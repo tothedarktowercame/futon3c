@@ -2,9 +2,38 @@
 
 Codex-2, 2026-08-26, design response to f45/a96J08.
 
-Status: design for review before implementation. f45 should remain halted until
-the new transition exists. This note does not treat the corrected target already
-on `apm-lean` master as authority to rewrite f45's registered problem.
+Status: revised after Joe's ruling that a void frame never happened. f45 should
+remain halted until the new transition exists. The corrected target already on
+`apm-lean` master is the `a96J08` registration that f46 will receive; it is not a
+rewrite of a surviving f45.
+
+## Void semantics and the durable home of the result
+
+Void removes the provisional frame from campaign history. It does not leave a
+failed f45 terminal entry, and it does not create an old problem registration to
+supersede. The queue retains the logical problem id `a96J08`; after its pinned
+content is corrected, the same queue slot is minted again as f46.
+
+The mathematical result must therefore be published before the frame is erased
+into a store whose identity is independent of frames: a **problem study ledger**.
+A study record is content-addressed and binds:
+
+- logical problem id `a96J08`;
+- the exact refuted target digest and its repository/revision/path/blob pins;
+- the qualified refutation artifact, theorem names, and axiom audit;
+- the diagnosis and proposed corrected target digest, when known;
+- author/reviewer identities and the source campaign ledger digest.
+
+The source frame id may occur in audit provenance, but is not part of the
+study's semantic identity and is not a foreign key to a surviving frame. The
+study says “this pinned formulation of a96J08 is false,” not “f45 failed.” Its
+id remains valid after the void transition removes f45. The existing
+`problems/a96J08/problem.md` is the human-readable instance of this authority;
+the machine path needs a typed, content-addressed record beside it.
+
+Publication of that study is a precondition of a `:statement-refuted` void.
+Thus the transition cannot erase its only copy of the evidence. Apparatus and
+baseline voids do not require a mathematical study.
 
 ## Decision
 
@@ -41,17 +70,18 @@ that wire value; do not retain it as an alias in the new schema.
 allow a caller to turn a Solver error, a failed proof attempt, or an informal
 opinion into a refutation.
 
-Introduce a content-addressed `RefutationCertificate` at the terminal boundary.
+Introduce a content-addressed problem-study receipt and bind its id in the
+`RefutationCertificate` at the terminal boundary.
 The Lean model should require one exactly when the outcome is `refuted`; the
 Clojure validator should enforce the corresponding data shape before issuing a
 statement-refuted void certificate. The certificate should bind:
 
-- frame id and problem id;
+- problem id and the provisional source attempt/frame as audit provenance;
 - the registered repository, revision, path, blob, and target digest;
 - one or more elaborated refutation theorem names;
 - the checked artifact revision/blob containing those theorems;
 - the Lean command result and axiom audit for each theorem;
-- the reviewer/study receipt id and a digest of the recorded study;
+- the independently durable problem-study receipt id and digest;
 - the source ledger version and digest.
 
 The axiom policy belongs to the qualification authority already used for proof
@@ -148,7 +178,9 @@ refuted-retry-same-problem = false
 statement-refuted-void-outcome = refuted
 non-refutation-void-outcome = unsolved
 early-void-canonical-prefix = true
-corrected-problem-requires-new-registration = true
+voided-slot-reuses-logical-problem-id = true
+corrected-pins-require-plan-revision = true
+statement-refuted-void-requires-durable-study = true
 ```
 
 `generated_contract.clj` must require these exact values and reject unknown
@@ -157,10 +189,11 @@ Clojure consumer, and trace checker from drifting independently.
 
 ## Clojure transition
 
-There are two different durable operations and they should remain separate:
+There are three ordered durable operations and they should remain separate:
 
-1. dispose of f45 on the evidence already obtained;
-2. register a corrected problem and mint a new frame.
+1. publish the refutation as an `a96J08` problem study;
+2. void f45, removing it from campaign history;
+3. revise the pinned queue slot and mint f46 for the same problem id.
 
 They must be ordered, but correction is not a precondition for recording a
 valid refutation. Some false statements will have no known repair.
@@ -168,18 +201,19 @@ valid refutation. Some false statements will have no known repair.
 ### 1. Refutation disposition
 
 Add a typed controller command, for example `dispose-refuted-frame!`, at the
-queue orchestration boundary. It receives the halted-frame receipt and the
-qualified refutation/study receipt. It must:
+queue orchestration boundary. It receives the halted-frame receipt and an
+already-published qualified problem-study receipt. It must:
 
 1. verify that the active frame and registered problem pins match the evidence;
 2. call `frame_void/prepare` with `:statement-refuted` and the refutation
    evidence;
 3. append the obligation claim and `:frame/stopped` event with compare-and-append;
-4. derive and validate a terminal receipt with
-   `:problem/outcome :refuted`, `:frame/result :void`, and the certificate ids;
-5. retire the frame and append its terminal record to queue state;
-6. leave the queue with no active frame and with the original problem consumed,
-   never retryable.
+4. validate the disposition witness with `:problem/outcome :refuted`,
+   `:frame/result :void`, and the study/certificate ids;
+5. remove the provisional frame rather than append it to the queue's completed
+   frame history;
+6. restore the queue cursor to the `a96J08` slot and mark that slot as requiring
+   a revised pinned plan before another frame can be minted.
 
 `frame_void/prepare` should make classification-specific evidence mandatory.
 `:statement-refuted` requires a qualified refutation and study digest. The two
@@ -192,42 +226,54 @@ arbitrary `:error/code`. `:solver-defect-review-required` is how f45 stopped,
 but an error code is not proof of falsehood. The review/qualification receipt is
 the authority that selects `:statement-refuted`.
 
-### 2. Corrected problem registration
+The `refuted / frameVoid` value is therefore a transition witness, not a
+surviving frame record. It remains in the void event's audit log and Lean trace,
+while the mathematical evidence it points to remains in the problem study
+ledger. Queries for campaign frames do not return f45 after the transition.
 
-A corrected target is a new problem registration, even when it uses the same
-source path. It needs a new problem id and must bind the new revision/blob and a
-new target digest. Its metadata should include:
+### 2. Corrected queue-slot revision
+
+A corrected target keeps the logical problem id `a96J08`. It binds a new
+revision/blob and target digest in a revised version of the same queue slot. The
+revision authority should include:
 
 ```clojure
-{:problem/supersedes <old-problem-id>
- :correction/basis-refutation-certificate <certificate-id>
+{:problem/id "a96J08"
+ :correction/basis-study <problem-study-id>
  :correction/study <study-digest>}
 ```
 
-Do not mutate the pinned queue plan in place and do not decrement `:next-index`.
-The current plan id hashes its problem vector; changing the vector underneath an
-existing state would either fail the plan/state check or require bypassing it.
-Add an append-only queue amendment (or mint a successor queue plan) whose digest
-binds the predecessor plan, added problem registration, authorizing disposition,
-and resulting plan. Qualification of the new registration occurs before a new
-frame is minted. Only then may f46 be created.
+Do not mutate the content-addressed queue plan in place. The current plan id
+hashes its problem vector, so changing the `a96J08` blob requires an append-only
+plan revision. That revision binds the predecessor plan, slot index, unchanged
+logical problem id, replacement pins, authorizing study, and resulting plan.
+The corresponding state migration is permitted only from the statement-refuted
+void witness; it points `:next-index` back to that slot and clears the active
+frame. This is a rewind of the void slot, not a same-statement retry: qualification
+sees the replacement blob and target digest before f46 is minted.
+
+A plain cursor decrement against the old plan is invalid because it would mint
+the refuted pins again. Appending `a96J08` as a second problem is also invalid
+because void says the first occurrence never happened. The model should admit
+only the paired `(plan revision, cursor restoration)` transition.
 
 This gives the durable order:
 
 ```text
 qualified refutation
+  -> durable a96J08 problem-study receipt
   -> statement-refuted void certificate
-  -> f45 terminal receipt (refuted / void)
-  -> study recorded and bound
-  -> corrected problem registration (new id and pins)
-  -> queue amendment
+  -> f45 erased; refuted / void disposition witness retained in audit trace
+  -> revised a96J08 queue slot (same id, new pins)
+  -> cursor restored to that slot
   -> qualification
   -> f46 minted
 ```
 
-If correction registration or qualification fails, f45 remains correctly void
-and the queue remains without f46. Replaying any completed prefix is idempotent
-by certificate/event/plan digest.
+If plan revision or qualification fails, f45 remains void, the problem study
+remains durable, and the queue remains blocked at the `a96J08` slot without f46.
+Replaying any completed prefix is idempotent by study, certificate, event, and
+plan digest.
 
 ## Clojure ownership by namespace
 
@@ -241,11 +287,14 @@ by certificate/event/plan digest.
   blanket `:invalid` mapping.
 - `queued_frame_terminal.clj`: exact outcome/result table, conditional evidence
   requirements, and explicit non-retryability for refuted outcomes.
-- `problem_queue_supervisor.clj`: persist refuted completion without advancing
-  into a same-problem retry; accept only a separately authorized append-only
-  queue amendment for a correction.
-- `frame_specification.clj`: validate supersession and correction provenance on
-  a corrected registration while continuing to pin repository/revision/path/blob.
+- `problem_queue_supervisor.clj`: erase the void frame, restore its slot only
+  through a study-authorized plan revision, and mint the same problem id from
+  the replacement pins.
+- `frame_specification.clj`: validate correction provenance and replacement pins
+  for the same logical problem id.
+- a new problem-study namespace (or the existing canonical problem-artifact
+  authority): publish and validate the frame-independent refutation record
+  before the destructive void transition.
 - `frame_cycle_contract.clj` and `generated_contract.clj`: consume the emitted
   refutation and early-void policy.
 - `campaign_trace.clj`: emit schema-v2 terminal disposition and qualified
@@ -275,13 +324,14 @@ Clojure tests:
   and baseline voids map to `:unsolved`;
 - `queued_frame_terminal_test`: the full outcome/result table and evidence
   mutations;
-- `problem_queue_supervisor_test`: refuted consumes the old queue item, never
-  retries it, and a correction appears only through a content-addressed
-  amendment/new plan;
+- `problem_queue_supervisor_test`: f45 is absent after void, the cursor cannot
+  move against the old plan, and a study-authorized plan revision remints
+  `a96J08` as f46 from replacement pins;
 - `campaign_trace_test` and `generated_contract_test`: schema-v2 early void and
   mutation rejection;
-- an integration test replays the f45 shape through void, terminal derivation,
-  queue retirement, corrected registration, qualification, and f46 minting.
+- an integration test replays the f45 shape through problem-study publication,
+  void erasure, queue-slot revision, qualification, and f46 minting, then proves
+  that campaign frame enumeration contains f46 but not f45.
 
 Schema v1 artifacts remain readable only through an explicit v1 decoder. Do not
 translate `:invalid` heuristically: old apparatus voids used that value, so it
@@ -305,8 +355,9 @@ repairs it. No Lake command was run while preparing this design, and
 
 ## Recommendation for f45/f46
 
-After implementation and qualification, use the checked f45 refutations and
-study to issue a `:statement-refuted` certificate and record f45 as
-`refuted / void`. Register the corrected positive-sign target from `apm-lean`
-master as a new problem whose provenance names that certificate, then mint f46.
-Do not edit f45, relabel it unsolved, or treat its Solver head as retry state.
+After implementation and qualification, publish the checked refutations as a
+durable `a96J08` problem study, use it to issue the `:statement-refuted` void,
+and erase f45 from campaign frame history. Revise the existing `a96J08` queue
+slot to the positive-sign pins already on `apm-lean` master, restore the cursor,
+qualify those pins, and mint f46 with the same problem id. Do not retain f45,
+relabel it unsolved, or treat its Solver head as retry state.
