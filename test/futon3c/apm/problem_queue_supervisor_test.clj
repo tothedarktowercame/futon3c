@@ -216,7 +216,10 @@
         replacement (assoc (first problems)
                            :revision "corrected-revision"
                            :blob "corrected-blob")
-        revised (sut/revise-voided-slot (:plan providers) @state replacement)]
+        guide-receipt {:repair/role :guide
+                       :receipt/id (apply str (repeat 64 "d"))}
+        revised (sut/revise-voided-slot (:plan providers) @state replacement
+                                        guide-receipt)]
     (is (= :voided-slot-awaiting-revision (:status void-result)))
     (is (nil? (:active @state)))
     (is (empty? (:completed @state)))
@@ -226,10 +229,40 @@
     (is (= "corrected-blob" (get-in revised [:plan :problems 0 :blob])))
     (is (not= (:queue/id (:plan providers))
               (get-in revised [:plan :queue/id])))
+    (is (= 1 (get-in revised [:state :statement-repair-attempts "p1"])))
     (reset! state (:state revised))
     (is (= :frame-prepared
            (:status (sut/tick! (assoc providers :plan (:plan revised))))))
-    (is (= "p1" (get-in @state [:active :frame :problem/id])))))
+    (is (= "p1" (get-in @state [:active :frame :problem/id])))
+    (is (= :frame-prepared
+           (:status
+            (sut/tick!
+             (assoc providers :plan (:plan revised)
+                    :frame-tick-fn
+                    (constantly
+                     {:ok true :status :frame-complete :frame/result :void
+                      :terminal-receipt {:receipt/id "void-q1-repair"
+                                         :problem/outcome :refuted}}))))))
+    (is (= "p2" (get-in @state [:active :frame :problem/id])))
+    (is (= 2 (:next-index @state)))
+    (is (empty? (:completed @state)))))
+
+(deftest only-guide-may-author-the-single-statement-repair
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        _ (sut/tick! (assoc providers :frame-tick-fn
+                            (constantly
+                             {:ok true :status :frame-complete
+                              :frame/result :void
+                              :terminal-receipt {:receipt/id "void-q1"
+                                                 :problem/outcome :refuted}})))
+        replacement (assoc (first problems) :blob "corrected-blob")]
+    (is (= :problem-queue-guide-repair-receipt-invalid
+           (:error/code
+            (sut/revise-voided-slot
+             (:plan providers) @state replacement
+             {:repair/role :solver
+              :receipt/id (apply str (repeat 64 "e"))}))))))
 
 (deftest queue-plan-preserves-explicit-retained-branch
   (let [problem (assoc (first problems) :base-branch "exp/retained")]

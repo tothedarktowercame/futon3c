@@ -173,6 +173,9 @@
    :early-void-canonical-prefix true
    :voided-slot-reuses-logical-problem-id true
    :corrected-pins-require-plan-revision true
+   :statement-repair-role "guide"
+   :statement-repair-max-attempts 1
+   :statement-repair-exhaustion-action "discard-and-advance"
    :retry-requires-retained-solver-head true
    :retry-does-not-advance-problem-queue true
    :close-result-wire-canonicalization true

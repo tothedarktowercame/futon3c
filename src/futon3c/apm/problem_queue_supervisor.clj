@@ -96,9 +96,11 @@
 
   Returns a new content-addressed plan and matching state. No other queue slot
   or cursor position may change."
-  [plan state replacement]
+  [plan state replacement repair-receipt]
   (let [slot (:next-index state)
-        current (get (:problems plan) slot)]
+        current (get (:problems plan) slot)
+        problem-id (:problem/id current)
+        attempts (get-in state [:statement-repair-attempts problem-id] 0)]
     (cond
       (not (valid-state? state))
       {:ok false :error/code :problem-queue-state-invalid}
@@ -110,6 +112,12 @@
       {:ok false :error/code :problem-queue-voided-slot-missing}
       (not= (:problem/id current) (:problem/id replacement))
       {:ok false :error/code :problem-queue-slot-problem-id-changed}
+      (not (and (= :guide (:repair/role repair-receipt))
+                (string? (:receipt/id repair-receipt))
+                (re-matches #"[0-9a-f]{64}" (:receipt/id repair-receipt))))
+      {:ok false :error/code :problem-queue-guide-repair-receipt-invalid}
+      (not (zero? attempts))
+      {:ok false :error/code :problem-queue-statement-repair-exhausted}
       :else
       (let [problems (assoc (:problems plan) slot replacement)
             revised (queue-plan problems)
@@ -120,6 +128,9 @@
            :state (addressed
                    (-> state
                        (assoc :queue/id (:queue/id revised))
+                       (assoc-in [:statement-repair-attempts problem-id] 1)
+                       (assoc-in [:statement-repair-receipts problem-id]
+                                 (:receipt/id repair-receipt))
                        (dissoc :status)))})))))
 
 (defn reconcile-park-decisions
@@ -326,6 +337,17 @@
             (if-not (:ok retired)
               retired
               (let [void? (= :void (:frame/result result))
+                    refuted? (and void?
+                                  (= :refuted
+                                     (get-in result
+                                             [:terminal-receipt
+                                              :problem/outcome])))
+                    problem-id (get-in active [:frame :problem/id])
+                    repair-exhausted?
+                    (and refuted?
+                         (pos? (get-in state
+                                       [:statement-repair-attempts problem-id]
+                                       0)))
                     pause? (= :pause-after-active (:status state))
                     cleared (addressed
                              (cond-> (assoc state :active nil)
@@ -338,15 +360,16 @@
                                         :terminal-receipt/id
                                         (get-in result
                                                 [:terminal-receipt :receipt/id])})
-                               void? (update :next-index dec)
-                               void? (assoc :status
-                                            :voided-slot-awaiting-revision)
+                               (and refuted? (not repair-exhausted?))
+                               (update :next-index dec)
+                               (and refuted? (not repair-exhausted?))
+                               (assoc :status :voided-slot-awaiting-revision)
                                pause? (assoc :status :paused)))
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
-                  (if void?
+                  (if (and refuted? (not repair-exhausted?))
                     {:ok true :status :voided-slot-awaiting-revision
                      :state cleared}
                     (if pause?
