@@ -179,6 +179,15 @@ The identifier that *is* novel in the artifact —
 `integral_exp_mul_complex_Ioi`, in the proved `half_line_exp` — comes from
 f41's own scribe deposits. Fingerprinted, and irrelevant to condition 3.
 
+*Measured twice, independently.* claude-12 and codex-10 ran this adjudication
+concurrently without coordinating on it and agreed on every element: attempt
+3 used 4 of 42, `e-3411c0c2` traces to f33-guide on a94A07, the artifact is
+`a35590e6` with outcome `not-closed`, **zero** of that memory's identifiers
+appear in it, and the one novel identifier is same-problem. The two runs
+differ only in how many identifiers they extracted from the memory (16 versus
+19, a regex difference); the count present is zero on both. A negative result
+this consequential is worth having derived twice.
+
 **f40's four approved memories were used zero times across all three
 attempts**, having been on the shelf throughout. That is the plainest fact
 f41 produced, and the one most worth explaining: the shelf offered exactly
