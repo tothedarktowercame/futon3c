@@ -1,0 +1,218 @@
+;; f42a — an EXAMPLE cascade for APM frame f42, in the shape
+;; futon3c.apm.conductor/expand-memory-cascade emits.
+;;
+;; COUNTERFACTUAL, NOT A RECORDED RUN. f42 ran with the cascade OFF; every
+;; campaign on disk has zero cascade artifacts (TN-APM-cascades-exist-unused).
+;; This is what the expansion WOULD have been, recomputed from live substrate
+;; data on 2026-08-26 by claude-13.
+;;
+;; REAL: the 48 seed memory-ids (f42-solver-memory.edn); the 23 seed patterns
+;; (derived from those memories' memory/assert attachments, and matching the
+;; count TN-APM-cascades-exist-unused independently reports); the
+;; pattern/has-semantic-why edges; the co-incidence problem links; every
+;; expanded memory-id and its route and hop count.
+;;
+;; NOT REAL: :pattern-surfaces is left empty — rendering it needs conductor
+;; pattern-fn against the live store, and inventing surfaces would be the one
+;; part of this artifact a reader could not check. Left as a hole on purpose.
+;;
+;; REIMPLEMENTED, NOT INVOKED: routes/hops follow conductor.clj:287-382 —
+;; BFS over authored why edges for shortest hops, co-incidence fixed at 2 via
+;; pattern->problem->pattern, why preferred on ties, cheapest route per
+;; memory, sort by [hops route memory-id], take cap. expand-memory-cascade
+;; itself was NOT run (see PLAN H0). If H0 disagrees with these numbers,
+;; H0 is right and this file is wrong.
+
+{:f42a/meta
+ {:frame "jit-all-open-nontopology-v1-f42"
+  :snapshot "data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f42/snapshots/f42-solver-memory.edn"
+  :generated-by "claude-13, 2026-08-26"
+  :status :counterfactual
+  :delivered-shelf-before 48
+  :delivered-shelf-after 148
+  :note "The student was handed 48 entries sorted by :memory-id (hash order); the memory that closed f42 was 47th of 48."}
+
+ :seed-patterns
+ ["math-formalization-CA/measure-integration-api"
+  "math-formalization-CA/pointwise-logderiv-bridge-interval-to-contour"
+  "math-formalization/cast-normalization"
+  "math-formalization-CV/entire-and-singularity-api"
+  "math-formalization-CA/complex-arg-of-cpow-root"
+  "math-formalization-CA/divisor-sum-to-root-count-without-monic"
+  "math-formalization-CV/holomorphic-disk-api"
+  "math-formalization/coercion-bridge"
+  "math-formalization/statement-ladder-before-proof-text"
+  "math-formalization/tactic-algebra-interference"
+  "math-formalization/notation-semantics-traps"
+  "math-formalization/bank-cheap-obligations-before-the-hard-bridge"
+  "math-informal/convert-growth-counts-to-summability-by-geometric-shells"
+  "math-informal/local-to-global"
+  "math-formalization-CA/surj-via-oriented-root-preimage"
+  "math-strategy/proof-architecture"
+  "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness"
+  "math-strategy/route-map-before-reconstruction"
+  "math-formalization/compact-thickening-upgrades-pointwise-analyticity"
+  "math-formalization-CA/schwarz-disk-automorphism-formula"
+  "math-formalization/memlp-power-law-scalar-thresholds"
+  "math-informal/reduce-to-known-result"
+  "math-informal/construct-auxiliary-object"]
+
+ :patterns-per-problem 23
+ :expanded-count 100
+ :expanded-available 141
+ :cap 100
+ :truncated? true
+ :pattern-surfaces {}   ;; hole: needs conductor pattern-fn against the live store
+
+ :routes
+ [;; --- 48 seeds, route :leaf, 0 hops (what retrieval surfaced) ---
+  ["e-01c38dee-a698-41e3-af98-d6700d3dd55c" {:route :leaf :hops 0}]
+  ["e-07a2f8d1-8769-4682-9f7f-06183f2dc458" {:route :leaf :hops 0}]
+  ["e-082d154e-a52a-4697-92a7-61880d47f07c" {:route :leaf :hops 0}]
+  ["e-0a6c4c9c-49c9-4beb-8221-7322afdd325b" {:route :leaf :hops 0}]
+  ["e-0d0d3806-f07b-406e-85bd-0d9702fbad8d" {:route :leaf :hops 0}]
+  ["e-0d5fcb3e-7d75-4fa6-9b70-1f35688e0348" {:route :leaf :hops 0}]
+  ["e-10323bb7-c624-4bb6-89de-bb5d67503b01" {:route :leaf :hops 0}]
+  ["e-14100165-5b69-4898-ae80-f3cd44ddaed5" {:route :leaf :hops 0}]
+  ["e-1866fc8e-aa5a-426c-aa30-d8d57c224238" {:route :leaf :hops 0}]
+  ["e-1aa18a67-adf3-4262-8070-e44dc1744e3f" {:route :leaf :hops 0}]
+  ["e-2794cdf2-fb43-4a37-ae26-978fe6677e4d" {:route :leaf :hops 0}]
+  ["e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b" {:route :leaf :hops 0}]
+  ["e-4984bc4c-38ba-4112-ace1-e382b8c91fd9" {:route :leaf :hops 0}]
+  ["e-63b7c7c1-1906-412c-ae18-b4644762fbea" {:route :leaf :hops 0}]
+  ["e-6aea0c17-eb1f-4c2c-978c-ee6f7b725688" {:route :leaf :hops 0}]
+  ["e-6b355807-f9b3-4f2d-83e3-d63452f6de7c" {:route :leaf :hops 0}]
+  ["e-73ac922d-5d8d-42cd-a4df-25429440f39b" {:route :leaf :hops 0}]
+  ["e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd" {:route :leaf :hops 0}]
+  ["e-93b083ba-2a5c-4492-8120-9d48ab25a2de" {:route :leaf :hops 0}]
+  ["e-98785d73-580b-4b5f-913b-9e9d6da97641" {:route :leaf :hops 0}]
+  ["e-a581383e-9229-4488-81ad-54bbed6d73a4" {:route :leaf :hops 0}]
+  ["e-aa4210cf-5ba3-49ed-8e40-96ace9aa6d8a" {:route :leaf :hops 0}]
+  ["e-apm-promotion-21e68477d8939f3b226e67d092b2ac33" {:route :leaf :hops 0}]
+  ["e-apm-promotion-2dadcff353d6fe5b9a82f21b3168fb82" {:route :leaf :hops 0}]
+  ["e-apm-promotion-39ad04c68afb49aebb0d8b9af008d4df" {:route :leaf :hops 0}]
+  ["e-apm-promotion-3af138feb70f01657c9c0cba92011270" {:route :leaf :hops 0}]
+  ["e-apm-promotion-46aef25114ea3e89d3489bdafc530f52" {:route :leaf :hops 0}]
+  ["e-apm-promotion-54982951b1a5eba611abe0b13aa96d98" {:route :leaf :hops 0}]
+  ["e-apm-promotion-5a33ac6fb6ab7313dde700951134fa83" {:route :leaf :hops 0}]
+  ["e-apm-promotion-80b4735d37f1d15ad9d220ced8e76e29" {:route :leaf :hops 0}]
+  ["e-apm-promotion-88c95fc6db5846b0a2c56f7c0ab3ce5b" {:route :leaf :hops 0}]
+  ["e-apm-promotion-905a276d5ed486eea3461a728247f0be" {:route :leaf :hops 0}]
+  ["e-apm-promotion-b33aa85adab4e572b8fa3f2817aeadc6" {:route :leaf :hops 0}]
+  ["e-apm-promotion-c24492ee0155aef8123c2e6705f28e74" {:route :leaf :hops 0}]
+  ["e-apm-promotion-c903193507ed73290a50abf016100cc7" {:route :leaf :hops 0}]
+  ["e-apm-promotion-c9d3118a167bb9c88cb028e47a799bda" {:route :leaf :hops 0}]
+  ["e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d" {:route :leaf :hops 0}]
+  ["e-apm-promotion-f0a4bf984c7f7da61ecd05540a6d9fdc" {:route :leaf :hops 0}]
+  ["e-apm-promotion-f240c45c48e864d2f9bf23317503bf6b" {:route :leaf :hops 0}]
+  ["e-b1c4fa0e-3d3e-4ec3-8e2a-588cf1fa518d" {:route :leaf :hops 0}]
+  ["e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100" {:route :leaf :hops 0}]
+  ["e-bc26b67e-cda0-4996-a37f-34c28a65ad76" {:route :leaf :hops 0}]
+  ["e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e" {:route :leaf :hops 0}]
+  ["e-d2563094-59b1-45c1-902a-c28b5ad3ada3" {:route :leaf :hops 0}]
+  ["e-dda90056-d36e-4ae4-be4b-7f34e6754620" {:route :leaf :hops 0}]
+  ["e-e9f9c621-1686-4a86-a416-e258186384c4" {:route :leaf :hops 0}]
+  ["e-f72e5ece-2a26-48aa-a47c-2b6b310caf69" {:route :leaf :hops 0}]
+  ["e-fddf046d-3a4d-49fd-8403-f877d46ac12c" {:route :leaf :hops 0}]
+  ;; --- 100 expansions the cascade would add (of 141 available; cap 100) ---
+  ["e-23c9f2b7-505e-40f0-b39f-23edb925a168" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-3dd47d2a-1e10-4f82-a191-ba634d2e50d9" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-9751e537-f5b7-4c40-a857-0c0b699b93a2" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-a09-open-hunger-disk-automorphism-schwarz-pick-two-fixed-points" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-bb16ffa8-e6da-4956-81c3-011e312d5302" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-cad8c2ad-019d-458b-a12c-49527329aadb" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-distinguish-clean-measure-theory-recall-gap-from-malformed-query" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-inspect-conclusion-binding-structure-before-claiming-mathematical-content" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-inspect-placeholder-definitions-before-claiming-mathematical-content" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-integral-minkowski-eLpNorm-bochner" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-lemniscate-sublevel-components-inject-into-roots" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-lemniscate-superlevel-preconnected" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-look-for-an-interface-adapter-before-rebuilding-an-existing-theorem" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-make-construction-targets-buildable-importable-and-advertised-before-counting-them" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-order-a-disjoint-interval-family-into-a-variation-partition" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-order-proof-search-by-known-route-components-before-literature" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-place-section-include-after-a-definition-to-repair-theorems-without-changing-the-definition" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-poisson-ae-convergence-bridge" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-prefer-installed-source-search-when-the-library-namespace-is-guessable" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-preflight-file-elaboration-before-sorry-accounting-or-runner-dispatch" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-probe-the-high-risk-integral-assembly-before-polishing-young-leaves" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-consecutive-recall-empty-terrain-gaps-as-curriculum-signal" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-first-error-recall-field-use-and-legitimate-empty-curriculum-signal" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-genuine-statement-check-after-two-vacuity-detections" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-real-analysis-riemann-darboux-recall-terrain" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-unrelated-recall-as-honest-non-use-and-a-terrain-gap" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-record-unused-hypothesis-as-stronger-than-stated-signal" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-refuse-sorry-relocation-when-no-axiom-clean-partial-exists" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-scope-absence-claims-to-the-artifact-index-searched" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-separate-lexical-sorry-count-from-real-proof-hole-count" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-treat-not-in-mathlib-comments-as-revision-scoped-search-claims" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-use-finite-numerical-spot-checks-to-refute-not-characterize-asymptotics" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-codexpilot-zeroCountInClosedBall-homotopy-invariant" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-d72a5bd6-a54d-4fbb-8daa-1bf8a3c32e51" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-da3c4035-219d-409b-802a-53426bab8945" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-dfea2de9-8979-4f8f-9343-caabb48487e6" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-e10-leave-consultation-trail-in-boundary-artifact" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-e10-rectangular-contour-residue-theorem-gap" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-e9-a96j04-closer-open-component-decomposition" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-e9-a96j04-localize-an-observed-blocker-at-one-sorry" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-e9-a96j04-open-set-interval-decomposition-gap" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-fcb8d91a-55b2-429b-a372-74ba254b3118" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-j02-open-hunger-lebesgue-density-theorem" {:route :why-hop :hops 1 :pattern "math-strategy/missing-dependency-protocol"}]
+  ["e-021bf80a-b18a-4f0b-9dc5-e158108521cf" {:route :co-incidence :hops 2 :pattern "math-formalization/separate-proof-transfer-from-artifact-replay"}]
+  ["e-07f83183-c3ec-4f69-84fe-0cc44932218d" {:route :co-incidence :hops 2 :pattern "math-formalization/additive-principal-parts-from-order-germs"}]
+  ["e-0b15c2c9-eeb4-47f6-bac4-af4dea20879e" {:route :co-incidence :hops 2 :pattern "math-formalization/rewrite-orientation"}]
+  ["e-0b423578-4fa5-4bf8-95d9-1af599f78f04" {:route :co-incidence :hops 2 :pattern "math-formalization-FA/weak-convergence-hilbert"}]
+  ["e-0e4e32fe-54af-451b-b302-17aa521891fd" {:route :co-incidence :hops 2 :pattern "math-formalization-FA/weak-convergence-hilbert"}]
+  ["e-1484814c-a707-4526-a3f6-8ba51dbb54d7" {:route :co-incidence :hops 2 :pattern "math-formalization-CA/layer-cake-crossover-split"}]
+  ["e-16654eba-f541-47a5-ae79-3ff08cd2e600" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-1e571839-27b0-4ff5-970e-1d56c31f78b5" {:route :co-incidence :hops 2 :pattern "math-strategy/structural-obstruction-as-theorem"}]
+  ["e-1f0af380-5090-4afb-a083-8de6f3ec8713" {:route :co-incidence :hops 2 :pattern "math-formalization/binder-expression-mismatch"}]
+  ["e-20851bde-ba9a-4883-8b4e-0c2f0f741fe9" {:route :co-incidence :hops 2 :pattern "math-formalization/rewrite-orientation"}]
+  ["e-24b31218-832c-4ff9-b3c4-59f0cb96b9bb" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-30e87097-f843-4341-81c0-a49ee7ce0ef4" {:route :co-incidence :hops 2 :pattern "math-formalization-FA/weak-convergence-hilbert"}]
+  ["e-31646454-435e-4d34-b4db-ffdfee6af193" {:route :co-incidence :hops 2 :pattern "math-formalization-CA/series-evaluation-api"}]
+  ["e-33878cc4-75f9-4c1e-8edf-888adc5d46f5" {:route :co-incidence :hops 2 :pattern "math-formalization-CV/derivative-bounds-api"}]
+  ["e-3557a341-6ec3-405d-9a6b-4e939f7f46b5" {:route :co-incidence :hops 2 :pattern "math-formalization/normalize-meromorphic-point-values-before-continuation"}]
+  ["e-46c3e6e5-9b4e-41be-94f3-ef3500f42884" {:route :co-incidence :hops 2 :pattern "math-strategy/structural-obstruction-as-theorem"}]
+  ["e-4f55c284-65c9-4c07-b94d-6263ba8c6edc" {:route :co-incidence :hops 2 :pattern "math-strategy/isolate-computational-kernel-before-transport"}]
+  ["e-4f6b5d49-3ace-419d-adef-d1f928e859e0" {:route :co-incidence :hops 2 :pattern "math-strategy/construction-before-estimates"}]
+  ["e-4fda2517-1d61-4bef-9130-4ef3dc32205e" {:route :co-incidence :hops 2 :pattern "math-formalization/rewrite-orientation"}]
+  ["e-53fe93b7-d968-4f52-97fc-8691ef6b65ec" {:route :co-incidence :hops 2 :pattern "math-formalization/rewrite-orientation"}]
+  ["e-56ae9c01-7cbb-48f9-934e-8e792c4edcb4" {:route :co-incidence :hops 2 :pattern "math-formalization-CA/ode-gronwall-api"}]
+  ["e-5736f45a-151c-46b2-8993-f8d3e578b51a" {:route :co-incidence :hops 2 :pattern "math-formalization/binder-expression-mismatch"}]
+  ["e-5f3fb2da-22cf-49bf-bc6c-6a67a5c1c15e" {:route :co-incidence :hops 2 :pattern "math-formalization/additive-principal-parts-from-order-germs"}]
+  ["e-60dd41c6-e977-419c-b015-f2ddc2417caa" {:route :co-incidence :hops 2 :pattern "math-strategy/construction-before-estimates"}]
+  ["e-622879cf-5712-4586-8a64-5e6112c03778" {:route :co-incidence :hops 2 :pattern "math-formalization/additive-principal-parts-from-order-germs"}]
+  ["e-62615b79-8ae2-470b-8b28-465dd87f50c7" {:route :co-incidence :hops 2 :pattern "math-strategy/structural-obstruction-as-theorem"}]
+  ["e-65b94d16-3cdd-4850-970a-62974766637a" {:route :co-incidence :hops 2 :pattern "math-formalization-CV/complex-liouville-periodicity"}]
+  ["e-69344db6-0685-444d-85d6-8cd4a2b1773a" {:route :co-incidence :hops 2 :pattern "math-formalization/minmax-normalization"}]
+  ["e-6e83f0c0-d571-46a1-b9a2-5737cd83476c" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-78523ab2-4b3a-44b3-ab30-1b51de5f7069" {:route :co-incidence :hops 2 :pattern "math-strategy/construction-before-estimates"}]
+  ["e-7b39a396-5b35-4b84-a12f-9032c438c804" {:route :co-incidence :hops 2 :pattern "math-formalization-CV/complex-liouville-periodicity"}]
+  ["e-7d94a954-2ccf-4832-9c0e-76afb7c119bf" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-7e99953f-00e4-4927-b44b-435c1052da97" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-83ece32c-9e01-42aa-86d8-0a5a6e6265f5" {:route :co-incidence :hops 2 :pattern "math-formalization/separate-proof-transfer-from-artifact-replay"}]
+  ["e-88a1af39-53d5-4ac8-a01b-04137a559619" {:route :co-incidence :hops 2 :pattern "math-formalization-CV/derivative-bounds-api"}]
+  ["e-95c49e49-5982-4c66-abc0-7bba11a5be35" {:route :co-incidence :hops 2 :pattern "math-formalization-CA/series-evaluation-api"}]
+  ["e-9b02dd25-c7d5-44cc-ac09-74f760cee135" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-9cd9ea5b-ff03-4e9d-b4d8-eff9d057c59a" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-a2e79f73-5f25-469e-a050-019d8070c0bd" {:route :co-incidence :hops 2 :pattern "math-formalization-CV/entire-affine-by-divided-difference"}]
+  ["e-a39ff1b3-dbbe-4783-aa00-cd293ac77e0d" {:route :co-incidence :hops 2 :pattern "math-strategy/structural-obstruction-as-theorem"}]
+  ["e-a75efe47-7ec6-4963-9df3-5b79d873d9c9" {:route :co-incidence :hops 2 :pattern "math-formalization/separate-proof-transfer-from-artifact-replay"}]
+  ["e-a86f234d-51cf-444f-8ac8-e0ce8913027a" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08" {:route :co-incidence :hops 2 :pattern "math-strategy/corpus-trust-protocol"}]
+  ["e-afb1eae8-284f-4551-8c49-d0babd83a780" {:route :co-incidence :hops 2 :pattern "math-formalization-FA/weak-convergence-hilbert"}]
+  ["e-apm-promotion-2a6e129a232066308778f8d130a09499" {:route :co-incidence :hops 2 :pattern "math-formalization-CA/dyadic-refinement-of-indicators-by-finite-cell-sums"}]
+  ["e-apm-promotion-2c6e9e0f902be96abe7bdf132f30d338" {:route :co-incidence :hops 2 :pattern "math-formalization/fieldsimp-ring-for-affine-endpoint-congruence"}]
+  ["e-apm-promotion-4ca92ff6e67b1fc02bad2e55452ce147" {:route :co-incidence :hops 2 :pattern "math-formalization/partial-fraction-to-removable-sinc-representation"}]
+ ]}
