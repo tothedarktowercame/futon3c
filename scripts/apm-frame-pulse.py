@@ -183,26 +183,29 @@ def main():
                     try:
                         n = sum(1 for _ in open(mainlean, encoding="utf-8",
                                                 errors="replace"))
-                        # Only compare when the frame HAS earlier rounds. With
-                        # no rounds the worktree still sits at the opening
-                        # commit, so HEAD~1 is an unrelated apm-lean library
-                        # commit and the diff is library history reported as
-                        # solver progress -- f43 opened showing "264 lines (was
-                        # 232 a few rounds back)" with 0 rounds run. Reading
-                        # apm-lean for progress is what made this check misread
-                        # f36; the same mistake survived here in the baseline.
-                        prev = k = None
-                        if len(heads) >= 2:
-                            k = min(5, len(heads) - 1)
+                        # Baseline against the frame's OWN opening revision,
+                        # not HEAD~k. HEAD~k counts commits, which answers a
+                        # different question and reaches outside the frame: with
+                        # no rounds yet it floors at HEAD~1, which is a pre-frame
+                        # apm-lean library commit. :base-revision is the commit
+                        # the frame was actually handed, so the comparison is
+                        # "how far has this frame moved the file" at every round
+                        # count including zero -- which is when worktree growth
+                        # is the ONLY progress signal, the case this line exists
+                        # to serve.
+                        prev = None
+                        rev = re.search(r':base-revision "([0-9a-f]{7,})"', t)
+                        if rev:
                             base = subprocess.run(
                                 ["git", "show",
-                                 f"HEAD~{k}:problems/"
+                                 f"{rev.group(1)}:problems/"
                                  f"{pid.group(1)}/lean/Main.lean"],
                                 cwd=wt, capture_output=True, text=True, timeout=15)
                             prev = (len(base.stdout.splitlines())
                                     if base.returncode == 0 else None)
                         grow = (f"; worktree Main.lean {n} lines"
-                                + (f" (was {prev}, {k} rounds back)" if prev else ""))
+                                + (f" ({n - prev:+d} vs frame base {prev})"
+                                   if prev is not None else ""))
                     except Exception:
                         pass
             print(f"  solve:    round {rounds[-1]}, {rem[-1] if rem else '?'} left; "
