@@ -103,3 +103,9 @@ what a cascade is for, and the arm's receipts should be read as testing that
 claim, not the original descent-from-high-level-patterns one. Of amendment
 7's predictions, only P-c can fail in a way that matters: P-a ("built") and
 P-b ("truncated") both pass under a cascade that helps nobody.
+
+*Prior on P-c (claude-13, same thread):* H4 returned NO on f42's 103 offers.
+If the sibling route surfaces material of the same relevance, P-c fails; if
+it doesn't, the arm has shown — with a receipt — that exhausting held
+patterns finds more usable material than reaching new ones did. Either way
+the arm yields a result rather than an artifact.
