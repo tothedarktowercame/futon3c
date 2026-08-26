@@ -152,12 +152,31 @@
                    (conj :student-trace-inputs-missing))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
-      (let [cascade-config (:memory-cascade unit)
+      (let [all-accessible-ids (set (:accessible-memory-ids snapshot-access))
+            holdout? (and (= :student-attempt kind) (= 1 attempt-ordinal))
+            withheld-ids
+            (if holdout?
+              (->> (get-in snapshot-access [:snapshot :snapshot/memories])
+                   (filter #(and (map? (:provenance %))
+                                 (string? (get-in % [:provenance :problem-id]))
+                                 (= (:problem/id unit)
+                                    (get-in % [:provenance :problem-id]))
+                                 (contains? all-accessible-ids (:memory-id %))))
+                   (map :memory-id)
+                   (filter string?)
+                   distinct
+                   sort
+                   vec)
+              [])
+            accessible-ids (vec (sort (if holdout?
+                                        (apply disj all-accessible-ids withheld-ids)
+                                        all-accessible-ids)))
+            cascade-config (:memory-cascade unit)
             cascade (when (and (= :student-attempt kind)
                                (true? (:enabled? cascade-config)))
                       (cascade-request
                        cascade-config
-                       (vec (sort (:accessible-memory-ids snapshot-access)))
+                       accessible-ids
                        cascade-fn cascade-readers cascade-readers-fn))
             body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
@@ -172,6 +191,10 @@
                           :workspace (:workspace/path workspace)
                           :fresh-session? true
                           :fresh-session-nonce (str (UUID/randomUUID)))
+                   holdout?
+                   (assoc :shelf/holdout :same-problem
+                          :shelf/withheld-ids withheld-ids
+                          :shelf/withheld-count (count withheld-ids))
                    (and (= :student-attempt kind) (some? cascade))
                    (assoc :memory-cascade cascade)
                    ;; The base is what each fresh attempt is reset to and what
@@ -186,7 +209,7 @@
                            :snapshot-id (:receipt/snapshot-id promotion-receipt)
                            :snapshot-digest (:receipt/snapshot-digest promotion-receipt)
                            :accessible-memory-ids
-                           (vec (sort (:accessible-memory-ids snapshot-access)))})
+                           accessible-ids})
                    (and (= :scribe-reduce kind) (= :promote-solver phase))
                    (assoc :base-problem-blob (get-in unit [:problem :blob])
                           :problem-path (get-in unit [:problem :path])
@@ -348,6 +371,10 @@
                           :receipt/memory-snapshot
                           (select-keys (:memory-snapshot request)
                                        [:receipt-id :snapshot-id :snapshot-digest])}
+                   (= :same-problem (:shelf/holdout request))
+                   (assoc :shelf/holdout :same-problem
+                          :shelf/withheld-ids (:shelf/withheld-ids request)
+                          :shelf/withheld-count (:shelf/withheld-count request))
                    (map? (:memory-cascade request))
                    (assoc :receipt/memory-cascade
                           (let [cascade (:memory-cascade request)

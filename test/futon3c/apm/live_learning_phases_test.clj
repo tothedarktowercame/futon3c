@@ -105,6 +105,8 @@
             :terminal-budget {:collection-attempts 1 :repair-attempts 1}
             :turn-timeout-ms 3600000 :attempt-ordinal 1
             :workspace "/tmp/student" :fresh-session? true
+            :shelf/holdout :same-problem
+            :shelf/withheld-ids [] :shelf/withheld-count 0
             :memory-snapshot
             {:receipt-id "promotion" :snapshot-id "snapshot"
              :snapshot-digest "digest" :accessible-memory-ids []}
@@ -126,6 +128,8 @@
               :receipt/memory-snapshot
               {:receipt-id "promotion" :snapshot-id "snapshot"
                :snapshot-digest "digest"}
+              :shelf/holdout :same-problem
+              :shelf/withheld-ids [] :shelf/withheld-count 0
               :receipt/candidate candidate :receipt/id (:receipt/id certificate)}
              certificate)
           "the arm-off receipt is exactly the pre-change receipt"))))
@@ -329,6 +333,76 @@
                 :accessible-memory-ids ["m1"]
                 :surfaced-ids ["m1"] :used-ids [] :queries []}
                (get-in result [:report :memory-use])))))))
+
+(deftest attempt-one-withholds-only-well-formed-same-problem-provenance
+  (let [promotion {:receipt/id "promotion-receipt"
+                   :receipt/snapshot-id "snapshot-1"
+                   :receipt/snapshot-digest "snapshot-digest"}
+        memories [{:memory-id "same" :provenance {:problem-id "a01J05"}}
+                  {:memory-id "cross" :provenance {:problem-id "a98J02"}}
+                  {:memory-id "missing"}
+                  {:memory-id "malformed" :provenance {:problem-id :a01J05}}]
+        build (fn [ordinal]
+                (sut/build-request
+                 (merge base
+                        {:contract {:phases {(keyword (str "student-attempt-" ordinal))
+                                             {:ordinal ordinal :requires []}}}
+                         :receipts {:promote-solver promotion}
+                         :snapshot-access
+                         {:ok true
+                          ;; Verification remains against this complete, unfiltered
+                          ;; snapshot and its promotion-bound digest.
+                          :snapshot {:snapshot/digest "snapshot-digest"
+                                     :snapshot/memories memories}
+                          :accessible-memory-ids
+                          #{"same" "cross" "missing" "malformed"}}
+                         :action {:kind :student-attempt
+                                  :phase (keyword (str "student-attempt-" ordinal))
+                                  :role :student :ordinal ordinal
+                                  :frame-id "f19" :problem-id "a01J05"}
+                         :seat {:agent-id "f19-student" :invoke-ready? true}})))
+        first-result (build 1)
+        first-request (:request first-result)]
+    (is (:ok first-result))
+    (is (not-any? #{:student-snapshot-access-unverified} (:findings first-result))
+        "the full snapshot digest is verified before filtering student access")
+    (is (= ["cross" "malformed" "missing"]
+           (get-in first-request [:memory-snapshot :accessible-memory-ids])))
+    (is (= :same-problem (:shelf/holdout first-request)))
+    (is (= ["same"] (:shelf/withheld-ids first-request)))
+    (is (= 1 (:shelf/withheld-count first-request)))
+    (doseq [ordinal [2 3]
+            :let [request (:request (build ordinal))]]
+      (is (= ["cross" "malformed" "missing" "same"]
+             (get-in request [:memory-snapshot :accessible-memory-ids])))
+      (is (not (contains? request :shelf/holdout)))
+      (is (not (contains? request :shelf/withheld-ids)))
+      (is (not (contains? request :shelf/withheld-count))))))
+
+(deftest attempt-one-records-an-empty-same-problem-holdout
+  (let [promotion {:receipt/id "promotion-receipt"
+                   :receipt/snapshot-id "snapshot-1"
+                   :receipt/snapshot-digest "snapshot-digest"}
+        result (sut/build-request
+                (merge base
+                       {:receipts {:preflight preflight-receipt
+                                   :promote-solver promotion}
+                        :snapshot-access
+                        {:ok true
+                         :snapshot {:snapshot/digest "snapshot-digest"
+                                    :snapshot/memories
+                                    [{:memory-id "cross"
+                                      :provenance {:problem-id "a98J02"}}]}
+                         :accessible-memory-ids #{"cross"}}
+                        :action {:kind :student-attempt
+                                 :phase :student-attempt-1 :role :student
+                                 :frame-id "f19" :problem-id "a01J05"}
+                        :seat {:agent-id "f19-student" :invoke-ready? true}}))
+        request (:request result)]
+    (is (:ok result))
+    (is (= :same-problem (:shelf/holdout request)))
+    (is (= [] (:shelf/withheld-ids request)))
+    (is (= 0 (:shelf/withheld-count request)))))
 
 (deftest student-cannot-use-global-store-memory-outside-controller-evidence
   (let [request {:dispatch/type :student-attempt
