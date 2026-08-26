@@ -6,6 +6,7 @@
   and reads both back before a review request can be constructed."
   (:require [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as estore]
@@ -22,7 +23,13 @@
 (defn canonical-candidate
   "Derive controller-owned identity and digest for one described candidate."
   [deposit-request depositor ordinal candidate]
-  (let [body (evidence-body candidate)
+  (let [reported-kind (:kind candidate)
+        kind (if (pipeline/proof-text?
+                  candidate (:solver-certified-source deposit-request))
+               :proof-text
+               :memory)
+        candidate (assoc candidate :reported-kind reported-kind :kind kind)
+        body (evidence-body candidate)
         digest (machine/ledger-digest [body])
         identity-digest
         (machine/ledger-digest
@@ -41,7 +48,6 @@
     (not (nonblank? (:name candidate))) (conj :candidate-name-missing)
     (not (nonblank? (:hook candidate))) (conj :candidate-hook-missing)
     (not (nonblank? (:body candidate))) (conj :candidate-body-missing)
-    (not (keyword? (:kind candidate))) (conj :candidate-kind-missing)
     (not (and (vector? (:pattern-ids candidate))
               (seq (:pattern-ids candidate))
               (every? nonblank? (:pattern-ids candidate))))

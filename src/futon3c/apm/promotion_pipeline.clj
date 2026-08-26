@@ -27,15 +27,13 @@
     (let [at (.indexOf ^String s ^String needle from)]
       (if (neg? at) n (recur (+ at (count needle)) (inc n))))))
 
-(defn mechanical-candidate-findings
-  "Cheap deterministic guards before independent LLM review. Provenance may
-  name the problem; reusable hook/body text may not."
-  [candidate {:keys [problem-id solver-certified-source]}]
-  (let [hook (str (or (:hook candidate) ""))
-        body (str (or (:body candidate) ""))
-        text (str hook "\n" body)
-        pid (some-> problem-id str/lower-case)
-        lower (str/lower-case text)
+(defn proof-text?
+  "Classify proof text from controller-observed content, never from an agent's
+  :kind assertion.  The certified source is optional; when present, copying a
+  whole declaration from it is proof text in addition to the byte/block
+  limits."
+  [candidate solver-certified-source]
+  (let [body (str (or (:body candidate) ""))
         declaration-names
         (when (string? solver-certified-source)
           (set (map second
@@ -47,11 +45,24 @@
                               (java.util.regex.Pattern/quote %) "\\b"))
                         body)
               declaration-names)]
+    (boolean
+     (or (> (occurrence-count body ":= by") 3)
+         (> (alength (.getBytes body java.nio.charset.StandardCharsets/UTF_8))
+            4096)
+         copies-declaration?))))
+
+(defn mechanical-candidate-findings
+  "Cheap deterministic guards before independent LLM review. Provenance may
+  name the problem; reusable hook/body text may not."
+  [candidate {:keys [problem-id solver-certified-source]}]
+  (let [hook (str (or (:hook candidate) ""))
+        body (str (or (:body candidate) ""))
+        text (str hook "\n" body)
+        pid (some-> problem-id str/lower-case)
+        lower (str/lower-case text)
+        proof-text? (proof-text? candidate solver-certified-source)]
     (cond-> []
-      (or (> (occurrence-count body ":= by") 3)
-          (> (alength (.getBytes body java.nio.charset.StandardCharsets/UTF_8))
-             4096)
-          copies-declaration?)
+      proof-text?
       (conj :proof-text-not-memory)
       (or (and pid (not (str/blank? pid)) (str/includes? lower pid))
           (and pid (str/includes? lower (str "apm_" pid "_")))

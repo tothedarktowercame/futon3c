@@ -19,7 +19,7 @@
                  :job-id "scribe-job"}
         result
         (sut/persist!
-         {:depositor "scribe" :candidates [candidate] :lanes []}
+         {:depositor "scribe" :candidates [(dissoc candidate :kind)] :lanes []}
          request
          {:fetch-entry #(get @entries %)
           :append-entry (fn [entry]
@@ -37,6 +37,8 @@
     (is (.startsWith (:memory-id persisted) "e-apm-promotion-"))
     (is (not= "llm-invented-id" (:memory-id persisted)))
     (is (= "llm-invented-id" (:reported-memory-id persisted)))
+    (is (= :memory (:kind persisted)))
+    (is (nil? (:reported-kind persisted)))
     (is (= (machine/ledger-digest [(:evidence/body entry)])
            (:content-digest persisted)))
     (is (sut/visible? persisted #(get @entries %)
@@ -58,6 +60,24 @@
     (is (some #{:candidate-body-missing}
               (mapcat :findings (:findings result))))
     (is (zero? @writes))))
+
+(deftest controller-derives-kind-and-retains-agent-claim
+  (let [ordinary (sut/canonical-candidate
+                  {:dispatch/id "dispatch"} "scribe" 1
+                  (dissoc candidate :kind))
+        misleading (sut/canonical-candidate
+                    {:dispatch/id "dispatch"} "scribe" 2
+                    (assoc candidate :kind :proof-text))
+        proof-text (sut/canonical-candidate
+                    {:dispatch/id "dispatch"} "scribe" 3
+                    (assoc candidate :kind :fact
+                           :body (apply str (repeat 4 "lemma x : True := by\n"))))]
+    (is (= :memory (:kind ordinary)))
+    (is (nil? (:reported-kind ordinary)))
+    (is (= :memory (:kind misleading)))
+    (is (= :proof-text (:reported-kind misleading)))
+    (is (= :proof-text (:kind proof-text)))
+    (is (= :fact (:reported-kind proof-text)))))
 
 (deftest independently-reassigned-candidate-remains-visible-on-replay
   (let [memory-id "e-memory"
