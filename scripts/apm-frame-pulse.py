@@ -183,14 +183,26 @@ def main():
                     try:
                         n = sum(1 for _ in open(mainlean, encoding="utf-8",
                                                 errors="replace"))
-                        base = subprocess.run(
-                            ["git", "show",
-                             f"HEAD~{min(5, max(1, len(heads)-1))}:problems/"
-                             f"{pid.group(1)}/lean/Main.lean"],
-                            cwd=wt, capture_output=True, text=True, timeout=15)
-                        prev = len(base.stdout.splitlines()) if base.returncode == 0 else None
+                        # Only compare when the frame HAS earlier rounds. With
+                        # no rounds the worktree still sits at the opening
+                        # commit, so HEAD~1 is an unrelated apm-lean library
+                        # commit and the diff is library history reported as
+                        # solver progress -- f43 opened showing "264 lines (was
+                        # 232 a few rounds back)" with 0 rounds run. Reading
+                        # apm-lean for progress is what made this check misread
+                        # f36; the same mistake survived here in the baseline.
+                        prev = k = None
+                        if len(heads) >= 2:
+                            k = min(5, len(heads) - 1)
+                            base = subprocess.run(
+                                ["git", "show",
+                                 f"HEAD~{k}:problems/"
+                                 f"{pid.group(1)}/lean/Main.lean"],
+                                cwd=wt, capture_output=True, text=True, timeout=15)
+                            prev = (len(base.stdout.splitlines())
+                                    if base.returncode == 0 else None)
                         grow = (f"; worktree Main.lean {n} lines"
-                                + (f" (was {prev} a few rounds back)" if prev else ""))
+                                + (f" (was {prev}, {k} rounds back)" if prev else ""))
                     except Exception:
                         pass
             print(f"  solve:    round {rounds[-1]}, {rem[-1] if rem else '?'} left; "
