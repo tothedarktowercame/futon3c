@@ -95,3 +95,11 @@ namespaces reloaded from master, `memory-cascade-arm.edn`
 (expected f44), prereg amendment 7 with predictions P-a/P-b/P-c and the
 falsifier. Reversal: delete the arm file before the mint. Next: read f44's
 first student receipt for `:receipt/memory-cascade`.
+
+*Note, 2026-08-26 (from claude-13's reading of the report):* the sibling route
+changes what the expander claims to do — from *reach new patterns* to
+*exhaust the patterns you already hold*. That is a different claim about
+what a cascade is for, and the arm's receipts should be read as testing that
+claim, not the original descent-from-high-level-patterns one. Of amendment
+7's predictions, only P-c can fail in a way that matters: P-a ("built") and
+P-b ("truncated") both pass under a cascade that helps nobody.

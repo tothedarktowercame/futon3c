@@ -622,6 +622,18 @@ component has 342 nodes across 21 patterns (λ₂ ≈ 0.024), populated by the
 campaign. V2's structural instrument, which reads memory↔pattern edges,
 cannot see the pattern language's own edges at all.
 
+One error recurred three times in a single day and belongs here as a
+silence instance of its own: **a null result stated about a stack that was
+measured over one directory.** "Zero cascade artifacts in the entire
+campaign" was true of `data/apm-campaigns/` and false of
+`data/problem-state/`, where the round-1 conductor had written routed
+offers for four frames; independently, the War Machine's "zero realized
+outcomes across 62 attempts" was measured in the archive of a runner that
+does not enact, while the enacting runner had written 88 outcomes to
+`data/wm-trace/`; and the note recording the second error's correction had
+checked the same wrong archive (claude-13, same day). The fix is not more
+care; it is that a null result names the corpus it is a null result *about*.
+
 [n: one frame judged (f42), four round-1 frames reconstructed, 12 frames
 scored for ordering, one store change measured before/after. The ordering
 result is offline over archived attempts, not a controlled comparison; f43
