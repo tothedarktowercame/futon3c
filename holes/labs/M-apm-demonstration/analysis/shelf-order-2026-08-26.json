@@ -1,0 +1,1875 @@
+{
+  "campaign": "jit-all-open-nontopology-v1",
+  "frames_expected_by_handoff": 13,
+  "frames_found": [
+    "f28",
+    "f29",
+    "f30",
+    "f32",
+    "f33",
+    "f34",
+    "f35",
+    "f37",
+    "f39",
+    "f40",
+    "f41",
+    "f42"
+  ],
+  "frame_count": 12,
+  "method": {
+    "same_problem": "provenance problem equals frame problem; descending boolean",
+    "identifier_overlap": "distinct LEAN_TOKEN matches shared by memory name+hook+body and base problem file; descending count",
+    "combined": "same_problem, then identifier_overlap, then memory-id",
+    "tie_break": "memory-id"
+  },
+  "rows": [
+    {
+      "frame": "f28",
+      "attempt": 3,
+      "problem": "a01A12",
+      "memory_id": "e-0d0d3806-f07b-406e-85bd-0d9702fbad8d",
+      "memory_short": "e-0d0d3806-f07b-40",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 0,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 23,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f28",
+      "attempt": 3,
+      "problem": "a01A12",
+      "memory_id": "e-98785d73-580b-4b5f-913b-9e9d6da97641",
+      "memory_short": "e-98785d73-580b-4b",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 0,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 26,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f28",
+      "attempt": 3,
+      "problem": "a01A12",
+      "memory_id": "e-bc26b67e-cda0-4996-a37f-34c28a65ad76",
+      "memory_short": "e-bc26b67e-cda0-49",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 0,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 23,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 1,
+      "problem": "a01J05",
+      "memory_id": "e-1866fc8e-aa5a-426c-aa30-d8d57c224238",
+      "memory_short": "e-1866fc8e-aa5a-42",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 1,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "problem": "a01J05",
+      "memory_id": "e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd",
+      "memory_short": "e-81a44d2c-5f32-45",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 2,
+        "same_problem": 2,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "problem": "a01J05",
+      "memory_id": "e-93b083ba-2a5c-4492-8120-9d48ab25a2de",
+      "memory_short": "e-93b083ba-2a5c-44",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 29,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "problem": "a01J05",
+      "memory_id": "e-1866fc8e-aa5a-426c-aa30-d8d57c224238",
+      "memory_short": "e-1866fc8e-aa5a-42",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 1,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "problem": "a01J05",
+      "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+      "memory_short": "e-f72e5ece-2a26-48",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 28,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "problem": "a01J05",
+      "memory_id": "e-d2563094-59b1-45c1-902a-c28b5ad3ada3",
+      "memory_short": "e-d2563094-59b1-45",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 26,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-83ece32c-9e01-42aa-86d8-0a5a6e6265f5",
+      "memory_short": "e-83ece32c-9e01-42",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 62,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-021bf80a-b18a-4f0b-9dc5-e158108521cf",
+      "memory_short": "e-021bf80a-b18a-4f",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 48,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-c86a7d45-02e7-494b-b929-d8eddeef074f",
+      "memory_short": "e-c86a7d45-02e7-49",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 55,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-f6b4c56b-67f9-4cef-b094-1de22bad9588",
+      "memory_short": "e-f6b4c56b-67f9-4c",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 74,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+      "memory_short": "e-f72e5ece-2a26-48",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 28,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "problem": "a01J05",
+      "memory_id": "e-d2563094-59b1-45c1-902a-c28b5ad3ada3",
+      "memory_short": "e-d2563094-59b1-45",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 26,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 1,
+      "problem": "a01J06",
+      "memory_id": "e-6b355807-f9b3-4f2d-83e3-d63452f6de7c",
+      "memory_short": "e-6b355807-f9b3-4f",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 3,
+        "same_problem": 3,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 1,
+      "problem": "a01J06",
+      "memory_id": "e-8a40d240-9423-4d98-8ebf-8edaa8f5275f",
+      "memory_short": "e-8a40d240-9423-4d",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 43,
+      "snapshot_entry_present": false
+    },
+    {
+      "frame": "f30",
+      "attempt": 2,
+      "problem": "a01J06",
+      "memory_id": "e-f0db6e27-c64d-4576-bc23-22bd42a97481",
+      "memory_short": "e-f0db6e27-c64d-45",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 96,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 2,
+      "problem": "a01J06",
+      "memory_id": "e-6b355807-f9b3-4f2d-83e3-d63452f6de7c",
+      "memory_short": "e-6b355807-f9b3-4f",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 3,
+        "same_problem": 3,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 2,
+      "problem": "a01J06",
+      "memory_id": "e-14100165-5b69-4898-ae80-f3cd44ddaed5",
+      "memory_short": "e-14100165-5b69-48",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 1,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 3,
+      "problem": "a01J06",
+      "memory_id": "e-14100165-5b69-4898-ae80-f3cd44ddaed5",
+      "memory_short": "e-14100165-5b69-48",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 1,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 3,
+      "problem": "a01J06",
+      "memory_id": "e-20851bde-ba9a-4883-8b4e-0c2f0f741fe9",
+      "memory_short": "e-20851bde-ba9a-48",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 20,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 3,
+      "problem": "a01J06",
+      "memory_id": "e-6aea0c17-eb1f-4c2c-978c-ee6f7b725688",
+      "memory_short": "e-6aea0c17-eb1f-4c",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 2,
+        "same_problem": 2,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f30",
+      "attempt": 3,
+      "problem": "a01J06",
+      "memory_id": "e-6b355807-f9b3-4f2d-83e3-d63452f6de7c",
+      "memory_short": "e-6b355807-f9b3-4f",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "snapshot-fallback",
+      "shelf_size": 3,
+      "positions": {
+        "delivered": 3,
+        "same_problem": 3,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f32",
+      "attempt": 2,
+      "problem": "a92J01",
+      "memory_id": "e-fddf046d-3a4d-49fd-8403-f877d46ac12c",
+      "memory_short": "e-fddf046d-3a4d-49",
+      "provenance_problem": "a92J01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 21,
+      "positions": {
+        "delivered": 21,
+        "same_problem": 2,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 28,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f32",
+      "attempt": 2,
+      "problem": "a92J01",
+      "memory_id": "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+      "memory_short": "e-bad2ad5e-b5ed-4a",
+      "provenance_problem": "a92J01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 21,
+      "positions": {
+        "delivered": 14,
+        "same_problem": 1,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f32",
+      "attempt": 3,
+      "problem": "a92J01",
+      "memory_id": "e-fddf046d-3a4d-49fd-8403-f877d46ac12c",
+      "memory_short": "e-fddf046d-3a4d-49",
+      "provenance_problem": "a92J01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 22,
+      "positions": {
+        "delivered": 22,
+        "same_problem": 3,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 28,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f32",
+      "attempt": 3,
+      "problem": "a92J01",
+      "memory_id": "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+      "memory_short": "e-bad2ad5e-b5ed-4a",
+      "provenance_problem": "a92J01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 22,
+      "positions": {
+        "delivered": 14,
+        "same_problem": 1,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f32",
+      "attempt": 3,
+      "problem": "a92J01",
+      "memory_id": "e-e9f9c621-1686-4a86-a416-e258186384c4",
+      "memory_short": "e-e9f9c621-1686-4a",
+      "provenance_problem": "a92J01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 22,
+      "positions": {
+        "delivered": 18,
+        "same_problem": 2,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 10,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f33",
+      "attempt": 1,
+      "problem": "a94A07",
+      "memory_id": "e-codexpilot-force-a-sublinear-entire-function-constant-by-Cauchy-derivative-estimates",
+      "memory_short": "e-codexpilot-force",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 22,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 13,
+      "snapshot_entry_present": false
+    },
+    {
+      "frame": "f33",
+      "attempt": 2,
+      "problem": "a94A07",
+      "memory_id": "e-cfb5c7dc-6e74-4297-bc09-a0a1e669cc2b",
+      "memory_short": "e-cfb5c7dc-6e74-42",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 22,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 20,
+      "snapshot_entry_present": false
+    },
+    {
+      "frame": "f33",
+      "attempt": 3,
+      "problem": "a94A07",
+      "memory_id": "e-cfb5c7dc-6e74-4297-bc09-a0a1e669cc2b",
+      "memory_short": "e-cfb5c7dc-6e74-42",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 23,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 20,
+      "snapshot_entry_present": false
+    },
+    {
+      "frame": "f33",
+      "attempt": 3,
+      "problem": "a94A07",
+      "memory_id": "e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b",
+      "memory_short": "e-3411c0c2-98cd-4d",
+      "provenance_problem": "a94A07",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 23,
+      "positions": {
+        "delivered": 6,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 9,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f34",
+      "attempt": 2,
+      "problem": "a95J03",
+      "memory_id": "e-07a2f8d1-8769-4682-9f7f-06183f2dc458",
+      "memory_short": "e-07a2f8d1-8769-46",
+      "provenance_problem": "a95J03",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 25,
+      "positions": {
+        "delivered": 2,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 31,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f34",
+      "attempt": 2,
+      "problem": "a95J03",
+      "memory_id": "e-10323bb7-c624-4bb6-89de-bb5d67503b01",
+      "memory_short": "e-10323bb7-c624-4b",
+      "provenance_problem": "a95J03",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 25,
+      "positions": {
+        "delivered": 4,
+        "same_problem": 2,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 19,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "problem": "a96A08",
+      "memory_id": "e-01c38dee-a698-41e3-af98-d6700d3dd55c",
+      "memory_short": "e-01c38dee-a698-41",
+      "provenance_problem": "a96A08",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 26,
+      "positions": {
+        "delivered": 1,
+        "same_problem": 1,
+        "identifier_overlap": 3,
+        "combined": 2
+      },
+      "identifier_overlap_score": 8,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "problem": "a96A08",
+      "memory_id": "e-0d5fcb3e-7d75-4fa6-9b70-1f35688e0348",
+      "memory_short": "e-0d5fcb3e-7d75-4f",
+      "provenance_problem": "a96A08",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 26,
+      "positions": {
+        "delivered": 4,
+        "same_problem": 2,
+        "identifier_overlap": 12,
+        "combined": 5
+      },
+      "identifier_overlap_score": 1,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "problem": "a96A08",
+      "memory_id": "e-73ac922d-5d8d-42cd-a4df-25429440f39b",
+      "memory_short": "e-73ac922d-5d8d-42",
+      "provenance_problem": "a96A08",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 26,
+      "positions": {
+        "delivered": 13,
+        "same_problem": 3,
+        "identifier_overlap": 6,
+        "combined": 3
+      },
+      "identifier_overlap_score": 4,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "problem": "a96A08",
+      "memory_id": "e-a581383e-9229-4488-81ad-54bbed6d73a4",
+      "memory_short": "e-a581383e-9229-44",
+      "provenance_problem": "a96A08",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 26,
+      "positions": {
+        "delivered": 17,
+        "same_problem": 4,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 10,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "problem": "a96A08",
+      "memory_id": "e-apm-promotion-46aef25114ea3e89d3489bdafc530f52",
+      "memory_short": "e-apm-promotion-46",
+      "provenance_problem": "a96A08",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 26,
+      "positions": {
+        "delivered": 19,
+        "same_problem": 5,
+        "identifier_overlap": 7,
+        "combined": 4
+      },
+      "identifier_overlap_score": 4,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f39",
+      "attempt": 2,
+      "problem": "a97A01",
+      "memory_id": "e-63b7c7c1-1906-412c-ae18-b4644762fbea",
+      "memory_short": "e-63b7c7c1-1906-41",
+      "provenance_problem": "a96A08",
+      "cross_problem": true,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 27,
+      "positions": {
+        "delivered": 10,
+        "same_problem": 10,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 16,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f39",
+      "attempt": 3,
+      "problem": "a97A01",
+      "memory_id": "e-23a2940f-5fa6-444e-948c-74e6e201eb31",
+      "memory_short": "e-23a2940f-5fa6-44",
+      "provenance_problem": "a97A01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 29,
+      "positions": {
+        "delivered": 8,
+        "same_problem": 1,
+        "identifier_overlap": 2,
+        "combined": 1
+      },
+      "identifier_overlap_score": 20,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f39",
+      "attempt": 3,
+      "problem": "a97A01",
+      "memory_id": "e-6556333d-b0d0-4e5a-802b-15b7d452553a",
+      "memory_short": "e-6556333d-b0d0-4e",
+      "provenance_problem": "a97A01",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 29,
+      "positions": {
+        "delivered": 12,
+        "same_problem": 2,
+        "identifier_overlap": 8,
+        "combined": 2
+      },
+      "identifier_overlap_score": 14,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f39",
+      "attempt": 3,
+      "problem": "a97A01",
+      "memory_id": "e-1ac936fb-04e8-460e-a710-37fac474401c",
+      "memory_short": "e-1ac936fb-04e8-46",
+      "provenance_problem": null,
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 29,
+      "positions": {
+        "delivered": "not-on-shelf",
+        "same_problem": "not-on-shelf",
+        "identifier_overlap": "not-on-shelf",
+        "combined": "not-on-shelf"
+      },
+      "identifier_overlap_score": 12,
+      "snapshot_entry_present": false
+    },
+    {
+      "frame": "f40",
+      "attempt": 1,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-3af138feb70f01657c9c0cba92011270",
+      "memory_short": "e-apm-promotion-3a",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 31,
+      "positions": {
+        "delivered": 19,
+        "same_problem": 1,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 1,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+      "memory_short": "e-apm-promotion-e1",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 31,
+      "positions": {
+        "delivered": 24,
+        "same_problem": 4,
+        "identifier_overlap": 5,
+        "combined": 3
+      },
+      "identifier_overlap_score": 16,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 1,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-c24492ee0155aef8123c2e6705f28e74",
+      "memory_short": "e-apm-promotion-c2",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 31,
+      "positions": {
+        "delivered": 23,
+        "same_problem": 3,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 23,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 1,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-54982951b1a5eba611abe0b13aa96d98",
+      "memory_short": "e-apm-promotion-54",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 31,
+      "positions": {
+        "delivered": 21,
+        "same_problem": 2,
+        "identifier_overlap": 10,
+        "combined": 4
+      },
+      "identifier_overlap_score": 13,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 2,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-3af138feb70f01657c9c0cba92011270",
+      "memory_short": "e-apm-promotion-3a",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 33,
+      "positions": {
+        "delivered": 20,
+        "same_problem": 2,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 2,
+      "problem": "a97J05",
+      "memory_id": "e-dda90056-d36e-4ae4-be4b-7f34e6754620",
+      "memory_short": "e-dda90056-d36e-4a",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 33,
+      "positions": {
+        "delivered": 30,
+        "same_problem": 6,
+        "identifier_overlap": 4,
+        "combined": 4
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 2,
+      "problem": "a97J05",
+      "memory_id": "e-4984bc4c-38ba-4112-ace1-e382b8c91fd9",
+      "memory_short": "e-4984bc4c-38ba-41",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 33,
+      "positions": {
+        "delivered": 10,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 23,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 2,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+      "memory_short": "e-apm-promotion-e1",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 33,
+      "positions": {
+        "delivered": 25,
+        "same_problem": 5,
+        "identifier_overlap": 7,
+        "combined": 5
+      },
+      "identifier_overlap_score": 16,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-4984bc4c-38ba-4112-ace1-e382b8c91fd9",
+      "memory_short": "e-4984bc4c-38ba-41",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 11,
+        "same_problem": 2,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 23,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-dda90056-d36e-4ae4-be4b-7f34e6754620",
+      "memory_short": "e-dda90056-d36e-4a",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 31,
+        "same_problem": 7,
+        "identifier_overlap": 5,
+        "combined": 5
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-0a6c4c9c-49c9-4beb-8221-7322afdd325b",
+      "memory_short": "e-0a6c4c9c-49c9-4b",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 3,
+        "same_problem": 1,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-3af138feb70f01657c9c0cba92011270",
+      "memory_short": "e-apm-promotion-3a",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 21,
+        "same_problem": 3,
+        "identifier_overlap": 4,
+        "combined": 4
+      },
+      "identifier_overlap_score": 22,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d",
+      "memory_short": "e-apm-promotion-e1",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 26,
+        "same_problem": 6,
+        "identifier_overlap": 8,
+        "combined": 6
+      },
+      "identifier_overlap_score": 16,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-apm-promotion-54982951b1a5eba611abe0b13aa96d98",
+      "memory_short": "e-apm-promotion-54",
+      "provenance_problem": "a97J05",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 23,
+        "same_problem": 4,
+        "identifier_overlap": 13,
+        "combined": 7
+      },
+      "identifier_overlap_score": 13,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "problem": "a97J05",
+      "memory_id": "e-e9f9c621-1686-4a86-a416-e258186384c4",
+      "memory_short": "e-e9f9c621-1686-4a",
+      "provenance_problem": "a96A08",
+      "cross_problem": true,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 34,
+      "positions": {
+        "delivered": 32,
+        "same_problem": 32,
+        "identifier_overlap": 18,
+        "combined": 18
+      },
+      "identifier_overlap_score": 6,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 1,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-2dadcff353d6fe5b9a82f21b3168fb82",
+      "memory_short": "e-apm-promotion-2d",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 39,
+      "positions": {
+        "delivered": 21,
+        "same_problem": 1,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 29,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 1,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-88c95fc6db5846b0a2c56f7c0ab3ce5b",
+      "memory_short": "e-apm-promotion-88",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 39,
+      "positions": {
+        "delivered": 25,
+        "same_problem": 2,
+        "identifier_overlap": 14,
+        "combined": 3
+      },
+      "identifier_overlap_score": 14,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 1,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-f0a4bf984c7f7da61ecd05540a6d9fdc",
+      "memory_short": "e-apm-promotion-f0",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 39,
+      "positions": {
+        "delivered": 31,
+        "same_problem": 3,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 25,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 1,
+      "problem": "a97J06",
+      "memory_id": "e-73ac922d-5d8d-42cd-a4df-25429440f39b",
+      "memory_short": "e-73ac922d-5d8d-42",
+      "provenance_problem": "a97J05",
+      "cross_problem": true,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 39,
+      "positions": {
+        "delivered": 15,
+        "same_problem": 18,
+        "identifier_overlap": 8,
+        "combined": 9
+      },
+      "identifier_overlap_score": 18,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-2dadcff353d6fe5b9a82f21b3168fb82",
+      "memory_short": "e-apm-promotion-2d",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 41,
+      "positions": {
+        "delivered": 22,
+        "same_problem": 2,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 29,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-88c95fc6db5846b0a2c56f7c0ab3ce5b",
+      "memory_short": "e-apm-promotion-88",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 41,
+      "positions": {
+        "delivered": 26,
+        "same_problem": 3,
+        "identifier_overlap": 16,
+        "combined": 5
+      },
+      "identifier_overlap_score": 14,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-f0a4bf984c7f7da61ecd05540a6d9fdc",
+      "memory_short": "e-apm-promotion-f0",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 41,
+      "positions": {
+        "delivered": 32,
+        "same_problem": 4,
+        "identifier_overlap": 4,
+        "combined": 4
+      },
+      "identifier_overlap_score": 25,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "problem": "a97J06",
+      "memory_id": "e-082d154e-a52a-4697-92a7-61880d47f07c",
+      "memory_short": "e-082d154e-a52a-46",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 41,
+      "positions": {
+        "delivered": 3,
+        "same_problem": 1,
+        "identifier_overlap": 2,
+        "combined": 2
+      },
+      "identifier_overlap_score": 28,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "problem": "a97J06",
+      "memory_id": "e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e",
+      "memory_short": "e-bd971ae9-6833-4e",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 41,
+      "positions": {
+        "delivered": 36,
+        "same_problem": 5,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 26,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 3,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-2dadcff353d6fe5b9a82f21b3168fb82",
+      "memory_short": "e-apm-promotion-2d",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 42,
+      "positions": {
+        "delivered": 23,
+        "same_problem": 3,
+        "identifier_overlap": 1,
+        "combined": 1
+      },
+      "identifier_overlap_score": 29,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 3,
+      "problem": "a97J06",
+      "memory_id": "e-apm-promotion-f0a4bf984c7f7da61ecd05540a6d9fdc",
+      "memory_short": "e-apm-promotion-f0",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 42,
+      "positions": {
+        "delivered": 33,
+        "same_problem": 5,
+        "identifier_overlap": 4,
+        "combined": 4
+      },
+      "identifier_overlap_score": 25,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 3,
+      "problem": "a97J06",
+      "memory_id": "e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e",
+      "memory_short": "e-bd971ae9-6833-4e",
+      "provenance_problem": "a97J06",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 42,
+      "positions": {
+        "delivered": 37,
+        "same_problem": 6,
+        "identifier_overlap": 3,
+        "combined": 3
+      },
+      "identifier_overlap_score": 26,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f41",
+      "attempt": 3,
+      "problem": "a97J06",
+      "memory_id": "e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b",
+      "memory_short": "e-3411c0c2-98cd-4d",
+      "provenance_problem": "a97J05",
+      "cross_problem": true,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 42,
+      "positions": {
+        "delivered": 12,
+        "same_problem": 16,
+        "identifier_overlap": 15,
+        "combined": 16
+      },
+      "identifier_overlap_score": 14,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f42",
+      "attempt": 1,
+      "problem": "a97J07",
+      "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+      "memory_short": "e-f72e5ece-2a26-48",
+      "provenance_problem": "a97J06",
+      "cross_problem": true,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 48,
+      "positions": {
+        "delivered": 47,
+        "same_problem": 47,
+        "identifier_overlap": 48,
+        "combined": 48
+      },
+      "identifier_overlap_score": 0,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f42",
+      "attempt": 3,
+      "problem": "a97J07",
+      "memory_id": "e-apm-promotion-5a33ac6fb6ab7313dde700951134fa83",
+      "memory_short": "e-apm-promotion-5a",
+      "provenance_problem": "a97J07",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 50,
+      "positions": {
+        "delivered": 29,
+        "same_problem": 1,
+        "identifier_overlap": 6,
+        "combined": 2
+      },
+      "identifier_overlap_score": 5,
+      "snapshot_entry_present": true
+    },
+    {
+      "frame": "f42",
+      "attempt": 3,
+      "problem": "a97J07",
+      "memory_id": "e-apm-promotion-f240c45c48e864d2f9bf23317503bf6b",
+      "memory_short": "e-apm-promotion-f2",
+      "provenance_problem": "a97J07",
+      "cross_problem": false,
+      "shelf_source": "accessible-memory-ids",
+      "shelf_size": 50,
+      "positions": {
+        "delivered": 41,
+        "same_problem": 4,
+        "identifier_overlap": 8,
+        "combined": 4
+      },
+      "identifier_overlap_score": 5,
+      "snapshot_entry_present": true
+    }
+  ],
+  "summary": {
+    "all": {
+      "rows": 75,
+      "not_on_shelf": 19,
+      "orderings": {
+        "delivered": {
+          "count": 56,
+          "median": 18.5,
+          "mean": 17.035714285714285,
+          "top_5": 15,
+          "top_10": 19
+        },
+        "same_problem": {
+          "count": 56,
+          "median": 2.5,
+          "mean": 4.607142857142857,
+          "top_5": 47,
+          "top_10": 52
+        },
+        "identifier_overlap": {
+          "count": 56,
+          "median": 3.0,
+          "mean": 5.232142857142857,
+          "top_5": 40,
+          "top_10": 49
+        },
+        "combined": {
+          "count": 56,
+          "median": 3.0,
+          "mean": 4.035714285714286,
+          "top_5": 50,
+          "top_10": 53
+        }
+      }
+    },
+    "cross_problem": {
+      "rows": 5,
+      "not_on_shelf": 0,
+      "orderings": {
+        "delivered": {
+          "count": 5,
+          "median": 15,
+          "mean": 23.2,
+          "top_5": 0,
+          "top_10": 1
+        },
+        "same_problem": {
+          "count": 5,
+          "median": 18,
+          "mean": 24.6,
+          "top_5": 0,
+          "top_10": 1
+        },
+        "identifier_overlap": {
+          "count": 5,
+          "median": 15,
+          "mean": 18.4,
+          "top_5": 1,
+          "top_10": 2
+        },
+        "combined": {
+          "count": 5,
+          "median": 16,
+          "mean": 18.8,
+          "top_5": 1,
+          "top_10": 2
+        }
+      }
+    }
+  },
+  "comparison": {
+    "combined_beats_delivered_mean": true,
+    "combined_beats_delivered_median": true,
+    "f42_rows": [
+      {
+        "attempt": 1,
+        "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
+        "delivered": 47,
+        "identifier_overlap": 48
+      },
+      {
+        "attempt": 3,
+        "memory_id": "e-apm-promotion-5a33ac6fb6ab7313dde700951134fa83",
+        "delivered": 29,
+        "identifier_overlap": 6
+      },
+      {
+        "attempt": 3,
+        "memory_id": "e-apm-promotion-f240c45c48e864d2f9bf23317503bf6b",
+        "delivered": 41,
+        "identifier_overlap": 8
+      }
+    ]
+  },
+  "fallback_rows": [
+    {
+      "frame": "f28",
+      "attempt": 3
+    },
+    {
+      "frame": "f29",
+      "attempt": 1
+    },
+    {
+      "frame": "f29",
+      "attempt": 2
+    },
+    {
+      "frame": "f29",
+      "attempt": 3
+    },
+    {
+      "frame": "f30",
+      "attempt": 1
+    },
+    {
+      "frame": "f30",
+      "attempt": 2
+    },
+    {
+      "frame": "f30",
+      "attempt": 3
+    }
+  ],
+  "shelf_comparisons": [
+    {
+      "frame": "f28",
+      "attempt": 3,
+      "source": "snapshot-fallback",
+      "delivered_size": 0,
+      "solver_snapshot_size": 0,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f29",
+      "attempt": 1,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f29",
+      "attempt": 2,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f29",
+      "attempt": 3,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f30",
+      "attempt": 1,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f30",
+      "attempt": 2,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f30",
+      "attempt": 3,
+      "source": "snapshot-fallback",
+      "delivered_size": 3,
+      "solver_snapshot_size": 3,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f32",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 21,
+      "solver_snapshot_size": 19,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+        "e-fddf046d-3a4d-49fd-8403-f877d46ac12c"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f32",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 22,
+      "solver_snapshot_size": 19,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-bad2ad5e-b5ed-4a45-92c8-2c9a854d2100",
+        "e-e9f9c621-1686-4a86-a416-e258186384c4",
+        "e-fddf046d-3a4d-49fd-8403-f877d46ac12c"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f33",
+      "attempt": 1,
+      "source": "accessible-memory-ids",
+      "delivered_size": 22,
+      "solver_snapshot_size": 22,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f33",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 22,
+      "solver_snapshot_size": 22,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f33",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 23,
+      "solver_snapshot_size": 22,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-3411c0c2-98cd-4d4c-bb23-43cf73831a7b"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f34",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 25,
+      "solver_snapshot_size": 23,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-07a2f8d1-8769-4682-9f7f-06183f2dc458",
+        "e-10323bb7-c624-4bb6-89de-bb5d67503b01"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f37",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 26,
+      "solver_snapshot_size": 22,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-01c38dee-a698-41e3-af98-d6700d3dd55c",
+        "e-0d5fcb3e-7d75-4fa6-9b70-1f35688e0348",
+        "e-73ac922d-5d8d-42cd-a4df-25429440f39b",
+        "e-a581383e-9229-4488-81ad-54bbed6d73a4"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f39",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 27,
+      "solver_snapshot_size": 27,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f39",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 29,
+      "solver_snapshot_size": 27,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-23a2940f-5fa6-444e-948c-74e6e201eb31",
+        "e-6556333d-b0d0-4e5a-802b-15b7d452553a"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f40",
+      "attempt": 1,
+      "source": "accessible-memory-ids",
+      "delivered_size": 31,
+      "solver_snapshot_size": 31,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f40",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 33,
+      "solver_snapshot_size": 31,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-4984bc4c-38ba-4112-ace1-e382b8c91fd9",
+        "e-dda90056-d36e-4ae4-be4b-7f34e6754620"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f40",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 34,
+      "solver_snapshot_size": 31,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-0a6c4c9c-49c9-4beb-8221-7322afdd325b",
+        "e-4984bc4c-38ba-4112-ace1-e382b8c91fd9",
+        "e-dda90056-d36e-4ae4-be4b-7f34e6754620"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f41",
+      "attempt": 1,
+      "source": "accessible-memory-ids",
+      "delivered_size": 39,
+      "solver_snapshot_size": 39,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f41",
+      "attempt": 2,
+      "source": "accessible-memory-ids",
+      "delivered_size": 41,
+      "solver_snapshot_size": 39,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-082d154e-a52a-4697-92a7-61880d47f07c",
+        "e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f41",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 42,
+      "solver_snapshot_size": 39,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-082d154e-a52a-4697-92a7-61880d47f07c",
+        "e-1aa18a67-adf3-4262-8070-e44dc1744e3f",
+        "e-bd971ae9-6833-4e83-99a4-c0a2e0abe47e"
+      ],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f42",
+      "attempt": 1,
+      "source": "accessible-memory-ids",
+      "delivered_size": 48,
+      "solver_snapshot_size": 48,
+      "matches_solver_snapshot": true,
+      "added_vs_solver": [],
+      "missing_vs_solver": []
+    },
+    {
+      "frame": "f42",
+      "attempt": 3,
+      "source": "accessible-memory-ids",
+      "delivered_size": 50,
+      "solver_snapshot_size": 48,
+      "matches_solver_snapshot": false,
+      "added_vs_solver": [
+        "e-apm-promotion-88a35ca007789060cb3cc16140b928f6",
+        "e-apm-promotion-a1507c8cbce93ceaff909ffa055c725e"
+      ],
+      "missing_vs_solver": []
+    }
+  ],
+  "accessible_differs_from_solver_snapshot_count": 11,
+  "missing_snapshot_entry_ids": [
+    "e-021bf80a-b18a-4f0b-9dc5-e158108521cf",
+    "e-0d0d3806-f07b-406e-85bd-0d9702fbad8d",
+    "e-1ac936fb-04e8-460e-a710-37fac474401c",
+    "e-20851bde-ba9a-4883-8b4e-0c2f0f741fe9",
+    "e-83ece32c-9e01-42aa-86d8-0a5a6e6265f5",
+    "e-8a40d240-9423-4d98-8ebf-8edaa8f5275f",
+    "e-93b083ba-2a5c-4492-8120-9d48ab25a2de",
+    "e-98785d73-580b-4b5f-913b-9e9d6da97641",
+    "e-bc26b67e-cda0-4996-a37f-34c28a65ad76",
+    "e-c86a7d45-02e7-494b-b929-d8eddeef074f",
+    "e-cfb5c7dc-6e74-4297-bc09-a0a1e669cc2b",
+    "e-codexpilot-force-a-sublinear-entire-function-constant-by-Cauchy-derivative-estimates",
+    "e-d2563094-59b1-45c1-902a-c28b5ad3ada3",
+    "e-f0db6e27-c64d-4576-bc23-22bd42a97481",
+    "e-f6b4c56b-67f9-4cef-b094-1de22bad9588",
+    "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69"
+  ],
+  "wall_clock_seconds": 1.7990107059013098
+}
