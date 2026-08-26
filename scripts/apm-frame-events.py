@@ -16,7 +16,37 @@ import os, re, glob, time, sys
 CAMP = os.environ.get(
     "APM_CAMPAIGN",
     "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-nontopology-v1")
-BABYLOG = os.environ.get("APM_BABYSIT_LOG", "")
+BABYLOG = os.environ.get("APM_BABYSIT_LOG", "auto")
+# "auto" (the default) tracks whichever babysitter log is newest, and keeps
+# tracking it across babysitter restarts. An explicit path is pinned.
+BABYLOG_AUTO = BABYLOG == "auto"
+
+
+def resolve_babylog(current):
+    """Newest babysitter log under /tmp/futon3c-bg.
+
+    The babysitter gets relaunched (new bg id, new log path) whenever it is
+    fixed or restarted, which used to leave this watcher tailing a dead file
+    and reporting nothing -- silence that looks exactly like a quiet queue.
+    Re-resolving by mtime means a babysitter restart no longer requires
+    restarting the Monitor too.
+    """
+    try:
+        cands = [f"/tmp/futon3c-bg/{n}" for n in os.listdir("/tmp/futon3c-bg")
+                 if n.endswith(".log")]
+    except OSError:
+        return current
+    best, best_mt = current, -1.0
+    for c in cands:
+        try:
+            if os.path.getsize(c) and os.path.getmtime(c) > best_mt:
+                with open(c, encoding="utf-8", errors="replace") as f:
+                    if not f.read(4096).lstrip().startswith("BABYSIT"):
+                        continue
+                best, best_mt = c, os.path.getmtime(c)
+        except OSError:
+            continue
+    return best
 REVIEW = ("promote-solver", "scribe-reduce",
           "guide-intervention-1-review", "guide-intervention-2-review")
 
@@ -115,7 +145,16 @@ while True:
                             last_emit[p] = line
                             out(line)
 
-        if BABYLOG and os.path.exists(BABYLOG):
+        if BABYLOG_AUTO:
+            # Re-resolved every poll, not just when the current file vanishes:
+            # a relaunched babysitter leaves the old log on disk, so existence
+            # is no evidence it is still the live one.
+            nb = resolve_babylog(BABYLOG)
+            if nb != BABYLOG and os.path.exists(nb):
+                out(f"BABYSIT (watcher now tailing {nb})")
+                BABYLOG, baby_pos = nb, 0
+
+        if BABYLOG and BABYLOG != "auto" and os.path.exists(BABYLOG):
             sz = os.path.getsize(BABYLOG)
             if sz > baby_pos:
                 with open(BABYLOG, encoding="utf-8", errors="replace") as f:
