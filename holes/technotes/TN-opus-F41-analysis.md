@@ -2,9 +2,10 @@
 
 Claude (claude-12), 2026-08-26, written live while watching the frame.
 Campaign `jit-all-open-nontopology-v1`, frame f41, problem **a97J06**.
-Status: attempts 1-3 are complete and analysed below; **certification is
-still pending**, so the closing tally and scribe-reduce verdicts are not yet
-recorded.
+Status: **complete.** f41 certified at 2026-08-26T10:58Z with
+`:receipt/result :partial`, `:receipt/learning-outcome :observed`. The queue
+then paused at `next-index=14` (`queue-state.edn :status :paused`), so no f42
+was minted; resuming is Joe's call.
 
 Companion to `TN-fable-F32-F35-bank-review.md`. The running working record is
 `TN-spec-delta-cannot-judge-and-trace-checker.md`; this note cites it rather
@@ -265,3 +266,48 @@ mid-frame churns a running manifest. These wait for f41 to certify.
 Instrument fix made along the way: `24356587` stops `apm-frame-pulse.py`
 rendering an in-flight attempt as `0/N used`, which is indistinguishable from
 the zero-uptake result it was built to catch.
+
+## Certification tally
+
+| phase | verdicts |
+|---|---|
+| promote-solver | `{reassign 3, reject 1}` |
+| guide-intervention-1-review | `{approve 2}` |
+| guide-intervention-2-review | `{reassign 1, approve 1}` |
+| scribe-reduce | `{approve 3, reassign 1}` |
+| **frame total** | **12 verdicts — 6 approve, 5 reassign, 1 reject** |
+
+Frame result `:partial`: the solver closed a97J06 at 0 sorries in 3 rounds,
+no student attempt closed it.
+
+Against the tier-A gate:
+
+1. **Scribe approvals non-zero — met.** Six approvals, after the 0-for-31 run
+   that preceded f40.
+2. **Zero unresolved passes — met, and this is the first frame it has been
+   met cleanly.** Unresolved passes advanced both f39 and f40; f41's gate is
+   clean at every phase. The Clojure enforcement gap that let those two
+   through is still unfixed, so this is a frame that did not exercise it
+   rather than a gap that has been closed.
+3. **Cross-problem transfer — not met.** See above.
+4. **Paste zero — held.** No paste verdict in the frame.
+
+Two of the four conditions now hold. Condition 3 is the one the campaign
+exists to demonstrate, and f41 was the best-designed test of it so far.
+
+## The machine's own behaviour, f41 vs f40
+
+Worth recording because it is the first frame where the apparatus was not the
+story. One hard stop (the promotion halt, §16 — fixed mid-frame, campaign
+resumed on the same verdicts without re-authoring them), and
+`terminal-job-collection-stale` fired four times and self-cleared every time.
+No new campaign failures after the promotion fix: the failure list's newest
+entry pre-dates the frame.
+
+The babysitter EOF fix (`b1b581a0`) was verified at this boundary, which was
+the last unverified repair of the night: **one attach for f41, zero
+restarts**, across the whole frame including certification. Before the fix,
+f40's boundary produced a re-attach to the already-certified frame plus four
+attach/exit pairs. The babysitter also detached to `__queue_paused__` and
+declined to bell about an expected pause, which is the behaviour §15.1 was
+written to get.
