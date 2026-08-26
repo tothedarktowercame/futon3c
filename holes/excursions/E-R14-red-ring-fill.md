@@ -509,6 +509,98 @@ though it spoke for the others. **Recording the discrepancy; not resolving it
 here.** If R8's redness is partly a stopped line awaiting a named repair rather
 than a loop that decayed, that changes what R8's slices are for.
 
+## TryHarder — the other pole, and what it says the machine is doing
+
+Joe, 2026-08-26: *"In my First Proof experiments I came up with something called
+TryHarder. It's the opposite of stop-the-line — it says: If I haven't completed
+the proof, try harder. That usually doesn't work, but it's a strategy."*
+
+### The two poles are the ends of R14's own axis
+
+In commitment-temperature terms the pair is exact:
+
+| | what it does | in τ |
+|---|---|---|
+| **TryHarder** | commit maximally to the current best and repeat | **τ → 0** |
+| hedge / explore | flatten, let rivals compete | τ large |
+| **stop-the-line** | leave the ranking altogether | **off the axis** — a gate |
+
+So R14's dial *is* the axis between TryHarder and hedging, and stop-the-line is
+the third option that does not live on it. That finally states what the dial is
+for, which this excursion has been circling.
+
+### And it tells us what the disconnected dial actually does
+
+**Under argmax, τ → 0 is indistinguishable from every other τ.** The machine
+always takes the top-ranked action. So the War Machine as built does not lack a
+strategy — **it is pinned to TryHarder**, permanently, with no way off. Of Joe's
+two strategies it is stuck in the one he describes as usually not working, and
+no evidence can move it.
+
+### It has been observed, and the number is on disk
+
+`futon2/data/wm-full-loop/archives/stop-line-2026-07-15/` — selection *"admitted
+and repeatedly reinforced"* one action. `attempt-001` was the single
+`grounded-change`; `attempt-002`–`022` and `024` were `no-selection`;
+`attempt-023` was `agent-unavailable`. So in the WM's one archived episode,
+
+    TryHarder's yield: 0 successes in 22 retries
+
+and it took a person to stop it. *"Usually doesn't work"* is, here, 0/22.
+
+### The stack audited this five months before R14 came up
+
+`futon6/holes/handoffs/futon6-hotspots-tryharder-loop-audit-2026-03-05.md`,
+whose stated goal is *"identify where effort increased without proportionate
+understanding, and define concrete stop/pivot rules."* Eight hotspots, each with
+**Moment / Symptom / Cost / Missed trigger / Better move**, and six numbered
+gates carrying thresholds: `spec_lock_status = pass` before retrieval; ≥30
+labelled pairs before a rerun; >70% pairwise ties after 2 replicates ⇒ stop broad
+reruns; `verified = 0` ⇒ targeted mode only; "needs theorem/citation" ⇒ pivot to
+primary sources; one hardening cycle then freeze infra.
+
+**The "Missed trigger" field is the stop-the-line condition that was not
+computable at the time**, and the thresholds are countable in exactly WR-26's
+sense — applied to stopping rather than to re-arming. This is a ready-made
+specification, dated 2026-03-05, that nobody has connected to R14.
+
+### The unifying quantity, and it is the one from this morning
+
+H2's cost reads: *"repeated runs produced no epistemic update."* Today's finding
+reads `I(τ ; action) = 0`. These are the same shape one level apart — **work is
+done and nothing downstream changes.** So the quantity that decides between the
+two strategies is **information gained per unit effort**, and the partition has
+three arms, not two:
+
+| information per effort | model status | correct move |
+|---|---|---|
+| positive | the model is right, the budget was wrong | **TryHarder** |
+| zero | model still plausible, this route exhausted | pivot / update |
+| zero | *both* models refuted — Joe's trigger | **stop the line** |
+
+TryHarder is a strategy rather than a bug precisely because the first row is
+real: sometimes effort is the binding constraint. It fails when the model is
+wrong, because effort on a wrong model only costs more. The audit's phrase for
+that failure is exact — *effort increased without proportionate understanding*.
+
+### Does 0/22 fill the salience hole? Presented, not filed.
+
+**For.** Dated, ours, and costly: 22 attempts and an operator intervention, with
+the machine committing maximally and unrevisably throughout.
+
+**Against.** Under argmax a *working* dial would have changed nothing either, so
+the cost attaches to the **argmax**, not to the pinned gain. And the archive
+records the stop condition as a policy-support mismatch, not a
+commitment-temperature failure.
+
+**Reading.** This is evidence that the **missing edge** is costly, not that the
+dial is wrong — which is a different claim from the one
+`?salience(required)` asks for, and closer than anything else found. It is the
+strongest of the four candidates now on the table (the τ-mode flip of 2026-07-13,
+ants dead τ, operator ⑯, and this). **Joe's call whether the distinction between
+"the dial is wrong" and "there is no dial" matters here.** The slot stays empty
+until he rules.
+
 ## The operator level — open, and deliberately left thin
 
 R8's workup ran at three levels: machine, operator surface, company. R14 now has
