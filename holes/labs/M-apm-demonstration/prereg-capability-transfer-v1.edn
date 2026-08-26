@@ -238,4 +238,296 @@
  :structural-invariants :TBD/operator
  :runtime-invariants :TBD/operator
  :problem {:F29 "a01J05"}
- :variation :TBD/operator}
+ :variation :TBD/operator
+
+ ;; ---------------------------------------------------------------------
+ ;; AMENDMENTS. Append-only. Nothing above this key is edited: the value of
+ ;; this document is that its claims, exclusion boundary and stop rules were
+ ;; written before the data. An amendment records what changed in the
+ ;; instrument or what the record has since supplied -- it never revises a
+ ;; prediction.
+ :amendments
+ [{:amendment 1
+   :at "2026-08-25T18:00Z"
+   :by "claude-12"
+   :kind :instrument-version-boundaries
+   :why
+   "The decision rule above requires each reported frame to carry the futon3c
+    revision and any repair shas landed since the previous frame, 'so that an
+    effect which appears only after some repair is VISIBLE as such rather than
+    pooled away'. Three changes since F29 alter what a Student can do or how
+    long it may do it, and none was recorded as a boundary at the time. Listed
+    here so no cross-frame comparison silently spans one."
+   :boundaries
+   [{:at "2026-08-24"
+     :shas ["0ed27146" "4d1ca83b" "bbc04b0b" "eb9c5846" "77a72e92"]
+     :change "Authenticated open memory search wired for role seats
+              (scripts/apm-search-memory.py + role_memory_search.clj)."
+     :effect
+     "From F31/F32 onward the Student has BOTH the pre-selected snapshot shelf
+      and a live query tool. In the vocabulary of
+      PROPOSAL-memory-access-experiment-20260824 every attempt since is running
+      the 'both' condition, unrandomized and unlabelled. The proposal's own
+      confound therefore applies to the frames already banked: access mode is
+      collinear with frame ordinal. Frames F29-F30 are 'spoonfed'; F32+ are
+      'both'. Any comparison across that line confounds access mode with every
+      other repair landed in between.
+      It also breaks a stated invariant: memories now reach a Student that were
+      never on the reviewed shelf (f33 attempt-1 used a 2026-07-31 codex-pilot
+      memory; f33 attempt-2 used an unpromoted guide memory -- close-frame
+      findings F3). 'No memory used that was not on the reviewed shelf' has
+      been false since this landed, and no receipt says so."}
+    {:at "2026-08-25" :sha "114ea24e"
+     :change "Student memory accounting derived from controller receipts;
+              :surfaced-ids, queries and search-receipt ids are no longer
+              agent-authored (TN-controller-owned-identifier-replay-audit)."
+     :effect
+     "Pre-F35 :surfaced-ids are LLM transcriptions of a controller-held set and
+      are not evidence of what was surfaced; post-F35 they are controller
+      facts. :used-ids remains an agent claim throughout. Any surfacing rate
+      computed across this line mixes two different measurements."}
+    {:at "2026-08-25" :sha "d21c3dcf"
+     :change "Student attempt cap set to 30 minutes (:seat-turn-timeout-ms
+              1800000 for the student seat); F35 is the first frame under it."
+     :effect
+     "F29-F34 attempts ran under a uniform 60-minute ceiling (TN-sonnet-F33)
+      while the role card asked for 120. Attempt duration is not comparable
+      across F34/F35, and the compression measurement Joe wants -- how much of
+      the solver's solve the Student closes in a deliberately short budget --
+      only begins at F35."}]}
+
+  {:amendment 2
+   :at "2026-08-25T18:00Z"
+   :by "claude-12"
+   :kind :evidence-qualification
+   :subject :level-2a
+   :why
+   "Level-2a is recorded above as :first-observed-at-F29, resting on 'F29 has
+    attested student memory usage'. An artifact-level audit of every recorded
+    USE in F28-F34 (analysis/NOTE-fingerprint-audit-2026-08-25.md) shows what
+    that usage was."
+   :finding
+   "35 use events over 13 attempts. 23 carry the whitepaper 3.1 fingerprint
+    (an identifier named by the memory and NOVEL to the artifact against the
+    base file the Student was handed); 6 are verbatim pastes of 8-25
+    consecutive lines; 6 matched only identifiers already present in the base;
+    0 are unwitnessed. All 6 paste events are F29 and F30 -- including the F29
+    attempt-3 events that level-2a's 'first observed' rests on. The six pasted
+    memories remained on every later shelf and were never used again after F30."
+   :consequence
+   "Level-2a still holds -- there is fingerprinted usage, 23 events over 18
+    distinct memories -- but its FIRST instance is a paste, not a transfer, and
+    should not be cited as the observation that opened the claim. The earliest
+    non-paste fingerprinted events are F28 attempt-3 and F29 attempt-2.
+    This does not touch level-2b: usage is still not improvement, and the
+    ablation arm does not exist."
+   :also
+   "Cross-problem reuse over the campaign is 1, not 0: f33 attempt-1 used a
+    memory mined from a94J08 on a94A07. It read as 0 because the origin rule
+    could not resolve memories whose subject is a mission ref -- which is
+    exactly the naming hygiene the scribe cards require. Rule extended
+    2026-08-25 to fall back to the memory's cited witness commit."}
+
+  {:amendment 3
+   :at "2026-08-25T18:00Z"
+   :by "claude-12"
+   :kind :field-resolution
+   :why
+   "Recording values the campaign record now supplies for fields left
+    :TBD/operator, WITHOUT editing those fields -- an operator value and a
+    value read off the record afterwards are different things and the
+    difference should stay visible."
+   :from-record
+   {:reg/role-cards
+    "Per-frame, hashed by blob into each dispatch: student zai-student-v2
+     (blob b7c5c3b3 at F35), guide claude-guide-v2.2, proctor proctor.md,
+     scribe codex-scribe-v1 + zai-scribe-v1 (split landed 2026-08-24),
+     promotion-proctor v2 (v3 drafted, adapter still points at v2)."
+    :problem
+    {:F29 "a01J05" :F30 "a01J06" :F31 "a03J05 (aborted, no student attempts)"
+     :F32 "a92J01" :F33 "a94A07" :F34 "a95J03" :F35 "a95J04"}
+    :confirmation-units-so-far
+    "F29, F30, F32, F33, F34 closed; F31 void; F35 in flight. n=5 reported
+     frames under the total-reporting rule."}
+   :still-open
+   "estimated-cost, budget-cap, teardown-deadline, required-capabilities,
+    structural-invariants, runtime-invariants, variation, lean-registration,
+    modules, reg/solver-seat. These need an operator value; the record does
+    not supply them."}
+
+  {:amendment 4
+   :at "2026-08-25T19:10Z"
+   :by "claude-12"
+   :authority "Joe, 2026-08-25, in session"
+   :kind :programme-correction
+   :why
+   "This registration's ablation trigger fires on a condition that cannot
+    distinguish anything, and its sequencing does not describe the programme
+    actually being run. Recorded as an amendment rather than an edit: the
+    original text stays visible, because the fact that it was over-optimistic
+    is itself part of the record."
+
+   :finding/trigger-is-vacuous
+   "The :arms map defines :ablation as {:memory :withheld} with status
+    :not-yet-run, and it has never existed. Every student arm since F29 is a
+    memory arm. So the ablation-trigger precondition -- 'the memory arm has
+    actually closed something' -- does not name a contrast; it reduces to 'a
+    student closed something'. A trigger that cannot separate two arms when
+    only one arm exists is not a trigger. (Joe: 'right now all Zai arms are
+    memory arms in some sense'.)"
+
+   :finding/registration-was-optimistic
+   "The registration assumed the causal path would be reliable enough that
+    level-2b would follow level-2a quickly. It has not been. f28-f35 are the
+    first frames to run end-to-end in a meaningful way at all, and three of the
+    four most recent were certified with unresolved review passes. The
+    document's sequencing described an intention, not a plan."
+
+   :correction/operating-programme
+   {:kind :design-research
+    :not :ablation-experiment
+    :objective
+    "Shrink the time Zai takes to close a proof, WITHOUT spoonfeeding answers
+     from Codex. Improvement is sought by changing the system between waves;
+     system change is the method, not a confound to be frozen out."
+    :ablation-status
+    "DEFERRED TO THE TAIL (Joe: 'F200 or so'). Not triggered by this
+     registration's trigger clause, which is void per the finding above. The
+     replacement is the two-tier gate below."
+    :rationale
+    "Joe, 2026-08-25: 'Until we can reliably use the memory system, there is no
+     point or possibility to doing scientific work on this problem.' An
+     ablation over an apparatus that loses memories measures the apparatus, not
+     the memories."}
+
+   :correction/two-tier-gate
+   {:tier-a
+    {:name "the memory system is working roughly as intended"
+     :status :not-met
+     :note "Joe, 2026-08-25: 'right now, I have no evidence to that effect
+            whatsoever.' Scored per wave off instruments that already exist
+            (analysis/fingerprint_audit.py, memory_shape.py, and the review
+            verdict counts in the phase receipts)."
+     :conditions
+     [{:id 1 :claim "Supply is alive: scribe deposits approved at a non-zero rate."
+       :baseline "0 of 31 across f32-f35."}
+      {:id 2 :claim "Delivery does not need rescue: zero unresolved review passes in a wave."
+       :baseline "3 frames of 4 carried them; 26 unresolved verdicts."}
+      {:id 3 :claim "The pipeline transfers ACROSS problems: a memory mined in one
+                     frame is fingerprint-used in a later frame on a different
+                     problem, THROUGH the shelf."
+       :baseline "n=1, and it arrived around the pipeline by open search rather
+                  than through it. 25 of 26 distinct used memories were used only
+                  on the problem they were mined from."
+       :note "The condition that matters; 1, 2 and 4 are plumbing and hygiene. If
+              memories never help on a different problem the system is a
+              within-frame feedback loop -- a cache, in the scribe card's own
+              vocabulary -- however clean its receipts look."}
+      {:id 4 :claim "No spoonfeeding: paste stays at zero, fingerprinted uses non-zero."
+       :baseline "paste 6 events, all f29-f30, 0 across f32-f34; 23 fingerprinted."
+       :instrument "fingerprint_audit.py separates a verbatim paste from a
+                    named-identifier fingerprint, both differenced against the base
+                    file the student was handed."}]}
+    :tier-b
+    {:name "pre-ablation gate"
+     :status :not-met
+     :note "Joe, 2026-08-25: further items gate the move to controlled work,
+            beyond tier A -- and tier A must be HELD, not merely touched once."
+     :conditions
+     [{:id 5 :claim "Pattern use: memories are reached through their parent patterns
+                     rather than only by direct id, and patterns span more than one
+                     problem."}
+      {:id 6 :claim "Zai timings trend down across waves, as compression against the
+                     matched solver's own solve time."
+       :note "Only readable from f35 onward: before the 30-minute student cap
+              (d21c3dcf) attempts ran to a flat 60-minute ceiling."}]}}
+
+   :note/uncontrolled-natural-experiment
+   {:observation
+    "Joe, 2026-08-25: failures to supply memories already act as a kind of
+     ablation, uncontrolled. Memory-poor attempts exist in the banked data: f32
+     attempt 1 (18 accessible, all off-topic, closed nothing), f34 attempts 1 and
+     3 (0 used), and f33 attempt 1, which closed the problem at 0 sorries using NO
+     shelf memory -- its single use came from open search."
+    :why-it-is-not-a-usable-contrast
+    "CORRECTED by Joe, 2026-08-25, against claude-12's first framing. claude-12
+     called the attempt-ordinal collinearity ('no shelf memory used' tracks
+     'attempt 1', because guide deposits only exist from attempt 2) the defect,
+     and proposed cleaner prospective recording as the remedy. That misses the
+     point. Anything after attempt 1 could be spoonfeeding in any case: a guide
+     memory is written AFTER reading this student's failure account on THIS
+     problem, so it is problem-specific assistance by construction, whether or not
+     it is verbatim proof text. No amount of clean recording makes attempts 2 and 3
+     an interesting experimental contrast. The ordinal correlation is a side
+     effect, not the obstacle."
+    :consequence
+    "Two consequences, both narrowing.
+     (a) The only interesting experimental question here is CROSS-PROBLEM TRANSFER
+         -- tier-A condition 3. Within-frame attempts are not a contrast and should
+         not be reported as one.
+     (b) Attempts 2 and 3 REMAIN VALID AS DESIGN RESEARCH (Joe): they show how well
+         the machine delivers what it has, which is the thing being iterated. They
+         are signal about the apparatus, not evidence about memory."}
+
+  :note/two-levels-of-spoonfeeding
+  {:why
+   "Follows from the correction above, and sharpens tier-A condition 4. The
+    constraint 'without spoonfeeding answers from Codex' has a crude form and a
+    subtle one, and only the crude one was instrumented."
+   :crude
+   "Verbatim proof text. Measured: fingerprint_audit.py's paste verdict (>=3
+    consecutive memory-body lines appearing in the artifact and absent from the
+    base file). 6 events, all f29-f30, 0 since the scribe cards were split."
+   :subtle
+   "A memory that names the exact lemma for the residual the student is stuck on,
+    written by an agent that has read that student's failure account. Not paste,
+    not reusable, and not transfer. Measured by PROVENANCE, not by body: was the
+    memory mined from the same problem it was used on? Current reading -- 25 of 26
+    distinct used memories were used only on their own problem; 1 crossed, and
+    that one arrived by open search rather than through the pipeline."
+   :target
+   "Design research succeeds when mass moves from same-problem to cross-problem
+    use. Paste staying at zero is a floor, not the goal."}
+
+   :marked-defective
+   {:authority "Joe, 2026-08-25: 'they are part of the continuous improvement loop,
+                but yes, let us mark them defective.'"
+    :rule "Per :decision-rule/:total-reporting -- reported AND MARKED, never
+           dropped. Recorded here rather than by mutating the certified frame
+           ledgers, which are append-only."
+    :frames
+    [{:frame "f32" :problem "a92J01" :defects [:unresolved-review-pass]
+      :detail "scribe-reduce: 4 of 4 candidates :cannot-judge."}
+     {:frame "f33" :problem "a94A07"
+      :defects [:unresolved-review-pass :deposits-stranded]
+      :detail "promote-solver 4, guide-1 3, scribe-reduce 7 :cannot-judge (14).
+               Guide deposits the reviewer judged coherent never reached the shelf."}
+     {:frame "f34" :problem "a95J03" :defects []
+      :detail "No unresolved pass. The only clean frame of the four."}
+     {:frame "f31" :problem "a03J05"
+      :defects [:void :prior-snapshot-unreadable]
+      :detail "Void, no student attempts. Its snapshot has been unreadable to
+               every subsequent frame -- f32, f33, f34 and f35 each carry
+               :receipt/prior-dropped {:frame-id \"f31\" :finding
+               :prior-snapshot-unreadable}. The countermeasure worked: the drop
+               is listed loudly in every promote-solver receipt. Nobody answered
+               it for five frames."
+      :disposition
+      "REPAIR DEFERRED, deliberately (Joe, 2026-08-25): 'I can't be bothered to
+       repair it right now, as I said, this is design research, I'd rather get
+       the next frames running and see if they are good.' Recorded as a decision
+       rather than left as an open action, so a later reader does not mistake it
+       for an oversight. Consequence: f31's memories remain unavailable to every
+       frame of the next wave, so that wave's supply is smaller than the store
+       by however much f31 held."}
+     {:frame "f35" :problem "a95J04"
+      :defects [:unresolved-review-pass :deposits-stranded]
+      :detail "promote-solver 5, guide-1 3, guide-2 4 :cannot-judge (12). guide-2 ran
+               18:08:45, after the keyword fix 2d9e08a8 was committed (18:04:36) but
+               before the JVM carried it; its reason names a second cause too, FTS
+               failing to discover the exact pattern id."}]
+    :common-cause
+    "Two, both identified: the keywordized new-pattern-rationales lookup (fixed,
+     2d9e08a8) and coined pattern ids absent from the substrate (open). Neither is a
+     defect in the frames' mathematics; both are defects in the memory channel,
+     which is what these frames were run to exercise."}}]}

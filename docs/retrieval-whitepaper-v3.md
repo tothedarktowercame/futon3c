@@ -1,7 +1,8 @@
 # Silence, Witness, and Demand: an Agent Memory System Audited by Its Own Twins
 
-**V3 — DRAFT, Phase 1 sections (2026-08-11). Batch-dependent sections are
-skeletal and marked.** Successor to V1 ("Warrant-Disciplined Agent Memory:
+**V3 — DRAFT. Phase 1 sections 2026-08-11; §§2.1 (items 14–20), 3.1a,
+3.1b, 5a added 2026-08-25 from the f28–f35 frame campaign. Batch-dependent
+sections are skeletal and marked.** Successor to V1 ("Warrant-Disciplined Agent Memory:
 Architecture, Instrumentation, and a Pre-Repair Baseline") and V2 ("Catching
 Our Own Instruments: Construct Validity, Self-Applied"). Programme:
 `holes/excursions/E-memory-whitepaper-v3-programme.md`. Evidence citations
@@ -32,6 +33,15 @@ minutes of being built. The paper's constructive contribution is the
 resulting pipeline (votes → build → callback), its measurement discipline
 (frames with enforced slots; twin adjudication; blind relevance scoring),
 and a characterization of the retrieval defect written by its own users.
+A fourth strand, added later and reported as such: a campaign carrying
+memories from a strong solver to a weaker student on the same problem,
+in which the witness standard was applied mechanically to every use claim
+on record — no claim unwitnessed, the verbatim-paste failure mode ending
+exactly where the write-side norm changed while the pasted memories
+themselves stayed on the shelf, and the single cross-problem transfer in
+the corpus arriving through lexical search rather than through the
+pipeline built to deliver it, having been counted as zero by three
+separate instruments.
 
 ## 1. What this draft is
 
@@ -203,6 +213,80 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
     attested only by reports and transcripts) and queueing close-time
     auto-commit for the next batch.
 
+**Second tranche, 2026-08-24/25.** The instances above are two days in
+August. The campaign continued, and the frames that followed (f28–f35,
+§5a) produced six more — the interest of which is that four of them sit
+inside instruments built *after* the catalogue above was written, by
+people who had read it.
+
+14. **The identifier the machine asked a model to copy.** The Student's
+    terminal submission required it to hand-transcribe 21
+    controller-minted memory UUIDs; on f32 it got one character wrong
+    (`aa5e` for `aa5a`), the set-membership check rejected the report,
+    the frame's single repair budget was already spent on a different
+    failure class, and the coordinator went `:failed` with no successor
+    state. The invariant being protected was never violated — both
+    claimed uses were on the reviewed shelf. The field that failed does
+    not exist in the Lean model: it lives inside a residual hole that was
+    declared open and never closed, so the validation was correct *up to
+    that hole*, and the hole is where every LLM-authored field lived. The
+    system was specified in Lean, translated to Clojure, passed
+    qualification, and still contained this (`TN-fable-F32-model`; fixed
+    `114ea24e`, hole closed).
+15. **Eight hours of a siren talking to nobody.** The same failure was
+    correctly diagnosed within forty minutes and then sat untouched
+    overnight: the on-duty agent treated repairing the apparatus as
+    needing an authorization it could have obtained from any idle agent
+    on the roster, while the watchdog belled it 48 times from an identity
+    (`claude-cli`) that is not registered — so all 48 replies were
+    delivered nowhere, and the watchdog has no code path that reads a
+    reply. Two incident keys fired for one condition; the 48th bell was
+    identical to the first. No message was addressed to the operator;
+    there is no channel for one (`TN-fable-F32-process`).
+16. **The budget that was written down nowhere.** Operator and reviewer
+    spent an evening reasoning about a "30-minute Student attempt".
+    Searching the entire lab tree for it returns zero hits: the role card
+    said 120 minutes, the harness enforced a flat 60 across every seat,
+    and 30 existed only in the room. A three-way mismatch, discovered by
+    asking why an attempt was still running at 42 minutes
+    (`TN-sonnet-F33-finding`; capped `d21c3dcf`).
+17. **`cannot-judge` began to certify.** A one-line change admitted
+    `:cannot-judge` to the set of valid review verdicts, so that a
+    reviewer unable to fetch its candidates no longer blocked a frame
+    (`be9978b5`). Frame f33 then ran three review passes in which **11 of
+    11 candidates** were `cannot-judge` — persisted evidence 404, and a
+    validator defect described below — and closed with a well-formed
+    certified receipt. The frame's own close audit recorded it as
+    findings F1/F2/F4; nothing in the receipt shape did. A review that
+    reviewed nothing is now a review that passed.
+18. **The isolation invariant that quietly stopped being true.** "No
+    memory used that was not on the reviewed shelf" is the property the
+    snapshot machinery exists to enforce. Open corpus search was wired on
+    2026-08-24; from the next frame on, Students reached memories that
+    were never on any shelf — f33 attempt-1 used a 2026-07-31 memory from
+    a different problem entirely, f33 attempt-2 used an unpromoted guide
+    memory. Both are recorded, in the frame's own findings, as the
+    channel *working*. Neither the receipt nor the preregistration
+    marked that the invariant had been retired, and the shelf machinery
+    continued to report as though it were the only door.
+19. **"The watcher ingests this file."** Both new scribe seats, unable to
+    introduce a coined pattern through the deposit path (item 20), wrote
+    their patterns into markdown side files opening with that sentence.
+    No code in any of the three repositories reads them; none of the
+    seven coined pattern ids exists in the substrate or the library. The
+    deposits were then attached to canonical patterns that do not fit,
+    and rejected at review for exactly that — a documented workaround
+    for a defect, which produced well-formed evidence of a different
+    failure.
+20. **A string where a keyword was.** Underneath 17 and 19: the
+    pattern-accounting validator requires a rationale for each newly
+    coined pattern id, looks that rationale up by *string* key, and
+    receives a map whose keys JSON-parsing has turned into *keywords*.
+    Every coined id is therefore unaccounted and every such deposit
+    fails, unconditionally, since it was written. Diagnosed by one of the
+    affected agents in its own lane report, which is the only place it is
+    recorded.
+
 ### 2.2 The argument
 
 The instances share one mechanism: **a record whose well-formedness is
@@ -229,7 +313,24 @@ passes. What fixed each instance was one of three moves:
 The prior series' claim (I3, staging bank): norms must be authored before
 recurrence becomes visible. V3 adds the operational corollary: **authored
 norms decay into sentinels unless some instrument or fresh reader is
-charged with disbelieving them.** [n: 13 instances, two days; this is a
+charged with disbelieving them.**
+
+The second tranche sharpens this rather than merely lengthening it. Items
+14, 17, 19 and 20 are defects *in the countermeasures*: a Lean-specified
+cycle whose validation was sound up to a declared hole that happened to
+contain every model-authored field; a review verdict added to keep frames
+moving that turned an unreviewable pass into a passing one; a workaround
+for a validator defect that manufactured well-formed evidence of a
+different failure. Item 18 is the sharpest, because nothing broke: a new
+capability was wired correctly, and an invariant the surrounding machinery
+still asserts simply stopped being true, with the frames recording each
+violation as a success. The mechanism is unchanged — well-formedness
+independent of the reality reported — but the second tranche says
+something the first could not, since the first was written by people
+discovering the problem and the second by people who had already named
+it. **Knowing the failure mode does not confer immunity to it; the only
+things that helped, again, were construction and a fresh reader.** [n: 20
+instances over two episodes, four days apart in a six-week campaign; a
 catalogue with a mechanism, not a rate.]
 
 ## 3. The witness standard, and what survived it
@@ -247,6 +348,102 @@ shape") instantiated. Offered receipt `e-fab2e3d9…`; outcome
 end-to-end witnessed chain on a clean index, and it fixes the standard:
 **a USE claim counts when the artifact carries the memory's fingerprint;
 prose attribution alone is design signal, never outcome data.**
+
+### 3.1a The standard applied to a whole campaign (n=35 events)
+
+The a94A09 chain was hand-checked. §5a's campaign made it cheap to apply
+the standard mechanically to every USE claim on record: for each
+(attempt, memory), extract the Lean identifiers the memory names, look for
+them in the attempt's archived closing artifact, and separately measure
+the longest run of memory-body lines appearing verbatim there
+(`analysis/fingerprint_audit.py`, reading
+`fingerprint-2026-08-25.json`).
+
+**Both measured against the base file the Student was handed.** This is
+the step that decides whether the number means anything: memory, base file
+and certified head discuss the same mathematics in the same vocabulary, so
+an identifier already present in the base is not evidence that a memory
+put it there. Raw matching reports 29 of 35 events fingerprinted;
+differencing against the base — resolved from each attempt receipt's own
+`:base-revision` and `:problem-path` — reports 23. The six events that
+move are the difference between a measurement and a well-formed number.
+
+Over 35 use events (19 attempts, 13 with a USE claim, frames f28–f34):
+
+| | events |
+|---|---|
+| fingerprinted (identifier novel to the artifact) | 23 (18 distinct memories) |
+| paste (8–25 consecutive body lines verbatim) | 6 (6 distinct memories) |
+| matched only identifiers already in the base | 6 |
+| unwitnessed | 0 |
+
+Three results. First, **no USE claim was unwitnessed** — every
+`:used-ids` entry left some trace in the artifact. Set against §3.2, where
+prose attribution repeatedly failed corroboration, the difference is the
+channel: a self-report made inside a machine that binds it to a
+controller-derived surfaced set and archives the artifact behaves
+differently from a self-report made in an interview.
+
+Second, **the six paste events are confined to two frames**, and they are
+the same six proof-text blocks an independent review had flagged as still
+being seeded campaign-wide. The audit reaches that set from artifacts
+rather than from bodies. All six remained on every subsequent shelf and
+were never used again after the scribe role card was split and given
+explicit proof-text limits (≤3 tactic blocks, ≤4 KB, whole-declaration
+copies rejected). Availability held constant while the behaviour changed
+— the closest thing to a controlled before/after the corpus offers on this
+failure mode, and evidence that the write-side norm did what it was
+written to do.
+
+Third, the audit's *negative* rows are its validation. Six events report
+that the memory's identifiers were present but all were already in the
+base — and they fall in exactly the attempts independently known to have
+produced nothing: one whose budget went entirely on signature
+verification with no Lean written, one that died on the mistyped
+identifier of §2.1 item 14. The instrument was not told either fact.
+
+The limits are worth stating with the result. A fingerprint is a
+*necessary* condition: it rules out the unwitnessed claim; it does not
+establish the counterfactual, which only the ablation arm can. A hit can
+even be a refutation — one counted identifier appears in the artifact
+because the Student engaged with a memory and *corrected* it. And these
+are events, not memories.
+
+### 3.1b The first cross-problem chain (existence, n=1)
+
+a94A07, 2026-08-25, frame f33 attempt 1. The Student abandoned the base
+file's own declared route, searched the corpus twice, and on the second
+query — phrased in the vocabulary of the route it had just chosen, not of
+the problem — surfaced a memory deposited three weeks earlier by a
+different agent working a different problem
+(`e-codexpilot-force-a-sublinear-entire-function-constant-by-Cauchy-derivative-estimates`,
+witness commit apm-lean `662b9ec` = a94J08). The closing artifact carries
+that memory's construction and two of the three APIs it names; the third
+it does without. The problem closed at 0 sorries under standard axioms,
+independently recompiled.
+
+Three things make this the most informative single event in the corpus.
+It is the **first USE of a memory mined from another problem** — every
+other use to date, 25 of 26 distinct memories, was on the problem the
+memory came from, which is a cache rather than a store. It **bypassed the
+entire promotion pipeline**: no scribe, no proctor, no shelf; the memory
+was reached by lexical search on obstacle vocabulary, which is precisely
+the retrieval model §4.2's users described and the anchor mechanism did
+not implement. And the Student's own account states the mechanism —
+its first query, in the problem's vocabulary as the file's comment framed
+it, returned one irrelevant hit; the second, in the vocabulary of its
+obstacle, returned this.
+
+It was also recorded as zero, three times over: the frame's close audit
+counted the attempt as memory-free, the store's reuse metric reported no
+cross-problem use, and the campaign summary carried that number forward.
+Each instrument was well-formed. The origin rule could not resolve
+memories whose subject is a mission rather than a problem — which is
+exactly the naming hygiene the scribe cards demand — so the memories with
+the best hygiene were the ones that could never be counted as reuse. The
+rule now falls back to the commit a memory cites as its witness; the
+campaign's cross-problem reuse count is 1, not 0. §2.2's mechanism, this
+time in the measurement layer rather than the machine.
 
 ### 3.2 What the standard did to attribution (batch-1 preview)
 
@@ -307,6 +504,114 @@ identical proofs and once to an identical unprompted corpus repair);
 divergence only where the library offers competing engines. Nine labeled
 twin-diffs; one semantically-same/syntactically-different proof pair.
 [Tables from frame records; batch-2 results; cumulative P7.]
+
+## 5a. Transfer between unequal agents: the frame campaign [DRAFT — f29–f34 closed, f35 in flight]
+
+§5's ladder varied the memory channel between two runs of the same model.
+The campaign that followed it varies the *model*: a strong solver closes
+a problem, the memories mined from that close are the only channel to a
+weaker student re-proving the same problem cold. This is a different
+claim from anything in §5 and is preregistered separately
+(`prereg-capability-transfer-v1`, written 2026-08-24 before its
+confirmation units existed).
+
+**The design.** One frame = one problem. A Codex solver closes it and its
+trace is mined by a scribe into candidate memories; an independent
+promotion proctor reviews them (reviewer ≠ depositor); approved memories
+form a shelf. A Zai student then attempts the same problem three times,
+each a fresh cold session with no memory of the last, holding the base
+file and the shelf — and, from f32, a live corpus search tool as well
+(the boundary noted at the end of this section; before it the shelf was
+the whole channel). Between attempts a guide reads the student's
+failure account and may deposit further memories. Every phase emits a
+receipt into an append-only ledger; a frame missing a required slot is
+`:incomplete`, never scored — §5's frames discipline at a larger
+granularity.
+
+**The claim ladder, and where it actually stands.** The preregistration
+separates, following Sen, what the student can *do* from what it *could*
+do:
+
+| level | claim | status |
+|---|---|---|
+| 1 | Codex closes APM problems | established, uninteresting |
+| 2a | memories carried through the medium are USED by a weaker student | **established**: 20 fingerprinted events over 15 distinct memories in the confirmation set (23 / 18 including the excluded pilot frame f28 — §3.1a) |
+| 2b | the memories are LOAD-BEARING — the same student without them fails | **not run**: the ablation arm does not exist |
+| 3 | a stocked store lets the student close problems beyond its independent reach | not attempted |
+| 3b | the same medium lifts a *human* student | separate phase, not in this registration |
+
+The gap between 2a and 2b is the whole of what this section cannot yet
+say. Every result below is about usage, not benefit. The ablation is
+cheap to describe and has not been run: it requires student rounds with
+memory withheld on problems the memory arm closed, and its power band is
+narrow — too easy and both arms close, too hard and both fail.
+
+**What the frames show so far.** The registration's confirmation set is
+F29 onward — F1–F28 are excluded because the causal path from solver
+memory to student did not exist, an exclusion documented before the
+registration was written and turning on the *instrument*, not on the
+results. Through f34 that set is five reported frames (f29, f30, f32,
+f33, f34; f31 void, no student attempts), twelve student attempts
+carrying a USE claim, 32 use events: 20 fingerprinted over 15 distinct
+memories, 6 pastes, 6 matching only base-file identifiers, none
+unwitnessed. All six pastes fall in f29–f30, before the scribe cards
+were split. One use is cross-problem (§3.1b). §3.1a's slightly larger
+counts (35 events, 13 attempts, 23 fingerprinted) include f28, an
+excluded pilot frame, because the audit was run over everything with an
+archived artifact; the difference is f28 attempt 3 and its three
+fingerprinted events. Under the registration's
+total-reporting rule the null and degraded frames are reported with their
+named defect rather than dropped, and the unit of evidence is the frame,
+not the series — pooling across a continuously repaired instrument is
+what the design forbids.
+
+**The supply/demand asymmetry, in the new design.** Of 45 candidates
+reviewed across f32–f35, 8 were approved. All 8 came from the guide,
+which deposited 14; the two scribe seats deposited 31 and had none
+approved — 11 rejected on the merits, 20 returned `cannot-judge` because
+the reviewer could not fetch or could not bind them.
+
+Much of that is apparatus rather than judgement, and one instance shows
+how much. The single validator defect of §2.1 item 20 has now voided
+three guide deposits on f33 and three more on f35 — the latter while
+this section was being written, in a frame still running, with the
+reviewer recording its own verdict as: *"Approval cannot be persisted
+because the typed JSON boundary keywordizes new-pattern-rationales keys
+while validate-pattern-accounting looks up string pattern IDs."* It had
+judged all three coherent and actionable against named residuals. A
+one-token type mismatch is deciding what a student is allowed to know,
+and the only place that is written down is inside the verdicts it
+produces.
+
+The scribe seats' remaining failures include a design contradiction
+worth stating in its own right: the student-side scribe is
+chartered to mine *process* corrections — the stumbles a cold agent
+repeats — while the proctor reviews every candidate for fit against an
+open mathematical residual, which a process rule by construction does not
+have. The seat cannot yield until one card gives.
+
+What did yield is the guide: it reads what the student says it lacked, in
+the student's own words, and writes one memory against one residual.
+That is §6's demand-side result reappearing inside a supply-side
+pipeline. Two qualifications keep it honest. These are same-problem
+memories — a cache, in the scribe card's own vocabulary — and 25 of 26
+distinct used memories were used only on the problem they were mined
+from. And on one frame the guide's memories were written *after* an
+attempt had already closed the problem without them, the following
+attempt then being recorded as a closure with memory; a second frame
+shows the same shape with a longer post-intervention attempt than the
+successful one preceding it. Whether an intervention between attempts
+buys anything is an open question the campaign is now instrumented to
+answer and has not yet answered.
+
+**Instrument-version boundaries.** Three changes cut across the frames
+and no comparison may span one silently: open corpus search wired
+2026-08-24 (so from f32 the student has both a shelf and a query tool,
+unrandomized — access mode is collinear with frame ordinal); controller-
+derived memory accounting 2026-08-25 (pre-f35 surfacing records are model
+transcriptions, after they are controller facts); and the student attempt
+cap cut from an enforced 60 minutes to 30 at f35. All three are recorded
+as amendments to the preregistration rather than edits to it.
 
 ## 6. Demand-side memory: votes, builds, callbacks [DRAFT-READY DATA]
 
@@ -409,7 +714,7 @@ disbelieving the document.
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
-- The thirteen-instance catalogue is complete for the period as far as
+- The twenty-instance catalogue is complete for its two periods as far as
   we know — by construction we cannot know it is.
 - Relevance scoring blindness (batch-2) is procedural, not cryptographic.
 - All twin comparisons carry a two-seat confound; seats traded
@@ -417,6 +722,22 @@ disbelieving the document.
   exists yet.
 - The operator hierarchy's economics (frontier/mid/third-party split) is
   reported from one day's practice.
+- §3.1a's fingerprint is a necessary condition on a USE claim, not a
+  causal one: it establishes that the artifact carries what the memory
+  named, never that the student could not have got there alone. §5a's
+  level-2b is the claim that would need the ablation, and the ablation
+  has not been run.
+- The identifier extraction behind §3.1a is a regex over memory bodies,
+  calibrated against one hand-checked case (§3.1b) and validated by its
+  negative rows. It cannot distinguish a memory's identifier being *used*
+  from its being *corrected*; at least one counted event is the latter.
+- §5a's paste before/after holds the availability of the six pasted
+  memories constant, not the problems, the students, or the rest of the
+  pipeline. It is a controlled comparison in one factor, not a trial.
+- Every count in §5a is over frames run on a continuously repaired
+  instrument. That is a stated condition of the design rather than a
+  defect in it, and it is why the unit of evidence is the frame with its
+  revision attached, not the pooled series.
 
 ## Appendix A. Artifact index [TO MAINTAIN]
 
@@ -425,3 +746,21 @@ ledger: substrate, session "vote-and-callback-pipeline", tags
 :concept-vote :glue-census :use-adjudication :retrieval-miss. Runbook:
 `E-batch-operator-runbook.md`. Day synthesis: `E-2026-08-10-learnings.md`.
 Priors: `E-memory-priors-survey.md`.
+
+**§§2.1 items 14–20, 3.1a, 3.1b, 5a (frame campaign).** Frame records,
+per-phase receipts and archived attempt sources:
+`data/apm-campaigns/jit-all-open-nontopology-v1/*-f{28..35}/`.
+Preregistration and its amendments:
+`holes/labs/M-apm-demonstration/prereg-capability-transfer-v1.edn`.
+Fingerprint instrument and reading:
+`holes/labs/M-apm-demonstration/analysis/fingerprint_audit.py`,
+`fingerprint-2026-08-25.json`, write-up
+`NOTE-fingerprint-audit-2026-08-25.md`. Store shape and origin/reuse rule:
+`analysis/memory_shape.py`, `memory-shape-2026-08-25.json`. Silence
+instances: `holes/technotes/TN-fable-F32-model.md` (14),
+`TN-fable-F32-process.md` (15), `TN-sonnet-F33-finding.md` (16),
+`TN-fable-F32-F35-bank-review.md` (17–20, and the review these sections
+came from). Role cards under `holes/labs/M-apm-demonstration/role-cards/`:
+`codex-scribe-v1`, `zai-scribe-v1`, `promotion-proctor-v3`,
+`zai-student-v2`. Prior review of the pasted population:
+`holes/excursions/E-early-memories-review.md`.

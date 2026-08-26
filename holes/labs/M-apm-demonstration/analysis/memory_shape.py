@@ -14,11 +14,12 @@ futon3/library/math-*), never by directory listing (analyst-v1 caution). Every
 count states its denominator. A count that equals its request limit is printed
 as a CEILING, not a total.
 """
-import argparse, collections, glob, json, os, re, sys, urllib.parse, urllib.request
+import argparse, collections, glob, json, os, re, subprocess, sys, urllib.parse, urllib.request
 
 SUBSTRATE = os.environ.get("FUTON1B_BASE", "http://127.0.0.1:7073")
 LIBRARY = os.environ.get("FUTON3_LIBRARY", os.path.expanduser("~/code/futon3/library"))
 CAMPAIGNS = os.environ.get("APM_CAMPAIGNS", os.path.expanduser("~/code/futon3c/data/apm-campaigns"))
+APM_LEAN = os.environ.get("APM_LEAN", os.path.expanduser("~/code/apm-lean"))
 PROBLEM_ID = re.compile(r"\b[a-z]\d{2}[A-Z]\d{2}\b")
 APM_IDENT = re.compile(r"apm_[a-z]\d{2}[A-Z]\d{2}")
 FILE_LINE = re.compile(r"Main\.lean:\d+")
@@ -110,10 +111,51 @@ def use_receipts():
     return surfaced, used, frames, problems
 
 
+def witness_commit(b):
+    """The apm-lean commit a memory cites as its witness, wherever it sits in
+    the body tree (codex-pilot memories nest it under :body :witness :commit)."""
+    stack = [b]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            c = node.get("commit") or node.get(":commit")
+            if isinstance(c, str) and re.fullmatch(r"[0-9a-f]{7,40}", c):
+                return c
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            stack.extend(node)
+    return None
+
+
+def problem_of_commit(sha, cache={}):
+    """Resolve a witness commit to the problem it touched, via apm-lean."""
+    if sha not in cache:
+        cache[sha] = None
+        try:
+            out = subprocess.run(["git", "show", "--stat", "--format=", sha],
+                                 cwd=APM_LEAN, capture_output=True, text=True,
+                                 timeout=20).stdout
+            hits = {m.group(1) for m in re.finditer(r"problems/([a-z]\d{2}[A-Z]\d{2})/", out)}
+            if len(hits) == 1:
+                cache[sha] = hits.pop()
+        except Exception:
+            pass
+    return cache[sha]
+
+
 def mined_from(m):
     """The problem a memory was mined from: its :evidence/subject when that is a
     problem ref, else the first problem id in its name/hook/body (the f29/f30
-    guide memories name it), else None."""
+    guide memories name it), else the problem touched by the commit it cites as
+    its witness, else None.
+
+    The witness fallback matters: memories deposited by the codex pilot carry a
+    MISSION subject (M-codex-sorry-loop), not a problem ref, and name no problem
+    id anywhere -- exactly the hygiene the scribe cards ask for. Without this
+    they resolve to unknown origin, and a use of one cannot be counted as
+    cross-problem reuse even when it plainly is (f33 attempt-1 used
+    e-codexpilot-force-a-sublinear-... on a94A07; its witness commit 662b9ec is
+    a94J08). That is how the campaign reuse count read 0 while standing at 1."""
     subj = m.get("evidence/subject") or m.get(":evidence/subject") or {}
     if isinstance(subj, dict):
         rid = subj.get("ref/id") or subj.get(":ref/id")
@@ -121,7 +163,10 @@ def mined_from(m):
             return str(rid)
     b = body_of(m)
     hit = PROBLEM_ID.search(" ".join(str(b.get(k, "")) for k in ("name", "hook", "body")))
-    return hit.group(0) if hit else None
+    if hit:
+        return hit.group(0)
+    sha = witness_commit(b)
+    return problem_of_commit(sha) if sha else None
 
 
 def main():
