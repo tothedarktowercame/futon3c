@@ -13,17 +13,26 @@
 
 (defn- path [] (or *path-override* (config/env "FUTON3C_FOLLOWUP_PATH") default-path))
 (defn- empty-state [] {:queued {} :leased {} :terminal {} :dedupe {}})
+(defn- migrate-dedupe [s]
+  (let [outstanding (into #{} (concat (map :followup-id (mapcat val (:queued s)))
+                                        (keys (:leased s))))]
+    (update s :dedupe #(into {} (filter (fn [[_ id]] (contains? outstanding id)) %)))))
 (defn- load-state []
   (let [f (io/file (path))]
     (if (.exists f)
       (let [x (edn/read-string (slurp f))]
-        (if (map? x) (merge (empty-state) x) (empty-state)))
+        (if (map? x) (migrate-dedupe (merge (empty-state) x)) (empty-state)))
       (empty-state))))
-(defn- ensure! [] (when-not @!state (reset! !state (load-state))) @!state)
 (defn- persist! [s] (spit (path) (pr-str s)) s)
+(defn- ensure! []
+  (when-not @!state
+    (reset! !state (persist! (load-state))))
+  @!state)
 (defn clear! [] (reset! !state (empty-state)) (persist! @!state))
 (defn snapshot [] (ensure!) @!state)
 (defn- seat-key [agent session] [(str agent) (str session)])
+(defn- release-dedupe [s item]
+  (if item (update s :dedupe dissoc (:dedupe-key item)) s))
 
 (defn enqueue!
   [{:keys [agent session type dedupe-key prompt metadata]}]
@@ -66,6 +75,7 @@
                  (-> s
                      (assoc :queued queued)
                      (update :leased dissoc id)
+                     (release-dedupe item)
                      (assoc-in [:terminal id] (assoc item :state :cancelled :reason reason)))
                  s))))
     (persist! @!state)
@@ -93,16 +103,20 @@
            (fn [s]
              (loop [s (requeue-expired s now)]
                (if-let [item (first (get-in s [:queued key]))]
-                 (let [rest-items (subvec (get-in s [:queued key]) 1)]
-                   (if (valid? item)
-                     (let [item* (assoc item :lease-deadline-ms (+ now lease-ms))]
-                       (reset! leased item*)
-                       (-> s (assoc-in [:queued key] rest-items)
-                           (assoc-in [:leased (:followup-id item)] item*)))
-                     (recur (-> s (assoc-in [:queued key] rest-items)
-                                (assoc-in [:terminal (:followup-id item)]
-                                          (assoc item :state :cancelled
-                                                      :reason :revalidation-failed))))))
+                 (let [rest-items (subvec (get-in s [:queued key]) 1)
+                       validity (valid? item)]
+                   (if (true? validity)
+                    (let [item* (assoc item :lease-deadline-ms (+ now lease-ms))]
+                      (reset! leased item*)
+                      (-> s (assoc-in [:queued key] rest-items)
+                          (assoc-in [:leased (:followup-id item)] item*)))
+                    (recur (-> s (assoc-in [:queued key] rest-items)
+                               (release-dedupe item)
+                               (assoc-in [:terminal (:followup-id item)]
+                                         (assoc item :state :cancelled
+                                                     :reason (if (keyword? validity)
+                                                               validity
+                                                               :revalidation-failed)))))))
                  s))))
     (persist! @!state)
     @leased))
@@ -112,6 +126,7 @@
   (let [item (get-in @!state [:leased id])]
     (when item
       (swap! !state #(-> % (update :leased dissoc id)
+                           (release-dedupe item)
                            (assoc-in [:terminal id] (assoc item :state :acked))))
       (persist! @!state)
       true)))

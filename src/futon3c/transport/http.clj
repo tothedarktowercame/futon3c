@@ -75,6 +75,8 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.followup-queue :as followup-queue]
+            [futon3c.inbox-zero.followup-validity :as followup-validity]
+            [futon3c.dev.config :as dev-config]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -4066,7 +4068,12 @@
 
 (defn- handle-followup-ready [request]
   (let [agent (req-query-param request "agent")
-        session (req-query-param request "session")]
+        session (req-query-param request "session")
+        now (System/currentTimeMillis)
+        ttl-ms (try (Long/parseLong (or (dev-config/env "FUTON3C_FOLLOWUP_TTL_MS")
+                                        "21600000"))
+                    (catch Throwable _ 21600000))
+        current? (followup-validity/validator {})]
     (cond
       (agent-in-flight-turn? agent)
       (json-response 200 {:ok true :ready [] :withheld true})
@@ -4074,7 +4081,15 @@
       (let [item (followup-queue/lease-one!
                   agent session
                   (fn [queued]
-                    (exact-agent-session? (:agent queued) (:session queued))))]
+                    (cond
+                      (not (exact-agent-session? (:agent queued) (:session queued)))
+                      :revalidation-failed
+
+                      (< (+ (long (or (:created-at-ms queued) 0)) ttl-ms) now)
+                      :expired
+
+                      (not (current? queued)) :stale
+                      :else true)))]
         (json-response 200 {:ok true :ready (if item [item] [])
                             :leased (some? item)})))))
 
