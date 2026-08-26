@@ -252,7 +252,9 @@
     (is (:ok result) (pr-str result))
     (is (= :refused (get-in result [:bank-receipt :solve/pin-status])))
     (is (= :sorry-ax (get-in result [:bank-receipt :solve/pin-reason])))
-    (is (false? (get-in result [:bank-receipt :branch-retained?])))
+    ;; The branch is retained whether or not the solve passed the gate; the
+    ;; refusal is carried by :solve/pin-status, not by restating it here.
+    (is (true? (get-in result [:bank-receipt :branch-retained?])))
     (is (= #{:solver :student} (set (keys (:workspace-receipts result)))))
     (is (= (:bank-receipt result) @persisted))))
 
@@ -272,7 +274,8 @@
     (is (:ok result) (pr-str result))
     (is (zero? @calls))
     (is (= :skipped (get-in result [:bank-receipt :solve/pin-status])))
-    (is (false? (get-in result [:bank-receipt :branch-retained?])))))
+    ;; A partial frame's branch IS retained -- this must not read false.
+    (is (true? (get-in result [:bank-receipt :branch-retained?])))))
 
 (deftest throwing-pin-effect-is-recorded-without-blocking-close
   (let [frame {:frame/id "f44" :problem/id "a97J09"}

@@ -80,7 +80,14 @@
               :solver/branch (get-in terminal [:solver :branch])
               :solver/head (get-in terminal [:solver :head])
               :workspace/terminal-heads (:workspace/terminal-heads terminal)
-              :branch-retained? (= :pinned (:status pin-result))
+              ;; NOT conditional on the pin. The machine retains the solver
+              ;; branch for every frame, solved or not, so tying this to a
+              ;; successful pin made it report false for partial and void
+              ;; frames whose branches are retained -- a receipt asserting
+              ;; something untrue, which is the defect the pin exists to fix.
+              ;; The verified claim is :solve/pin-status; this field keeps the
+              ;; meaning it has always had.
+              :branch-retained? true
               :solve/pin-status (:status pin-result)}
         body (cond-> body
                (:ref pin-result) (assoc :solve/pin-ref (:ref pin-result))
@@ -89,7 +96,8 @@
 
 (defn- pin-outcome
   [frame terminal-receipt pin-solve-fn]
-  (if-not (= :solved (:problem/outcome terminal-receipt))
+  (if-not (and (fn? pin-solve-fn)
+               (= :solved (:problem/outcome terminal-receipt)))
     {:status :skipped}
     (try
       (let [result (pin-solve-fn frame terminal-receipt)]
@@ -109,8 +117,12 @@
   (let [terminal-check (validate-terminal frame terminal-receipt)]
     (cond
       (not (:ok terminal-check)) terminal-check
+      ;; pin-solve-fn is deliberately NOT required. Adding it to this list
+      ;; invalidated every existing caller that predates pinning -- the queue
+      ;; integration test alone cascaded 21 failures -- and a frame must still
+      ;; close where no pinner is wired. Absent, it degrades to :skipped.
       (not (every? fn? [audit-fn retire-workspace-fn retirement-status-fn
-                        persist-bank-fn retire-seats-fn pin-solve-fn]))
+                        persist-bank-fn retire-seats-fn]))
       {:ok false :error/code :queued-frame-terminal-provider-missing}
       (not= #{:solver :student} (set (keys leases)))
       {:ok false :error/code :queued-frame-terminal-leases-incomplete}
