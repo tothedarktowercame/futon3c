@@ -1,0 +1,71 @@
+;; Append-only decision records for parked frames.
+;;
+;; Written because the machine can park a frame with :decision/owner
+;; :claude-supervisor and bell for a decision, but has no path to CONSUME the
+;; decision that comes back -- there is no frame-park resolution function
+;; (conductor_surface/resume-parked! is the Agency agent-park protocol, not
+;; this).  Until that lands, a decision recorded anywhere else is lost.  Each
+;; record carries :last-valid-receipt/id so it can be matched to its park
+;; without ambiguity when a consumption path exists.
+{:decisions
+ [{:frame/id "f36"
+   :problem/id "a96A07"
+   :campaign/id "jit-all-open-nontopology-v1"
+   :last-valid-receipt/id
+   "517fb3e78e184a24703902139fa7ecf2ef85d0e306446dcd26ca842cf395b6e6"
+   :park/state-type :solver-human-intervention-frame-park
+   :decision/owner :claude-supervisor
+   :decision/by "claude-12"
+   :decision/at "2026-08-26T11:15:00Z"
+   :decision/status :decided
+   :decision/disposition :partial
+   :decision/class :library-infrastructure-absent
+   :decision/redispatch-solver? false
+   :decision/apparatus-repair-required? false
+
+   ;; What I verified rather than accepted, at
+   ;; /home/joe/code/apm-frames/f36-a96A07-solver, head
+   ;; cfe5518dcbafb6873d4beba5304b6cabd0393e41 (present, matches the park):
+   :verification
+   {:problem-file "problems/a96A07/lean/Main.lean"
+    :lines 3168
+    :sorry-count 1
+    :sorry-line 3168
+    :named-theorems-present
+    ["apm_a96A07_HasStripUnitSheetIntersection"
+     "apm_a96A07_stripDeckDegreeBound_of_unitSheetIntersection"
+     "apm_a96A07_of_stripUnitSheetIntersection"]
+    :solver/rounds-completed 50}
+
+   :decision/rationale
+   (str "Not an apparatus failure. The machine behaved correctly: 50 rounds, "
+        "receipts preserved, a precise residual, artifacts committed, and the "
+        "claim reads back exactly -- 3168 lines with exactly one sorry at the "
+        "last line, all three named theorems present. "
+        "The residual is a library gap, not a proof gap the solver can close: "
+        "prove that a proper embedded annular lift confined to the open strip "
+        "with degree magnitude >= 2 must meet its unit horizontal translate. "
+        "The solver's own source audit, recorded in the file above the sorry, "
+        "found no Jordan curve, topological degree, winding-number, "
+        "circle-homology, Alexander duality or planar separation theorem in "
+        "the pinned sources, and states that further component adapters do "
+        "not reduce the residual. "
+        "So more solver budget will not move this. Under Joe's rule -- "
+        "continue while the obstruction moves, stop when it repeats -- this "
+        "obstruction has stopped moving. Redispatching the solver would burn "
+        "50 more rounds against absent infrastructure.")
+
+   :decision/recommended-route
+   (str "a96A07 needs the missing planar-separation/degree infrastructure to "
+        "exist before it is attemptable. That is a Mathlib-contribution-shaped "
+        "task, not a frame retry. Suggest classifying it out of the active "
+        "queue as infrastructure-blocked rather than leaving it parked "
+        "indefinitely, and revisiting if the pinned Mathlib gains the "
+        "machinery. Joe's read at round 24 -- that a96A07 might simply be a "
+        "hard problem -- is confirmed, with the refinement that it is not "
+        "long-proof hard but blocked on library content that is not there.")
+
+   :decision/not-done
+   (str "The frame is NOT voided and NOT forgotten: this record disposes it "
+        "as :partial with its residual and artifacts intact. I did not edit "
+        "queue-state.edn, which is machine-owned durable state.")}]}
