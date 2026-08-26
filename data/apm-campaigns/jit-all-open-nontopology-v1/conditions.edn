@@ -105,4 +105,17 @@
  :namespaces
  ["futon3c.apm.queued-frame-adapter" "futon3c.apm.countdown-control"],
  :loaded? true}
+{:namespaces
+ ["futon3c.apm.conductor" "futon3c.apm.live-learning-phases"],
+ :field [:receipt/memory-cascade :holdout-excluded],
+ :amendment 8,
+ :note
+ "On master, NOT loaded: the attempt-1 same-problem holdout (amendment 8, claude-clink-1) now bounds the cascade (:exclude on expand-memory-cascade; :holdout-excluded on the cascade record) and every citation channel (finding :student-memory-used-despite-holdout). Load together with 0e4b71ba at the pause after f44; register that reload.",
+ :head "0385f29d",
+ :id "C-10",
+ :kind :code,
+ :at "2026-08-26T18:50Z",
+ :by "claude-19",
+ :loaded? false,
+ :sha "0385f29d"}
 ]
