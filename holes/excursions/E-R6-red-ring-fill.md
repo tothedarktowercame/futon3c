@@ -91,16 +91,122 @@ composition read above is in `war_machine.clj`'s judge path; the 07-15 run went
 through the full-loop runner. Which proposers that path installs is the second
 check, and it is cheap.
 
+## The requirements, in the family vocabulary
+
+*The four mechanisms above are evidence, not a fix-list. Joe, 2026-08-26: a
+sentence naming four things to repair is still an implied to-do. Stated as
+requirements, in the shape `E-R8-red-ring-fill` uses — the family, the naive fix
+that recreates the defect, and the fix that removes the need for the entry.*
+
+### The mechanism all four share
+
+Nothing distinguishes **"the space is genuinely empty"** from **"the generator
+did not run."**
+
+- tension silent — no tension, or no signal?
+- portfolio dark — no `:close-mission` candidates, or the proposer is off?
+- artifact frozen — these are the high-curvature nodes, or this is a June file?
+- set literal — these are the action kinds, or nobody added the fifteenth?
+
+Four indistinguishabilities, one property. And it is **family 2 at the SELECT
+stratum** — the same requirement as `typedAbsence` in `GainChain.lean`
+(out-of-domain ≠ no-data) and the same as R5's *an absence is reported with the
+discipline of a poor score*. One family, three columns.
+
+### Requirement A — family 2, non-empty handle, at the proposer stratum
+
+**An empty contribution is a record, not a missing row.** For every *registered*
+proposer, the composed space carries whether it ran, on what input, and what it
+produced — including `0`.
+
+**The implementation locus is exact.** `action-proposer/compose-proposers` is
+three lines: `(mapcat propose) → distinct → vec`. The protocol declares
+`proposer-id` *"for tracing / logging"* at `action_proposer.clj:31` and the
+composer **never calls it**. Two of five proposers self-stamp provenance into
+their own candidates — `pattern_registry.clj:360` `:proposer-id
+:pattern-enumerator`, `aif2/tension.clj:125` `:provenance {:proposer-id …}` —
+and bootstrap, sorry-enumerator and portfolio do not.
+
+**❌ The naive fix: make every proposer stamp its id.** It recreates the defect
+exactly. **A proposer that emits nothing stamps nothing** — provenance carried on
+emitted items cannot express absence. Five stamping proposers still produce a
+silent, unattributable space.
+
+**✅ The requirement-satisfying fix:** the *composer* writes one attestation per
+**registered** proposer, whether or not it emitted — `{:proposer-id … :ran? …
+:input-ref … :emitted n}`. The record is keyed by the registry, not by the
+output, so absence has somewhere to live.
+
+**Acceptance.** On a tick where nothing is addressable, the trace names five
+proposers with `:emitted 0` and a reason each. The 2026-07-15 archive is the
+counter-case: 24 attempts, `"no addressable entities"` seven times each, and no
+record of which proposers ran — so the operator learned it at attempt 24 rather
+than attempt 2.
+
+### Requirement B — family 3, self-contained record, in its dual
+
+**A live decision must not depend on evidence whose age is unstated.** Family 3
+in `GainChain.lean` is `selfContainedRecord` — a durable record's reconstruction
+may not depend on state that can change afterwards. The dual: **a live read must
+carry its as-of, and its consumer must declare a staleness bound.**
+
+**❌ The naive fix: regenerate `M-substrate-metric.R2-curvature-full.json`.** It
+is stale again in twelve weeks and nothing says so. This is *"repair the eight
+rejected deposits"* from `E-R8` slice 4, one stratum up.
+
+**✅** The signal carries `:as-of`; `read-curvature-signal` returns
+`fresh(sig) | stale(sig, age) | absent` — three values, not `[]` — and the
+proposer's contribution is typed accordingly. Whether stale still proposes is a
+policy; that it is *reported* is the requirement.
+
+**Acceptance.** A tick reading a June artifact in August records `stale` with the
+age. No tick reads an undated signal.
+
+### Requirement C — family 5, declared domain, and WR-20's own ruling
+
+**A stratum's inventory is data, and extension does not edit code.** This is not
+a new requirement — it is **WR-20 (2026-05-31)**, unimplemented at two of three
+strata.
+
+**❌ The naive fix: add the missing action classes to the set literal.** Editing
+a list. `E-R8`'s test — *does this fix scale by editing a list?* — answers itself.
+
+**✅** `action-types` and the proposer vector become registry entries with the
+per-entry admissibility gate WR-20 specifies. **The primitive already exists**:
+`aif2/tension.clj` is its S1 instance, *"a credited + admissibility-gated S1
+registry entry"*. So this is instantiation at the remaining strata, not design.
+
+**Acceptance.** A new action class or proposer is added with no edit to
+`forward_model.clj` and no edit to `war_machine.clj:4370`.
+
+### The module property
+
+In the shape module 1 established, and family 9 of the rosetta
+(`M-formal-war-machine` §2.1b), whose Lean cell currently reads *"unstated — the
+R6 module's slot"*:
+
+> **`surveyedSpace`** — the ordering step consumes only a space in which every
+> registered contributor is accounted for, each contribution carrying its
+> input's as-of.
+
+`DarkTower/WarMachine/CandidateSpace.lean` at the light standard, with refusal
+theorems named after the dated incidents — **2026-06-03** (a signal read as
+current three months on) and **2026-07-15** (24 attempts, no attestation) — and a
+positive witness. Not before slice 1: the artifact's provenance may change what
+"contributor" means.
+
+### What all three share
+
+Every naive fix above **adds an entry** — one regenerated file, one armed flag,
+one more action class, one more stamp. Every requirement-satisfying fix **removes
+the need for entries**, by making the registry the thing that is recorded rather
+than the output. That is `E-R8`'s test, and R6 fails it in four places at once.
+
 ## What this makes R6
 
-Not *"the proposer is unbuilt"*. R6 is: **a generative stratum that exists at one
-level (WR-20's S1 registry, instantiated once) over an inventory and a proposer
-set that are still code, fed by an artifact nobody has regenerated in twelve
-weeks, with one proposer dark and one silent-on-absence.**
-
-That is a materially different piece of work from "build a candidate source", and
-it is the same lesson as R8 and R14: **the ring's recorded reason was the part
-that had not been checked.**
+Not *"the proposer is unbuilt"*. R6 is **a stratum that can generate but cannot
+account for what it generated or failed to** — and the ring's recorded reason was
+the part nobody had checked, as with R8 and R14.
 
 ## First slices
 
