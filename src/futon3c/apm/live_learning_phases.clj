@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-learning-phases
   "Live Student/Guide/Scribe/close adapters for the APM map/reduce cycle."
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.java.shell :as shell]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
@@ -35,7 +36,12 @@
        set))
 
 (defn- cascade-request
-  [config seed-ids cascade-fn cascade-readers cascade-readers-fn]
+  "EXCLUDE-IDS are never offered, whichever route reaches them: the attempt's
+   withheld shelf entries (same-problem holdout, amendment 8) would otherwise
+   return through the sibling route, since they sit on the seeds' own
+   patterns. :holdout-excluded counts what the exclusion removed, so the
+   receipt's holdout and cascade records agree."
+  [config seed-ids exclude-ids cascade-fn cascade-readers cascade-readers-fn]
   (let [started (System/nanoTime)]
     (try
       (let [readers (if (fn? cascade-readers-fn)
@@ -44,7 +50,8 @@
             options (cond-> (or readers {})
                       (some? (:cap config)) (assoc :cap (:cap config))
                       (some? (:routes config)) (assoc :routes
-                                                      (set (:routes config))))
+                                                      (set (:routes config)))
+                      (seq exclude-ids) (assoc :exclude (set exclude-ids)))
             expanded (cascade-fn seed-ids options)
             offers (->> (:routes expanded)
                         (remove #(= :leaf (get-in % [1 :route])))
@@ -74,6 +81,7 @@
          :expanded-available (:expanded-available expanded)
          :offers offers
          :histogram (frequencies (map :route offers))
+         :holdout-excluded (or (:excluded-offers expanded) 0)
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
       (catch Throwable t
         {:error (or (.getMessage t) (.getName (class t)))
@@ -177,6 +185,7 @@
                       (cascade-request
                        cascade-config
                        accessible-ids
+                       withheld-ids
                        cascade-fn cascade-readers cascade-readers-fn))
             body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
@@ -288,9 +297,16 @@
         (set (get-in request [:memory-snapshot :accessible-memory-ids]))
         cascade-memory-ids
         (set (map :memory-id (get-in request [:memory-cascade :offers])))
+        ;; A withheld id (same-problem holdout, amendment 8) is not citable
+        ;; by any channel: not the shelf it was removed from, not a search
+        ;; hit on the store, not a cascade offer. Otherwise the holdout is
+        ;; only as strong as the weakest channel, and a leak reads as a
+        ;; cross-problem use.
+        withheld-memory-ids (set (:shelf/withheld-ids request))
         allowed-memory-ids
-        (into snapshot-memory-ids (concat searched-memory-ids
-                                          cascade-memory-ids))
+        (set/difference (into snapshot-memory-ids
+                              (concat searched-memory-ids cascade-memory-ids))
+                        withheld-memory-ids)
         used-memory-ids (set (:used-ids submitted-memory-use))
         memory-use (controller-memory-use request ticket
                                           (:used-ids submitted-memory-use))
@@ -315,6 +331,10 @@
                (map? submitted-memory-use)
                (not (every? allowed-memory-ids used-memory-ids)))
           (conj :student-memory-used-without-surfacing)
+          (and (= :student-attempt kind)
+               (map? submitted-memory-use)
+               (seq (set/intersection used-memory-ids withheld-memory-ids)))
+          (conj :student-memory-used-despite-holdout)
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)

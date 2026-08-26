@@ -319,11 +319,19 @@
    `why-targets-fn` returns authored @why targets for a pattern. The result is
    bounded after cheapest-route deduplication. `:expanded-count` excludes the
    leaf memories already surfaced by retrieval."
-  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap routes]
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap routes
+                           exclude]
                     :or {cap default-memory-cascade-cap}}]
   (let [routes-enabled (or routes #{:why-hop :co-incidence})
         seed-memory-ids (vec (distinct seed-memory-ids))
         seed-memory-set (set seed-memory-ids)
+        ;; `:exclude` — memory ids that must not be offered by ANY route,
+        ;; whatever the store says. Every structural route reads candidates
+        ;; from the store (attachments-fn), not from the shelf, so an id the
+        ;; caller withheld from the seeds (the attempt-1 same-problem holdout,
+        ;; prereg amendment 8) would otherwise come straight back as a
+        ;; sibling: it is attached to the very patterns the seeds sit on.
+        excluded (set exclude)
         seed-edges (mapcat attachments-fn seed-memory-ids)
         seed-patterns (vec (distinct (mapcat attachment-patterns seed-edges)))
         ;; Authored why edges form a directed graph. Record the shortest
@@ -361,7 +369,7 @@
         route-rank {:sibling 0 :why-hop 1 :co-incidence 2}
         route-key (fn [{:keys [route hops pattern]}]
                     [hops (get route-rank route 3) (str pattern)])
-        structural
+        structural-unbounded
         (concat
          (when (contains? routes-enabled :sibling)
            (for [pattern seed-patterns
@@ -379,6 +387,12 @@
                :let [memory-id (attachment-memory-id edge)]
                :when (and memory-id (not (seed-memory-set memory-id)))]
            [memory-id {:route :co-incidence :hops hops :pattern pattern}]))
+        excluded-offers (->> structural-unbounded
+                             (map first)
+                             (filter excluded)
+                             distinct
+                             count)
+        structural (remove #(excluded (first %)) structural-unbounded)
         cheapest
         (reduce (fn [by-memory [memory-id route]]
                   (update by-memory memory-id
@@ -414,6 +428,8 @@
      :patterns-per-problem (count seed-patterns)
      :expanded-count (count selected)
      :expanded-available (count ordered)
+     :exclude-count (count excluded)
+     :excluded-offers excluded-offers
      :cap cap
      :truncated? (> (count ordered) cap)}))
 

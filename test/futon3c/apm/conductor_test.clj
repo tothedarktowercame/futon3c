@@ -61,6 +61,32 @@
            (:routes result)))
     (is (= #{:sibling} (:routes-enabled result)))))
 
+(deftest excluded-memories-are-not-offered-by-any-route
+  ;; The attempt-1 same-problem holdout (amendment 8) removes ids from the
+  ;; seeds; without :exclude the sibling route would re-offer exactly those
+  ;; ids, because they sit on the seeds' own patterns.
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        withheld (cascade-edge "memory/withheld" "pattern/seed" "a01A01")
+        sibling (cascade-edge "memory/sibling" "pattern/seed" "a02A02")
+        readers (cascade-readers {"memory/leaf" [leaf]
+                                  "pattern/seed" [leaf withheld sibling]}
+                                 {})
+        leaky (conductor/expand-memory-cascade
+               ["memory/leaf"] (merge readers {:routes #{:sibling} :cap 10}))
+        bounded (conductor/expand-memory-cascade
+                 ["memory/leaf"] (merge readers {:routes #{:sibling} :cap 10
+                                                 :exclude #{"memory/withheld"}}))]
+    (is (= #{"memory/withheld" "memory/sibling"}
+           (set (map first (remove #(= :leaf (:route (second %)))
+                                   (:routes leaky)))))
+        "without :exclude the withheld id comes back as a sibling")
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]
+            ["memory/sibling" {:route :sibling :hops 1 :pattern "pattern/seed"}]]
+           (:routes bounded)))
+    (is (= 1 (:exclude-count bounded)))
+    (is (= 1 (:excluded-offers bounded)))
+    (is (= 0 (:excluded-offers leaky)))))
+
 (deftest minimum-cascade-sibling-wins-an-equal-hop-why-route
   (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
         as-sibling (cascade-edge "memory/shared" "pattern/seed" "a02A02")

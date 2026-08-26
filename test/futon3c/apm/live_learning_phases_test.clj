@@ -404,6 +404,83 @@
     (is (= [] (:shelf/withheld-ids request)))
     (is (= 0 (:shelf/withheld-count request)))))
 
+(deftest holdout-bounds-the-cascade-and-every-citation-channel
+  ;; Amendment 7 (cascade arm) and amendment 8 (attempt-1 same-problem
+  ;; holdout) go live on the same reload. The cascade reads candidates from
+  ;; the store, so a withheld id would come back as a sibling of the shelf's
+  ;; own patterns unless the expander is told to exclude it; and a withheld
+  ;; id found by search or offered by a leaky cascade must not be citable.
+  (let [promotion {:receipt/id "promotion-receipt"
+                   :receipt/snapshot-id "snapshot-1"
+                   :receipt/snapshot-digest "snapshot-digest"}
+        memories [{:memory-id "same" :provenance {:problem-id "a01J05"}}
+                  {:memory-id "cross" :provenance {:problem-id "a98J02"}}]
+        seen-options (atom nil)
+        request
+        (:request
+         (sut/build-request
+          (merge base
+                 {:unit (assoc unit :memory-cascade
+                               {:enabled? true :routes [:sibling] :cap 10})
+                  :contract {:phases {:student-attempt-1
+                                      {:ordinal 1 :requires []}}}
+                  :receipts {:promote-solver promotion}
+                  :snapshot-access
+                  {:ok true
+                   :snapshot {:snapshot/digest "snapshot-digest"
+                              :snapshot/memories memories}
+                   :accessible-memory-ids #{"same" "cross"}}
+                  :action cascade-action
+                  :seat {:agent-id "f19-student" :invoke-ready? true}
+                  :cascade-fn
+                  (fn [seed-ids options]
+                    (reset! seen-options options)
+                    (is (= ["cross"] seed-ids) "seeds are the filtered shelf")
+                    {:routes [["cross" {:route :leaf :hops 0}]
+                              ["cross-sibling" {:route :sibling :hops 1
+                                                :pattern "math-strategy/p"}]]
+                     :pattern-surfaces {}
+                     :expanded-available 1 :expanded-count 1 :cap 10
+                     :truncated? false :routes-enabled #{:sibling}
+                     :exclude-count 1 :excluded-offers 1})
+                  :cascade-readers {:attachments-fn (constantly [])
+                                    :why-targets-fn (constantly [])
+                                    :pattern-fn (constantly nil)}})))
+        ticket {:job-id "cascade-job"}]
+    (is (= ["same"] (:shelf/withheld-ids request)))
+    (is (= #{"same"} (:exclude @seen-options))
+        "the withheld ids reach the expander as :exclude")
+    (is (= ["cross-sibling"]
+           (map :memory-id (get-in request [:memory-cascade :offers]))))
+    (is (= 1 (get-in request [:memory-cascade :holdout-excluded]))
+        "the cascade record says how many offers the holdout removed")
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (is (:ok (sut/validate-terminal request ticket
+                                      (student-job ["cross-sibling"]))))
+      (let [findings (:findings (sut/validate-terminal
+                                 request ticket (student-job ["same"])))]
+        (is (some #{:student-memory-used-despite-holdout} findings))
+        (is (some #{:student-memory-used-without-surfacing} findings))))
+    ;; A search hit on a withheld id is not a licence either.
+    (with-redefs [role-memory/recorded-receipts-for-job
+                  (fn [job-id]
+                    (if (= "cascade-job" job-id)
+                      [{:receipt/id "receipt" :query "same problem"
+                        :result-ids ["same"]}]
+                      []))]
+      (is (some #{:student-memory-used-despite-holdout}
+                (:findings (sut/validate-terminal
+                            request ticket (student-job ["same"]))))))
+    ;; And a leaky cascade record (offer of a withheld id) does not license it.
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (is (some #{:student-memory-used-despite-holdout}
+                (:findings
+                 (sut/validate-terminal
+                  (assoc-in request [:memory-cascade :offers]
+                            [{:memory-id "same" :route :sibling :hops 1
+                              :pattern "math-strategy/p"}])
+                  ticket (student-job ["same"]))))))))
+
 (deftest student-cannot-use-global-store-memory-outside-controller-evidence
   (let [request {:dispatch/type :student-attempt
                  :agent-id "f22-student" :frame-id "f22"
