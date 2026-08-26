@@ -51,6 +51,9 @@
                               (get content rev))))
             results (bank-audit/unbanked-solved
                      {:campaign-dir (.getPath campaign-dir)
+                      ;; The production default is "origin/master" (the ref the
+                      ;; sweep pushes to); fixtures key on "master".
+                      :master-rev "master"
                       :read-at-rev read-at-rev})]
         (is (= [{:frame "f35" :problem-id "a95J04"
                  :head "different-head" :status :unbanked}
@@ -69,6 +72,7 @@
     (fn [campaign-dir]
       (is (= [] (bank-audit/unbanked-solved
                  {:campaign-dir (.getPath campaign-dir)
+                  :master-rev "master"
                   :read-at-rev (constantly nil)}))))))
 
 (defn- verification-input

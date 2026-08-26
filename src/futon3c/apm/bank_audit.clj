@@ -36,7 +36,13 @@
 (defn unbanked-solved
   "Classify solved frame receipts by comparing solver-head proof content to master."
   [{:keys [campaign-dir read-at-rev master-rev]
-    :or {read-at-rev default-read-at-rev master-rev "master"}}]
+    ;; origin/master, not master. bank-sweep branches from origin/master and
+    ;; pushes there, and never advances the local branch — so comparing against
+    ;; local master reported f44 :unbanked immediately after the sweep had
+    ;; banked and pushed it. Two tools disagreeing about which ref is "master"
+    ;; reads as work lost when it is not. Overridable for tests and for a
+    ;; repo with no remote.
+    :or {read-at-rev default-read-at-rev master-rev "origin/master"}}]
   (->> (terminal-receipts campaign-dir)
        (filter #(= :solved (:problem/outcome %)))
        (mapv (fn [receipt]
