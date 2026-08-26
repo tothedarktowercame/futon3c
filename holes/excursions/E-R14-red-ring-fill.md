@@ -329,6 +329,89 @@ an instance filling it. R14's honest re-description is **red on a disconnected
 dial** — a third kind of red, alongside R8's demonstrated defect and this
 excursion's opening guess of an evidence hole.
 
+## The information-theoretic reading — and why it upgrades the finding
+
+Joe, 2026-08-26. τ is the temperature of `P(π) ∝ exp(−G(π)/τ)`, which makes it
+exactly the knob on the **entropy** of the policy distribution: τ → 0 gives a
+point mass (H = 0, total commitment), τ → ∞ gives uniform (H maximal, no
+commitment). Taking the argmax keeps only the *mode* — and the mode of a softmax
+is invariant to its temperature for every τ > 0, since `x ↦ x/τ` is strictly
+monotone. So on the enacting path
+
+    I(τ ; selected action) = 0 bits
+
+Not small. Zero, by construction, for every value of τ.
+
+**This is a bound, not a code observation.** g reaches `:action` only through τ:
+`chosen` (`policy.clj:238`) is a function of `ranked-actions` alone, and the
+only other readers of `:selection-gain` are an audit field written *into* the
+record (`enact.clj:226`) and reporting (`lane_futility`) — neither gates an
+action. With `g → τ → action` a Markov chain, the data processing inequality
+gives
+
+    I(realized outcomes ; selected action) ≤ I(g ; action) ≤ I(τ ; action) = 0
+
+**Consequence for R8, and it is a scheduling result.** Repairing R8 completely —
+slices 4 and 5 landed, deposits flowing, γ moving off 1.0 — **cannot change a
+single selected action.** `E-R8-red-ring-fill`'s stopping condition ("the ring
+stays red with a working instrument attached") understates this: with the
+instrument fully working the behavioural effect is provably nil until R14's edge
+is reconnected. `p4ng/empirics-futon/NOTE-modular-formalisation-order.md` puts
+R8's repairs first; this argues the reconnection is what makes them measurable.
+
+**It also explains the empty salience interval exactly.** The cost of a wrong
+dial is bounded by what the dial can transmit. Zero bits ⇒ no bearer is
+possible. Fable's *"not merely unfound"* was a code reading; this is the bound
+underneath it.
+
+### The irony, in three layers
+
+1. **This is an active-inference stack.** In the canonical form
+   `P(π) = σ(−γ · G(π))`, precision over policies γ is the signature quantity —
+   what the free-energy formulation adds over plain cost minimisation — and
+   action follows from *sampling* the policy posterior, not from its argmax.
+   **Argmax is precisely the operation that makes precision inert.** A machine
+   whose only stated requirement is AIF faithfulness selects by the one rule
+   under which its own precision parameter cannot act.
+2. **G carries an epistemic term** — expected information gain about hidden
+   states. A loop built to maximise information gain transmits zero bits from
+   its own gain to its own behaviour.
+3. **WR-27 says a loop is born instrumented for its gain, and here the
+   instrument works.** `:controller-ranking` scores are literally `−G/τ`;
+   `:softmax-weights` is the full distribution; `:habit-adjusted-ranking` and
+   `:counterfactual` are computed and written. **The distribution is calculated,
+   recorded, and then discarded at the final step.** The channel is not missing —
+   it is severed at the last inch, *after* the reading is taken. Perfect
+   instrumentation of a quantity with no downstream.
+
+### And the one branch where τ does carry information names the repair
+
+In the habit-prior branch, `scores = −G/τ + ln E`. Because `ln E` is **not**
+scaled by τ, τ sets the exchange rate between evidence and habit, and there the
+argmax does depend on it. The general statement:
+
+> τ carries information only when it trades off two terms with different
+> τ-scaling. A single-term argmax annihilates it. Precision is meaningful only
+> relative to something else.
+
+That yields the reconnection menu by derivation rather than invention:
+
+| option | what it does | cost |
+|---|---|---|
+| **(a) sample** `P(π)` instead of argmax | canonical AIF; `I(τ ; action)` becomes the entropy τ controls, so the dial is live by construction | changes enactment behaviour — the same class of call as R8's slice 4, Joe's |
+| **(b) keep argmax, keep a second non-τ-scaled term** | the habit prior, which already exists and governs exactly **3** records in the archive | needs the shadow-vs-live check the strategy notes flag before citing those 3 |
+| **(c) accept it is decorative** | stop reporting τ as though it governed | honest, and it forecloses slice 3 |
+
+Option (c) is a real option, not a concession: logging a zero-capacity quantity
+per tick is exactly the *"well-formed pairing record of a provably inert
+quantity"* the strategy notes warn against.
+
+**Scope.** All of this is about the enacting path under
+`:selection-boundary :strategic-recommendation`. Under `:structural-pressure-mode
+:habit-prior` the capacity is nonzero, which is why those 3 records matter and
+why establishing whether they are live or shadow is now the highest-value cheap
+check in this excursion.
+
 ## The company level
 
 `futon0/analysis/business-models/NOTE-select-column-and-R14.md` (2026-08-26)
