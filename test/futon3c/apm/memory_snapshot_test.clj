@@ -8,18 +8,60 @@
   {:memory-id "e-solver-1" :depositor "solver"
    :reviewer "scribe" :review-evidence-id "e-review-1"
    :attachment-status :reviewed
-   :pattern-ids ["math-formalization/example"]})
+   :pattern-ids ["math-formalization/example"]
+   :name "solver memory" :hook "Use solverMemoryAnchor"
+   :body "exact solverMemoryAnchor"})
+
+(deftest candidates-are-ordered-by-promoted-frame-overlap-and-id
+  (let [candidates [{:memory-id "z-promoted"
+                     :provenance {:problem-id "p1"}
+                     :body "unrelatedIdentifier"}
+                    {:memory-id "a-inline" :body "sharedAlpha"}
+                    {:memory-id "b-fetched"}
+                    {:memory-id "c-failed"}]
+        fetched (atom [])
+        result (sut/order-candidates
+                candidates
+                {:problem-id "p1"
+                 :base-text "sharedAlpha sharedBeta otherIdentifier"
+                 :text-fn (fn [memory-id]
+                            (swap! fetched conj memory-id)
+                            (case memory-id
+                              "b-fetched" {:evidence/body
+                                           {:name "sharedAlpha"
+                                            :hook "sharedBeta"}}
+                              "c-failed" (throw (ex-info "store down" {}))))})]
+    (is (= ["z-promoted" "b-fetched" "a-inline" "c-failed"]
+           (mapv :memory-id (:ordered result))))
+    (is (= ["b-fetched" "c-failed"] @fetched))
+    (is (= {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+            :scores {"a-inline" 1 "b-fetched" 2 "c-failed" 0
+                     "z-promoted" 0}
+            :promoted-this-frame 1
+            :textless-fetched 1
+            :fetch-failed ["c-failed"]}
+           (:ordering result)))))
 
 (deftest atomic-snapshot-is-idempotent-and-student-access-is-exact
   (let [dir (Files/createTempDirectory "apm-snapshot-test"
                                        (make-array FileAttribute 0))
         path (.resolve dir "eligible.edn")
         args {:frame-id "f21" :problem-id "p1" :candidates [candidate]
-              :path path :evidence-visible? (constantly true)}
+              :path path :evidence-visible? (constantly true)
+              :base-text "solverMemoryAnchor"
+              :base-file-blob "1111111111111111111111111111111111111111"}
         first-result (sut/publish! args)
         replay (sut/publish! args)
         digest (get-in first-result [:snapshot :snapshot/digest])]
     (is (:ok first-result))
+    (is (= 2 (get-in first-result [:snapshot :snapshot/version])))
+    (is (= [:promoted-this-frame :identifier-overlap :memory-id]
+           (get-in first-result [:snapshot :snapshot/ordering :signal])))
+    (is (= "1111111111111111111111111111111111111111"
+           (get-in first-result
+                   [:snapshot :snapshot/ordering :base-file-blob])))
+    (is (= {"e-solver-1" 1}
+           (get-in first-result [:snapshot :snapshot/ordering :scores])))
     (is (false? (:idempotent? first-result)))
     (is (:ok replay))
     (is (:idempotent? replay))

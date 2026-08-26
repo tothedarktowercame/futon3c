@@ -862,8 +862,24 @@
       {:candidates [] :dropped []}
       (or (:completed queue-state) [])))))
 
+(defn- snapshot-ordering-options
+  [{:keys [unit preparation request]}]
+  (let [problem (:problem unit)
+        repository (:repository problem)
+        revision (or (get-in preparation [:workspaces :student :base-revision])
+                     (:revision problem))
+        problem-path (or (:problem-path request) (:path problem))
+        expected-blob (or (:base-problem-blob request) (:blob problem))
+        shown (when (every? string? [repository revision problem-path])
+                (shell/sh "git" "-C" repository "show"
+                          (str revision ":" problem-path)))
+        base-readable? (and shown (zero? (:exit shown)))]
+    {:base-text (when base-readable? (:out shown))
+     :base-file-blob (when base-readable? expected-blob)
+     :text-fn (memory-snapshot/evidence-text-fn)}))
+
 (defn- publish-promotion!
-  [{:keys [contract action receipts request]}
+  [{:keys [contract action receipts request] :as phase-inputs}
    {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (campaign-prior-memories)
         own (mapv #(assoc % :provenance
@@ -872,14 +888,16 @@
                   candidates)
         published
         (memory-snapshot/publish-cumulative!
-         {:frame-id (:frame-id action)
-          :problem-id (:problem-id action)
-          :prior-candidates (:candidates prior)
-          :own-candidates own
-          :path (.resolve (control-path state-directory)
-                          (str "snapshots/" (:frame-id action)
-                               "-solver-memory.edn"))
-          :evidence-visible? memory-snapshot/candidate-visible?})]
+         (merge
+          {:frame-id (:frame-id action)
+           :problem-id (:problem-id action)
+           :prior-candidates (:candidates prior)
+           :own-candidates own
+           :path (.resolve (control-path state-directory)
+                           (str "snapshots/" (:frame-id action)
+                                "-solver-memory.edn"))
+           :evidence-visible? memory-snapshot/candidate-visible?}
+          (snapshot-ordering-options phase-inputs)))]
     (if-not (:ok published)
       published
       (let [snapshot (:snapshot published)
@@ -927,7 +945,7 @@
 (defn- publish-zai-scribe-promotion!
   "Independently review the Student-mined candidates, publish their exact
   snapshot, and certify the ordinary end-of-frame scribe receipt."
-  [{:keys [contract action receipts request]}
+  [{:keys [contract action receipts request] :as phase-inputs}
    {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (frame-cycle-handlers/latest-snapshot-receipt receipts 4)
         prior-path (:receipt/snapshot-path prior)
@@ -948,12 +966,14 @@
         published
         (when (vector? union)
         (memory-snapshot/publish!
-         {:frame-id (:frame-id action) :problem-id (:problem-id action)
-          :candidates union
-          :path (.resolve (control-path state-directory)
-                          (str "snapshots/" (:frame-id action)
-                               "-student-mined-memory.edn"))
-          :evidence-visible? memory-snapshot/candidate-visible?}))]
+         (merge
+          {:frame-id (:frame-id action) :problem-id (:problem-id action)
+           :candidates union
+           :path (.resolve (control-path state-directory)
+                           (str "snapshots/" (:frame-id action)
+                                "-student-mined-memory.edn"))
+           :evidence-visible? memory-snapshot/candidate-visible?}
+          (snapshot-ordering-options phase-inputs))))]
     (cond
       (not (vector? union))
       {:ok false :error/code :zai-scribe-prior-snapshot-unreadable
@@ -1008,7 +1028,7 @@
   the promotion Proctor approved. Every prior memory is re-validated and
   re-checked against the substrate, so the union is as fresh as a first
   snapshot; an identical republish is idempotent."
-  [{:keys [action request]}
+  [{:keys [action request] :as phase-inputs}
    {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (:prior-snapshot request)
         prior-path (when (string? (:snapshot-path prior)) (:snapshot-path prior))
@@ -1032,13 +1052,15 @@
        :path prior-path}
       (let [published
             (memory-snapshot/publish!
-             {:frame-id (:frame-id action)
-              :problem-id (:problem-id action)
-              :candidates union
-              :path (.resolve (control-path state-directory)
-                              (str "snapshots/" (:frame-id action)
-                                   "-guide-" ordinal "-memory.edn"))
-              :evidence-visible? memory-snapshot/candidate-visible?})]
+             (merge
+              {:frame-id (:frame-id action)
+               :problem-id (:problem-id action)
+               :candidates union
+               :path (.resolve (control-path state-directory)
+                               (str "snapshots/" (:frame-id action)
+                                    "-guide-" ordinal "-memory.edn"))
+               :evidence-visible? memory-snapshot/candidate-visible?}
+              (snapshot-ordering-options phase-inputs)))]
         (if-not (:ok published)
           published
           (let [snapshot (:snapshot published)

@@ -4,6 +4,7 @@
   This boundary does not perform attachment review. It admits only review
   results already visible in the substrate and supplied by an evidence reader."
   (:require [clojure.edn :as edn]
+            [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.evidence.futon1b-backend :as f1b]
@@ -17,6 +18,89 @@
 
 (defn- reviewed? [x]
   (= "reviewed" (some-> x name)))
+
+(def ^:private lean-token
+  #"[A-Za-z][A-Za-z0-9_'.]{5,}")
+
+(defn- content-text [content]
+  (let [content (if (and (map? content) (contains? content :evidence/body))
+                  (:evidence/body content)
+                  content)]
+    (if (map? content)
+      (str/join "\n" (map #(str (get content % "")) [:name :hook :body]))
+      (str (or content "")))))
+
+(defn- candidate-text [candidate]
+  (content-text (select-keys candidate [:name :hook :body])))
+
+(defn- candidate-has-text? [candidate]
+  (some (fn [value]
+          (or (nonblank? value)
+              (and (coll? value) (seq value))))
+        (map #(get candidate %) [:name :hook :body])))
+
+(defn- fetched-content? [fetched]
+  (or (nonblank? fetched)
+      (and (map? fetched)
+           (or (contains? fetched :evidence/body)
+               (some #(contains? fetched %) [:name :hook :body])))))
+
+(defn- identifiers [text]
+  (set (re-seq lean-token (or text ""))))
+
+(defn order-candidates
+  "Order CANDIDATES by promotion provenance, overlap with BASE-TEXT, then id.
+  TEXT-FN is called with a memory id only when the snapshot candidate carries
+  none of :name/:hook/:body. Fetch failures score zero and remain observable in
+  the returned ordering record."
+  [candidates {:keys [problem-id base-text text-fn]}]
+  (let [base-identifiers (identifiers base-text)
+        measured
+        (mapv (fn [candidate]
+                (let [memory-id (:memory-id candidate)
+                      promoted? (= problem-id
+                                   (get-in candidate [:provenance :problem-id]))]
+                  (if (candidate-has-text? candidate)
+                    {:candidate candidate
+                     :memory-id memory-id
+                     :promoted? promoted?
+                     :score (count (set/intersection
+                                    base-identifiers
+                                    (identifiers (candidate-text candidate))))}
+                    (try
+                      (let [fetched (when (fn? text-fn) (text-fn memory-id))]
+                        (if (fetched-content? fetched)
+                          {:candidate candidate
+                           :memory-id memory-id
+                           :promoted? promoted?
+                           :score (count (set/intersection
+                                          base-identifiers
+                                          (identifiers (content-text fetched))))
+                           :fetched? true}
+                          {:candidate candidate :memory-id memory-id
+                           :promoted? promoted? :score 0 :fetch-failed? true}))
+                      (catch Throwable _
+                        {:candidate candidate :memory-id memory-id
+                         :promoted? promoted? :score 0 :fetch-failed? true})))))
+              candidates)
+        ordered (sort-by (juxt (complement :promoted?)
+                               (comp - :score)
+                               :memory-id)
+                         measured)]
+    {:ordered (mapv :candidate ordered)
+     :ordering
+     {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+      :scores (into (sorted-map) (map (juxt :memory-id :score)) measured)
+      :promoted-this-frame (count (filter :promoted? measured))
+      :textless-fetched (count (filter :fetched? measured))
+      :fetch-failed (->> measured (filter :fetch-failed?)
+                         (mapv :memory-id))}}))
+
+(defn evidence-text-fn
+  "Return a production text reader for snapshot candidates absent inline text."
+  []
+  (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+    #(estore/get-entry* backend %)))
 
 (defn validate-candidate
   [{:keys [memory-id depositor reviewer review-evidence-id
@@ -33,18 +117,24 @@
     {:ok false :finding :snapshot-patterns-missing}
     :else {:ok true}))
 
-(defn snapshot-body [frame-id problem-id candidates]
-  (let [ordered (vec (sort-by :memory-id candidates))
+(defn snapshot-body
+  [frame-id problem-id candidates ordering-options]
+  (let [{:keys [ordered ordering]}
+        (order-candidates candidates
+                          (assoc ordering-options :problem-id problem-id))
+        ordering (assoc ordering :base-file-blob
+                        (:base-file-blob ordering-options))
         provenance-summary
         (when (some :provenance ordered)
           (->> ordered
                (keep #(get-in % [:provenance :frame-id]))
                frequencies
                (into (sorted-map))))]
-    (cond-> {:snapshot/version 1
+    (cond-> {:snapshot/version 2
              :snapshot/frame-id frame-id
              :snapshot/problem-id problem-id
              :snapshot/review-policy :persisted-independent-review
+             :snapshot/ordering ordering
              :snapshot/memories ordered}
       provenance-summary
       (assoc :snapshot/provenance-summary provenance-summary))))
@@ -84,13 +174,17 @@
   "Validate CANDIDATES, publish one immutable EDN snapshot atomically, and
   verify it by a fresh read. Existing identical content is an idempotent replay;
   existing different content fails closed."
-  [{:keys [frame-id problem-id candidates path evidence-visible?]}]
+  [{:keys [frame-id problem-id candidates path evidence-visible?
+           base-text base-file-blob text-fn]}]
   (let [validations (mapv validate-candidate candidates)
         invisible (when (fn? evidence-visible?)
                     (->> candidates
                          (remove evidence-visible?)
                          (mapv :memory-id)))
-        body (snapshot-body frame-id problem-id candidates)
+        body (snapshot-body frame-id problem-id candidates
+                            {:base-text base-text
+                             :base-file-blob base-file-blob
+                             :text-fn (or text-fn (evidence-text-fn))})
         digest (machine/ledger-digest [body])
         snapshot (assoc body :snapshot/id digest :snapshot/digest digest)
         target (Path/of (str path) (make-array String 0))]
