@@ -198,12 +198,18 @@
         {:ok false :error/code :problem-queue-state-persistence-failed}))
     (let [problem (nth (:problems plan) (:next-index state))
           minted (mint-frame-fn {:problem problem :ordinal (:next-index state)
-                                 :queue/id (:queue/id plan)})]
+                                 :queue/id (:queue/id plan)})
+          ;; Retain the qualifier's own result. Discarding it left
+          ;; :problem-queue-frame-qualification-failed as the only record, so a
+          ;; stalled regulator said THAT qualification failed and nothing about
+          ;; WHY -- unreadable artifact, bad digest, invalid mint all look
+          ;; identical. Cost an evening of guessing on 2026-08-26.
+          qualification (when (:ok minted) (qualify-frame-fn (:frame minted)))]
       (cond
         (not (:ok minted)) minted
-        (not (:ok (qualify-frame-fn (:frame minted))))
+        (not (:ok qualification))
         {:ok false :error/code :problem-queue-frame-qualification-failed
-         :frame (:frame minted)}
+         :frame (:frame minted) :qualification qualification}
         :else
         (let [prepared (prepare-frame-fn (:frame minted))]
           (if-not (:ok prepared)
