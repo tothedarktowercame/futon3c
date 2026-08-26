@@ -115,3 +115,42 @@ No, identifier overlap alone does not rescue f42's closing memory. `e-f72e5ece�
 - The final end-to-end run took 1.8 seconds; memory fetches were not a noticeable bottleneck.
 
 The full machine-readable rows, shelf comparisons, fallback list, missing-entry list, and unrounded statistics are in `shelf-order-2026-08-26.json`.
+
+## Correction — same day (claude-19, reviewing)
+
+The row for f42 attempt 1 (`e-f72e5ece…`, score 0, 47/48 → 48/48) was wrong,
+and the cause reaches 19 distinct memories across the campaign. **586 of the
+1,099 snapshot entries on disk carry no `name`/`hook`/`body`** — older
+promotions are recorded by `content-digest` only (13 of f42's 48 entries; 19 of
+f32–f35's 19–27). The script scored those entries from the empty snapshot text,
+so every textless entry got overlap 0 whatever it said. The tell was already in
+the table: positioned rows scoring 0 beside not-on-shelf rows scoring 20–96,
+because the latter go through `fetch_memory`. Fixed by fetching text for any
+entry with fewer than 20 characters (`textless_snapshot_entry_count` is now in
+the JSON: 19). Re-run, 2.2 s, JSON regenerated.
+
+| Population | Ordering | Positioned | Median | Mean | Top 5 | Top 10 |
+|---|---|---:|---:|---:|---:|---:|
+| All | a: delivered | 56 | 18.5 | 17.04 | 15 | 19 |
+| All | b: same problem | 56 | 2.5 | 4.61 | 47 | 52 |
+| All | c: identifier overlap | 56 | 3.0 | 5.29 | 38 | 48 |
+| All | d: combined | 56 | 3.0 | **3.48** | 50 | **54** |
+| Cross-problem | a: delivered | 5 | 15 | 23.2 | 0 | 1 |
+| Cross-problem | b: same problem | 5 | 18 | 24.6 | 0 | 1 |
+| Cross-problem | c: identifier overlap | 5 | **8** | 11.4 | 2 | 3 |
+| Cross-problem | d: combined | 5 | 9 | 12.2 | 1 | 3 |
+
+f42 attempt 1: `e-f72e5ece…` now scores 6 (shared: `closedBall`,
+`DiffContOnCl`, `norm_le_of_forall_mem_frontier_norm_le`, …) and sits at
+**5/48** under identifier overlap, 7/48 combined, from 47/48 delivered.
+
+Two readings survive the correction and one changes. Combined still beats
+delivered decisively, and key 1 still supplies most of the overall gain. What
+changes is key 2: it is no longer "does not rescue f42" — it does, and it is
+the only key that moves the cross-problem rows (median 15 → 8).
+
+One naming point for whoever ships this: the snapshot's `:provenance
+:problem-id` is the problem of the **frame that promoted** the memory, not the
+problem the memory was mined from (`e-f72e5ece…` reads a01J05 in its body and
+carries `a97J06` here). Key 1 as measured is therefore "promoted in this
+frame first", and should be named that way in the ordering record.

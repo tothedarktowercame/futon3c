@@ -93,10 +93,10 @@
       "positions": {
         "delivered": 1,
         "same_problem": 1,
-        "identifier_overlap": 1,
-        "combined": 1
+        "identifier_overlap": 2,
+        "combined": 2
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 10,
       "snapshot_entry_present": true
     },
     {
@@ -112,10 +112,10 @@
       "positions": {
         "delivered": 2,
         "same_problem": 2,
-        "identifier_overlap": 2,
-        "combined": 2
+        "identifier_overlap": 1,
+        "combined": 1
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 13,
       "snapshot_entry_present": true
     },
     {
@@ -150,10 +150,10 @@
       "positions": {
         "delivered": 1,
         "same_problem": 1,
-        "identifier_overlap": 1,
-        "combined": 1
+        "identifier_overlap": 2,
+        "combined": 2
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 10,
       "snapshot_entry_present": true
     },
     {
@@ -324,7 +324,7 @@
         "identifier_overlap": 3,
         "combined": 3
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 12,
       "snapshot_entry_present": true
     },
     {
@@ -381,7 +381,7 @@
         "identifier_overlap": 3,
         "combined": 3
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 12,
       "snapshot_entry_present": true
     },
     {
@@ -397,10 +397,10 @@
       "positions": {
         "delivered": 1,
         "same_problem": 1,
-        "identifier_overlap": 1,
-        "combined": 1
+        "identifier_overlap": 2,
+        "combined": 2
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 13,
       "snapshot_entry_present": true
     },
     {
@@ -416,10 +416,10 @@
       "positions": {
         "delivered": 1,
         "same_problem": 1,
-        "identifier_overlap": 1,
-        "combined": 1
+        "identifier_overlap": 2,
+        "combined": 2
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 13,
       "snapshot_entry_present": true
     },
     {
@@ -454,10 +454,10 @@
       "positions": {
         "delivered": 2,
         "same_problem": 2,
-        "identifier_overlap": 2,
-        "combined": 2
+        "identifier_overlap": 1,
+        "combined": 1
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 19,
       "snapshot_entry_present": true
     },
     {
@@ -476,7 +476,7 @@
         "identifier_overlap": 3,
         "combined": 3
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 12,
       "snapshot_entry_present": true
     },
     {
@@ -511,7 +511,7 @@
       "positions": {
         "delivered": 14,
         "same_problem": 1,
-        "identifier_overlap": 2,
+        "identifier_overlap": 4,
         "combined": 2
       },
       "identifier_overlap_score": 22,
@@ -549,7 +549,7 @@
       "positions": {
         "delivered": 14,
         "same_problem": 1,
-        "identifier_overlap": 2,
+        "identifier_overlap": 4,
         "combined": 2
       },
       "identifier_overlap_score": 22,
@@ -568,7 +568,7 @@
       "positions": {
         "delivered": 18,
         "same_problem": 2,
-        "identifier_overlap": 3,
+        "identifier_overlap": 11,
         "combined": 3
       },
       "identifier_overlap_score": 10,
@@ -644,7 +644,7 @@
       "positions": {
         "delivered": 6,
         "same_problem": 1,
-        "identifier_overlap": 1,
+        "identifier_overlap": 5,
         "combined": 1
       },
       "identifier_overlap_score": 9,
@@ -663,7 +663,7 @@
       "positions": {
         "delivered": 2,
         "same_problem": 1,
-        "identifier_overlap": 1,
+        "identifier_overlap": 2,
         "combined": 1
       },
       "identifier_overlap_score": 31,
@@ -682,7 +682,7 @@
       "positions": {
         "delivered": 4,
         "same_problem": 2,
-        "identifier_overlap": 2,
+        "identifier_overlap": 7,
         "combined": 2
       },
       "identifier_overlap_score": 19,
@@ -720,7 +720,7 @@
       "positions": {
         "delivered": 4,
         "same_problem": 2,
-        "identifier_overlap": 12,
+        "identifier_overlap": 17,
         "combined": 5
       },
       "identifier_overlap_score": 1,
@@ -891,7 +891,7 @@
       "positions": {
         "delivered": 24,
         "same_problem": 4,
-        "identifier_overlap": 5,
+        "identifier_overlap": 6,
         "combined": 3
       },
       "identifier_overlap_score": 16,
@@ -929,7 +929,7 @@
       "positions": {
         "delivered": 21,
         "same_problem": 2,
-        "identifier_overlap": 10,
+        "identifier_overlap": 11,
         "combined": 4
       },
       "identifier_overlap_score": 13,
@@ -1005,7 +1005,7 @@
       "positions": {
         "delivered": 25,
         "same_problem": 5,
-        "identifier_overlap": 7,
+        "identifier_overlap": 8,
         "combined": 5
       },
       "identifier_overlap_score": 16,
@@ -1100,7 +1100,7 @@
       "positions": {
         "delivered": 26,
         "same_problem": 6,
-        "identifier_overlap": 8,
+        "identifier_overlap": 9,
         "combined": 6
       },
       "identifier_overlap_score": 16,
@@ -1119,7 +1119,7 @@
       "positions": {
         "delivered": 23,
         "same_problem": 4,
-        "identifier_overlap": 13,
+        "identifier_overlap": 14,
         "combined": 7
       },
       "identifier_overlap_score": 13,
@@ -1138,8 +1138,8 @@
       "positions": {
         "delivered": 32,
         "same_problem": 32,
-        "identifier_overlap": 18,
-        "combined": 18
+        "identifier_overlap": 26,
+        "combined": 26
       },
       "identifier_overlap_score": 6,
       "snapshot_entry_present": true
@@ -1404,10 +1404,10 @@
       "positions": {
         "delivered": 47,
         "same_problem": 47,
-        "identifier_overlap": 48,
-        "combined": 48
+        "identifier_overlap": 5,
+        "combined": 7
       },
-      "identifier_overlap_score": 0,
+      "identifier_overlap_score": 6,
       "snapshot_entry_present": true
     },
     {
@@ -1423,7 +1423,7 @@
       "positions": {
         "delivered": 29,
         "same_problem": 1,
-        "identifier_overlap": 6,
+        "identifier_overlap": 8,
         "combined": 2
       },
       "identifier_overlap_score": 5,
@@ -1442,7 +1442,7 @@
       "positions": {
         "delivered": 41,
         "same_problem": 4,
-        "identifier_overlap": 8,
+        "identifier_overlap": 10,
         "combined": 4
       },
       "identifier_overlap_score": 5,
@@ -1471,16 +1471,16 @@
         "identifier_overlap": {
           "count": 56,
           "median": 3.0,
-          "mean": 5.232142857142857,
-          "top_5": 40,
-          "top_10": 49
+          "mean": 5.285714285714286,
+          "top_5": 38,
+          "top_10": 48
         },
         "combined": {
           "count": 56,
           "median": 3.0,
-          "mean": 4.035714285714286,
+          "mean": 3.482142857142857,
           "top_5": 50,
-          "top_10": 53
+          "top_10": 54
         }
       }
     },
@@ -1504,17 +1504,17 @@
         },
         "identifier_overlap": {
           "count": 5,
-          "median": 15,
-          "mean": 18.4,
-          "top_5": 1,
-          "top_10": 2
+          "median": 8,
+          "mean": 11.4,
+          "top_5": 2,
+          "top_10": 3
         },
         "combined": {
           "count": 5,
-          "median": 16,
-          "mean": 18.8,
+          "median": 9,
+          "mean": 12.2,
           "top_5": 1,
-          "top_10": 2
+          "top_10": 3
         }
       }
     }
@@ -1527,19 +1527,19 @@
         "attempt": 1,
         "memory_id": "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69",
         "delivered": 47,
-        "identifier_overlap": 48
+        "identifier_overlap": 5
       },
       {
         "attempt": 3,
         "memory_id": "e-apm-promotion-5a33ac6fb6ab7313dde700951134fa83",
         "delivered": 29,
-        "identifier_overlap": 6
+        "identifier_overlap": 8
       },
       {
         "attempt": 3,
         "memory_id": "e-apm-promotion-f240c45c48e864d2f9bf23317503bf6b",
         "delivered": 41,
-        "identifier_overlap": 8
+        "identifier_overlap": 10
       }
     ]
   },
@@ -1853,6 +1853,7 @@
     }
   ],
   "accessible_differs_from_solver_snapshot_count": 11,
+  "textless_snapshot_entry_count": 19,
   "missing_snapshot_entry_ids": [
     "e-021bf80a-b18a-4f0b-9dc5-e158108521cf",
     "e-0d0d3806-f07b-406e-85bd-0d9702fbad8d",
@@ -1871,5 +1872,5 @@
     "e-f6b4c56b-67f9-4cef-b094-1de22bad9588",
     "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69"
   ],
-  "wall_clock_seconds": 1.7990107059013098
+  "wall_clock_seconds": 2.2409014450386167
 }

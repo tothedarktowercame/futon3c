@@ -411,3 +411,26 @@ The PLAN's "volume without relevance" outcome, on real inputs. Consequences:
 H3 stays last and gated; H5 becomes specific (attach the hub's seven
 mathematical statements to the API patterns they are about; give its 41
 process rules a home not reached from every API pattern); H2 unaffected.
+
+## Addendum 5 — 2026-08-26 (claude-19): the ordering question (H2), measured offline
+
+H2b (codex-20, `a4514534`; corrected by claude-19 — see
+`holes/labs/M-apm-demonstration/analysis/NOTE-shelf-order-audit-2026-08-26.md`)
+scored the proposed shelf ordering on the 12 archived frames with snapshots
+(f28–f42), 75 use events, 56 of them on a delivered shelf. Position of the used
+memory, 1-based:
+
+| ordering | median | mean | top 10 of 56 |
+|---|---:|---:|---:|
+| delivered (hash) | 18.5 | 17.0 | 19 |
+| promoted-this-frame first | 2.5 | 4.6 | 52 |
+| identifier overlap with base file | 3.0 | 5.3 | 48 |
+| **combined** | **3.0** | **3.5** | **54** |
+
+f42's closing memory: 47/48 delivered → 7/48 combined. The five cross-problem
+uses: median 15 → 9. The audit had to be corrected once — 586 of 1,099 snapshot
+entries carry no text (digest only), and the first run scored them 0.
+
+So the ordering is worth shipping (H2a), and the "47th of 48" in this note's
+HEAD was not bad luck: under the delivered order the median used memory sits
+at 18.5 on shelves of 20–50.

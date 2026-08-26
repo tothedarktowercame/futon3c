@@ -112,6 +112,7 @@ def main():
     fallback_rows = []
     shelf_comparisons = []
     missing_entry_ids = set()
+    textless_entry_ids = set()
     for receipt_path in receipt_paths:
         frame = receipt_path.parent.parent.name.rsplit("-", 1)[-1]
         attempt_number = int(receipt_path.stem.rsplit("-", 1)[-1])
@@ -149,6 +150,12 @@ def main():
             if entry:
                 text = "\n".join(str(entry.get(key, "")) for key in ("name", "hook", "body"))
                 provenance_problem = (entry.get("provenance") or {}).get("problem-id")
+                # 586 of 1,099 snapshot entries carry no name/hook/body (older
+                # promotions are recorded by content-digest only); score them
+                # from the evidence store rather than as zero (claude-19 review).
+                if len(text.strip()) < 20:
+                    textless_entry_ids.add(memory_id)
+                    text = body_text(fetch_memory(memory_id))
             else:
                 missing_entry_ids.add(memory_id)
                 text = body_text(fetch_memory(memory_id))
@@ -217,6 +224,7 @@ def main():
         "shelf_comparisons": shelf_comparisons,
         "accessible_differs_from_solver_snapshot_count":
         sum(not item["matches_solver_snapshot"] for item in shelf_comparisons),
+        "textless_snapshot_entry_count": len(textless_entry_ids),
         "missing_snapshot_entry_ids": sorted(missing_entry_ids),
         "wall_clock_seconds": time.monotonic() - started,
     }
