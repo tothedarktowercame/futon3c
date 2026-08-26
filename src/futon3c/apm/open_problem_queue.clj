@@ -56,7 +56,11 @@
   ([repository rev]
   (let [rev (or rev "origin/master")
         revision (git-out repository "rev-parse" rev)
-        branch rev
+        ;; :branch must stay a name a worktree can be created ON.
+        ;; queued-frame-adapter uses :base-branch for exactly that, and a
+        ;; remote-tracking ref like origin/master is not checkout-able — so
+        ;; report the local branch the rev corresponds to, not the rev we read.
+        branch (str/replace-first (str rev) #"^origin/" "")
         rows (mapv (fn [[_path content]]
                      (let [status (json/read-str content :key-fn keyword)
                            id (:problem_id status)
