@@ -136,6 +136,23 @@ vocabulary: no predicted outcome distribution is present"*, evaluation (b) is
 unbuilt, and codex-8's audit found no `P(s′ | π, s)` and no state-indexed
 `G(s′)`. Conflating the two is the error this excursion exists to avoid.
 
+## Global findings — the backlog these slices generated
+
+Three findings from this diagnosis outlive the excursion and are tracked as
+tickets, so modular work can proceed without losing them
+(`holes/tickets/`, the draw pile `gen-wip-cards.py` reads into Cascade Live):
+
+| ticket | requirement it proposes |
+|---|---|
+| `T-wm-wrong-corpus-26082026` | a recorded null result must name the corpus it is null about, as a path |
+| `T-fixture-becomes-registry-26082026` | a producer declares its domain; a substitution may not shrink it silently |
+| `T-evidence-pinned-to-mutable-prose-26082026` | durable evidence must not depend on a mutable tree |
+
+**These are global requirements, not slice work.** Each was found while chasing
+one ring and each constrains every module that follows. The second is already
+the second clause of module 1's formal property; the other two want a home in
+whatever the model says about evidence.
+
 ## Joe's calls, outstanding
 
 1. **Slice 4** — repair the record or make the corpus load degrade. Touches the
