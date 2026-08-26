@@ -35,8 +35,8 @@
 
 (defn unbanked-solved
   "Classify solved frame receipts by comparing solver-head proof content to master."
-  [{:keys [campaign-dir read-at-rev]
-    :or {read-at-rev default-read-at-rev}}]
+  [{:keys [campaign-dir read-at-rev master-rev]
+    :or {read-at-rev default-read-at-rev master-rev "master"}}]
   (->> (terminal-receipts campaign-dir)
        (filter #(= :solved (:problem/outcome %)))
        (mapv (fn [receipt]
@@ -46,7 +46,7 @@
                      path (format proof-path-template problem-id)
                      head-content (read-at-rev head path)
                      master-content (when (some? head-content)
-                                      (read-at-rev "master" path))
+                                      (read-at-rev master-rev path))
                      status (cond
                               (nil? head-content) :head-unresolvable
                               (and (some? master-content)
