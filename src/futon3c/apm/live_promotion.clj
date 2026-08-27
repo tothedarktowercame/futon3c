@@ -20,6 +20,13 @@
 (declare drive!)
 
 (def ^:private max-deposit-attempts 3)
+(def ^:private default-transport-retry-delay-ms (* 10 60 1000))
+(def ^:private default-transport-retry-max-attempts 3)
+
+(defn- transport-failure? [value]
+  (boolean
+   (some #(and (map? %) (= :transport (:error/component %)))
+         (tree-seq coll? seq value))))
 
 (defn- pass-reviews [result]
   {:ok true :reviews (:reviews result)})
@@ -402,7 +409,7 @@
         :review-job job-id}))))
 
 (defn- hold-incomplete-pass!
-  [state checked promotion-policy contract-digest persist-fn]
+  [state checked promotion-policy contract-digest persist-fn now-ms-fn]
   (let [projection-failure?
         (or (= :promotion-review-projection-failed (:error/code checked))
             (some #(= :promotion-review-projection-failed (:finding %))
@@ -415,6 +422,21 @@
                           projection-failure? :review-projection
                           unresolved-review? :unresolved-review
                           :else :promotion-pass))
+        transport? (transport-failure? checked)
+        now-ms (long (now-ms-fn))
+        transport-attempt (or (:transport-retry/attempt state) 0)
+        transport-max (or (:transport-retry-max-attempts promotion-policy)
+                          default-transport-retry-max-attempts)
+        transport-delay (or (:transport-retry-delay-ms promotion-policy)
+                            default-transport-retry-delay-ms)
+        transport-history
+        (cond-> (vec (:transport-retry/history state))
+          transport?
+          (conj {:attempt transport-attempt
+                 :failed-at-ms now-ms
+                 :error/component :transport
+                 :error/code (:error/code checked)}))
+        retryable-transport? (and transport? (< transport-attempt transport-max))
         hold {:state/type :promotion
               :stage :awaiting-apparatus-repair
               :last-valid-state state
@@ -427,13 +449,30 @@
               :repair/kind repair-kind
               :repair/attempts (or (:projection-repair-attempt state) 0)
               :repair/max-attempts
-              (or (:projection-repair-max-attempts promotion-policy) 1)}]
+              (or (:projection-repair-max-attempts promotion-policy) 1)}
+        hold (if retryable-transport?
+               (assoc hold
+                      :stage :awaiting-transport-retry
+                      :transport-retry/attempt transport-attempt
+                      :transport-retry/max-attempts transport-max
+                      :transport-retry/delay-ms transport-delay
+                      :transport-retry/not-before-ms
+                      (+ now-ms transport-delay)
+                      :transport-retry/history transport-history)
+               (cond-> hold
+                 transport?
+                 (assoc :transport-retry/attempt transport-attempt
+                        :transport-retry/max-attempts transport-max
+                        :transport-retry/history transport-history
+                        :repair/attempts (:repair/max-attempts hold))))]
     (persist-fn hold)
-    {:ok true :status :awaiting-apparatus-repair
+    {:ok true :status (if retryable-transport?
+                        :transport-retry-scheduled
+                        :awaiting-apparatus-repair)
      :state hold :findings (:findings checked)}))
 
 (defn- publish-completed-pass!
-  [state action promotion-policy contract-digest publish-fn persist-fn]
+  [state action promotion-policy contract-digest publish-fn persist-fn now-ms-fn]
   (let [checked (if (:completed-pass-required promotion-policy)
                   (pipeline/validate-complete-dispositions
                    (:dispatched-candidates action) (:reviews action))
@@ -442,7 +481,7 @@
       (hold-incomplete-pass!
        state
        (assoc checked :review-job (:job state) :reviews (:reviews action))
-       promotion-policy contract-digest persist-fn)
+       promotion-policy contract-digest persist-fn now-ms-fn)
       (let [published-action
             (cond-> action
               (:completed-pass-required promotion-policy)
@@ -456,9 +495,15 @@
             :review-job (:job state)
             :reviews (:reviews action)
             :findings [published]}
-           promotion-policy contract-digest persist-fn)
+           promotion-policy contract-digest persist-fn now-ms-fn)
           (let [done {:state/type :promotion-certified
-                      :receipt (:receipt published)}]
+                      :receipt (:receipt published)}
+                done (if (pos? (or (:transport-retry/attempt state) 0))
+                       (assoc done :transport-retry/history
+                              (conj (vec (:transport-retry/history state))
+                                    {:attempt (:transport-retry/attempt state)
+                                     :succeeded-at-ms (long (now-ms-fn))}))
+                       done)]
             (persist-fn done)
             {:ok true :status :certified :state done
              :certificate (:receipt published)}))))))
@@ -467,9 +512,10 @@
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
            persist-reviews-fn deposit-request reviewer-request
-           promotion-policy contract-digest]
+           promotion-policy contract-digest now-ms-fn]
     :as inputs
     :or {prepare-patterns-fn coined-pattern/publish!
+         now-ms-fn #(System/currentTimeMillis)
          persist-candidates-fn
          (fn [deposit] {:ok true :deposit deposit
                         :candidates (:candidates deposit)})
@@ -554,7 +600,8 @@
                                 (hold-incomplete-pass!
                                  s (assoc persisted-mechanical
                                           :findings [persisted-mechanical])
-                                 promotion-policy contract-digest persist-fn)
+                                 promotion-policy contract-digest persist-fn
+                                 now-ms-fn)
                                 (publish-completed-pass!
                                  s
                                  {:candidates []
@@ -566,7 +613,7 @@
                                   :reviewer pipeline/mechanical-reviewer
                                   :reviews (:reviews persisted-mechanical)}
                                  promotion-policy contract-digest publish-fn
-                                 persist-fn)))))))))))))))
+                                 persist-fn now-ms-fn)))))))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
@@ -597,7 +644,7 @@
                 (hold-incomplete-pass!
                  s (assoc persisted-mechanical
                           :findings [persisted-mechanical])
-                 promotion-policy contract-digest persist-fn)
+                 promotion-policy contract-digest persist-fn now-ms-fn)
                 (publish-completed-pass!
                  s
                  {:candidates []
@@ -609,7 +656,7 @@
                   :reviewer pipeline/mechanical-reviewer
                   :reviews (:reviews persisted-mechanical)}
                  promotion-policy contract-digest
-                 publish-fn persist-fn)))))))))
+                 publish-fn persist-fn now-ms-fn)))))))))
 
     (= :independent-review (:stage state))
     (let [invisible (filterv (complement candidate-visible-fn)
@@ -638,7 +685,7 @@
                 (if (:completed-pass-required promotion-policy)
                   (hold-incomplete-pass!
                    state (assoc checked :error/code :promotion-pass-incomplete)
-                   promotion-policy contract-digest persist-fn)
+                   promotion-policy contract-digest persist-fn now-ms-fn)
                   checked)
                 (let [persisted
                       (persist-reviews-fn
@@ -655,7 +702,7 @@
                          (assoc :findings [persisted])
                          (seq (:reviews r))
                          (assoc :returned-reviews (:reviews r)))
-                       promotion-policy contract-digest persist-fn)
+                       promotion-policy contract-digest persist-fn now-ms-fn)
                       persisted)
                     (let [persisted-checked
                           (pipeline/validate-review*
@@ -669,7 +716,7 @@
                            (assoc persisted-checked
                                   :error/code
                                   :persisted-promotion-review-invalid)
-                           promotion-policy contract-digest persist-fn)
+                           promotion-policy contract-digest persist-fn now-ms-fn)
                           (assoc persisted-checked
                                  :error/code
                                  :persisted-promotion-review-invalid))
@@ -685,7 +732,7 @@
                              state
                              (assoc persisted-mechanical
                                     :findings [persisted-mechanical])
-                             promotion-policy contract-digest persist-fn)
+                             promotion-policy contract-digest persist-fn now-ms-fn)
                             (publish-completed-pass!
                              state
                              {:candidates (:candidates persisted-checked)
@@ -702,7 +749,18 @@
                               (into (vec (:reviews persisted-mechanical))
                                     (:reviews persisted))}
                              promotion-policy contract-digest publish-fn
-                             persist-fn)))))))))))))
+                             persist-fn now-ms-fn)))))))))))))
+
+    (= :awaiting-transport-retry (:stage state))
+    (if (< (long (now-ms-fn)) (:transport-retry/not-before-ms state))
+      {:ok true :status :transport-retry-scheduled :state state
+       :retry/not-before-ms (:transport-retry/not-before-ms state)}
+      (drive! (assoc inputs :state
+                     (assoc (:last-valid-state state)
+                            :transport-retry/attempt
+                            (inc (:transport-retry/attempt state))
+                            :transport-retry/history
+                            (:transport-retry/history state)))))
 
     (= :awaiting-apparatus-repair (:stage state))
     (cond

@@ -76,3 +76,24 @@ campaign or coordinator state. To accumulate the intended shelf on the next
 `jit-all-open-v2` frame, its launch authority must declare
 `{:campaign/priors ["jit-all-open-nontopology-v1"]}`; that declaration is then
 pinned into the frame manifest and snapshot.
+
+## Transport failure disposition
+
+Promotion projection previously sent a substrate timeout through the same
+apparatus-repair path as invalid evidence. A single timed-out hyperedge write
+therefore stopped the regulator even though no evidence judgement had been
+made.
+
+The Lean model now separates transport failures from evidence failures. Only
+the transport class admits delayed retry, and a retry at its configured bound
+is invalid. The emitted contract fixes the runtime policy at three attempts,
+ten minutes between attempts, with durable history required. It also states
+that evidence failures are not retryable.
+
+Promotion state records the failed transport observation, attempt ordinal and
+absolute retry deadline before returning control. Regulator ticks before the
+deadline perform no substrate or reviewer I/O. A successful retry preserves
+the history in the certified state; exhaustion enters the existing apparatus
+repair path. Pull-mode parking uses the same absolute deadline instead of its
+ordinary short continuation timer. Evidence failures continue directly to the
+existing repair/refusal behavior.

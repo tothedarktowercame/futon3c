@@ -147,6 +147,11 @@
    "park-frame-and-continue-queue"
    :projection-repair-exhaustion-decision-owner "claude-supervisor"
    :projection-repair-exhaustion-bell-required true
+   :transport-failure-action "bounded-delayed-retry"
+   :transport-retry-delay-ms 600000
+   :transport-retry-max-attempts 3
+   :transport-retry-history-required true
+   :evidence-failure-retryable false
    :promotion-successor-validation
    "before-snapshot-publication-and-certification"
    :certified-pass-snapshot-materialized true

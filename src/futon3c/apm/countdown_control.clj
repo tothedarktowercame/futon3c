@@ -1587,7 +1587,9 @@
              (let [body (cond-> {:agent agent :session session :surface surface
                                  :awaiting awaiting :payload (:payload request)}
                           (empty? awaiting)
-                          (assoc :timer-due-ms (+ (long (now-ms-fn)) 500)))
+                          (assoc :timer-due-ms
+                                 (or (:retry/not-before-ms request)
+                                     (+ (long (now-ms-fn)) 500))))
                    response (live-preflight-runtime/http-json
                              "POST" (str (:agency-base identity) "/api/alpha/park") body)]
                {:ok (and (= 200 (:http/status response)) (:ok response))

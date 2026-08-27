@@ -651,7 +651,10 @@
                   :deposit {:depositor "scribe" :candidates [candidate]}
                   :candidates [candidate] :job "review-job"}
           :promotion-policy {:completed-pass-required true
-                             :projection-repair-max-attempts 2}
+                             :projection-repair-max-attempts 2
+                             :transport-retry-delay-ms 600000
+                             :transport-retry-max-attempts 3}
+          :now-ms-fn (constantly 1000)
           :contract-digest "contract-v1"
           :review-fn (fn [_ _] {:ok true :reviewer "proctor"
                                 :reviews [returned]})
@@ -662,13 +665,17 @@
                    :reviews [persisted]
                    :persisted [{:review-evidence-id "review"}]
                    :findings [{:memory-id "m"
-                               :failure :promotion-review-projection-failed}]})
+                               :failure :promotion-review-projection-failed
+                               :projection
+                               {:ok false
+                                :error {:error/component :transport
+                                        :error/code :hyperedge-unreachable}}}]})
           :publish-fn (fn [value]
                         (reset! publication value)
                         {:ok true :receipt {:receipt/id "done"}})
           :persist-fn (fn [_] {:ok true})})]
     (is (:ok result))
-    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :transport-retry-scheduled (:status result)))
     (is (nil? @publication))
     (is (= [persisted]
            (get-in result [:state :persisted-review-result :reviews])))
@@ -676,7 +683,52 @@
            (get-in result
                    [:state :persisted-review-result :returned-reviews])))
     (is (= :review-projection (get-in result [:state :repair/kind])))
-    (is (= 2 (get-in result [:state :repair/max-attempts])))))
+    (is (= 2 (get-in result [:state :repair/max-attempts])))
+    (is (= :awaiting-transport-retry (get-in result [:state :stage])))
+    (is (= 601000 (get-in result [:state :transport-retry/not-before-ms])))
+    (is (= [{:attempt 0 :failed-at-ms 1000
+             :error/component :transport
+             :error/code :promotion-review-projection-failed}]
+           (get-in result [:state :transport-retry/history])))))
+
+(deftest transport-retry-waits-without-io-then-reuses-terminal-review
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        retry-state {:state/type :promotion :stage :awaiting-transport-retry
+                     :last-valid-state last-valid
+                     :transport-retry/attempt 0
+                     :transport-retry/max-attempts 3
+                     :transport-retry/not-before-ms 601000
+                     :transport-retry/history
+                     [{:attempt 0 :failed-at-ms 1000}]}
+        calls (atom [])
+        inputs {:state retry-state
+                :promotion-policy {:completed-pass-required true}
+                :review-fn (fn [job _]
+                             (swap! calls conj job)
+                             {:ok true :reviewer "proctor" :reviews [review]})
+                :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+                :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+                :persist-fn (fn [_] {:ok true})}
+        waiting (sut/drive! (assoc inputs :now-ms-fn (constantly 600999)))
+        calls-while-waiting @calls
+        completed (sut/drive! (assoc inputs :now-ms-fn (constantly 601000)))]
+    (is (= :transport-retry-scheduled (:status waiting)))
+    (is (empty? calls-while-waiting))
+    (is (= :certified (:status completed)))
+    (is (= ["terminal-review"] @calls))
+    (is (= 1 (get-in completed [:state :transport-retry/history 1 :attempt])))
+    (is (= 601000
+           (get-in completed [:state :transport-retry/history 1
+                              :succeeded-at-ms])))))
 
 (deftest same-contract-projection-repair-reuses-terminal-review-job
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]

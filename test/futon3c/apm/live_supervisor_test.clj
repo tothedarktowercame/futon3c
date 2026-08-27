@@ -62,6 +62,18 @@
     (is (not-any? #{:advance} @calls))
     (is (= [] (get-in (last @calls) [1 :awaiting])))))
 
+(deftest scheduled-transport-retry-remains-nonterminal-and-pins-deadline
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls
+                      {:ok true :status :transport-retry-scheduled
+                       :state {:transport-retry/not-before-ms 601000}}))]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (not-any? #{:advance} @calls))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))
+    (is (= 601000 (get-in (last @calls) [1 :retry/not-before-ms])))))
+
 (deftest audit-and-projection-failures-stop-without-routing-around
   (testing "audit"
     (let [calls (atom [])

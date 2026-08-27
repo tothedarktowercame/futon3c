@@ -105,6 +105,28 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
+                (= :transport-retry-scheduled (:status driven))
+                (let [projected (project-fn)
+                      parked (when (:ok projected)
+                               (park-fn {:awaiting []
+                                         :retry/not-before-ms
+                                         (get-in driven
+                                                 [:state
+                                                  :transport-retry/not-before-ms])
+                                         :payload continuation-payload}))]
+                  (cond
+                    (not (:ok projected))
+                    {:ok false :error/code :live-supervisor-projection-failed
+                     :finding projected}
+                    (:ok parked)
+                    {:ok true :status :transport-retry-scheduled
+                     :phase (:phase action) :projection projected :park parked
+                     :retry/not-before-ms
+                     (get-in driven [:state :transport-retry/not-before-ms])}
+                    :else
+                    {:ok false :error/code :live-supervisor-park-failed
+                     :finding parked}))
+
                 :else
                 {:ok false :error/code :live-supervisor-phase-status-invalid
                  :finding driven}))))))))
