@@ -338,7 +338,15 @@
                       announced
                       (let [next-state
                             (cond->
-                             (assoc (dissoc state :terminal-collection)
+                             (assoc (-> state
+                                        (update :superseded-terminals
+                                                (fnil conj [])
+                                                {:job job
+                                                 :ticket (:ticket state)
+                                                 :terminal-collection
+                                                 (:terminal-collection state)
+                                                 :findings (:findings validated)})
+                                        (dissoc :terminal-collection))
                                     :active-request repair-request
                                     :ticket (:ticket announced)
                                     :activation/accepted? false

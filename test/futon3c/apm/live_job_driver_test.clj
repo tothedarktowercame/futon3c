@@ -145,6 +145,34 @@
     (is (< (.indexOf @calls [:persist :live-job-dispatched])
            (.lastIndexOf @calls :activate)))))
 
+(deftest repair-retains-the-discarded-terminal
+  (let [calls (atom [])
+        persisted (atom nil)
+        terminal {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                  :report {:memory-use {:used-ids ["memory-7"]}
+                           :outcome :partial}}
+        collection {:evidence {:collection/id "collection-1"}
+                    :submission {:payload {:evidence (:report terminal)}}}
+        base (assoc (effects calls (atom terminal))
+                    :persist-fn #(do (reset! persisted %) {:ok true})
+                    :announce-fn (constantly {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (constantly {:ok false
+                                 :findings [:student-memory-used-despite-holdout]})
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job _failure]
+                      {:ok true :request (assoc r :dispatch/id "repair-1")}))
+        dispatched (assoc (:state (sut/drive! base))
+                          :terminal-collection collection)
+        repaired (sut/drive! (assoc base :state dispatched))
+        discarded (first (:superseded-terminals @persisted))]
+    (is (= :awaiting-terminal (:status repaired)))
+    (is (= ["memory-7"]
+           (get-in discarded [:job :report :memory-use :used-ids])))
+    (is (= collection (:terminal-collection discarded)))
+    (is (= [:student-memory-used-despite-holdout]
+           (:findings discarded)))))
+
 (deftest second-invalid-terminal-exhausts-repair-bound
   (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
         state (assoc (:state (sut/drive! (effects calls job)))
