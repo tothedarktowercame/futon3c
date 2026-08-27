@@ -83,6 +83,47 @@ Recorded because the wrong version was circulated before the right one:
   rather than the depositor). It is not that: the id was never in a snapshot at all, so no
   provenance was ever stamped on it.
 
+## Second observation: the shelf's utility collapses as it grows
+
+Measured across the five student attempts run under campaign v2, counting each used id
+against that attempt's own `:accessible-memory-ids`:
+
+| attempt | shelf | used | from shelf | from elsewhere |
+|---|---|---|---|---|
+| f46 a1 |  0 | 0 | 0 | 0 |
+| f46 a2 |  5 | 4 | 4 | 0 |
+| f46 a3 |  7 | 5 | 5 | 0 |
+| f47 a1 | 67 | 1 | **0** | 1 |
+| f47 a2 | 72 | 4 | **3** | 1 |
+
+A shelf of five or seven — entirely the frame's own deposits — is used at 80% and 71%. A
+shelf of seventy is used at effectively zero.
+
+The collapse is sharper than the table shows. f47/a2's three shelf hits were `f47-scribe`
+and `f47-guide` on a97A01: the frame's **own** deposits again. Of the roughly 69
+prior-frame memories on that shelf, **none were used**. What got used was what this frame
+had just written, plus one thing search found.
+
+So on this evidence the shelf is not operating as a retrieval mechanism. It is operating
+as a scratchpad for work in progress, with a large inert tail attached.
+
+**Caveat, and it matters.** f47/a1's `0 of 67` is confounded: amendment 8's holdout
+withheld exactly the three own-frame deposits, which is the class f46 shows to be heavily
+used. So a1 is not evidence that priors are useless — it is evidence that removing
+own-deposits removes almost all of the shelf's realised value. a2 is the unconfounded case
+and points the same way.
+
+**Why this bears on condition 3.** Joe's framing, and the right one: this is better read as
+*the shelf failing to be useful* than as *students routing around the shelf*. The student
+searched because the shelf did not supply what it needed, and search delivered — twice in
+f47, including one genuinely cross-problem memory (`ams-codex-1` on a97J02, used on
+a97A01, contributing to a partial). Condition 3 requires transfer **through the shelf**, so
+it reads zero for both. A criterion that measures one channel while the useful traffic
+flows through another will keep reporting n=1 while transfer demonstrably occurs.
+
+Nothing here says the memories are bad or that transfer does not happen. It says the shelf,
+at its current size and composition, is not where transfer is happening.
+
 ## If we come back to this
 
 The open question is whether the holdout should be airtight. Making it so means keying the
