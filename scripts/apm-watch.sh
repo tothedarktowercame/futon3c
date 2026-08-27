@@ -9,20 +9,36 @@
 set -u
 cd /home/joe/code/futon3c
 
-prev=""; lasttk=""; lastrs=""; lasten=""; stall=0
+prev=""; lasttk=""; lastrs=""; lasten=""; lastcampaign=""; stall=0
 
 while true; do
   # Watch the most recently touched campaign that the coordinator registry
   # actually knows about. Plain "most recently touched" follows fixture and
   # smoke-test directories -- ftriangle-live-smoke-v1 hijacked this watch at
   # 19:35 -- and those have no regulator, so every signal below reads as zero.
+  # Registry membership alone is not enough: jit-all-open-nontopology-v1 is
+  # registered, enabled, and FINISHED (:complete, last touched 26h ago). At
+  # 21:55 a stray write made its directory newest and the watch moved to it,
+  # reporting yesterday's f44 as current. Skip terminal coordinators too.
   C=""
   for candidate in $(ls -dt data/apm-campaigns/*/); do
     state=$(python3 scripts/apm-coordinator-enabled.py "$(basename "$candidate")" 2>/dev/null)
-    if [ "$state" != "unknown" ]; then C="$candidate"; break; fi
+    [ "$state" = "unknown" ] && continue
+    rstat=$(grep -o ':regulator/status :[a-z-]*' "$candidate/coordinator.edn" 2>/dev/null | head -1 | awk '{print $2}')
+    case "$rstat" in :complete*) continue;; esac
+    C="$candidate"; break
   done
   [ -z "$C" ] && C=$(ls -dt data/apm-campaigns/*/ | head -1)
   campaign=$(basename "$C")
+
+  # Enable/disable and tick deltas are only meaningful WITHIN one campaign.
+  # Comparing them across a switch reported "COORDINATOR RE-ENABLED" when
+  # nothing had been re-enabled -- the watch had simply changed subject.
+  if [ "$campaign" != "$lastcampaign" ]; then
+    [ -n "$lastcampaign" ] && echo "== WATCHING $campaign $(date -u +%H:%M:%SZ) (was $lastcampaign)"
+    prev=""; lasttk=""; lastrs=""; lasten=""; stall=0
+    lastcampaign="$campaign"
+  fi
 
   # Pass the campaign explicitly. The pulse takes it POSITIONALLY and
   # otherwise picks the newest directory itself, so an unqualified call
