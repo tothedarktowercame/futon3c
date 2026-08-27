@@ -59,6 +59,7 @@
     {:job-id (:job-id job) :agent-id (:agent-id job)
      :session-id (:session-id job)
      :state (some-> (:state job) keyword)
+     :trace/delivery-observation (:trace/delivery-observation job)
      :report (:report parsed)
      :report/error (when-not (:ok parsed) (dissoc parsed :ok))}))
 

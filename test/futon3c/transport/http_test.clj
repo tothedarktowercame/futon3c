@@ -290,6 +290,16 @@
     (is (not (contains? view :result-text)))
     (is (not (contains? view :result)))))
 
+(deftest invoke-job-public-view-preserves-delivery-observation
+  (let [observation {:terminal-job-id "job-1"
+                     :delivery-status "delivery-failed"
+                     :inbox-file-created? false
+                     :registered-push-performed? false
+                     :polling-available? true}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-1" :trace/delivery-observation observation})]
+    (is (= observation (:trace/delivery-observation view)))))
+
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
   [response]

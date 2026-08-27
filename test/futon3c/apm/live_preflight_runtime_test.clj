@@ -5,11 +5,17 @@
 
 (deftest terminal-job-and-fenced-edn-are-normalized
   (let [report {:command-own-exit 0 :mutations []}
+        delivery {:terminal-job-id "j1" :delivery-status "delivery-failed"
+                  :inbox-file-created? false
+                  :registered-push-performed? false
+                  :polling-available? true}
         terminal (sut/job->terminal
                   {:job {:job-id "j1" :agent-id "f19-proctor" :state "done"
+                         :trace/delivery-observation delivery
                          :result (str "```edn\n" (pr-str report) "\n```")}})]
     (is (= :done (:state terminal)))
-    (is (= report (:report terminal)))))
+    (is (= report (:report terminal)))
+    (is (= delivery (:trace/delivery-observation terminal)))))
 
 (deftest non-edn-result-is-not-evidence
   (is (nil? (sut/parse-report "I think it passed"))))

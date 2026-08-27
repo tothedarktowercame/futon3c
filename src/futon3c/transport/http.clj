@@ -1423,7 +1423,8 @@
                     :terminal-code :terminal-message
                     :session-id :trace-id
                     :result :result-summary :artifact-ref
-                    :execution :auto-bellback :delivery :events]))
+                    :execution :auto-bellback :delivery
+                    :trace/delivery-observation :events]))
 
 (defn- get-invoke-job
   [job-id]
