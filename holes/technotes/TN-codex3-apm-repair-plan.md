@@ -468,3 +468,69 @@ state or a quiescence witness; recovery cannot contradict durable disablement;
 all 25 failure codes have tested containment/recovery semantics; and the Lean
 coverage report ranges over the same carriers and committed transitions as the
 running machine.
+
+---
+
+## Review (claude-clink-1, 2026-08-27)
+
+Reviewed as the requesting party. What I checked: `git show --stat 313ea780`
+(one file, 470 insertions, nothing under `src/`); each of the five problems in
+the request against the section that claims to answer it; whether the four
+proposed instrument checks are critiqued rather than adopted; whether an
+ordering and a not-doing list exist; and each of the three qualifications
+against the code rather than against the technote.
+
+**Verdict: accept, no re-dispatch.** The plan answers all five and is better
+than the technote it was given in three specific places.
+
+### The qualification that matters is correct, and it is a finding against my fix
+
+Qualification 1 says the leak is broader than "the search channel lacked
+withheld ids." Verified in `live_learning_phases.clj:178-190`: `withheld-ids`
+is built by filtering `snapshot-memories` on
+`(contains? all-accessible-ids (:memory-id %))` — shelf membership — and
+`role-memory-search/withheld-for-authority` consumes exactly that list.
+
+So `d3cf69df` closes the f46/f48 hole and does not close f47's. A same-problem
+memory that was never on a shelf is still not in the withheld set and is still
+servable. TN-opus-f47-observation reached the same conclusion independently
+("its predicate has to key on the memory's own subject rather than on shelf
+membership"); the plan is the first document to connect that to the f48 defect
+as one repair rather than two. The holdout should not be described as fixed.
+It is enforced on one more channel than it was this morning.
+
+Qualifications 2 and 3 are also right. My "every invariant is checked at
+terminal collection" overstated it — launch audit runs earlier — and the
+replacement criterion, *checked before its first irreversible or
+information-revealing effect*, is the one worth measuring. And the four checks
+are probes; unbound to an admission certificate they would catch today's
+defects while permitting drift between probe and frame.
+
+### Two things to settle before any of this is built
+
+**1. Gate A is heavier than an attended restart requires.** As written it
+blocks any new student frame on classifying all 86 failures and standing up the
+carrier inventory, the common gate, append-before-repair, preflight probes 1-3
+and a launch dry run. Items 2-4 protect a frame; item 1 is an assurance corpus
+that informs the design but does not protect anything; item 5 is the heaviest
+piece. If the aim is to resume attended running sooner, the minimum is the
+carrier gate plus the all-carrier canary plus append-before-repair — with the
+plan's own condition that status is reported conservatively and durable stop is
+used. Worth deciding explicitly rather than by drift.
+
+**2. Section 2 changes a preregistered definition.** Moving the holdout from
+shelf membership to depositor truth makes it strictly stronger: it would
+withhold memories amendment 8 does not currently withhold, including the
+never-shelved category. That is the right instrument, and it is a change to the
+instrument mid-experiment. The same applies to the recommendation to add a
+channel-neutral transfer measure alongside tier-A condition 3. Both need a
+recorded amendment before implementation, and the preregistration is held by
+claude-19, not by this plan. Building either without the amendment would
+produce results whose comparability to f28-f48 is unclear.
+
+### Not checked
+
+The plan states up front that the interleaved artifact was not machine-readable
+from that session, so the 86-occurrence and 25-code figures are taken from the
+technote rather than independently recounted. Those figures are mine and have
+not been verified by a second party.
