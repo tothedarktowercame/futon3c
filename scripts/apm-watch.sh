@@ -24,7 +24,11 @@ while true; do
   [ -z "$C" ] && C=$(ls -dt data/apm-campaigns/*/ | head -1)
   campaign=$(basename "$C")
 
-  cur=$(timeout 240 python3 scripts/apm-frame-pulse.py 2>&1); rc=$?
+  # Pass the campaign explicitly. The pulse takes it POSITIONALLY and
+  # otherwise picks the newest directory itself, so an unqualified call
+  # reports one campaign under another's name -- at 20:29 the header said
+  # jit-all-open-v2 while the body described ftriangle-live-smoke-v1.
+  cur=$(timeout 240 python3 scripts/apm-frame-pulse.py "${C%/}" 2>&1); rc=$?
   key=$(echo "$cur" \
         | grep -E "^campaign|^frame|^    [a-z-]+ +\{|supply:|^    a[0-9]:|GATE" \
         | sed -E 's/worktree Main\.lean [0-9]+ lines \([^)]*\)//; s/round [0-9]+, [0-9]+ left//' \
