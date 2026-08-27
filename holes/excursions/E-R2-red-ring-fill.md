@@ -15,7 +15,8 @@ opposite ends. **The loop is open at both ends.**
 | the ring's claim | **CONFIRMED** — and for the first time today, checking it strengthened rather than falsified it |
 | the ring's citation | **WRONG FILE**, harmlessly — corrected below |
 | the gap | **one edge**, not a corpus and not a mechanism |
-| salience | **already filled** — 香, dated, with a measured cost. Unlike R14 this does not stall |
+| salience | **filled, and half-corrected** — see slice 1: the counts are live and stable, the nag-0 inference does not hold, the 0.009 credit is unverified |
+| slice 1 — verify the cost figures | **DONE 2026-08-27** |
 
 ## What checking found
 
@@ -86,6 +87,54 @@ Two things to check before this is cited further — the same discipline that
 corrected the observe.clj citation: **which bulletin, on what date, and is 0.009
 the current credit or the value at the time of writing?**
 
+## Slice 1 — DONE, 2026-08-27. The numbers are real; one inference from them is not.
+
+**Provenance found.** The figures come from `futon3c/holes/excursions/E-wm-operator-lane.md`
+(**2026-06-05**), which shipped the lane classifier and bulletin and recorded
+*"Live: `GET /api/alpha/war-machine/operator-bulletin` (nag 0 / brief 60 / silent
+51 / total 111)"*.
+
+**They are current, not stale.** Queried live:
+
+    GET localhost:7070/api/alpha/war-machine/operator-bulletin
+    date 2026-08-27 · generated-at 2026-08-27T11:21:24Z
+    nag [] · brief 60 · silent-count 51 · total 111
+
+Regenerated today, and **identical to 2026-06-05**. So this is not the R6
+frozen-artifact shape — the bulletin computes fresh and lands on the same
+partition twelve weeks later. *(Counts compared, not membership; whether the
+same 60 items are briefed is unchecked.)*
+
+**But nag 0 does not mean what R2's salience reads into it.** The source
+excursion reads the same zero the opposite way:
+
+> *"Result: all three → Brief; **the nag lane stays empty. This validates the
+> design**"* — and nag is defined as an **AND of three conditions**, *"a narrow,
+> earned mode — not the default channel for anything that needs him"*, reached
+> only via `discovered → briefed → [if it goes critical] → nag`.
+
+And decisively, from its Remaining list: *"acknowledged-state persistence (**so
+nag can fire**)"* — **the nag gate is blocked on unbuilt state.** A gate that
+cannot fire returns 0 whether or not anything deserved escalation. Reading intent
+off it is `record_sensitivity_is_not_governance` at the operator lane: a channel
+with no capacity carries no signal, in either direction.
+
+So the salience clause *"the strongest representation the loop has of the
+operator fired zero times in a hundred and eleven opportunities"* should not be
+cited as written. **It fired zero times because it is not wired to fire.**
+
+**A better datum replaces it, and it is stronger.** The partition is
+**unchanged — 111 / 60 / 51 — across twelve weeks of live regeneration.** That is
+a measured inertness of the operator lane, obtained from a working instrument,
+and it does not depend on interpreting a blocked gate.
+
+**Still unverified, and not to be cited until it is:** the `0.009` per-class
+credit. That is the salience's other leg and the one that speaks directly to the
+observation vector rather than to the lane.
+
+**Recurring shape, fourth time today:** the number was real and the reading of it
+was not. R8's producer, R14's location, R6's proposer, and now R2's nag lane.
+
 ## The requirement, in the family vocabulary
 
 **Family 2 (non-empty handle), at the perception stratum, with R14's clause
@@ -129,8 +178,9 @@ feedback the WM lacks, and R2 is the edge that would carry it.
 
 ## Slices
 
-1. **Verify the cost figures** — which bulletin, what date, is 0.009 current.
-   *(cheap; do first, per `T-wm-wrong-corpus-26082026`)*
+1. ~~**Verify the cost figures**~~ — **DONE 2026-08-27**, see above. Residual:
+   the `0.009` credit is still unverified, and brief *membership* was not compared
+   across the twelve weeks, only counts.
 2. **The one edge** — what a `:turn-pattern-*` channel would carry, and whether
    `gen_turn_chain.py`'s join is the right shape to normalise into `[0,1]`.
 3. **The pilot, with R14's acceptance bar** — a demonstrated inference change,
@@ -147,3 +197,5 @@ feedback the WM lacks, and R2 is the edge that would carry it.
 - `futon3c/src/futon3c/aif/observe.clj` — the ten the ring cites; a different vector.
 - `p4ng/empirics-futon/gen_turn_chain.py` + `turn-chain-counts.tex` — the association, built.
 - `p4ng/empirics-futon/NOTE-thirtyfour-steps-both-levels.md` — why this ring carries the join.
+- `futon3c/holes/excursions/E-wm-operator-lane.md` (2026-06-05) — the lanes, the nag gate, and the figures' origin.
+- `futon3c/src/futon3c/wm/operator_lane.clj`, `operator_bulletin.clj` — the classifier and the projection.
