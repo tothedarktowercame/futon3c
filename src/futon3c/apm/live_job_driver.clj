@@ -71,20 +71,28 @@
     (if-not (:ok cancelled)
       {:ok false :error/code :live-job-unaccepted-cancellation-failed
        :state state :finding cancelled}
-      (let [announced (ticket active-request (announce-fn active-request))]
-        (cond
-          (not (:ok announced)) announced
-          (= (:job-id old-ticket) (get-in announced [:ticket :job-id]))
-          {:ok false :error/code :live-job-supersession-identity-reused}
-          :else
-          (let [next-state (-> state
+      (let [predecessor (assoc old-ticket :cancellation cancelled)
+            already-archived?
+            (= (:job-id old-ticket)
+               (:job-id (peek (:superseded-tickets state))))
+            archived-state (cond-> state
+                             (not already-archived?)
+                             (update :superseded-tickets (fnil conj []) predecessor))
+            archived-persisted (persist-fn archived-state)]
+        (if-not (:ok archived-persisted)
+          {:ok false :error/code :live-job-supersession-archive-persistence-failed
+           :state state}
+          (let [announced (ticket active-request (announce-fn active-request))]
+            (cond
+              (not (:ok announced)) announced
+              (= (:job-id old-ticket) (get-in announced [:ticket :job-id]))
+              {:ok false :error/code :live-job-supersession-identity-reused}
+              :else
+              (let [next-state (-> archived-state
                                (assoc :ticket (:ticket announced)
                                       :activation/accepted? false
                                       :activation/failure nil
-                                      :activation-supersession-attempts 1)
-                               (update :superseded-tickets (fnil conj [])
-                                       (assoc old-ticket
-                                              :cancellation cancelled)))]
+                                      :activation-supersession-attempts 1))]
             (if-not (:ok (persist-fn next-state))
               {:ok false :error/code :live-job-supersession-persistence-failed}
               (let [registered (if (fn? ticket-register-fn)
@@ -108,7 +116,7 @@
                        :supersession? true :state accepted}
                       {:ok false
                        :error/code :live-job-activation-acceptance-persistence-failed
-                       :state next-state})))))))))))
+                       :state next-state})))))))))))))
 
 (defn ticket [request response]
   (if-not (and (:ok response) (string? (:job-id response))
