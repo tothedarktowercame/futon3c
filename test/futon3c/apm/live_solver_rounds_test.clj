@@ -95,10 +95,62 @@
     (is (= :terminal-collected (:status collected)))
     (is (= :awaiting-terminal (:status repaired)))
     (is (true? (:repair? repaired)))
+    (is (= "job-1"
+           (get-in repaired [:state :superseded-terminals 0 :job :job-id])))
+    (is (= [:typed-submission-missing]
+           (get-in repaired [:state :superseded-terminals 0 :findings])))
     (is (= :terminal-collected (:status repair-collected)))
     (is (= :solver-typed-submission-repair-exhausted
            (:error/code exhausted)))
     (is (= 1 (:repair/attempts exhausted)))))
+
+(deftest terminal-repair-archive-failure-blocks-announcement
+  (let [announcements (atom 0)
+        persisted (atom [])
+        base (assoc (effects persisted)
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn (constantly {:ok true})
+                    :announce-fn (fn [_]
+                                   (swap! announcements inc)
+                                   {:ok true :job-id "must-not-exist"})
+                    :persist-fn (fn [state]
+                                  (swap! persisted conj state)
+                                  (if (:superseded-terminals state)
+                                    {:ok false :error :disk-full}
+                                    {:ok true}))
+                    :terminal-budget-config {:collection-attempts 1
+                                             :repair-attempts 1})
+        collected (sut/drive! base)
+        before @announcements
+        repaired (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :solver-terminal-repair-archive-persistence-failed
+           (:error/code repaired)))
+    (is (= before @announcements))))
+
+(deftest repeated-terminal-repairs-append-predecessors
+  (let [next-job (atom 1)
+        persisted (atom nil)
+        fx {:announce-fn (fn [_]
+                           {:ok true :job-id (str "repair-" (swap! next-job inc))})
+            :activate-fn (fn [& _] {:ok true})
+            :ticket-register-fn (fn [& _] {:ok true})
+            :persist-fn (fn [state] (reset! persisted state) {:ok true})}
+        state {:state/type :solver-rounds :base-request base-request :rounds []
+               :active (assoc legacy-state :terminal-collection {:evidence :first})}
+        first (#'sut/dispatch-terminal-repair!
+               fx state [:first-invalid] {:job-id "job-1" :state :done})
+        second-state (assoc-in (:state first) [:active :terminal-collection]
+                               {:evidence :second})
+        second (#'sut/dispatch-terminal-repair!
+                fx second-state [:second-invalid]
+                {:job-id "repair-2" :state :done})]
+    (is (:ok first))
+    (is (:ok second))
+    (is (= ["job-1" "repair-2"]
+           (mapv #(get-in % [:job :job-id])
+                 (:superseded-terminals (:state second)))))
+    (is (= [[:first-invalid] [:second-invalid]]
+           (mapv :findings (:superseded-terminals (:state second)))))))
 
 (deftest retry-carries-terminal-validation-remediation
   (let [persisted (atom nil)

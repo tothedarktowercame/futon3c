@@ -9,6 +9,57 @@
 (def terminal-states #{:done :failed :error :cancelled})
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 
+(def durable-reference-keys
+  #{:job-id :solver/prior-job-id :repair/of-job-id :submission/id :receipt/id
+    :prior-receipt-id :terminal-job-id})
+
+(defn durable-references
+  "Return durable job/submission/receipt references in stable path order."
+  [state]
+  (letfn [(walk [path value]
+            (cond
+              (map? value)
+              (mapcat (fn [[k v]]
+                        (let [p (conj path k)]
+                          (if (and (contains? durable-reference-keys k)
+                                   (string? v) (not-empty v))
+                            [{:path p :key k :id v}]
+                            (walk p v))))
+                      (sort-by (comp pr-str key) value))
+              (vector? value)
+              (mapcat (fn [[i v]] (walk (conj path i) v))
+                      (map-indexed vector value))
+              (sequential? value)
+              (mapcat (fn [[i v]] (walk (conj path i) v))
+                      (map-indexed vector value))
+              :else []))]
+    (vec (walk [] state))))
+
+(defn scan-durable-references
+  "Synchronously resolve every durable attempt/job/submission/receipt reference.
+
+   RESOLVE-FN receives one reference map. A readable target is `{:ok true
+   :value ...}`. Returns the first missing/corrupt reference, or `{:ok true}`."
+  [state resolve-fn]
+  (if-not (and (map? state) (fn? resolve-fn))
+    {:ok false :error/code :durable-reference-scan-input-invalid}
+    (loop [[reference & more] (durable-references state)]
+      (if-not reference
+        {:ok true}
+        (let [resolved (try
+                         (resolve-fn reference)
+                         (catch Exception e
+                           {:ok false :error/code :durable-reference-corrupt
+                            :exception/class (.getName (class e))
+                            :exception/message (.getMessage e)}))]
+          (if (and (:ok resolved) (some? (:value resolved)))
+            (recur more)
+            {:ok false
+             :error/code (or (:error/code resolved)
+                             :durable-reference-missing)
+             :reference reference
+             :finding (dissoc resolved :value)}))))))
+
 (declare ticket)
 
 (defn- supersede-unaccepted!

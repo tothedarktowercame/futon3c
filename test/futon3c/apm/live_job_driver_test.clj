@@ -173,6 +173,31 @@
     (is (= [:student-memory-used-despite-holdout]
            (:findings discarded)))))
 
+(deftest durable-reference-scan-is-clean-and-reports-first-missing-reference
+  (let [state {:ticket {:job-id "job-current"}
+               :superseded-terminals
+               [{:job {:job-id "job-old"}
+                 :terminal-collection
+                 {:submission {:submission/id "submission-old"}}}]}
+        intact #{"job-current" "job-old" "submission-old"}
+        resolve-intact (fn [{:keys [id]}]
+                         (if (contains? intact id)
+                           {:ok true :value {:id id}}
+                           {:ok false :error/code :fixture-missing}))]
+    (is (= {:ok true}
+           (sut/scan-durable-references state resolve-intact)))
+    (is (= {:ok false
+            :error/code :fixture-missing
+            :reference {:path [:superseded-terminals 0 :job :job-id]
+                        :key :job-id :id "job-old"}
+            :finding {:ok false :error/code :fixture-missing}}
+           (sut/scan-durable-references
+            state
+            (fn [{:keys [id]}]
+              (if (= id "job-old")
+                {:ok false :error/code :fixture-missing}
+                {:ok true :value {:id id}})))))))
+
 (deftest second-invalid-terminal-exhausts-repair-bound
   (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
         state (assoc (:state (sut/drive! (effects calls job)))

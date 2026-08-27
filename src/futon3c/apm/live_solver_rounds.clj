@@ -112,7 +112,7 @@
 
 (defn- dispatch-terminal-repair!
   [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]}
-   state findings]
+   state findings job]
   (let [active (:active state)
         attempt (inc (or (:terminal-repair-attempts active) 0))
         body (-> (:request active)
@@ -123,13 +123,24 @@
                                              [:typed-submission-missing])))
         request (submission/prepare-request
                  (assoc body :dispatch/id (machine/ledger-digest [body])))
-        announced (job-driver/ticket request (announce-fn request))]
-    (if-not (:ok announced)
-      announced
-      (let [next-active {:state/type :live-job-dispatched :request request
+        predecessor {:job job
+                     :ticket (:ticket active)
+                     :terminal-collection (:terminal-collection active)
+                     :findings (vec (or findings [:typed-submission-missing]))}
+        archived (-> state
+                     (update :superseded-terminals (fnil conj []) predecessor)
+                     (assoc :active nil))
+        archive-result (persist-container persist-fn archived)]
+    (if-not (:ok archive-result)
+      {:ok false :error/code :solver-terminal-repair-archive-persistence-failed
+       :state state}
+      (let [announced (job-driver/ticket request (announce-fn request))]
+        (if-not (:ok announced)
+          announced
+          (let [next-active {:state/type :live-job-dispatched :request request
                          :ticket (:ticket announced)
                          :terminal-repair-attempts attempt}
-            staged (assoc state :active next-active)]
+                staged (assoc archived :active next-active)]
         (if-not (:ok (persist-container persist-fn staged))
           {:ok false :error/code :solver-terminal-repair-persistence-failed}
           (let [registered (if (fn? ticket-register-fn)
@@ -148,7 +159,7 @@
                   {:ok true :status :awaiting-terminal :repair? true
                    :state accepted}
                   {:ok false
-                   :error/code :solver-terminal-repair-acceptance-persistence-failed})))))))))
+                   :error/code :solver-terminal-repair-acceptance-persistence-failed})))))))))))
 
 (defn- normalize-round-report [report]
   (let [lean (:lean report)
@@ -319,7 +330,7 @@
                                              :repair-attempts] 1)]
             (if (< (or (:terminal-repair-attempts active) 0) max-repairs)
               (dispatch-terminal-repair! effects state
-                                         [:typed-submission-missing])
+                                         [:typed-submission-missing] job)
               {:ok false :error/code :solver-typed-submission-repair-exhausted
                :repair/attempts (:terminal-repair-attempts active)
                :collection (:evidence collection) :state state}))
@@ -401,7 +412,7 @@
                        effects
                        (update state :checkpoint/invalid-observations
                                (fnil conj []) completed)
-                       [:solver-strategy-missing-or-invalid])
+                       [:solver-strategy-missing-or-invalid] job)
                       (let [stopped (assoc next-state
                                            :state/type
                                            :solver-strategy-checkpoint-required)
@@ -502,7 +513,7 @@
                       (update :checkpoint/invalid-observations
                               (fnil conj []) completed))]
       (dispatch-terminal-repair!
-       effects resumed [:solver-strategy-missing-or-invalid]))))
+       effects resumed [:solver-strategy-missing-or-invalid] nil))))
 
 (defn resume-strategy-checkpoint!
   "Resume a stopped strategy checkpoint from its persisted typed evidence.
