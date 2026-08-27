@@ -81,6 +81,10 @@
         awaiting (:awaiting-job observation)
         deadline-ms (some-> awaiting :deadline instant-ms)
         ready? (= :ready (:supervisor/status observation))
+        elapsed-ms (max 0 (- now-ms last-progress-ms))
+        valid-external-wait? (and (some? awaiting) (some? deadline-ms)
+                                  (<= now-ms (+ deadline-ms
+                                                external-deadline-grace-ms)))
         reason (cond
                  immediate immediate
                  (and awaiting (nil? deadline-ms))
@@ -101,8 +105,24 @@
       {:status :halt
        :reason reason
        :state (assoc base :watchdog/status :halted
-                     :watchdog/halt-reason reason)}
-      {:status :watching :state base})))
+                     :watchdog/halt-reason reason
+                     :watchdog/trace-observation
+                     {:coordinator-enabled?
+                      (boolean (:coordinator-enabled? observation))
+                      :elapsed-ms elapsed-ms
+                      :valid-external-wait? (boolean valid-external-wait?)
+                      :semantic-cursor-advanced? cursor-changed?
+                      :coordinator-disabled? false
+                      :first-violation-recorded? true})}
+      {:status :watching
+       :state (assoc base :watchdog/trace-observation
+                     {:coordinator-enabled?
+                      (boolean (:coordinator-enabled? observation))
+                      :elapsed-ms elapsed-ms
+                      :valid-external-wait? (boolean valid-external-wait?)
+                      :semantic-cursor-advanced? cursor-changed?
+                      :coordinator-disabled? false
+                      :first-violation-recorded? false})})))
 
 (defn check!
   "Observe once. A halt first disables the durable coordinator, then persists
@@ -116,8 +136,11 @@
   (let [decision (evaluate watch-state observation now-ms)]
     (if (= :halt (:status decision))
       (let [stopped (stop-fn registry-path coordinator-id)
-            final-state (assoc (:state decision)
-                               :watchdog/durable-stop stopped)
+            final-state (-> (:state decision)
+                            (assoc :watchdog/durable-stop stopped)
+                            (assoc-in [:watchdog/trace-observation
+                                       :coordinator-disabled?]
+                                      (boolean (:ok stopped))))
             persisted (persist-fn final-state)]
         {:ok (and (:ok stopped) (:ok persisted))
          :status :halted

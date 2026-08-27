@@ -305,6 +305,7 @@
                :last-committed-event-id
                (or (:last-committed-event-id state)
                    (:event/id state))}
+      :coordinator-enabled? (:coordinator/enabled? entry)
       :regulator state
       :supervisor/status (when (= :running (:regulator/status state)) :ready)
       :invalid-state? (and (some? state)

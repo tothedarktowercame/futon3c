@@ -60,6 +60,15 @@
     (is (= "close-frame" (last (:phase-order contract))))
     (is (nil? (get-in contract [:transitions 10 :to])))))
 
+(deftest trace-observation-schema-drift-is-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        missing (update contract :trace-observation-schemas pop)
+        duplicate (update contract :trace-observation-schemas
+                          conj (first (:trace-observation-schemas contract)))]
+    (doseq [mutant [missing duplicate]]
+      (is (some #{:generated-contract-trace-observation-schemas-invalid}
+                (:findings (sut/validate mutant)))))))
+
 (deftest missing-promotion-mutation-is-killed
   (let [contract (:contract (sut/read-contract generated-path))
         mutated (-> contract

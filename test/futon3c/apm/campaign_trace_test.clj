@@ -75,6 +75,24 @@
      :ledger-digest "parallel-ledger" :projection-ledger-digest "parallel-ledger"}]
    :phase-receipt-ids (mapv #(str "receipt-" %) (range 11))
    :problem-outcome :solved :frame-result :closed
+   :operational-observations
+   {:progress [{:coordinator-enabled? true :elapsed-ms 1000
+                :valid-external-wait? false
+                :semantic-cursor-advanced? true
+                :coordinator-disabled? false
+                :first-violation-recorded? false}]
+    :successor [{:predecessor-id "job-0"
+                 :terminal-evidence-id "terminal-0"
+                 :collection-evidence-id "collection-0"
+                 :disposition "superseded"
+                 :predecessor-persisted? true
+                 :successor-announced-id "job-1"
+                 :successor-activated-id "job-1"}]
+    :delivery [{:terminal-job-id "job-1"
+                :delivery-status "delivered"
+                :inbox-file-created? true
+                :registered-push-performed? false
+                :polling-available? true}]}
    :analyst-wakes
    [{:frame-id "f1" :terminal true :ordinal 1 :series-input-version 1
      :append-only true :proposal-type nil :proposal-digest nil
@@ -83,6 +101,25 @@
      :append-only true :proposal-type "regime-proposal"
      :proposal-digest "proposal-digest-2"
      :successor-handoff true :mutates-in-flight false}]})
+
+(deftest missing-lean-declared-producer-is-a-hard-error
+  (let [missing (update valid :operational-observations dissoc :delivery)]
+    (is (= :campaign-trace-producer-missing
+           (:error/code (ex-data (try (sut/trace missing)
+                                      (catch clojure.lang.ExceptionInfo e e))))))))
+
+(deftest generated-schema-addition-breaks-unwired-adapter
+  ;; Falsifiable mutation: this is the shape produced if Lean gains a kind.
+  (let [schemas (conj (sut/observation-schemas)
+                      {:kind "new-kind" :collection-field "newObservations"
+                       :fields [{:wire-name "witness"
+                                 :source-path ["witness"]}]})]
+    (is (= :campaign-trace-producer-missing
+           (:error/code
+            (ex-data
+             (try (sut/project-operational-observations
+                   schemas (:operational-observations valid))
+                  (catch clojure.lang.ExceptionInfo e e))))))))
 
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
@@ -108,7 +145,9 @@
                          "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
-           (json/parse-string (slurp a))))))
+           (apply dissoc (json/parse-string (slurp a))
+                  ["progressObservations" "successorObservations"
+                   "deliveryObservations"])))))
 
 (deftest early-statement-refuted-trace-emits-only-executed-prefix
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
@@ -124,7 +163,9 @@
     (is (:ok (sut/emit! output trace)))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/early-statement-refuted.json"))
-           (json/parse-string (slurp output))))))
+           (apply dissoc (json/parse-string (slurp output))
+                  ["progressObservations" "successorObservations"
+                   "deliveryObservations"])))))
 
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))
@@ -161,7 +202,8 @@
                      :content-digest "snapshot-verified"}]
                    :review-passes
                    [{:phase :promote-solver :ordinal 0
-                     :verdicts [:reject]}]}})]
+                     :verdicts [:reject]}]}
+          :operational-observations (:operational-observations valid)})]
     (is (= true (get-in projected ["steps" 0 "clientTimeoutObserved"])))
     (is (= false (get-in projected ["steps" 0 "timeoutTreatedAsSuccess"])))
     (is (= 202 (get-in projected ["steps" 0 "activationStatus"])))))

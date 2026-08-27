@@ -2,7 +2,54 @@
   "Canonical refinement trace exported for the Lean campaign checker."
   (:require [cheshire.core :as json]
             [clojure.edn]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [futon3c.apm.generated-contract :as generated-contract]))
+
+(def default-contract-path
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
+
+(defn observation-schemas
+  ([] (observation-schemas default-contract-path))
+  ([path]
+   (let [loaded (generated-contract/read-contract path)
+         validated (when (:ok loaded)
+                     (generated-contract/validate (:contract loaded)))]
+     (when-not (:ok validated)
+       (throw (ex-info "Lean-generated trace observation schema unavailable"
+                       (or validated loaded))))
+     (get-in validated [:contract :trace-observation-schemas]))))
+
+(defn project-operational-observations
+  "Project every Lean-declared observation collection from durable decision
+  records. No Clojure observation-kind or field registry exists: absence of a
+  declared source collection is an error, including when a new Lean kind is
+  added before its producer is wired."
+  ([sources] (project-operational-observations (observation-schemas) sources))
+  ([schemas sources]
+   (into {}
+         (map (fn [{:keys [kind collection-field fields]}]
+                (let [source-key (keyword kind)]
+                  (when-not (contains? sources source-key)
+                    (throw (ex-info "Lean-declared trace producer missing"
+                                    {:error/code :campaign-trace-producer-missing
+                                     :observation/kind source-key})))
+                  [collection-field
+                   (mapv (fn [record]
+                           (into {}
+                                 (map (fn [{:keys [wire-name source-path]}]
+                                        (let [path (mapv keyword source-path)
+                                              marker (Object.)
+                                              value (get-in record path marker)]
+                                          (when (identical? marker value)
+                                            (throw
+                                             (ex-info "Durable observation field missing"
+                                                      {:error/code :campaign-trace-field-missing
+                                                       :observation/kind source-key
+                                                       :source-path path})))
+                                          [wire-name value])))
+                                 fields))
+                         (get sources source-key))])))
+         schemas)))
 
 (defn- canonical [x]
   (cond
@@ -39,9 +86,10 @@
            snapshot-admitted-after-solve-verify snapshot-depositor
            snapshot-reviewer student-bindings campaign-lanes
            phase-receipt-ids problem-outcome frame-result void-classification
-           analyst-wakes]}]
+           analyst-wakes operational-observations]}]
+  (let [operational (project-operational-observations operational-observations)]
   (canonical
-   {"schemaVersion" 1
+   (merge {"schemaVersion" 1
     "campaignId" campaign-id
     "manifestHash" manifest-hash
     "contractId" contract-id
@@ -125,12 +173,12 @@
              "proposalDigest" proposal-digest
              "successorHandoff" successor-handoff
              "mutatesInFlight" mutates-in-flight})
-          analyst-wakes)}))
+          analyst-wakes)} operational))))
 
 (defn from-durable-state
   "Project only witnessed durable ledger/job facts into a checker trace."
   [{:keys [registration observations closed terminal-ledger-digest
-           memory campaign-lanes frame analyst-wakes]}]
+           memory campaign-lanes frame analyst-wakes operational-observations]}]
   (trace
    (merge registration
           {:closed closed :terminal-ledger-digest terminal-ledger-digest
@@ -148,6 +196,7 @@
            :frame-result (:frame-result frame)
            :void-classification (:void-classification frame)
            :analyst-wakes analyst-wakes
+           :operational-observations operational-observations
            :steps
            (mapv
             (fn [{:keys [from to ledger-before ledger-after claim job receipt]}]

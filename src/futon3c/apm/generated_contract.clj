@@ -374,6 +374,7 @@
   [contract]
   (let [phase-order (:phase-order contract)
         transitions (:transitions contract)
+        trace-schemas (:trace-observation-schemas contract)
         terminal-policy (:terminal-policy contract)
         candidate-policy
         (select-keys terminal-policy (keys required-student-candidate-policy))
@@ -395,6 +396,20 @@
           (conj :generated-contract-verify-bypasses-promotion)
           (not= required-bounds (:bounds contract))
           (conj :generated-contract-bounds-invalid)
+          (or (not= (:trace-observation-schema-count contract)
+                    (count trace-schemas))
+              (not= (count trace-schemas)
+                    (count (distinct (map :kind trace-schemas))))
+              (not (every? #(and (string? (:kind %))
+                                 (string? (:collection-field %))
+                                 (seq (:fields %))
+                                 (every? (fn [field]
+                                           (and (string? (:wire-name field))
+                                                (seq (:source-path field))
+                                                (every? string? (:source-path field))))
+                                         (:fields %)))
+                           trace-schemas)))
+          (conj :generated-contract-trace-observation-schemas-invalid)
           (not= required-dispatch-policy (:dispatch-policy contract))
           (conj :generated-contract-dispatch-policy-invalid)
           (not= required-memory-policy (:memory-policy contract))
