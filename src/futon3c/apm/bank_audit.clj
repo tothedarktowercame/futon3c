@@ -115,7 +115,17 @@
                              (make-array java.nio.file.attribute.FileAttribute 0))
                   temp-dir (.toFile temp-path)
                   proof-file (io/file temp-dir "Main.lean")
-                  theorem (str "apm_" (str/lower-case problem-id))]
+                  ;; Read the target's name from the source rather than
+                  ;; constructing it. The corpus is not consistent about case:
+                  ;; a98A02 declares apm_a98a02 and a97J07 declares apm_a97j07,
+                  ;; but a96J08 declares apm_a96J08. Constructing the lowercase
+                  ;; form asked for a theorem that does not exist, `#print
+                  ;; axioms` errored, and the gate refused a proof that was in
+                  ;; fact complete and axiom-clean -- a false refusal on f46.
+                  theorem (or (last (map second
+                                         (re-seq #"(?m)^(?:theorem|lemma)\s+(apm_[A-Za-z0-9_']+)"
+                                                 (str (:out shown)))))
+                              (str "apm_" (str/lower-case problem-id)))]
               (try
                 (spit proof-file (str (:out shown) "\n#print axioms " theorem "\n"))
                 (let [elaboration (run-lean repo proof-file)
