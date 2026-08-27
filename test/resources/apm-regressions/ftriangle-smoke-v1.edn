@@ -1,0 +1,27 @@
+{:fixture/id :ftriangle-smoke-v1
+ :campaign/id "ftriangle-live-smoke-v1"
+ :frame/id "ft1"
+ :problem/id "ftriangle-pythagoras"
+ :shelf
+ [{:memory-id "ftriangle-same-problem-memory"
+   :depositor "f1-guide"
+   :text "For a right triangle, use the squared norm identity."
+   :provenance {:campaign-id "ftriangle-fixture"
+                :frame-id "f1"
+                :problem-id "ftriangle-pythagoras"}}]
+ :synthetic-durable-documents
+ [{:watchdog/trace-observation
+   {:coordinator-enabled? true :elapsed-ms 1
+    :valid-external-wait? false :semantic-cursor-advanced? true
+    :coordinator-disabled? false :first-violation-recorded? false}}
+  {:trace/successor-observation
+   {:predecessor-id "synthetic-job-0"
+    :terminal-evidence-id "synthetic-terminal-0"
+    :collection-evidence-id "synthetic-collection-0"
+    :disposition "superseded" :predecessor-persisted? true
+    :successor-announced-id "synthetic-job-1"
+    :successor-activated-id "synthetic-job-1"}}
+  {:trace/delivery-observation
+   {:terminal-job-id "synthetic-job-1" :delivery-status "delivered"
+    :inbox-file-created? true :registered-push-performed? false
+    :polling-available? true}}]}
