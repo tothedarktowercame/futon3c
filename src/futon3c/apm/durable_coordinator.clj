@@ -19,6 +19,7 @@
 (def intent-type :durable-coordinator-intent)
 (defonce ^:private adapters (atom {}))
 (def ^:dynamic *watchdog-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *enabled-transition-now-fn* #(System/currentTimeMillis))
 (def ^:dynamic *watchdog-start-fn* watchdog/start!)
 (def ^:dynamic *watchdog-stop-fn* watchdog/stop!)
 (def ^:dynamic *watchdog-running-fn* watchdog/running?)
@@ -44,6 +45,9 @@
 
 (defn entry-digest [entry]
   (sha256 (dissoc entry :coordinator/entry-digest)))
+
+(defn enabled-transition-digest [transition]
+  (sha256 (dissoc transition :transition/digest)))
 
 (defn intent-digest [intent]
   (sha256 (dissoc intent :intent/digest)))
@@ -111,6 +115,24 @@
        (string? (:coordinator/state-path entry))
        (pos-int? (:coordinator/period-ms entry))
        (boolean? (:coordinator/enabled? entry))
+       (or (nil? (:coordinator/enabled-history entry))
+           (and (vector? (:coordinator/enabled-history entry))
+                (every?
+                 (fn [transition]
+                   (and (= :durable-coordinator-enabled-transition
+                           (:state/type transition))
+                        (= (:coordinator/id entry)
+                           (:coordinator/id transition))
+                        (or (nil? (:enabled/previous transition))
+                            (boolean? (:enabled/previous transition)))
+                        (boolean? (:enabled/new transition))
+                        (keyword? (:transition/actor transition))
+                        (keyword? (:transition/reason transition))
+                        (nat-int? (:transition/timestamp-ms transition))
+                        (string? (:durable-state/digest transition))
+                        (= (:transition/digest transition)
+                           (enabled-transition-digest transition))))
+                 (:coordinator/enabled-history entry))))
        (or (nil? (:coordinator/problem-id entry))
            (and (string? (:coordinator/problem-id entry))
                 (not-empty (:coordinator/problem-id entry))))
@@ -155,13 +177,27 @@
            adapter config state-path period-ms]
     :or {period-ms regulator/default-period-ms}}]
   (let [registry (read-registry registry-path)
+        state-at-registration (read-edn state-path)
+        initial-transition
+        {:state/type :durable-coordinator-enabled-transition
+         :coordinator/id coordinator-id
+         :enabled/previous nil
+         :enabled/new true
+         :transition/actor :durable-coordinator/register!
+         :transition/reason :registration
+         :transition/timestamp-ms (*enabled-transition-now-fn*)
+         :durable-state/digest (state-digest state-at-registration)}
+        initial-transition
+        (assoc initial-transition :transition/digest
+               (enabled-transition-digest initial-transition))
         entry (cond-> {:state/type entry-type
                        :coordinator/id coordinator-id
                        :coordinator/adapter adapter
                        :coordinator/config (or config {})
                        :coordinator/state-path (str state-path)
                        :coordinator/period-ms period-ms
-                       :coordinator/enabled? true}
+                       :coordinator/enabled? true
+                       :coordinator/enabled-history [initial-transition]}
                 problem-id (assoc :coordinator/problem-id problem-id
                                   :retry/count (or retry-count 0)
                                   :retry/max (or retry-max 0))
@@ -424,7 +460,7 @@
         :runtime (regulator/status coordinator-id)
         :durable-state (read-edn (:coordinator/state-path entry))}))))
 
-(defn- set-enabled! [registry-path coordinator-id enabled?]
+(defn- set-enabled! [registry-path coordinator-id enabled? actor reason]
   (let [registry (read-registry registry-path)
         entry (get-in registry [:entries coordinator-id])]
     (cond
@@ -433,7 +469,21 @@
       (nil? entry)
       {:ok false :error/code :durable-coordinator-not-registered}
       :else
-      (let [updated (assoc entry :coordinator/enabled? enabled?)
+      (let [durable-state (read-edn (:coordinator/state-path entry))
+            transition {:state/type :durable-coordinator-enabled-transition
+                        :coordinator/id coordinator-id
+                        :enabled/previous (:coordinator/enabled? entry)
+                        :enabled/new enabled?
+                        :transition/actor actor
+                        :transition/reason reason
+                        :transition/timestamp-ms (*enabled-transition-now-fn*)
+                        :durable-state/digest (state-digest durable-state)}
+            transition (assoc transition :transition/digest
+                              (enabled-transition-digest transition))
+            updated (-> entry
+                        (assoc :coordinator/enabled? enabled?)
+                        (update :coordinator/enabled-history
+                                (fnil conj []) transition))
             updated (assoc updated :coordinator/entry-digest
                            (entry-digest updated))]
         (persistence/atomic-persist!
@@ -443,7 +493,9 @@
 (defn stop!
   ([coordinator-id] (regulator/stop! coordinator-id))
   ([registry-path coordinator-id]
-   (let [disabled (set-enabled! registry-path coordinator-id false)]
+   (let [disabled (set-enabled! registry-path coordinator-id false
+                                :durable-coordinator/stop!
+                                :stop-requested)]
      (if (:ok disabled)
        (let [watchdog-stopped (*watchdog-stop-fn*
                                (watchdog-id coordinator-id))]
@@ -472,7 +524,11 @@
                     {:ok true})]
      (if-not (:ok repaired)
        repaired
-       (let [enabled (set-enabled! registry-path coordinator-id true)]
+       (let [enabled (set-enabled! registry-path coordinator-id true
+                                   :durable-coordinator/resume!
+                                   (if repair-reason
+                                     :repair-resume-requested
+                                     :resume-requested))]
          (if (:ok enabled)
            (start-registered! registry-path coordinator-id)
            enabled))))))

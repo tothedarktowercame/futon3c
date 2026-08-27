@@ -2,6 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.durable-coordinator :as sut]
+            [futon3c.apm.live-preflight-runtime :as persistence]
             [futon3c.apm.live-regulator :as regulator]
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.file Files]
@@ -32,7 +33,8 @@
     (let [clock (atom 0)]
       (clear-runners!)
       (try
-        (binding [sut/*watchdog-now-fn* #(swap! clock + 20)]
+        (binding [sut/*watchdog-now-fn* #(swap! clock + 20)
+                  sut/*enabled-transition-now-fn* #(swap! clock + 20)]
           (test-fn))
         (finally (clear-runners!))))))
 
@@ -51,6 +53,52 @@
 
 (defn- registered-entry [registry coordinator-id]
   (get-in (sut/read-registry registry) [:entries coordinator-id]))
+
+(deftest enabled-transitions-are-append-only-and-preserve-current-read-path
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:history"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (with-redefs [regulator/stop! (fn [_] {:ok true :status :stopped})
+                  sut/start-registered! (fn [_ _] {:ok true :status :started})]
+      (is (:durably-disabled? (sut/stop! registry "c:history")))
+      (is (:ok (sut/resume! registry "c:history")))
+      (is (:durably-disabled? (sut/stop! registry "c:history")))
+      (let [entry (registered-entry registry "c:history")
+            history (:coordinator/enabled-history entry)]
+        (is (false? (:coordinator/enabled? entry)))
+        (is (= [[nil true] [true false] [false true] [true false]]
+               (mapv (juxt :enabled/previous :enabled/new) history)))
+        (is (= [:durable-coordinator/register!
+                :durable-coordinator/stop!
+                :durable-coordinator/resume!
+                :durable-coordinator/stop!]
+               (mapv :transition/actor history)))
+        (is (every? string? (map :durable-state/digest history)))
+        (is (apply < (map :transition/timestamp-ms history)))))))
+
+(deftest failed-history-write-blocks-enabled-transition-and-successor
+  (let [{:keys [registry state-a]} (temp-paths)
+        stopped (atom 0)
+        started (atom 0)]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:blocked"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (let [before (sut/read-registry registry)]
+      (with-redefs [persistence/atomic-persist!
+                    (fn [& _] {:ok false :error/code :test/archive-failed})
+                    regulator/stop! (fn [_] (swap! stopped inc)
+                                      {:ok true :status :stopped})
+                    sut/start-registered! (fn [& _] (swap! started inc)
+                                            {:ok true :status :started})]
+        (is (= :test/archive-failed
+               (:error/code (sut/stop! registry "c:blocked"))))
+        (is (= before (sut/read-registry registry)))
+        (is (zero? @stopped))
+        (is (= :test/archive-failed
+               (:error/code (sut/resume! registry "c:blocked"))))
+        (is (= before (sut/read-registry registry)))
+        (is (zero? @started))))))
 
 (deftest coordinator-start-arms-independent-watchdog
   (let [{:keys [registry state-a]} (temp-paths)
