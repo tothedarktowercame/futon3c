@@ -102,6 +102,17 @@
     (is (= :preflight-admission (:stage result)))
     (is (= :block-go-live (:failure/action result)))))
 
+(deftest thrown-live-effect-is-a-named-apparatus-failure
+  (let [result (sut/execute!
+                {:checks (passing-checks)
+                 :effects {:preflight-admission
+                           (fn [_] (throw (ClassCastException. "wrong port type")))}})]
+    (is (= :apparatus (:failure/class result)))
+    (is (= :ftriangle-live-effect-threw
+           (get-in result [:finding :error/code])))
+    (is (= "java.lang.ClassCastException"
+           (get-in result [:finding :exception/class])))))
+
 (deftest wired-effects-call-production-ports-and-preserve-repair-evidence
   (let [calls (atom [])
         trace-body {"schemaVersion" 1 "traceKind" "wired-test"}

@@ -193,7 +193,13 @@
           (if-let [effect (get effects stage)]
             (let [result
                   (loop [attempt 1]
-                    (let [observed (effect evidence)
+                    (let [observed
+                          (try (effect evidence)
+                               (catch Throwable error
+                                 {:ok false
+                                  :error/code :ftriangle-live-effect-threw
+                                  :exception/class (.getName (class error))
+                                  :exception/message (.getMessage error)}))
                           classified (when-not (:ok observed)
                                        (classify-failure stage observed))]
                       (if (and (= :substrate (:failure/class classified))
@@ -306,7 +312,8 @@
 
      :watchdog-progress
      (fn [_]
-       (let [state (runtime/read-state watchdog-state-path)
+       (let [state (runtime/read-state
+                    (Path/of watchdog-state-path (make-array String 0)))
              observation (:watchdog/trace-observation state)]
          (reset! watchdog-evidence state)
          (if (and (= :watching (:watchdog/status state))
