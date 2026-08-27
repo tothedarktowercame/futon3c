@@ -263,3 +263,77 @@ claim is made about any flight before it.
 - `p4ng/empirics-futon/NOTE-patterns-as-problems.md` — why an enumerated criterion set has no singularities.
 - `E-R14-red-ring-fill.md` — the inverse failure.
 - `mathlib4/DarkTower/WarMachine/GainChain.lean` — `foldCompliant`, R5's property in embryo.
+
+## What the Snatch study settled about G(π) — and a fourth clause
+
+**Added 2026-08-27** · after the `futon3/library/snatch/` collection was compiled
+into a running policy. This is the section the paper's definition should track.
+
+`NOTE-a-standard-for-G.md` named exactly one gap, and named it well:
+
+> **`G` is earned at action grain and not at policy grain.** The only multi-step
+> prediction repeats a single action, so "policy" collapses to "this action,
+> sustained" — and a sustained action is not a π.
+
+**S-G2 is now satisfiable by a real artefact.** The pattern-driven policy over
+*Snatch or Share* produces, under G4 against a snatcher, the action sequence
+`offer → denounce → offer → denounce → offer`, scoring `+3` where grim trigger
+scores `−1`. Each action is chosen by a different pattern's `THEN`; the sequence
+is heterogeneous because the *situation* changed, not because a schedule said so.
+That is a predicted-and-then-realised sequence conditioned on a policy, which is
+what S-G2 asks for and what nothing in the stack could previously produce.
+
+### S-G4 — the value must move when the cascade is re-wired
+
+`futon2.aif.cascade_prior` already states that two cascades with the same
+patterns wired differently are different policies. Making precedence data made
+that runnable: promoting one pattern in the consultation order, changing no
+pattern text and no membership, moves the G4 score from `+3` to `−5`.
+
+That gives the standard a fourth clause, in the same declared-domain form as the
+other three:
+
+> **S-G4** · a quantity may be emitted as `G(π)` only if it is **sensitive to the
+> policy's wiring** — there exists an alternative ordering of the same components
+> under which it differs. A score no re-wiring can move is not scoring the policy.
+
+This is the singularity criterion applied one level up. A dimension along which
+nothing varies carries no information; the same is true of a policy space in
+which every wiring scores alike.
+
+### S-G2 is necessary and not sufficient — the case that shows it
+
+Grim trigger under G1 against a snatcher plays `offer → abstain → abstain →
+abstain → abstain`. Two distinct actions, so it **passes S-G2**. It is still not
+a policy in the sense we need: it is hardcoded, it has exactly one wiring, and
+no re-ordering of anything can move its score. **S-G4 refuses it and S-G2 does
+not**, which is the argument for having both.
+
+### The definition, as short as it goes
+
+> **G(π)** is the value a policy earns by being run: accumulated at action grain
+> over one realised trajectory, and attributed at policy grain to the pattern
+> cascade that produced the actions. A quantity earns the name only if the
+> trajectory is not a single action sustained (S-G2) and the value moves when the
+> cascade is re-wired (S-G4) — and only if it is computed from a predicted
+> outcome distribution and declared preferences in the first place (S-G1), with
+> every stipulated component declared (S-G3).
+
+The cascade, not the action chain, is what carries the attribution: one pattern
+acts per round, so the acting sequence is linear, while the cascade is the
+`@why` sub-graph those patterns stand on. For the G4 run that is seven nodes and
+ten edges, four of them standing on two authorities — a semilattice, which is
+Alexander's own shape and the reason the attribution is not simply a list.
+
+### Where the Lean stands
+
+Two different R5 modules, and it is worth not conflating them:
+
+| module | states | status |
+|---|---|---|
+| `DarkTower/WarMachine/CoverageReport.lean` | R5's **coverage** clause — declare the criterion boundary, type the outside | **built and reviewed** |
+| `DarkTower/WarMachine/PolicyGrade.lean` | S-G2 and S-G4 as checkable predicates over a finished run, with the three Snatch witnesses | **dispatched 2026-08-27** (codex-22, `invoke-1787849563083-2454-fa53aac2`) |
+
+`CoverageReport` was already in place; what was missing was any statement of the
+naming discipline, which is what makes `G(π)` refusable rather than merely
+defined.
