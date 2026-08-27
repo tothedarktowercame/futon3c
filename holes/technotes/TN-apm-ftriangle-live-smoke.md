@@ -95,3 +95,39 @@ It is one frame on one easy problem. It proves the assembled machine runs; it
 does not prove any invariant holds in general — that is what the Lean and the
 incident fixtures are for. Its value is precisely that it is the only check
 that sees the wiring.
+
+## F△'s own preflight — check the wiring before spending a single agent turn
+
+Joe, 2026-08-27: do not run F△ until it has some hope of succeeding. A first
+run that fails for a reason already known would discredit the gate before it
+has earned anything.
+
+Rather than rely on someone remembering that, F△ should refuse to dispatch. Its
+first act is a static wiring check costing no agent time, and it aborts with
+`:ftriangle-preconditions-unmet` naming the unmet item:
+
+1. **Historical ledgers project valid.** Pick any completed frame ledger and
+   assert `:projection/status :valid`. Today f28 of
+   `jit-all-open-nontopology-v1` returns `:invalid` with
+   `:frame-close-combined-trace-required`, so closure cannot succeed and F△
+   must not dispatch.
+2. **Priors are non-empty.** `campaign-prior-memories` over the declared
+   lineage returns candidates, not 13 drops. Without this the shelf is empty
+   and item 3 of the traversal is untestable.
+3. **Loaded namespaces match the declared revision.** F△ runs against the JVM,
+   not the tree. `generated-contract`, `campaign-trace`, `campaign-machine` and
+   `countdown-control` must be the current ones — this is the C1 failure mode,
+   where a correct fix sat unloaded for an hour.
+4. **The watchdog is armed** for the coordinator F△ will use.
+5. **The trace assembler issues a receipt** for a synthetic frame, and the Lean
+   checker accepts it — proven before any agent is dispatched, since this is
+   the step most likely to fail and the most expensive to discover late.
+6. **A shelf fixture exists** containing at least one same-problem memory, so
+   the holdout has something to withhold.
+
+Only when all six pass does F△ dispatch a real turn. This makes a premature run
+cost seconds instead of agent time, and — more usefully — turns the checklist
+into something executable rather than a paragraph someone has to remember.
+
+The preflight is also independently valuable: it is a cheap, honest answer to
+"is the machine ready?", runnable at any time without starting anything.
