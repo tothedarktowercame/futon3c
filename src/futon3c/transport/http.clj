@@ -1418,13 +1418,18 @@
   ;; downstream contract parsers must read; :result-summary is a 220-char
   ;; whitespace-collapsed list-view digest and truncates structured payloads
   ;; (attempt-051 feature-card incident, 2026-07-25).
-  (select-keys job [:job-id :agent-id :caller :surface :mode :state
-                    :created-at :started-at :finished-at
-                    :terminal-code :terminal-message
-                    :session-id :trace-id
-                    :result :result-summary :artifact-ref
-                    :execution :auto-bellback :delivery
-                    :trace/delivery-observation :events]))
+  (let [view
+        (select-keys job [:job-id :agent-id :caller :surface :mode :state
+                          :created-at :started-at :finished-at
+                          :terminal-code :terminal-message
+                          :session-id :trace-id
+                          :result :result-summary :artifact-ref
+                          :execution :auto-bellback :delivery
+                          :trace/delivery-observation :events])]
+    (if (and (terminal-invoke-state? (:state job))
+             (= "pending" (get-in job [:delivery :status])))
+      (assoc view :state "delivering")
+      view)))
 
 (defn- get-invoke-job
   [job-id]

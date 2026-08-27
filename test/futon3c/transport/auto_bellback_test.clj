@@ -204,6 +204,38 @@
     (is (= "delivery-failed"
            (get-in terminal [:trace/delivery-observation :delivery-status])))))
 
+(deftest concurrent-reader-cannot-observe-terminal-before-delivery-disposition
+  (let [job-id "concurrent-terminal-non-seat"
+        entered (promise)
+        release (promise)
+        record! (var-get #'http/record-invoke-job-delivery-by-job-id!)]
+    (create-job! {:job-id job-id
+                  :agent-id "unregistered-worker"
+                  :caller "jvm-harness"})
+    (with-redefs [http/record-invoke-job-delivery-by-job-id!
+                  (fn [& args]
+                    (deliver entered true)
+                    @release
+                    (apply record! args))]
+      (let [finalizer (future-call (bound-fn [] (finalize! job-id)))]
+        @entered
+        (let [durable-half-state (job job-id)
+              public-half-state
+              (#'http/invoke-job-public-view durable-half-state)]
+          (is (= "done" (:state durable-half-state)))
+          (is (= "pending" (get-in durable-half-state [:delivery :status])))
+          (is (= "delivering" (:state public-half-state)))
+          (is (not (#'http/terminal-invoke-state?
+                    (:state public-half-state)))))
+        (deliver release true)
+        @finalizer
+        (let [public-final
+              (#'http/invoke-job-public-view (job job-id))]
+          (is (= "done" (:state public-final)))
+          (is (= "delivery-failed"
+                 (get-in public-final [:delivery :status])))
+          (is (map? (:trace/delivery-observation public-final))))))))
+
 (deftest invalid-callers-do-not-bell-back
   (register-agent! "codex-1" :codex)
   (register-agent! "claude-6" :claude)
