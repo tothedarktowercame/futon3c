@@ -27,7 +27,9 @@
 (defn- update-last-successor-observation [state f]
   (let [index (dec (count (:superseded-terminals state)))]
     (update-in state [:superseded-terminals index
-                      :trace/successor-observation] f)))
+                      :trace/successor-observation]
+               #(campaign-trace/validate-authoritative-observation
+                 :successor (f %)))))
 
 (defn strategy-checkpoint-round? [ordinal]
   (zero? (mod ordinal strategy-checkpoint-every)))

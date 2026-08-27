@@ -40,8 +40,10 @@
   (let [index (dec (count (:superseded-terminals state)))]
     (update-in state [:superseded-terminals index
                       :trace/successor-observation]
-               assoc :successor-announced-id (str successor-id)
-               :successor-activated-id (str successor-id))))
+               #(campaign-trace/validate-authoritative-observation
+                 :successor
+                 (assoc % :successor-announced-id (str successor-id)
+                        :successor-activated-id (str successor-id))))))
 
 (defn- transport-failure? [value]
   (boolean

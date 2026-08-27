@@ -25,7 +25,9 @@
 (defn- update-last-successor-observation [state f]
   (let [index (dec (count (:superseded-terminals state)))]
     (update-in state [:superseded-terminals index
-                      :trace/successor-observation] f)))
+                      :trace/successor-observation]
+               #(campaign-trace/validate-authoritative-observation
+                 :successor (f %)))))
 
 (def durable-reference-keys
   #{:job-id :solver/prior-job-id :repair/of-job-id :submission/id :receipt/id
