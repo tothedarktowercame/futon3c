@@ -147,6 +147,16 @@
                                   (string? (:receipt/final-head
                                             (get receipts :solve))))))
                    (conj :promotion-residual-inputs-missing))
+        snapshot-memories (get-in snapshot-access [:snapshot :snapshot/memories])
+        invalid-origin?
+        (fn [memory]
+          (let [origin (:provenance memory)
+                depositor-frame (some->> (:depositor memory)
+                                         (re-matches #"^(f[0-9]+)-.+$") second)]
+            (not (and (map? origin)
+                      (every? #(and (string? %) (not (str/blank? %)))
+                              ((juxt :campaign-id :frame-id :problem-id) origin))
+                      (= depositor-frame (:frame-id origin))))))
         findings (cond-> findings
                    (and (= :scribe-reduce kind) (= :scribe-reduce phase)
                         (not (and (= 3 (count student-attempt-inputs))
@@ -157,14 +167,17 @@
                                   (string? (get-in unit [:problem :blob]))
                                   (string? (:receipt/final-head
                                             (get receipts :solve))))))
-                   (conj :student-trace-inputs-missing))]
+                   (conj :student-trace-inputs-missing)
+                   (and (= :student-attempt kind) (= 1 attempt-ordinal)
+                        (some invalid-origin? snapshot-memories))
+                   (conj :student-snapshot-provenance-invalid))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
       (let [all-accessible-ids (set (:accessible-memory-ids snapshot-access))
             holdout? (and (= :student-attempt kind) (= 1 attempt-ordinal))
             withheld-ids
             (if holdout?
-              (->> (get-in snapshot-access [:snapshot :snapshot/memories])
+              (->> snapshot-memories
                    (filter #(and (map? (:provenance %))
                                  (string? (get-in % [:provenance :problem-id]))
                                  (= (:problem/id unit)

@@ -740,29 +740,35 @@
 (deftest campaign-priors-follow-queue-order-and-final-receipt-snapshots
   (let [root "data/apm-campaigns/jit-all-open-nontopology-v1"
         queue-path (str root "/queue-state.edn")
-        fixtures [["f28" "a01A12" "f28-guide-2-memory.edn"]
-                  ["f29" "a01J05" "f29-guide-2-memory.edn"]
-                  ["f30" "a01J06" "f30-guide-2-memory.edn"]]
-        expected
-        (->> fixtures
-             (mapcat (fn [[frame-id problem-id filename]]
-                       (let [path (str root "/jit-all-open-nontopology-v1-"
-                                       frame-id "/snapshots/" filename)]
-                         (map #(assoc % :provenance
-                                      {:frame-id frame-id :problem-id problem-id})
-                              (:snapshot/memories
-                               (edn/read-string (slurp path)))))))
-             (reduce (fn [acc memory] (assoc acc (:memory-id memory) memory)) {})
-             vals
-             (sort-by :memory-id)
-             vec)
-        actual (->> (:candidates (sut/campaign-prior-memories queue-path))
-                    (reduce (fn [acc memory]
-                              (assoc acc (:memory-id memory) memory)) {})
-                    vals (sort-by :memory-id) vec)]
-    (is (= expected actual))
-    (is (= #{"f28" "f29" "f30"}
-           (set (map #(get-in % [:provenance :frame-id]) actual))))))
+        result (sut/campaign-prior-memories queue-path)
+        actual (:candidates result)]
+    (is (:ok result) result)
+    (is (= ["jit-all-open-nontopology-v1"] (:lineage result)))
+    (is (seq actual))
+    (is (every?
+         (fn [memory]
+           (let [depositor-frame (some->> (:depositor memory)
+                                          (re-matches #"^(f[0-9]+)-.+$")
+                                          second)]
+             (and (= depositor-frame
+                     (get-in memory [:provenance :frame-id]))
+                  (= "jit-all-open-nontopology-v1"
+                     (get-in memory [:provenance :campaign-id])))))
+         actual))))
+
+(deftest campaign-priors-use-only-declared-cross-campaign-lineage
+  (let [queue-path "data/apm-campaigns/jit-all-open-v2/queue-state.edn"
+        result (binding [sut/campaign-prior-campaigns
+                         ["jit-all-open-nontopology-v1"]]
+                 (sut/campaign-prior-memories queue-path))]
+    (is (:ok result) result)
+    (is (= ["jit-all-open-nontopology-v1" "jit-all-open-v2"]
+           (:lineage result)))
+    (is (some #(= "f28" (get-in % [:provenance :frame-id]))
+              (:candidates result)))
+    (is (every? #(not (contains? #{"jit-m-five" "jit-m94A03-retry"}
+                                  (get-in % [:provenance :campaign-id])))
+                (:candidates result)))))
 
 (deftest memory-cascade-arm-file-is-read-only-when-launch-has-no-arm
   (let [dir (java.nio.file.Files/createTempDirectory

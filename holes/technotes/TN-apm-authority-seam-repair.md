@@ -44,3 +44,35 @@ re-enters its last valid independent-review state after a contract change,
 reuses the completed reviewer job, persists the controller evidence, validates
 the persisted form, and then continues to publication. No reviewer redispatch
 or campaign-state rewrite is required.
+
+## Cumulative memory provenance and campaign lineage
+
+A cumulative snapshot previously restamped every carried memory with the frame
+and problem publishing that snapshot. That made the carrier appear to be the
+depositor. The same-problem holdout consequently selected memories using a
+field whose meaning changed at every publication.
+
+The Lean model now distinguishes a memory's depositor origin from a snapshot
+publication. A valid publication requires every origin to be complete and
+requires republication of a memory ID to preserve that origin. The model also
+states the precondition under which same-problem holdout is depositor-truthful.
+The generated memory policy exposes these requirements to Clojure.
+
+The runtime now enforces the corresponding rules:
+
+- a provenance frame must equal the frame prefix of `:depositor`;
+- complete provenance is preserved exactly;
+- legacy provenance is reconstructed from the depositor frame and the durable
+  frame-to-problem mapping, and is marked `:provenance/repaired? true`;
+- duplicate memory IDs preserve the earliest carrier's entry;
+- predecessor campaigns come only from an ordered `:campaign/priors` launch
+  value or `lineage.edn`, never directory discovery;
+- the ordered lineage is included in the memory snapshot and in the minted
+  frame's conditions.
+
+Ambiguous frame IDs across a declared lineage fail closed because a depositor
+prefix could not identify one authoritative origin. The repair does not alter
+campaign or coordinator state. To accumulate the intended shelf on the next
+`jit-all-open-v2` frame, its launch authority must declare
+`{:campaign/priors ["jit-all-open-nontopology-v1"]}`; that declaration is then
+pinned into the frame manifest and snapshot.

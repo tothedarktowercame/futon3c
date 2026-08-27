@@ -132,27 +132,32 @@
 (deftest cumulative-publication-drops-stale-priors-but-fails-closed-on-own
   (let [dir (Files/createTempDirectory "apm-cumulative-snapshot-test"
                                        (make-array FileAttribute 0))
-        visible-prior (assoc candidate :memory-id "prior-ok"
-                             :provenance {:frame-id "f28" :problem-id "p28"})
-        stale-prior (assoc candidate :memory-id "prior-stale"
+        visible-prior (assoc candidate :memory-id "prior-ok" :depositor "f28-guide"
+                             :provenance {:campaign-id "c1"
+                                          :frame-id "f28" :problem-id "p28"})
+        stale-prior (assoc candidate :memory-id "prior-stale" :depositor "f29-guide"
                            :review-evidence-id "missing-review"
-                           :provenance {:frame-id "f29" :problem-id "p29"})
-        own (assoc candidate :memory-id "own"
-                   :provenance {:frame-id "f31" :problem-id "p31"})
+                           :provenance {:campaign-id "c1"
+                                        :frame-id "f29" :problem-id "p29"})
+        own (assoc candidate :memory-id "own" :depositor "f31-guide"
+                   :provenance {:campaign-id "c2"
+                                :frame-id "f31" :problem-id "p31"})
         visible? #(not= "missing-review" (:review-evidence-id %))
         path (.resolve dir "union.edn")
         result (sut/publish-cumulative!
                 {:frame-id "f31" :problem-id "p31"
                  :prior-candidates [visible-prior stale-prior]
-                 :own-candidates [own] :path path
+                 :own-candidates [own] :path path :lineage ["c1" "c2"]
                  :evidence-visible? visible?})]
     (is (:ok result))
     (is (= ["own" "prior-ok"]
            (mapv :memory-id (get-in result [:snapshot :snapshot/memories]))))
     (is (= {"f28" 1 "f31" 1}
            (get-in result [:snapshot :snapshot/provenance-summary])))
+    (is (= ["c1" "c2"] (get-in result [:snapshot :snapshot/lineage])))
     (is (= [{:memory-id "prior-stale"
-             :provenance {:frame-id "f29" :problem-id "p29"}
+             :provenance {:campaign-id "c1"
+                          :frame-id "f29" :problem-id "p29"}
              :finding :snapshot-review-not-visible}]
            (:prior-dropped result)))
     (is (:ok (sut/verify-student-access
@@ -167,3 +172,19 @@
               :own-candidates [(assoc own :review-evidence-id "missing-review")]
               :path (.resolve dir "own-stale.edn")
               :evidence-visible? visible?}))))))
+
+(deftest cumulative-dedup-preserves-earliest-depositor-origin
+  (let [dir (Files/createTempDirectory "apm-provenance-dedup"
+                                       (make-array FileAttribute 0))
+        origin {:campaign-id "c1" :frame-id "f28" :problem-id "p1"}
+        carrier {:campaign-id "c2" :frame-id "f46" :problem-id "p2"}
+        earliest (assoc candidate :depositor "f28-guide" :provenance origin)
+        republished (assoc candidate :depositor "f28-guide" :provenance carrier)
+        result (sut/publish-cumulative!
+                {:frame-id "f47" :problem-id "p3" :lineage ["c1" "c2"]
+                 :prior-candidates [earliest republished]
+                 :own-candidates [] :path (.resolve dir "snapshot.edn")
+                 :evidence-visible? (constantly true)})]
+    (is (:ok result) result)
+    (is (= origin
+           (get-in result [:snapshot :snapshot/memories 0 :provenance])))))

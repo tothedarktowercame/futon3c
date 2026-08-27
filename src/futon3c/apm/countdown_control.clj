@@ -61,6 +61,7 @@
 (def ^:dynamic problem-queue-state-path
   "data/apm-campaigns/problem-queue/live/queue.edn")
 (def ^:dynamic campaign-queue-state-path nil)
+(def ^:dynamic campaign-prior-campaigns nil)
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
@@ -135,6 +136,8 @@
                (or (:problem-queue-state-path config#) problem-queue-state-path)
                campaign-queue-state-path
                (or (:campaign-queue-state-path config#) campaign-queue-state-path)
+               campaign-prior-campaigns
+               (or (:campaign-priors config#) campaign-prior-campaigns)
                analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
                preparation-path (or (:preparation-path config#) preparation-path)]
        ~@body)))
@@ -826,47 +829,122 @@
     (sequential? value) (mapcat nested-snapshot-receipts value)
     :else []))
 
+(defn- declared-campaign-priors [campaign-root]
+  (if (vector? campaign-prior-campaigns)
+    campaign-prior-campaigns
+    (let [path (.resolve campaign-root "lineage.edn")]
+      (when (java.nio.file.Files/isRegularFile
+             path (make-array java.nio.file.LinkOption 0))
+        (let [value (try (edn/read-string (slurp (str path)))
+                         (catch Throwable _ ::unreadable))]
+          (if (map? value) (:campaign/priors value) value))))))
+
 (defn campaign-prior-memories
-  "Read prior frames from the durable queue order and each frame ledger's last
-  snapshot receipt. This deliberately does not discover frames or snapshots by
-  directory globbing or filename order."
+  "Read declared predecessor campaigns followed by the current campaign.
+
+  Campaigns and frames are traversed only through lineage and durable queue
+  order. Complete provenance is preserved. Legacy provenance is repaired from
+  the depositor frame and the declared queues' frame/problem authority."
   ([] (campaign-prior-memories
        (control-path (or campaign-queue-state-path problem-queue-state-path))))
   ([queue-path]
    (let [queue-path (Path/of (str queue-path) (make-array String 0))
-         queue-state (live-preflight-runtime/read-state queue-path)
          campaign-root (.getParent queue-path)
-         campaign-name (some-> campaign-root .getFileName str)]
-     (reduce
-      (fn [{:keys [candidates dropped] :as acc} completed-frame]
-        (let [frame-id (:frame/id completed-frame)
-              problem-id (:problem/id completed-frame)
-              ledger-path (.resolve campaign-root
-                                    (str campaign-name "-" frame-id "/ledger.edn"))
-              history (ledger/read-ledger ledger-path)
-              receipt (when (:ok history)
-                        (->> (:events history)
-                             reverse
-                             (mapcat nested-snapshot-receipts)
-                             first))
-              snapshot-path (:receipt/snapshot-path receipt)
-              snapshot (when (string? snapshot-path)
-                         (try (edn/read-string (slurp snapshot-path))
-                              (catch Throwable _ nil)))
-              memories (:snapshot/memories snapshot)]
-          (if (vector? memories)
-            (assoc acc :candidates
-                   (into candidates
-                         (map #(assoc % :provenance
-                                      {:frame-id frame-id :problem-id problem-id}))
-                         memories))
-            (assoc acc :dropped
-                   (conj dropped {:frame-id frame-id :problem-id problem-id
-                                  :finding (if (:ok history)
-                                             :prior-snapshot-unreadable
-                                             :prior-frame-ledger-unreadable)})))))
-      {:candidates [] :dropped []}
-      (or (:completed queue-state) [])))))
+         campaigns-root (.getParent campaign-root)
+         campaign-name (some-> campaign-root .getFileName str)
+         priors (or (declared-campaign-priors campaign-root) [])
+         lineage-valid? (and (vector? priors)
+                             (every? #(and (string? %)
+                                           (re-matches #"[A-Za-z0-9._-]+" %))
+                                     priors)
+                             (= (count priors) (count (distinct priors)))
+                             (not (some #{campaign-name} priors)))
+         campaign-names (conj priors campaign-name)
+         contexts
+         (when lineage-valid?
+           (mapv (fn [name]
+                   (let [root (.resolve campaigns-root name)]
+                     {:campaign-id name :root root
+                      :queue-state
+                      (live-preflight-runtime/read-state
+                       (.resolve root "queue-state.edn"))}))
+                 campaign-names))
+         origin-pairs
+         (mapcat (fn [{:keys [campaign-id queue-state]}]
+                   (map (fn [frame]
+                          [(:frame/id frame)
+                           {:campaign-id campaign-id
+                            :frame-id (:frame/id frame)
+                            :problem-id (:problem/id frame)}])
+                        (:completed queue-state)))
+                 contexts)
+         ambiguous-frame-ids
+         (->> origin-pairs (group-by first)
+              (keep (fn [[frame-id entries]]
+                      (when (< 1 (count entries)) frame-id)))
+              vec)
+         origins (into {} origin-pairs)]
+     (if-not lineage-valid?
+       {:ok false :error/code :campaign-memory-lineage-invalid
+        :lineage priors}
+       (if (seq ambiguous-frame-ids)
+         {:ok false :error/code :campaign-memory-lineage-frame-ambiguous
+          :lineage campaign-names :frame-ids ambiguous-frame-ids}
+         (assoc
+          (reduce
+         (fn [{:keys [dropped] :as acc}
+              [campaign-id root completed-frame]]
+           (let [frame-id (:frame/id completed-frame)
+                 problem-id (:problem/id completed-frame)
+                 ledger-path (.resolve root
+                                       (str campaign-id "-" frame-id
+                                            "/ledger.edn"))
+                 history (ledger/read-ledger ledger-path)
+                 receipt (when (:ok history)
+                           (->> (:events history) reverse
+                                (mapcat nested-snapshot-receipts) first))
+                 snapshot-path (:receipt/snapshot-path receipt)
+                 snapshot (when (string? snapshot-path)
+                            (try (edn/read-string (slurp snapshot-path))
+                                 (catch Throwable _ nil)))
+                 memories (:snapshot/memories snapshot)]
+             (if (vector? memories)
+               (reduce
+                (fn [result memory]
+                  (let [provenance (:provenance memory)
+                        depositor-frame
+                        (some->> (:depositor memory)
+                                 (re-matches #"^(f[0-9]+)-.+$") second)
+                        origin (get origins depositor-frame)]
+                    (cond
+                      (and (map? provenance)
+                           (string? (:campaign-id provenance)))
+                      (update result :candidates conj memory)
+
+                      origin
+                      (update result :candidates conj
+                              (assoc memory :provenance
+                                     (assoc origin
+                                            :provenance/repaired? true)))
+
+                      :else
+                      (update result :dropped conj
+                              {:memory-id (:memory-id memory)
+                               :frame-id frame-id :problem-id problem-id
+                               :finding :prior-provenance-unresolvable}))))
+                acc memories)
+               (assoc acc :dropped
+                      (conj dropped
+                            {:frame-id frame-id :problem-id problem-id
+                             :finding (if (:ok history)
+                                        :prior-snapshot-unreadable
+                                        :prior-frame-ledger-unreadable)})))))
+           {:candidates [] :dropped []}
+           (mapcat (fn [{:keys [campaign-id root queue-state]}]
+                     (map #(vector campaign-id root %)
+                          (or (:completed queue-state) [])))
+                   contexts))
+          :lineage campaign-names :ok true))))))
 
 (defn- snapshot-ordering-options
   [{:keys [unit preparation request]}]
@@ -888,25 +966,36 @@
   [{:keys [contract action receipts request] :as phase-inputs}
    {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (campaign-prior-memories)
+        queue-campaign-id
+        (some-> (Path/of
+                 (str (control-path (or campaign-queue-state-path
+                                        problem-queue-state-path)))
+                 (make-array String 0))
+                .getParent .getFileName str)
         own (mapv #(assoc % :provenance
-                          {:frame-id (:frame-id action)
+                          {:campaign-id queue-campaign-id
+                           :frame-id (:frame-id action)
                            :problem-id (:problem-id action)})
                   candidates)
         published
-        (memory-snapshot/publish-cumulative!
-         (merge
-          {:frame-id (:frame-id action)
-           :problem-id (:problem-id action)
-           :prior-candidates (:candidates prior)
-           :own-candidates own
-           :path (.resolve (control-path state-directory)
-                           (str "snapshots/" (:frame-id action)
-                                "-solver-memory.edn"))
-           :evidence-visible? memory-snapshot/candidate-visible?}
-          (snapshot-ordering-options phase-inputs)))]
-    (if-not (:ok published)
-      published
-      (let [snapshot (:snapshot published)
+        (when (:ok prior)
+          (memory-snapshot/publish-cumulative!
+           (merge
+            {:frame-id (:frame-id action)
+             :problem-id (:problem-id action)
+             :prior-candidates (:candidates prior)
+             :own-candidates own
+             :lineage (:lineage prior)
+             :path (.resolve (control-path state-directory)
+                             (str "snapshots/" (:frame-id action)
+                                  "-solver-memory.edn"))
+             :evidence-visible? memory-snapshot/candidate-visible?}
+            (snapshot-ordering-options phase-inputs))))]
+    (if-not (:ok prior)
+      prior
+      (if-not (:ok published)
+        published
+        (let [snapshot (:snapshot published)
             snapshot-memories (:snapshot/memories snapshot)
             own-ids (set (map :memory-id own))
             retained-prior (remove #(contains? own-ids (:memory-id %))
@@ -946,7 +1035,7 @@
           (and certification (not (:ok certification))) certification
           (not (:ok accounting)) accounting
           (:ok checked) {:ok true :receipt receipt}
-          :else checked)))))
+          :else checked))))))
 
 (defn- publish-zai-scribe-promotion!
   "Independently review the Student-mined candidates, publish their exact
@@ -2001,12 +2090,22 @@
                             :promotion-proctor
                             :scribe :zai-scribe :analyst]))
         memory-cascade (memory-cascade-arm memory-cascade campaign-root)
-        conditions (campaign-conditions campaign-root)
+        declared-priors
+        (or (:campaign/priors authority)
+            (declared-campaign-priors
+             (Path/of campaign-root (make-array String 0))))
+        conditions
+        (cond-> (campaign-conditions campaign-root)
+          (seq declared-priors)
+          (conj {:id "campaign-memory-lineage"
+                 :kind :campaign-memory-lineage
+                 :campaign/priors (vec declared-priors)}))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
          :conditions conditions
          :campaign-root campaign-root
+         :campaign-priors (vec (or declared-priors []))
          :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
          :generated-contract-path
          (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")

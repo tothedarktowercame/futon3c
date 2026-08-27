@@ -334,15 +334,17 @@
                 :surfaced-ids ["m1"] :used-ids [] :queries []}
                (get-in result [:report :memory-use])))))))
 
-(deftest attempt-one-withholds-only-well-formed-same-problem-provenance
+(deftest attempt-one-requires-depositor-truthful-provenance
   (let [promotion {:receipt/id "promotion-receipt"
                    :receipt/snapshot-id "snapshot-1"
                    :receipt/snapshot-digest "snapshot-digest"}
-        memories [{:memory-id "same" :provenance {:problem-id "a01J05"}}
-                  {:memory-id "cross" :provenance {:problem-id "a98J02"}}
-                  {:memory-id "missing"}
-                  {:memory-id "malformed" :provenance {:problem-id :a01J05}}]
-        build (fn [ordinal]
+        memories [{:memory-id "same" :depositor "f28-guide"
+                   :provenance {:campaign-id "c1" :frame-id "f28"
+                                :problem-id "a01J05"}}
+                  {:memory-id "cross" :depositor "f29-guide"
+                   :provenance {:campaign-id "c1" :frame-id "f29"
+                                :problem-id "a98J02"}}]
+        build (fn [ordinal memories]
                 (sut/build-request
                  (merge base
                         {:contract {:phases {(keyword (str "student-attempt-" ordinal))
@@ -355,25 +357,27 @@
                           :snapshot {:snapshot/digest "snapshot-digest"
                                      :snapshot/memories memories}
                           :accessible-memory-ids
-                          #{"same" "cross" "missing" "malformed"}}
+                          (set (map :memory-id memories))}
                          :action {:kind :student-attempt
                                   :phase (keyword (str "student-attempt-" ordinal))
                                   :role :student :ordinal ordinal
                                   :frame-id "f19" :problem-id "a01J05"}
                          :seat {:agent-id "f19-student" :invoke-ready? true}})))
-        first-result (build 1)
+        first-result (build 1 memories)
         first-request (:request first-result)]
     (is (:ok first-result))
     (is (not-any? #{:student-snapshot-access-unverified} (:findings first-result))
         "the full snapshot digest is verified before filtering student access")
-    (is (= ["cross" "malformed" "missing"]
+    (is (= ["cross"]
            (get-in first-request [:memory-snapshot :accessible-memory-ids])))
     (is (= :same-problem (:shelf/holdout first-request)))
     (is (= ["same"] (:shelf/withheld-ids first-request)))
     (is (= 1 (:shelf/withheld-count first-request)))
+    (is (some #{:student-snapshot-provenance-invalid}
+              (:findings (build 1 [(dissoc (first memories) :depositor)]))))
     (doseq [ordinal [2 3]
-            :let [request (:request (build ordinal))]]
-      (is (= ["cross" "malformed" "missing" "same"]
+            :let [request (:request (build ordinal memories))]]
+      (is (= ["cross" "same"]
              (get-in request [:memory-snapshot :accessible-memory-ids])))
       (is (not (contains? request :shelf/holdout)))
       (is (not (contains? request :shelf/withheld-ids)))
@@ -392,7 +396,10 @@
                          :snapshot {:snapshot/digest "snapshot-digest"
                                     :snapshot/memories
                                     [{:memory-id "cross"
-                                      :provenance {:problem-id "a98J02"}}]}
+                                      :depositor "f29-guide"
+                                      :provenance {:campaign-id "c1"
+                                                   :frame-id "f29"
+                                                   :problem-id "a98J02"}}]}
                          :accessible-memory-ids #{"cross"}}
                         :action {:kind :student-attempt
                                  :phase :student-attempt-1 :role :student
@@ -413,8 +420,12 @@
   (let [promotion {:receipt/id "promotion-receipt"
                    :receipt/snapshot-id "snapshot-1"
                    :receipt/snapshot-digest "snapshot-digest"}
-        memories [{:memory-id "same" :provenance {:problem-id "a01J05"}}
-                  {:memory-id "cross" :provenance {:problem-id "a98J02"}}]
+        memories [{:memory-id "same" :depositor "f28-guide"
+                   :provenance {:campaign-id "c1" :frame-id "f28"
+                                :problem-id "a01J05"}}
+                  {:memory-id "cross" :depositor "f29-guide"
+                   :provenance {:campaign-id "c1" :frame-id "f29"
+                                :problem-id "a98J02"}}]
         seen-options (atom nil)
         request
         (:request

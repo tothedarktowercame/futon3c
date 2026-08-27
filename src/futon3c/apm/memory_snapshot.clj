@@ -138,6 +138,8 @@
              :snapshot/review-policy :persisted-independent-review
              :snapshot/ordering ordering
              :snapshot/memories ordered}
+      (seq (:lineage ordering-options))
+      (assoc :snapshot/lineage (vec (:lineage ordering-options)))
       provenance-summary
       (assoc :snapshot/provenance-summary provenance-summary))))
 
@@ -177,7 +179,7 @@
   verify it by a fresh read. Existing identical content is an idempotent replay;
   existing different content fails closed."
   [{:keys [frame-id problem-id candidates path evidence-visible?
-           base-text base-file-blob text-fn]}]
+           base-text base-file-blob text-fn lineage]}]
   (let [validations (mapv validate-candidate candidates)
         invisible (when (fn? evidence-visible?)
                     (->> candidates
@@ -186,6 +188,7 @@
         body (snapshot-body frame-id problem-id candidates
                             {:base-text base-text
                              :base-file-blob base-file-blob
+                             :lineage lineage
                              :text-fn (or text-fn (evidence-text-fn))})
         digest (machine/ledger-digest [body])
         snapshot (assoc body :snapshot/id digest :snapshot/digest digest)
@@ -226,15 +229,27 @@
 
 (defn publish-cumulative!
   "Publish OWN-CANDIDATES on top of the campaign-ordered PRIOR-CANDIDATES.
-  Prior candidates are deduplicated first (last frame wins), then stale prior
+  Prior candidates are deduplicated first (earliest carrier wins), then stale prior
   reviews are dropped with an explicit account. Own candidates remain subject
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
-  (let [prior-by-id (reduce (fn [acc candidate]
-                              (assoc acc (:memory-id candidate) candidate))
-                            {} prior-candidates)
-        own-ids (set (map :memory-id own-candidates))
-        prior (remove #(contains? own-ids (:memory-id %)) (vals prior-by-id))
+  (let [origin-valid?
+        (fn [candidate]
+          (let [provenance (:provenance candidate)
+                depositor-frame
+                (some->> (:depositor candidate)
+                         (re-matches #"^(f[0-9]+)-.+$") second)]
+            (and (map? provenance)
+                 (every? nonblank?
+                         ((juxt :campaign-id :frame-id :problem-id)
+                          provenance))
+                 (= depositor-frame (:frame-id provenance)))))
+        prior (reduce (fn [ordered candidate]
+                        (if (some #(= (:memory-id candidate) (:memory-id %))
+                                  ordered)
+                          ordered
+                          (conj ordered candidate)))
+                      [] prior-candidates)
         inspected
         (mapv (fn [candidate]
                 (let [shape (validate-candidate candidate)
@@ -254,10 +269,20 @@
                          :provenance (:provenance candidate)
                          :finding finding})
                       (filter :finding inspected))
-        merged (into retained own-candidates)
-        published (publish! (assoc args :candidates merged))]
-    (cond-> published
-      (:ok published) (assoc :prior-dropped dropped))))
+        merged (reduce (fn [ordered candidate]
+                         (if (some #(= (:memory-id candidate) (:memory-id %))
+                                   ordered)
+                           ordered
+                           (conj ordered candidate)))
+                       retained own-candidates)
+        invalid-origins (mapv :memory-id (remove origin-valid? merged))
+        published (when (empty? invalid-origins)
+                    (publish! (assoc args :candidates merged)))]
+    (if (seq invalid-origins)
+      {:ok false :error/code :memory-snapshot-provenance-invalid
+       :memory-ids invalid-origins}
+      (cond-> published
+        (:ok published) (assoc :prior-dropped dropped)))))
 
 (defn verify-student-access
   [{:keys [path expected frame-id problem-id accessible-memory-ids]}]

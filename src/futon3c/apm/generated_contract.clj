@@ -95,6 +95,13 @@
    :guide-union-snapshot-content-addressed true
    :next-student-binds-latest-reviewed-snapshot true
    :candidate-pattern-binding-required true
+   :memory-provenance-authority "depositor-origin"
+   :memory-provenance-preserved-on-republication true
+   :memory-lineage-source "declared-predecessors-only"
+   :memory-lineage-dedup "earliest-carrier-wins"
+   :memory-snapshot-lineage-pinned true
+   :same-problem-holdout-requires-valid-origin true
+   :legacy-provenance-repair-marked true
    :open-reviewed-corpus-search true
    :search-capable-roles ["student" "scribe" "promotion-proctor"]
    :search-query-trace-persisted true
