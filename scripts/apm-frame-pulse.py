@@ -126,11 +126,21 @@ def main():
         unresolved_total += cj
         flag = "  <-- UNRESOLVED" if cj else ""
         print(f"    {ph:30} {tally}{flag}")
+    # :reassign is an ACCEPT, not a rejection. promotion_pipeline.clj groups it
+    # with :approve everywhere -- both map to status :reviewed, and a reassign
+    # is refused unless its target attachment is already reviewed. It means the
+    # candidate duplicates an existing reviewed pattern, so attach it there.
+    # Counting only "approve" reported f49's three reassigns as "0 approved",
+    # i.e. reported cross-frame pattern recognition as no supply at all.
     approved = 0
+    reassigned = 0
     for ph in REVIEW_PHASES:
         t = read(os.path.join(live, ph + ".edn"))
-        approved += len([1 for _mid, v in dispositions(t) if v == "approve"])
-    print(f"  supply:   {approved} approved this frame")
+        verdicts = [v for _mid, v in dispositions(t)]
+        approved += verdicts.count("approve")
+        reassigned += verdicts.count("reassign")
+    extra = f" (+{reassigned} reassigned to existing patterns)" if reassigned else ""
+    print(f"  supply:   {approved} approved this frame{extra}")
 
     # Solve progress: rounds alone cannot separate real work from spinning,
     # because :solver/outcome :progress is the solver's own claim and reads the
