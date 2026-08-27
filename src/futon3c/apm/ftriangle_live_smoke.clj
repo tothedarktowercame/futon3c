@@ -72,15 +72,18 @@
      (when-not (runtime/read-state state-file)
        (runtime/atomic-persist! state-file
                                 (regulator/initial-state coordinator-id))))
-   (let [registered
-         (durable-coordinator/register!
-          {:registry-path registry :coordinator-id coordinator-id
-           :adapter :ftriangle/live-smoke :config {}
-           :state-path state-path :period-ms period-ms})]
-     (if (:ok registered)
-       (assoc (durable-coordinator/start-registered! registry coordinator-id)
-              :registration (:status registered))
-       registered))))
+   (if (get-in (durable-coordinator/read-registry registry)
+               [:entries coordinator-id])
+     (durable-coordinator/resume! registry coordinator-id)
+     (let [registered
+           (durable-coordinator/register!
+            {:registry-path registry :coordinator-id coordinator-id
+             :adapter :ftriangle/live-smoke :config {}
+             :state-path state-path :period-ms period-ms})]
+       (if (:ok registered)
+         (assoc (durable-coordinator/start-registered! registry coordinator-id)
+                :registration (:status registered))
+         registered)))))
 
 (defn- loaded-runtime-current []
   (let [contract (generated-contract/read-contract
