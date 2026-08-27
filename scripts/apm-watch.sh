@@ -12,7 +12,16 @@ cd /home/joe/code/futon3c
 prev=""; lasttk=""; lastrs=""; lasten=""; stall=0
 
 while true; do
-  C=$(ls -dt data/apm-campaigns/*/ | head -1)
+  # Watch the most recently touched campaign that the coordinator registry
+  # actually knows about. Plain "most recently touched" follows fixture and
+  # smoke-test directories -- ftriangle-live-smoke-v1 hijacked this watch at
+  # 19:35 -- and those have no regulator, so every signal below reads as zero.
+  C=""
+  for candidate in $(ls -dt data/apm-campaigns/*/); do
+    state=$(python3 scripts/apm-coordinator-enabled.py "$(basename "$candidate")" 2>/dev/null)
+    if [ "$state" != "unknown" ]; then C="$candidate"; break; fi
+  done
+  [ -z "$C" ] && C=$(ls -dt data/apm-campaigns/*/ | head -1)
   campaign=$(basename "$C")
 
   cur=$(timeout 240 python3 scripts/apm-frame-pulse.py 2>&1); rc=$?
@@ -60,7 +69,9 @@ while true; do
     stall=0
   fi
 
-  if [ "$qs" != ":paused" ] && [ "$qs" != ":pause-after-active" ] \
+  # An ABSENT tick counter is not a frozen one: "" = "" compares equal and
+  # would report a stall forever against a directory that never ticks.
+  if [ -n "$tk" ] && [ "$qs" != ":paused" ] && [ "$qs" != ":pause-after-active" ] \
      && [ "$rs" != ":failed" ] && [ "$en" != "disabled" ]; then
     if [ "$tk" = "$lasttk" ]; then
       stall=$((stall+1))
