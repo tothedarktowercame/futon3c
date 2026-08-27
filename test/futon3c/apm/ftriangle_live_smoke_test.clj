@@ -22,6 +22,23 @@
            (get-in config [:contract :contract/id])))
     (is (= "ft1" (get-in config [:manifest :units 0 :frame/id])))))
 
+(deftest live-port-contract-normalizes-paths-and-refuses-bad-shapes
+  (let [valid (sut/validate-live-port-config
+               {:manifest {} :contract {} :smoke-root "smoke"
+                :watchdog-state-path "watch.edn"
+                :dispatch-request {:agent-id "agent" :prompt "p"
+                                   :job-id "job"}})
+        invalid (sut/validate-live-port-config
+                 {:manifest {} :contract {} :smoke-root "smoke"
+                  :watchdog-state-path (java.io.File. "wrong-type")
+                  :dispatch-request {}})]
+    (is (:ok valid))
+    (is (instance? java.nio.file.Path
+                   (get-in valid [:config :watchdog-state-path])))
+    (is (= :ftriangle-port-contract-invalid (:error/code invalid)))
+    (is (= :harness (:failure/class invalid)))
+    (is (= :verdict/none (:verdict invalid)))))
+
 (deftest preflight-names-each-unmet-condition-without-dispatch
   (doseq [condition sut/condition-order]
     (let [dispatches (atom 0)
@@ -32,7 +49,8 @@
                                   (map #(vector % (fn [_]
                                                     (swap! dispatches inc)
                                                     {:ok true :evidence {}})))
-                                  sut/traversal-order)})]
+                                  sut/traversal-order)
+                   :persist-ledger-fn (constantly {:ok true})})]
       (is (= :ftriangle-preconditions-unmet (:error/code result)) condition)
       (is (= [condition] (:unmet result)) condition)
       (is (zero? @dispatches) condition))))
@@ -89,7 +107,8 @@
                                            :error/code :admission-refused}))
                                       (constantly {:ok true :evidence {}}))]))
                       sut/traversal-order)
-        result (sut/execute! {:checks (passing-checks) :effects effects})]
+        result (sut/execute! {:checks (passing-checks) :effects effects
+                              :persist-ledger-fn (constantly {:ok true})})]
     (is (= 2 @calls))
     (is (= :apparatus (:failure/class result)))
     (is (= 2 (:ftriangle/attempts result)))))
@@ -124,17 +143,27 @@
            (set (keys (:evidence result)))))))
 
 (deftest missing-live-effect-is-a-harness-failure
-  (let [result (sut/execute! {:checks (passing-checks) :effects {}})]
+  (let [result (sut/execute! {:checks (passing-checks) :effects {}
+                              :persist-ledger-fn (constantly {:ok true})})]
     (is (= :harness (:failure/class result)))
-    (is (= :preflight-admission (:stage result)))
+    (is (some #{[:preflight-admission :effect-not-function]}
+              (:findings result)))
     (is (= :fix-ftriangle (:failure/action result)))
     (is (= :verdict/none (:verdict result)))))
 
 (deftest thrown-live-effect-is-a-named-apparatus-failure
-  (let [result (sut/execute!
+  (let [effects (into {}
+                      (map (fn [stage]
+                             [stage (if (= :preflight-admission stage)
+                                      (fn [_]
+                                        (throw (ClassCastException.
+                                                "wrong port type")))
+                                      (constantly {:ok true :evidence {}}))]))
+                      sut/traversal-order)
+        result (sut/execute!
                 {:checks (passing-checks)
-                 :effects {:preflight-admission
-                           (fn [_] (throw (ClassCastException. "wrong port type")))}})]
+                 :effects effects
+                 :persist-ledger-fn (constantly {:ok true})})]
     (is (= :apparatus (:failure/class result)))
     (is (= :ftriangle-live-effect-threw
            (get-in result [:finding :error/code])))

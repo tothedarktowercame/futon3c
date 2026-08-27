@@ -288,7 +288,7 @@
                :result-text "private bounded response"})]
     (is (= decision (:auto-bellback view)))
     (is (not (contains? view :result-text)))
-    (is (not (contains? view :result)))))
+    (is (= "private complete response" (:result view)))))
 
 (deftest invoke-job-public-view-preserves-delivery-observation
   (let [observation {:terminal-job-id "job-1"

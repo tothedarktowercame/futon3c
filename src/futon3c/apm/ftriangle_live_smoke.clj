@@ -40,7 +40,38 @@
 (def harness-input-error-codes
   #{:ftriangle-live-effect-missing
     :ftriangle-ledger-persist-port-missing
+    :ftriangle-port-contract-invalid
     :live-job-driver-input-invalid})
+
+(defn validate-live-port-config
+  "Normalize the EDN config into the host types required by F△'s effect ports.
+  Invalid call shapes are rejected before preflight or dispatch."
+  [config]
+  (let [dispatch (:dispatch-request config)
+        findings
+        (cond-> []
+          (not (map? (:manifest config))) (conj :manifest-not-map)
+          (not (map? (:contract config))) (conj :contract-not-map)
+          (not (and (string? (:smoke-root config))
+                    (not-empty (:smoke-root config))))
+          (conj :smoke-root-not-string)
+          (not (and (string? (:watchdog-state-path config))
+                    (not-empty (:watchdog-state-path config))))
+          (conj :watchdog-state-path-not-string)
+          (not (and (map? dispatch)
+                    (every? #(and (string? (get dispatch %))
+                                  (not-empty (get dispatch %)))
+                            [:agent-id :prompt :job-id])))
+          (conj :dispatch-request-invalid))]
+    (if (seq findings)
+      {:ok false :error/code :ftriangle-port-contract-invalid
+       :failure/class :harness :failure/action :fix-ftriangle
+       :verdict :verdict/none :findings findings}
+      {:ok true
+       :config (assoc config
+                      :watchdog-state-path
+                      (Path/of (:watchdog-state-path config)
+                               (make-array String 0)))})))
 
 (defn read-fixture [] (edn/read-string (slurp fixture-path)))
 
@@ -209,21 +240,46 @@
   Each effect receives accumulated evidence and must return {:ok true
   :evidence ...}. No default can dispatch or mutate a production campaign."
   [{:keys [checks effects persist-ledger-fn]}]
-  (let [ready (preflight (or checks (default-checks)))]
-    (if-not (:ok ready)
-      ready
-      (loop [remaining traversal-order evidence {}]
-        (if-let [stage (first remaining)]
-          (if-let [effect (get effects stage)]
-            (let [result
+  (let [invalid-effects (into [] (remove #(fn? (get effects %)))
+                              traversal-order)
+        port-check (cond
+                     (seq invalid-effects)
+                     {:ok false :error/code :ftriangle-port-contract-invalid
+                      :failure/class :harness :failure/action :fix-ftriangle
+                      :verdict :verdict/none
+                      :findings (mapv #(vector % :effect-not-function)
+                                      invalid-effects)}
+                     (not (fn? persist-ledger-fn))
+                     {:ok false :error/code :ftriangle-port-contract-invalid
+                      :failure/class :harness :failure/action :fix-ftriangle
+                      :verdict :verdict/none
+                      :findings [[:persist-ledger :not-function]]}
+                     :else {:ok true})
+        ready (when (:ok port-check)
+                (preflight (or checks (default-checks))))]
+    (if-not (:ok port-check)
+      port-check
+      (if-not (:ok ready)
+        ready
+        (loop [remaining traversal-order evidence {}]
+          (if-let [stage (first remaining)]
+            (let [effect (get effects stage)
+                  result
                   (loop [attempt 1]
-                    (let [observed
+                    (let [raw-observed
                           (try (effect evidence)
                                (catch Throwable error
                                  {:ok false
                                   :error/code :ftriangle-live-effect-threw
                                   :exception/class (.getName (class error))
                                   :exception/message (.getMessage error)}))
+                          observed
+                          (if (and (map? raw-observed)
+                                   (boolean? (:ok raw-observed)))
+                            raw-observed
+                            {:ok false
+                             :error/code :ftriangle-port-contract-invalid
+                             :findings [[stage :result-not-typed-map]]})
                           classified (when-not (:ok observed)
                                        (classify-failure stage observed))]
                       (if (and (= :substrate (:failure/class classified))
@@ -237,12 +293,11 @@
                                     :ftriangle/attempts
                                     (:ftriangle/attempts result)))
                       checkpoint
-                      (when (fn? persist-ledger-fn)
-                        (persist-ledger-fn
-                         {:campaign/id campaign-id :frame/id frame-id
-                          :traversal/status :in-progress
-                          :traversal/evidence next-evidence}))]
-                  (if (or (nil? checkpoint) (:ok checkpoint))
+                      (persist-ledger-fn
+                       {:campaign/id campaign-id :frame/id frame-id
+                        :traversal/status :in-progress
+                        :traversal/evidence next-evidence})]
+                  (if (:ok checkpoint)
                     (recur (rest remaining) next-evidence)
                     (classify-failure
                      :ledger-evidence
@@ -250,32 +305,23 @@
                       :stage stage :finding checkpoint})))
                 (assoc (classify-failure stage result)
                        :ftriangle/attempts (:ftriangle/attempts result))))
-            (classify-failure stage
-                              {:error/code :ftriangle-live-effect-missing}))
-          (let [missing (into [] (remove #(contains? evidence %)) traversal-order)
-                closure (:combined-trace-closure evidence)
-                valid-close? (campaign-trace/valid-combined-trace-receipt?
-                              (:certificate closure))]
-            (cond
-              (seq missing)
-              (classify-failure :ledger-evidence
-                                {:error/code :ftriangle-ledger-evidence-missing
-                                 :missing missing})
-              (not valid-close?)
-              (classify-failure :combined-trace-closure
-                                {:error/code :ftriangle-closure-receipt-invalid})
-              (not (fn? persist-ledger-fn))
-              (classify-failure :ledger-evidence
-                                {:error/code :ftriangle-ledger-persist-port-missing})
-              :else
-              (let [persisted (persist-ledger-fn
-                               {:campaign/id campaign-id :frame/id frame-id
-                                :traversal/evidence evidence})]
-                (if (:ok persisted)
-                  {:ok true :status :closed :campaign/id campaign-id
-                   :frame/id frame-id :evidence evidence
-                   :persisted persisted}
-                  (classify-failure :ledger-evidence persisted))))))))))
+            (let [closure (:combined-trace-closure evidence)
+                  valid-close? (campaign-trace/valid-combined-trace-receipt?
+                                (:certificate closure))]
+              (if-not valid-close?
+                (classify-failure
+                 :combined-trace-closure
+                 {:error/code :ftriangle-closure-receipt-invalid})
+                (let [persisted
+                      (persist-ledger-fn
+                       {:campaign/id campaign-id :frame/id frame-id
+                        :traversal/status :closed
+                        :traversal/evidence evidence})]
+                  (if (:ok persisted)
+                    {:ok true :status :closed :campaign/id campaign-id
+                     :frame/id frame-id :evidence evidence
+                     :persisted persisted}
+                    (classify-failure :ledger-evidence persisted)))))))))))
 
 (defn- smoke-path [root relative]
   (.resolve (Path/of (str root) (make-array String 0)) relative))
@@ -350,8 +396,7 @@
 
      :watchdog-progress
      (fn [_]
-       (let [state (runtime/read-state
-                    (Path/of watchdog-state-path (make-array String 0)))
+       (let [state (runtime/read-state watchdog-state-path)
              observation (:watchdog/trace-observation state)]
          (reset! watchdog-evidence state)
          (if (and (= :watching (:watchdog/status state))
@@ -421,7 +466,7 @@
                      {:certificate {:receipt/id "ftriangle-close"
                                     :receipt/frame-id frame-id}
                       :durable-documents documents
-                      :trace-path (smoke-path
+                      :trace-path (io/file
                                    root "terminal/combined-trace.json")})]
          (if (:ok issued)
            {:ok true :evidence {:certificate (:certificate issued)
@@ -433,9 +478,12 @@
   the wired effects. Calling this function may dispatch agents; preflight does
   not."
   [raw-config]
-  (let [{:keys [smoke-root] :as config} (read-live-config raw-config)
+  (let [validated (validate-live-port-config (read-live-config raw-config))
+        {:keys [smoke-root] :as config} (:config validated)
         root (str (or smoke-root ledger-root))]
-    (if (or (= root "data/apm-campaigns/jit-all-open-v2")
+    (if-not (:ok validated)
+      validated
+      (if (or (= root "data/apm-campaigns/jit-all-open-v2")
             (not (.contains root "ftriangle-live-smoke")))
       {:ok false :error/code :ftriangle-isolation-invalid :root root}
       (execute!
@@ -444,4 +492,4 @@
         :persist-ledger-fn
         (fn [evidence]
           (runtime/atomic-persist!
-           (smoke-path root "ledger/evidence.edn") evidence))}))))
+           (smoke-path root "ledger/evidence.edn") evidence))})))))
