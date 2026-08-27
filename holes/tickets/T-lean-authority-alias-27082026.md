@@ -1,8 +1,9 @@
 # T-lean-authority-alias — mathlib4 was aliased into APM's package authority, and the original is preserved
 
 **Opened:** 2026-08-27 · claude-13, reviewing codex-22's diagnosis
-(`invoke-1787830674542-2326-6e7822bb`). **Decision pending with Joe. Nothing has
-been mutated.**
+(`invoke-1787830674542-2326-6e7822bb`).
+**CLOSED 2026-08-27** — Joe: *"get this into a consistent state so that we stop
+losing time over it."* Reverted and verified; see the closing section.
 
 ## The finding
 
@@ -41,15 +42,38 @@ mathlib4) is the right direction. Two corrections to its costing:
    15–90 minutes plus fetch/build. The 4.31 dependency set with compiled
    artifacts has been on disk since Aug 14. The repair is a rename.
 
-## Proposed repair — Joe's call, not executed
+## The repair, executed and verified 2026-08-27
 
-Restore the set-aside directory as `mathlib4/.lake/packages` and remove the
-alias. Then re-probe:
+    cd /home/joe/code/mathlib4/.lake
+    unlink packages                             # the symlink only
+    mv packages.pre-canonical-20260826 packages
 
-    import Mathlib.Probability.Kernel.Category.Stoch
+`unlink` was used deliberately: it refuses to operate on a real directory, so it
+could not have removed the authority itself.
 
-**Containment until then:** do not run Lake from `mathlib4` on any file that
-imports anything. Mathlib-free files are unaffected.
+**Pre-checks.** No `.olean` under `mathlib4/.lake/build` was newer than the alias
+(2026-08-26 22:01), so there were no mixed-epoch artifacts to clean up.
+Baseline recorded: APM authority `batteries` at `bce25af7`.
+
+**Verification.**
+
+| check | result |
+|---|---|
+| `import Mathlib.Probability.Kernel.Category.Stoch` — the original symptom | **exit 0**, `Stoch : Type (u_1 + 1)` |
+| Lake reconciliation during that run | **none** — no `checking out revision` lines, so packages already matched the manifest |
+| `mathlib4/.lake/packages/batteries` | real dir, `v4.31.0-rc1`, HEAD `708b0578` — matches mathlib4's manifest |
+| `GainChain.lean` | exit 0, no errors, no `sorryAx` |
+| `CommitmentTemperature.lean` | exit 0, no errors, no `sorryAx` |
+| APM authority afterwards | `bce25af7`, unchanged; `apm-lean` worktree clean |
+
+**Blast radius: zero on the APM side.** The repair moved `mathlib4` off the
+authority rather than moving the authority, so none of the 21 APM symlink
+consumers was touched.
+
+**Recurrence prevented.** `AGENTS.md` now states, under the Lean section, that
+`mathlib4` is not a frame worktree, keeps its own `.lake/packages`, and must not
+be aliased to the APM authority — with the reason (different toolchains, shared
+mutable dir, last-repo-wins) and a pointer here.
 
 ## What is not at risk
 
