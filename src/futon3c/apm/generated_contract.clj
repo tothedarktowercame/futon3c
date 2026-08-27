@@ -188,6 +188,12 @@
 
 (def required-terminal-policy
   {:certified-phase-receipts 11
+   :closure-combined-trace-required true
+   :closure-trace-observation-inventory "lean-declared-total"
+   :closure-trace-projection-authority "durable-state"
+   :closure-checker-receipt-required true
+   :closure-checker-receipt-binds-trace-digest true
+   :campaign-certification-requires-combined-trace true
    :separate-problem-frame-outcomes true
    :learning-outcome-required true
    :solved-partial-bankable true

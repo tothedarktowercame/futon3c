@@ -1,6 +1,7 @@
 (ns futon3c.apm.campaign-regulator-test
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.campaign-regulator :as regulator]))
 
 (def phases [:probe :solve :close])
@@ -17,6 +18,16 @@
    :event/campaign-id "apm-200" :event/actor "regulator"
    :event/at (str "2026-08-20T12:00:0" seq "Z")
    :event/expected-version seq :event/body body})
+
+(defn trace-certificate [body]
+  (merge body
+         {:trace/digest (apply str (repeat 64 "a"))
+          :trace/projected-from-durable-state? true
+          :trace/observation-kinds
+          (mapv :kind (campaign-trace/observation-schemas))
+          :trace/checker-receipt
+          {:checker/status :accepted
+           :trace/digest (apply str (repeat 64 "a"))}}))
 
 (defn certificate [events & [status]]
   (let [projection (machine/projection events)
@@ -92,12 +103,16 @@
                              {:frame-id "f1" :problem-id "p1" :block-id "b1"})
                       (event 3 :frame/advanced {:frame-id "f1" :from :probe :to :solve})
                       (event 4 :frame/advanced {:frame-id "f1" :from :solve :to :close})
-                      (event 5 :frame/closed {:frame-id "f1" :certificate {:ok true}})
+                      (event 5 :frame/closed
+                             {:frame-id "f1"
+                              :certificate (trace-certificate {:ok true})})
                       (event 6 :frame/opened
                              {:frame-id "f2" :problem-id "p2" :block-id "b1"})
                       (event 7 :frame/advanced {:frame-id "f2" :from :probe :to :solve})
                       (event 8 :frame/advanced {:frame-id "f2" :from :solve :to :close})
-                      (event 9 :frame/closed {:frame-id "f2" :certificate {:ok true}})])
+                      (event 9 :frame/closed
+                             {:frame-id "f2"
+                              :certificate (trace-certificate {:ok true})})])
         close-block (regulator/decide (certificate events))
         closed-events (conj events
                             (event 10 :block/closed

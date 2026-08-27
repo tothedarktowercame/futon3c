@@ -1,8 +1,19 @@
 (ns futon3c.apm.campaign-machine-test
   (:require [clojure.test :refer [deftest is testing]]
-            [futon3c.apm.campaign-machine :as machine]))
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]))
 
 (def phases [:probe :freeze :solve :verify :close])
+
+(defn trace-certificate [body]
+  (merge body
+         {:trace/digest (apply str (repeat 64 "a"))
+          :trace/projected-from-durable-state? true
+          :trace/observation-kinds
+          (mapv :kind (campaign-trace/observation-schemas))
+          :trace/checker-receipt
+          {:checker/status :accepted
+           :trace/digest (apply str (repeat 64 "a"))}}))
 
 (defn event [seq type body]
   {:event/id (str "e" seq) :event/seq seq :event/type type
@@ -29,7 +40,8 @@
                       (event 6 :frame/advanced {:frame-id "f1" :from :verify :to :close
                                                 :certificate {:proctor :pass}})
                       (event 7 :frame/closed {:frame-id "f1"
-                                              :certificate {:axioms :clean}})
+                                              :certificate
+                                              (trace-certificate {:axioms :clean})})
                       (event 8 :block/closed {:block-id "b1"
                                               :certificate {:frames 1}})])
         projected (machine/projection events)]
@@ -85,6 +97,27 @@
             (machine/projection
              (conj advanced
                    (event 7 :frame/closed {:frame-id "f1"}))))))))
+
+(deftest frame-close-refuses-missing-or-unbound-combined-trace
+  (let [advanced (into prefix
+                       (map-indexed
+                        (fn [index [from to]]
+                          (event (+ 3 index) :frame/advanced
+                                 {:frame-id "f1" :from from :to to
+                                  :certificate {:ok true}}))
+                        (partition 2 1 phases)))
+        close (fn [certificate]
+                (machine/projection
+                 (conj advanced
+                       (event 7 :frame/closed
+                              {:frame-id "f1" :certificate certificate}))))]
+    (is (= :frame-close-combined-trace-required
+           (:error/code (close {:ok true}))))
+    (is (= :frame-close-combined-trace-required
+           (:error/code
+            (close (assoc-in (trace-certificate {})
+                             [:trace/checker-receipt :trace/digest]
+                             (apply str (repeat 64 "b")))))))))
 
 (deftest pinned-ledger-digest-refuses-different-history
   (let [digest (:ledger/digest (machine/projection prefix))

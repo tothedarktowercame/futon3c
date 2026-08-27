@@ -4,7 +4,8 @@
   The ledger is the authority.  Runtime jobs, buffers, and conversational
   sessions are projections or reconciliation inputs; none may advance this
   machine directly."
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [futon3c.apm.campaign-trace :as campaign-trace])
   (:import [java.nio.charset StandardCharsets]
            [java.security MessageDigest]))
 
@@ -331,6 +332,9 @@
           (refusal state event :frame-close-before-terminal-phase)
           (not (map? (:certificate body)))
           (refusal state event :frame-close-certificate-required)
+          (not (campaign-trace/valid-combined-trace-receipt?
+                (:certificate body)))
+          (refusal state event :frame-close-combined-trace-required)
           :else
           {:ok true :state (-> state
                                (assoc :active-frame-id nil)
@@ -360,6 +364,9 @@
         (:active-block-id state) (refusal state event :campaign-close-with-active-block)
         (not (map? (:certificate body)))
         (refusal state event :campaign-close-certificate-required)
+        (not (campaign-trace/valid-combined-trace-receipt?
+              (:certificate body)))
+        (refusal state event :campaign-close-combined-trace-required)
         :else
         {:ok true :state (assoc state :status :closed
                                 :close-certificate (:certificate body))}))))

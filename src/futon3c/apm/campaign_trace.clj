@@ -88,6 +88,24 @@
                          :observation/kind source-key})))))
   sources)
 
+(defn valid-combined-trace-receipt?
+  "Closure gate over the Lean-declared observation inventory. The receipt is
+  accepted only when the checker accepted the same digest and the trace says
+  its observations were projected from durable state."
+  [certificate]
+  (let [schemas (observation-schemas)
+        declared (set (map :kind schemas))
+        observed (set (:trace/observation-kinds certificate))
+        trace-digest (:trace/digest certificate)
+        checker (:trace/checker-receipt certificate)]
+    (and (string? trace-digest)
+         (boolean (re-matches #"[0-9a-f]{64}" trace-digest))
+         (= declared observed)
+         (= (count schemas) (count (:trace/observation-kinds certificate)))
+         (true? (:trace/projected-from-durable-state? certificate))
+         (= :accepted (:checker/status checker))
+         (= trace-digest (:trace/digest checker)))))
+
 (defn- canonical [x]
   (cond
     (map? x) (into (sorted-map) (map (fn [[k v]] [(name k) (canonical v)])) x)

@@ -39,7 +39,7 @@
    (event 6 :frame/advanced {:frame-id "f19" :from :preflight :to :solve
                              :obligation/id "o3" :certificate {:ok true}})])
 
-(deftest partial-frame-closes-old-block-and-campaign-append-only
+(deftest partial-series-cannot-certify-without-combined-trace
   (let [path (Files/createTempFile "series-terminal-" ".edn"
                                    (make-array FileAttribute 0))]
     (try
@@ -56,14 +56,14 @@
                                 :now "2026-08-21T01:00:00Z"})
             loaded (ledger/read-ledger path)
             projection (:projection loaded)]
-        (is (:ok result))
-        (is (= [:frame :block :campaign] (mapv :stage (:steps result))))
-        (is (= :closed (:campaign/status projection)))
+        (is (false? (:ok result)))
+        (is (= [:frame :block] (mapv :stage (:steps result))))
+        (is (= :registered (:campaign/status projection)))
         (is (= :stopped (get-in projection [:campaign/frames "f19" :status])))
         (is (= :partial
                (get-in projection [:campaign/frames "f19" :stop
                                    :certificate :outcome])))
-        (is (= (+ (count prefix) 6) (:ledger/event-count projection))))
+        (is (= (+ (count prefix) 4) (:ledger/event-count projection))))
       (finally (Files/deleteIfExists path)))))
 
 (deftest post-verify-apparatus-failure-preserves-solved-problem-outcome

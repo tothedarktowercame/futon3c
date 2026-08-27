@@ -163,6 +163,23 @@
                     (catch clojure.lang.ExceptionInfo e e)))))
           frame))))
 
+(deftest closure-receipt-is-total-durable-and-digest-bound
+  (let [digest (apply str (repeat 64 "a"))
+        kinds (mapv :kind (sut/observation-schemas))
+        receipt {:trace/digest digest
+                 :trace/projected-from-durable-state? true
+                 :trace/observation-kinds kinds
+                 :trace/checker-receipt
+                 {:checker/status :accepted :trace/digest digest}}]
+    (is (sut/valid-combined-trace-receipt? receipt))
+    (is (false? (sut/valid-combined-trace-receipt?
+                 (update receipt :trace/observation-kinds pop))))
+    (is (false? (sut/valid-combined-trace-receipt?
+                 (assoc-in receipt [:trace/checker-receipt :trace/digest]
+                           (apply str (repeat 64 "b"))))))
+    (is (false? (sut/valid-combined-trace-receipt?
+                 (assoc receipt :trace/projected-from-durable-state? false))))))
+
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
                             "apm-trace" (make-array java.nio.file.attribute.FileAttribute 0)))
