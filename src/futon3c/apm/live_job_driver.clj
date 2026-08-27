@@ -383,21 +383,31 @@
                   {:ok false
                    :error/code :live-job-terminal-repair-request-invalid
                    :finding repair}
-                  (let [announced (ticket repair-request
-                                          (announce-fn repair-request))]
-                    (if-not (:ok announced)
-                      announced
-                      (let [next-state
+                  (let [predecessor
+                        {:job job
+                         :ticket (:ticket state)
+                         :terminal-collection (:terminal-collection state)
+                         :findings (:findings validated)}
+                        already-archived?
+                        (= (:job-id job)
+                           (get-in (peek (:superseded-terminals state))
+                                   [:job :job-id]))
+                        archived-state
+                        (cond-> (dissoc state :terminal-collection)
+                          (not already-archived?)
+                          (update :superseded-terminals (fnil conj []) predecessor))
+                        archived-persisted (persist-fn archived-state)]
+                    (if-not (:ok archived-persisted)
+                      {:ok false
+                       :error/code :live-job-terminal-repair-archive-persistence-failed
+                       :state state}
+                      (let [announced (ticket repair-request
+                                              (announce-fn repair-request))]
+                        (if-not (:ok announced)
+                          announced
+                          (let [next-state
                             (cond->
-                             (assoc (-> state
-                                        (update :superseded-terminals
-                                                (fnil conj [])
-                                                {:job job
-                                                 :ticket (:ticket state)
-                                                 :terminal-collection
-                                                 (:terminal-collection state)
-                                                 :findings (:findings validated)})
-                                        (dissoc :terminal-collection))
+                             (assoc archived-state
                                     :active-request repair-request
                                     :ticket (:ticket announced)
                                     :activation/accepted? false
@@ -435,4 +445,4 @@
                                    :repair? true :state accepted}
                                   {:ok false
                                    :error/code :live-job-activation-acceptance-persistence-failed
-                                   :state next-state})))))))))))))))))))
+                                   :state next-state})))))))))))))))))))))

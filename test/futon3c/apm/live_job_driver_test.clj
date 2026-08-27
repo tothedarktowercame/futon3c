@@ -173,6 +173,32 @@
     (is (= [:student-memory-used-despite-holdout]
            (:findings discarded)))))
 
+(deftest repair-archive-failure-blocks-successor-announcement
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        base (assoc (effects calls job)
+                    :persist-fn (fn [state]
+                                  (swap! calls conj [:persist state])
+                                  (if (:superseded-terminals state)
+                                    {:ok false :error :disk-full}
+                                    {:ok true}))
+                    :terminal-validator
+                    (constantly {:ok false :findings [:invalid-terminal]})
+                    :terminal-repair-request-fn
+                    (fn [r _ _ _]
+                      {:ok true :request (assoc r :dispatch/id "repair-1")})
+                    :announce-fn (fn [request]
+                                   (when (= "repair-1" (:dispatch/id request))
+                                     (swap! calls conj :repair-announced))
+                                   {:ok true :job-id
+                                    (if (= "repair-1" (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        dispatched (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state dispatched)))]
+    (is (= :live-job-terminal-repair-archive-persistence-failed
+           (:error/code result)))
+    (is (not-any? #{:repair-announced} @calls))))
+
 (deftest durable-reference-scan-is-clean-and-reports-first-missing-reference
   (let [state {:ticket {:job-id "job-current"}
                :superseded-terminals
