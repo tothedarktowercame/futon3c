@@ -5,9 +5,11 @@
 
 (def adapter-key :apm/jit-problem-queue)
 (def default-registry-path "data/apm-coordinators/registry.edn")
+(def ^:dynamic *intent-now-fn* #(System/currentTimeMillis))
 
 (defn- next-intent [config state]
-  (let [body {:coordinator/id (:coordinator-id config)
+  (let [tick-duration-ms (:coordinator/period-ms config)
+        body {:coordinator/id (:coordinator-id config)
               :queue/name (:queue-name config)
               :queue/id (:queue-id config)
               :prior-intent/digest
@@ -17,6 +19,9 @@
      :dispatch/id (machine/ledger-digest
                    [(assoc body :dispatch/type :jit-problem-queue-tick)])
      :dispatch/action :jit-problem-queue/tick
+     :dispatch/parameters
+     {:deadline-ms (+ (*intent-now-fn*) tick-duration-ms)
+      :permitted-duration-ms tick-duration-ms}
      :expected/postcondition
      {:status/one-of [:frame-prepared :parked :phase-advanced
                       :terminal-collected :claim-recovered :batch-paused

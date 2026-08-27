@@ -398,7 +398,9 @@
      :finding {:adapter (:coordinator/adapter entry)}}
     :else
     (let [adapter ((get @adapters (:coordinator/adapter entry))
-                   (:coordinator/config entry))]
+                   (assoc (:coordinator/config entry)
+                          :coordinator/period-ms
+                          (:coordinator/period-ms entry)))]
       (if-not (and (map? adapter) (fn? (:decide-fn adapter))
                    (fn? (:reconcile-fn adapter)))
         {:ok false :error/code :durable-coordinator-adapter-provider-invalid}
