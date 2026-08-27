@@ -164,9 +164,11 @@
           frame))))
 
 (deftest closure-receipt-is-total-durable-and-digest-bound
-  (let [digest (apply str (repeat 64 "a"))
+  (let [trace-body {"schemaVersion" 1 "traceKind" "test"}
+        digest (sut/combined-trace-digest trace-body)
         kinds (mapv :kind (sut/observation-schemas))
-        receipt {:trace/digest digest
+        receipt {:trace/combined trace-body
+                 :trace/digest digest
                  :trace/projected-from-durable-state? true
                  :trace/observation-kinds kinds
                  :trace/checker-receipt
@@ -178,7 +180,49 @@
                  (assoc-in receipt [:trace/checker-receipt :trace/digest]
                            (apply str (repeat 64 "b"))))))
     (is (false? (sut/valid-combined-trace-receipt?
+                 (assoc receipt :trace/combined
+                        {"schemaVersion" 1 "traceKind" "tampered"}))))
+    (is (false? (sut/valid-combined-trace-receipt?
                  (assoc receipt :trace/projected-from-durable-state? false))))))
+
+(deftest assembler-issues-checker-bound-receipt-and-names-each-missing-kind
+  (let [schemas (sut/observation-schemas)
+        samples (:operational-observations valid)
+        documents
+        (mapv (fn [{:keys [kind durable-record-key]}]
+                {(keyword durable-record-key)
+                 (first (get samples (keyword kind)))})
+              schemas)
+        directory (.toFile (java.nio.file.Files/createTempDirectory
+                            "combined-trace"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+        trace-path (java.io.File. directory "trace.json")
+        issued (sut/issue-combined-trace-receipt!
+                {:certificate {:receipt/id "close"}
+                 :durable-documents documents
+                 :trace-path trace-path
+                 :checker-fn (fn [_]
+                               {:exit 0
+                                :out "APM-OPERATIONAL-TRACE-ACCEPTED\n"})})]
+    (is (:ok issued) (pr-str issued))
+    (is (sut/valid-combined-trace-receipt? (:certificate issued)))
+    (is (.isFile trace-path))
+    (doseq [[index schema] (map-indexed vector schemas)]
+      (let [without (vec (concat (subvec documents 0 index)
+                                 (subvec documents (inc index))))
+            result (sut/issue-combined-trace-receipt!
+                    {:certificate {}
+                     :durable-documents without
+                     :trace-path (java.io.File. directory
+                                                (str "missing-" index ".json"))
+                     :checker-fn (constantly
+                                  {:exit 0
+                                   :out "APM-OPERATIONAL-TRACE-ACCEPTED\n"})})]
+        (is (= :campaign-trace-observation-absent (:error/code result))
+            (:kind schema))
+        (is (= (keyword (:kind schema))
+               (get-in result [:finding :observation/kind]))
+            (:kind schema))))))
 
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory

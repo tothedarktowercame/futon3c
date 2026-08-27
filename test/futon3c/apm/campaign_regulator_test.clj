@@ -20,14 +20,17 @@
    :event/expected-version seq :event/body body})
 
 (defn trace-certificate [body]
-  (merge body
-         {:trace/digest (apply str (repeat 64 "a"))
+  (let [trace-body {"schemaVersion" 1 "traceKind" "test"}
+        digest (campaign-trace/combined-trace-digest trace-body)]
+    (merge body
+         {:trace/combined trace-body
+          :trace/digest digest
           :trace/projected-from-durable-state? true
           :trace/observation-kinds
           (mapv :kind (campaign-trace/observation-schemas))
           :trace/checker-receipt
           {:checker/status :accepted
-           :trace/digest (apply str (repeat 64 "a"))}}))
+           :trace/digest digest}})))
 
 (defn certificate [events & [status]]
   (let [projection (machine/projection events)

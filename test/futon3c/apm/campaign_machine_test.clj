@@ -6,14 +6,17 @@
 (def phases [:probe :freeze :solve :verify :close])
 
 (defn trace-certificate [body]
-  (merge body
-         {:trace/digest (apply str (repeat 64 "a"))
+  (let [trace-body {"schemaVersion" 1 "traceKind" "test"}
+        digest (campaign-trace/combined-trace-digest trace-body)]
+    (merge body
+         {:trace/combined trace-body
+          :trace/digest digest
           :trace/projected-from-durable-state? true
           :trace/observation-kinds
           (mapv :kind (campaign-trace/observation-schemas))
           :trace/checker-receipt
           {:checker/status :accepted
-           :trace/digest (apply str (repeat 64 "a"))}}))
+           :trace/digest digest}})))
 
 (defn event [seq type body]
   {:event/id (str "e" seq) :event/seq seq :event/type type
@@ -118,6 +121,42 @@
             (close (assoc-in (trace-certificate {})
                              [:trace/checker-receipt :trace/digest]
                              (apply str (repeat 64 "b")))))))))
+
+(deftest frame-close-accepts-receipt-issued-by-combined-trace-path
+  (let [schemas (campaign-trace/observation-schemas)
+        documents
+        (mapv (fn [{:keys [durable-record-key fields]}]
+                {(keyword durable-record-key)
+                 (reduce (fn [record {:keys [source-path]}]
+                           (assoc-in record (mapv keyword source-path) true))
+                         {}
+                         fields)})
+              schemas)
+        directory (.toFile (java.nio.file.Files/createTempDirectory
+                            "machine-combined-trace"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+        issued (campaign-trace/issue-combined-trace-receipt!
+                {:certificate {:ok true}
+                 :durable-documents documents
+                 :trace-path (java.io.File. directory "trace.json")
+                 :checker-fn (constantly
+                              {:exit 0
+                               :out "APM-OPERATIONAL-TRACE-ACCEPTED\n"})})
+        advanced (into prefix
+                       (map-indexed
+                        (fn [index [from to]]
+                          (event (+ 3 index) :frame/advanced
+                                 {:frame-id "f1" :from from :to to
+                                  :certificate {:ok true}}))
+                        (partition 2 1 phases)))
+        projection (machine/projection
+                    (conj advanced
+                          (event 7 :frame/closed
+                                 {:frame-id "f1"
+                                  :certificate (:certificate issued)})))]
+    (is (:ok issued) (pr-str issued))
+    (is (nil? (:error/code projection)) (pr-str projection))
+    (is (= :closed (get-in projection [:campaign/frames "f1" :status])))))
 
 (deftest pinned-ledger-digest-refuses-different-history
   (let [digest (:ledger/digest (machine/projection prefix))

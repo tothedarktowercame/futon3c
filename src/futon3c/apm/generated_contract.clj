@@ -408,6 +408,7 @@
                     (count (distinct (map :kind trace-schemas))))
               (not (every? #(and (string? (:kind %))
                                  (string? (:collection-field %))
+                                 (string? (:durable-record-key %))
                                  (seq (:fields %))
                                  (every? (fn [field]
                                            (and (string? (:wire-name field))

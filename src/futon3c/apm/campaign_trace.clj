@@ -3,10 +3,13 @@
   (:require [cheshire.core :as json]
             [clojure.edn]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [futon3c.apm.generated-contract :as generated-contract]))
 
 (def default-contract-path
   "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
+
+(declare canonical sha256 combined-trace-digest)
 
 (defn observation-schemas
   ([] (observation-schemas default-contract-path))
@@ -96,15 +99,109 @@
   (let [schemas (observation-schemas)
         declared (set (map :kind schemas))
         observed (set (:trace/observation-kinds certificate))
+        trace-body (:trace/combined certificate)
         trace-digest (:trace/digest certificate)
         checker (:trace/checker-receipt certificate)]
-    (and (string? trace-digest)
+    (and (map? trace-body)
+         (string? trace-digest)
          (boolean (re-matches #"[0-9a-f]{64}" trace-digest))
+         (= trace-digest (combined-trace-digest trace-body))
          (= declared observed)
          (= (count schemas) (count (:trace/observation-kinds certificate)))
          (true? (:trace/projected-from-durable-state? certificate))
          (= :accepted (:checker/status checker))
          (= trace-digest (:trace/digest checker)))))
+
+(defn- durable-records [documents record-key]
+  (letfn [(walk [value]
+            (cond
+              (map? value)
+              (concat (when (contains? value record-key)
+                        [(get value record-key)])
+                      (mapcat walk (vals value)))
+              (sequential? value) (mapcat walk value)
+              :else []))]
+    (vec (mapcat walk documents))))
+
+(defn assemble-combined-operational-trace
+  "Total schema-driven projection from explicitly supplied durable documents.
+  Durable record keys and wire fields both come from Lean."
+  [durable-documents]
+  (let [schemas (observation-schemas)
+        sources
+        (into {}
+              (map (fn [{:keys [kind durable-record-key]}]
+                     [(keyword kind)
+                      (durable-records durable-documents
+                                       (keyword durable-record-key))]))
+              schemas)
+        complete (require-complete-operational-sources sources)]
+    (canonical
+     (merge {"schemaVersion" 1
+             "traceKind" "apm-combined-operational"}
+            (project-operational-observations schemas complete)))))
+
+(defn- sha256 [text]
+  (let [digest (java.security.MessageDigest/getInstance "SHA-256")]
+    (format "%064x" (java.math.BigInteger. 1
+                                            (.digest digest (.getBytes text "UTF-8"))))))
+
+(defn combined-trace-digest
+  "Digest the exact canonical JSON representation carried by a close receipt."
+  [trace-body]
+  (sha256 (str (json/generate-string (canonical trace-body)) "\n")))
+
+(defn issue-combined-trace-receipt!
+  "Persist a deterministic combined trace, invoke Lean, and return a closure
+  certificate carrying the digest-bound checker receipt. CHECKER-FN is a
+  hermetic test seam and receives the trace path."
+  [{:keys [certificate durable-documents trace-path checker-fn]
+    :or {checker-fn
+         (fn [path]
+           (shell/sh "bash" "-lc"
+                     (str "cd /home/joe/code/apm-lean && "
+                          "lake env lean --run DarkTower/APMCampaignTraceChecker.lean "
+                          "--operational " (pr-str (str path)))))}}]
+  (try
+    (let [assembled (assemble-combined-operational-trace durable-documents)
+          payload (str (json/generate-string assembled) "\n")
+          digest (combined-trace-digest assembled)
+          target (io/file trace-path)
+          parent (.getParentFile target)
+          _ (.mkdirs parent)
+          temporary (java.io.File/createTempFile ".combined-trace-" ".json" parent)]
+      (try
+        (spit temporary payload)
+        (java.nio.file.Files/move
+         (.toPath temporary) (.toPath target)
+         (into-array java.nio.file.CopyOption
+                     [java.nio.file.StandardCopyOption/ATOMIC_MOVE
+                      java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+        (let [checked (checker-fn (.getCanonicalPath target))]
+          (if (and (zero? (:exit checked))
+                   (.contains (str (:out checked))
+                              "APM-OPERATIONAL-TRACE-ACCEPTED"))
+            {:ok true
+             :trace assembled
+             :certificate
+             (assoc certificate
+                    :trace/combined assembled
+                    :trace/path (.getCanonicalPath target)
+                    :trace/digest digest
+                    :trace/projected-from-durable-state? true
+                    :trace/observation-kinds
+                    (mapv :kind (observation-schemas))
+                    :trace/checker-receipt
+                    {:checker/status :accepted :trace/digest digest})}
+            {:ok false :error/code :combined-trace-checker-rejected
+             :checker checked :trace/digest digest}))
+        (finally
+          (when (.exists temporary) (.delete temporary)))))
+    (catch clojure.lang.ExceptionInfo e
+      {:ok false
+       :error/code (or (:error/code (ex-data e))
+                       :combined-trace-assembly-failed)
+       :finding (ex-data e)})))
 
 (defn- canonical [x]
   (cond

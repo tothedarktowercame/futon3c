@@ -6,6 +6,7 @@
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.campaign-stepper :as stepper]
@@ -467,7 +468,49 @@
                         (:state/type state))
              (= (:frame-id action) (:receipt/frame-id receipt))
              (= (:problem-id action) (:receipt/problem-id receipt)))
-      {:ok true :certificate receipt}
+      (if (= :close-frame kind)
+        (let [frame-root (control-path state-directory)
+              campaign-root (.getParent frame-root)
+              live-root (.resolve frame-root "live")
+              invoke-path (Path/of
+                           (or (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
+                               "/tmp/futon3c-invoke-jobs.edn")
+                           (make-array String 0))
+              paths (concat
+                     (when (java.nio.file.Files/isDirectory
+                            live-root (make-array java.nio.file.LinkOption 0))
+                       (->> (file-seq (.toFile live-root))
+                            (filter #(.isFile ^java.io.File %))
+                            (filter #(str/ends-with? (.getName ^java.io.File %)
+                                                    ".edn"))
+                            (map #(.toPath ^java.io.File %))))
+                     [(.resolve campaign-root "coordinator.edn.watchdog.edn")
+                      invoke-path])
+              documents
+              (keep (fn [^Path path]
+                      (when (java.nio.file.Files/isRegularFile
+                             path (make-array java.nio.file.LinkOption 0))
+                        (let [value (edn/read-string (slurp (str path)))]
+                          (if (= path invoke-path)
+                            (update value :jobs
+                                    (fn [jobs]
+                                      (into {}
+                                            (filter (fn [[_ job]]
+                                                      (= (:frame-id action)
+                                                         (:frame-id job))))
+                                            jobs)))
+                            value))))
+                    paths)
+              issued
+              (campaign-trace/issue-combined-trace-receipt!
+               {:certificate receipt
+                :durable-documents documents
+                :trace-path (.resolve frame-root
+                                      "terminal/combined-operational-trace.json")})]
+          (if (:ok issued)
+            {:ok true :certificate (:certificate issued)}
+            issued))
+        {:ok true :certificate receipt})
       {:ok false :error/code :countdown-certified-phase-unavailable
        :finding {:kind kind :state/type (:state/type state)}})))
 
@@ -495,9 +538,19 @@
                              {:ok true :certificate
                               {:effect :countdown-block-closed
                                :block-id (:block-id action)}})
-              :close-campaign (fn [_action]
-                                {:ok true :certificate
-                                 {:effect :countdown-campaign-closed}})
+              :close-campaign
+              (fn [_action]
+                (let [projection (:projection
+                                  (ledger/read-ledger (control-path ledger-path)))
+                      receipt (->> (vals (:campaign/frames projection))
+                                   (keep :close-certificate)
+                                   (filter campaign-trace/valid-combined-trace-receipt?)
+                                   last)]
+                  (if receipt
+                    {:ok true :certificate
+                     (assoc receipt :effect :countdown-campaign-closed)}
+                    {:ok false
+                     :error/code :countdown-campaign-combined-trace-unavailable})))
               :preflight (partial certified-handler :preflight)
               :solve (partial certified-handler :solve)
               :verify (partial certified-handler :verify)
