@@ -1,5 +1,6 @@
 (ns futon3c.apm.semantic-progress-watchdog
   "Independent liveness observer for one durable APM coordinator."
+  (:require [futon3c.apm.campaign-trace :as campaign-trace])
   (:import [java.time Instant]
            [java.util.concurrent Executors ScheduledExecutorService
             ThreadFactory TimeUnit]
@@ -107,22 +108,26 @@
        :state (assoc base :watchdog/status :halted
                      :watchdog/halt-reason reason
                      :watchdog/trace-observation
+                     (campaign-trace/validate-authoritative-observation
+                      :progress
                      {:coordinator-enabled?
                       (boolean (:coordinator-enabled? observation))
                       :elapsed-ms elapsed-ms
                       :valid-external-wait? (boolean valid-external-wait?)
                       :semantic-cursor-advanced? cursor-changed?
                       :coordinator-disabled? false
-                      :first-violation-recorded? true})}
+                      :first-violation-recorded? true}))}
       {:status :watching
        :state (assoc base :watchdog/trace-observation
+                     (campaign-trace/validate-authoritative-observation
+                      :progress
                      {:coordinator-enabled?
                       (boolean (:coordinator-enabled? observation))
                       :elapsed-ms elapsed-ms
                       :valid-external-wait? (boolean valid-external-wait?)
                       :semantic-cursor-advanced? cursor-changed?
                       :coordinator-disabled? false
-                      :first-violation-recorded? false})})))
+                      :first-violation-recorded? false}))})))
 
 (defn check!
   "Observe once. A halt first disables the durable coordinator, then persists

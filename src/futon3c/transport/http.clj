@@ -59,6 +59,7 @@
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.apm.campaign-machine :as campaign-machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.role-memory-search :as role-memory-search]
             [futon3c.apm.typed-role-submission :as role-submission]
             [futon3c.transport.encyclopedia :as enc]
@@ -1312,11 +1313,13 @@
                           :recorded-at (str (Instant/now))
                           :note (str (or note ""))}
                  trace-observation
+                 (campaign-trace/validate-authoritative-observation
+                  :delivery
                  {:terminal-job-id job-id
                   :delivery-status (:status receipt)
                   :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
                   :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
-                  :polling-available? true}
+                  :polling-available? true})
                  updated-job (-> job
                                  (assoc :delivery receipt)
                                  (assoc :trace/delivery-observation trace-observation)
@@ -1338,11 +1341,13 @@
                         :recorded-at (str (Instant/now))
                         :note (str (or note ""))}
                trace-observation
+               (campaign-trace/validate-authoritative-observation
+                :delivery
                {:terminal-job-id job-id
                 :delivery-status (:status receipt)
                 :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
                 :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
-                :polling-available? true}
+                :polling-available? true})
                updated-job (-> job
                                (assoc :delivery receipt)
                                (assoc :trace/delivery-observation trace-observation)

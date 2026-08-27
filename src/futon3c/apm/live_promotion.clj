@@ -2,6 +2,7 @@
   "Durable two-seat promotion dispatcher."
   (:require [clojure.edn :as edn]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.coined-pattern :as coined-pattern]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
@@ -24,6 +25,8 @@
 (def ^:private default-transport-retry-max-attempts 3)
 
 (defn- successor-observation [job-id terminal-collection findings]
+  (campaign-trace/validate-authoritative-observation
+   :successor
   {:predecessor-id (str job-id)
    :terminal-evidence-id (str job-id)
    :collection-evidence-id (str (or (get-in terminal-collection
@@ -31,7 +34,7 @@
    :disposition (pr-str (vec findings))
    :predecessor-persisted? true
    :successor-announced-id ""
-   :successor-activated-id ""})
+   :successor-activated-id ""}))
 
 (defn- bind-last-successor [state successor-id]
   (let [index (dec (count (:superseded-terminals state)))]

@@ -4,12 +4,15 @@
    The canonical Agency job is announced, ticketed, and persisted before it is
    activated. A restart therefore polls the recorded job instead of dispatching
    a duplicate. Terminal evidence is delegated to a phase-specific validator."
-  (:require [futon3c.apm.campaign-machine :as machine]))
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]))
 
 (def terminal-states #{:done :failed :error :cancelled})
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 
 (defn- successor-observation [job terminal-collection findings]
+  (campaign-trace/validate-authoritative-observation
+   :successor
   {:predecessor-id (:job-id job)
    :terminal-evidence-id (:job-id job)
    :collection-evidence-id (get-in terminal-collection
@@ -17,7 +20,7 @@
    :disposition (pr-str (vec findings))
    :predecessor-persisted? true
    :successor-announced-id ""
-   :successor-activated-id ""})
+   :successor-activated-id ""}))
 
 (defn- update-last-successor-observation [state f]
   (let [index (dec (count (:superseded-terminals state)))]

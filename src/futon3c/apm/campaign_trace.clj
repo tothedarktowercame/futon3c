@@ -51,6 +51,19 @@
                          (get sources source-key))])))
          schemas)))
 
+(defn validate-authoritative-observation
+  "Validate one producer record through its Lean-emitted schema and return the
+  unchanged durable record. Producers call this before their atomic persist;
+  the projected wire record is deliberately not a second authority."
+  [kind record]
+  (let [schema (some #(when (= (name kind) (:kind %)) %) (observation-schemas))]
+    (when-not schema
+      (throw (ex-info "Trace observation kind not declared by Lean"
+                      {:error/code :campaign-trace-kind-undeclared
+                       :observation/kind kind})))
+    (project-operational-observations [schema] {kind [record]})
+    record))
+
 (defn operational-sources-from-durable
   "Collect observation records already embedded by the deciding durable
   writers. This function never derives a verdict or reconstructs a missing

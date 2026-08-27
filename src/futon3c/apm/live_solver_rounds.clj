@@ -5,6 +5,7 @@
    and the same seat/session/branch is continued up to an explicit round cap."
   (:require [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.live-job-driver :as job-driver]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -12,6 +13,8 @@
 (def strategy-checkpoint-every 10)
 
 (defn- successor-observation [job terminal-collection findings]
+  (campaign-trace/validate-authoritative-observation
+   :successor
   {:predecessor-id (:job-id job)
    :terminal-evidence-id (:job-id job)
    :collection-evidence-id (get-in terminal-collection
@@ -19,7 +22,7 @@
    :disposition (pr-str (vec findings))
    :predecessor-persisted? true
    :successor-announced-id ""
-   :successor-activated-id ""})
+   :successor-activated-id ""}))
 
 (defn- update-last-successor-observation [state f]
   (let [index (dec (count (:superseded-terminals state)))]
