@@ -1,2 +1,2 @@
 {"futon3c.apm.disruption-soak-test"
- "Nondeterministic asynchronous timing fixture: 2,2,2,1 failures across four unchanged runs; tracked separately in TN-codex-pre-Ftriangle-repairs.md."}
+ "Reports defect A5: coordinator ticks have no durable claim spanning effects through durable completion. It remains red until that transaction boundary exists; see TN-codex-pre-Ftriangle-repairs.md."}
