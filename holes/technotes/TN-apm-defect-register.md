@@ -57,6 +57,9 @@ Two failure classes matter most (Joe, 2026-08-27): **frames not advancing** and
 |---|---|---|---|
 | C1 | A completed job whose caller is a pull-only (`delivery-mode :inbox`) seat records `status: "delivered"` with `note: "bell-job-ready"` and a poll URL as its destination. No auto-bellback job is created and nothing is written to the seat's inbox. The caller learns nothing unless it polls. | observed on both codex-3 jobs (`…2379-903d5af6`, `…2380-a5e8d1dd`), caller correctly recorded as `claude-clink-1` in each; jobs from other seats in the same period produced real `auto-bellback-*` jobs and inbox files | **none** |
 
+| C2 | A park placed by a pull-only CLI seat wakes a headless `claude -p --resume` fork that this terminal never sees. The fork reads the park payload as instructions and **acts on it with the parking agent's identity** — on 2026-08-27 it dispatched a review of the holdout fix to codex-18 as `caller: claude-clink-1`, duplicating work already committed as `d3cf69df` and consuming a seat reserved for other work. The parking session learns nothing. | the CLI-fork hazard is documented in `README-park.md`; the packet-level consequence — shadow dispatch under the parker's identity — was not | **none** |
+| C3 | A job can be functionally successful and policy-failed under one `state` field: a probe returned the correct result and was delivered, yet reports `state: failed`, `terminal-code: no-execution-evidence`. A reviewer gating on `state` discards good work | observed 2026-08-27 on `…2384-1be867e4` | **none** |
+
 C1 is the same shape as A3, A5 and A6: a status field asserting an action the
 machine did not perform. Both affected jobs were dispatched with
 `--mode work`; two samples is not enough to blame the mode, but the delivery
