@@ -8,6 +8,7 @@
             [futon3c.agency.registry :as registry]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.live-job-driver :as job-driver]
+            [futon3c.apm.memory-access-gate :as access-gate]
             [futon3c.apm.role-memory-search :as memory-search]
             [futon3c.apm.semantic-progress-watchdog :as watchdog]
             [futon3c.transport.http :as http]))
@@ -45,9 +46,14 @@
        (or (:inbox-file-created? observation)
            (:registered-push-performed? observation))))
 
-(defn search-result [ids]
+(defn search-result [ids depositor-problem-id]
   {:index-as-of "incident-fixture"
-   :content-matches (mapv (fn [id] {:memory/id id :text "fixture"}) ids)
+   :content-matches
+   (mapv (fn [id] {:memory/id id :text "fixture"
+                   :depositor "f39-guide"
+                   :provenance {:campaign-id "incident"
+                                :frame-id "f39"
+                                :problem-id depositor-problem-id}}) ids)
    :candidates []})
 
 (deftest real-holdout-incidents-have-mechanism-derived-deltas
@@ -56,9 +62,10 @@
       (let [historical incident
             authority {:shelf/holdout :same-problem
                        :shelf/withheld-ids (:withheld-ids incident)}
-            withheld (memory-search/withheld-for-authority authority)
-            enforced (memory-search/enforce-holdout
-                      (search-result (:served-ids incident)) withheld)
+            enforced (memory-search/enforce-depositor-holdout
+                      (search-result (:served-ids incident)
+                                     (:depositor-problem-id incident))
+                      (assoc authority :problem-id (:problem-id incident)))
             upgraded (assoc incident
                             :served-ids (mapv :memory/id
                                               (get-in enforced
@@ -69,23 +76,48 @@
         (is (= (vec (sort (:withheld-ids incident))) (:excluded enforced))
             "delta is enforce-holdout output, using withheld-for-authority")))))
 
-(deftest store-only-f47-pair-stays-red-until-m2-exists
+(deftest store-only-f47-pair-goes-red-to-green-through-m2
   (let [incident (last (:holdout incidents))
         authority {:shelf/holdout :same-problem
                    :shelf/withheld-ids (:withheld-ids incident)}
-        enforced (memory-search/enforce-holdout
-                  (search-result (:served-ids incident))
-                  (memory-search/withheld-for-authority authority))
+        enforced (memory-search/enforce-depositor-holdout
+                  (search-result (:served-ids incident)
+                                 (:depositor-problem-id incident))
+                  (assoc authority :problem-id (:problem-id incident)))
         upgraded (assoc incident
                         :served-ids (mapv :memory/id
                                           (get-in enforced
                                                   [:result :content-matches])))]
     (is (false? (holdout-valid? incident)) "historical REJECTED")
-    (is (false? (holdout-valid? upgraded))
-        "upgraded remains REJECTED: M2 depositor-truth mechanism is absent")
-    (is (= [] (:excluded enforced))
-        "the actual shelf-derived mechanism produces no delta")
+    (is (true? (holdout-valid? upgraded)) "upgraded ACCEPTED")
+    (is (= (:served-ids incident) (:excluded enforced))
+        "the actual M2 gate produces the delta")
+    (is (= :same-problem-depositor
+           (get-in enforced [:decision-evidence :content :excluded 0 :reason])))
     (is (= :reject-missing-m2 (:expected-upgrade incident)))))
+
+(deftest common-gate-is-depositor-truth-and-fail-closed
+  (let [authority {:problem-id "a97A01" :shelf/holdout :same-problem}
+        memory (fn [id problem]
+                 {:memory-id id :depositor "f39-guide"
+                  :provenance {:campaign-id "c" :frame-id "f39"
+                               :problem-id problem}})]
+    (is (empty? (:allowed (access-gate/enforce-carrier
+                           :search authority [(memory "same" "a97A01")]))))
+    (is (= ["other"] (mapv :memory-id
+                            (:allowed (access-gate/enforce-carrier
+                                       :search authority
+                                       [(memory "other" "a97A02")])))))
+    (is (= :unverifiable-depositor-provenance
+           (get-in (access-gate/enforce-carrier
+                    :search authority [{:memory-id "unknown"}])
+                   [:excluded 0 :reason])))
+    (is (= (access-gate/registered-carriers)
+           (set (for [carrier (access-gate/registered-carriers)
+                      :let [result (access-gate/enforce-carrier
+                                   carrier authority [(memory "same" "a97A01")])]
+                      :when (= carrier (get-in result [:evidence :carrier]))]
+                  carrier))))))
 
 (defn run-repair [incident]
   (let [calls (atom [])

@@ -172,6 +172,11 @@
                                    :pattern "math-strategy/p"}]]
                         :pattern-surfaces
                         {"math-strategy/p" {:offer/pattern-hook "Try the bridge"}}
+                        :memory-metadata
+                        {"offered-memory"
+                         {:depositor "f18-guide"
+                          :provenance {:campaign-id "c" :frame-id "f18"
+                                       :problem-id "different"}}}
                         :expanded-available 1 :expanded-count 1 :cap 10
                         :truncated? false :routes-enabled #{:sibling}}))
                     (assoc :memory-snapshot
@@ -451,6 +456,11 @@
                               ["cross-sibling" {:route :sibling :hops 1
                                                 :pattern "math-strategy/p"}]]
                      :pattern-surfaces {}
+                     :memory-metadata
+                     {"cross-sibling"
+                      {:depositor "f29-guide"
+                       :provenance {:campaign-id "c1" :frame-id "f29"
+                                    :problem-id "a98J02"}}}
                      :expanded-available 1 :expanded-count 1 :cap 10
                      :truncated? false :routes-enabled #{:sibling}
                      :exclude-count 1 :excluded-offers 1})

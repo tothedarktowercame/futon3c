@@ -396,6 +396,8 @@
                                (let [support
                                      {:memory-id memory-id
                                       :fts-score score
+                                      :depositor (:depositor memory)
+                                      :provenance (:provenance memory)
                                       :hook (or (get-in entry
                                                         [:evidence/body :hook])
                                                 (:memory/hook memory))}]

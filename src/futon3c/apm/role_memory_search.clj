@@ -5,6 +5,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.memory-access-gate :as access-gate]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.peripheral.memory-recall :as recall])
   (:import (java.nio.file Files StandardCopyOption)
@@ -58,6 +59,21 @@
                            #(vec (remove (comp withheld :pattern-id) %))))
        :excluded excluded})))
 
+(defn enforce-depositor-holdout [result authority]
+  (let [content (access-gate/enforce-carrier
+                 :search authority (:content-matches result))
+        candidates (access-gate/enforce-carrier
+                    :search authority (:candidates result))
+        excluded (vec (sort (distinct (keep :candidate/id
+                                             (concat (:excluded content)
+                                                     (:excluded candidates))))))]
+    {:result (assoc result
+                    :content-matches (:allowed content)
+                    :candidates (:allowed candidates))
+     :excluded excluded
+     :decision-evidence {:content (:evidence content)
+                         :candidates (:evidence candidates)}}))
+
 (defn search!
   "Execute one bounded read-only query and persist its exact result receipt.
    Identity comes only from the registered role job authority."
@@ -79,7 +95,8 @@
             withheld (withheld-for-authority auth)
             searched (*search-fn* {:domain :mathematics} query
                                   {:limit bounded-limit :trace-id trace-id})
-            {:keys [result excluded]} (enforce-holdout searched withheld)
+            {:keys [result excluded decision-evidence]}
+            (enforce-depositor-holdout searched auth)
             body {:receipt/type :apm-role-memory-search
                   :receipt/version 1
                   :corpus/scope :reviewed-mathematics
@@ -97,6 +114,7 @@
                   :shelf/holdout (:shelf/holdout auth)
                   :holdout/withheld-count (count withheld)
                   :holdout/excluded-ids excluded
+                  :holdout/decision-evidence decision-evidence
                   :result-ids (result-ids result)
                   :content-matches (:content-matches result)
                   :candidates (:candidates result)}

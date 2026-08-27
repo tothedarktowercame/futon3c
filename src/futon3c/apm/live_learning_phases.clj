@@ -8,6 +8,7 @@
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.memory-access-gate :as access-gate]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]
@@ -41,7 +42,7 @@
    return through the sibling route, since they sit on the seeds' own
    patterns. :holdout-excluded counts what the exclusion removed, so the
    receipt's holdout and cascade records agree."
-  [config seed-ids exclude-ids cascade-fn cascade-readers cascade-readers-fn]
+  [config seed-ids exclude-ids authority cascade-fn cascade-readers cascade-readers-fn]
   (let [started (System/nanoTime)]
     (try
       (let [readers (if (fn? cascade-readers-fn)
@@ -53,7 +54,7 @@
                                                       (set (:routes config)))
                       (seq exclude-ids) (assoc :exclude (set exclude-ids)))
             expanded (cascade-fn seed-ids options)
-            offers (->> (:routes expanded)
+            offers0 (->> (:routes expanded)
                         (remove #(= :leaf (get-in % [1 :route])))
                         (mapv (fn [[memory-id {:keys [route hops pattern]}]]
                                 {:memory-id memory-id
@@ -74,12 +75,21 @@
                                               :entity/props :hook])
                                      (get-in expanded
                                              [:pattern-surfaces pattern :entity
-                                              :props :hook]))})))]
+                                              :props :hook]))
+                                 :depositor (get-in expanded
+                                                    [:memory-metadata memory-id
+                                                     :depositor])
+                                 :provenance (get-in expanded
+                                                     [:memory-metadata memory-id
+                                                      :provenance])})))
+            gated (access-gate/enforce-carrier :cascade authority offers0)
+            offers (mapv #(dissoc % :depositor :provenance) (:allowed gated))]
         {:routes-enabled (:routes-enabled expanded)
          :cap (:cap expanded)
          :truncated? (:truncated? expanded)
          :expanded-available (:expanded-available expanded)
          :offers offers
+         :holdout-decision (:evidence gated)
          :histogram (frequencies (map :route offers))
          :holdout-excluded (or (:excluded-offers expanded) 0)
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
@@ -175,15 +185,16 @@
       {:ok false :error/code :live-learning-request-invalid :findings findings}
       (let [all-accessible-ids (set (:accessible-memory-ids snapshot-access))
             holdout? (and (= :student-attempt kind) (= 1 attempt-ordinal))
+            holdout-authority {:problem-id (:problem/id unit)
+                               :frame-id (:frame/id unit)
+                               :shelf/holdout (when holdout? :same-problem)}
+            snapshot-gate (access-gate/enforce-carrier
+                           :shelf-materialization holdout-authority
+                           (vec snapshot-memories))
             withheld-ids
             (if holdout?
-              (->> snapshot-memories
-                   (filter #(and (map? (:provenance %))
-                                 (string? (get-in % [:provenance :problem-id]))
-                                 (= (:problem/id unit)
-                                    (get-in % [:provenance :problem-id]))
-                                 (contains? all-accessible-ids (:memory-id %))))
-                   (map :memory-id)
+              (->> (:excluded snapshot-gate)
+                   (map :candidate/id)
                    (filter string?)
                    distinct
                    sort
@@ -199,6 +210,7 @@
                        cascade-config
                        accessible-ids
                        withheld-ids
+                       holdout-authority
                        cascade-fn cascade-readers cascade-readers-fn))
             body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
@@ -217,6 +229,9 @@
                    (assoc :shelf/holdout :same-problem
                           :shelf/withheld-ids withheld-ids
                           :shelf/withheld-count (count withheld-ids))
+                   (and holdout? (seq snapshot-memories))
+                   (assoc :memory-access-decisions
+                          {:shelf-materialization (:evidence snapshot-gate)})
                    (and (= :student-attempt kind) (some? cascade))
                    (assoc :memory-cascade cascade)
                    ;; The base is what each fresh attempt is reset to and what

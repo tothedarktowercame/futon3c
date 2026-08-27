@@ -23,8 +23,18 @@
         receipt-root (temp-dir "role-search-receipts")
         calls (atom [])
         search-result {:ok true :trace-id "ignored" :index-as-of "index-7"
-                       :content-matches [{:memory/id "outside-snapshot-memory"}]
-                       :candidates [{:pattern-id "math/canonical-pattern"}]}]
+                       :content-matches [{:memory/id "outside-snapshot-memory"
+                                          :depositor "f28-guide"
+                                          :provenance {:campaign-id "c"
+                                                       :frame-id "f28"
+                                                       :problem-id "other"}}]
+                       :candidates [{:pattern-id "math/canonical-pattern"
+                                     :memory-support
+                                     [{:memory-id "pattern-support"
+                                       :depositor "f28-guide"
+                                       :provenance {:campaign-id "c"
+                                                    :frame-id "f28"
+                                                    :problem-id "other"}}]}]}]
     (is (:ok (register! authority-root :student "student-job")))
     (binding [submission/*submission-root* authority-root
               sut/*receipt-root* receipt-root
@@ -44,7 +54,8 @@
         (is (= receipt (sut/receipt (:receipt/id receipt))))
         (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
                (sut/recorded-result-ids-for-job "student-job")))
-        (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
+        (is (= #{"math/canonical-pattern" "outside-snapshot-memory"
+                 "pattern-support"}
                (sut/recorded-surfaced-ids-for-job "student-job")))
         (is (= [receipt] (sut/recorded-receipts-for-job "student-job")))
         (is (= [] (sut/recorded-receipts-for-job "another-job")))
@@ -147,10 +158,30 @@
           receipt-root (temp-dir "role-search-holdout-receipts")
           withheld "e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"
           search-result {:ok true :index-as-of "index-9"
-                         :content-matches [{:memory/id withheld}
-                                           {:memory/id "unheld-memory"}]
-                         :candidates [{:pattern-id withheld}
-                                      {:pattern-id "math/unheld-pattern"}]}]
+                         :content-matches [{:memory/id withheld
+                                            :depositor "f48-guide"
+                                            :provenance {:campaign-id "c"
+                                                         :frame-id "f48"
+                                                         :problem-id "a98A03"}}
+                                           {:memory/id "unheld-memory"
+                                            :depositor "f47-guide"
+                                            :provenance {:campaign-id "c"
+                                                         :frame-id "f47"
+                                                         :problem-id "different"}}]
+                         :candidates [{:pattern-id withheld
+                                      :memory-support
+                                      [{:memory-id withheld
+                                        :depositor "f48-guide"
+                                        :provenance {:campaign-id "c"
+                                                     :frame-id "f48"
+                                                     :problem-id "a98A03"}}]}
+                                      {:pattern-id "math/unheld-pattern"
+                                       :memory-support
+                                       [{:memory-id "support"
+                                         :depositor "f47-guide"
+                                         :provenance {:campaign-id "c"
+                                                      :frame-id "f47"
+                                                      :problem-id "different"}}]}]}]
       (is (:ok (register-holdout! authority-root "held-job" [withheld])))
       (binding [submission/*submission-root* authority-root
                 sut/*receipt-root* receipt-root
