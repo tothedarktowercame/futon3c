@@ -79,6 +79,17 @@
    :coordinator-retries-increment-same-entry true
    :coordinator-retry-beyond-maximum-refused true
    :coordinator-startup-directory-heuristics false
+   :semantic-progress-observation-required true
+   :semantic-progress-max-stall-ms 300000
+   :semantic-progress-violation-action "durable-disable"
+   :semantic-progress-first-violation-recorded true
+   :successor-predecessor-record-required true
+   :successor-predecessor-required-fields
+   ["identifier" "terminal-evidence" "collection-evidence" "disposition"]
+   :successor-absent-on-predecessor-persist-failure true
+   :terminal-delivery-action-required true
+   :terminal-delivery-actions ["inbox-file" "registered-push"]
+   :polling-availability-is-delivery false
    :gate-manifest-authority-binding "campaign-and-frame-exact"
    :qualification-contract-digest-binding "registered-and-observed-exact"
    :proof-target-name-authority "source-declaration"})

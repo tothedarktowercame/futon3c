@@ -104,6 +104,26 @@
         (is (some #{:generated-contract-dispatch-policy-invalid}
                   (:findings result)) (str field))))))
 
+(deftest cross-transition-trace-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (doseq [[field bad-value]
+            [[:semantic-progress-max-stall-ms 300001]
+             [:semantic-progress-observation-required false]
+             [:semantic-progress-violation-action "continue"]
+             [:semantic-progress-first-violation-recorded false]
+             [:successor-predecessor-record-required false]
+             [:successor-predecessor-required-fields
+              ["identifier" "disposition"]]
+             [:successor-absent-on-predecessor-persist-failure false]
+             [:terminal-delivery-action-required false]
+             [:terminal-delivery-actions ["polling-url"]]
+             [:polling-availability-is-delivery true]]]
+      (let [result (sut/validate
+                    (assoc-in contract [:dispatch-policy field] bad-value))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-dispatch-policy-invalid}
+                  (:findings result)) (str field))))))
+
 (deftest memory-and-isolation-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))
         memory-result (sut/validate
