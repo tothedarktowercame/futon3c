@@ -1,5 +1,6 @@
 (ns futon3c.apm.ftriangle-live-smoke-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
@@ -10,6 +11,16 @@
 
 (defn passing-checks []
   (into {} (map #(vector % (constantly {:ok true}))) sut/condition-order))
+
+(deftest committed-live-authorities-resolve-and-validate
+  (let [config (sut/read-live-config
+                (edn/read-string
+                 (slurp "data/apm-campaigns/ftriangle-live-smoke-v1/config.edn")))
+        validated (countdown-manifest/validate (:manifest config))]
+    (is (:valid? validated) (pr-str validated))
+    (is (= :apm-complete-frame-cycle-v2
+           (get-in config [:contract :contract/id])))
+    (is (= "ft1" (get-in config [:manifest :units 0 :frame/id])))))
 
 (deftest preflight-names-each-unmet-condition-without-dispatch
   (doseq [condition sut/condition-order]

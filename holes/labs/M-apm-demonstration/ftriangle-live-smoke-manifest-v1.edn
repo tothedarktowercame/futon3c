@@ -1,0 +1,30 @@
+{:manifest/version 1
+ :manifest/scope :one-off
+ :campaign/id "ftriangle-live-smoke-v1"
+ :block/id "ft1-one-off"
+ :apparatus
+ {:repository "/home/joe/code/futon3c"
+  :branch "master"
+  :revision "0790864f64c5eca529226428a7b6bf532931b0f5"
+  :artifacts
+  {:cycle-contract
+   {:path "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+    :blob "a83e36653360538b824cf913c77781093132cd10"}}
+  :pin/id "aeca02fef445c95de578710712883d389c5e8c29d1f92a19185864191a705991"}
+ :units
+ [{:ordinal 1
+   :frame/id "ft1"
+   :problem/id "ftriangle-pythagoras"
+   :classification/value :non-topology
+   :classification/source :operator-reviewed-statement
+   :classification/evidence
+   "F△ isolates apparatus behavior with a one-step real-arithmetic theorem."
+   :problem
+   {:repository "/home/joe/code/apm-lean"
+    :branch "master"
+    :revision "759bcd165669e886a60f8fd2d0315f5b765c4431"
+    :path "problems/ftriangleSmoke/lean/Main.lean"
+    :blob "66fd524d9e223faaf2791e66f12bb04bea67e529"}
+   :apparatus/pin-id
+   "aeca02fef445c95de578710712883d389c5e8c29d1f92a19185864191a705991"}]
+ :manifest/id "9646615ae2b92531e0b0d9edcbd9afcb1890050a9826a5afb944a0087f1c3ad3"}

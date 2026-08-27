@@ -9,10 +9,12 @@
             [futon3c.apm.countdown-control :as countdown-control]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
+            [futon3c.apm.durable-coordinator :as durable-coordinator]
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-job-driver :as job-driver]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-regulator :as regulator]
             [futon3c.apm.memory-access-gate :as memory-gate]
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.file Path]))
@@ -23,6 +25,9 @@
 (def watchdog-id (str "semantic-progress:" coordinator-id))
 (def ledger-root "data/apm-campaigns/ftriangle-live-smoke-v1")
 (def fixture-path "test/resources/apm-regressions/ftriangle-smoke-v1.edn")
+(def registry-path "data/apm-coordinators/registry.edn")
+(def coordinator-state-path
+  "data/apm-campaigns/ftriangle-live-smoke-v1/coordinator.edn")
 
 (def condition-order
   [:historical-ledger-valid :priors-non-empty :loaded-runtime-current
@@ -33,6 +38,48 @@
    :watchdog-progress :forced-repair-durability :combined-trace-closure])
 
 (defn read-fixture [] (edn/read-string (slurp fixture-path)))
+
+(defn read-live-config
+  "Read the isolated authorities named by CONFIG. Paths are data, not an
+  executable reader form, so the committed config remains plain EDN."
+  [config]
+  (cond-> config
+    (:manifest-path config)
+    (assoc :manifest (edn/read-string (slurp (:manifest-path config))))
+    (:contract-path config)
+    (assoc :contract (edn/read-string (slurp (:contract-path config))))))
+
+(defn arm-isolated-coordinator!
+  "Register and start only F△'s coordinator. This deliberately never calls
+  recover-all!, whose scope includes production coordinators."
+  ([] (arm-isolated-coordinator! {}))
+  ([{:keys [registry state-path period-ms]
+     :or {registry registry-path state-path coordinator-state-path
+          period-ms 250}}]
+   (durable-coordinator/register-adapter!
+    :ftriangle/live-smoke
+    (fn [_]
+      {:decide-fn
+       (fn [state]
+         {:ok true :status :observed
+          :regulator/state-updates
+          {:phase :ftriangle-smoke
+           :frame-id frame-id
+           :last-committed-event-id
+           (str "ftriangle-tick-" (inc (or (:regulator/ticks state) 0)))}})
+       :reconcile-fn (fn [_ _] {:ok true :status :observed})}))
+   (when-not (runtime/read-state state-path)
+     (runtime/atomic-persist! (Path/of state-path (make-array String 0))
+                              (regulator/initial-state coordinator-id)))
+   (let [registered
+         (durable-coordinator/register!
+          {:registry-path registry :coordinator-id coordinator-id
+           :adapter :ftriangle/live-smoke :config {}
+           :state-path state-path :period-ms period-ms})]
+     (if (:ok registered)
+       (assoc (durable-coordinator/start-registered! registry coordinator-id)
+              :registration (:status registered))
+       registered))))
 
 (defn- loaded-runtime-current []
   (let [contract (generated-contract/read-contract
@@ -344,8 +391,9 @@
   "The sole live F△ call. It refuses a non-isolated root and otherwise uses
   the wired effects. Calling this function may dispatch agents; preflight does
   not."
-  [{:keys [smoke-root] :as config}]
-  (let [root (str (or smoke-root ledger-root))]
+  [raw-config]
+  (let [{:keys [smoke-root] :as config} (read-live-config raw-config)
+        root (str (or smoke-root ledger-root))]
     (if (or (= root "data/apm-campaigns/jit-all-open-v2")
             (not (.contains root "ftriangle-live-smoke")))
       {:ok false :error/code :ftriangle-isolation-invalid :root root}

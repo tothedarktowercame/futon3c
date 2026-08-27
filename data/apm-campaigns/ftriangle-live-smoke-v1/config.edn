@@ -1,0 +1,15 @@
+{:manifest-path
+ "holes/labs/M-apm-demonstration/ftriangle-live-smoke-manifest-v1.edn"
+ :contract-path
+ "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+ :smoke-root "data/apm-campaigns/ftriangle-live-smoke-v1"
+ :watchdog-state-path
+ "data/apm-campaigns/ftriangle-live-smoke-v1/coordinator.edn.watchdog.edn"
+ :agency-base "http://127.0.0.1:7070"
+ :dispatch-request
+ {:agent-id "codex-8"
+  :surface "bell"
+  :prompt
+  "F△ isolated smoke task. Prove the Lean theorem apm_ftriangle_pythagoras: for real a=3 and b=4, a^2+b^2=25. Return a concise terminal report. Do not edit repositories or contact other agents."
+  :timeout-ms 30000}
+ :await-options {:max-polls 60 :poll-ms 500}}
