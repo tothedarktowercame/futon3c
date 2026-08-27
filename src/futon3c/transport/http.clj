@@ -1297,6 +1297,19 @@
               (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
                             (.getMessage t)))
               (flush))))))
+    ;; A caller with no registered push or inbox route can never leave the
+    ;; polling-only state. Record that terminal disposition here; unlike seat
+    ;; receipts, it does not depend on a later delivery action.
+    (when (and updated-terminal-job
+               (not= auto-bellback-caller (:caller updated-terminal-job))
+               (not (inbox-agent? (:caller updated-terminal-job)))
+               (nil? (reg/get-agent (:caller updated-terminal-job))))
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "poll"
+        :destination (str "/api/alpha/invoke/jobs/" job-id)
+        :delivered? false
+        :note "caller-not-a-registered-seat"}))
     (boolean updated-terminal-job)))
 
 (defn- record-invoke-job-delivery!
@@ -1334,7 +1347,9 @@
     (update-invoke-jobs-ledger!
      (fn [ledger]
        (if-let [job (get-in ledger [:jobs job-id])]
-         (let [delivered (boolean delivered?)
+         (if (not= "pending" (get-in job [:delivery :status]))
+           ledger
+           (let [delivered (boolean delivered?)
                receipt {:status (if delivered "delivered" "delivery-failed")
                         :surface (str (or surface "unknown"))
                         :destination (str (or destination "unknown"))
@@ -1352,7 +1367,7 @@
                                (assoc :delivery receipt)
                                (assoc :trace/delivery-observation trace-observation)
                                (append-job-event "delivery-recorded" receipt))]
-           (assoc-in ledger [:jobs job-id] updated-job))
+             (assoc-in ledger [:jobs job-id] updated-job)))
          ledger)))))
 
 (declare get-invoke-job)
@@ -1395,7 +1410,7 @@
        {:surface "poll"
         :destination status-url
         :delivered? false
-        :note "bell-result-pollable-caller-not-deliverable"}))))
+        :note "caller-not-a-registered-seat"}))))
 
 (defn- invoke-job-public-view
   [job]

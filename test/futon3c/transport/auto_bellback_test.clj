@@ -181,8 +181,6 @@
                 :agent-id "unregistered-worker"
                 :caller "missing-caller"})
   (finalize! "pollable-completion")
-  (#'http/record-bell-completion-delivery!
-   "pollable-completion" "missing-caller" {:ok true})
   (let [delivery (:delivery (job "pollable-completion"))]
     (is (= "delivery-failed" (:status delivery)))
     (is (not= "delivered" (:status delivery)))
@@ -190,9 +188,21 @@
     (is (false? (get-in (job "pollable-completion")
                         [:trace/delivery-observation
                          :registered-push-performed?])))
-    (is (= "bell-result-pollable-caller-not-deliverable" (:note delivery)))
+    (is (= "caller-not-a-registered-seat" (:note delivery)))
     (is (= "/api/alpha/invoke/jobs/pollable-completion"
            (:destination delivery)))))
+
+(deftest terminal-non-seat-job-never-rests-at-pending
+  (create-job! {:job-id "terminal-non-seat"
+                :agent-id "unregistered-worker"
+                :caller "jvm-harness"})
+  (finalize! "terminal-non-seat")
+  (let [terminal (job "terminal-non-seat")]
+    (is (= "done" (:state terminal)))
+    (is (= "delivery-failed" (get-in terminal [:delivery :status])))
+    (is (= "poll" (get-in terminal [:delivery :surface])))
+    (is (= "delivery-failed"
+           (get-in terminal [:trace/delivery-observation :delivery-status])))))
 
 (deftest invalid-callers-do-not-bell-back
   (register-agent! "codex-1" :codex)
