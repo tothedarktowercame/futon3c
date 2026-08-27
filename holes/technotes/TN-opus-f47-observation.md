@@ -132,3 +132,87 @@ cascade and search channels under it. Nothing here is broken — the machine beh
 correctly at every step and the receipts are honest. What it costs, left alone, is that
 attempt-1 on a retry-shaped frame is not a clean cross-problem test, and any tally that
 treats it as one will be wrong.
+
+---
+
+## Addendum, 2026-08-27: the search channel was serving withheld memories
+
+The section above says "the machine behaved correctly at every step." That is wrong, and
+the way it is wrong changes what the second observation means.
+
+While measuring f48/a1 the same way, its live record turned out to carry
+`:terminal-repair-attempts 1` and
+
+    :terminal-repair/findings [:student-memory-used-without-surfacing
+                               :student-memory-used-despite-holdout]
+
+f46/a1 carries exactly the same pair. Both attempts used a memory their own holdout had
+withheld; both were discarded and re-dispatched.
+
+### The defect
+
+The dispatch request carries `:shelf/holdout` and `:shelf/withheld-ids`, but
+`typed-role-submission/register!` filters that request through `authority-fields`, which
+listed neither key. The shelf removed the withheld ids and the cascade removed them;
+`role-memory-search/search!` never learned they existed and returned them on request.
+
+`allowed = shelf ∪ search ∪ cascade − withheld` is evaluated when the terminal is
+validated, which is after the student has read the memory. Detection was working. Nothing
+prevented the read.
+
+Of the three frames that have run with a holdout, search served withheld ids in two:
+
+| frame | shelf | withheld ids served by search | used | result |
+|---|---|---|---|---|
+| f46 a1 | **empty** | 2 of 2 | both, "materially used" | discarded, re-run |
+| f47 a1 | 67 | 0 | — | stands |
+| f48 a1 | 76 | 1 of 4 | 1 | discarded, re-run |
+
+Both students disclosed the breach themselves. f48's account: the id "was also in the
+withheld holdout list; it reached me through the authorized, receipt-recorded search
+channel and I reported that transparently in the failure account." f46's recorded that its
+shelf snapshot was empty, so everything it had came through search.
+
+Fixed in `d3cf69df`: the holdout now travels on the job authority, and `search!` drops
+withheld ids before returning, recording `:shelf/holdout`, `:holdout/withheld-count` and
+`:holdout/excluded-ids` on the receipt so enforcement is auditable rather than a silent
+drop. A job with no holdout filters nothing, so attempts 2 and 3 are unaffected.
+
+### Terminal repair overwrites the evidence
+
+`live/student-attempt-1.edn` is a single slot. The repair re-dispatch persists over it, so
+the discarded attempt's `used-ids`, its response, and its disclosure are gone. f46/a1's
+surviving record reads `used-ids []` — indistinguishable from an attempt that used
+nothing. The two keywords in `:terminal-repair/findings` are the only trace left on disk.
+
+Both discarded attempts were recovered from the Agency job ledger while they were still
+resident (`:terminal-repair/original-job-id`, both `state: done`) and written to each
+frame's `superseded/` directory. `data/*` is gitignored, so those two files are the only
+copies once the ledger entries age out.
+
+Real work was thrown away with them. f48/a1 had compiled `apm_a98a03_vol_image_mul`
+(`volume ((r * ·) '' s) = ofReal |r| * volume s`), which exists under no name in this
+Mathlib; f46/a1 had elaborated four lemmas including the pole-cancelling pairing identity.
+
+### What this does to the second observation
+
+**The f46 a1 row of the shelf-utility table is measuring an erased attempt.** Its `shelf 0,
+used 0` describes the clean re-run. The original a1 used two same-problem memories that
+search supplied and the holdout had withheld.
+
+**The reading needs correcting.** The note concluded, following Joe, that this is better
+read as *the shelf failing to be useful* than as *students routing around the shelf*. On
+f47 that still holds — f47 had no breach, and its student searched because a 67-entry
+shelf did not supply what it needed. On f46 it does not: the shelf was empty and the
+channel that supplied the student was handing over memories the instrument had explicitly
+removed. That is not a shelf failing to be useful. That is the holdout leaking, and the
+from-shelf-zero pattern is partly an artefact of it.
+
+Which frames are affected is bounded by what survives: three attempt records on disk carry
+a holdout at all, because the live slot is reused. Earlier frames cannot be checked.
+
+The open question at the end of the note — whether the holdout should be airtight — is
+now answered for the search channel, which is enforced. The cascade already excluded
+withheld ids. What remains open is the category f47 identified: a memory that was never on
+any shelf cannot be withheld by a predicate that keys on shelf membership, and that is
+still true.
