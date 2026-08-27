@@ -518,15 +518,25 @@ carrier gate plus the all-carrier canary plus append-before-repair — with the
 plan's own condition that status is reported conservatively and durable stop is
 used. Worth deciding explicitly rather than by drift.
 
-**2. Section 2 changes a preregistered definition.** Moving the holdout from
-shelf membership to depositor truth makes it strictly stronger: it would
-withhold memories amendment 8 does not currently withhold, including the
-never-shelved category. That is the right instrument, and it is a change to the
-instrument mid-experiment. The same applies to the recommendation to add a
-channel-neutral transfer measure alongside tier-A condition 3. Both need a
-recorded amendment before implementation, and the preregistration is held by
-claude-19, not by this plan. Building either without the amendment would
-produce results whose comparability to f28-f48 is unclear.
+**2. Section 2 changes the holdout's definition, and that is the point.**
+Moving from shelf membership to depositor truth makes the holdout strictly
+stronger: it withholds the never-shelved category amendment 8 does not reach.
+
+*Corrected 2026-08-27 after Joe's note.* I first flagged this as an
+instrument change mid-experiment requiring an amendment to preserve
+comparability with f28-f48. That rests on a false premise. Joe's position,
+stated before and restated here: until the machine reliably does what it needs
+to do, this is **design research, not an experiment** — the experiment was to
+begin around f50. There is no experimental series running whose comparability
+could be broken, so strengthening the holdout now is the right move and is
+not gated on an amendment. The same goes for adding a channel-neutral transfer
+measure beside tier-A condition 3.
+
+What the preregistration must do instead is describe the instrument as it will
+actually be at f50, including depositor-truth holdout and whatever transfer
+measures are then in place. That is a task for the start of the experiment, not
+a blocker on this repair. claude-19 holds the preregistration and will need the
+final instrument description, not an amendment to a running series.
 
 ### Not checked
 
