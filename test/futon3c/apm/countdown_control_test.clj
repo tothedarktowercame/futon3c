@@ -5,6 +5,7 @@
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner]
+            [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
@@ -38,13 +39,52 @@
         (is (not= countdown (:countdown-manifest @observed)))
         (is (= "f46" (:frame-id @observed)))))))
 
+(defn- valid-combined-trace-receipt
+  "A receipt in the shape campaign-trace/valid-combined-trace-receipt? accepts."
+  []
+  (let [trace-body {"schemaVersion" 1 "traceKind" "countdown-close-test"}
+        digest (campaign-trace/combined-trace-digest trace-body)]
+    {:trace/combined trace-body
+     :trace/digest digest
+     :trace/projected-from-durable-state? true
+     :trace/observation-kinds (mapv :kind (campaign-trace/observation-schemas))
+     :trace/checker-receipt {:checker/status :accepted :trace/digest digest}}))
+
 (deftest terminal-lifecycle-actions-have-deterministic-handlers
   (is (= {:ok true :status :certified
           :certificate {:effect :countdown-block-closed :block-id "b1"}}
-         (#'sut/drive-live-action! {:kind :close-block :block-id "b1"})))
-  (is (= {:ok true :status :certified
-          :certificate {:effect :countdown-campaign-closed}}
-         (#'sut/drive-live-action! {:kind :close-campaign}))))
+         (#'sut/drive-live-action! {:kind :close-block :block-id "b1"}))))
+
+;; Campaign closure is gated on a combined-trace receipt (dd2d5abd). Both
+;; directions are asserted here: without a receipt the campaign must not close,
+;; and the refusal must name why rather than failing generically.
+(deftest close-campaign-requires-a-combined-trace-receipt
+  (with-redefs [ledger/read-ledger
+                (constantly {:projection {:campaign/frames {}}})]
+    (is (= {:ok false :error/code :countdown-campaign-combined-trace-unavailable}
+           (#'sut/drive-live-action! {:kind :close-campaign}))))
+  (with-redefs [ledger/read-ledger
+                (constantly {:projection
+                             {:campaign/frames
+                              {"f1" {:close-certificate
+                                     {:trace/combined {"schemaVersion" 1}
+                                      :trace/digest "not-a-real-digest"}}}}})]
+    (is (= :countdown-campaign-combined-trace-unavailable
+           (:error/code (#'sut/drive-live-action! {:kind :close-campaign})))
+        "an invalid receipt is not a receipt")))
+
+(deftest close-campaign-certifies-with-a-valid-receipt
+  (let [receipt (valid-combined-trace-receipt)]
+    (with-redefs [ledger/read-ledger
+                  (constantly {:projection
+                               {:campaign/frames
+                                {"f1" {:close-certificate receipt}}}})]
+      (let [result (#'sut/drive-live-action! {:kind :close-campaign})]
+        (is (:ok result))
+        (is (= :certified (:status result)))
+        (is (= :countdown-campaign-closed (:effect (:certificate result))))
+        (is (= (:trace/digest receipt) (:trace/digest (:certificate result)))
+            "the certificate carries the receipt's own trace digest")))))
 
 (deftest role-turn-timeout-distinguishes-student-attempts
   (let [contract {:generated/bounds {:seat-turn-timeout-ms 3600000
