@@ -143,11 +143,23 @@
       (loop [remaining traversal-order evidence {}]
         (if-let [stage (first remaining)]
           (if-let [effect (get effects stage)]
-            (let [result (effect evidence)]
+            (let [result
+                  (loop [attempt 1]
+                    (let [observed (effect evidence)
+                          classified (when-not (:ok observed)
+                                       (classify-failure stage observed))]
+                      (if (and (= :substrate (:failure/class classified))
+                               (< attempt 2))
+                        (recur (inc attempt))
+                        (assoc observed :ftriangle/attempts attempt))))]
               (if (:ok result)
                 (recur (rest remaining)
-                       (assoc evidence stage (:evidence result)))
-                (classify-failure stage result)))
+                       (assoc evidence stage
+                              (assoc (:evidence result)
+                                     :ftriangle/attempts
+                                     (:ftriangle/attempts result))))
+                (assoc (classify-failure stage result)
+                       :ftriangle/attempts (:ftriangle/attempts result))))
             (classify-failure stage
                               {:error/code :ftriangle-live-effect-missing}))
           (let [missing (into [] (remove #(contains? evidence %)) traversal-order)
@@ -209,6 +221,7 @@
      :dispatch-terminal
      (fn [_]
        (let [request (merge {:surface "emacs-repl" :caller campaign-id
+                             :job-id (str campaign-id "-" frame-id "-dispatch")
                              :timeout-ms 30000}
                             dispatch-request)
              announced (job-port/announce! request-fn agency-base request)]

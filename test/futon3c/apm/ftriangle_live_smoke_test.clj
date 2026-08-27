@@ -37,6 +37,25 @@
           (sut/classify-failure :holdout-exclusion
                                 {:error/code :holdout-evidence-missing})))))
 
+(deftest substrate-stage-retries-once-without-retrying-apparatus
+  (let [calls (atom 0)
+        effects (into {}
+                      (map (fn [stage]
+                             [stage (if (= stage :preflight-admission)
+                                      (fn [_]
+                                        (if (= 1 (swap! calls inc))
+                                          {:ok false
+                                           :error/component :transport
+                                           :error/code :hyperedge-unreachable}
+                                          {:ok false
+                                           :error/code :admission-refused}))
+                                      (constantly {:ok true :evidence {}}))]))
+                      sut/traversal-order)
+        result (sut/execute! {:checks (passing-checks) :effects effects})]
+    (is (= 2 @calls))
+    (is (= :apparatus (:failure/class result)))
+    (is (= 2 (:ftriangle/attempts result)))))
+
 (deftest executor-requires-all-six-ledger-evidence-items-and-valid-closure
   (let [trace-body {"schemaVersion" 1 "traceKind" "ftriangle-test"}
         digest (campaign-trace/combined-trace-digest trace-body)
