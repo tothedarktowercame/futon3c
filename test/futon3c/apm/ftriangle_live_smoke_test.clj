@@ -113,6 +113,30 @@
     (is (= "java.lang.ClassCastException"
            (get-in result [:finding :exception/class])))))
 
+(deftest successful-stage-evidence-is-durable-before-the-next-stage
+  (let [persisted (atom [])
+        effects (into {}
+                      (map (fn [stage]
+                             [stage
+                              (if (= stage :watchdog-progress)
+                                (fn [_] (throw (Exception. "later failure")))
+                                (fn [_] {:ok true
+                                         :evidence {:stage stage}}))]))
+                      sut/traversal-order)
+        result (sut/execute!
+                {:checks (passing-checks) :effects effects
+                 :persist-ledger-fn
+                 (fn [state] (swap! persisted conj state) {:ok true})})
+        holdout-checkpoint
+        (some #(when (contains? (:traversal/evidence %)
+                                :holdout-exclusion) %)
+              @persisted)]
+    (is (= :watchdog-progress (:stage result)))
+    (is (map? holdout-checkpoint))
+    (is (= :holdout-exclusion
+           (get-in holdout-checkpoint
+                   [:traversal/evidence :holdout-exclusion :stage])))))
+
 (deftest wired-effects-call-production-ports-and-preserve-repair-evidence
   (let [calls (atom [])
         trace-body {"schemaVersion" 1 "traceKind" "wired-test"}

@@ -22,9 +22,9 @@
    :problem
    {:repository "/home/joe/code/apm-lean"
     :branch "master"
-    :revision "759bcd165669e886a60f8fd2d0315f5b765c4431"
-    :path "problems/ftriangleSmoke/lean/Main.lean"
-    :blob "66fd524d9e223faaf2791e66f12bb04bea67e529"}
+    :revision "fafd134e569f555f75afcba36d67e44c7b7a7cef"
+    :path "SmokeTests/Ftriangle/Main.lean"
+    :blob "8c6f8259a837e08ac37e95985043e909c79ef88b"}
    :apparatus/pin-id
    "aeca02fef445c95de578710712883d389c5e8c29d1f92a19185864191a705991"}]
- :manifest/id "9646615ae2b92531e0b0d9edcbd9afcb1890050a9826a5afb944a0087f1c3ad3"}
+ :manifest/id "a26821e429025d2da7c8e0e1fa8a07f723f59ba15b05537fa83cea1bf35a0cea"}

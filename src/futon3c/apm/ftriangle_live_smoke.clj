@@ -207,11 +207,23 @@
                         (recur (inc attempt))
                         (assoc observed :ftriangle/attempts attempt))))]
               (if (:ok result)
-                (recur (rest remaining)
-                       (assoc evidence stage
-                              (assoc (:evidence result)
-                                     :ftriangle/attempts
-                                     (:ftriangle/attempts result))))
+                (let [next-evidence
+                      (assoc evidence stage
+                             (assoc (:evidence result)
+                                    :ftriangle/attempts
+                                    (:ftriangle/attempts result)))
+                      checkpoint
+                      (when (fn? persist-ledger-fn)
+                        (persist-ledger-fn
+                         {:campaign/id campaign-id :frame/id frame-id
+                          :traversal/status :in-progress
+                          :traversal/evidence next-evidence}))]
+                  (if (or (nil? checkpoint) (:ok checkpoint))
+                    (recur (rest remaining) next-evidence)
+                    (classify-failure
+                     :ledger-evidence
+                     {:error/code :ftriangle-stage-evidence-not-durable
+                      :stage stage :finding checkpoint})))
                 (assoc (classify-failure stage result)
                        :ftriangle/attempts (:ftriangle/attempts result))))
             (classify-failure stage
