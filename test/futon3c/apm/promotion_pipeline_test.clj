@@ -93,6 +93,20 @@
                (sut/validate-review deposit "f22-proctor"
                                     [(assoc review :verdict :challenge)]))))))
 
+(deftest returned-review-precedes-controller-owned-evidence
+  (let [raw {:memory-id "m1" :reviewer "f46-promotion-proctor"
+             :verdict :approve :pattern-ids ["p1"]
+             :reason "residual: Main.lean:64. fact: finite sums"
+             :residual "Main.lean:64"}
+        returned (sut/validate-returned-review*
+                  [candidate] "f46-scribe" "f46-promotion-proctor" [raw])
+        prematurely-persisted (sut/validate-review*
+                               [candidate] "f46-scribe"
+                               "f46-promotion-proctor" [raw])]
+    (is (:ok returned) returned)
+    (is (some #{:approved-review-evidence-invalid}
+              (:findings prematurely-persisted)))))
+
 (deftest deposit-requires-all-four-typed-lanes
   (is (:ok (sut/validate-deposit {:depositor "scribe" :candidates [candidate]
                                   :lanes lanes})))

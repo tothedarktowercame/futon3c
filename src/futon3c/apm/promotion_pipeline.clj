@@ -132,6 +132,44 @@
 
 (declare validate-review*)
 
+(defn validate-returned-review*
+  "Validate the Promotion Proctor's judgement before controller persistence.
+
+  Review evidence identity and attachment status are deliberately absent here:
+  they are controller-owned outputs of promotion-review-store/persist!, not
+  fields the role may author.  validate-review* checks those fields after that
+  boundary."
+  [candidates depositor reviewer reviews]
+  (let [candidate-ids (set (map :memory-id candidates))
+        findings (cond-> []
+                   (not (string? reviewer)) (conj :reviewer-missing)
+                   (= depositor reviewer) (conj :reviewer-is-depositor)
+                   (not= candidate-ids (set (map :memory-id reviews)))
+                   (conj :review-set-mismatch)
+                   (some #(not= reviewer (:reviewer %)) reviews)
+                   (conj :review-attribution-mismatch)
+                   (some #(not (contains? review-verdicts (:verdict %))) reviews)
+                   (conj :review-verdict-invalid)
+                   (some #(not (and (string? (:reason %))
+                                    (not (str/blank? (:reason %)))
+                                    (string? (:residual %))
+                                    (not (str/blank? (:residual %)))))
+                         reviews)
+                   (conj :review-reasoning-missing)
+                   (some #(and (contains? #{:approve :reassign} (:verdict %))
+                               (not (and (vector? (:pattern-ids %))
+                                         (seq (:pattern-ids %))
+                                         (every? (fn [pattern-id]
+                                                   (and (string? pattern-id)
+                                                        (not (str/blank?
+                                                              pattern-id))))
+                                                 (:pattern-ids %)))))
+                         reviews)
+                   (conj :review-patterns-invalid))]
+    (if (seq findings)
+      {:ok false :findings findings}
+      {:ok true :reviews reviews})))
+
 (defn publishing-review?
   "A merit verdict publishes only when its attachment projection succeeded."
   [review]

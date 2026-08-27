@@ -78,7 +78,10 @@
    :coordinator-one-registration-per-problem true
    :coordinator-retries-increment-same-entry true
    :coordinator-retry-beyond-maximum-refused true
-   :coordinator-startup-directory-heuristics false})
+   :coordinator-startup-directory-heuristics false
+   :gate-manifest-authority-binding "campaign-and-frame-exact"
+   :qualification-contract-digest-binding "registered-and-observed-exact"
+   :proof-target-name-authority "source-declaration"})
 
 (def required-memory-policy
   {:content-addressed-snapshot true :admit-after-solve-verify true
@@ -125,6 +128,8 @@
     "read-back-content-digest" "persistence-receipt-id"]
    :materialized-artifact-digests-must-match true
    :review-evidence-materialized-before-disposition true
+   :returned-review-controller-evidence-required false
+   :persisted-review-controller-evidence-required true
    :nonpublishing-dispositions ["reject"]
    :projection-failure-action
    "hold-at-review-awaiting-apparatus-repair"

@@ -630,7 +630,7 @@
         (let [r (review-fn (:job state) (:candidates state))]
           (if (= :awaiting-terminal (:status r))
             (assoc r :job-id (:job state))
-            (let [checked (pipeline/validate-review*
+            (let [checked (pipeline/validate-returned-review*
                            (:candidates state)
                            (:depositor (:deposit state))
                            (:reviewer r) (:reviews r))]
