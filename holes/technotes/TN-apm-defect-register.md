@@ -1,0 +1,61 @@
+# TN-apm-defect-register — every known defect, and what stops it recurring
+
+claude-clink-1, 2026-08-27. Compiled at Joe's request. This is the evidence
+side: what went wrong, what is in place now, and — stated strictly — whether
+anything makes recurrence impossible.
+
+**"Guaranteed from DATE" means one thing here:** a mechanism exists such that
+the defect cannot recur without that mechanism itself failing or being removed.
+A fix at one call site is not a guarantee if a second call site can reintroduce
+it. A test is not a guarantee. A convention is not a guarantee. Where there is
+no such mechanism the entry says **none**, and that is an acceptable answer.
+
+Two failure classes matter most (Joe, 2026-08-27): **frames not advancing** and
+**data being lost**. Defects are grouped by which class they produce.
+
+## Class 1 — data lost
+
+| id | defect | status | guarantee |
+|---|---|---|---|
+| D1 | Terminal repair overwrote the discarded attempt in place; `used-ids`, response and disclosure destroyed | `b642640a` appends the discarded terminal to `:superseded-terminals` before the `dissoc` | **partial** — covers the terminal-repair path only |
+| D2 | Other overwrite paths unaudited: solver rounds, typed-contract migration, transport retry, supervisor/claim recovery, manual repair/resume, any attempt-numbered write | not audited | **none** |
+| D3 | The attempt live slot is one mutable file; a repair rewrite makes two reads at different times look like one observation | unchanged | **none** |
+| D4 | Recovered evidence exists only under gitignored `data/*` plus an Agency job ledger that expires | two files copied by hand today | **none** |
+| D5 | A student attempt discarded for an apparatus-caused breach consumed the frame's repair budget | restored by hand for f48 | **none** |
+
+## Class 2 — frames not advancing
+
+| id | defect | status | guarantee |
+|---|---|---|---|
+| A1 | No liveness check anywhere in the machine. `grep` for stall/watchdog/heartbeat/no-progress across `src/futon3c/apm/` returns nothing | the only stall detection is a shell loop in a session monitor, outside the machine, advisory | **none** |
+| A2 | f49 minted 13:39, dead 13:41 on its first tick (`live-job-state-invalid`), nothing dispatched, no alarm | unchanged | **none** |
+| A3 | `live-regulator/stop!` (1-arity) cancels the runner but leaves the registry entry enabled; recovery re-arms it | 2-arity `durable-coordinator/stop!` does disable durably; the misleading API remains | **none** |
+| A4 | A `stop!` that has returned does not mean no tick is running; an in-flight tick kept working and minted f49 | unchanged | **none** |
+| A5 | Neither the runner table nor the active-job list reveals an in-flight tick — both were empty while work landed on disk | unchanged | **none** |
+| A6 | Durable state read `:regulator/status :running` with an empty runner table | unchanged | **none** |
+| A7 | `live-regulator-tick-threw` — exception escaping the tick, 13 occurrences, 23 Aug–27 Aug | outer containment only, no classification | **none** |
+| A8 | `live-supervisor-launch-audit-failed` — 13 occurrences | unchanged | **none** |
+
+## Class 3 — measurement contaminated (causes of the above)
+
+| id | defect | status | guarantee |
+|---|---|---|---|
+| M1 | Same-problem holdout not enforced on the search channel; f46 (2 of 2 withheld ids served and used) and f48 (1 of 4) | `d3cf69df` carries the holdout on the job authority and filters `search!` | **partial** — a newly added channel is not covered |
+| M2 | The holdout's domain is shelf-derived, so a same-problem memory never on a shelf is not withheld at all (f47's category) | unchanged | **none** |
+| M3 | `authority-fields` is a hand-maintained allow-list decoupled from the request and validator schemas — the mechanism of M1 | unchanged | **none** |
+| M4 | Invariants are validated at terminal collection, after the action they constrain | unchanged for reads | **none** |
+| M5 | Apparatus-caused breach indistinguishable from student fault; disclosure made discard more likely, not less | unchanged | **none** |
+| M6 | A Lean invariant may quantify over one carrier where the system has several (`same_problem_holdout_uses_depositor_truth` over `shelf`) with no mechanism to detect it | unchanged | **none** |
+| M7 | Loaded JVM namespaces may diverge from the committed source | unchanged | **none** |
+| M8 | Lean emitter ↔ generated contract ↔ Clojure validator ↔ loaded namespace have no enforced coupling | unchanged | **none** |
+| M9 | `frame-void/prepare` refuses any frame that is not active, so a closed frame cannot be voided (f46) | unchanged | **none** |
+| M10 | 25 distinct live failure codes, 86 occurrences, largely uncharacterised for retryability, committed effects and recovery | unchanged | **none** |
+
+## Summary as of 2026-08-27 13:30
+
+Two partials, twenty-one with no guarantee. Nothing in this register is
+currently guaranteed in the strict sense above.
+
+Evidence: `TN-opus-f48-critical-findings.md`, `TN-opus-f47-observation.md`,
+`TN-codex3-apm-repair-plan.md`, and the interleaved model/failure timeline at
+https://claude.ai/code/artifact/b01d0577-1557-4b1f-9322-526222a79f75
