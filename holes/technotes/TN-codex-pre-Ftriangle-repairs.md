@@ -123,3 +123,49 @@ none of these is among them.
 
 The fourth is a real defect in the test itself, and only became visible once the
 other three stopped drowning it.
+
+## Where the Lean remit ends (Joe, 2026-08-27)
+
+Scheduling is outside the APM Cycle Machine's Lean remit, and covered
+operationally by Clojure instead.
+
+The model covers the **cycle**: phases, transitions, receipts, dispositions,
+and — since today — trace properties over observations of those. It does not
+cover the **scheduler** that drives the cycle: ticks, epochs, leases, drain,
+process death. Modelling those means modelling concurrency and wall-clock,
+which is a different verification problem and not the one this project needs
+solved.
+
+This is consistent with what is already built. codex-3's adapter spec put it
+the same way: *"Do not try to prove that networks, filesystems, or callbacks do
+not fail; prove that any failure leaves a classifiable durable state from which
+recovery is defined."* And the progress invariant formalised in `ae438faa` is a
+property of **observations of frame progress**, not of the executor — which is
+why it could be bound to the contract at all.
+
+So the boundary is:
+
+| | Lean | Clojure |
+|---|---|---|
+| cycle transitions, receipts, dispositions | modelled and proved | validated |
+| observations of those, as traces | modelled and proved | projected, checked |
+| tick claims, epochs, leases, drain, restart | **not modelled** | **must be covered operationally** |
+
+"Not modelled" is not "not assured". A5 needs real operational coverage —
+durable claim before effects, cleared after durable completion, with
+deterministic tests — it just does not need a theorem.
+
+### The consequence for disruption-soak
+
+This makes the disposition above sharper rather than softer. `disruption-soak`
+is exactly the operational coverage the table's third row demands, and it is
+currently the only thing exercising it. It reports A5's absence
+non-deterministically because that is how a missing transaction boundary
+presents.
+
+So it is not a test to repair and not a test to exclude on grounds of
+flakiness. **It is A5's acceptance test.** When the durable tick claim exists,
+`:process-restart` and `:duplicate-activation` should become deterministic and
+green; until then it stays red for a stated reason. That is Joe's own pattern
+from earlier today — a failure found now becomes the gate on the fix later —
+applied to the last structural gap rather than to a bug.
