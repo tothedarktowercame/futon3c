@@ -184,6 +184,24 @@
          (filter string?)
          set)))
 
+(defn gated-receipt-surfaced-ids
+  "Reapply depositor truth when a durable search receipt is inherited by a
+   repair. This deliberately rejects legacy receipt content whose provenance
+   cannot be verified."
+  [authority carrier receipt]
+  (if-not (:shelf/holdout authority)
+    (receipt-surfaced-ids receipt)
+    (let [content (access-gate/enforce-carrier
+                 carrier authority (:content-matches receipt))
+        candidates (access-gate/enforce-carrier
+                    carrier authority (:candidates receipt))]
+      (receipt-surfaced-ids
+       (assoc receipt :content-matches (:allowed content)
+                      :candidates (:allowed candidates)
+                      :result-ids (result-ids
+                                   {:content-matches (:allowed content)
+                                    :candidates (:allowed candidates)}))))))
+
 (defn recorded-surfaced-ids-for-job
   "Return identifiers explicitly surfaced by valid receipts for JOB-ID."
   [job-id]

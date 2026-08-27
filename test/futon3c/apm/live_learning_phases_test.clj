@@ -565,6 +565,26 @@
                       []))]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
+(deftest holdout-repair-fails-closed-on-unverifiable-inherited-result
+  (let [request {:dispatch/type :student-attempt
+                 :repair/of-job-id "original"
+                 :agent-id "f30-student" :frame-id "f30"
+                 :problem-id "a01J06" :shelf/holdout :same-problem
+                 :memory-snapshot {:accessible-memory-ids []}}
+        job {:job-id "repair" :agent-id "f30-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f30" :problem-id "a01J06"
+                      :memory-use {:used-ids ["e-legacy"]}}}]
+    (with-redefs [role-memory/recorded-receipts-for-job
+                  (fn [job-id]
+                    (if (= "original" job-id)
+                      [{:receipt/id "legacy" :result-ids ["e-legacy"]
+                        :content-matches [{:memory/id "e-legacy"}]}]
+                      []))]
+      (is (some #{:student-memory-used-without-surfacing}
+                (:findings
+                 (sut/validate-terminal request {:job-id "repair"} job)))))))
+
 (deftest f32-freehand-surfaced-id-typo-is-ignored-in-favor-of-controller-data
   (let [request {:dispatch/type :student-attempt
                  :agent-id "f30-student" :frame-id "f30"

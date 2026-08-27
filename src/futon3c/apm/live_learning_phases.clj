@@ -83,13 +83,17 @@
                                                      [:memory-metadata memory-id
                                                       :provenance])})))
             gated (access-gate/enforce-carrier :cascade authority offers0)
-            offers (mapv #(dissoc % :depositor :provenance) (:allowed gated))]
+            prompt-gated (access-gate/enforce-carrier
+                          :prompt-assembly authority (:allowed gated))
+            offers (mapv #(dissoc % :depositor :provenance)
+                         (:allowed prompt-gated))]
         {:routes-enabled (:routes-enabled expanded)
          :cap (:cap expanded)
          :truncated? (:truncated? expanded)
          :expanded-available (:expanded-available expanded)
          :offers offers
          :holdout-decision (:evidence gated)
+         :prompt-holdout-decision (:evidence prompt-gated)
          :histogram (frequencies (map :route offers))
          :holdout-excluded (or (:excluded-offers expanded) 0)
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
@@ -191,6 +195,9 @@
             snapshot-gate (access-gate/enforce-carrier
                            :shelf-materialization holdout-authority
                            (vec snapshot-memories))
+            snapshot-prompt-gate (access-gate/enforce-carrier
+                                  :prompt-assembly holdout-authority
+                                  (:allowed snapshot-gate))
             withheld-ids
             (if holdout?
               (->> (:excluded snapshot-gate)
@@ -231,7 +238,8 @@
                           :shelf/withheld-count (count withheld-ids))
                    (and holdout? (seq snapshot-memories))
                    (assoc :memory-access-decisions
-                          {:shelf-materialization (:evidence snapshot-gate)})
+                          {:shelf-materialization (:evidence snapshot-gate)
+                           :prompt-assembly (:evidence snapshot-prompt-gate)})
                    (and (= :student-attempt kind) (some? cascade))
                    (assoc :memory-cascade cascade)
                    ;; The base is what each fresh attempt is reset to and what
@@ -292,14 +300,18 @@
 
 (defn- controller-memory-use
   [request ticket used-ids]
-  (let [search-receipts
-        (vec (concat
-              (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
-              (role-memory/recorded-receipts-for-job (:job-id ticket))))
+  (let [predecessor-receipts
+        (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
+        current-receipts
+        (role-memory/recorded-receipts-for-job (:job-id ticket))
+        search-receipts (vec (concat predecessor-receipts current-receipts))
         surfaced-ids
         (into (set (get-in request [:memory-snapshot :accessible-memory-ids]))
-              (mapcat role-memory/receipt-surfaced-ids)
-              search-receipts)]
+              (concat
+               (mapcat #(role-memory/gated-receipt-surfaced-ids
+                         request :inherited-repair %)
+                       predecessor-receipts)
+               (mapcat role-memory/receipt-surfaced-ids current-receipts)))]
     (merge (:memory-snapshot request)
            {:surfaced-ids (vec (sort surfaced-ids))
             :used-ids (vec used-ids)
@@ -317,10 +329,13 @@
         (role-memory/recorded-receipts-for-job (:job-id ticket))
         predecessor-search-receipts
         (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
-        search-receipts (vec (concat predecessor-search-receipts
-                                     current-search-receipts))
         searched-memory-ids
-        (set (mapcat role-memory/receipt-surfaced-ids search-receipts))
+        (set (concat
+              (mapcat #(role-memory/gated-receipt-surfaced-ids
+                        request :inherited-repair %)
+                      predecessor-search-receipts)
+              (mapcat role-memory/receipt-surfaced-ids
+                      current-search-receipts)))
         snapshot-memory-ids
         (set (get-in request [:memory-snapshot :accessible-memory-ids]))
         cascade-memory-ids
