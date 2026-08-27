@@ -67,7 +67,7 @@ record shows the mechanism regardless of what selects it.
 
 ## Summary as of 2026-08-27 13:30
 
-Twenty-four defects: two partial, twenty-two with no guarantee.
+Twenty-six defects: two partial, twenty-four with no guarantee. (Count corrected 2026-08-27 after codex-3 noted it was stale — C2 and C3 were added without updating it.)
 
 **This is not a statement that the machine guarantees nothing.** The register
 lists what broke, and what broke is by construction what was not guaranteed —
