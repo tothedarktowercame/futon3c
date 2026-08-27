@@ -51,6 +51,44 @@
     (is (zero? (count (filter #{:activate} @calls))))
     (is (= :running (get-in retried [:state :activation/reconciled-from])))))
 
+(deftest unaccepted-supersession-archives-cancellation-before-redispatch
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :state :queued})
+        saved (atom nil)
+        base (assoc (effects calls job)
+                    :state {:state/type :live-job-dispatched :request request
+                            :ticket {:job-id "job-1"}
+                            :activation/accepted? false
+                            :activation/failure {:ok false :error :timeout}}
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :cancel-fn (fn [id]
+                                 {:ok true :job-id id :state :cancelled})
+                    :activate-fn (fn [& _] {:ok true})
+                    :persist-fn (fn [state] (reset! saved state) {:ok true}))
+        superseded (sut/drive! base)]
+    (is (= :awaiting-terminal (:status superseded)))
+    (is (= "job-1" (get-in @saved [:superseded-tickets 0 :job-id])))
+    (is (= :cancelled
+           (get-in @saved [:superseded-tickets 0 :cancellation :state]))))
+  (let [announced (atom 0)
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id "job-1"} :activation/accepted? false
+               :activation/failure {:ok false}}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom {:job-id "job-1" :state :queued}))
+                       :state state :terminal-submission-provider (constantly nil)
+                       :cancel-fn (fn [_] {:ok true :state :cancelled})
+                       :persist-fn (fn [s]
+                                     (if (:superseded-tickets s)
+                                       {:ok false} {:ok true}))
+                       :announce-fn (fn [_]
+                                      (swap! announced inc)
+                                      {:ok true :job-id "job-2"})))]
+    (is (= :live-job-supersession-archive-persistence-failed
+           (:error/code result)))
+    (is (zero? @announced))))
+
 (deftest persisted-ticket-reconciles-terminal-job-before-validation
   (let [calls (atom []) job (atom {:state :queued})
         failed (sut/drive!

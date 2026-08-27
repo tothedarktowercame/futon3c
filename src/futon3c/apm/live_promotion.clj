@@ -371,12 +371,25 @@
       (let [repair-ordinal
             (inc (+ (count (:failed-attempts state))
                     format-repairs schema-repairs))
-            retry (deposit-fn (assoc failure
-                                     :submission/attempt repair-ordinal))]
-        (if-not (:ok retry)
-          retry
-          (let [next-state
+            predecessor {:job {:job-id (:job state)
+                               :state :failed
+                               :report failure}
+                         :ticket (:ticket state)
+                         :terminal-collection (:terminal-collection state)
+                         :findings (vec (:findings failure))}
+            archived-state (update state :superseded-terminals
+                                   (fnil conj []) predecessor)
+            archived (persist-fn archived-state)]
+        (if-not (:ok archived)
+          {:ok false :error/code :promotion-deposit-archive-persistence-failed
+           :state state}
+          (let [retry (deposit-fn (assoc failure
+                                         :submission/attempt repair-ordinal))]
+            (if-not (:ok retry)
+              retry
+              (let [next-state
                 (-> state
+                    (assoc :superseded-terminals (:superseded-terminals archived-state))
                     (assoc :job (:job retry)
                            :ticket {:job-id (:job retry)}
                            :attempt (if boundary-repair? attempt (inc attempt)))
@@ -391,7 +404,7 @@
             (persist-fn next-state)
             {:ok true :status :awaiting-terminal :job-id (:job retry)
              :retry/reason (or (:error/code failure) :deposit-invalid)
-             :state next-state}))))))
+             :state next-state}))))))))
 
 (defn- persist-mechanical-reviews!
   [deposit reviews persist-reviews-fn]
@@ -580,6 +593,7 @@
                                  :mechanical-reviews mechanical
                                  :deposit-job (:job state)
                                  :deposit-request deposit-request
+                                 :superseded-terminals (:superseded-terminals state)
                                  :job (:job review)
                                  :request reviewer-request
                                  :ticket {:job-id (:job review)}}
@@ -769,18 +783,30 @@
            (not= contract-digest (:contract-digest state)))
       (let [prior (:last-valid-state state)
             successor-attempt (inc (or (:review-successor-attempt prior) 0))
-            successor (review-fn (:candidates prior) (:job prior)
-                                 successor-attempt)]
-        (if-not (:ok successor)
-          successor
-          (let [next-state (assoc prior
+            predecessor {:job {:job-id (:job prior)
+                               :state :done
+                               :report (:persisted-review-result state)}
+                         :ticket (:ticket prior)
+                         :terminal-collection (:terminal-collection prior)
+                         :findings (vec (:findings state))}
+            archived-prior (update prior :superseded-terminals
+                                   (fnil conj []) predecessor)
+            archived (persist-fn archived-prior)]
+        (if-not (:ok archived)
+          {:ok false :error/code :promotion-review-archive-persistence-failed
+           :state state}
+          (let [successor (review-fn (:candidates prior) (:job prior)
+                                     successor-attempt)]
+            (if-not (:ok successor)
+              successor
+              (let [next-state (assoc archived-prior
                                   :job (:job successor)
                                   :ticket {:job-id (:job successor)}
                                   :predecessor-job-id (:job prior)
                                   :review-successor-attempt successor-attempt)]
             (persist-fn next-state)
             {:ok true :status :awaiting-terminal
-             :job-id (:job successor) :state next-state})))
+             :job-id (:job successor) :state next-state})))))
 
       (and (string? contract-digest)
            (not= contract-digest (:contract-digest state)))

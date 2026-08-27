@@ -149,6 +149,34 @@
            (:failed-attempts @saved)))
     (is (false? @review-called?))))
 
+(deftest deposit-retry-archives-before-successor-and-appends
+  (let [successors (atom 0)
+        persist-log (atom [])
+        deposit-fn (fn [_]
+                     {:ok true :job (str "successor-" (swap! successors inc))})
+        persist-fn (fn [state] (swap! persist-log conj state) {:ok true})
+        failure {:ok false :error/code :bad-deposit :findings [:bad]}
+        first (#'sut/retry-deposit!
+               {:state/type :promotion :stage :deposit :job "original"
+                :ticket {:job-id "original"} :attempt 1}
+               failure deposit-fn persist-fn)
+        second (#'sut/retry-deposit! (:state first) failure deposit-fn persist-fn)]
+    (is (= ["original" "successor-1"]
+           (mapv #(get-in % [:job :job-id])
+                 (get-in second [:state :superseded-terminals]))))
+    (is (= [:bad] (get-in first [:state :superseded-terminals 0 :findings])))
+    (is (= 2 @successors)))
+  (let [successors (atom 0)
+        result (#'sut/retry-deposit!
+                {:state/type :promotion :stage :deposit :job "original"
+                 :ticket {:job-id "original"} :attempt 1}
+                {:ok false :error/code :bad-deposit :findings [:bad]}
+                (fn [_] (swap! successors inc) {:ok true :job "forbidden"})
+                (constantly {:ok false :error :disk-full}))]
+    (is (= :promotion-deposit-archive-persistence-failed
+           (:error/code result)))
+    (is (zero? @successors))))
+
 (deftest invisible-candidate-redispatches-scribe-before-observing-review
   (let [saved (atom nil)
         reviewed? (atom false)
@@ -200,6 +228,10 @@
                :deposit-job "scribe-original"
                :deposit-request {:role :scribe}
                :abandoned-review-job predecessor
+               :superseded-terminals
+               [{:job {:job-id predecessor :state :failed}
+                 :ticket {:job-id predecessor}
+                 :findings [:candidate-invisible]}]
                :attempt 2}
         candidate {:name "general pattern" :hook "when formalizing"
                    :body "Use the reviewed library pattern."
@@ -243,6 +275,8 @@
     (is (= predecessor (:predecessor @launched)))
     (is (= 1 (:attempt @launched)))
     (is (= predecessor (:predecessor-job-id @saved)))
+    (is (= predecessor
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))
     (is (= 1 (:review-successor-attempt @saved)))
     (is (= :independent-review (:stage @saved)))))
 
@@ -823,4 +857,37 @@
     (is (= :awaiting-terminal (:status result)))
     (is (= "successor-review" (:job-id result)))
     (is (= "prior-terminal-review" (:predecessor-job-id @saved)))
-    (is (= 1 (:review-successor-attempt @saved)))))
+    (is (= 1 (:review-successor-attempt @saved)))
+    (is (= "prior-terminal-review"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))
+    (let [second (sut/drive!
+                  {:state {:state/type :promotion
+                           :stage :awaiting-apparatus-repair
+                           :repair/kind :unresolved-review
+                           :contract-digest "contract-v2"
+                           :last-valid-state (:state result)}
+                   :contract-digest "contract-v3"
+                   :review-fn (fn [_ _ _]
+                                {:ok true :job "successor-review-2"})
+                   :persist-fn #(do (reset! saved %) {:ok true})})]
+      (is (= :awaiting-terminal (:status second)))
+      (is (= ["prior-terminal-review" "successor-review"]
+             (mapv #(get-in % [:job :job-id])
+                   (get-in second [:state :superseded-terminals])))))))
+
+(deftest unresolved-review-archive-failure-blocks-successor
+  (let [called (atom 0)
+        last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m"}] :job "prior-review"
+                    :ticket {:job-id "prior-review"}}
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                         :repair/kind :unresolved-review
+                         :contract-digest "old" :last-valid-state last-valid}
+                 :contract-digest "new"
+                 :review-fn (fn [& _]
+                              (swap! called inc)
+                              {:ok true :job "forbidden"})
+                 :persist-fn (constantly {:ok false :error :disk-full})})]
+    (is (= :promotion-review-archive-persistence-failed (:error/code result)))
+    (is (zero? @called))))
