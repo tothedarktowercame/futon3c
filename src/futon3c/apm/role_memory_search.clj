@@ -33,6 +33,31 @@
                (keep :pattern-id (:candidates result)))
        (filter string?) distinct sort vec))
 
+(defn withheld-for-authority
+  "The holdout this job must not be served. Empty when the job carries no
+   holdout, so attempts that were never held out are unaffected."
+  [auth]
+  (if (some? (:shelf/holdout auth))
+    (set (filter string? (:shelf/withheld-ids auth)))
+    #{}))
+
+(defn enforce-holdout
+  "Remove withheld memories from a search result before it reaches the role.
+   Detection downstream is not enough: a withheld id the channel hands over
+   has already been read by the time the terminal is validated."
+  [result withheld]
+  (if (empty? withheld)
+    {:result result :excluded []}
+    (let [excluded (->> (concat (keep :memory/id (:content-matches result))
+                                (keep :pattern-id (:candidates result)))
+                        (filter withheld) distinct sort vec)]
+      {:result (-> result
+                   (update :content-matches
+                           #(vec (remove (comp withheld :memory/id) %)))
+                   (update :candidates
+                           #(vec (remove (comp withheld :pattern-id) %))))
+       :excluded excluded})))
+
 (defn search!
   "Execute one bounded read-only query and persist its exact result receipt.
    Identity comes only from the registered role job authority."
@@ -51,8 +76,10 @@
       :else
       (let [trace-id (machine/ledger-digest
                       ["apm-role-memory-search" job-id query bounded-limit])
-            result (*search-fn* {:domain :mathematics} query
-                                {:limit bounded-limit :trace-id trace-id})
+            withheld (withheld-for-authority auth)
+            searched (*search-fn* {:domain :mathematics} query
+                                  {:limit bounded-limit :trace-id trace-id})
+            {:keys [result excluded]} (enforce-holdout searched withheld)
             body {:receipt/type :apm-role-memory-search
                   :receipt/version 1
                   :corpus/scope :reviewed-mathematics
@@ -67,6 +94,9 @@
                   :limit bounded-limit
                   :trace-id trace-id
                   :index-as-of (:index-as-of result)
+                  :shelf/holdout (:shelf/holdout auth)
+                  :holdout/withheld-count (count withheld)
+                  :holdout/excluded-ids excluded
                   :result-ids (result-ids result)
                   :content-matches (:content-matches result)
                   :candidates (:candidates result)}

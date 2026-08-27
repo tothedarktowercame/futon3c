@@ -131,3 +131,50 @@
     (is (:ok accounted))
     (is (= #{proposed} (:proposed-pattern-ids accounted)))
     (is (= :canonical-pattern-reuse-unaccounted (:error/code still-refused)))))
+
+(defn register-holdout! [root job-id withheld]
+  (binding [submission/*submission-root* root]
+    (submission/register!
+     {:submission/token "token" :dispatch/id "dispatch"
+      :agent-id "seat" :frame-id "f48" :problem-id "a98A03"
+      :phase :student-attempt-1 :role :student
+      :shelf/holdout :same-problem :shelf/withheld-ids withheld}
+     {:job-id job-id})))
+
+(deftest search-never-serves-a-withheld-memory
+  (testing "f48/a1: the shelf and cascade withheld an id the search returned"
+    (let [authority-root (temp-dir "role-search-holdout-authority")
+          receipt-root (temp-dir "role-search-holdout-receipts")
+          withheld "e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"
+          search-result {:ok true :index-as-of "index-9"
+                         :content-matches [{:memory/id withheld}
+                                           {:memory/id "unheld-memory"}]
+                         :candidates [{:pattern-id withheld}
+                                      {:pattern-id "math/unheld-pattern"}]}]
+      (is (:ok (register-holdout! authority-root "held-job" [withheld])))
+      (binding [submission/*submission-root* authority-root
+                sut/*receipt-root* receipt-root
+                sut/*search-fn* (fn [_ _ _] search-result)]
+        (let [receipt (:receipt (sut/search! "held-job" "token" "Cantor" 10))]
+          (is (= ["math/unheld-pattern" "unheld-memory"] (:result-ids receipt)))
+          (is (= [withheld] (:holdout/excluded-ids receipt)))
+          (is (= :same-problem (:shelf/holdout receipt)))
+          (is (= 1 (:holdout/withheld-count receipt)))
+          (is (not (contains? (sut/recorded-surfaced-ids-for-job "held-job")
+                              withheld))))))))
+
+(deftest search-without-a-holdout-is-unfiltered
+  (testing "attempts 2 and 3 carry no holdout and must keep every result"
+    (let [authority-root (temp-dir "role-search-nofilter-authority")
+          receipt-root (temp-dir "role-search-nofilter-receipts")
+          search-result {:ok true :index-as-of "index-9"
+                         :content-matches [{:memory/id "any-memory"}]
+                         :candidates []}]
+      (is (:ok (register! authority-root :student "open-job")))
+      (binding [submission/*submission-root* authority-root
+                sut/*receipt-root* receipt-root
+                sut/*search-fn* (fn [_ _ _] search-result)]
+        (let [receipt (:receipt (sut/search! "open-job" "token" "Cantor" 10))]
+          (is (= ["any-memory"] (:result-ids receipt)))
+          (is (= [] (:holdout/excluded-ids receipt)))
+          (is (nil? (:shelf/holdout receipt))))))))

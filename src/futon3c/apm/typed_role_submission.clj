@@ -22,7 +22,11 @@
 (def authority-fields
   #{:job-id :dispatch/id :agent-id :frame-id :problem-id :phase :role
     :attempt-ordinal :submission/attempt :predecessor-job-id
-    :fresh-session-nonce :memory-snapshot})
+    :fresh-session-nonce :memory-snapshot
+    ;; The holdout travels with the job authority so every channel that
+    ;; serves memories can enforce it. Without this the shelf and the
+    ;; cascade withhold an id while the search channel still returns it.
+    :shelf/holdout :shelf/withheld-ids})
 
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
