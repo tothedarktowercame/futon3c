@@ -14,6 +14,8 @@
     (clear-runners!)
     (try (test-fn) (finally (clear-runners!)))))
 
+(defn- with-lock [f] (f))
+
 (deftest tick-persists-running-and-terminal-results
   (let [saved (atom nil)
         persist #(do (reset! saved %) {:ok true})
@@ -42,6 +44,84 @@
     (is (= :failed (:regulator/status @saved)))
     (is (= :failed-invariant
            (get-in @saved [:regulator/last-result :error/code])))))
+
+(deftest claim-is-durable-before-effects-and-cleared-after-completion
+  (let [writes (atom [])
+        result (sut/tick!
+                {:state (sut/initial-state "claimed")
+                 :now-fn (constantly "2026-08-27T12:00:00Z")
+                 :persist-fn #(do (swap! writes conj %) {:ok true})
+                 :tick-state-fn
+                 (fn [claimed]
+                   (is (= :live-regulator-tick-claim
+                          (get-in claimed [:regulator/tick-claim :state/type])))
+                   {:ok true :status :parked})})]
+    (is (:ok result))
+    (is (= 2 (count @writes)))
+    (is (some? (:regulator/tick-claim (first @writes))))
+    (is (nil? (:regulator/tick-claim (second @writes))))
+    (is (= :settled (:regulator/reconciliation (second @writes))))))
+
+(deftest failed-claim-write-blocks-the-effect
+  (let [effects (atom 0)
+        writes (atom 0)
+        result (sut/tick!
+                {:state (sut/initial-state "claim-fails")
+                 :persist-fn (fn [_]
+                               (swap! writes inc)
+                               {:ok false :error/code :disk-full})
+                 :tick-fn #(do (swap! effects inc) {:ok true})})]
+    (is (= :live-regulator-claim-persistence-failed (:error/code result)))
+    (is (= 1 @writes))
+    (is (zero? @effects))))
+
+(deftest failed-completion-write-leaves-the-durable-claim-for-recovery
+  (let [durable (atom nil)
+        writes (atom 0)
+        result (sut/tick!
+                {:state (sut/initial-state "completion-fails")
+                 :tick-fn (constantly {:ok true :status :parked})
+                 :persist-fn
+                 (fn [state]
+                   (if (= 1 (swap! writes inc))
+                     (do (reset! durable state) {:ok true})
+                     {:ok false :error/code :disk-full}))})]
+    (is (= :live-regulator-persistence-failed (:error/code result)))
+    (is (= 2 @writes))
+    (is (= :live-regulator-tick-claim
+           (get-in @durable [:regulator/tick-claim :state/type])))
+    (is (= :claimed (:regulator/reconciliation @durable)))))
+
+(deftest stale-claim-is-reconciled-without-minting-a-successor
+  (let [claim {:state/type :live-regulator-tick-claim
+               :regulator/id "recover" :tick/epoch 7 :tick/ordinal 4
+               :tick/id "recover:7:4" :tick/claimed-at "then"}
+        state (assoc (sut/initial-state "recover")
+                     :regulator/epoch 7 :regulator/ticks 3
+                     :regulator/tick-claim claim)
+        writes (atom [])
+        result (sut/tick! {:state state
+                           :persist-fn #(do (swap! writes conj %) {:ok true})
+                           :tick-state-fn
+                           (fn [claimed]
+                             (is (= :reconciling
+                                    (:regulator/reconciliation claimed)))
+                             {:ok true :status :awaiting-job})})]
+    (is (:ok result))
+    (is (= 1 (count @writes)))
+    (is (= claim (get-in result [:state :regulator/last-completed-tick])))
+    (is (= 4 (get-in result [:state :regulator/ticks])))))
+
+(deftest superseded-runner-epoch-cannot-produce-effects
+  (let [effects (atom 0)
+        writes (atom 0)
+        state (assoc (sut/initial-state "epoch") :regulator/epoch 2)
+        result (sut/tick! {:state state :expected-epoch 1
+                           :persist-fn (fn [_] (swap! writes inc) {:ok true})
+                           :tick-fn (fn [] (swap! effects inc) {:ok true})})]
+    (is (= :live-regulator-epoch-superseded (:error/code result)))
+    (is (zero? @writes))
+    (is (zero? @effects))))
 
 (deftest terminal-recovery-does-not-run-or-repersist
   (let [calls (atom [])
@@ -97,40 +177,39 @@
                           :persist-fn (constantly {:ok true})}))))))
 
 (deftest scheduled-runner-executes-without-an-agent-continuation
-  (let [persisted (promise) saved (atom nil)
+  (let [saved (atom nil)
         result (sut/start!
                 {:regulator-id "scheduled-test"
                  :period-ms 1000
                  :read-fn (constantly nil)
                  :persist-fn #(do (reset! saved %)
-                                  (deliver persisted %)
                                   {:ok true})
+                 :with-tick-lock-fn with-lock
                  :tick-fn (constantly {:ok true :status :frame-complete})})]
     (try
       (is (= :started (:status result)))
-      (is (not= :timeout (deref persisted 2000 :timeout)))
+      (is (not= :timeout (deref (:first-tick result) 2000 :timeout)))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! "scheduled-test")))))
 
 (deftest start-replaces-a-stale-shutdown-runner
   (let [id "stale-runner-test"
         executor (Executors/newSingleThreadScheduledExecutor)
-        persisted (promise)
-        saved (atom nil)]
+        saved (atom (sut/initial-state id))]
     (.shutdown executor)
     (swap! (var-get #'sut/runners)
            assoc id {:executor executor :state (atom (sut/initial-state id))})
     (try
-      (is (= :started
-             (:status
-              (sut/start!
-               {:regulator-id id :period-ms 1000
-                :read-fn (constantly (sut/initial-state id))
-                :persist-fn #(do (reset! saved %)
-                                 (deliver persisted %)
-                                 {:ok true})
-                :tick-fn (constantly {:ok true :status :frame-complete})}))))
-      (is (not= :timeout (deref persisted 2000 :timeout)))
+      (let [started (sut/start!
+                     {:regulator-id id :period-ms 1000
+                      :read-fn #(deref saved)
+                      :persist-fn #(do (reset! saved %) {:ok true})
+                      :with-tick-lock-fn with-lock
+                      :tick-fn (constantly
+                                {:ok true :status :frame-complete})})]
+        (is (= :started (:status started)))
+        (is (not= :timeout
+                  (deref (:first-tick started) 2000 :timeout))))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! id)))))
 
@@ -149,6 +228,7 @@
                   :persist-fn #(do (reset! persisted %)
                                    (deliver ready true)
                                    {:ok true})
+                  :with-tick-lock-fn with-lock
                   :tick-fn #(do (swap! ticks inc)
                                 {:ok true :status :parked})}))]
     (try

@@ -37,7 +37,9 @@
     :else nil))
 
 (defn- immediate-reason [observation now-ms]
-  (cond
+  (let [claimed-at (or (get-in observation [:tick-claim :tick/claimed-at])
+                       (get-in observation [:tick-claim :claimed-at]))]
+    (cond
     (= :failed (get-in observation [:regulator :regulator/status]))
     {:code :regulator-failed}
 
@@ -50,15 +52,14 @@
     (:impossible-transition? observation)
     {:code :impossible-transition :finding (:transition observation)}
 
-    (and (some? (get-in observation [:tick-claim :claimed-at]))
-         (let [claimed-ms (instant-ms
-                           (get-in observation [:tick-claim :claimed-at]))]
+    (and (some? claimed-at)
+         (let [claimed-ms (instant-ms claimed-at)]
            (or (nil? claimed-ms)
                (> (- now-ms claimed-ms) scheduler-claim-max-ms))))
     {:code :scheduler-claim-stale
-     :claimed-at (get-in observation [:tick-claim :claimed-at])}
+     :claimed-at claimed-at}
 
-    :else nil))
+    :else nil)))
 
 (defn evaluate
   "Pure watchdog transition. NOW-MS is injected by the caller.
@@ -201,8 +202,11 @@
                         ;; A failed observation is retried by this independent
                         ;; scheduler; WATCH-FN owns durable error recording.
                         nil)))]
-      (.scheduleWithFixedDelay executor run-one 0 period-ms
-                               TimeUnit/MILLISECONDS)
       (swap! runners assoc watchdog-id executor)
+      ;; Registration is visible before the watched coordinator can run.  The
+      ;; first observation occurs after one period so restart reconciliation
+      ;; gets the same grace as every later interval.
+      (.scheduleWithFixedDelay executor run-one period-ms period-ms
+                               TimeUnit/MILLISECONDS)
       {:ok true :status :started :watchdog/id watchdog-id
        :executor executor})))

@@ -1718,6 +1718,10 @@
         :period-ms (or period-ms live-regulator/default-period-ms)
         :read-fn #(live-preflight-runtime/read-state state-path)
         :persist-fn #(live-preflight-runtime/atomic-persist! state-path %)
+        :with-tick-lock-fn
+        (live-regulator/with-file-tick-lock
+         (Path/of (str state-path ".tick-claim.lock")
+                  (make-array String 0)))
         :tick-fn #(set-alight! continuation)})))))
 
 (defn set-alight-batch!

@@ -343,6 +343,8 @@
                    (:event/id state))}
       :coordinator-enabled? (:coordinator/enabled? entry)
       :regulator state
+      :tick-claim (:regulator/tick-claim state)
+      :reconciliation/status (:regulator/reconciliation state)
       :supervisor/status (when (= :running (:regulator/status state)) :ready)
       :invalid-state? (and (some? state)
                            (not= :live-regulator (:state/type state)))
@@ -400,6 +402,10 @@
                             :read-fn #(persistence/read-state state-path)
                             :persist-fn #(persistence/atomic-persist!
                                           state-path %)
+                            :with-tick-lock-fn
+                            (regulator/with-file-tick-lock
+                             (Path/of (str state-path ".tick-claim.lock")
+                                      (make-array String 0)))
                             :tick-state-fn
                             (fn [state]
                               (if (*watchdog-running-fn*
@@ -456,9 +462,13 @@
   ([registry-path coordinator-id]
    (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])]
      (when entry
-       {:registration entry
-        :runtime (regulator/status coordinator-id)
-        :durable-state (read-edn (:coordinator/state-path entry))}))))
+       (let [durable-state (read-edn (:coordinator/state-path entry))]
+         {:registration entry
+          :runtime (regulator/status coordinator-id)
+          :durable-state durable-state
+          :tick-claim (:regulator/tick-claim durable-state)
+          :reconciliation/status
+          (:regulator/reconciliation durable-state)})))))
 
 (defn- set-enabled! [registry-path coordinator-id enabled? actor reason]
   (let [registry (read-registry registry-path)

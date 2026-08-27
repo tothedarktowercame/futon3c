@@ -21,11 +21,8 @@
     {:registry (str (.resolve root "registry.edn"))
      :state (str (.resolve root "state.edn"))}))
 
-(defn- await-until [pred]
-  (loop [attempt 0]
-    (cond (pred) true
-          (= attempt 150) false
-          :else (do (Thread/sleep 10) (recur (inc attempt))))))
+(defn- await-first-tick [started]
+  (deref (:first-tick started) 2000 {:ok false :error/code :tick-timeout}))
 
 (defn- read-state [path]
   (edn/read-string (slurp path)))
@@ -73,7 +70,7 @@
     (is (:ok (coordinator/register!
               {:registry-path registry :coordinator-id coordinator-id
                :adapter adapter-key :config {} :state-path state
-               :period-ms 10})))
+               :period-ms 100000})))
     (spit state (str (pr-str original) "\n"))
     (try
       (case disruption
@@ -81,9 +78,10 @@
         (require 'futon3c.apm.durable-coordinator :reload)
 
         :process-restart
-        (do (is (:ok (coordinator/start-registered! registry coordinator-id)))
-            (is (await-until #(pos? @reconcile-calls)))
-            (coordinator/stop! coordinator-id))
+        (let [started (coordinator/start-registered! registry coordinator-id)]
+          (is (:ok started))
+          (is (:ok (await-first-tick started)))
+          (coordinator/stop! coordinator-id))
 
         :revision-moved
         (spit state
@@ -101,18 +99,16 @@
             (spit state (str (pr-str original) "\n")))
 
         :duplicate-activation
-        (do (is (:ok (coordinator/start-registered! registry coordinator-id)))
-            (is (await-until #(pos? @reconcile-calls)))
-            (coordinator/stop! coordinator-id))
+        (let [started (coordinator/start-registered! registry coordinator-id)]
+          (is (:ok started))
+          (is (:ok (await-first-tick started)))
+          (coordinator/stop! coordinator-id))
 
         nil)
-      (is (:ok (coordinator/start-registered! registry coordinator-id)))
-      (is (await-until
-           #(if (= :revision-moved disruption)
-              (= :failed (:regulator/status (read-state state)))
-              (> @reconcile-calls
-                 (if (#{:process-restart :duplicate-activation} disruption)
-                   1 0)))))
+      (let [started (coordinator/start-registered! registry coordinator-id)]
+        (is (:ok started))
+        (is (not= :tick-timeout
+                  (:error/code (await-first-tick started)))))
       (let [after (read-state state)]
         {:phase (:fixture/phase after)
          :intent-digest (get-in after [:coordinator/pending-intent :intent/digest])

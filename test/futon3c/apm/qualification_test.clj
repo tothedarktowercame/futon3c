@@ -18,7 +18,7 @@
         declared (->> (:argv command) (drop 2) (partition 2)
                       (map second) set)]
     (is (= (set/difference discovered exclusions) declared))
-    (is (= #{"futon3c.apm.disruption-soak-test"} exclusions))
+    (is (empty? exclusions))
     (is (every? #(not (str/blank? %))
                 (vals (:clojure-qualification/exclusions plan))))
     (is (some #{:qualification-namespace-coverage-incomplete}

@@ -1,6 +1,8 @@
 (ns futon3c.apm.live-regulator
   "Single-flight, non-agentic scheduler for the idempotent live supervisor."
   (:import [java.time Instant]
+           [java.nio.channels FileChannel]
+           [java.nio.file Files Path StandardOpenOption]
            [java.util.concurrent Executors ScheduledExecutorService ThreadFactory
             TimeUnit]
            [java.util.concurrent.atomic AtomicLong]))
@@ -12,19 +14,50 @@
 
 (defn- now [] (str (Instant/now)))
 
-(defn initial-state [regulator-id]
-  {:state/type :live-regulator
-   :regulator/id regulator-id
-   :regulator/status :running
-   :regulator/ticks 0
-   :regulator/updated-at (now)})
+(defn with-file-tick-lock
+  "Return a cross-process single-flight wrapper backed by `claim-path`."
+  [claim-path]
+  (fn [f]
+    (let [^Path path (if (instance? Path claim-path)
+                       claim-path
+                       (Path/of (str claim-path) (make-array String 0)))]
+      (when-let [parent (.getParent path)]
+        (Files/createDirectories
+         parent (make-array java.nio.file.attribute.FileAttribute 0)))
+      (with-open [channel (FileChannel/open
+                           path
+                           (into-array StandardOpenOption
+                                       [StandardOpenOption/CREATE
+                                        StandardOpenOption/WRITE]))
+                  _lock (.lock channel)]
+        (f)))))
+
+(defn initial-state
+  ([regulator-id] (initial-state regulator-id now))
+  ([regulator-id now-fn]
+   {:state/type :live-regulator
+    :regulator/id regulator-id
+    :regulator/status :running
+    :regulator/epoch 0
+    :regulator/ticks 0
+    :regulator/updated-at (now-fn)}))
 
 (defn terminal? [state]
   (contains? terminal-statuses (:regulator/status state)))
 
+(defn- valid-claim? [regulator-id claim]
+  (and (map? claim)
+       (= :live-regulator-tick-claim (:state/type claim))
+       (= regulator-id (:regulator/id claim))
+       (nat-int? (:tick/epoch claim))
+       (pos-int? (:tick/ordinal claim))
+       (string? (:tick/id claim))
+       (string? (:tick/claimed-at claim))))
+
 (defn tick!
-  "Execute one machine-owned supervisor tick and durably classify its result."
-  [{:keys [state tick-fn tick-state-fn persist-fn]}]
+  "Execute one supervisor tick inside a claim persisted before any effect."
+  [{:keys [state tick-fn tick-state-fn persist-fn now-fn expected-epoch]
+    :or {now-fn now}}]
   (cond
     (not (and (map? state) (= :live-regulator (:state/type state))))
     {:ok false :error/code :live-regulator-state-invalid}
@@ -32,10 +65,41 @@
     {:ok false :error/code :live-regulator-provider-missing}
     (terminal? state)
     {:ok true :status (:regulator/status state) :state state}
+    (and (some? expected-epoch)
+         (not= expected-epoch (:regulator/epoch state)))
+    {:ok false :error/code :live-regulator-epoch-superseded
+     :finding {:expected expected-epoch :actual (:regulator/epoch state)}}
     :else
-    (let [result (try (if tick-state-fn
-                        (tick-state-fn state)
-                        (tick-fn))
+    (let [regulator-id (:regulator/id state)
+          prior-claim (:regulator/tick-claim state)
+          invalid-claim? (and prior-claim
+                              (not (valid-claim? regulator-id prior-claim)))
+          claim (or prior-claim
+                    {:state/type :live-regulator-tick-claim
+                     :regulator/id regulator-id
+                     :tick/epoch (or (:regulator/epoch state) 0)
+                     :tick/ordinal (inc (or (:regulator/ticks state) 0))
+                     :tick/id (str regulator-id ":"
+                                   (or (:regulator/epoch state) 0) ":"
+                                   (inc (or (:regulator/ticks state) 0)))
+                     :tick/claimed-at (now-fn)})
+          claimed-state (assoc state
+                               :regulator/tick-claim claim
+                               :regulator/reconciliation
+                               (if prior-claim :reconciling :claimed))
+          claimed (when-not invalid-claim?
+                    (if prior-claim {:ok true} (persist-fn claimed-state)))]
+      (cond
+        invalid-claim?
+        {:ok false :error/code :live-regulator-tick-claim-invalid
+         :finding prior-claim}
+        (not (:ok claimed))
+        {:ok false :error/code :live-regulator-claim-persistence-failed
+         :finding claimed}
+        :else
+        (let [result (try (if tick-state-fn
+                            (tick-state-fn claimed-state)
+                            (tick-fn))
                       (catch Throwable t
                         {:ok false :error/code :live-regulator-tick-threw
                          :exception/class (.getName (class t))
@@ -44,19 +108,22 @@
                    (and (:ok result) (= :frame-complete (:status result))) :complete
                    (:ok result) :running
                    :else :failed)
-          next-state (-> state
+          next-state (-> claimed-state
                          (merge (:regulator/state-updates result))
+                         (dissoc :regulator/tick-claim)
                          (assoc :regulator/status status
-                                :regulator/ticks (inc (:regulator/ticks state))
-                                :regulator/updated-at (now)
+                                :regulator/ticks (:tick/ordinal claim)
+                                :regulator/updated-at (now-fn)
+                                :regulator/reconciliation :settled
+                                :regulator/last-completed-tick claim
                                 :regulator/last-result
                                 (dissoc result :regulator/state-updates)))
           persisted (persist-fn next-state)]
-      (if (:ok persisted)
-        {:ok (not= :failed status) :status status :state next-state
-         :result result}
-        {:ok false :error/code :live-regulator-persistence-failed
-         :finding persisted}))))
+          (if (:ok persisted)
+            {:ok (not= :failed status) :status status :state next-state
+             :result result}
+            {:ok false :error/code :live-regulator-persistence-failed
+             :claim claim :finding persisted}))))))
 
 (defn status [regulator-id]
   (some-> (get @runners regulator-id) :state deref))
@@ -130,12 +197,13 @@
 
 (defn start!
   "Start an idempotent single-thread regulator, recovering durable state."
-  [{:keys [regulator-id read-fn persist-fn tick-fn tick-state-fn period-ms]
+  [{:keys [regulator-id read-fn persist-fn tick-fn tick-state-fn period-ms
+           with-tick-lock-fn now-fn]
     :or {period-ms default-period-ms}}]
   (cond
     (not (and (string? regulator-id) (not-empty regulator-id)))
     {:ok false :error/code :live-regulator-id-invalid}
-    (not (and (fn? read-fn) (fn? persist-fn)
+    (not (and (fn? read-fn) (fn? persist-fn) (fn? with-tick-lock-fn)
               (or (fn? tick-fn) (fn? tick-state-fn))))
     {:ok false :error/code :live-regulator-provider-missing}
     (not (pos-int? period-ms))
@@ -152,10 +220,37 @@
       (stop! regulator-id)
       (start! {:regulator-id regulator-id :read-fn read-fn
                :persist-fn persist-fn :tick-fn tick-fn
-               :tick-state-fn tick-state-fn :period-ms period-ms}))
+               :tick-state-fn tick-state-fn :period-ms period-ms
+               :with-tick-lock-fn with-tick-lock-fn :now-fn now-fn}))
     :else
-    (let [recovered (or (read-fn) (initial-state regulator-id))]
+    (let [prepared
+          (with-tick-lock-fn
+            (fn []
+              (let [recovered (or (read-fn)
+                                  (initial-state regulator-id (or now-fn now)))]
+                (cond
+                  (not= regulator-id (:regulator/id recovered))
+                  {:ok false :error/code :live-regulator-id-mismatch
+                   :finding {:expected regulator-id
+                             :actual (:regulator/id recovered)}}
+                  (terminal? recovered) {:ok true :state recovered}
+                  :else
+                  (let [next-state
+                        (if (:regulator/tick-claim recovered)
+                          (assoc recovered :regulator/reconciliation :required)
+                          (-> recovered
+                              (update :regulator/epoch (fnil inc 0))
+                              (assoc :regulator/reconciliation :ready
+                                     :regulator/updated-at ((or now-fn now)))))
+                        persisted (persist-fn next-state)]
+                    (if (:ok persisted)
+                      {:ok true :state next-state}
+                      {:ok false
+                       :error/code :live-regulator-start-persistence-failed
+                       :finding persisted}))))))
+          recovered (:state prepared)]
       (cond
+        (not (:ok prepared)) prepared
         (not= regulator-id (:regulator/id recovered))
         {:ok false :error/code :live-regulator-id-mismatch
          :finding {:expected regulator-id :actual (:regulator/id recovered)}}
@@ -163,6 +258,7 @@
         {:ok true :status (:regulator/status recovered) :state recovered}
         :else
         (let [state (atom recovered)
+              first-tick (promise)
               executor (Executors/newSingleThreadScheduledExecutor
                         (reify ThreadFactory
                           (newThread [_ runnable]
@@ -171,15 +267,23 @@
                                                 (.incrementAndGet thread-seq)))
                               (.setDaemon true)))))
               run-one (fn []
-                        (let [result (tick! {:state @state :tick-fn tick-fn
-                                            :tick-state-fn tick-state-fn
-                                            :persist-fn persist-fn})]
+                        (let [result
+                              (with-tick-lock-fn
+                                #(tick! {:state (or (read-fn) @state)
+                                         :tick-fn tick-fn
+                                         :tick-state-fn tick-state-fn
+                                         :persist-fn persist-fn
+                                         :expected-epoch
+                                         (:regulator/epoch recovered)
+                                         :now-fn (or now-fn now)}))]
                           (when-let [next-state (:state result)]
                             (reset! state next-state))
+                          (deliver first-tick result)
                           (when (or (not (:ok result)) (terminal? @state))
                             (stop! regulator-id))))]
           (swap! runners assoc regulator-id {:executor executor :state state})
           (.scheduleWithFixedDelay ^ScheduledExecutorService executor
                                    ^Runnable run-one 0 period-ms
                                    TimeUnit/MILLISECONDS)
-          {:ok true :status :started :state recovered})))))
+          {:ok true :status :started :state recovered
+           :first-tick first-tick})))))

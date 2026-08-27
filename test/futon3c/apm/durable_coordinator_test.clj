@@ -100,6 +100,25 @@
         (is (= before (sut/read-registry registry)))
         (is (zero? @started))))))
 
+(deftest status-reports-the-durable-tick-claim-and-reconciliation
+  (let [{:keys [registry state-a]} (temp-paths)
+        claim {:state/type :live-regulator-tick-claim
+               :regulator/id "c:status" :tick/epoch 3 :tick/ordinal 9
+               :tick/id "c:status:3:9" :tick/claimed-at "claimed"}]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:status"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str (assoc (regulator/initial-state "c:status")
+                                     :regulator/tick-claim claim
+                                     :regulator/reconciliation :required))
+                       "\n"))
+    (let [observed (sut/status registry "c:status")]
+      (is (= claim (:tick-claim observed)))
+      (is (= :required (:reconciliation/status observed)))
+      (is (= claim (get-in observed
+                           [:durable-state :regulator/tick-claim]))))))
+
 (deftest coordinator-start-arms-independent-watchdog
   (let [{:keys [registry state-a]} (temp-paths)
         armed (atom [])]
