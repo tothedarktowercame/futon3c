@@ -1,7 +1,8 @@
 (ns futon3c.apm.durable-coordinator-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
-            [futon3c.apm.durable-coordinator :as sut])
+            [futon3c.apm.durable-coordinator :as sut]
+            [futon3c.apm.live-regulator :as regulator])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -22,6 +23,93 @@
   (let [file (java.io.File. path)]
     (when (.isFile file)
       (some-> path slurp edn/read-string :regulator/status))))
+
+(defn- registered-entry [registry coordinator-id]
+  (get-in (sut/read-registry registry) [:entries coordinator-id]))
+
+(deftest coordinator-start-arms-independent-watchdog
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom [])]
+    (sut/register-adapter!
+     :test/watchdog
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:watch"
+                             :adapter :test/watchdog :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (swap! armed conj request)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (constantly true)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:watch"))))
+        (is (= ["semantic-progress:c:watch"]
+               (mapv :watchdog-id @armed)))
+        (is (fn? (:watch-fn (first @armed))))))))
+
+(deftest durable-stop-disarms-watchdog
+  (let [{:keys [registry state-a]} (temp-paths)
+        stopped (atom [])]
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:watch"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-stop-fn*
+              (fn [id]
+                (swap! stopped conj id)
+                {:ok true :status :stopped})]
+      (with-redefs [regulator/stop! (fn [_] {:ok true :status :stopped})]
+        (let [result (sut/stop! registry "c:watch")]
+          (is (:durably-disabled? result))
+          (is (= ["semantic-progress:c:watch"] @stopped)))))))
+
+(deftest running-without-live-watchdog-is-durably-halted
+  (let [{:keys [registry state-a]} (temp-paths)
+        stopped (atom [])]
+    (sut/register-adapter!
+     :test/unwatched
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:bare"
+                             :adapter :test/unwatched :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn* (fn [_] {:ok true :status :started})
+              sut/*watchdog-running-fn* (constantly false)
+              sut/*watchdog-stop-fn*
+              (fn [id] (swap! stopped conj id) {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    regulator/stop! (fn [_] {:ok true :status :stopped})]
+        (let [result (sut/start-registered! registry "c:bare")]
+          (is (= :durable-coordinator-running-unwatched
+                 (:error/code result)))
+          (is (false? (get-in (sut/read-registry registry)
+                              [:entries "c:bare" :coordinator/enabled?])))
+          (is (= ["semantic-progress:c:bare"] @stopped)))))))
+
+(deftest recovery-rearms-watchdog-and-disabled-entry-does-not-arm
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        armed (atom [])]
+    (sut/register-adapter!
+     :test/rearm
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (doseq [[id state] [["c:enabled" state-a] ["c:disabled" state-b]]]
+      (is (:ok (sut/register! {:registry-path registry :coordinator-id id
+                               :adapter :test/rearm :config {}
+                               :state-path state :period-ms 10}))))
+    (is (:durably-disabled? (sut/stop! registry "c:disabled")))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (swap! armed conj (:watchdog-id request))
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (constantly true)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :not-running})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (is (:ok (sut/recover-all! registry)))
+        (is (:ok (sut/recover-all! registry)))
+        (is (= ["semantic-progress:c:enabled"
+                "semantic-progress:c:enabled"] @armed))))))
 
 (deftest activation-intent-is-persisted-before-reconcile
   (let [{:keys [registry state-a]} (temp-paths)

@@ -7,7 +7,8 @@
    content-addressed; startup never infers coordinators from directories."
   (:require [clojure.edn :as edn]
             [futon3c.apm.live-preflight-runtime :as persistence]
-            [futon3c.apm.live-regulator :as regulator])
+            [futon3c.apm.live-regulator :as regulator]
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.charset StandardCharsets]
            [java.nio.file Files LinkOption Path]
            [java.security MessageDigest]))
@@ -17,6 +18,11 @@
 (def entry-type :durable-coordinator-registration)
 (def intent-type :durable-coordinator-intent)
 (defonce ^:private adapters (atom {}))
+(def ^:dynamic *watchdog-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *watchdog-start-fn* watchdog/start!)
+(def ^:dynamic *watchdog-stop-fn* watchdog/stop!)
+(def ^:dynamic *watchdog-running-fn* watchdog/running?)
+(declare stop!)
 
 (defn- canonical [value]
   (cond
@@ -271,12 +277,71 @@
             {:ok false :error/code :durable-coordinator-intent-invalid}))
         :else decision))))
 
-(defn start-entry! [entry]
+(defn- watchdog-id [coordinator-id]
+  (str "semantic-progress:" coordinator-id))
+
+(defn- watchdog-state-path [entry]
+  (Path/of (str (:coordinator/state-path entry) ".watchdog.edn")
+           (make-array String 0)))
+
+(defn- intent-deadline [intent]
+  (or (:dispatch/deadline intent)
+      (get-in intent [:dispatch/parameters :deadline])
+      (get-in intent [:dispatch/parameters :deadline-ms])))
+
+(defn watchdog-observation [entry state]
+  (let [intent (:coordinator/pending-intent state)
+        result (:regulator/last-result state)]
+    (cond->
+     {:cursor {:frame-id (or (:frame-id state)
+                             (:frame/id state)
+                             (:coordinator/problem-id entry))
+               :phase (:phase state)
+               :attempt-ordinal (or (:attempt-ordinal state)
+                                    (:submission/attempt state))
+               :obligation/status (or (:obligation/status state)
+                                      (:status result))
+               :active-job-id (:job-id intent)
+               :last-committed-event-id
+               (or (:last-committed-event-id state)
+                   (:event/id state))}
+      :regulator state
+      :supervisor/status (when (= :running (:regulator/status state)) :ready)
+      :invalid-state? (and (some? state)
+                           (not= :live-regulator (:state/type state)))
+      :failed-launch-audit?
+      (= :live-supervisor-launch-audit-failed (:error/code result))}
+      intent (assoc :awaiting-job {:job-id (:job-id intent)
+                                   :deadline (intent-deadline intent)}))))
+
+(defn- arm-watchdog! [registry-path entry]
+  (let [id (watchdog-id (:coordinator/id entry))
+        state-path (Path/of (:coordinator/state-path entry)
+                            (make-array String 0))
+        watch-path (watchdog-state-path entry)
+        watch-fn #(watchdog/check!
+                   {:watch-state (persistence/read-state watch-path)
+                    :observation (watchdog-observation
+                                  entry (persistence/read-state state-path))
+                    :now-ms (*watchdog-now-fn*)
+                    :registry-path registry-path
+                    :coordinator-id (:coordinator/id entry)
+                    :persist-fn (fn [state]
+                                  (persistence/atomic-persist! watch-path
+                                                               state))})]
+    (*watchdog-start-fn* {:watchdog-id id :watch-fn watch-fn})))
+
+(defn start-entry!
+  ([entry]
+   {:ok false :error/code :durable-coordinator-watchdog-authority-missing
+    :finding {:coordinator/id (:coordinator/id entry)}})
+  ([registry-path entry]
   (cond
     (not (valid-entry? entry))
     {:ok false :error/code :durable-coordinator-registration-invalid}
     (not (:coordinator/enabled? entry))
-    {:ok true :status :disabled :coordinator/id (:coordinator/id entry)}
+    (do (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
+        {:ok true :status :disabled :coordinator/id (:coordinator/id entry)})
     (nil? (get @adapters (:coordinator/adapter entry)))
     {:ok false :error/code :durable-coordinator-adapter-unavailable
      :finding {:adapter (:coordinator/adapter entry)}}
@@ -287,14 +352,43 @@
                    (fn? (:reconcile-fn adapter)))
         {:ok false :error/code :durable-coordinator-adapter-provider-invalid}
         (let [state-path (Path/of (:coordinator/state-path entry)
-                                  (make-array String 0))]
-          (regulator/start!
-           {:regulator-id (:coordinator/id entry)
-            :period-ms (:coordinator/period-ms entry)
-            :read-fn #(persistence/read-state state-path)
-            :persist-fn #(persistence/atomic-persist! state-path %)
-            :tick-state-fn #(coordinator-tick (:coordinator/id entry)
-                                               adapter %)}))))))
+                                  (make-array String 0))
+              armed (arm-watchdog! registry-path entry)]
+          (if-not (:ok armed)
+            {:ok false :error/code :durable-coordinator-watchdog-arm-failed
+             :finding armed}
+            (let [started (regulator/start!
+                           {:regulator-id (:coordinator/id entry)
+                            :period-ms (:coordinator/period-ms entry)
+                            :read-fn #(persistence/read-state state-path)
+                            :persist-fn #(persistence/atomic-persist!
+                                          state-path %)
+                            :tick-state-fn
+                            (fn [state]
+                              (if (*watchdog-running-fn*
+                                   (watchdog-id (:coordinator/id entry)))
+                                (coordinator-tick (:coordinator/id entry)
+                                                  adapter state)
+                                (let [halted (stop!
+                                              registry-path
+                                              (:coordinator/id entry))]
+                                  {:ok false
+                                   :error/code
+                                   :durable-coordinator-running-unwatched
+                                   :finding {:halted halted}})))})
+                  watched? (*watchdog-running-fn*
+                            (watchdog-id (:coordinator/id entry)))]
+              (cond
+                (not (:ok started))
+                (do (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
+                    started)
+                (not watched?)
+                (let [halted (stop! registry-path (:coordinator/id entry))]
+                  {:ok false
+                   :error/code :durable-coordinator-running-unwatched
+                   :finding {:halted halted}})
+                :else
+                (assoc started :watchdog armed))))))))))
 
 (defn start-registered!
   "Start one coordinator solely from its typed registry entry."
@@ -305,7 +399,8 @@
       {:ok false :error/code :durable-coordinator-registry-invalid}
       (nil? (get-in registry [:entries coordinator-id]))
       {:ok false :error/code :durable-coordinator-not-registered}
-      :else (start-entry! (get-in registry [:entries coordinator-id])))))
+      :else (start-entry! registry-path
+                          (get-in registry [:entries coordinator-id])))))
 
 (defn recover-all!
   "Start every typed registry entry. No filesystem discovery is performed."
@@ -314,7 +409,8 @@
     (if-not (valid-registry? registry)
       {:ok false :error/code :durable-coordinator-registry-invalid}
       (let [results (into (sorted-map)
-                          (map (fn [[id entry]] [id (start-entry! entry)]))
+                          (map (fn [[id entry]]
+                                 [id (start-entry! registry-path entry)]))
                           (:entries registry))]
         {:ok (every? :ok (vals results)) :results results}))))
 
@@ -348,7 +444,11 @@
   ([registry-path coordinator-id]
    (let [disabled (set-enabled! registry-path coordinator-id false)]
      (if (:ok disabled)
-       (assoc (regulator/stop! coordinator-id) :durably-disabled? true)
+       (let [watchdog-stopped (*watchdog-stop-fn*
+                               (watchdog-id coordinator-id))]
+         (assoc (regulator/stop! coordinator-id)
+                :durably-disabled? true
+                :watchdog watchdog-stopped))
        disabled))))
 
 (defn resume!

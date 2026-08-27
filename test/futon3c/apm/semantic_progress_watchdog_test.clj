@@ -122,3 +122,27 @@
       (finally
         (sut/stop! id)
         (.shutdownNow watchdog)))))
+
+(deftest start-replaces-stale-watchdog-executor
+  (let [first-executor (Executors/newSingleThreadScheduledExecutor)
+        second-executor (Executors/newSingleThreadScheduledExecutor)
+        executors (atom [first-executor second-executor])
+        id (str "watchdog-rearm-" (random-uuid))
+        start #(sut/start! {:watchdog-id id
+                            :watch-fn (fn [] nil)
+                            :period-ms 60000
+                            :executor-fn (fn []
+                                           (let [executor (first @executors)]
+                                             (swap! executors subvec 1)
+                                             executor))})]
+    (try
+      (is (= :started (:status (start))))
+      (.shutdownNow first-executor)
+      (let [rearmed (start)]
+        (is (= :started (:status rearmed)))
+        (is (identical? second-executor (:executor rearmed)))
+        (is (sut/running? id)))
+      (finally
+        (sut/stop! id)
+        (.shutdownNow first-executor)
+        (.shutdownNow second-executor)))))

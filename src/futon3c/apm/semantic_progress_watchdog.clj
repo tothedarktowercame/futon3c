@@ -1,6 +1,5 @@
 (ns futon3c.apm.semantic-progress-watchdog
   "Independent liveness observer for one durable APM coordinator."
-  (:require [futon3c.apm.durable-coordinator :as durable])
   (:import [java.time Instant]
            [java.util.concurrent Executors ScheduledExecutorService
             ThreadFactory TimeUnit]
@@ -111,7 +110,9 @@
    tests."
   [{:keys [watch-state observation now-ms registry-path coordinator-id
            stop-fn persist-fn]
-    :or {stop-fn durable/stop!}}]
+    :or {stop-fn (fn [path id]
+                   ((requiring-resolve
+                     'futon3c.apm.durable-coordinator/stop!) path id))}}]
   (let [decision (evaluate watch-state observation now-ms)]
     (if (= :halt (:status decision))
       (let [stopped (stop-fn registry-path coordinator-id)
@@ -138,6 +139,11 @@
       {:ok true :status :stopped :watchdog/id watchdog-id})
     {:ok true :status :not-running :watchdog/id watchdog-id}))
 
+(defn running? [watchdog-id]
+  (when-let [^ScheduledExecutorService executor (get @runners watchdog-id)]
+    (and (not (.isShutdown executor))
+         (not (.isTerminated executor)))))
+
 (defn start!
   "Schedule WATCH-FN on a dedicated executor. The watched runner/executor is
    deliberately not accepted, so its death cannot stop this observer."
@@ -151,8 +157,13 @@
     {:ok false :error/code :semantic-progress-watchdog-provider-missing}
     (not (pos-int? period-ms))
     {:ok false :error/code :semantic-progress-watchdog-period-invalid}
-    (contains? @runners watchdog-id)
+    (and (contains? @runners watchdog-id) (running? watchdog-id))
     {:ok true :status :already-running :watchdog/id watchdog-id}
+    (contains? @runners watchdog-id)
+    (do
+      (stop! watchdog-id)
+      (start! {:watchdog-id watchdog-id :watch-fn watch-fn
+               :period-ms period-ms :executor-fn executor-fn}))
     :else
     (let [^ScheduledExecutorService executor (executor-fn)
           run-one (fn []
