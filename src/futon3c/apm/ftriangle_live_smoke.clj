@@ -7,9 +7,15 @@
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.countdown-control :as countdown-control]
+            [futon3c.apm.countdown-manifest :as countdown-manifest]
+            [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.generated-contract :as generated-contract]
+            [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-job-driver :as job-driver]
+            [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.memory-access-gate :as memory-gate]
-            [futon3c.apm.semantic-progress-watchdog :as watchdog]))
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
+  (:import [java.nio.file Path]))
 
 (def campaign-id "ftriangle-live-smoke-v1")
 (def frame-id "ft1")
@@ -133,18 +139,16 @@
   (let [ready (preflight (or checks (default-checks)))]
     (if-not (:ok ready)
       ready
-      (loop [remaining traversal-order evidence {:preflight-admission ready}]
+      (loop [remaining traversal-order evidence {}]
         (if-let [stage (first remaining)]
-          (if (= :preflight-admission stage)
-            (recur (rest remaining) evidence)
-            (if-let [effect (get effects stage)]
-              (let [result (effect evidence)]
-                (if (:ok result)
-                  (recur (rest remaining)
-                         (assoc evidence stage (:evidence result)))
-                  (classify-failure stage result)))
-              (classify-failure stage
-                                {:error/code :ftriangle-live-effect-missing})))
+          (if-let [effect (get effects stage)]
+            (let [result (effect evidence)]
+              (if (:ok result)
+                (recur (rest remaining)
+                       (assoc evidence stage (:evidence result)))
+                (classify-failure stage result)))
+            (classify-failure stage
+                              {:error/code :ftriangle-live-effect-missing}))
           (let [missing (into [] (remove #(contains? evidence %)) traversal-order)
                 closure (:combined-trace-closure evidence)
                 valid-close? (campaign-trace/valid-combined-trace-receipt?
@@ -169,3 +173,172 @@
                    :frame/id frame-id :evidence evidence
                    :persisted persisted}
                   (classify-failure :ledger-evidence persisted))))))))))
+
+(defn- smoke-path [root relative]
+  (.resolve (Path/of (str root) (make-array String 0)) relative))
+
+(defn wired-effects
+  "Construct the six live effects from the same APIs used by production.
+  Construction has no effects. CONFIG must name F△'s isolated manifest,
+  contract, dispatch authority, watchdog state, and root."
+  [{:keys [manifest contract agency-base dispatch-request watchdog-state-path
+           smoke-root request-fn await-options]
+    :or {agency-base "http://127.0.0.1:7070"
+         smoke-root ledger-root
+         request-fn runtime/http-json
+         await-options {:max-polls 60 :poll-ms 500}}}]
+  (let [fixture (read-fixture)
+        dispatch-evidence (atom nil)
+        repair-state (atom nil)
+        watchdog-evidence (atom nil)
+        root (str smoke-root)]
+    (when-not (= campaign-id (:campaign/id fixture))
+      (throw (ex-info "Ftriangle fixture campaign mismatch"
+                      {:error/code :ftriangle-isolation-invalid})))
+    {:preflight-admission
+     (fn [_]
+       (let [manifest-check (countdown-manifest/validate manifest)
+             result (admission/validate
+                     {:countdown-manifest manifest :cycle-contract contract
+                      :frame-id frame-id :manifest-check manifest-check})]
+         (if (:ok result)
+           {:ok true :evidence result}
+           (assoc result :error/code :ftriangle-admission-refused))))
+
+     :dispatch-terminal
+     (fn [_]
+       (let [request (merge {:surface "emacs-repl" :caller campaign-id
+                             :timeout-ms 30000}
+                            dispatch-request)
+             announced (job-port/announce! request-fn agency-base request)]
+         (if-not (:ok announced)
+           (assoc announced :error/component :transport)
+           (let [request (assoc request :job-id (:job-id announced))
+                 activated (job-port/activate! request-fn agency-base request)]
+             (if-not (:ok activated)
+               (assoc activated :error/component :transport)
+               (let [terminal (job-port/await-terminal!
+                               request-fn agency-base
+                               {:job-id (:job-id announced)
+                                :activation-accepted? (:accepted? activated)}
+                               await-options)
+                     evidence {:request request :announced announced
+                               :activated activated :terminal terminal}]
+                 (reset! dispatch-evidence evidence)
+                 (if (:ok terminal)
+                   {:ok true :evidence evidence}
+                   terminal)))))))
+
+     :holdout-exclusion
+     (fn [_]
+       (let [authority {:problem-id (:problem/id fixture)
+                        :shelf/holdout :same-problem}
+             decision (memory-gate/enforce-carrier
+                       :shelf-materialization authority (:shelf fixture))
+             receipt {:receipt/type :ftriangle-holdout
+                      :receipt/excluded (:excluded decision)
+                      :receipt/decision-evidence (:evidence decision)}]
+         (if (seq (:excluded decision))
+           {:ok true :evidence {:receipt receipt :decision decision}}
+           {:ok false :error/code :ftriangle-holdout-evidence-missing})))
+
+     :watchdog-progress
+     (fn [_]
+       (let [state (runtime/read-state watchdog-state-path)
+             observation (:watchdog/trace-observation state)]
+         (reset! watchdog-evidence state)
+         (if (and (= :watching (:watchdog/status state))
+                  (true? (:semantic-cursor-advanced? observation)))
+           {:ok true :evidence {:state state :observation observation}}
+           {:ok false :error/code :ftriangle-watchdog-progress-absent
+            :watchdog/state state})))
+
+     :forced-repair-durability
+     (fn [_]
+       (let [{:keys [request announced terminal]} @dispatch-evidence
+             job (get-in terminal [:dispatch-observation :terminal])
+             collection-id (str (:job-id announced) "-forced-invalid")
+             initial-state
+             {:state/type :live-job-dispatched :request request
+              :active-request request
+              :ticket {:ticket/id (:job-id announced)
+                       :job-id (:job-id announced)}
+              :activation/accepted? true
+              :terminal-collection
+              {:evidence {:collection/id collection-id}
+               :submission {:payload {:evidence (:report job)}}}}
+             persist-path (smoke-path root "live/forced-repair.edn")
+             persisted (atom initial-state)
+             persist-fn (fn [state]
+                          (let [result (runtime/atomic-persist!
+                                        persist-path state)]
+                            (when (:ok result) (reset! persisted state))
+                            result))
+             result
+             (job-driver/drive!
+              {:request request :state initial-state
+               :announce-fn #(job-port/announce! request-fn agency-base %)
+               :activate-fn
+               (fn [repair ticket]
+                 (job-port/activate! request-fn agency-base
+                                     (assoc repair :job-id (:job-id ticket))))
+               :job-fn (constantly job) :persist-fn persist-fn
+               :terminal-validator
+               (constantly {:ok false
+                            :error/code :ftriangle-deliberate-invalid-terminal
+                            :findings [:ftriangle-forced-repair]})
+               :receipt-provider
+               (constantly {:ok false :error/code :must-not-certify-invalid})
+               :terminal-repair-request-fn
+               (fn [original _ticket _job failure]
+                 {:ok true
+                  :request (assoc original
+                                  :dispatch/id
+                                  (str (:dispatch/id original) "-repair-1")
+                                  :repair/attempt 1
+                                  :repair/findings (:findings failure))})
+               :terminal-budget-config {:collection-attempts 1
+                                        :repair-attempts 1}})
+             archived (first (:superseded-terminals @persisted))]
+         (reset! repair-state @persisted)
+         (if (and (:ok result) archived
+                  (= (:job-id job) (get-in archived [:job :job-id]))
+                  (get-in archived [:terminal-collection :evidence
+                                    :collection/id]))
+           {:ok true :evidence {:driver result :state @persisted
+                                :predecessor archived}}
+           {:ok false :error/code :ftriangle-predecessor-not-durable
+            :driver result :state @persisted})))
+
+     :combined-trace-closure
+     (fn [_]
+       (let [terminal (get-in @dispatch-evidence
+                              [:terminal :dispatch-observation :terminal])
+             documents [@watchdog-evidence @repair-state terminal]
+             issued (campaign-trace/issue-combined-trace-receipt!
+                     {:certificate {:receipt/id "ftriangle-close"
+                                    :receipt/frame-id frame-id}
+                      :durable-documents documents
+                      :trace-path (smoke-path
+                                   root "terminal/combined-trace.json")})]
+         (if (:ok issued)
+           {:ok true :evidence {:certificate (:certificate issued)
+                                :trace (:trace issued)}}
+           issued)))}))
+
+(defn run-live!
+  "The sole live F△ call. It refuses a non-isolated root and otherwise uses
+  the wired effects. Calling this function may dispatch agents; preflight does
+  not."
+  [{:keys [smoke-root] :as config}]
+  (let [root (str (or smoke-root ledger-root))]
+    (if (or (= root "data/apm-campaigns/jit-all-open-v2")
+            (not (.contains root "ftriangle-live-smoke")))
+      {:ok false :error/code :ftriangle-isolation-invalid :root root}
+      (execute!
+       {:checks (default-checks {:smoke-root root})
+        :effects (wired-effects (assoc config :smoke-root root))
+        :persist-ledger-fn
+        (fn [evidence]
+          (runtime/atomic-persist!
+           (smoke-path root "ledger/evidence.edn") evidence))}))))
