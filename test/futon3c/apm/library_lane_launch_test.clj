@@ -46,6 +46,12 @@
                                    :classification "partial"}))
     (write! repo (str "problems/" problem-id "/lean/Main.lean")
             "theorem fixture_target : True := by\n  sorry\n")
+    ;; workspace-lifecycle/validate requires a readable lake-manifest.json in
+    ;; the workspace root (:workspace-substrate-manifest-missing). A workspace
+    ;; is a worktree of this corpus, so the manifest must be committed here —
+    ;; as it is in a real Lean project, beside the lakefile — not only in the
+    ;; substrate directory above.
+    (write! repo "lake-manifest.json" "{\"version\": \"1.1.0\", \"packages\": []}\n")
     (write! repo ".gitignore" ".lake\n")
     (git repo "init" "-q" "-b" "trunk")
     (git repo "config" "user.email" "lane-launch@example.test")

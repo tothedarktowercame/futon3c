@@ -40,7 +40,13 @@
                     request-fn "http://handler"
                     {:job-id (:job-id announced)
                      :activation-accepted? (:accepted? activated)}
-                    {:max-polls 100 :poll-ms 1})]
+                    ;; The original 100 polls x 1ms gave the async dispatch a
+                    ;; 100ms budget, which it does not meet: the handler had
+                    ;; simply not run yet when the assertions fired, so runs
+                    ;; was 0 and the terminal was absent. This is a real-time
+                    ;; budget, not a synchronisation point — kept generous so
+                    ;; it fails only when dispatch is genuinely broken.
+                    {:max-polls 200 :poll-ms 25})]
         (is (:accepted? activated))
         (is (:ok terminal))
         (is (= 1 @runs))
