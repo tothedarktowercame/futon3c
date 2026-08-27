@@ -1,2 +1,2 @@
-{"futon3c.apm.disruption-soak-test"
- "Reports defect A5: coordinator ticks have no durable claim spanning effects through durable completion. It remains red until that transaction boundary exists; see TN-codex-pre-Ftriangle-repairs.md."}
+{"futon3c.apm.qualification-test"
+ "Consumes the gate's own verdict: committed-contract-and-qualification-are-one-coherent-state asserts the committed qualification report is valid, and the report is written by this gate. A test that reads the gate's output cannot run inside the gate without deadlocking it — the report can only become :ok true if the test passes, and the test can only pass if the report is already :ok true. It still runs in ordinary test runs; it is excluded only from the gate it validates."}

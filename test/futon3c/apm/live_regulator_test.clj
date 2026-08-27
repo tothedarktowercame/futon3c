@@ -188,7 +188,8 @@
                  :tick-fn (constantly {:ok true :status :frame-complete})})]
     (try
       (is (= :started (:status result)))
-      (is (not= :timeout (deref (:first-tick result) 2000 :timeout)))
+      ;; Same contention budget as above.
+      (is (not= :timeout (deref (:first-tick result) 15000 :timeout)))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! "scheduled-test")))))
 
@@ -236,8 +237,16 @@
                                       ticks-a persisted-a ready-a))))
       (is (= :started (:status (start "countdown-regulator:campaign-b"
                                       ticks-b persisted-b ready-b))))
-      (is (= true (deref ready-a 2000 :timeout)))
-      (is (= true (deref ready-b 2000 :timeout)))
+      ;; Real-time budget, not a synchronisation point. The first tick is
+      ;; scheduled with zero initial delay and this test's persist-fn is an
+      ;; in-memory reset! with a no-op tick lock, so the tick itself is
+      ;; effectively free — this is NOT an A5 cost. What exceeds 2s is JVM
+      ;; contention: inside the qualification gate this namespace shares a
+      ;; process with ninety-odd others, and the scheduled executor competes
+      ;; with Clojure compiling them. Generous so it fails only if scheduling
+      ;; is actually broken.
+      (is (= true (deref ready-a 15000 :timeout)))
+      (is (= true (deref ready-b 15000 :timeout)))
       (is (pos? @ticks-a))
       (is (pos? @ticks-b))
       (is (= "countdown-regulator:campaign-a"

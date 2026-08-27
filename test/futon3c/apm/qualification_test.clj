@@ -18,7 +18,13 @@
         declared (->> (:argv command) (drop 2) (partition 2)
                       (map second) set)]
     (is (= (set/difference discovered exclusions) declared))
-    (is (empty? exclusions))
+    ;; Exclusions are permitted but must be real and justified. Emptiness is
+    ;; not the property: qualification-test itself must be excluded, because it
+    ;; asserts on the report this gate writes and would deadlock the gate. What
+    ;; must hold is that no exclusion names a namespace that does not exist —
+    ;; a phantom entry silently narrows coverage, which is the defect this
+    ;; derived inventory exists to prevent.
+    (is (set/subset? exclusions discovered))
     (is (every? #(not (str/blank? %))
                 (vals (:clojure-qualification/exclusions plan))))
     (is (some #{:qualification-namespace-coverage-incomplete}
