@@ -8,7 +8,7 @@
  :agency-base "http://127.0.0.1:7070"
  :dispatch-request
  {:agent-id "codex-1"
-  :job-id "ftriangle-live-smoke-v1-ft1-run-2"
+  :job-id "ftriangle-live-smoke-v1-ft1-run-3"
   :surface "bell"
   :prompt
   "F△ isolated smoke task. Prove the Lean theorem apm_ftriangle_pythagoras: for real a=3 and b=4, a^2+b^2=25. Return a concise terminal report. Do not edit repositories or contact other agents."

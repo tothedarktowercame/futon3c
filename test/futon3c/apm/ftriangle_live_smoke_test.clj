@@ -48,6 +48,24 @@
           (sut/classify-failure :holdout-exclusion
                                 {:error/code :holdout-evidence-missing})))))
 
+(deftest harness-classification-is-explicit-and-produces-no-verdict
+  (let [direct (sut/classify-failure
+                :preflight-admission
+                {:error/code :ftriangle-live-effect-missing})
+        nested (sut/classify-failure
+                :forced-repair-durability
+                {:error/code :ftriangle-predecessor-not-durable
+                 :driver {:error/code :live-job-driver-input-invalid}})
+        ambiguous (sut/classify-failure
+                   :forced-repair-durability
+                   {:error/code :live-job-terminal-repair-request-invalid})]
+    (doseq [result [direct nested]]
+      (is (= :harness (:failure/class result)))
+      (is (= :fix-ftriangle (:failure/action result)))
+      (is (= :verdict/none (:verdict result))))
+    (is (= :apparatus (:failure/class ambiguous)))
+    (is (= :block-go-live (:failure/action ambiguous)))))
+
 (deftest substrate-stage-retries-once-without-retrying-apparatus
   (let [calls (atom 0)
         effects (into {}
@@ -96,11 +114,12 @@
     (is (= (set sut/traversal-order)
            (set (keys (:evidence result)))))))
 
-(deftest missing-live-effect-is-an-apparatus-failure
+(deftest missing-live-effect-is-a-harness-failure
   (let [result (sut/execute! {:checks (passing-checks) :effects {}})]
-    (is (= :apparatus (:failure/class result)))
+    (is (= :harness (:failure/class result)))
     (is (= :preflight-admission (:stage result)))
-    (is (= :block-go-live (:failure/action result)))))
+    (is (= :fix-ftriangle (:failure/action result)))
+    (is (= :verdict/none (:verdict result)))))
 
 (deftest thrown-live-effect-is-a-named-apparatus-failure
   (let [result (sut/execute!

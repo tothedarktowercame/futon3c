@@ -37,6 +37,11 @@
   [:preflight-admission :dispatch-terminal :holdout-exclusion
    :watchdog-progress :forced-repair-durability :combined-trace-closure])
 
+(def harness-input-error-codes
+  #{:ftriangle-live-effect-missing
+    :ftriangle-ledger-persist-port-missing
+    :live-job-driver-input-invalid})
+
 (defn read-fixture [] (edn/read-string (slurp fixture-path)))
 
 (defn read-live-config
@@ -174,13 +179,19 @@
        {:ok true :status :ready :conditions results}))))
 
 (defn classify-failure [stage result]
-  (let [substrate? (or (= :transport (:error/component result))
+  (let [error-codes #{(:error/code result)
+                      (get-in result [:driver :error/code])}
+        harness? (boolean (some harness-input-error-codes error-codes))
+        substrate? (or (= :transport (:error/component result))
                        (contains? #{:hyperedge-unreachable :job-port-budget-exhausted
                                     :dispatch-timeout :terminal-timeout}
                                   (:error/code result)))]
     {:ok false :status :failed :stage stage
-     :failure/class (if substrate? :substrate :apparatus)
-     :failure/action (if substrate? :retry :block-go-live)
+     :failure/class (cond substrate? :substrate harness? :harness
+                          :else :apparatus)
+     :failure/action (cond substrate? :retry harness? :fix-ftriangle
+                           :else :block-go-live)
+     :verdict (if harness? :verdict/none :verdict/fail)
      :finding result}))
 
 (defn execute!
@@ -290,6 +301,8 @@
      :dispatch-terminal
      (fn [_]
        (let [request (merge {:surface "emacs-repl" :caller campaign-id
+                             :dispatch/id
+                             (str campaign-id "-" frame-id "-dispatch")
                              :job-id (str campaign-id "-" frame-id "-dispatch")
                              :timeout-ms 30000}
                             dispatch-request)
