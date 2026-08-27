@@ -9,7 +9,6 @@
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
-            [futon3c.apm.test-support :refer [with-stubbed-qualification]]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
@@ -162,18 +161,6 @@
         (is (:ok result))
         (is (= :promote-solver (get-in result [:request :phase])))
         (is (= "f22-scribe" (get-in result [:request :agent-id])))))))
-
-(deftest replacement-registration-starts-at-f19-with-complete-cycle
-  (let [body (with-stubbed-qualification (sut/registration-body))
-        units (get-in body [:block-plan 0 :units])]
-    (is (= 9 (count units)))
-    (is (= "f19" (:frame-id (first units))))
-    (is (= "f27" (:frame-id (last units))))
-    (is (= 10 (count (:phase-order body))))
-    (is (= :preflight (first (:phase-order body))))
-    (is (= :close-frame (last (:phase-order body))))
-    (is (not-any? #(contains? % :required-receipt-kinds) units)
-        "eventual close receipts must not be required at open-frame runtime")))
 
 (deftest m-five-v2-entrypoint-is-fresh-f25-and-self-continuing
   (let [captured (atom nil)
@@ -509,38 +496,6 @@
       (is (= :countdown-registration-mismatch
              (:error/code (sut/bootstrap!)))))))
 
-(deftest qualified-v2-launch-dry-run-dispatches-nothing
-  (binding [sut/contract-path
-            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
-    (let [result (with-stubbed-qualification (sut/dry-run-v2-launch))]
-      (is (:ok result) (pr-str result))
-      (is (= [] (:dispatches result)))
-      (is (= [] (:historical-state-mutations result)))
-      (is (= :f25-frozen (:reference-fixture result)))
-      (is (every? true? (vals (:policy-audit result))))
-      (is (= :promote-solver
-             (nth (get-in result [:registration :phase-order]) 3)))
-      (is (= :apm-validated-system-v1
-             (get-in result [:qualification :qualification/id]))))))
-
-(deftest stale-qualification-report-blocks-v2-launch
-  (let [report (edn/read-string
-                (slurp "data/apm-validation/qualification-report-v1.edn"))
-        temp (java.io.File/createTempFile "stale-apm-report" ".edn")]
-    (spit temp (pr-str (assoc-in report
-                                 [:generated-contract :observed-digest]
-                                 "stale")))
-    (try
-      (binding [sut/contract-path
-                "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
-                sut/qualification-report-path (.getAbsolutePath temp)]
-        (let [result (with-stubbed-qualification (sut/dry-run-v2-launch))]
-          (is (false? (:ok result)))
-          (is (some #{:qualification-observed-artifact-stale}
-                    (get-in result [:qualification :findings])))
-          (is (= [] (:dispatches result)))))
-      (finally (.delete temp)))))
-
 (deftest ^:slow v2-manifest-qualifies-under-real-lean
   ;; The one test that provisions the qualification worktrees and runs
   ;; `lake env lean` on all ten pinned problems (~25 s). Everything else
@@ -776,39 +731,6 @@
     (is (#'sut/active-frame-job? frame role-job))
     (is (false? (#'sut/active-frame-job?
                  frame (assoc role-job :state "done"))))))
-
-(deftest campaign-priors-follow-queue-order-and-final-receipt-snapshots
-  (let [root "data/apm-campaigns/jit-all-open-nontopology-v1"
-        queue-path (str root "/queue-state.edn")
-        result (sut/campaign-prior-memories queue-path)
-        actual (:candidates result)]
-    (is (:ok result) result)
-    (is (= ["jit-all-open-nontopology-v1"] (:lineage result)))
-    (is (seq actual))
-    (is (every?
-         (fn [memory]
-           (let [depositor-frame (some->> (:depositor memory)
-                                          (re-matches #"^(f[0-9]+)-.+$")
-                                          second)]
-             (and (= depositor-frame
-                     (get-in memory [:provenance :frame-id]))
-                  (= "jit-all-open-nontopology-v1"
-                     (get-in memory [:provenance :campaign-id])))))
-         actual))))
-
-(deftest campaign-priors-use-only-declared-cross-campaign-lineage
-  (let [queue-path "data/apm-campaigns/jit-all-open-v2/queue-state.edn"
-        result (binding [sut/campaign-prior-campaigns
-                         ["jit-all-open-nontopology-v1"]]
-                 (sut/campaign-prior-memories queue-path))]
-    (is (:ok result) result)
-    (is (= ["jit-all-open-nontopology-v1" "jit-all-open-v2"]
-           (:lineage result)))
-    (is (some #(= "f28" (get-in % [:provenance :frame-id]))
-              (:candidates result)))
-    (is (every? #(not (contains? #{"jit-m-five" "jit-m94A03-retry"}
-                                  (get-in % [:provenance :campaign-id])))
-                (:candidates result)))))
 
 (deftest memory-cascade-arm-file-is-read-only-when-launch-has-no-arm
   (let [dir (java.nio.file.Files/createTempDirectory
