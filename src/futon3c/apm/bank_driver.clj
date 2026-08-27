@@ -124,6 +124,7 @@
    :receipt/frame-id frame-id
    :receipt/problem-id problem-id
    :receipt/verify-receipt-id verify-receipt-id
+   :receipt/input-receipt-ids #{verify-receipt-id}
    :receipt/lane-transition lane-transition})
 
 (defn- non-landed-receipt [request]

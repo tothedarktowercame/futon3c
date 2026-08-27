@@ -51,6 +51,8 @@
     (is (every? some? [closed partial defective blocked]))
     (is (every? #(true? (:ok (bank/validate-receipt %)))
                 [closed partial defective blocked]))
+    (is (every? #(= #{digest} (:receipt/input-receipt-ids %))
+                [closed partial defective blocked]))
     (is (= [:done :library :repair :library]
            (mapv #(get-in % [:receipt/lane-transition :to])
                  [closed partial defective blocked])))

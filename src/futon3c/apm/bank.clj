@@ -170,6 +170,9 @@
   (if (contains? body :receipt/id)
     {:ok false :error/code :frame-bank-body-contains-id}
     (let [body (cond-> body
+                 (string? (:receipt/verify-receipt-id body))
+                 (assoc :receipt/input-receipt-ids
+                        #{(:receipt/verify-receipt-id body)})
                  (contains? ruling->classification (:receipt/ruling body))
                  (assoc :receipt/classification
                         (get ruling->classification (:receipt/ruling body))))
