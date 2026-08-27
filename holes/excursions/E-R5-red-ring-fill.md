@@ -332,8 +332,39 @@ Two different R5 modules, and it is worth not conflating them:
 | module | states | status |
 |---|---|---|
 | `DarkTower/WarMachine/CoverageReport.lean` | R5's **coverage** clause — declare the criterion boundary, type the outside | **built and reviewed** |
-| `DarkTower/WarMachine/PolicyGrade.lean` | S-G2 and S-G4 as checkable predicates over a finished run, with the three Snatch witnesses | **dispatched 2026-08-27** (codex-22, `invoke-1787849563083-2454-fa53aac2`) |
+| `DarkTower/WarMachine/PolicyGrade.lean` | S-G2 and S-G4 as checkable predicates over a finished run, with the three Snatch witnesses | **built and reviewed 2026-08-27** (codex-22 `3677281f8b`, review fix `0de75bc6e6`) |
 
 `CoverageReport` was already in place; what was missing was any statement of the
 naming discipline, which is what makes `G(π)` refusable rather than merely
 defined.
+
+`PolicyGrade` proves five things, no `sorryAx`, no Mathlib. Two are general and
+depend on no axioms at all:
+
+- **S-G4 forces a policy space with more than one point** — a score cannot be
+  sensitive to a choice of wiring that does not exist.
+- **A singleton-indexed score family therefore fails S-G4**, whatever it scores.
+
+Those carry the grim-trigger refusals, so the only commitment left in those cases
+is the modelling one — that a hardcoded policy admits exactly one wiring — and
+the refusal is a consequence rather than a second assumption. The first draft had
+the refusal resting on the choice of `Unit` as the wiring type, which is true but
+puts the argument in the type rather than in a proof.
+
+### Two bounds on S-G4, from codex-22, accepted
+
+**The wiring type does not witness that its values re-order the same
+components.** `PatternWiring` has two constructors and nothing forces them to be
+two orderings of one collection. That obligation falls on whoever builds the
+family; here it is discharged by both scores having been measured on the same
+twelve patterns, which is evidence outside the proof.
+
+**A wiring-insensitive score may belong to a robust policy rather than a
+degenerate one.** If every ordering of a collection scores alike, that could mean
+the collection is good in any order. S-G4 refuses the name in that case too, and
+the reason is worth stating precisely: **S-G4 is a condition on the measurement,
+not a verdict on the policy.** A number no re-wiring moves supplies no evidence
+that the cascade produced it; it may be a fine score, it is just not evidence
+about π. The cost is real and should be carried openly — a genuinely robust
+collection cannot earn `G(π)` on a scenario set that fails to separate its
+wirings, and the remedy is a scenario that does, not a weaker clause.
