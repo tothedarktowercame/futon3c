@@ -51,10 +51,36 @@ Two failure classes matter most (Joe, 2026-08-27): **frames not advancing** and
 | M9 | `frame-void/prepare` refuses any frame that is not active, so a closed frame cannot be voided (f46) | unchanged | **none** |
 | M10 | 25 distinct live failure codes, 86 occurrences, largely uncharacterised for retryability, committed effects and recovery | unchanged | **none** |
 
+## Class 4 — coordination (added 2026-08-27 14:40)
+
+| id | defect | status | guarantee |
+|---|---|---|---|
+| C1 | A completed job whose caller is a pull-only (`delivery-mode :inbox`) seat records `status: "delivered"` with `note: "bell-job-ready"` and a poll URL as its destination. No auto-bellback job is created and nothing is written to the seat's inbox. The caller learns nothing unless it polls. | observed on both codex-3 jobs (`…2379-903d5af6`, `…2380-a5e8d1dd`), caller correctly recorded as `claude-clink-1` in each; jobs from other seats in the same period produced real `auto-bellback-*` jobs and inbox files | **none** |
+
+C1 is the same shape as A3, A5 and A6: a status field asserting an action the
+machine did not perform. Both affected jobs were dispatched with
+`--mode work`; two samples is not enough to blame the mode, but the delivery
+record shows the mechanism regardless of what selects it.
+
 ## Summary as of 2026-08-27 13:30
 
-Two partials, twenty-one with no guarantee. Nothing in this register is
-currently guaranteed in the strict sense above.
+Twenty-four defects: two partial, twenty-two with no guarantee.
+
+**This is not a statement that the machine guarantees nothing.** The register
+lists what broke, and what broke is by construction what was not guaranteed —
+so its emptiness of guarantees is close to tautological. Real guarantees exist
+outside it: `futon3c.apm.generated-contract-test` (18 tests, 98 assertions,
+green 2026-08-27) round-trips the Lean emitter's own output through the Clojure
+validator and runs ~15 mutation tests that must reject a changed policy. Drift
+between the model and the specification cannot pass silently. That perimeter is
+the contract's content; every defect here landed outside it, which is the
+finding, not an absence of assurance.
+
+Relatedly, the 86 recorded failures are an upper bound on defects, not a count
+of them: several codes (`student-candidate-validation-failed`,
+`live-learning-request-invalid`, `promotion-publication-accounting-invalid`)
+read as the apparatus correctly refusing invalid input — guarantees firing, not
+failing. Settling that split needs the taxonomy in TN-codex3-apm-repair-plan §1.
 
 Evidence: `TN-opus-f48-critical-findings.md`, `TN-opus-f47-observation.md`,
 `TN-codex3-apm-repair-plan.md`, and the interleaved model/failure timeline at
