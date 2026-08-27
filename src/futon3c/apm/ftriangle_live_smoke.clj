@@ -68,9 +68,10 @@
            :last-committed-event-id
            (str "ftriangle-tick-" (inc (or (:regulator/ticks state) 0)))}})
        :reconcile-fn (fn [_ _] {:ok true :status :observed})}))
-   (when-not (runtime/read-state state-path)
-     (runtime/atomic-persist! (Path/of state-path (make-array String 0))
-                              (regulator/initial-state coordinator-id)))
+   (let [state-file (Path/of state-path (make-array String 0))]
+     (when-not (runtime/read-state state-file)
+       (runtime/atomic-persist! state-file
+                                (regulator/initial-state coordinator-id))))
    (let [registered
          (durable-coordinator/register!
           {:registry-path registry :coordinator-id coordinator-id
