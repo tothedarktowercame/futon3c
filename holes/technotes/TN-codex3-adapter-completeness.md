@@ -394,3 +394,49 @@ Only after these pass may the system say: “for this admitted runtime version,
 every declared model observation is produced and consumed on every applicable
 machine path, and every protected live adapter is represented in the model.”
 It must not shorten that to “the trace is true” or “the model is complete.”
+
+---
+
+## The gate this specification implies (Joe, 2026-08-27)
+
+The spec above states mandatory mediation as an obligation. Joe's instruction is
+to promote it into the APM Cycle Machine as an invariant, so that a disconnected
+adapter is a refusal rather than an outstanding task:
+
+> **A frame may not close, and a campaign may not certify, without a complete
+> combined trace that contains every Lean-declared observation type, is
+> projected from durable state, and carries a checker receipt bound to its
+> digest.**
+
+Joe's two concrete criteria — successor and delivery must be connected, and
+there must be a combined trace — are the current instance of this. Stated
+generally rather than by naming those two types, because an invariant that
+enumerates today's observation types ages exactly as `authority-fields` did: the
+next type added is unconnected and nothing notices.
+
+Three properties this must have, from what went wrong today:
+
+1. **It gates a transition.** `campaign_trace/trace` already throws
+   `:campaign-trace-producer-missing` for a declared type with no producer
+   (`38cdd517`), and `campaign-trace` has no caller in `src/` or `scripts/` —
+   only its own test. A hard failure inside a function no production path
+   invokes cannot fire. The guard is correct and unreachable.
+2. **Projection from durable state, not from an observer's own log.** codex-2
+   reports f46-f48 are rejected as incomplete because they predate the
+   watchdog and so carry no watchdog observations. But the underlying facts are
+   on disk — f49 was minted 13:39:03, `:failed` by 13:40:43, `live/` holds only
+   a lease, and it was never disabled until a human did it at 14:43. Projecting
+   from the durable records the machine actually wrote makes historical frames
+   checkable and satisfies witness fidelity (condition 5) at the same time.
+   Projecting from a per-observer log makes every predicate uncheckable against
+   anything that ran before that observer existed.
+3. **The receipt binds the trace digest**, so certification cannot consume a
+   trace other than the one checked.
+
+### Consequence for the historical corpus
+
+`TN-apm-historical-acceptance-corpus.md` labels real incidents with the verdict
+a correct checker must produce. Under property 2 those rows are checkable today;
+under a per-observer-log design they are not, and the corpus degrades to
+covering only frames run after each observer was built — which is precisely the
+set of frames whose defects we do not yet know about.
