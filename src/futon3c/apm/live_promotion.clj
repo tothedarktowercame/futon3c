@@ -23,6 +23,23 @@
 (def ^:private default-transport-retry-delay-ms (* 10 60 1000))
 (def ^:private default-transport-retry-max-attempts 3)
 
+(defn- successor-observation [job-id terminal-collection findings]
+  {:predecessor-id (str job-id)
+   :terminal-evidence-id (str job-id)
+   :collection-evidence-id (str (or (get-in terminal-collection
+                                            [:evidence :collection/id]) ""))
+   :disposition (pr-str (vec findings))
+   :predecessor-persisted? true
+   :successor-announced-id ""
+   :successor-activated-id ""})
+
+(defn- bind-last-successor [state successor-id]
+  (let [index (dec (count (:superseded-terminals state)))]
+    (update-in state [:superseded-terminals index
+                      :trace/successor-observation]
+               assoc :successor-announced-id (str successor-id)
+               :successor-activated-id (str successor-id))))
+
 (defn- transport-failure? [value]
   (boolean
    (some #(and (map? %) (= :transport (:error/component %)))
@@ -376,7 +393,11 @@
                                :report failure}
                          :ticket (:ticket state)
                          :terminal-collection (:terminal-collection state)
-                         :findings (vec (:findings failure))}
+                         :findings (vec (:findings failure))
+                         :trace/successor-observation
+                         (successor-observation (:job state)
+                                                (:terminal-collection state)
+                                                (:findings failure))}
             archived-state (update state :superseded-terminals
                                    (fnil conj []) predecessor)
             archived (persist-fn archived-state)]
@@ -390,6 +411,7 @@
               (let [next-state
                 (-> state
                     (assoc :superseded-terminals (:superseded-terminals archived-state))
+                    (bind-last-successor (:job retry))
                     (assoc :job (:job retry)
                            :ticket {:job-id (:job retry)}
                            :attempt (if boundary-repair? attempt (inc attempt)))
@@ -788,7 +810,11 @@
                                :report (:persisted-review-result state)}
                          :ticket (:ticket prior)
                          :terminal-collection (:terminal-collection prior)
-                         :findings (vec (:findings state))}
+                         :findings (vec (:findings state))
+                         :trace/successor-observation
+                         (successor-observation (:job prior)
+                                                (:terminal-collection prior)
+                                                (:findings state))}
             archived-prior (update prior :superseded-terminals
                                    (fnil conj []) predecessor)
             archived (persist-fn archived-prior)]
@@ -799,11 +825,13 @@
                                      successor-attempt)]
             (if-not (:ok successor)
               successor
-              (let [next-state (assoc archived-prior
+              (let [next-state (-> archived-prior
+                                  (bind-last-successor (:job successor))
+                                  (assoc
                                   :job (:job successor)
                                   :ticket {:job-id (:job successor)}
                                   :predecessor-job-id (:job prior)
-                                  :review-successor-attempt successor-attempt)]
+                                  :review-successor-attempt successor-attempt))]
             (persist-fn next-state)
             {:ok true :status :awaiting-terminal
              :job-id (:job successor) :state next-state})))))

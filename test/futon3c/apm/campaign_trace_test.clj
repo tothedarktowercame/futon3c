@@ -1,5 +1,6 @@
 (ns futon3c.apm.campaign-trace-test
   (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-trace :as sut]))
 
@@ -121,6 +122,47 @@
                    schemas (:operational-observations valid))
                   (catch clojure.lang.ExceptionInfo e e))))))))
 
+(deftest operational-observations-come-from-durable-authorities
+  (let [sources (sut/operational-sources-from-durable
+                 {:watchdog-states
+                  [{:watchdog/trace-observation
+                    (first (get-in valid [:operational-observations :progress]))}]
+                  :successor-states
+                  [{:superseded-terminals
+                    [{:trace/successor-observation
+                      (first (get-in valid [:operational-observations
+                                           :successor]))}]}]
+                  :delivery-ledgers
+                  [{:jobs {"job-1"
+                           {:trace/delivery-observation
+                            (first (get-in valid [:operational-observations
+                                                 :delivery]))}}}]})]
+    (is (= (:operational-observations valid) sources))
+    (is (= #{"progressObservations" "successorObservations"
+             "deliveryObservations"}
+           (set (keys (sut/project-operational-observations
+                       (sut/require-complete-operational-sources sources))))))))
+
+(deftest historical-f46-f48-authorities-are-rejected-not-backfilled
+  ;; Those flights predate the durable watchdog observation. Their repair
+  ;; archives are useful evidence, but cannot manufacture progress evidence.
+  (doseq [frame ["f46" "f48"]]
+    (let [root (str "data/apm-campaigns/jit-all-open-v2/"
+                    "jit-all-open-v2-" frame)
+          successor-state
+          (edn/read-string
+           (slurp (str root "/live/student-attempt-1.edn")))
+          sources (sut/operational-sources-from-durable
+                   {:watchdog-states []
+                    :successor-states [successor-state]
+                    :delivery-ledgers []})]
+      (is (= :campaign-trace-observation-absent
+             (:error/code
+              (ex-data
+               (try (sut/require-complete-operational-sources sources)
+                    (catch clojure.lang.ExceptionInfo e e)))))
+          frame))))
+
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
                             "apm-trace" (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -145,9 +187,10 @@
                          "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
-           (apply dissoc (json/parse-string (slurp a))
-                  ["progressObservations" "successorObservations"
-                   "deliveryObservations"])))))
+           (-> (apply dissoc (json/parse-string (slurp a))
+                      ["progressObservations" "successorObservations"
+                       "deliveryObservations"])
+               (assoc "schemaVersion" 1))))))
 
 (deftest early-statement-refuted-trace-emits-only-executed-prefix
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
@@ -163,9 +206,10 @@
     (is (:ok (sut/emit! output trace)))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/early-statement-refuted.json"))
-           (apply dissoc (json/parse-string (slurp output))
-                  ["progressObservations" "successorObservations"
-                   "deliveryObservations"])))))
+           (-> (apply dissoc (json/parse-string (slurp output))
+                      ["progressObservations" "successorObservations"
+                       "deliveryObservations"])
+               (assoc "schemaVersion" 1))))))
 
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))

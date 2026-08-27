@@ -99,6 +99,10 @@
            (get-in repaired [:state :superseded-terminals 0 :job :job-id])))
     (is (= [:typed-submission-missing]
            (get-in repaired [:state :superseded-terminals 0 :findings])))
+    (is (= "solver-repair-job"
+           (get-in repaired [:state :superseded-terminals 0
+                             :trace/successor-observation
+                             :successor-activated-id])))
     (is (= :terminal-collected (:status repair-collected)))
     (is (= :solver-typed-submission-repair-exhausted
            (:error/code exhausted)))

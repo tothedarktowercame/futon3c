@@ -140,6 +140,12 @@
               payload (json/parse-string (slurp inbox-file) true)]
           (is (= "delivered" (get-in original [:delivery :status])))
           (is (= "inbox" (get-in original [:delivery :surface])))
+          (is (= {:terminal-job-id job-id
+                  :delivery-status "delivered"
+                  :inbox-file-created? true
+                  :registered-push-performed? false
+                  :polling-available? true}
+                 (:trace/delivery-observation original)))
           (is (.isFile inbox-file))
           (is (not (.exists (io/file (.getParentFile inbox-file)
                                      (str bell-job-id ".json.tmp"))))
@@ -165,7 +171,10 @@
           :surface "bell"
           :note "bell-job-ready"}
          (select-keys (:delivery (job "push-completion"))
-                      [:status :surface :note]))))
+                      [:status :surface :note])))
+  (is (true? (get-in (job "push-completion")
+                     [:trace/delivery-observation
+                      :registered-push-performed?]))))
 
 (deftest pollable-result-is-not-recorded-as-delivered
   (create-job! {:job-id "pollable-completion"
@@ -178,6 +187,9 @@
     (is (= "delivery-failed" (:status delivery)))
     (is (not= "delivered" (:status delivery)))
     (is (= "poll" (:surface delivery)))
+    (is (false? (get-in (job "pollable-completion")
+                        [:trace/delivery-observation
+                         :registered-push-performed?])))
     (is (= "bell-result-pollable-caller-not-deliverable" (:note delivery)))
     (is (= "/api/alpha/invoke/jobs/pollable-completion"
            (:destination delivery)))))

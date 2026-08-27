@@ -209,7 +209,15 @@
            (get-in discarded [:job :report :memory-use :used-ids])))
     (is (= collection (:terminal-collection discarded)))
     (is (= [:student-memory-used-despite-holdout]
-           (:findings discarded)))))
+           (:findings discarded)))
+    (is (= {:predecessor-id "job-1"
+            :terminal-evidence-id "job-1"
+            :collection-evidence-id "collection-1"
+            :disposition "[:student-memory-used-despite-holdout]"
+            :predecessor-persisted? true
+            :successor-announced-id "job-2"
+            :successor-activated-id "job-2"}
+           (:trace/successor-observation discarded)))))
 
 (deftest repair-archive-failure-blocks-successor-announcement
   (let [calls (atom [])

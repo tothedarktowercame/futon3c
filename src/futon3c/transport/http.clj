@@ -1311,8 +1311,15 @@
                           :destination (str (or destination "unknown"))
                           :recorded-at (str (Instant/now))
                           :note (str (or note ""))}
+                 trace-observation
+                 {:terminal-job-id job-id
+                  :delivery-status (:status receipt)
+                  :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
+                  :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
+                  :polling-available? true}
                  updated-job (-> job
                                  (assoc :delivery receipt)
+                                 (assoc :trace/delivery-observation trace-observation)
                                  (append-job-event "delivery-recorded" receipt))]
              (assoc-in ledger [:jobs job-id] updated-job))
            ledger)
@@ -1330,8 +1337,15 @@
                         :destination (str (or destination "unknown"))
                         :recorded-at (str (Instant/now))
                         :note (str (or note ""))}
+               trace-observation
+               {:terminal-job-id job-id
+                :delivery-status (:status receipt)
+                :inbox-file-created? (and delivered (= "inbox" (:surface receipt)))
+                :registered-push-performed? (and delivered (= "bell" (:surface receipt)))
+                :polling-available? true}
                updated-job (-> job
                                (assoc :delivery receipt)
+                               (assoc :trace/delivery-observation trace-observation)
                                (append-job-event "delivery-recorded" receipt))]
            (assoc-in ledger [:jobs job-id] updated-job))
          ledger)))))

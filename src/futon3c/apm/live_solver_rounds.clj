@@ -11,6 +11,21 @@
 (def default-max-rounds 50)
 (def strategy-checkpoint-every 10)
 
+(defn- successor-observation [job terminal-collection findings]
+  {:predecessor-id (:job-id job)
+   :terminal-evidence-id (:job-id job)
+   :collection-evidence-id (get-in terminal-collection
+                                   [:evidence :collection/id])
+   :disposition (pr-str (vec findings))
+   :predecessor-persisted? true
+   :successor-announced-id ""
+   :successor-activated-id ""})
+
+(defn- update-last-successor-observation [state f]
+  (let [index (dec (count (:superseded-terminals state)))]
+    (update-in state [:superseded-terminals index
+                      :trace/successor-observation] f)))
+
 (defn strategy-checkpoint-round? [ordinal]
   (zero? (mod ordinal strategy-checkpoint-every)))
 
@@ -126,7 +141,11 @@
         predecessor {:job job
                      :ticket (:ticket active)
                      :terminal-collection (:terminal-collection active)
-                     :findings (vec (or findings [:typed-submission-missing]))}
+                     :findings (vec (or findings [:typed-submission-missing]))
+                     :trace/successor-observation
+                     (successor-observation
+                      job (:terminal-collection active)
+                      (or findings [:typed-submission-missing]))}
         archived (-> state
                      (update :superseded-terminals (fnil conj []) predecessor)
                      (assoc :active nil))
@@ -137,10 +156,14 @@
       (let [announced (job-driver/ticket request (announce-fn request))]
         (if-not (:ok announced)
           announced
-          (let [next-active {:state/type :live-job-dispatched :request request
+          (let [announced-state
+                (update-last-successor-observation
+                 archived #(assoc % :successor-announced-id
+                                  (get-in announced [:ticket :job-id])))
+                next-active {:state/type :live-job-dispatched :request request
                          :ticket (:ticket announced)
                          :terminal-repair-attempts attempt}
-                staged (assoc archived :active next-active)]
+                staged (assoc announced-state :active next-active)]
         (if-not (:ok (persist-container persist-fn staged))
           {:ok false :error/code :solver-terminal-repair-persistence-failed}
           (let [registered (if (fn? ticket-register-fn)
@@ -154,7 +177,11 @@
               (not (:ok activated))
               {:ok false :error/code :solver-terminal-repair-activation-failed}
               :else
-              (let [accepted (assoc-in staged [:active :activation/accepted?] true)]
+              (let [accepted (-> staged
+                                 (assoc-in [:active :activation/accepted?] true)
+                                 (update-last-successor-observation
+                                  #(assoc % :successor-activated-id
+                                          (get-in announced [:ticket :job-id]))))]
                 (if (:ok (persist-container persist-fn accepted))
                   {:ok true :status :awaiting-terminal :repair? true
                    :state accepted}

@@ -51,6 +51,30 @@
                          (get sources source-key))])))
          schemas)))
 
+(defn operational-sources-from-durable
+  "Collect observation records already embedded by the deciding durable
+  writers. This function never derives a verdict or reconstructs a missing
+  observation from adjacent fields."
+  [{:keys [watchdog-states successor-states delivery-ledgers]}]
+  {:progress (into [] (keep :watchdog/trace-observation) watchdog-states)
+   :successor (into []
+                    (comp (mapcat #(or (:superseded-terminals %) []))
+                          (keep :trace/successor-observation))
+                    successor-states)
+   :delivery (into []
+                   (comp (mapcat #(vals (or (:jobs %) {})))
+                         (keep :trace/delivery-observation))
+                   delivery-ledgers)})
+
+(defn require-complete-operational-sources [sources]
+  (doseq [{:keys [kind]} (observation-schemas)]
+    (let [source-key (keyword kind)]
+      (when-not (seq (get sources source-key))
+        (throw (ex-info "Lean-declared trace observation absent"
+                        {:error/code :campaign-trace-observation-absent
+                         :observation/kind source-key})))))
+  sources)
+
 (defn- canonical [x]
   (cond
     (map? x) (into (sorted-map) (map (fn [[k v]] [(name k) (canonical v)])) x)
@@ -89,7 +113,7 @@
            analyst-wakes operational-observations]}]
   (let [operational (project-operational-observations operational-observations)]
   (canonical
-   (merge {"schemaVersion" 1
+   (merge {"schemaVersion" 2
     "campaignId" campaign-id
     "manifestHash" manifest-hash
     "contractId" contract-id
@@ -178,7 +202,8 @@
 (defn from-durable-state
   "Project only witnessed durable ledger/job facts into a checker trace."
   [{:keys [registration observations closed terminal-ledger-digest
-           memory campaign-lanes frame analyst-wakes operational-observations]}]
+           memory campaign-lanes frame analyst-wakes operational-observations
+           operational-authorities]}]
   (trace
    (merge registration
           {:closed closed :terminal-ledger-digest terminal-ledger-digest
@@ -196,7 +221,11 @@
            :frame-result (:frame-result frame)
            :void-classification (:void-classification frame)
            :analyst-wakes analyst-wakes
-           :operational-observations operational-observations
+           :operational-observations
+           (or operational-observations
+               (some-> operational-authorities
+                       operational-sources-from-durable
+                       require-complete-operational-sources))
            :steps
            (mapv
             (fn [{:keys [from to ledger-before ledger-after claim job receipt]}]

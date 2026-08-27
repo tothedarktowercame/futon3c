@@ -9,6 +9,21 @@
 (def terminal-states #{:done :failed :error :cancelled})
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 
+(defn- successor-observation [job terminal-collection findings]
+  {:predecessor-id (:job-id job)
+   :terminal-evidence-id (:job-id job)
+   :collection-evidence-id (get-in terminal-collection
+                                   [:evidence :collection/id])
+   :disposition (pr-str (vec findings))
+   :predecessor-persisted? true
+   :successor-announced-id ""
+   :successor-activated-id ""})
+
+(defn- update-last-successor-observation [state f]
+  (let [index (dec (count (:superseded-terminals state)))]
+    (update-in state [:superseded-terminals index
+                      :trace/successor-observation] f)))
+
 (def durable-reference-keys
   #{:job-id :solver/prior-job-id :repair/of-job-id :submission/id :receipt/id
     :prior-receipt-id :terminal-job-id})
@@ -395,7 +410,10 @@
                         {:job job
                          :ticket (:ticket state)
                          :terminal-collection (:terminal-collection state)
-                         :findings (:findings validated)}
+                         :findings (:findings validated)
+                         :trace/successor-observation
+                         (successor-observation job (:terminal-collection state)
+                                                (:findings validated))}
                         already-archived?
                         (= (:job-id job)
                            (get-in (peek (:superseded-terminals state))
@@ -413,9 +431,14 @@
                                               (announce-fn repair-request))]
                         (if-not (:ok announced)
                           announced
-                          (let [next-state
+                          (let [announced-state
+                                (update-last-successor-observation
+                                 archived-state
+                                 #(assoc % :successor-announced-id
+                                         (get-in announced [:ticket :job-id])))
+                                next-state
                             (cond->
-                             (assoc archived-state
+                             (assoc announced-state
                                     :active-request repair-request
                                     :ticket (:ticket announced)
                                     :activation/accepted? false
@@ -446,8 +469,12 @@
                             (if-not (:ok activated)
                               {:ok false :error/code :live-job-activation-failed
                                :state next-state :finding activated}
-                              (let [accepted (assoc next-state
-                                                    :activation/accepted? true)]
+                              (let [accepted (-> next-state
+                                                 (assoc :activation/accepted? true)
+                                                 (update-last-successor-observation
+                                                  #(assoc % :successor-activated-id
+                                                          (get-in announced
+                                                                  [:ticket :job-id]))))]
                                 (if (:ok (persist-fn accepted))
                                   {:ok true :status :awaiting-terminal
                                    :repair? true :state accepted}
