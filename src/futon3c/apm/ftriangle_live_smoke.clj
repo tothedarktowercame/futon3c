@@ -20,6 +20,7 @@
 (def campaign-id "ftriangle-live-smoke-v1")
 (def frame-id "ft1")
 (def coordinator-id "ftriangle-live-smoke-v1")
+(def watchdog-id (str "semantic-progress:" coordinator-id))
 (def ledger-root "data/apm-campaigns/ftriangle-live-smoke-v1")
 (def fixture-path "test/resources/apm-regressions/ftriangle-smoke-v1.edn")
 
@@ -76,8 +77,8 @@
            :dropped-count (count (:dropped result))}))
       :loaded-runtime-current loaded-runtime-current
       :watchdog-armed
-      (fn [] {:ok (boolean (watchdog/running? coordinator-id))
-              :watchdog/id coordinator-id})
+      (fn [] {:ok (boolean (watchdog/running? watchdog-id))
+              :watchdog/id watchdog-id})
       :trace-assembler-accepted
       (fn []
         (campaign-trace/issue-combined-trace-receipt!
