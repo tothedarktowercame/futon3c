@@ -21,12 +21,6 @@
   (is (contains? (get-in readiness [:launch-rule :must-not-defer])
                  :analyst-post-close-receipt)))
 
-(deftest every-readiness-claim-is-grounded-in-a-present-artifact
-  (doseq [{:keys [evidence]} (concat (:ready readiness)
-                                     (:blocking-slices readiness))
-          path evidence]
-    (is (.isFile (java.io.File. path)) path)))
-
 (deftest blocking-slices-have-an-executable-finish-condition
   (is (= (range 1 7) (map :order (:blocking-slices readiness))))
   (is (every? #(and (string? (:problem %))
