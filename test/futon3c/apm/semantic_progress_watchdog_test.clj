@@ -105,6 +105,35 @@
                    (+ 1000 sut/scheduler-claim-max-ms 1))]
     (is (= :scheduler-claim-stale (get-in result [:reason :code])))))
 
+(deftest stale-tick-claim-validly-awaiting-external-job-does-not-halt
+  (let [claimed-at 1000
+        now (+ claimed-at sut/scheduler-claim-max-ms 1)
+        [result stops _]
+        (run-check nil
+                   (observation
+                    :tick-claim {:claimed-at claimed-at}
+                    :awaiting-job {:job-id "solver-1"
+                                   :deadline (+ now 1000)})
+                   now)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))
+    (is (true? (get-in result [:state :watchdog/trace-observation
+                               :valid-external-wait?])))))
+
+(deftest stale-tick-claim-does-not-mask-expired-external-deadline
+  (let [claimed-at 1000
+        deadline 2000
+        now (+ deadline sut/external-deadline-grace-ms 1)
+        [result stops _]
+        (run-check nil
+                   (observation
+                    :tick-claim {:claimed-at claimed-at}
+                    :awaiting-job {:job-id "solver-1" :deadline deadline})
+                   now)]
+    (is (= :external-job-deadline-exceeded
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
 (deftest immediate-integrity-failures-halt
   (doseq [[observation-key reason]
           [[:invalid-state? :invalid-state]

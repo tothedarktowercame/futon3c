@@ -36,10 +36,8 @@
     (string? value) (.toEpochMilli (Instant/parse value))
     :else nil))
 
-(defn- immediate-reason [observation now-ms]
-  (let [claimed-at (or (get-in observation [:tick-claim :tick/claimed-at])
-                       (get-in observation [:tick-claim :claimed-at]))]
-    (cond
+(defn- integrity-reason [observation]
+  (cond
     (= :failed (get-in observation [:regulator :regulator/status]))
     {:code :regulator-failed}
 
@@ -52,14 +50,18 @@
     (:impossible-transition? observation)
     {:code :impossible-transition :finding (:transition observation)}
 
+    :else nil))
+
+(defn- stale-claim-reason [observation now-ms]
+  (let [claimed-at (or (get-in observation [:tick-claim :tick/claimed-at])
+                       (get-in observation [:tick-claim :claimed-at]))]
+    (when
     (and (some? claimed-at)
          (let [claimed-ms (instant-ms claimed-at)]
            (or (nil? claimed-ms)
                (> (- now-ms claimed-ms) scheduler-claim-max-ms))))
-    {:code :scheduler-claim-stale
-     :claimed-at claimed-at}
-
-    :else nil)))
+      {:code :scheduler-claim-stale
+       :claimed-at claimed-at})))
 
 (defn evaluate
   "Pure watchdog transition. NOW-MS is injected by the caller.
@@ -79,16 +81,17 @@
               :watchdog/cursor cursor
               :watchdog/last-progress-ms last-progress-ms
               :watchdog/observed-at-ms now-ms}
-        immediate (immediate-reason observation now-ms)
         awaiting (:awaiting-job observation)
         deadline-ms (some-> awaiting :deadline instant-ms)
+        integrity (integrity-reason observation)
+        stale-claim (stale-claim-reason observation now-ms)
         ready? (= :ready (:supervisor/status observation))
         elapsed-ms (max 0 (- now-ms last-progress-ms))
         valid-external-wait? (and (some? awaiting) (some? deadline-ms)
                                   (<= now-ms (+ deadline-ms
                                                 external-deadline-grace-ms)))
         reason (cond
-                 immediate immediate
+                 integrity integrity
                  (and awaiting (nil? deadline-ms))
                  {:code :external-job-deadline-missing
                   :job-id (:job-id awaiting)}
@@ -97,6 +100,7 @@
                  {:code :external-job-deadline-exceeded
                   :job-id (:job-id awaiting)
                   :deadline-ms deadline-ms}
+                 (and stale-claim (not valid-external-wait?)) stale-claim
                  (and ready? (nil? awaiting)
                       (>= (- now-ms last-progress-ms)
                           internal-progress-max-ms))
