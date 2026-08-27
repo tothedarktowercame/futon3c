@@ -1,0 +1,70 @@
+{:fixture/type :apm-real-incident-regression-corpus
+ :fixture/version 1
+ :captured-at "2026-08-27"
+ :source-policy
+ {:note "Checked-in facts are the durable test authority; gitignored data paths are provenance only and are not read by the suite. SHA-256 values identify the source artifacts inspected when this fixture was made."}
+ :holdout
+ [{:id :f46-a1
+   :problem-id "a96J08"
+   :withheld-ids ["e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a"
+                  "e-apm-promotion-c99db7afb5e674475257a437aba2d17e"]
+   :served-ids ["e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a"
+                "e-apm-promotion-c99db7afb5e674475257a437aba2d17e"]
+   :used-ids ["e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a"
+              "e-apm-promotion-c99db7afb5e674475257a437aba2d17e"]
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f46/superseded/student-attempt-1.repair-1.original-job.json"
+            :sha256 "018d524479c8fafb06beba4c1af05b422621ee6499b0a171e454d43f4b96cad0"}}
+  {:id :f48-a1
+   :problem-id "a98A03"
+   :withheld-ids ["e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"]
+   :served-ids ["e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"]
+   :used-ids ["e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"]
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f48/superseded/student-attempt-1.repair-1.original-job.json"
+            :sha256 "ba26b0d55bfdb4e6abf0e1a28d35973cea787acdeeff30347bfca04b8f0628a2"}}
+  {:id :f47-a1-m2
+   :problem-id "a97A01"
+   :depositor-problem-id "a97A01"
+   :withheld-ids []
+   :served-ids ["e-23a2940f-5fa6-444e-948c-74e6e201eb31"]
+   :used-ids ["e-23a2940f-5fa6-444e-948c-74e6e201eb31"]
+   :expected-upgrade :reject-missing-m2
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f47/live/student-attempt-1.edn"
+            :sha256 "3eb1200a166e74a8256dcad15f1161355c024663d8c92a38719a39a4c8722179"}}]
+ :durability
+ [{:id :f46-a1
+   :predecessor-id "apm-role-f9e09e71f1102c27ecaf7487dcd442a3f1de362727c034223a4de7e7fede414b"
+   :collection-id "f46-a1-terminal-collection"
+   :used-ids ["e-apm-promotion-0fb7d520e4a9bbf9583f0da8bb06637a"
+              "e-apm-promotion-c99db7afb5e674475257a437aba2d17e"]
+   :surviving-used-ids []
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f46/superseded/student-attempt-1.repair-1.original-job.json"
+            :sha256 "018d524479c8fafb06beba4c1af05b422621ee6499b0a171e454d43f4b96cad0"}}
+  {:id :f48-a1
+   :predecessor-id "apm-role-a77d51d79522a00297f1ae1229ff6eb767bdb39b34e9676dc990fe887f5e4a1c"
+   :collection-id "f48-a1-terminal-collection"
+   :used-ids ["e-apm-promotion-9b8d0aec504ee645aa3130fc7768738b"]
+   :surviving-used-ids []
+   :source {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f48/superseded/student-attempt-1.repair-1.original-job.json"
+            :sha256 "ba26b0d55bfdb4e6abf0e1a28d35973cea787acdeeff30347bfca04b8f0628a2"}}]
+ :progress
+ {:id :f49
+  :minted-at "2026-08-27T13:39:00.546553464Z"
+  :failed-at "2026-08-27T13:40:43Z"
+  :failure-code :live-job-state-invalid
+  :live-files ["workspace-leases.edn"]
+  :source [{:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f49/ledger.edn"
+            :sha256 "b5dfecd72a5a3e7348a2fc74989da9770b8d2a595250372987e65b5457bff2c2"}
+           {:path "data/apm-campaigns/jit-all-open-v2/coordinator.edn"
+            :sha256 "67c49a9a488137da977a1c112a66847a40882b96a858b35f80528bbaaebae837"}]}
+ :delivery
+ {:historical [{:job-id "invoke-1787838800874-2379-903d5af6"
+                :status "delivered" :note "bell-job-ready"
+                :surface "poll" :inbox-file-created? false}
+               {:job-id "invoke-1787840783317-2380-a5e8d1dd"
+                :status "delivered" :note "bell-job-ready"
+                :surface "poll" :inbox-file-created? false}]
+  :post-fix {:job-id "invoke-…2384-1be867e4"
+             :status "delivered" :note "bell-job-ready-inbox"
+             :surface "inbox" :inbox-file-created? true}
+  :source {:path "holes/technotes/TN-apm-historical-acceptance-corpus.md"
+           :commit "6d68ce82"}}}
