@@ -675,13 +675,29 @@
            summary
            "\nDetails: /api/alpha/invoke/jobs/" job-id))))
 
+(declare inbox-agent?)
+(declare invoke-job-terminal-state?)
+
+(defn- inbox-completion-bellback?
+  "A pull-only caller needs a completion inbox record even when the worker's
+   type is outside the push auto-bellback allowlist. Preserve the loop,
+   identity, duplicate, and parked-continuation guards used by push routing."
+  [job released-park-records]
+  (and (invoke-job-terminal-state? (:state job))
+       (inbox-agent? (:caller job))
+       (valid-auto-bellback-caller? (:caller job) (:agent-id job) true)
+       (not (auto-bellback-job? job))
+       (nil? (:auto-bellback job))
+       (not (auto-bellback-suppressing-park job released-park-records))))
+
 (defn- auto-bellback-request
   ([job] (auto-bellback-request job nil))
   ([job released-park-records]
   (let [recipient-type (auto-bellback-recipient-type (:agent-id job))
         caller-registered? (auto-bellback-caller-registered? (:caller job))]
-    (when (should-auto-bellback? job recipient-type caller-registered?
-                                 (auto-bellback-enabled?) released-park-records)
+    (when (or (should-auto-bellback? job recipient-type caller-registered?
+                                    (auto-bellback-enabled?) released-park-records)
+              (inbox-completion-bellback? job released-park-records))
       {:caller (str/trim (str (:caller job)))
        :bell-job-id (str "auto-bellback-" (:job-id job))
        :reply-to (str (:job-id job))   ;; the original bell this answers (bell-router)
@@ -1319,6 +1335,48 @@
                                (append-job-event "delivery-recorded" receipt))]
            (assoc-in ledger [:jobs job-id] updated-job))
          ledger)))))
+
+(declare get-invoke-job)
+
+(defn- record-bell-completion-delivery!
+  "Record the delivery action performed after an asynchronous bell completes.
+
+   Pull-only callers are delivered through their completion bellback's atomic
+   inbox file. Registered push callers retain the existing callback receipt.
+   An absent caller has only a polling URL, which is explicitly not delivery."
+  [job-id caller result]
+  (let [caller (some-> caller str str/trim)
+        job (get-invoke-job job-id)
+        status-url (str "/api/alpha/invoke/jobs/" job-id)]
+    (cond
+      (inbox-agent? caller)
+      (let [bell-job-id (get-in job [:auto-bellback :bell-job-id])
+            inbox-path (some-> bell-job-id get-invoke-job :inbox-path)]
+        (record-invoke-job-delivery-by-job-id!
+         job-id
+         {:surface "inbox"
+          :destination (or inbox-path status-url)
+          :delivered? (boolean inbox-path)
+          :note (cond
+                  inbox-path "bell-job-ready-inbox"
+                  bell-job-id "bell-job-inbox-write-missing"
+                  :else "bell-job-inbox-delivery-not-created")}))
+
+      (reg/get-agent caller)
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "bell"
+        :destination (str "caller " caller " via " status-url)
+        :delivered? true
+        :note (if (:ok result) "bell-job-ready" "bell-job-error")})
+
+      :else
+      (record-invoke-job-delivery-by-job-id!
+       job-id
+       {:surface "poll"
+        :destination status-url
+        :delivered? false
+        :note "bell-result-pollable-caller-not-deliverable"}))))
 
 (defn- invoke-job-public-view
   [job]
@@ -4473,13 +4531,8 @@
                                                   :mission-id mission-id
                                                   :evidence-store evidence-store}))
                       deliver-result (fn [result]
-                                       ;; Bell delivery means caller can obtain terminal result via canonical job query.
-                                       (record-invoke-job-delivery-by-job-id!
-                                        job-id
-                                        {:surface "bell"
-                                         :destination (str "caller " caller " via /api/alpha/invoke/jobs/" job-id)
-                                         :delivered? true
-                                         :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
+                                       (record-bell-completion-delivery!
+                                        job-id caller result))]
                   (try
                     (if (inbox-agent? agent-id)
                       (let [inbox-path (deliver-invoke-job-to-inbox! job-id prompt)]

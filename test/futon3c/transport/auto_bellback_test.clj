@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -112,6 +113,74 @@
       #(finalize! "job-2b"))
     (is (empty? @enqueued))
     (is (nil? (:auto-bellback (job "job-2b"))))))
+
+(deftest pull-only-caller-completion-is-atomically-delivered-to-inbox
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "completion-inbox"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        caller "pull-only-caller"
+        job-id "pull-only-completion"]
+    (try
+      (reg/register-agent!
+       {:agent-id caller
+        :type :mock
+        :delivery-mode :inbox
+        :invoke-fn (fn [& _] (throw (ex-info "pull-only caller invoked" {})))
+        :capabilities [:invoke]})
+      ;; An ineligible worker type reproduces the observed gap: push
+      ;; auto-bellback would not have been selected for this completion.
+      (create-job! {:job-id job-id :agent-id "unregistered-worker" :caller caller})
+      (with-redefs [agency-inbox/inbox-root (constantly root)]
+        (finalize! job-id)
+        (#'http/record-bell-completion-delivery! job-id caller {:ok true})
+        (let [original (job job-id)
+              bell-job-id (get-in original [:auto-bellback :bell-job-id])
+              bell-job (job bell-job-id)
+              inbox-file (io/file (:inbox-path bell-job))
+              payload (json/parse-string (slurp inbox-file) true)]
+          (is (= "delivered" (get-in original [:delivery :status])))
+          (is (= "inbox" (get-in original [:delivery :surface])))
+          (is (.isFile inbox-file))
+          (is (not (.exists (io/file (.getParentFile inbox-file)
+                                     (str bell-job-id ".json.tmp"))))
+              "atomic rename leaves no temporary delivery file")
+          (is (= (str "/api/alpha/invoke/jobs/" bell-job-id "/ack")
+                 (:ack-url payload)))
+          (is (= job-id (:in-reply-to payload)))))
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (io/delete-file file true))))))
+
+(deftest push-caller-completion-delivery-receipt-is-unchanged
+  (register-agent! "codex-push" :codex)
+  (register-agent! "claude-push" :claude)
+  (create-job! {:job-id "push-completion"
+                :agent-id "codex-push"
+                :caller "claude-push"})
+  (with-redefs-fn {#'http/*enqueue-auto-bellback!* (constantly nil)}
+    #(finalize! "push-completion"))
+  (#'http/record-bell-completion-delivery!
+   "push-completion" "claude-push" {:ok true})
+  (is (= {:status "delivered"
+          :surface "bell"
+          :note "bell-job-ready"}
+         (select-keys (:delivery (job "push-completion"))
+                      [:status :surface :note]))))
+
+(deftest pollable-result-is-not-recorded-as-delivered
+  (create-job! {:job-id "pollable-completion"
+                :agent-id "unregistered-worker"
+                :caller "missing-caller"})
+  (finalize! "pollable-completion")
+  (#'http/record-bell-completion-delivery!
+   "pollable-completion" "missing-caller" {:ok true})
+  (let [delivery (:delivery (job "pollable-completion"))]
+    (is (= "delivery-failed" (:status delivery)))
+    (is (not= "delivered" (:status delivery)))
+    (is (= "poll" (:surface delivery)))
+    (is (= "bell-result-pollable-caller-not-deliverable" (:note delivery)))
+    (is (= "/api/alpha/invoke/jobs/pollable-completion"
+           (:destination delivery)))))
 
 (deftest invalid-callers-do-not-bell-back
   (register-agent! "codex-1" :codex)
