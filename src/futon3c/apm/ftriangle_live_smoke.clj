@@ -194,6 +194,16 @@
      :verdict (if harness? :verdict/none :verdict/fail)
      :finding result}))
 
+(defn repair-request
+  "Mint F△'s one permitted repair as a distinct Agency job."
+  [original failure]
+  {:ok true
+   :request (assoc original
+                   :job-id (str (:job-id original) "-repair-1")
+                   :dispatch/id (str (:dispatch/id original) "-repair-1")
+                   :repair/attempt 1
+                   :repair/findings (:findings failure))})
+
 (defn execute!
   "Execute an isolated live smoke frame through explicitly supplied effects.
   Each effect receives accumulated evidence and must return {:ok true
@@ -388,12 +398,7 @@
                (constantly {:ok false :error/code :must-not-certify-invalid})
                :terminal-repair-request-fn
                (fn [original _ticket _job failure]
-                 {:ok true
-                  :request (assoc original
-                                  :dispatch/id
-                                  (str (:dispatch/id original) "-repair-1")
-                                  :repair/attempt 1
-                                  :repair/findings (:findings failure))})
+                 (repair-request original failure))
                :terminal-budget-config {:collection-attempts 1
                                         :repair-attempts 1}})
              archived (first (:superseded-terminals @persisted))]

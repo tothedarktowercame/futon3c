@@ -66,6 +66,15 @@
     (is (= :apparatus (:failure/class ambiguous)))
     (is (= :block-go-live (:failure/action ambiguous)))))
 
+(deftest repair-successor-has-a-fresh-job-and-dispatch-identity
+  (let [original {:job-id "predecessor" :dispatch/id "dispatch"}
+        request (:request
+                 (sut/repair-request original {:findings [:forced]}))]
+    (is (= "predecessor-repair-1" (:job-id request)))
+    (is (= "dispatch-repair-1" (:dispatch/id request)))
+    (is (not= (:job-id original) (:job-id request)))
+    (is (= [:forced] (:repair/findings request)))))
+
 (deftest substrate-stage-retries-once-without-retrying-apparatus
   (let [calls (atom 0)
         effects (into {}
