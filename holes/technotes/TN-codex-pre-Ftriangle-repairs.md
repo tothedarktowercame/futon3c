@@ -71,9 +71,48 @@ same class as the halt-path flakiness codex-22 repaired in `7a67ba08` — and it
 should get the same treatment: synchronise on committed durable state rather
 than polling.
 
-Until it is deterministic its failures cannot be interpreted, so making it
-deterministic comes before diagnosing what it reports. A flaky test in the
-disruption-recovery path is worth no more than the halt-path one was.
+### Corrected, 2026-08-27, after Joe: the system is not transactional
+
+The paragraph above originally recommended giving this test the determinism
+treatment codex-22 applied to the halt path. **That was wrong, and acting on it
+would have hidden the finding.**
+
+Joe's hypothesis — if it does not touch futon1b, the remaining explanation is
+that the system is not transactional — is correct and checkable. `grep` for a
+tick claim or epoch across `durable_coordinator.clj` and `live_regulator.clj`
+returns nothing. A tick's effects and its durable state update are not bracketed
+by any claim, so after a restart the observable state depends on where the
+interruption landed.
+
+That is register defect **A5**, already stated in
+`TN-codex3-apm-guarantee-register.md`: *"every tick durably claims an epoch/tick
+id before effects and clears it only after durable completion"* — dated
+2026-09-10, a target, not built. A4 and A6 depend on the same bracket.
+
+So `disruption-soak` is not a badly written test. It is the only thing in the
+suite that reports A5's absence, and it reports it the only way a missing
+transaction boundary can be reported: non-deterministically. Synchronising the
+harness harder would make it green while the system stayed non-atomic — the
+precise failure mode this whole repair exists to remove.
+
+Correct disposition: leave it red, and name its reason as *reports the absence
+of the durable tick claim (A5)* rather than "flaky". If the qualification gate
+excludes it, that is the reason string to use. It turns green when A5 is built,
+and not before.
+
+Two consequences beyond this test:
+
+- **F△ cannot assert quiescence without A5.** Its preflight condition "the
+  watchdog is armed" is checkable today; "no tick is in flight" is not, because
+  nothing durably records that a tick is in flight. F△ can still run — it does
+  not depend on quiescence — but its report should not claim the machine is
+  quiescent.
+- **The evidence-durability work already landed is the same shape.** Persisting
+  the predecessor before announcing the successor (`7c1398bc`, `f84e3f24`,
+  `64e47f3a`) and refusing an enable transition whose history append failed
+  (`eb6f0a1e`) are both transaction brackets, added one path at a time. A5 is
+  that discipline applied to the tick itself, which is the one place it is still
+  missing.
 
 ## What this exercise showed
 
