@@ -7,6 +7,27 @@ a 'wired' component that just no-ops, etc."*
 **The fear is correct, and it is not one mechanism but four. The ring's own note
 describes none of them accurately.**
 
+## Status at 2026-08-26 end of day
+
+**Verdict so far: R6 is red for none of the reasons recorded.** The tension
+proposer is built and live-installed; the ring says it is unbuilt. What is
+actually wrong is that the stratum **cannot account for what it generated or
+failed to generate**.
+
+| | state |
+|---|---|
+| the ring's stated reason | **FALSIFIED** — `aif2/tension.clj`, live at `war_machine.clj:4378` since 2026-06-01 |
+| requirements | **STATED** — A (attestation), B (as-of), C (WR-20 registry), below |
+| module property | **NAMED** — `surveyedSpace`, family 9 of the rosetta; `CandidateSpace.lean` unwritten |
+| slice 1 — artifact provenance | **OPEN**, and blocking the module |
+| slice 2 — full-loop proposer set | **OPEN**, cheap |
+| WR-20 has no ring | **OPEN — Joe's call** |
+
+**Not yet done, and deliberately:** no salience work. R6's pattern already
+carries a dated 香 (*"the War Machine exhausted its proposer-fed queue into
+learn-action-class"*) and a named bearer (*"the War Machine's own"*), so unlike
+R14 this excursion does not stall on who bears the cost.
+
 ## The ring says the proposer is unbuilt. It is built and live.
 
 `wr-overlay.edn`: `{:node "R6" :wr "WR-19" :holds false :note "tension must
@@ -223,3 +244,6 @@ the part nobody had checked, as with R8 and R14.
 - `E-R8-red-ring-fill.md` — the four-entry whitelist, one stratum down.
 - `p4ng/empirics-futon/NOTE-select-is-map-plus-derive.md` — why R6 is MAP, and why the node holds two functions.
 - `futon3/library/war-room/wr-20-action-class-inventory-becomes-data.flexiarg` — the unrung ruling.
+- `futon2/holes/missions/M-formal-war-machine.md` §2.1b — family 9, whose Lean cell this excursion fills.
+- `futon2/src/futon2/aif/action_proposer.clj:31,61` — `proposer-id`, declared and never composed.
+- `futon2/src/futon2/aif2/tension.clj` — the tension proposer, and WR-20's S1 instance.
