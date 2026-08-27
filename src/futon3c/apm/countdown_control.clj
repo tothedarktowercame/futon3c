@@ -386,6 +386,8 @@
                    :harness-hash (get-in manifest [:apparatus :pin/id])}))
               units)]
     {:series :apm :manifest-hash (:manifest/id manifest)
+     :closure-policy-version
+     (get-in contract [:terminal-policy :closure-policy-version])
      :phase-order (:phase-order contract)
      :block-plan [{:block-id (:block/id manifest) :ordinal 1 :units registered}]
      :obligation-plan
@@ -401,6 +403,8 @@
         registration-matches?
         (and (= (:campaign/id manifest) (:campaign/id projection))
              (= (:manifest/id manifest) (:campaign/manifest-hash projection))
+             (= (get-in contract [:terminal-policy :closure-policy-version])
+                (:campaign/closure-policy-version projection))
              (= (:phase-order contract) (:campaign/phase-order projection)))]
     (cond
       (not (:ok loaded)) loaded

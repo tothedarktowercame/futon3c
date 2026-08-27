@@ -26,7 +26,8 @@
 
 (def prefix
   [(event 0 :campaign/registered
-          {:series :apm :manifest-hash "manifest" :phase-order phases})
+          {:series :apm :manifest-hash "manifest" :closure-policy-version 1
+           :phase-order phases})
    (event 1 :block/opened {:block-id "b1" :ordinal 1})
    (event 2 :frame/opened
           {:frame-id "f1" :block-id "b1" :problem-id "m97A06"
@@ -121,6 +122,24 @@
             (close (assoc-in (trace-certificate {})
                              [:trace/checker-receipt :trace/digest]
                              (apply str (repeat 64 "b")))))))))
+
+(deftest legacy-ledger-replay-does-not-apply-new-closure-policy
+  (let [legacy-prefix (update-in prefix [0 :event/body]
+                                 dissoc :closure-policy-version)
+        advanced (into legacy-prefix
+                       (map-indexed
+                        (fn [index [from to]]
+                          (event (+ 3 index) :frame/advanced
+                                 {:frame-id "f1" :from from :to to
+                                  :certificate {:ok true}}))
+                        (partition 2 1 phases)))
+        projection (machine/projection
+                    (conj advanced
+                          (event 7 :frame/closed
+                                 {:frame-id "f1"
+                                  :certificate {:ok true}})))]
+    (is (= :valid (:projection/status projection)))
+    (is (= :closed (get-in projection [:campaign/frames "f1" :status])))))
 
 (deftest frame-close-accepts-receipt-issued-by-combined-trace-path
   (let [schemas (campaign-trace/observation-schemas)

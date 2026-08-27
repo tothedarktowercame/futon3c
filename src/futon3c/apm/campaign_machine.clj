@@ -180,6 +180,7 @@
                        :campaign-id (:event/campaign-id event)
                        :series (or (:series body) :apm)
                        :manifest-hash (:manifest-hash body)
+                       :closure-policy-version (:closure-policy-version body)
                        :phase-order (:phase-order body)
                        :block-plan (:block-plan body)
                        :obligation-plan (:obligation-plan body)
@@ -332,8 +333,9 @@
           (refusal state event :frame-close-before-terminal-phase)
           (not (map? (:certificate body)))
           (refusal state event :frame-close-certificate-required)
-          (not (campaign-trace/valid-combined-trace-receipt?
-                (:certificate body)))
+          (and (= 1 (:closure-policy-version state))
+               (not (campaign-trace/valid-combined-trace-receipt?
+                     (:certificate body))))
           (refusal state event :frame-close-combined-trace-required)
           :else
           {:ok true :state (-> state
@@ -364,8 +366,9 @@
         (:active-block-id state) (refusal state event :campaign-close-with-active-block)
         (not (map? (:certificate body)))
         (refusal state event :campaign-close-certificate-required)
-        (not (campaign-trace/valid-combined-trace-receipt?
-              (:certificate body)))
+        (and (= 1 (:closure-policy-version state))
+             (not (campaign-trace/valid-combined-trace-receipt?
+                   (:certificate body))))
         (refusal state event :campaign-close-combined-trace-required)
         :else
         {:ok true :state (assoc state :status :closed
@@ -426,6 +429,7 @@
           :campaign/id (:campaign-id state)
           :campaign/series (:series state)
           :campaign/manifest-hash (:manifest-hash state)
+          :campaign/closure-policy-version (:closure-policy-version state)
           :campaign/status (:status state)
           :campaign/version (:version state)
           :campaign/phase-order (:phase-order state)

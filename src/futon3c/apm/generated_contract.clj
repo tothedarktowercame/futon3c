@@ -188,6 +188,7 @@
 
 (def required-terminal-policy
   {:certified-phase-receipts 11
+   :closure-policy-version 1
    :closure-combined-trace-required true
    :closure-trace-observation-inventory "lean-declared-total"
    :closure-trace-projection-authority "durable-state"
