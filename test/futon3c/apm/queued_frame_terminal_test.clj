@@ -126,7 +126,7 @@
          #(adapter/qualify-current
            {:frame %
             :generated-contract-path
-            "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
+            "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json"
             :qualification-report-path
             "data/apm-validation/qualification-report-v1.edn"})
          :prepare-frame-fn
