@@ -107,6 +107,92 @@ arrive on the world's schedule. **The instrument must therefore be in place
 before the next one arrives** — which is WR-27's *born instrumented* applied to
 the one channel we do not control.
 
+## The build: an edge-graph kernel, general across three domains
+
+*Joe, 2026-08-27: aim for a build general enough to work in Snatch, the
+mathematics patterns, and general-purpose WM behaviour; Snatch is the easy test
+domain.*
+
+### What the corpora actually carry — measured before designing
+
+| corpus | `@why` | `@how` | `@see-also` |
+|---|---:|---:|---:|
+| `futon3/library` (1227 flexiargs) | 60 | **1 file** | 38 |
+| the five maths namespaces (~96) | 14 | **0** | 21 |
+
+Plus a **second edge store**: substrate pattern→pattern edges, which
+`TN-APM-cascades-exist-unused.md` confirms *"DO exist, as relations rather than
+hyperedges"* (addendum 2026-08-26). And *leaf memories* — what zai is actually
+handed — are *"a flat list … sorted by hash"*, carrying no structure at all.
+
+**Design consequence, and it is the main one: the build must not depend on
+`@how`.** It is the relation that would give cascades and it is essentially
+unpopulated everywhere, including the domain that is closest to live test. The
+build takes **typed edges from any source** and is indifferent to which directive
+supplied them.
+
+### The five steps
+
+| step | what it does | domain-specific? |
+|---|---|---|
+| **1 · support** | a `core.logic` relation, run forward against domain facts, returning the bindings under which an edge holds | the *facts* are; the relation shape is not |
+| **2 · mass** | a Beta posterior per **edge** — `intrinsic-values/credit-for` generalised from per-class to per-edge, as `aif2/tension.clj` already did for per-entry | no |
+| **3 · kernel** | `node → D(node)`; a cascade is Kleisli composition | no |
+| **4 · readouts** | `discriminates?` — is the channel constant — and `entropy`, the ambiguity term | no |
+| **5 · mirror** | every witness ships a case where it must find **zero mass** | the case is |
+
+Only steps 1 and 5 are per-domain, and only their *facts*. That is what makes one
+build serve Snatch, mathematics and the War Machine.
+
+### Why this belongs in R5 rather than elsewhere
+
+R5's requirement is that the evaluate stage **report what its criterion set does
+not cover**. Step 4 is that requirement made computable: a channel's entropy *is*
+the statement of how much the criterion fails to determine, and `discriminates?`
+is the statement that a dimension carries no singularity at all. **R5 is the ring
+where a spread becomes reportable rather than merely present.**
+
+### Dispatch slices — drafted, not sent
+
+Sized per the handoff protocol: one behaviour, one acceptance test each. **Send to
+codex-22.**
+
+- **S1 · edge-graph reader.** Parse flexiarg directives into a typed edge set
+  `{:from :to :kind :attested?}`, with the source pluggable so substrate relations
+  can be added without touching the reader's consumers.
+  *Acceptance:* over `futon3/library` it reports **60** `@why` files, **38**
+  `@see-also`, **1** `@how` — the numbers measured above. A reader that returns
+  different counts is wrong, and the counts are the test.
+
+- **S2 · kernel constructor.** Given edges, a support relation and Beta state,
+  produce `node → D(node)` with `entropy` and `discriminates?` readouts.
+  *Acceptance:* on the snatch edge already witnessed, the support is the same four
+  bindings `checks/how_witness_snatch.clj` returns, unattested edges weight at
+  Beta(1,1), and the entropy of a uniform four-point channel is `log 4`.
+
+- **S3 · snatch adapter and mirror.** Facts from the game's design diagrams; the
+  mirror is the G1-vs-G3 case.
+  *Acceptance:* witness has positive mass and positive entropy; **mirror has zero
+  mass.** A kernel that puts mass everywhere is the stochastic form of a witness
+  that cannot fail.
+
+- **S4 · mathematics adapter.** *Held* until the maths apparatus repair lands, and
+  noted now because it is the domain that will actually exercise this. Its facts
+  come from the proof apparatus, not from a diagram.
+
+**S1 and S2 are independent** and can go in parallel; S3 needs both.
+
+### Honest bounds carried into the build
+
+- Beta(1,1) is a **prior**, i.e. a stipulation — `S-G3` requires it declared in
+  the artefact, not absorbed into a number.
+- Entropy over the wrong coordinates is a number, not a measurement. Whether
+  `@holds-at` nodes are the right outcome space is **unresolved**, and this build
+  does not settle it — it makes the question askable at one-edge scale.
+- The `@how` sparsity means the first real graphs will be `@why`/`@see-also`
+  shaped: authority and peerage rather than method decomposition. **Those are not
+  the same relation**, and reading a cascade off them would be a category error.
+
 ## Slices
 
 1. **What the projection actually counts** — enumerate the rungs in the counted
