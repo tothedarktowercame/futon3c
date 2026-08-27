@@ -886,15 +886,18 @@
     (sequential? value) (mapcat nested-snapshot-receipts value)
     :else []))
 
-(defn- declared-campaign-priors [campaign-root]
-  (if (vector? campaign-prior-campaigns)
-    campaign-prior-campaigns
-    (let [path (.resolve campaign-root "lineage.edn")]
-      (when (java.nio.file.Files/isRegularFile
-             path (make-array java.nio.file.LinkOption 0))
-        (let [value (try (edn/read-string (slurp (str path)))
-                         (catch Throwable _ ::unreadable))]
-          (if (map? value) (:campaign/priors value) value))))))
+(defn- read-edn-file [path]
+  (try (edn/read-string (slurp (str path)))
+       (catch Throwable _ nil)))
+
+(defn- declared-campaign-priors
+  ([campaign-root] (declared-campaign-priors campaign-root read-edn-file))
+  ([campaign-root read-edn-fn]
+   (if (vector? campaign-prior-campaigns)
+     campaign-prior-campaigns
+     (let [path (.resolve campaign-root "lineage.edn")
+           value (read-edn-fn path)]
+       (if (map? value) (:campaign/priors value) value)))))
 
 (defn campaign-prior-memories
   "Read declared predecessor campaigns followed by the current campaign.
@@ -904,12 +907,16 @@
   the depositor frame and the declared queues' frame/problem authority."
   ([] (campaign-prior-memories
        (control-path (or campaign-queue-state-path problem-queue-state-path))))
-  ([queue-path]
+  ([queue-path] (campaign-prior-memories queue-path {}))
+  ([queue-path {:keys [read-state-fn read-ledger-fn read-edn-fn]
+                :or {read-state-fn live-preflight-runtime/read-state
+                     read-ledger-fn ledger/read-ledger
+                     read-edn-fn read-edn-file}}]
    (let [queue-path (Path/of (str queue-path) (make-array String 0))
          campaign-root (.getParent queue-path)
          campaigns-root (.getParent campaign-root)
          campaign-name (some-> campaign-root .getFileName str)
-         priors (or (declared-campaign-priors campaign-root) [])
+         priors (or (declared-campaign-priors campaign-root read-edn-fn) [])
          lineage-valid? (and (vector? priors)
                              (every? #(and (string? %)
                                            (re-matches #"[A-Za-z0-9._-]+" %))
@@ -922,9 +929,8 @@
            (mapv (fn [name]
                    (let [root (.resolve campaigns-root name)]
                      {:campaign-id name :root root
-                      :queue-state
-                      (live-preflight-runtime/read-state
-                       (.resolve root "queue-state.edn"))}))
+                      :queue-state (read-state-fn
+                                    (.resolve root "queue-state.edn"))}))
                  campaign-names))
          origin-pairs
          (mapcat (fn [{:keys [campaign-id queue-state]}]
@@ -956,14 +962,13 @@
                  ledger-path (.resolve root
                                        (str campaign-id "-" frame-id
                                             "/ledger.edn"))
-                 history (ledger/read-ledger ledger-path)
+                 history (read-ledger-fn ledger-path)
                  receipt (when (:ok history)
                            (->> (:events history) reverse
                                 (mapcat nested-snapshot-receipts) first))
                  snapshot-path (:receipt/snapshot-path receipt)
                  snapshot (when (string? snapshot-path)
-                            (try (edn/read-string (slurp snapshot-path))
-                                 (catch Throwable _ nil)))
+                            (read-edn-fn snapshot-path))
                  memories (:snapshot/memories snapshot)]
              (if (vector? memories)
                (reduce

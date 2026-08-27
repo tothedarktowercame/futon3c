@@ -1,5 +1,6 @@
 (ns futon3c.apm.countdown-control-test
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-ledger :as ledger]
@@ -15,6 +16,49 @@
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
+
+(def campaign-priors-fixture
+  (-> "test/resources/apm-regressions/campaign-priors-legacy-v1.edn"
+      slurp edn/read-string))
+
+(deftest campaign-priors-use-legacy-ledgers-final-snapshots-and-declared-lineage
+  (let [{:keys [current-campaign lineage queues ledgers snapshots expected]}
+        campaign-priors-fixture
+        queue-path (str "/fixture/campaigns/" current-campaign "/queue-state.edn")
+        read-state
+        (fn [path]
+          (get queues (-> path .getParent .getFileName str)))
+        read-ledger
+        (fn [path]
+          (let [path (str path)
+                events (some (fn [[[campaign frame] events]]
+                               (when (str/ends-with?
+                                      path (str campaign "-" frame "/ledger.edn"))
+                                 events))
+                             ledgers)]
+            {:ok true :events events}))
+        read-edn
+        (fn [path]
+          (let [path (str path)]
+            (if (str/ends-with? path "/lineage.edn")
+              lineage
+              (get snapshots path))))
+        legacy-events (get ledgers ["prior-v1" "f10"])
+        result (sut/campaign-prior-memories
+                queue-path {:read-state-fn read-state
+                            :read-ledger-fn read-ledger
+                            :read-edn-fn read-edn})]
+    (is (= :valid (:projection/status (machine/projection legacy-events)))
+        "the pre-closure-policy ledger remains replayable")
+    (is (:ok result) (pr-str result))
+    (is (= (:lineage expected) (:lineage result)))
+    (is (= (:memory-ids expected)
+           (mapv :memory-id (:candidates result)))
+        "queue order and the final snapshot receipt determine candidate order")
+    (is (= (:dropped expected) (:dropped result))
+        "an unreadable snapshot drops only its frame with a stated finding")
+    (is (not-any? #(= "rogue" (:memory-id %)) (:candidates result))
+        "campaigns outside declared lineage are never discovered")))
 
 (deftest jit-gate-uses-captured-one-off-manifest
   (let [one-off {:manifest/id "f46-manifest" :manifest/scope :one-off
