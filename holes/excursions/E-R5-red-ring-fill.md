@@ -182,6 +182,56 @@ codex-22.**
 
 **S1 and S2 are independent** and can go in parallel; S3 needs both.
 
+### The adapter is a GUARANTEE on new flights, not an analysis of old ones
+
+*Joe, 2026-08-27: "the 82 flights are of indicative importance only — what we
+really need are new guarantees around new flights."*
+
+**Recorded as a correction, and as a repeat.** This is the second time in one day
+I have proposed validating against a historical corpus and been redirected: first
+the retro-trip acceptance bar over `data/wm-trace/`, now an adapter over
+`data/wm-full-loop/`'s 82 flights. The pull is real — the data is *there* — and
+the requirement is about what happens next. **A frequency computed over closed
+flights is not falsifiable; a guarantee on the next flight is.**
+
+So the 82 flights keep exactly the role the trace corpus was given: **fixture
+design.** They tell us which shapes are real — the fourteen terminal
+dispositions, the (π, o) pairing, that 21% of flights lose their π — and nothing
+more.
+
+**The guarantee, and it attaches to a seam that already exists.** Every flight
+writes `007-closed.edn`. So:
+
+> **Every flight's close carries a coverage statement**: the criterion set
+> declared for that flight, and whether the terminal outcome fell inside it. An
+> outcome outside the declared coverage is recorded as `:uncovered` — never
+> omitted.
+
+That is R5's requirement made **operative per flight** rather than inferred from
+a corpus. It is checkable at one point, on a record the runner already writes,
+and it applies to the next flight rather than to the previous eighty-two.
+
+**Chain, in Tier-0 shape:**
+
+| link | what |
+|---|---|
+| Lean | `CoverageReport.lean` states it (dispatched 2026-08-27) |
+| emitter | the clause joins the emitted contract |
+| Clojure | validates a **new** flight's `007-closed.edn` |
+| mutation test | proves a close that omits the coverage statement is **rejected** |
+
+**What it would have said about 2026-07-15.** Those 22 attempts each recorded
+*"no addressable entities"* per action class — a form of non-coverage reporting
+at **action** grain — and then closed with `:outcome :no-selection` and no
+coverage statement at **flight** grain. Under the guarantee the close must say
+whether `:no-selection` was inside the declared criterion set. It was; and
+*saying so* is what converts twenty-two silent repetitions into twenty-two
+records that a reader can see agreeing with each other.
+
+**Acceptance:** the first flight after the clause lands carries a coverage
+statement, and a hand-mutated close that drops it is refused by the check. No
+claim is made about any flight before it.
+
 ### Honest bounds carried into the build
 
 - Beta(1,1) is a **prior**, i.e. a stipulation — `S-G3` requires it declared in
