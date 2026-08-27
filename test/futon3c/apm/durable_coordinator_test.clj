@@ -1,8 +1,9 @@
 (ns futon3c.apm.durable-coordinator-test
   (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.durable-coordinator :as sut]
-            [futon3c.apm.live-regulator :as regulator])
+            [futon3c.apm.live-regulator :as regulator]
+            [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -13,11 +14,35 @@
      :state-a (str (.resolve root "a.edn"))
      :state-b (str (.resolve root "b.edn"))}))
 
+(defn- clear-runner-registry! [registry entries]
+  (doseq [entry entries
+          :let [executor (if (map? entry) (:executor entry) entry)]
+          :when executor]
+    (.shutdownNow executor))
+  (reset! registry {}))
+
+(defn- clear-runners! []
+  (let [regulator-runners (var-get #'regulator/runners)
+        watchdog-runners (var-get #'watchdog/runners)]
+    (clear-runner-registry! regulator-runners (vals @regulator-runners))
+    (clear-runner-registry! watchdog-runners (vals @watchdog-runners))))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (let [clock (atom 0)]
+      (clear-runners!)
+      (try
+        (binding [sut/*watchdog-now-fn* #(swap! clock + 20)]
+          (test-fn))
+        (finally (clear-runners!))))))
+
 (defn- await-until [pred]
-  (loop [attempt 0]
-    (cond (pred) true
-          (= attempt 100) false
-          :else (do (Thread/sleep 20) (recur (inc attempt))))))
+  (let [deadline (+ (sut/*watchdog-now-fn*) 200000)]
+    (loop []
+      (cond
+        (pred) true
+        (>= (sut/*watchdog-now-fn*) deadline) false
+        :else (do (Thread/yield) (recur))))))
 
 (defn- state-status [path]
   (let [file (java.io.File. path)]
@@ -272,10 +297,15 @@
     (is (:ok (sut/register! {:registry-path registry
                              :coordinator-id "c:multi"
                              :adapter :test/multi-poll :config {}
-                             :state-path state-a :period-ms 100})))
+                             :state-path state-a :period-ms 1})))
     (try
       (is (:ok (sut/start-registered! registry "c:multi")))
-      (is (await-until #(= 1 (count @reconciled))))
+      (is (await-until
+           #(let [file (java.io.File. state-a)
+                  state (when (.isFile file)
+                          (edn/read-string (slurp file)))]
+              (and (= 1 (count @reconciled))
+                   (>= (:regulator/ticks state 0) 2)))))
       (is (= :stopped (:status (sut/stop! "c:multi"))))
       (let [stopped (edn/read-string (slurp state-a))]
         (is (= "job-multi"

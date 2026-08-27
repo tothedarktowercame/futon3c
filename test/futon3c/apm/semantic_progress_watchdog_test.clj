@@ -1,5 +1,5 @@
 (ns futon3c.apm.semantic-progress-watchdog-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.semantic-progress-watchdog :as sut])
   (:import [java.util.concurrent Executors ScheduledExecutorService]))
 
@@ -7,6 +7,17 @@
   {:frame-id "f49" :phase :solve :attempt-ordinal 1
    :obligation/status :ready :active-job-id nil
    :last-committed-event-id "event-7"})
+
+(defn- clear-runners! []
+  (let [registry (var-get #'sut/runners)]
+    (doseq [executor (vals @registry)]
+      (.shutdownNow executor))
+    (reset! registry {})))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (clear-runners!)
+    (try (test-fn) (finally (clear-runners!)))))
 
 (defn observation [& {:as overrides}]
   (merge {:cursor cursor

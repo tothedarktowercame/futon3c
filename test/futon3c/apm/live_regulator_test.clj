@@ -1,7 +1,18 @@
 (ns futon3c.apm.live-regulator-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.live-regulator :as sut])
   (:import [java.util.concurrent Executors]))
+
+(defn- clear-runners! []
+  (let [registry (var-get #'sut/runners)]
+    (doseq [[_ {:keys [executor]}] @registry]
+      (.shutdownNow executor))
+    (reset! registry {})))
+
+(use-fixtures :each
+  (fn [test-fn]
+    (clear-runners!)
+    (try (test-fn) (finally (clear-runners!)))))
 
 (deftest tick-persists-running-and-terminal-results
   (let [saved (atom nil)
@@ -86,29 +97,25 @@
                           :persist-fn (constantly {:ok true})}))))))
 
 (deftest scheduled-runner-executes-without-an-agent-continuation
-  (let [ran (promise) saved (atom nil)
+  (let [persisted (promise) saved (atom nil)
         result (sut/start!
                 {:regulator-id "scheduled-test"
                  :period-ms 1000
                  :read-fn (constantly nil)
-                 :persist-fn #(do (reset! saved %) {:ok true})
-                 :tick-fn #(do (deliver ran true)
-                               {:ok true :status :frame-complete})})]
+                 :persist-fn #(do (reset! saved %)
+                                  (deliver persisted %)
+                                  {:ok true})
+                 :tick-fn (constantly {:ok true :status :frame-complete})})]
     (try
       (is (= :started (:status result)))
-      (is (= true (deref ran 2000 :timeout)))
-      (loop [attempt 0]
-        (when (and (< attempt 20)
-                   (not= :complete (:regulator/status @saved)))
-          (Thread/sleep 25)
-          (recur (inc attempt))))
+      (is (not= :timeout (deref persisted 2000 :timeout)))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! "scheduled-test")))))
 
 (deftest start-replaces-a-stale-shutdown-runner
   (let [id "stale-runner-test"
         executor (Executors/newSingleThreadScheduledExecutor)
-        ran (promise)
+        persisted (promise)
         saved (atom nil)]
     (.shutdown executor)
     (swap! (var-get #'sut/runners)
@@ -119,10 +126,11 @@
               (sut/start!
                {:regulator-id id :period-ms 1000
                 :read-fn (constantly (sut/initial-state id))
-                :persist-fn #(do (reset! saved %) {:ok true})
-                :tick-fn #(do (deliver ran true)
-                              {:ok true :status :frame-complete})}))))
-      (is (= true (deref ran 2000 :timeout)))
+                :persist-fn #(do (reset! saved %)
+                                 (deliver persisted %)
+                                 {:ok true})
+                :tick-fn (constantly {:ok true :status :frame-complete})}))))
+      (is (not= :timeout (deref persisted 2000 :timeout)))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! id)))))
 
@@ -131,24 +139,25 @@
         ticks-b (atom 0)
         persisted-a (atom nil)
         persisted-b (atom nil)
-        start (fn [id ticks persisted]
+        ready-a (promise)
+        ready-b (promise)
+        start (fn [id ticks persisted ready]
                 (sut/start!
                  {:regulator-id id
                   :period-ms 1000
                   :read-fn (constantly nil)
-                  :persist-fn #(do (reset! persisted %) {:ok true})
+                  :persist-fn #(do (reset! persisted %)
+                                   (deliver ready true)
+                                   {:ok true})
                   :tick-fn #(do (swap! ticks inc)
                                 {:ok true :status :parked})}))]
     (try
       (is (= :started (:status (start "countdown-regulator:campaign-a"
-                                      ticks-a persisted-a))))
+                                      ticks-a persisted-a ready-a))))
       (is (= :started (:status (start "countdown-regulator:campaign-b"
-                                      ticks-b persisted-b))))
-      (loop [attempt 0]
-        (when (and (< attempt 40)
-                   (or (zero? @ticks-a) (zero? @ticks-b)))
-          (Thread/sleep 25)
-          (recur (inc attempt))))
+                                      ticks-b persisted-b ready-b))))
+      (is (= true (deref ready-a 2000 :timeout)))
+      (is (= true (deref ready-b 2000 :timeout)))
       (is (pos? @ticks-a))
       (is (pos? @ticks-b))
       (is (= "countdown-regulator:campaign-a"
