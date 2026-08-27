@@ -3,7 +3,41 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]))
+
+(def qualification-test-root "test/futon3c/apm")
+
+(defn qualification-test-namespaces
+  "Derive APM test namespaces from checked-in source files."
+  ([] (qualification-test-namespaces qualification-test-root))
+  ([root]
+   (->> (file-seq (io/file root))
+        (filter #(.isFile %))
+        (filter #(str/ends-with? (.getName %) "_test.clj"))
+        (keep (fn [file]
+                (some-> (re-find #"\(ns\s+([^\s\)]+)" (slurp file)) second)))
+        sort vec)))
+
+(defn with-derived-clojure-qualification
+  "Replace the qualification command's namespace arguments with the complete
+  on-disk inventory minus explicitly reasoned exclusions."
+  [plan]
+  (let [discovered (qualification-test-namespaces)
+        exclusions (:clojure-qualification/exclusions plan)
+        excluded (set (keys exclusions))
+        included (remove excluded discovered)
+        argv (into ["clojure" "-M:test"] (mapcat #(vector "-n" %) included))]
+    (update plan :commands
+            (fn [commands]
+              (mapv (fn [command]
+                      (if (= :clojure-qualification (:id command))
+                        (assoc command :argv argv
+                               :derived-namespace-count (count discovered)
+                               :excluded-namespaces exclusions)
+                        command))
+                    commands)))))
 
 (defn file-digest [path]
   (machine/ledger-digest [(slurp path)]))
@@ -12,6 +46,16 @@
   (let [classes (set (keys (:mutation-classes plan)))
         required (:required-mutation-classes plan)
         holes (:residual-holes plan)
+        discovered (set (qualification-test-namespaces))
+        exclusions (:clojure-qualification/exclusions plan)
+        excluded (set (keys exclusions))
+        qualification-command (some #(when (= :clojure-qualification (:id %)) %)
+                                    (:commands plan))
+        declared (->> (:argv qualification-command)
+                      (drop 2)
+                      (partition 2)
+                      (keep (fn [[flag value]] (when (= "-n" flag) value)))
+                      set)
         findings (cond-> []
                    (empty? (:positive-fixtures plan)) (conj :vacuous-positive-set)
                    (not= required classes) (conj :mutation-class-coverage-incomplete)
@@ -24,7 +68,15 @@
                    (conj :generated-artifact-stale)
                    (some #(not (and (.isFile (io/file (:path %)))
                                     (keyword? (:test-id %)))) holes)
-                   (conj :residual-hole-test-missing))]
+                   (conj :residual-hole-test-missing)
+                   (not (and (map? exclusions)
+                             (every? #(and (string? %) (not (str/blank? %)))
+                                     (vals exclusions))))
+                   (conj :qualification-exclusions-invalid)
+                   (not (set/subset? excluded discovered))
+                   (conj :qualification-exclusion-not-found)
+                   (not= (set/difference discovered excluded) declared)
+                   (conj :qualification-namespace-coverage-incomplete))]
     (if (seq findings)
       {:ok false :error/code :qualification-plan-invalid :findings findings}
       {:ok true :plan plan})))
@@ -59,7 +111,8 @@
           :gates results})))))
 
 (defn run-qualification! [plan-path report-path]
-  (let [report (qualify (edn/read-string (slurp plan-path)))]
+  (let [report (qualify (with-derived-clojure-qualification
+                         (edn/read-string (slurp plan-path))))]
     (spit report-path (str (pr-str report) "\n"))
     report))
 

@@ -20,6 +20,7 @@
 (def prefix
   [(event 0 :campaign/registered
           {:series :apm :manifest-hash "old" :phase-order [:preflight :solve]
+           :closure-policy-version 1
            :claims-required? true
            :block-plan [{:block-id "old-block" :ordinal 1
                          :units [{:frame-id "f19" :problem-id "p19"}]}]

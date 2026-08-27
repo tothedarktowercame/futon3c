@@ -1,5 +1,7 @@
 (ns futon3c.apm.qualification-test
   (:require [clojure.edn :as edn]
+            [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.qualification :as sut]))
 
@@ -7,6 +9,27 @@
            (slurp "holes/labs/M-apm-demonstration/apm-qualification-v1.edn")))
 
 (def report-path "data/apm-validation/qualification-report-v1.edn")
+
+(deftest clojure-qualification-covers-derived-inventory-with-explicit-exclusions
+  (let [discovered (set (sut/qualification-test-namespaces))
+        exclusions (set (keys (:clojure-qualification/exclusions plan)))
+        command (some #(when (= :clojure-qualification (:id %)) %)
+                      (:commands plan))
+        declared (->> (:argv command) (drop 2) (partition 2)
+                      (map second) set)]
+    (is (= (set/difference discovered exclusions) declared))
+    (is (= #{"futon3c.apm.disruption-soak-test"} exclusions))
+    (is (every? #(not (str/blank? %))
+                (vals (:clojure-qualification/exclusions plan))))
+    (is (some #{:qualification-namespace-coverage-incomplete}
+              (:findings
+               (sut/validate-plan
+                (update-in plan [:commands]
+                           (fn [commands]
+                             (mapv #(if (= :clojure-qualification (:id %))
+                                      (update % :argv pop)
+                                      %)
+                                   commands)))))))))
 
 (deftest committed-contract-and-qualification-are-one-coherent-state
   (let [report (edn/read-string (slurp report-path))
