@@ -59,7 +59,7 @@
     (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:history"
                              :adapter :test/none :config {}
                              :state-path state-a :period-ms 10})))
-    (with-redefs [regulator/stop! (fn [_] {:ok true :status :stopped})
+    (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})
                   sut/start-registered! (fn [_ _] {:ok true :status :started})]
       (is (:durably-disabled? (sut/stop! registry "c:history")))
       (is (:ok (sut/resume! registry "c:history")))
@@ -87,7 +87,7 @@
     (let [before (sut/read-registry registry)]
       (with-redefs [persistence/atomic-persist!
                     (fn [& _] {:ok false :error/code :test/archive-failed})
-                    regulator/stop! (fn [_] (swap! stopped inc)
+                    regulator/cancel-scheduler! (fn [_] (swap! stopped inc)
                                       {:ok true :status :stopped})
                     sut/start-registered! (fn [& _] (swap! started inc)
                                             {:ok true :status :started})]
@@ -151,7 +151,7 @@
               (fn [id]
                 (swap! stopped conj id)
                 {:ok true :status :stopped})]
-      (with-redefs [regulator/stop! (fn [_] {:ok true :status :stopped})]
+      (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
         (let [result (sut/stop! registry "c:watch")]
           (is (:durably-disabled? result))
           (is (= ["semantic-progress:c:watch"] @stopped)))))))
@@ -171,7 +171,7 @@
               sut/*watchdog-stop-fn*
               (fn [id] (swap! stopped conj id) {:ok true :status :stopped})]
       (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
-                    regulator/stop! (fn [_] {:ok true :status :stopped})]
+                    regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
         (let [result (sut/start-registered! registry "c:bare")]
           (is (= :durable-coordinator-running-unwatched
                  (:error/code result)))
@@ -233,7 +233,7 @@
       (let [[_ reconcile] @observations]
         (is (= "job-fixed" (get-in reconcile [1 :job-id])))
         (is (= (reconcile 1) (reconcile 2))))
-      (finally (sut/stop! "c:a")))))
+      (finally (sut/cancel-scheduler! "c:a")))))
 
 (deftest restart-reconciles-persisted-intent-with-same-job-id
   (let [{:keys [registry state-a]} (temp-paths)
@@ -270,7 +270,7 @@
                                     (state-status state-a))))
       (is (= :complete (state-status state-a)) (slurp state-a))
       (is (= ["job-stable"] @reconciled))
-      (finally (sut/stop! "c:restart")))))
+      (finally (sut/cancel-scheduler! "c:restart")))))
 
 (deftest typed-intent-integrity-kills-field-mutations
   (let [pre-state {:state/type :live-regulator
@@ -338,7 +338,7 @@
       (is (= [:intent-digest]
              (get-in (edn/read-string (slurp state-a))
                      [:regulator/last-result :findings])))
-      (finally (sut/stop! "c:reject")))))
+      (finally (sut/cancel-scheduler! "c:reject")))))
 
 (deftest pending-intent-survives-multiple-polls-and-runner-restart
   (let [{:keys [registry state-a]} (temp-paths)
@@ -373,7 +373,7 @@
                           (edn/read-string (slurp file)))]
               (and (= 1 (count @reconciled))
                    (>= (:regulator/ticks state 0) 2)))))
-      (is (= :stopped (:status (sut/stop! "c:multi"))))
+      (is (= :stopped (:status (sut/cancel-scheduler! "c:multi"))))
       (let [stopped (edn/read-string (slurp state-a))]
         (is (= "job-multi"
                (get-in stopped [:coordinator/pending-intent :job-id])))
@@ -384,7 +384,7 @@
       (is (apply = @reconciled))
       (is (= {:job-id "job-multi" :dispatch/id "dispatch-multi"}
              (first @reconciled)))
-      (finally (sut/stop! "c:multi")))))
+      (finally (sut/cancel-scheduler! "c:multi")))))
 
 (deftest pending-intent-rejects-rewound-tick
   (let [pre-state {:state/type :live-regulator :regulator/id "c:rewind"
@@ -422,7 +422,8 @@
         (is (= #{"c:a" "c:b"} (set (keys (:results result))))))
       (is (await-until #(and (pos? (get @ticks :a 0))
                              (pos? (get @ticks :b 0)))))
-      (finally (sut/stop! "c:a") (sut/stop! "c:b")))))
+      (finally (sut/cancel-scheduler! "c:a")
+               (sut/cancel-scheduler! "c:b")))))
 
 (deftest conflicting-or-tampered-registration-fails-closed
   (let [{:keys [registry state-a state-b]} (temp-paths)
@@ -466,14 +467,84 @@
                              :adapter :test/stoppable :config {}
                              :state-path state-a :period-ms 10})))
     (try
-      (is (:ok (sut/start-registered! registry "c:stop")))
+      (let [started (sut/start-registered! registry "c:stop")]
+        (is (:ok started))
       (is (await-until #(some? (sut/status "c:stop"))))
-      (is (:durably-disabled? (sut/stop! registry "c:stop")))
+        (let [first-stop (sut/stop! registry "c:stop")]
+          (is (:durably-disabled? first-stop))
+          (when (= :draining (:status first-stop))
+            (is (string? (get-in first-stop [:in-flight-tick :tick/id])))
+            (is (not= :timeout
+                      (deref (:first-tick started) 2000 :timeout)))
+            (is (= :stopped
+                   (:status (sut/stop! registry "c:stop"))))))
       (is (= :disabled
              (get-in (sut/recover-all! registry) [:results "c:stop" :status])))
       (is (false? (get-in (sut/status registry "c:stop")
-                          [:registration :coordinator/enabled?])))
-      (finally (sut/stop! "c:stop")))))
+                            [:registration :coordinator/enabled?]))))
+      (finally (sut/cancel-scheduler! "c:stop")))))
+
+(deftest stop-exposes-draining-claim-before-durable-quiescence
+  (let [{:keys [registry state-a]} (temp-paths)
+        coordinator-id "c:drain-observer"
+        tick-entered (promise)
+        release-tick (promise)]
+    (sut/register-adapter!
+     :test/drain-observer
+     (fn [_]
+       {:decide-fn (fn [_]
+                     (deliver tick-entered true)
+                     @release-tick
+                     {:ok true :status :awaiting-job})
+        :reconcile-fn (fn [_ _] {:ok true :status :awaiting-job})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id coordinator-id
+                             :adapter :test/drain-observer :config {}
+                             :state-path state-a :period-ms 1000})))
+    (try
+      (let [started (sut/start-registered! registry coordinator-id)]
+        (is (= true (deref tick-entered 2000 :timeout)))
+        (let [stop-result (future (sut/stop! registry coordinator-id))
+              observer (future
+                         (loop []
+                           (let [registration
+                                 (get-in (sut/read-registry registry)
+                                         [:entries coordinator-id])]
+                             (if (= :draining
+                                    (:coordinator/lifecycle registration))
+                               (edn/read-string (slurp state-a))
+                               (do (Thread/yield) (recur))))))
+              observed (deref observer 2000 :timeout)
+              draining (deref stop-result 2000 :timeout)]
+          (is (map? observed))
+          (is (= :live-regulator-tick-claim
+                 (get-in observed [:regulator/tick-claim :state/type])))
+          (is (not= :stopped (:regulator/status observed)))
+          (is (nil? (:regulator/quiescence-witness observed)))
+          (is (= :draining (:status draining)))
+          (is (= (get-in observed [:regulator/tick-claim :tick/id])
+                 (get-in draining [:in-flight-tick :tick/id])))
+          (is (= (get-in draining [:in-flight-tick :tick/id])
+                 (get-in (sut/recover-all! registry)
+                         [:results coordinator-id :in-flight-tick :tick/id])))
+          (deliver release-tick true)
+          (is (not= :timeout (deref (:first-tick started) 2000 :timeout)))
+          (let [stopped (sut/stop! registry coordinator-id)
+                durable (edn/read-string (slurp state-a))]
+            (is (= :stopped (:status stopped)))
+            (is (= :stopped (:regulator/status durable)))
+            (is (nil? (:regulator/tick-claim durable)))
+            (is (= :durable-quiescence-witness
+                   (get-in durable
+                           [:regulator/quiescence-witness :state/type])))
+            (is (nil? (get-in durable
+                              [:regulator/quiescence-witness :tick-claim])))
+            (is (= :disabled
+                   (get-in (sut/recover-all! registry)
+                           [:results coordinator-id :status]))))))
+      (finally
+        (deliver release-tick true)
+        (sut/cancel-scheduler! coordinator-id)))))
 
 (deftest unexpected-postcondition-fails-before-state-advance
   (let [{:keys [registry state-a]} (temp-paths)]
@@ -503,4 +574,4 @@
                (get-in state [:regulator/last-result :error/code])))
         (is (nil? (:forbidden/advance state)))
         (is (some? (:coordinator/pending-intent state))))
-      (finally (sut/stop! "c:postcondition")))))
+      (finally (sut/cancel-scheduler! "c:postcondition")))))

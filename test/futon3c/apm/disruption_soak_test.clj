@@ -81,7 +81,7 @@
         (let [started (coordinator/start-registered! registry coordinator-id)]
           (is (:ok started))
           (is (:ok (await-first-tick started)))
-          (coordinator/stop! coordinator-id))
+          (coordinator/cancel-scheduler! coordinator-id))
 
         :revision-moved
         (spit state
@@ -102,7 +102,7 @@
         (let [started (coordinator/start-registered! registry coordinator-id)]
           (is (:ok started))
           (is (:ok (await-first-tick started)))
-          (coordinator/stop! coordinator-id))
+          (coordinator/cancel-scheduler! coordinator-id))
 
         nil)
       (let [started (coordinator/start-registered! registry coordinator-id)]
@@ -117,7 +117,7 @@
          :status (:regulator/status after)
          :reconcile-calls @reconcile-calls
          :expected-digest intent-digest})
-      (finally (coordinator/stop! coordinator-id)))))
+      (finally (coordinator/cancel-scheduler! coordinator-id)))))
 
 (deftest every-known-disruption-resumes-or-refuses-at-the-same-intent
   (doseq [disruption disruptions]

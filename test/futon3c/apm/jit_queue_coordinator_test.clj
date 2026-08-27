@@ -35,7 +35,7 @@
         (is (:ok @(future (sut/start! options))))
         (is (await-until #(= 1 (count @calls))))
         (is (= :stopped
-               (:status (durable/stop! "jit-queue:q"))))
+               (:status (durable/cancel-scheduler! "jit-queue:q"))))
         (let [pending (edn/read-string (slurp state-path))]
           (is (string? (get-in pending [:coordinator/last-settled-intent
                                         :job-id]))))
@@ -45,7 +45,7 @@
                                      [:durable-state :regulator/status]))))
         (is (= 2 (count @calls)))
         (is (every? #(nil? (get-in % [:authority :session])) @calls))
-        (finally (durable/stop! "jit-queue:q"))))))
+        (finally (durable/cancel-scheduler! "jit-queue:q"))))))
 
 (deftest autonomous-list-step-does-not-publish-a-controller-park
   (let [park-calls (atom 0)

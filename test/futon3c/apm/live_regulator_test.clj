@@ -138,7 +138,9 @@
          (:error/code (sut/tick! {:state {} :tick-fn identity
                                   :persist-fn identity}))))
   (is (= :live-regulator-provider-missing
-         (:error/code (sut/tick! {:state (sut/initial-state "r1")})))))
+         (:error/code (sut/tick! {:state (sut/initial-state "r1")}))))
+  (is (= :live-regulator-durable-stop-required
+         (:error/code (sut/stop! "r1")))))
 
 (deftest failed-regulator-resume-retains-repair-evidence
   (let [failed (assoc (sut/initial-state "r")
@@ -176,6 +178,24 @@
                          {:state @durable :reason "again"
                           :persist-fn (constantly {:ok true})}))))))
 
+(deftest stopped-regulator-reopens-only-from-a-quiescence-witness
+  (let [witness {:state/type :durable-quiescence-witness :tick-claim nil}
+        stopped (assoc (sut/initial-state "r")
+                       :regulator/status :stopped
+                       :regulator/quiescence-witness witness)
+        durable (atom stopped)
+        result (sut/resume-stopped!
+                {:state stopped :now-fn (constantly "resumed")
+                 :persist-fn #(do (reset! durable %) {:ok true})})]
+    (is (= :running (:status result)))
+    (is (= [witness] (:regulator/quiescence-history @durable)))
+    (is (nil? (:regulator/quiescence-witness @durable)))
+    (is (= :live-regulator-quiescence-witness-invalid
+           (:error/code
+            (sut/resume-stopped!
+             {:state (dissoc stopped :regulator/quiescence-witness)
+              :persist-fn (constantly {:ok true})}))))))
+
 (deftest scheduled-runner-executes-without-an-agent-continuation
   (let [saved (atom nil)
         result (sut/start!
@@ -191,7 +211,7 @@
       ;; Same contention budget as above.
       (is (not= :timeout (deref (:first-tick result) 15000 :timeout)))
       (is (= :complete (:regulator/status @saved)))
-      (finally (sut/stop! "scheduled-test")))))
+      (finally (sut/cancel-scheduler! "scheduled-test")))))
 
 (deftest start-replaces-a-stale-shutdown-runner
   (let [id "stale-runner-test"
@@ -212,7 +232,7 @@
         (is (not= :timeout
                   (deref (:first-tick started) 2000 :timeout))))
       (is (= :complete (:regulator/status @saved)))
-      (finally (sut/stop! id)))))
+      (finally (sut/cancel-scheduler! id)))))
 
 (deftest campaign-scoped-runners-coexist-and-stop-independently
   (let [ticks-a (atom 0)
@@ -254,7 +274,7 @@
       (is (= "countdown-regulator:campaign-b"
              (:regulator/id (sut/status "countdown-regulator:campaign-b"))))
       (is (= :stopped
-             (:status (sut/stop! "countdown-regulator:campaign-a"))))
+             (:status (sut/cancel-scheduler! "countdown-regulator:campaign-a"))))
       (is (nil? (sut/status "countdown-regulator:campaign-a")))
       (is (= :running
              (:regulator/status
@@ -264,5 +284,5 @@
       (is (= "countdown-regulator:campaign-b"
              (:regulator/id @persisted-b)))
       (finally
-        (sut/stop! "countdown-regulator:campaign-a")
-        (sut/stop! "countdown-regulator:campaign-b")))))
+        (sut/cancel-scheduler! "countdown-regulator:campaign-a")
+        (sut/cancel-scheduler! "countdown-regulator:campaign-b")))))

@@ -20,6 +20,7 @@
 (defonce ^:private adapters (atom {}))
 (def ^:dynamic *watchdog-now-fn* #(System/currentTimeMillis))
 (def ^:dynamic *enabled-transition-now-fn* #(System/currentTimeMillis))
+(def ^:dynamic *quiescence-now-fn* #(str (java.time.Instant/now)))
 (def ^:dynamic *watchdog-start-fn* watchdog/start!)
 (def ^:dynamic *watchdog-stop-fn* watchdog/stop!)
 (def ^:dynamic *watchdog-running-fn* watchdog/running?)
@@ -115,6 +116,8 @@
        (string? (:coordinator/state-path entry))
        (pos-int? (:coordinator/period-ms entry))
        (boolean? (:coordinator/enabled? entry))
+       (or (nil? (:coordinator/lifecycle entry))
+           (contains? #{:running :draining} (:coordinator/lifecycle entry)))
        (or (nil? (:coordinator/enabled-history entry))
            (and (vector? (:coordinator/enabled-history entry))
                 (every?
@@ -197,6 +200,7 @@
                        :coordinator/state-path (str state-path)
                        :coordinator/period-ms period-ms
                        :coordinator/enabled? true
+                       :coordinator/lifecycle :running
                        :coordinator/enabled-history [initial-transition]}
                 problem-id (assoc :coordinator/problem-id problem-id
                                   :retry/count (or retry-count 0)
@@ -379,8 +383,16 @@
     (not (valid-entry? entry))
     {:ok false :error/code :durable-coordinator-registration-invalid}
     (not (:coordinator/enabled? entry))
-    (do (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
-        {:ok true :status :disabled :coordinator/id (:coordinator/id entry)})
+    (let [state (read-edn (:coordinator/state-path entry))
+          claim (:regulator/tick-claim state)]
+      (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
+      (cond-> {:ok true
+               :status (if claim :draining :disabled)
+               :coordinator/id (:coordinator/id entry)}
+        claim (assoc :in-flight-tick claim)
+        (:regulator/quiescence-witness state)
+        (assoc :quiescence-witness
+               (:regulator/quiescence-witness state))))
     (nil? (get @adapters (:coordinator/adapter entry)))
     {:ok false :error/code :durable-coordinator-adapter-unavailable
      :finding {:adapter (:coordinator/adapter entry)}}
@@ -406,6 +418,13 @@
                             (regulator/with-file-tick-lock
                              (Path/of (str state-path ".tick-claim.lock")
                                       (make-array String 0)))
+                            :claim-allowed-fn
+                            #(let [current (get-in (read-registry registry-path)
+                                                   [:entries (:coordinator/id entry)])]
+                               (and (:coordinator/enabled? current)
+                                    (= :running
+                                       (or (:coordinator/lifecycle current)
+                                           :running))))
                             :tick-state-fn
                             (fn [state]
                               (if (*watchdog-running-fn*
@@ -492,6 +511,8 @@
                               (enabled-transition-digest transition))
             updated (-> entry
                         (assoc :coordinator/enabled? enabled?)
+                        (assoc :coordinator/lifecycle
+                               (if enabled? :running :draining))
                         (update :coordinator/enabled-history
                                 (fnil conj []) transition))
             updated (assoc updated :coordinator/entry-digest
@@ -500,19 +521,67 @@
          (Path/of (str registry-path) (make-array String 0))
          (assoc-in registry [:entries coordinator-id] updated))))))
 
+(defn cancel-scheduler!
+  "Process-local scheduler cancellation for test cleanup and internal failure
+  handling. It is deliberately not named stop: no durable witness is written."
+  [coordinator-id]
+  (regulator/cancel-scheduler! coordinator-id))
+
 (defn stop!
-  ([coordinator-id] (regulator/stop! coordinator-id))
-  ([registry-path coordinator-id]
-   (let [disabled (set-enabled! registry-path coordinator-id false
-                                :durable-coordinator/stop!
-                                :stop-requested)]
-     (if (:ok disabled)
-       (let [watchdog-stopped (*watchdog-stop-fn*
-                               (watchdog-id coordinator-id))]
-         (assoc (regulator/stop! coordinator-id)
-                :durably-disabled? true
-                :watchdog watchdog-stopped))
-       disabled))))
+  "Durably drain a coordinator. Returns :stopped only when the state file
+  contains a quiescence witness and no tick claim; otherwise names the durable
+  in-flight tick and leaves the coordinator in :draining."
+  [registry-path coordinator-id]
+  (let [disabled (set-enabled! registry-path coordinator-id false
+                               :durable-coordinator/stop!
+                               :stop-requested)]
+    (if-not (:ok disabled)
+      disabled
+      (let [entry (get-in (read-registry registry-path)
+                          [:entries coordinator-id])
+            state-path (Path/of (:coordinator/state-path entry)
+                                (make-array String 0))
+            tick-lock (regulator/with-file-tick-lock
+                       (Path/of (str state-path ".tick-claim.lock")
+                                (make-array String 0)))
+            watchdog-stopped (*watchdog-stop-fn* (watchdog-id coordinator-id))
+            scheduler (regulator/cancel-scheduler! coordinator-id)
+            observed (read-edn state-path)]
+        (if-let [claim (:regulator/tick-claim observed)]
+          {:ok true :status :draining :coordinator/id coordinator-id
+           :durably-disabled? true :in-flight-tick claim
+           :scheduler scheduler :watchdog watchdog-stopped}
+          (tick-lock
+           (fn []
+             (let [state (or (read-edn state-path)
+                             (regulator/initial-state coordinator-id))]
+               (if-let [claim (:regulator/tick-claim state)]
+                 {:ok true :status :draining :coordinator/id coordinator-id
+                  :durably-disabled? true :in-flight-tick claim
+                  :scheduler scheduler :watchdog watchdog-stopped}
+                 (let [witness {:state/type :durable-quiescence-witness
+                                :coordinator/id coordinator-id
+                                :regulator/epoch (:regulator/epoch state)
+                                :regulator/ticks (:regulator/ticks state)
+                                :tick-claim nil
+                                :witnessed-at (*quiescence-now-fn*)}
+                       stopped (assoc state
+                                      :regulator/status :stopped
+                                      :regulator/reconciliation :quiescent
+                                      :regulator/quiescence-witness witness
+                                      :regulator/updated-at
+                                      (:witnessed-at witness))
+                       saved (persistence/atomic-persist! state-path stopped)]
+                   (if (:ok saved)
+                     {:ok true :status :stopped
+                      :coordinator/id coordinator-id
+                      :durably-disabled? true
+                      :quiescence-witness witness
+                      :state stopped :scheduler scheduler
+                      :watchdog watchdog-stopped}
+                     {:ok false
+                      :error/code :durable-coordinator-quiescence-write-failed
+                      :finding saved})))))))))))
 
 (defn resume!
   "Enable and start a stopped coordinator, or explicitly repair a failed one."
@@ -531,6 +600,9 @@
                     :complete (regulator/continue-complete!
                                {:state state :reason repair-reason
                                 :persist-fn persist-state!})
+                    :stopped (regulator/resume-stopped!
+                              {:state state :persist-fn persist-state!
+                               :now-fn *quiescence-now-fn*})
                     {:ok true})]
      (if-not (:ok repaired)
        repaired

@@ -40,14 +40,14 @@
       (try
         (is (:ok @(future (sut/start! options))))
         (is (await-until #(= 1 (count @calls))))
-        (is (= :stopped (:status (durable/stop! "library:t00J02"))))
+        (is (= :stopped (:status (durable/cancel-scheduler! "library:t00J02"))))
         (is (:ok (durable/start-registered! registry "library:t00J02")))
         (is (await-until #(= :complete
                              (get-in (sut/status registry "library:t00J02")
                                      [:durable-state :regulator/status]))))
         (is (= 3 (count @calls)))
         (is (apply = (map #(select-keys % [:job-id :dispatch/id]) @calls)))
-        (finally (durable/stop! "library:t00J02"))))))
+        (finally (durable/cancel-scheduler! "library:t00J02"))))))
 
 (deftest partial-bank-clears-intent-and-mints-successor
   (let [{:keys [registry state]} (fixture)
@@ -73,7 +73,7 @@
                   (get-in @calls [1 :dispatch/id])))
         (is (true? (get-in (sut/status registry "library:partial")
                            [:durable-state :library/strategy-required?])))
-        (finally (durable/stop! "library:partial"))))))
+        (finally (durable/cancel-scheduler! "library:partial"))))))
 
 (deftest each-phase-has-a-distinct-durable-intent
   (let [{:keys [registry state]} (fixture)
@@ -98,7 +98,7 @@
         (is (= [:preflight :solve :verify :bank]
                (mapv first @observations)))
         (is (= 4 (count (distinct (map second @observations)))))
-        (finally (durable/stop! "library:phases"))))))
+        (finally (durable/cancel-scheduler! "library:phases"))))))
 
 (deftest phase-state-drift-prevents-external-step
   (let [calls (atom 0)
@@ -156,7 +156,7 @@
         (is (await-until #(some? (get-in (sut/status registry "library:migrate")
                                          [:durable-state
                                           :coordinator/pending-intent]))))
-        (durable/stop! "library:migrate")
+        (durable/cancel-scheduler! "library:migrate")
         (let [before (get-in (sut/status registry "library:migrate")
                              [:durable-state :coordinator/pending-intent])
               legacy (-> before
@@ -181,7 +181,7 @@
                  "library:migrate"
                  (:durable-state (sut/status registry "library:migrate"))
                  after))))
-        (finally (durable/stop! "library:migrate"))))))
+        (finally (durable/cancel-scheduler! "library:migrate"))))))
 
 (deftest legacy-control-authority-hydration-preserves-pending-intent
   (let [{:keys [registry state]} (fixture)
@@ -203,7 +203,7 @@
                                                    "library:authority")
                                          [:durable-state
                                           :coordinator/pending-intent]))))
-        (durable/stop! "library:authority")
+        (durable/cancel-scheduler! "library:authority")
         (let [before (get-in (sut/status registry "library:authority")
                              [:durable-state :coordinator/pending-intent])
               result (sut/hydrate-control-authority!
@@ -222,7 +222,7 @@
                  (:status (sut/hydrate-control-authority!
                            registry "library:authority"
                            "/home/joe/code/futon3c" "repeat")))))
-        (finally (durable/stop! "library:authority"))))))
+        (finally (durable/cancel-scheduler! "library:authority"))))))
 
 (deftest legacy-solver-assignment-migration-preserves-pending-intent
   (let [{:keys [registry state]} (fixture)
@@ -239,7 +239,7 @@
         (is (await-until #(some? (get-in (sut/status registry coordinator-id)
                                          [:durable-state
                                           :coordinator/pending-intent]))))
-        (durable/stop! coordinator-id)
+        (durable/cancel-scheduler! coordinator-id)
         (let [before (get-in (sut/status registry coordinator-id)
                              [:durable-state :coordinator/pending-intent])
               result (sut/migrate-solver-assignment!
@@ -252,4 +252,4 @@
                                 :solver-assignment-id])))
           (is (= before (get-in after [:durable-state
                                        :coordinator/pending-intent]))))
-        (finally (durable/stop! coordinator-id))))))
+        (finally (durable/cancel-scheduler! coordinator-id))))))

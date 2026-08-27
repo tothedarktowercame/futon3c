@@ -8,7 +8,7 @@
            [java.util.concurrent.atomic AtomicLong]))
 
 (def default-period-ms 2000)
-(def terminal-statuses #{:complete :failed})
+(def terminal-statuses #{:complete :failed :stopped})
 (defonce ^:private runners (atom {}))
 (defonce ^:private thread-seq (AtomicLong. 0))
 
@@ -56,7 +56,8 @@
 
 (defn tick!
   "Execute one supervisor tick inside a claim persisted before any effect."
-  [{:keys [state tick-fn tick-state-fn persist-fn now-fn expected-epoch]
+  [{:keys [state tick-fn tick-state-fn persist-fn now-fn expected-epoch
+           claim-allowed-fn]
     :or {now-fn now}}]
   (cond
     (not (and (map? state) (= :live-regulator (:state/type state))))
@@ -69,6 +70,9 @@
          (not= expected-epoch (:regulator/epoch state)))
     {:ok false :error/code :live-regulator-epoch-superseded
      :finding {:expected expected-epoch :actual (:regulator/epoch state)}}
+    (and claim-allowed-fn (not (claim-allowed-fn)))
+    {:ok false :error/code :live-regulator-draining
+     :status :draining :state state}
     :else
     (let [regulator-id (:regulator/id state)
           prior-claim (:regulator/tick-claim state)
@@ -134,12 +138,23 @@
        (not (.isTerminated executor))
        (not (terminal? @state))))
 
-(defn stop! [regulator-id]
+(defn cancel-scheduler!
+  "Cancel future scheduled ticks. This is not an operator-visible stop: it
+  writes no durable lifecycle state and supplies no quiescence witness."
+  [regulator-id]
   (if-let [{:keys [^ScheduledExecutorService executor]} (get @runners regulator-id)]
     (do (swap! runners dissoc regulator-id)
         (.shutdown executor)
         {:ok true :status :stopped :regulator/id regulator-id})
     {:ok true :status :not-running :regulator/id regulator-id}))
+
+(defn stop!
+  "Refuse the former scheduler-only stop API. Operator stop requires the
+  durable coordinator registry so draining and quiescence can be witnessed."
+  [regulator-id]
+  {:ok false :error/code :live-regulator-durable-stop-required
+   :regulator/id regulator-id
+   :required-call 'futon3c.apm.durable-coordinator/stop!})
 
 (defn repair-resume!
   "Durably reopen a failed regulator after an explicit code repair.
@@ -195,10 +210,34 @@
         {:ok false :error/code :live-regulator-continuation-persistence-failed
          :finding persisted}))))
 
+(defn resume-stopped!
+  "Reopen a durably quiescent regulator through an explicit lifecycle resume."
+  [{:keys [state persist-fn now-fn] :or {now-fn now}}]
+  (cond
+    (not= :stopped (:regulator/status state))
+    {:ok false :error/code :live-regulator-not-stopped}
+    (not (and (map? (:regulator/quiescence-witness state))
+              (nil? (:regulator/tick-claim state))
+              (fn? persist-fn)))
+    {:ok false :error/code :live-regulator-quiescence-witness-invalid}
+    :else
+    (let [resumed (-> state
+                      (update :regulator/quiescence-history (fnil conj [])
+                              (:regulator/quiescence-witness state))
+                      (dissoc :regulator/quiescence-witness)
+                      (assoc :regulator/status :running
+                             :regulator/reconciliation :ready
+                             :regulator/updated-at (now-fn)))
+          persisted (persist-fn resumed)]
+      (if (:ok persisted)
+        {:ok true :status :running :state resumed}
+        {:ok false :error/code :live-regulator-resume-persistence-failed
+         :finding persisted}))))
+
 (defn start!
   "Start an idempotent single-thread regulator, recovering durable state."
   [{:keys [regulator-id read-fn persist-fn tick-fn tick-state-fn period-ms
-           with-tick-lock-fn now-fn]
+           with-tick-lock-fn now-fn claim-allowed-fn]
     :or {period-ms default-period-ms}}]
   (cond
     (not (and (string? regulator-id) (not-empty regulator-id)))
@@ -217,11 +256,12 @@
       ;; and repair calls can race that cleanup, leaving a shutdown executor in
       ;; the defonce table. It is not a running coordinator and must not satisfy
       ;; idempotent start.
-      (stop! regulator-id)
+      (cancel-scheduler! regulator-id)
       (start! {:regulator-id regulator-id :read-fn read-fn
                :persist-fn persist-fn :tick-fn tick-fn
                :tick-state-fn tick-state-fn :period-ms period-ms
-               :with-tick-lock-fn with-tick-lock-fn :now-fn now-fn}))
+               :with-tick-lock-fn with-tick-lock-fn :now-fn now-fn
+               :claim-allowed-fn claim-allowed-fn}))
     :else
     (let [prepared
           (with-tick-lock-fn
@@ -275,12 +315,13 @@
                                          :persist-fn persist-fn
                                          :expected-epoch
                                          (:regulator/epoch recovered)
-                                         :now-fn (or now-fn now)}))]
+                                         :now-fn (or now-fn now)
+                                         :claim-allowed-fn claim-allowed-fn}))]
                           (when-let [next-state (:state result)]
                             (reset! state next-state))
                           (deliver first-tick result)
                           (when (or (not (:ok result)) (terminal? @state))
-                            (stop! regulator-id))))]
+                            (cancel-scheduler! regulator-id))))]
           (swap! runners assoc regulator-id {:executor executor :state state})
           (.scheduleWithFixedDelay ^ScheduledExecutorService executor
                                    ^Runnable run-one 0 period-ms

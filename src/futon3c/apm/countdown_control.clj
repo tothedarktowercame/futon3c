@@ -1689,11 +1689,12 @@
    (with-campaign campaign-config
      (live-regulator/status (scoped-regulator-id)))))
 
-(defn stop-regulator!
-  ([] (live-regulator/stop! (scoped-regulator-id)))
+(defn cancel-regulator-scheduler!
+  "Cancel polling only; this does not establish durable quiescence."
+  ([] (live-regulator/cancel-scheduler! (scoped-regulator-id)))
   ([campaign-config]
    (with-campaign campaign-config
-     (live-regulator/stop! (scoped-regulator-id)))))
+     (live-regulator/cancel-scheduler! (scoped-regulator-id)))))
 
 (defn start-regulator!
   "Start the non-agentic single-frame regulator.
