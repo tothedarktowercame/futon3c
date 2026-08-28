@@ -17,6 +17,7 @@
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.qualification :as qualification]
             [futon3c.apm.queued-frame-terminal :as terminal]
+            [futon3c.apm.workspace-build :as workspace-build]
             [futon3c.apm.workspace-lifecycle :as workspace])
   (:import [java.nio.file Files LinkOption Path]))
 
@@ -376,14 +377,7 @@
            bootstrap-workspace-fn persist-lease-fn]
     :or {agency-base "http://localhost:7070" http-fn runtime/http-json
          provision-fn workspace/provision! validate-workspace-fn workspace/validate
-         bootstrap-workspace-fn
-         (fn [lease]
-           (let [result (shell/sh "lake" "build" "ConstructionTargets"
-                                  :dir (:workspace/path lease))]
-             (if (zero? (:exit result))
-               {:ok true}
-               {:ok false :error/code :workspace-bootstrap-failed
-                :role (:role lease) :finding result})))}}]
+         bootstrap-workspace-fn workspace-build/bootstrap!}}]
   (let [unit (assoc (:problem frame) :frame/id (:frame/id frame)
                     :problem/id (:problem/id frame)
                     :problem (:problem frame))
