@@ -11,6 +11,18 @@
 
 (declare canonical sha256 combined-trace-digest durable-records)
 
+(defn- as-file
+  "Coerce a path-ish value to a File.
+
+  countdown-control addresses frame artefacts with java.nio.file.Path values
+  built by .resolve, and clojure.java.io/file has no Coercions implementation
+  for Path -- it throws IllegalArgumentException at runtime. f50 ran its whole
+  cycle and then died on the close tick for this reason. str covers Path, File
+  and String alike, so every path argument crossing this namespace's boundary
+  goes through here."
+  ^java.io.File [path]
+  (io/file (str path)))
+
 (defn observation-schemas
   ([] (observation-schemas default-contract-path))
   ([path]
@@ -118,10 +130,7 @@
       (let [observation (validate-authoritative-observation
                          :successor clean-successor-observation)
             document {record-key observation}
-            ;; countdown-control passes a java.nio.file.Path (from .resolve),
-            ;; which clojure.java.io/file cannot coerce; str covers Path, File
-            ;; and String alike.
-            target (io/file (str disposition-path))
+            target (as-file disposition-path)
             parent (.getParentFile target)]
         (.mkdirs parent)
         (when (.exists target)
@@ -221,7 +230,7 @@
     (let [assembled (assemble-combined-operational-trace durable-documents)
           payload (str (json/generate-string assembled) "\n")
           digest (combined-trace-digest assembled)
-          target (io/file trace-path)
+          target (as-file trace-path)
           parent (.getParentFile target)
           _ (.mkdirs parent)
           temporary (java.io.File/createTempFile ".combined-trace-" ".json" parent)]
@@ -277,7 +286,7 @@
   [frame-directory]
   (mapv
    (fn [[phase ordinal]]
-     (let [path (io/file frame-directory "live" (str (name phase) ".edn"))
+     (let [path (io/file (as-file frame-directory) "live" (str (name phase) ".edn"))
            state (clojure.edn/read-string (slurp path))
            reviews (get-in state [:receipt :receipt/promotion-reviews])]
        (when-not (vector? reviews)
@@ -442,7 +451,7 @@
    acceptance authority; this function intentionally performs no shadow
    protocol validation."
   [path input]
-  (let [target (io/file path)
+  (let [target (as-file path)
         parent (.getParentFile target)
         temp (java.io.File/createTempFile ".apm-trace-" ".json" parent)
         payload (str (json/generate-string (trace input)) "\n")]

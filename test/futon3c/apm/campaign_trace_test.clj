@@ -391,4 +391,13 @@
                   {:durable-documents documents :disposition-path path})]
     (is (:ok prepared))
     (is (:persisted? prepared))
-    (is (.exists (java.io.File. (str path))))))
+    (is (.exists (java.io.File. (str path))))
+    ;; the receipt writer takes a Path from the same caller
+    (let [trace-path (.resolve ^java.nio.file.Path directory
+                               "terminal/combined-operational-trace.json")
+          issued (sut/issue-combined-trace-receipt!
+                  {:certificate {:receipt/id "r-1"}
+                   :durable-documents (:durable-documents prepared)
+                   :trace-path trace-path})]
+      (is (some? issued))
+      (is (.exists (java.io.File. (str trace-path)))))))
