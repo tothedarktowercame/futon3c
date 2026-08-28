@@ -74,6 +74,14 @@ coordinator: the overnight commits were JIT tick-claim and deadline work, which
 exercises that coordinator.
 | A9 | On finding no live watchdog, `durable-coordinator` **halts the coordinator** instead of arming one. Both sites — the tick-time check and `start-entry!` — go straight to `stop!` with `:durable-coordinator-running-unwatched`. The obvious remedy, arm a watchdog and proceed, is absent. On 2026-08-28 this turned a stale-JVM condition into a self-inflicted outage: the campaign started, found no watchdog, disabled itself, and appeared unstartable. Joe: "the extremely obvious next step would be to start a watchdog process" | not fixed | **none** |
 | A10 | F△ arms its own watchdog on its own coordinator, so it never traverses the production start path. F△ passing proves *a* frame can run; it does not prove *this campaign* can start. A9 sat undetected through eight green F△ runs for exactly this reason | not fixed | **none** |
+| S1 | The agent roster can present a seat type that contradicts `frame_seats.clj` `seat-specs`, and does: `f43-scribe`, `f45-scribe` and `f50-scribe` are registered `:zai` where the spec declares `scribe → :codex`. Artifacts corroborate the spec — a codex scribe produced output for f35, f37, f39, f47, f48 and f49. `mint-seats!` validates and refuses (`seat-type-mismatch`); some other registration path does not | not fixed | **none** |
+| S2 | Because the roster contradicts the spec silently, it is read as authoritative and propagates the error. On 2026-08-28 codex-1 inferred from the roster that ZAI was the authoritative scribe type and changed a **correct** cast declaration (`scribe → gpt-5.6-sol`) into a wrong one (`glm-5.3`). f50's promote-solver then dispatched a codex model to a zai seat and ZAI rejected it with `modelCode: does not exist`, exhausting the promotion deposit retries and stopping the campaign | not fixed | **none** |
+
+S2 is the reason S1 is not merely untidy. A roster that can disagree with the
+spec is not a view, it is a second source of truth, and it will be believed —
+the seat type is not the sort of thing a reader expects to have to
+cross-check. Either the roster is derived from the spec, or a disagreement is
+surfaced where it is read, not only where a seat is minted.
 
 C1 is the same shape as A3, A5 and A6: a status field asserting an action the
 machine did not perform. Both affected jobs were dispatched with
