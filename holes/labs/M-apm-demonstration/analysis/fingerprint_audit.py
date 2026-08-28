@@ -18,6 +18,9 @@ This script does the check offline, per (frame, attempt, memory):
 
 Both are reported because they are different evidence. A memory whose named
 APIs appear in the artifact while its body does not is a fingerprinted USE.
+A novel token witnesses that use only when it occurs in fewer than 5% of the
+problem files on ``origin/master``. Common tokens remain visible as weak
+evidence, but cannot establish a fingerprint by themselves.
 A memory whose body appears verbatim is a paste -- the f29/f30 failure mode
 that `codex-scribe-v1` was written to stop -- and should not be counted as
 the same kind of result.
@@ -35,7 +38,7 @@ Reads only: campaign frame records on disk + the substrate evidence endpoint.
 
 Usage: python3 fingerprint_audit.py [--campaign ID] [--write PATH] [--json]
 """
-import argparse, json, os, re, subprocess, sys, urllib.request
+import argparse, json, math, os, re, subprocess, sys, urllib.request
 
 SUBSTRATE = os.environ.get("FUTON1B_BASE", "http://127.0.0.1:7073")
 CAMPAIGNS = os.environ.get("APM_CAMPAIGNS", os.path.expanduser("~/code/futon3c/data/apm-campaigns"))
@@ -57,6 +60,12 @@ STOPWORDS = {
     "how_to_apply", "key_api", "capture_kind", "scribe_author", "draft_source",
     "runner_model", "statement_integrity", "all_file_declarations",
 }
+
+# A token present in at least one problem out of twenty is common enough that
+# seeing it does not identify a particular memory. This corpus rule retains
+# rare bare lemma names while demoting ubiquitous bare tactics without a
+# hand-maintained tactic list.
+MAX_WITNESS_DOC_FRACTION = 0.05
 
 
 def get_text(path, timeout=60):
@@ -126,6 +135,48 @@ def base_file(rev, path, cache={}):
     return cache[key]
 
 
+def master_problem_count(cache={}):
+    """Number of problem Main files in the source corpus."""
+    if "count" not in cache:
+        p = subprocess.run(
+            ["git", "ls-tree", "-r", "--name-only", "origin/master", "--", "problems"],
+            cwd=APM_LEAN, capture_output=True, text=True, timeout=30, check=True)
+        cache["count"] = sum(
+            path.endswith("/lean/Main.lean") for path in p.stdout.splitlines())
+    return cache["count"]
+
+
+def token_master_frequency(token, cache={}):
+    """Problem-document frequency of a literal token on ``origin/master``."""
+    if token not in cache:
+        p = subprocess.run(
+            ["git", "grep", "-l", "-F", token, "origin/master", "--",
+             "problems/*/lean/Main.lean"],
+            cwd=APM_LEAN, capture_output=True, text=True, timeout=30)
+        if p.returncode not in (0, 1):
+            raise subprocess.CalledProcessError(
+                p.returncode, p.args, output=p.stdout, stderr=p.stderr)
+        count = len([line for line in p.stdout.splitlines() if line])
+        total = master_problem_count()
+        cache[token] = (count, total, count / total if total else 0.0)
+    return cache[token]
+
+
+def assess_novel_token(token):
+    """Return an auditable corpus-frequency witness decision for ``token``."""
+    count, total, frequency = token_master_frequency(token)
+    witnessing = frequency < MAX_WITNESS_DOC_FRACTION
+    information_bits = -math.log2(frequency) if frequency else math.log2(total + 1)
+    return {"token": token,
+            "master-problem-files": count,
+            "master-problem-files-total": total,
+            "master-document-frequency": frequency,
+            "information-bits": information_bits,
+            "witnessing": witnessing,
+            "reason": ("rare-in-master-problem-corpus" if witnessing else
+                       "common-in-master-problem-corpus")}
+
+
 def paste_run(body, novel_lines):
     """Longest run of consecutive body lines appearing verbatim and NOVEL."""
     best = cur = 0
@@ -184,7 +235,8 @@ def main():
     cdir = os.path.join(CAMPAIGNS, a.campaign)
     rows, summary = [], {"attempts": 0, "attempts-with-used": 0, "use-events": 0,
                          "fingerprinted": 0, "paste": 0, "already-in-base": 0,
-                         "unwitnessed": 0, "no-source": 0, "no-base": 0,
+                         "weak-fingerprint": 0, "unwitnessed": 0,
+                         "no-source": 0, "no-base": 0,
                          "unfetchable": 0}
 
     for frame, n, pid, ids, src, rev, ppath in attempts(cdir):
@@ -218,17 +270,26 @@ def main():
             else:
                 hits = [t for t in toks if t in source]
                 novel = [t for t in hits if t not in base]
+                assessments = [assess_novel_token(t) for t in novel]
+                witnessing = [x["token"] for x in assessments if x["witnessing"]]
+                nonwitnessing = [x["token"] for x in assessments if not x["witnessing"]]
                 best, nhit = paste_run(body, novel_lines)
                 row.update({"tokens-hit": len(hits), "tokens-novel": len(novel),
                             "novel-hits": novel[:12],
+                            "witnessing-novel-hits": witnessing[:12],
+                            "nonwitnessing-novel-hits": nonwitnessing[:12],
+                            "novel-token-assessments": assessments,
                             "in-base-already": len(hits) - len(novel),
                             "paste-longest-run": best, "paste-lines-hit": nhit})
                 if best >= 3:
                     row["verdict"] = "paste"
                     summary["paste"] += 1
-                elif novel:
+                elif witnessing:
                     row["verdict"] = "fingerprinted"
                     summary["fingerprinted"] += 1
+                elif novel:
+                    row["verdict"] = "weak-fingerprint"
+                    summary["weak-fingerprint"] += 1
                 elif hits:
                     row["verdict"] = "already-in-base"
                     summary["already-in-base"] += 1
@@ -239,6 +300,11 @@ def main():
 
     out = {"campaign": a.campaign, "substrate": SUBSTRATE,
            "standard": "retrieval-whitepaper-v3 3.1 (artifact carries the memory's fingerprint)",
+           "token-witness-rule": {
+               "measure": "origin/master problem-file document frequency",
+               "witnessing-when": "frequency < 0.05",
+               "threshold": MAX_WITNESS_DOC_FRACTION,
+               "corpus-problem-files": master_problem_count()},
            "summary": summary, "rows": rows}
     if a.write:
         open(a.write, "w").write(json.dumps(out, indent=1))
