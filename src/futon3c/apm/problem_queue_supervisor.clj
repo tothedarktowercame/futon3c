@@ -44,6 +44,14 @@
           (pos-int? (:repair/attempts park))
           (seq (:promotion/findings park)))
 
+     :role-terminal-repair-frame-park
+     (and (keyword? (:phase park))
+          (= :live-job-terminal-repair-exhausted (:error/code park))
+          (string? (:role/state-path park))
+          (keyword? (:repair/kind park))
+          (pos-int? (:repair/attempts park))
+          (seq (:role/findings park)))
+
      false)))
 
 (defn queue-plan [problems]

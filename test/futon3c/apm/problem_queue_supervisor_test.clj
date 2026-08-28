@@ -153,6 +153,30 @@
       (is (= [park] (:parked @state)))
       (is (empty? (filter #(= :retire (first %)) @calls))))))
 
+(deftest role-terminal-repair-park-preserves-record-and-prepares-successor
+  (let [{:keys [providers state calls]} (harness)
+        park {:state/type :role-terminal-repair-frame-park
+              :decision/owner :claude-supervisor
+              :decision/status :awaiting-decision
+              :decision/bell-required true
+              :frame/id "q1" :problem/id "p1"
+              :phase :guide-intervention-1
+              :role/state-path "/campaign/q1/live/guide-intervention-1.edn"
+              :last-valid-receipt/id "student-attempt-1-receipt"
+              :error/code :live-job-terminal-repair-exhausted
+              :repair/kind :terminal-submission :repair/attempts 1
+              :role/findings [:typed-submission-missing]
+              :residual "[:typed-submission-missing]"}]
+    (sut/tick! providers)
+    (let [result (sut/tick!
+                  (assoc providers :frame-tick-fn
+                         (constantly {:ok true :status :frame-parked
+                                      :frame/park park})))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= [park] (:parked @state)))
+      (is (empty? (filter #(= :retire (first %)) @calls))))))
+
 (deftest pause-after-active-retires-current-frame-without-minting-successor
   (let [{:keys [providers state calls]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))

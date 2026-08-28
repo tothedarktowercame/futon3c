@@ -1870,7 +1870,28 @@
                                               :ledger (ledger/read-ledger
                                                        (control-path ledger-path))
                                               :result driven}))
-                                          driven)))))]
+                                          (if (= :live-job-terminal-repair-exhausted
+                                                 (:error/code driven))
+                                            (with-campaign frame-config
+                                              (let [loaded
+                                                    (ledger/read-ledger
+                                                     (control-path ledger-path))
+                                                    phase
+                                                    (get-in loaded
+                                                            [:projection
+                                                             :active/frame
+                                                             :phase])]
+                                                (queued-frame-adapter/role-terminal-repair-park
+                                                 {:frame frame
+                                                  :ledger loaded
+                                                  :role-state-path
+                                                  (when (keyword? phase)
+                                                    (str (control-path
+                                                          (state-path-for
+                                                           (:frame/id frame)
+                                                           phase))))
+                                                  :result driven})))
+                                            driven))))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result

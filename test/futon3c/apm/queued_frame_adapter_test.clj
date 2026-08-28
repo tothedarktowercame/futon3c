@@ -104,6 +104,53 @@
     (is (= :claude-supervisor (:decision/owner park)))
     (is (true? (:decision/bell-required park)))))
 
+(deftest exhausted-role-terminal-repair-parks-with-prior-receipt-intact
+  (let [result
+        (sut/role-terminal-repair-park
+         {:frame frame
+          :role-state-path "/campaign/f30/live/guide-intervention-1.edn"
+          :ledger {:projection {:active/frame
+                                {:phase :guide-intervention-1}}
+                   :events [{:event/body
+                             {:certificate {:receipt/id "student-receipt"}}}]}
+          :result {:ok false
+                   :error/code :live-job-terminal-repair-exhausted
+                   :findings [:typed-submission-missing]
+                   :repair/attempts 1}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :role-terminal-repair-frame-park (:state/type park)))
+    (is (= "f30" (:frame/id park)))
+    (is (= "p1" (:problem/id park)))
+    (is (= :guide-intervention-1 (:phase park)))
+    (is (= "/campaign/f30/live/guide-intervention-1.edn"
+           (:role/state-path park)))
+    (is (= "student-receipt" (:last-valid-receipt/id park)))
+    (is (= [:typed-submission-missing] (:role/findings park)))
+    (is (= :terminal-submission (:repair/kind park)))
+    (is (= 1 (:repair/attempts park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (true? (:decision/bell-required park)))))
+
+(deftest under-evidenced-role-terminal-exhaustion-is-not-parked
+  (let [error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        complete {:frame frame
+                  :role-state-path "/campaign/f30/live/guide.edn"
+                  :ledger {:projection {:active/frame {:phase :guide-intervention-1}}
+                           :events [{:event/body
+                                     {:certificate {:receipt/id "receipt"}}}]}
+                  :result error}]
+    (doseq [input [(assoc complete :role-state-path nil)
+                   (assoc-in complete [:ledger :projection :active/frame :phase]
+                             nil)
+                   (assoc-in complete [:ledger :events] [])
+                   (assoc-in complete [:result :findings] [])
+                   (assoc-in complete [:result :repair/attempts] 0)]]
+      (is (= (:result input) (sut/role-terminal-repair-park input))))))
+
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
                   {:frame frame :apparatus-repository "."

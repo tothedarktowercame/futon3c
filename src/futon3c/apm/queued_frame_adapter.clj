@@ -138,6 +138,38 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
+(defn role-terminal-repair-park
+  "Park a frame after bounded repair of a role's terminal submission is
+  exhausted. The last certified phase receipt remains the re-entry authority;
+  an untyped terminal is recorded as the finding, never accepted as a receipt."
+  [{:keys [frame ledger role-state-path result]}]
+  (let [receipt (last (keep #(get-in % [:event/body :certificate])
+                            (:events ledger)))
+        phase (get-in ledger [:projection :active/frame :phase])
+        park (awaiting-claude-decision
+              {:state/type :role-terminal-repair-frame-park
+               :frame/id (:frame/id frame)
+               :problem/id (:problem/id frame)
+               :phase phase
+               :role/state-path role-state-path
+               :last-valid-receipt/id (or (:receipt/id receipt)
+                                          (:certificate/id receipt))
+               :error/code (:error/code result)
+               :repair/kind :terminal-submission
+               :repair/attempts (:repair/attempts result)
+               :role/findings (:findings result)
+               :residual (pr-str (:findings result))})]
+    (if (and (= :live-job-terminal-repair-exhausted (:error/code result))
+             (every? #(and (string? %) (not (str/blank? %)))
+                     ((juxt :frame/id :problem/id :role/state-path
+                            :last-valid-receipt/id :residual) park))
+             (keyword? (:phase park))
+             (keyword? (:repair/kind park))
+             (pos-int? (:repair/attempts park))
+             (seq (:role/findings park)))
+      {:ok true :status :frame-parked :frame/park park}
+      result)))
+
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
    :typed-completion
