@@ -5,10 +5,11 @@
   :stale; contradictory observations yield :conflict; only independently
   agreeing current observations yield :valid."
   (:require [clojure.string :as str]
-            [futon3c.apm.campaign-machine :as machine])
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.job-state :as job-state])
   (:import [java.time Duration Instant]))
 
-(def terminal-job-states #{:done :failed :error :cancelled})
+(def terminal-job-states job-state/terminal-states)
 
 (defn- nonblank? [x]
   (and (string? x) (not (str/blank? x))))
@@ -108,13 +109,20 @@
     (let [items (:items jobs)
           malformed (filter #(or (not (nonblank? (:job-id %)))
                                  (not (keyword? (:state %)))) items)
-          live (remove #(contains? terminal-job-states (:state %)) items)]
+          unknown (filter #(= :unknown (job-state/classify (:state %)))
+                          items)
+          live (filter #(contains? #{:active :settling}
+                                   (job-state/classify (:state %)))
+                       items)]
       (concat
        (when-not (vector? items)
          [(finding :stale :jobs :job-snapshot-invalid)])
        (when (seq malformed)
          [(finding :stale :jobs :job-observation-invalid
                    {:count (count malformed)})])
+       (when (seq unknown)
+         [(finding :stale :jobs :job-state-unclassified
+                   {:states (mapv :state unknown)})])
        (duplicate-job-findings items)
        (if active
          (for [job live :when (not= (:frame-id active) (:frame-id job))]

@@ -5,9 +5,10 @@
    activated. A restart therefore polls the recorded job instead of dispatching
    a duplicate. Terminal evidence is delegated to a phase-specific validator."
   (:require [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.campaign-trace :as campaign-trace]))
+            [futon3c.apm.campaign-trace :as campaign-trace]
+            [futon3c.apm.job-state :as job-state]))
 
-(def terminal-states #{:done :failed :error :cancelled})
+(def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 
 (defn- successor-observation [job terminal-collection findings]
@@ -219,9 +220,9 @@
 
     (not (:activation/accepted? state))
     (let [job (job-fn (get-in state [:ticket :job-id]))
-          observed-accepted? (or (contains? terminal-states (:state job))
-                                 (contains? #{:activating :running :overrun}
-                                            (:state job)))
+          state-class (job-state/classify (:state job))
+          observed-accepted? (contains? #{:terminal :settling :active}
+                                        state-class)
           unaccepted-state? (and (not (:activation/accepted? state))
                                  (contains? #{:queued :cancelled} (:state job)))
           supersession-eligible?
@@ -278,6 +279,10 @@
     (let [active-request (or (:active-request state) request)
           job (job-fn (get-in state [:ticket :job-id]))]
       (cond
+        (= :unknown (job-state/classify (:state job)))
+        {:ok false :error/code :live-job-state-unclassified
+         :finding {:job-id (:job-id job) :state (:state job)}}
+
         (not (contains? terminal-states (:state job)))
         {:ok true :status :awaiting-terminal :state state}
 

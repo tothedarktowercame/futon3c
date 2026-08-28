@@ -46,9 +46,9 @@
                     ;; was 0 and the terminal was absent. This is a real-time
                     ;; budget, not a synchronisation point — kept generous so
                     ;; it fails only when dispatch is genuinely broken.
-                    {:max-polls 200 :poll-ms 25})]
+                    {:max-polls 200 :max-settling-polls 600 :poll-ms 25})]
         (is (:accepted? activated))
-        (is (:ok terminal))
+        (is (:ok terminal) (pr-str terminal))
         (is (= 1 @runs))
         (is (= (:job-id announced)
                (get-in terminal [:dispatch-observation :terminal-job-id])))
@@ -67,3 +67,36 @@
     (is (= :job-port-budget-exhausted (:error/code result)))
     (is (false? (get-in result
                         [:dispatch-observation :timeout-treated-as-success])))))
+
+(deftest delivering-is-settling-and-unknown-states-fail-loudly
+  (let [responses (atom [{:http/status 200
+                          :job {:job-id "settling" :state "delivering"}}
+                         {:http/status 200
+                          :job {:job-id "settling" :state "done"
+                                :trace/delivery-observation
+                                {:terminal-job-id "settling"
+                                 :delivery-status "delivered"
+                                 :inbox-file-created? true
+                                 :registered-push-performed? false
+                                 :polling-available? true}}}])
+        request-fn (fn [_ _ _]
+                     (let [response (first @responses)]
+                       (swap! responses #(if (next %) (vec (next %)) %))
+                       response))
+        result (sut/await-terminal!
+                request-fn "http://handler"
+                {:job-id "settling" :activation-accepted? true}
+                {:max-polls 2 :poll-ms 0 :sleep-fn (fn [_])})]
+    (is (:ok result))
+    (is (= [:delivering :done]
+           (get-in result [:dispatch-observation :state-sequence]))))
+  (let [result (sut/await-terminal!
+                (fn [_ _ _]
+                  {:http/status 200
+                   :job {:job-id "novel" :state "new-vocabulary"}})
+                "http://handler"
+                {:job-id "novel" :activation-accepted? true}
+                {:max-polls 100 :poll-ms 0 :sleep-fn (fn [_])})]
+    (is (= :job-port-state-unclassified (:error/code result)))
+    (is (= [:new-vocabulary]
+           (get-in result [:dispatch-observation :state-sequence])))))

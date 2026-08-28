@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
+            [futon3c.apm.job-state :as job-state]
             [futon3c.apm.toolchain-port :as toolchain-port]))
 
 (def required-report-fields
@@ -200,9 +201,18 @@
     {:ok false :error/code :preflight-state-invalid}
 
     :else
-    (let [job (job-fn (get-in state [:ticket :job-id]))]
-      (if-not (= :done (:state job))
+    (let [job (job-fn (get-in state [:ticket :job-id]))
+          state-class (job-state/classify (:state job))]
+      (cond
+        (= :unknown state-class)
+        {:ok false :error/code :preflight-job-state-unclassified
+         :finding {:job-id (:job-id job) :state (:state job)}}
+        (contains? #{:active :settling} state-class)
         {:ok true :status :awaiting-terminal :state state}
+        (not= :done (:state job))
+        {:ok false :error/code :preflight-terminal-failure
+         :finding (select-keys job [:job-id :state :terminal-code])}
+        :else
         (let [ingested (receipt contract (:request state) (:ticket state) job)]
           (if-not (:ok ingested)
             ingested

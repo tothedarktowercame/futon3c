@@ -6,6 +6,7 @@
   (:require [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-trace :as campaign-trace]
+            [futon3c.apm.job-state :as job-state]
             [futon3c.apm.live-job-driver :as job-driver]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -321,7 +322,8 @@
       (let [active (:active state)
             raw-job (job-fn (get-in active [:ticket :job-id]))
             provider (:terminal-submission-provider effects)
-            terminal? (contains? job-driver/terminal-states (:state raw-job))
+            state-class (job-state/classify (:state raw-job))
+            terminal? (= :terminal state-class)
             collection (:terminal-collection active)
             freshly-collected (when (and terminal? provider (nil? collection))
                                 (provider (:request active) (:ticket active)
@@ -338,6 +340,10 @@
                   raw-job)
             expected-session (:session-id (first (:rounds state)))]
         (cond
+          (= :unknown state-class)
+          {:ok false :error/code :solver-job-state-unclassified
+           :finding {:job-id (:job-id raw-job) :state (:state raw-job)}}
+
           (and terminal? provider (nil? collection))
           (let [evidence (job-driver/terminal-collection-record
                           (:request active) (:ticket active) raw-job

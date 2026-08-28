@@ -206,14 +206,20 @@
      (let [job (job-port/observe agency-base job-id)
            typed (submission/submitted job-id)
            report (when typed (submitted-report typed))]
-       (if (contains? #{:done :failed :timeout :cancelled} (:state job))
+       (case (job-port/classify-state (:state job))
+         :terminal
          (if (and (= :done (:state job)) (map? report))
            {:ok true :job job-id :report report}
            {:ok false :error/code :promotion-stage-terminal-invalid :job job
             :report/error (if (= :done (:state job))
                             {:error/code :typed-submission-missing}
                             (:report/error job))})
-         {:ok true :status :awaiting-terminal :job job-id}))))))
+         :active
+         {:ok true :status :awaiting-terminal :job job-id}
+         :settling
+         {:ok true :status :awaiting-terminal :job job-id}
+         {:ok false :error/code :promotion-stage-job-state-unclassified
+          :job job}))))))
 
 (defn run-live!
   [{:keys [state-path agency-base control-root deposit-request reviewer-request
