@@ -62,6 +62,17 @@ Two failure classes matter most (Joe, 2026-08-27): **frames not advancing** and
 | C4 | A job can be dispatched carrying another agent's identity as `caller` without that agent having sent it. Two instances today, both under `caller: claude-clink-1`: `…2376` to codex-18 (a duplicate holdout review, cause: park fork — C2) and `…2405` to codex-2 at 15:35:19, 18 seconds after my own bell to the same seat and not sent by me. Content in both cases was legitimate, but job provenance under a given identity cannot be trusted for audit or for seat accounting | not diagnosed; the job ledger is a rolling window, so earlier instances may have aged out and the count of 2 is a floor | **none** |
 | G1 | `frame-cycle-handlers` guard `:frame-cycle-input-receipt-set-mismatch` fires only when `(:receipt/input-receipt-ids receipt)` is non-nil. `bank/build-receipt` has never set that key (unchanged since 2026-08-22), so for bank receipts `declared-inputs` is always nil and **the guard has never fired**. `bank-handler-rejects-a-different-frames-verify-receipt` asserts a protection that does not exist: a bank receipt naming another frame's verify receipt is accepted | found by the 2026-08-27 sweep; not today's regression | **none** |
 
+**C4 resolved 2026-08-28.** Joe: codex-12 is working topology problems with
+codex-18, and those seats carry his own work. The jobs appearing under
+`caller: claude-clink-1` are legitimate work whose caller attribution is
+inherited or defaulted — not something dispatching under a stolen identity. The
+practical consequence stands and is now a seat-reservation matter rather than a
+defect: job provenance under a given identity cannot be used to decide who asked
+for what, so an audit must corroborate from elsewhere. This most likely also
+explains the 2026-08-27 21:55 ticks on the disabled `jit-all-open-v2`
+coordinator: the overnight commits were JIT tick-claim and deadline work, which
+exercises that coordinator.
+
 C1 is the same shape as A3, A5 and A6: a status field asserting an action the
 machine did not perform. Both affected jobs were dispatched with
 `--mode work`; two samples is not enough to blame the mode, but the delivery
