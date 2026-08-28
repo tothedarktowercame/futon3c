@@ -110,3 +110,16 @@
                          {:ok true :status :frame-complete})))]
     (is (= :batch-advanced (:status result)))
     (is (= [:continue] (last @calls)))))
+
+(deftest awaiting-substrate-is-a-deliberate-wait
+  (let [state (atom nil) calls (atom [])
+        result (sut/tick!
+                (assoc (options state calls)
+                       :frame-tick-fn
+                       (fn [_]
+                         (swap! calls conj [:tick])
+                         {:ok true :status :awaiting-substrate
+                          :resume-at "2026-08-28T12:00:00Z"})))]
+    (is (= :awaiting-substrate (:status result)))
+    (is (= "2026-08-28T12:00:00Z" (:resume-at result)))
+    (is (not-any? #(= :continue (first %)) @calls))))

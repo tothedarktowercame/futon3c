@@ -94,10 +94,11 @@
 (deftest phase-status-vocabulary-is-closed-and-unknowns-name-the-gap
   (is (= #{:awaiting-terminal :awaiting-substrate
            :transport-retry-scheduled :terminal-collected :certified}
-         phase-status/known-statuses))
+         (phase-status/known-statuses :phase-driver)))
   (is (= :waiting-substrate
-         (phase-status/classify :awaiting-substrate)))
-  (is (= :unknown (phase-status/classify :new-producer-status)))
+         (phase-status/classify :phase-driver :awaiting-substrate)))
+  (is (= :unknown (phase-status/classify :phase-driver
+                                         :new-producer-status)))
   (let [calls (atom [])
         result (sut/tick!
                 (base calls {:ok true :status :new-producer-status}))]
@@ -105,9 +106,41 @@
            (:error/code result)))
     (is (= :new-producer-status (get-in result [:finding :status])))
     (is (= :unknown (get-in result [:finding :classification])))
-    (is (= (vec (sort phase-status/known-statuses))
+    (is (= (vec (sort (phase-status/known-statuses :phase-driver)))
            (get-in result [:finding :known-statuses])))
     (is (not-any? #(and (vector? %) (= :park (first %))) @calls))))
+
+(deftest status-propagation-closure-names-the-rejecting-consumer
+  (is (empty? (phase-status/closure-findings)))
+  (let [driver-only
+        (assoc-in phase-status/boundary-status-classes
+                  [:phase-driver :awaiting-new-substrate] :waiting-substrate)
+        missing-mapping
+        (phase-status/closure-findings driver-only phase-status/propagation)]
+    (is (= [{:error/code :phase-status-propagation-mapping-missing
+             :producer :phase-driver
+             :consumer :live-supervisor-frame
+             :status :awaiting-new-substrate}]
+           (filterv #(= :awaiting-new-substrate (:status %))
+                    missing-mapping))))
+  (let [vocabulary (-> phase-status/boundary-status-classes
+                       (assoc-in [:phase-driver :awaiting-new-substrate]
+                                 :waiting-substrate)
+                       (assoc-in [:live-supervisor-frame
+                                  :awaiting-new-substrate]
+                                 :waiting-substrate))
+        routes (mapv #(if (#{:phase-driver :live-supervisor-frame}
+                            (:producer %))
+                        (update % :mapping assoc
+                                :awaiting-new-substrate
+                                :awaiting-new-substrate)
+                        %)
+                     phase-status/propagation)
+        downstream (phase-status/closure-findings vocabulary routes)]
+    (is (= #{:problem-queue-frame :live-batch-frame}
+           (set (map :consumer
+                     (filter #(= :awaiting-new-substrate (:output-status %))
+                             downstream)))))))
 
 (deftest audit-and-projection-failures-stop-without-routing-around
   (testing "audit"

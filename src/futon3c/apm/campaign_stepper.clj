@@ -8,9 +8,8 @@
             [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-regulator :as regulator]
-            [futon3c.apm.campaign-runner :as runner]))
-
-(def gate-statuses #{:pass :fail})
+            [futon3c.apm.campaign-runner :as runner]
+            [futon3c.apm.phase-status :as phase-status]))
 
 (defn- gate-report-error [gates]
   (cond
@@ -20,8 +19,9 @@
     (not-every? keyword? (map :gate/id gates)) :campaign-stepper-gate-id-required
     (not= (count gates) (count (distinct (map :gate/id gates))))
     :campaign-stepper-gate-id-duplicate
-    (not-every? gate-statuses (map :gate/status gates))
-    :campaign-stepper-gate-status-invalid
+    (some #(= :unknown (phase-status/classify :campaign-stepper-gate %))
+          (map :gate/status gates))
+    :campaign-stepper-gate-status-vocabulary-incomplete
     (not-every? map? (map :gate/evidence gates))
     :campaign-stepper-gate-evidence-required))
 

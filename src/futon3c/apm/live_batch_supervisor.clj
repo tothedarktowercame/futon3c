@@ -4,7 +4,8 @@
    The campaign ledger is the cursor. A content-addressed campaign batch permit
    is the authority. This layer never infers success from a park or timeout."
   (:require [futon3c.apm.campaign-batch :as batch]
-            [futon3c.apm.campaign-machine :as machine]))
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.phase-status :as phase-status]))
 
 (defn contiguous-range
   "Resolve inclusive START..END from ordered manifest units."
@@ -123,8 +124,9 @@
                              :trusted-permit-id trusted-permit-id
                              :trusted-issuer trusted-issuer :actor actor})]
                 (if (and (:ok result)
-                         (contains? #{:parked :phase-advanced :frame-complete}
-                                    (:status result)))
+                         (not= :unknown
+                               (phase-status/classify :live-batch-frame
+                                                      (:status result))))
                   (if (= :frame-complete (:status result))
                     (if-not (fn? continue-fn)
                       {:ok false :error/code :live-batch-continuation-provider-missing}
@@ -139,6 +141,11 @@
                     (assoc result :batch/frames frames :batch/frame frame-id
                            :batch/cursor expected-cursor))
                   (if (:ok result)
-                    {:ok false :error/code :live-batch-frame-status-invalid
-                     :finding result}
+                    {:ok false
+                     :error/code :live-batch-frame-status-vocabulary-incomplete
+                     :finding {:status (:status result)
+                               :known-statuses
+                               (vec (sort (phase-status/known-statuses
+                                           :live-batch-frame)))
+                               :frame-result result}}
                     result))))))))))

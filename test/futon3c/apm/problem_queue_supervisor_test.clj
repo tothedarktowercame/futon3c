@@ -210,7 +210,8 @@
            (mapv second (filter #(= :mint (first %)) @calls))))))
 
 (deftest durable-intermediate-collection-statuses-remain-nonterminal
-  (doseq [status [:terminal-collected :claim-recovered]]
+  (doseq [status [:awaiting-substrate :transport-retry-scheduled
+                  :terminal-collected :claim-recovered]]
     (let [{:keys [providers calls]} (harness)]
       (sut/tick! providers)
       (let [result (sut/tick! (assoc providers :frame-tick-fn

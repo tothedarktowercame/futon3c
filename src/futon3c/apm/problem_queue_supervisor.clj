@@ -3,7 +3,8 @@
 
   At most one frame is provisioned. A successor may be minted only from a
   durably terminal predecessor; queued problems carry no seats or workspaces."
-  (:require [futon3c.apm.campaign-machine :as machine]))
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.phase-status :as phase-status]))
 
 (def terminal-results #{:closed :partial :void})
 
@@ -404,10 +405,14 @@
             result (frame-tick-fn (:frame active))]
         (cond
           (not (:ok result)) result
-          (not (contains? #{:parked :phase-advanced :terminal-collected
-                            :claim-recovered :frame-parked :frame-complete}
-                          (:status result)))
-          {:ok false :error/code :problem-queue-frame-status-invalid}
+          (= :unknown (phase-status/classify :problem-queue-frame
+                                             (:status result)))
+          {:ok false
+           :error/code :problem-queue-frame-status-vocabulary-incomplete
+           :finding {:status (:status result)
+                     :known-statuses
+                     (vec (sort (phase-status/known-statuses
+                                 :problem-queue-frame)))}}
           (= :frame-parked (:status result))
           (let [park (:frame/park result)]
             (if-not (and (valid-frame-park? park)

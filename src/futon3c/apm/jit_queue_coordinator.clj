@@ -1,7 +1,8 @@
 (ns futon3c.apm.jit-queue-coordinator
   "Durable coordinator adapter for the JIT problem queue."
   (:require [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.durable-coordinator :as coordinator]))
+            [futon3c.apm.durable-coordinator :as coordinator]
+            [futon3c.apm.phase-status :as phase-status]))
 
 (def adapter-key :apm/jit-problem-queue)
 (def default-registry-path "data/apm-coordinators/registry.edn")
@@ -31,9 +32,8 @@
       :permitted-duration-ms tick-work-timeout-ms
       :permitted-duration-source :coordinator/tick-work-timeout-minutes}
      :expected/postcondition
-     {:status/one-of [:frame-prepared :parked :phase-advanced
-                      :terminal-collected :claim-recovered :batch-paused
-                      :batch-complete]}}))
+     {:status/one-of (vec (sort (phase-status/known-statuses
+                                 :jit-queue-postcondition)))}}))
 
 (defn adapter-constructor [config]
   {:decide-fn

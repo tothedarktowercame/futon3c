@@ -44,7 +44,8 @@
             :else
             (let [action (get-in inspection [:obligation :obligation/action])
                   driven (drive-phase-fn action)
-                  status-class (phase-status/classify (:status driven))]
+                  status-class (phase-status/classify :phase-driver
+                                                      (:status driven))]
               (cond
                 (not (:ok driven)) driven
 
@@ -159,5 +160,6 @@
                  :finding {:status (:status driven)
                            :classification status-class
                            :known-statuses
-                           (vec (sort phase-status/known-statuses))
+                           (vec (sort (phase-status/known-statuses
+                                      :phase-driver)))
                            :phase-result driven}}))))))))

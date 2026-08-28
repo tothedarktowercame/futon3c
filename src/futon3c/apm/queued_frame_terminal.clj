@@ -4,7 +4,8 @@
   The problem-bank metadata receipt records verified solve pinning. Workspace
   removal is separately authorized by independent retirement audits; neither
   operation is allowed from a conversational or merely terminal-looking status."
-  (:require [futon3c.apm.campaign-machine :as machine]))
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.phase-status :as phase-status]))
 
 (def frame-results #{:closed :partial :void})
 (def learning-outcomes #{:observed :partially-observed :unobserved :skipped})
@@ -151,13 +152,17 @@
                                            [:workspace/terminal-heads role]))]
                        (cond
                          (not (:ok status)) (reduced status)
-                         (= :already-retired (:status status))
+                         (= :complete
+                            (phase-status/classify :queued-frame-retirement
+                                                   (:status status)))
                          (assoc-in result [:workspace-receipts role]
                                    (:receipt status))
-                         (not= :not-retired (:status status))
+                         (= :unknown
+                            (phase-status/classify :queued-frame-retirement
+                                                   (:status status)))
                          (reduced {:ok false
                                    :error/code
-                                   :queued-frame-retirement-status-invalid
+                                   :queued-frame-retirement-status-vocabulary-incomplete
                                    :role role :status status})
                          :else
                          (let [audit-result
