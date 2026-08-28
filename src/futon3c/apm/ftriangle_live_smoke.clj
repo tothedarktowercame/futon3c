@@ -35,7 +35,8 @@
 
 (def traversal-order
   [:preflight-admission :dispatch-terminal :holdout-exclusion
-   :watchdog-progress :forced-repair-durability :combined-trace-closure])
+   :watchdog-progress :forced-repair-durability :model-dispatch-binding
+   :combined-trace-closure])
 
 (def harness-input-error-codes
   #{:ftriangle-live-effect-missing
@@ -48,6 +49,9 @@
   Invalid call shapes are rejected before preflight or dispatch."
   [config]
   (let [dispatch (:dispatch-request config)
+        dispatch-role (:dispatch-role config)
+        declared-model (get-in config [:seat-cast dispatch-role :model])
+        declared-agent (get-in config [:seat-cast dispatch-role :agent-id])
         findings
         (cond-> []
           (not (map? (:manifest config))) (conj :manifest-not-map)
@@ -62,7 +66,14 @@
                     (every? #(and (string? (get dispatch %))
                                   (not-empty (get dispatch %)))
                             [:agent-id :prompt :job-id])))
-          (conj :dispatch-request-invalid))]
+          (conj :dispatch-request-invalid)
+          (not (keyword? dispatch-role)) (conj :dispatch-role-invalid)
+          (not (and (string? declared-model) (not-empty declared-model)))
+          (conj :dispatch-model-undeclared)
+          (not= declared-model (:model dispatch))
+          (conj :dispatch-model-does-not-match-cast)
+          (not= declared-agent (:agent-id dispatch))
+          (conj :dispatch-agent-does-not-match-cast))]
     (if (seq findings)
       {:ok false :error/code :ftriangle-port-contract-invalid
        :failure/class :harness :failure/action :fix-ftriangle
@@ -83,7 +94,37 @@
     (:manifest-path config)
     (assoc :manifest (edn/read-string (slurp (:manifest-path config))))
     (:contract-path config)
-    (assoc :contract (edn/read-string (slurp (:contract-path config))))))
+    (assoc :contract (edn/read-string (slurp (:contract-path config))))
+    (:seat-cast-path config)
+    (assoc :seat-cast (edn/read-string (slurp (:seat-cast-path config))))))
+
+(defn usage-report
+  "Informational provider visibility for the declared cast. Unknown provider
+  facts remain explicit and never affect readiness or the traversal verdict."
+  [seat-cast]
+  (into (sorted-map)
+        (map (fn [[role {:keys [model]}]]
+               [role {:model model
+                      :usage/headroom :unknown
+                      :usage/quota :unknown
+                      :usage/window-reset :unknown}]))
+        seat-cast))
+
+(defn model-dispatch-binding
+  "Check the declared cast against the model persisted by the invocation
+  boundary. The usage report is attached for operator visibility, not used as
+  a condition of success."
+  [dispatch-role seat-cast terminal]
+  (let [declared (get-in seat-cast [dispatch-role :model])
+        actual (:invocation/model terminal)
+        report (usage-report seat-cast)]
+    (if (and (string? declared) (not-empty declared) (= declared actual))
+      {:ok true
+       :evidence {:role dispatch-role :declared-model declared
+                  :actual-model actual :usage/report report}}
+      {:ok false :error/code :ftriangle-dispatch-model-mismatch
+       :role dispatch-role :declared-model declared :actual-model actual
+       :usage/report report})))
 
 (defn arm-isolated-coordinator!
   "Register and start only F△'s coordinator. This deliberately never calls
@@ -327,11 +368,11 @@
   (.resolve (Path/of (str root) (make-array String 0)) relative))
 
 (defn wired-effects
-  "Construct the six live effects from the same APIs used by production.
+  "Construct the seven live effects from the same APIs used by production.
   Construction has no effects. CONFIG must name F△'s isolated manifest,
   contract, dispatch authority, watchdog state, and root."
-  [{:keys [manifest contract agency-base dispatch-request watchdog-state-path
-           smoke-root request-fn await-options]
+  [{:keys [manifest contract agency-base dispatch-request dispatch-role seat-cast
+           watchdog-state-path smoke-root request-fn await-options]
     :or {agency-base "http://127.0.0.1:7070"
          smoke-root ledger-root
          request-fn runtime/http-json
@@ -456,6 +497,13 @@
                                 :predecessor archived}}
            {:ok false :error/code :ftriangle-predecessor-not-durable
             :driver result :state @persisted})))
+
+     :model-dispatch-binding
+     (fn [_]
+       (model-dispatch-binding
+        dispatch-role seat-cast
+        (get-in @dispatch-evidence
+                [:terminal :dispatch-observation :terminal])))
 
      :combined-trace-closure
      (fn [_]

@@ -11,10 +11,12 @@
                   :polling-available? true}
         terminal (sut/job->terminal
                   {:job {:job-id "j1" :agent-id "f19-proctor" :state "done"
+                         :invocation/model "gpt-5.6-sol"
                          :trace/delivery-observation delivery
                          :result (str "```edn\n" (pr-str report) "\n```")}})]
     (is (= :done (:state terminal)))
     (is (= report (:report terminal)))
+    (is (= "gpt-5.6-sol" (:invocation/model terminal)))
     (is (= delivery (:trace/delivery-observation terminal)))))
 
 (deftest non-edn-result-is-not-evidence

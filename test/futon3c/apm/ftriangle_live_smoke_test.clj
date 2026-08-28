@@ -26,8 +26,11 @@
   (let [valid (sut/validate-live-port-config
                {:manifest {} :contract {} :smoke-root "smoke"
                 :watchdog-state-path "watch.edn"
+                :dispatch-role :solver
+                :seat-cast {:solver {:agent-id "agent"
+                                     :model "gpt-5.6-sol"}}
                 :dispatch-request {:agent-id "agent" :prompt "p"
-                                   :job-id "job"}})
+                                   :job-id "job" :model "gpt-5.6-sol"}})
         invalid (sut/validate-live-port-config
                  {:manifest {} :contract {} :smoke-root "smoke"
                   :watchdog-state-path (java.io.File. "wrong-type")
@@ -113,7 +116,7 @@
     (is (= :apparatus (:failure/class result)))
     (is (= 2 (:ftriangle/attempts result)))))
 
-(deftest executor-requires-all-six-ledger-evidence-items-and-valid-closure
+(deftest executor-requires-all-seven-ledger-evidence-items-and-valid-closure
   (let [trace-body {"schemaVersion" 1 "traceKind" "ftriangle-test"}
         digest (campaign-trace/combined-trace-digest trace-body)
         certificate {:trace/combined trace-body :trace/digest digest
@@ -217,7 +220,8 @@
       (fn [& _]
         (swap! calls conj :terminal)
         {:ok true :dispatch-observation
-         {:terminal {:job-id "job-1" :state :done :report {}}
+         {:terminal {:job-id "job-1" :state :done :report {}
+                     :invocation/model "gpt-5.6-sol"}
           :terminal-job-id "job-1"}})
       runtime/read-state
       (fn [_] {:watchdog/status :watching
@@ -239,9 +243,13 @@
         {:ok true :certificate certificate :trace trace-body})]
       (let [effects (sut/wired-effects
                      {:manifest {} :contract {} :watchdog-state-path "watch"
+                      :dispatch-role :solver
+                      :seat-cast {:solver {:agent-id "fixture-agent"
+                                           :model "gpt-5.6-sol"}}
                       :dispatch-request {:dispatch/id "ftriangle-dispatch"
                                          :agent-id "fixture-agent"
-                                         :prompt "trivial"}})
+                                         :prompt "trivial"
+                                         :model "gpt-5.6-sol"}})
             result (sut/execute!
                     {:checks (passing-checks) :effects effects
                      :persist-ledger-fn (fn [_] {:ok true})})]
@@ -250,3 +258,19 @@
         (is (every? (set @calls)
                     [:manifest :admission :announce :activate :terminal
                      :persist :checker]))))))
+
+(deftest usage-report-is-explicitly-informational-when-provider-data-is-unknown
+  (is (= {:solver {:model "gpt-5.6-sol"
+                   :usage/headroom :unknown
+                   :usage/quota :unknown
+                   :usage/window-reset :unknown}}
+         (sut/usage-report {:solver {:model "gpt-5.6-sol"}}))))
+
+(deftest invocation-model-mismatch-names-declared-and-actual-values
+  (let [result (sut/model-dispatch-binding
+                :solver {:solver {:model "gpt-5.6-sol"}}
+                {:invocation/model "gpt-5.6-terra"})]
+    (is (false? (:ok result)))
+    (is (= :ftriangle-dispatch-model-mismatch (:error/code result)))
+    (is (= "gpt-5.6-sol" (:declared-model result)))
+    (is (= "gpt-5.6-terra" (:actual-model result)))))

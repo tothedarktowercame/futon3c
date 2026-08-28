@@ -58,6 +58,7 @@
         parsed (parse-report-diagnostic (:result job))]
     {:job-id (:job-id job) :agent-id (:agent-id job)
      :session-id (:session-id job)
+     :invocation/model (:invocation/model job)
      :state (some-> (:state job) keyword)
      :trace/delivery-observation (:trace/delivery-observation job)
      :report (:report parsed)

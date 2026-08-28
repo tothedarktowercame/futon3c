@@ -1000,8 +1000,17 @@
        (name code)
        msg])))
 
+(defn- invoke-job-request-digest
+  [agent-id prompt caller surface model]
+  (campaign-machine/ledger-digest
+   [(cond-> {:agent-id (str agent-id) :prompt (str prompt)
+             :caller (str (or caller "http-caller"))
+             :surface (str (or surface "http"))}
+      model (assoc :model model))]))
+
 (defn- create-invoke-job!
-  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode]}]
+  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
+           model]}]
   (let [created-id (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
@@ -1028,10 +1037,8 @@
                                :caller (str (or caller "http-caller"))
                                :surface (str (or surface "http"))
                                :request-digest
-                               (campaign-machine/ledger-digest
-                                [{:agent-id (str agent-id) :prompt (str prompt)
-                                  :caller (str (or caller "http-caller"))
-                                  :surface (str (or surface "http"))}])
+                               (invoke-job-request-digest
+                                agent-id prompt caller surface model)
                                :bellback-of (some-> bellback-of str)   ;; bell-router: this job is a reply to <job-id>
                                :mode mode
                                :state "queued"
@@ -1045,6 +1052,7 @@
                                :result-summary nil
                                :artifact-ref nil
                                :execution {:executed? false :tool-events 0 :command-events 0}
+                               :invocation/model model
                                :delivery {:status "pending"}
                                :event-seq 0
                                :events []}
@@ -1422,7 +1430,7 @@
         (select-keys job [:job-id :agent-id :caller :surface :mode :state
                           :created-at :started-at :finished-at
                           :terminal-code :terminal-message
-                          :session-id :trace-id
+                          :session-id :trace-id :invocation/model
                           :result :result-summary :artifact-ref
                           :execution :auto-bellback :delivery
                           :trace/delivery-observation :events])]
@@ -3892,12 +3900,15 @@
         mission-id (or (:mission-id payload) (get payload "mission-id"))
         timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                            long)
+        model (some-> (or (:model payload) (get payload "model"))
+                      str str/trim not-empty)
         ev-opts (when mission-id [:mission-id mission-id])
         job-id (create-invoke-job! {:requested-job-id requested-job-id
                                     :agent-id agent-id
                                     :prompt prompt
                                     :caller caller
-                                    :surface surface})]
+                                    :surface surface
+                                    :model model})]
     (try
       (mark-invoke-job-running! job-id)
       (register-job-worker! job-id (Thread/currentThread) nil)
@@ -3919,7 +3930,7 @@
             raw-result (try
                          (invoke-agent-with-session-recovery!
                           aid effective-prompt
-                          {:timeout-ms timeout-ms} job-id)
+                          {:timeout-ms timeout-ms :model model} job-id)
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -4639,6 +4650,8 @@
                         "announce")
             raw-mode (or (:mode payload) (get payload "mode"))
             mode (normalize-invoke-job-mode raw-mode)
+            model (some-> (or (:model payload) (get payload "model"))
+                          str str/trim not-empty)
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))
             requested-job-id (some-> requested-job-id str str/trim not-empty)
@@ -4646,9 +4659,8 @@
                        (get-in (ensure-invoke-jobs-ledger!)
                                [:jobs requested-job-id]))
             expected-digest (when (and agent-id prompt)
-                              (campaign-machine/ledger-digest
-                               [{:agent-id (str agent-id) :prompt (str prompt)
-                                 :caller caller :surface surface}]))]
+                              (invoke-job-request-digest
+                               agent-id prompt caller surface model))]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -4682,7 +4694,8 @@
                                               :prompt prompt
                                               :caller caller
                                               :surface surface
-                                              :mode mode}))
+                                              :mode mode
+                                              :model model}))
                 queued-jobs (get-in (active-invoke-job-counts)
                                     [(canonical-job-agent-id agent-id) :queued-jobs]
                                     0)
@@ -4722,11 +4735,12 @@
                     (some-> payload (get "surface") str) "http")
         raw-mode (or (:mode payload) (get payload "mode"))
         mode (normalize-invoke-job-mode raw-mode)
+        model (some-> (or (:model payload) (get payload "model"))
+                      str str/trim not-empty)
         job (when job-id (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)]))
         expected-digest (when (and agent-id prompt)
-                          (campaign-machine/ledger-digest
-                           [{:agent-id (str agent-id) :prompt (str prompt)
-                             :caller caller :surface surface}]))]
+                          (invoke-job-request-digest
+                           agent-id prompt caller surface model))]
     (cond
       (nil? payload) (json-response 400 {:ok false :error "invalid-json"})
       (or (str/blank? (str agent-id)) (nil? prompt) (str/blank? (str job-id)))

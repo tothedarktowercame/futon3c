@@ -33,14 +33,15 @@
 
 (defn announce!
   ([agency-base request] (announce! runtime/http-json agency-base request))
-  ([request-fn agency-base {:keys [agent-id prompt surface caller mode job-id]}]
+  ([request-fn agency-base {:keys [agent-id prompt surface caller mode job-id model]}]
    (let [response
          (request-fn "POST" (str agency-base "/api/alpha/invoke/announce")
                      (cond-> {:agent-id agent-id :prompt prompt
                               :surface (or surface "emacs-repl")
                               :caller (or caller "countdown-control")}
                        mode (assoc :mode mode)
-                       job-id (assoc :job-id job-id)))]
+                       job-id (assoc :job-id job-id)
+                       model (assoc :model model)))]
      {:ok (and (= 202 (:http/status response)) (:ok response)
                (:accepted response) (string? (:job-id response)))
       :job-id (:job-id response) :state (some-> (:state response) keyword)
@@ -49,7 +50,7 @@
 (defn activate!
   ([agency-base request] (activate! runtime/http-json agency-base request))
   ([request-fn agency-base {:keys [agent-id prompt surface caller mode job-id
-                                   timeout-ms]}]
+                                   timeout-ms model]}]
    (let [response
          (request-fn "POST" (str agency-base "/api/alpha/invoke/activate")
                      (cond-> {:agent-id agent-id :prompt prompt
@@ -57,7 +58,8 @@
                               :caller (or caller "countdown-control")
                               :job-id job-id}
                        mode (assoc :mode mode)
-                       timeout-ms (assoc :timeout-ms timeout-ms)))]
+                       timeout-ms (assoc :timeout-ms timeout-ms)
+                       model (assoc :model model)))]
      {:ok (and (= 202 (:http/status response)) (:ok response)
                (:accepted response))
       :job-id job-id :state (some-> (:state response) keyword)

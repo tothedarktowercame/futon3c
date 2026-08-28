@@ -22,7 +22,8 @@
         handler (http/make-handler {})
         request-fn (partial handler-request handler)
         authority {:agent-id "job-port-contract-agent"
-                   :prompt "contract work" :mode "brief"}]
+                   :prompt "contract work" :mode "brief"
+                   :model "gpt-5.6-sol"}]
     (registry/register-agent!
      {:agent-id {:id/value (:agent-id authority) :id/type :continuity}
       :type :codex :capabilities [:explore]
@@ -52,6 +53,9 @@
         (is (= 1 @runs))
         (is (= (:job-id announced)
                (get-in terminal [:dispatch-observation :terminal-job-id])))
+        (is (= "gpt-5.6-sol"
+               (get-in terminal [:dispatch-observation :terminal
+                                 :invocation/model])))
         (is (false? (get-in terminal
                             [:dispatch-observation :timeout-treated-as-success])))))))
 
