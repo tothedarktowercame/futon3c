@@ -72,6 +72,8 @@ for what, so an audit must corroborate from elsewhere. This most likely also
 explains the 2026-08-27 21:55 ticks on the disabled `jit-all-open-v2`
 coordinator: the overnight commits were JIT tick-claim and deadline work, which
 exercises that coordinator.
+| A9 | On finding no live watchdog, `durable-coordinator` **halts the coordinator** instead of arming one. Both sites — the tick-time check and `start-entry!` — go straight to `stop!` with `:durable-coordinator-running-unwatched`. The obvious remedy, arm a watchdog and proceed, is absent. On 2026-08-28 this turned a stale-JVM condition into a self-inflicted outage: the campaign started, found no watchdog, disabled itself, and appeared unstartable. Joe: "the extremely obvious next step would be to start a watchdog process" | not fixed | **none** |
+| A10 | F△ arms its own watchdog on its own coordinator, so it never traverses the production start path. F△ passing proves *a* frame can run; it does not prove *this campaign* can start. A9 sat undetected through eight green F△ runs for exactly this reason | not fixed | **none** |
 
 C1 is the same shape as A3, A5 and A6: a status field asserting an action the
 machine did not perform. Both affected jobs were dispatched with
