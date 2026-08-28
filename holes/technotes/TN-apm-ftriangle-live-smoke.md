@@ -163,3 +163,34 @@ which is the degenerate case of the same defect.
 **Sequencing:** this item can only be asserted once role models are declared
 (codex-1, job `…3142-90203f38`). Add it after that lands, not before, or F△
 fails on a condition nothing yet satisfies.
+
+## Informational: provider usage headroom (Joe, 2026-08-28)
+
+Pre-go-live should also report provider usage — **for information, not as a
+gate.**
+
+The distinction is deliberate. F△'s six preconditions are gates: unmet means
+refuse to dispatch, because running would produce a meaningless result. Usage
+headroom is different — you may legitimately start a campaign knowing a pause
+is coming, and blocking that would be the machine dictating to the operator
+rather than informing them. What you cannot afford is starting *without
+knowing*, which is exactly what happened overnight on 2026-08-27: f49's guide
+hit a five-hour Fable window nobody had looked at.
+
+**Report, per provider seat type in the campaign's cast:**
+
+- which model each role type will use (once declared — see the seventh
+  traversal item);
+- whatever quota or headroom figure the provider exposes;
+- when the current window resets, if that is knowable.
+
+**Report "unknown" honestly where it is unknown.** What is queryable differs by
+provider — GLM exposes a usage panel, and the Claude CLI's limit is observable
+only once hit, which is how we discovered this one. A confident-looking number
+inferred from nothing would be worse than an explicit blank, and this codebase
+has spent two days on fields that silently meant something other than they
+appeared to.
+
+The value is small and specific: an operator deciding whether to start a
+campaign now or after a reset should be able to see the answer, rather than
+discovering it six phases into a frame.
