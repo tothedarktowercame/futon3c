@@ -585,9 +585,15 @@
 (defn inspect! [] (stepper/inspect! (options)))
 
 (defn advance!
-  ([expected-kind] (advance! expected-kind nil))
-  ([expected-kind batch-authority]
-  (let [boot (bootstrap!) inspection (inspect!)]
+  ([expected-kind] (advance! expected-kind nil nil))
+  ([expected-kind batch-authority] (advance! expected-kind batch-authority nil))
+  ([expected-kind batch-authority booted]
+  ;; A caller that has already registered its own manifest passes that boot
+  ;; result in. Re-deriving it here would call bootstrap!, which reads the
+  ;; F19-era countdown manifest off disk and validates pins the JIT queue
+  ;; does not use -- the throw that 0555a316 removed from the JIT path's
+  ;; direct call but not from this transitive one.
+  (let [boot (or booted (bootstrap!)) inspection (inspect!)]
     (if-not (and (:ok boot) (:ok inspection)
                  (= :ready (:stepper/status inspection))
                  (= expected-kind
@@ -2266,8 +2272,8 @@
                   :ledger/version (:version observed)
                   :ledger/digest (:digest observed)}
                  (let [boot (bootstrap-one-off! manifest (:contract (inputs)))
-                       block (when (:ok boot) (advance! :open-block))
-                       opened (when (:ok block) (advance! :open-frame))]
+                       block (when (:ok boot) (advance! :open-block nil boot))
+                       opened (when (:ok block) (advance! :open-frame nil boot))]
                    (if (:ok opened) {:ok true} (or opened block boot)))))))
          :ledger-fn jit-ledger-observation}
         jit-config

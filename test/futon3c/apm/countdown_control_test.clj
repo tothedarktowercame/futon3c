@@ -816,3 +816,19 @@
     (is (nil? (sut/memory-cascade-arm nil root)) "a non-map file is off")
     (spit (str root "/memory-cascade-arm.edn") "{:unbalanced")
     (is (nil? (sut/memory-cascade-arm nil root)) "an unreadable file is off, not an exception")))
+
+;; 0555a316 kept the JIT registration path off the countdown manifest, but
+;; advance! re-derived the boot by calling bootstrap! itself, so the JIT frame
+;; effect still validated the F19-era countdown manifest transitively and threw
+;; "Countdown manifest failed executable validation" on every tick after f50
+;; closed. A caller that already booted passes its own result in.
+(deftest advance-uses-a-supplied-boot-instead-of-rereading-the-manifest
+  (let [bootstrap-calls (atom 0)]
+    (with-redefs [sut/bootstrap! (fn [] (swap! bootstrap-calls inc) {:ok true})
+                  sut/inspect! (constantly {:ok true :stepper/status :blocked})]
+      ;; supplied boot: bootstrap! must not be consulted
+      (sut/advance! :open-frame nil {:ok true})
+      (is (zero? @bootstrap-calls))
+      ;; no boot supplied: existing callers keep their behaviour
+      (sut/advance! :open-frame)
+      (is (= 1 @bootstrap-calls)))))
