@@ -64,6 +64,25 @@ living in the store comfortably.
    regexes — that produced three separate false findings in one afternoon, each
    of which read as a defect in the pipeline rather than in the instrument.
 
+## Refinement, 2026-08-27 — the store is queryable at the envelope, not at the body
+
+Measured while writing `M-formal-war-machine` §3.1e. Of 408 entries in one
+session window, **185 have a map body a JSON client can read; 223 are EDN maps
+rendered as strings** — `{"prompt-preview" "…"}`, keys and values
+space-separated, which is not JSON and has no stdlib parser in Python.
+
+**The split runs straight through the events the machine writes about itself.**
+`chat-turn` and `turn-commits` are in the readable half; every `invoke-start`,
+`invoke-complete`, `invoke-error` and `context-retrieval` is in the unreadable
+half — and those are exactly the events a WM-side criterion would quantify over.
+
+So the *queryable* row above understates it. The problem is not only that
+`wm-trace` sits outside the store; it is that the machine-facing events which
+**are** in the store cannot be read by a client that parses the envelope
+correctly. This cost two false measurements in one afternoon. Either the body is
+served as JSON when JSON is asked for, or a parser is provided and used; scraping
+it with regexes is what produced three separate false findings today.
+
 ## Split off deliberately — do not bundle
 
 **No tick has been recorded since 2026-07-21**, thirty-seven days. Whether the
