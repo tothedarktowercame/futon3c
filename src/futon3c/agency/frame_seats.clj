@@ -144,6 +144,18 @@
                          (some? model) (assoc :model model))]))
         specs))
 
+(defn- missing-claude-model-findings [specs]
+  (into []
+        (keep (fn [[registration-key suffix agent-type _memory-domain model]]
+                (when (and (= :claude agent-type)
+                           (not (and (string? model)
+                                     (not (str/blank? model)))))
+                  {:finding :claude-model-required
+                   :seat registration-key
+                   :agent-id-suffix suffix
+                   :agent-type :claude})))
+        specs))
+
 (defn mint-seats!
   "Register seven fresh, locally invocable identities for FRAME-ID.
 
@@ -177,31 +189,36 @@
       :else
       (locking mint-lock
         (let [specs (effective-seat-specs model cast)
+              model-findings (missing-claude-model-findings specs)
               seats (seat-map frame-id)
               findings
-              (into [] (keep (partial mint-one! prepare-seat-fn frame-id)) specs)
+              (if (seq model-findings)
+                model-findings
+                (into [] (keep (partial mint-one! prepare-seat-fn frame-id)) specs))
               readiness-findings
-              (->> specs
-                   (keep (fn [[registration-key suffix agent-type _memory-domain
-                               _model]]
-                           (let [agent-id (str frame-id "-" suffix)
-                                 agent (registry/get-agent agent-id)
-                                 info (readiness agent-id)]
-                             (cond
-                               (and agent (not= agent-type (:agent/type agent)))
-                               {:finding :seat-type-mismatch
-                                :seat registration-key
-                                :agent-id agent-id
-                                :expected-type agent-type
-                                :actual-type (:agent/type agent)}
+              (if (seq model-findings)
+                []
+                (->> specs
+                     (keep (fn [[registration-key suffix agent-type _memory-domain
+                                 _model]]
+                             (let [agent-id (str frame-id "-" suffix)
+                                   agent (registry/get-agent agent-id)
+                                   info (readiness agent-id)]
+                               (cond
+                                 (and agent (not= agent-type (:agent/type agent)))
+                                 {:finding :seat-type-mismatch
+                                  :seat registration-key
+                                  :agent-id agent-id
+                                  :expected-type agent-type
+                                  :actual-type (:agent/type agent)}
 
-                               (not (true? (:invoke-ready? info)))
-                               {:finding :seat-not-invoke-ready
-                                :seat registration-key
-                                :agent-id agent-id
-                                :agent-type agent-type
-                                :diagnostic (:invoke-diagnostic info)}))))
-                   vec)
+                                 (not (true? (:invoke-ready? info)))
+                                 {:finding :seat-not-invoke-ready
+                                  :seat registration-key
+                                  :agent-id agent-id
+                                  :agent-type agent-type
+                                  :diagnostic (:invoke-diagnostic info)}))))
+                     vec))
               all-findings (into findings readiness-findings)]
           (if (seq all-findings)
             {:ok false
@@ -230,6 +247,13 @@
     {:ok false
      :error :missing-seat-preparer
      :findings [{:finding :missing-seat-preparer}]}
+
+    (not (and (string? model) (not (str/blank? model))))
+    {:ok false
+     :error :claude-model-required
+     :findings [{:finding :claude-model-required
+                 :seat :reg/analyst-seat
+                 :agent-type :claude}]}
 
     :else
     (locking mint-lock
@@ -263,7 +287,8 @@
                           :session-reset-fn session-reset-fn
                           :capabilities [:explore :edit :test :coordination/execute]
                           :metadata (merge {:analyst-tenure tenure
-                                            :fresh-session? true}
+                                            :fresh-session? true
+                                            :model model}
                                            metadata)})]
                     (when (and (map? registered) (= false (:ok registered)))
                       {:finding :seat-registration-failed

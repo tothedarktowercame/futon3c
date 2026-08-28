@@ -273,6 +273,14 @@
                                             :promotion-proctor :scribe
                                             :zai-scribe :analyst]))
                  :workspace-root "/work" :substrate-path "/lake"
+                 :seat-cast {"solver" {:model "gpt-5.6-sol"}
+                             "student" {:model "glm-5.3"}
+                             "guide" {:model "claude-opus-5"}
+                             "proctor" {:model "gpt-5.6-sol"}
+                             "promotion-proctor" {:model "gpt-5.6-sol"}
+                             "scribe" {:model "gpt-5.6-sol"}
+                             "zai-scribe" {:model "glm-5.3"}
+                             "analyst" {:model "claude-opus-5"}}
                  :provision-fn
                  (fn [{:keys [role]}]
                    (swap! calls conj [:provision role])
@@ -300,7 +308,20 @@
     (is (= [[:provision :student] [:provision :solver]]
            (filter #(= :provision (first %)) @calls)))
     (is (= [[:bootstrap :student] [:bootstrap :solver]]
-           (filter #(= :bootstrap (first %)) @calls)))))
+           (filter #(= :bootstrap (first %)) @calls)))
+    (let [mint-payload (some (fn [[method url payload]]
+                               (when (and (= "POST" method)
+                                          (.endsWith ^String url "/mint-seats"))
+                                 payload))
+                             @calls)]
+      (is (= "claude-opus-5"
+             (get-in mint-payload [:cast "guide" :model])))
+      (is (= "claude-opus-5"
+             (get-in mint-payload [:cast "analyst" :model])))
+      (is (= "gpt-5.6-sol"
+             (get-in mint-payload [:cast "solver" :model])))
+      (is (= "glm-5.3"
+             (get-in mint-payload [:cast "student" :model]))))))
 
 (deftest five-problem-live-effects-never-prepare-a-successor-early
   (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"

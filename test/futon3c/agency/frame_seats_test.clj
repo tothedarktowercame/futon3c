@@ -21,7 +21,8 @@
         result (frame-seats/mint-seats!
                 {:prepare-seat-fn (fn [seat]
                                     (swap! calls conj seat)
-                                    (ready-seat seat))}
+                                    (ready-seat seat))
+                 :model "test-model"}
                 "frame-17")
         expected {:reg/solver-seat "frame-17-solver"
                   :reg/student-seat "frame-17-student"
@@ -40,11 +41,31 @@
         (is (some? agent) (name seat-key))
         (is (nil? (:agent/session-id agent)) (name seat-key))
         (is (true? (:invoke-ready? roster)) (name seat-key))
+        (is (= "test-model" (get-in roster [:metadata :model])) (name seat-key))
         (is (true? (get-in agent [:agent/metadata :fresh-session?])) (name seat-key))))))
+
+(deftest claude-seats-refuse-without-an-explicit-model
+  (let [frame-result (frame-seats/mint-seats!
+                      {:prepare-seat-fn ready-seat}
+                      "model-less-frame")
+        analyst-result (frame-seats/mint-analyst!
+                        {:prepare-seat-fn ready-seat}
+                        19)]
+    (is (false? (:ok frame-result)))
+    (is (= :seat-mint-incomplete (:error frame-result)))
+    (is (= #{:reg/guide-seat :reg/analyst-seat}
+           (set (map :seat (:findings frame-result)))))
+    (is (every? #(= :claude-model-required (:finding %))
+                (:findings frame-result)))
+    (is (empty? (registry/registered-agents)))
+    (is (= :claude-model-required (:error analyst-result)))
+    (is (= :claude-model-required
+           (get-in analyst-result [:findings 0 :finding])))))
 
 (deftest mint-is-idempotent-per-frame
   (let [calls (atom 0)
-        opts {:prepare-seat-fn (fn [seat]
+        opts {:model "test-model"
+              :prepare-seat-fn (fn [seat]
                                 (swap! calls inc)
                                 (ready-seat seat))}
         first-result (frame-seats/mint-seats! opts "same-frame")
@@ -58,20 +79,25 @@
         result (frame-seats/mint-analyst!
                 {:prepare-seat-fn (fn [seat]
                                     (swap! calls conj seat)
-                                    (ready-seat seat))}
+                                    (ready-seat seat))
+                 :model "claude-opus-5"}
                 1)
         agent (registry/get-agent "analyst-1")
         roster (get-in (registry/registry-status) [:agents "analyst-1"])]
     (is (= {:ok true :tenure 1 :analyst-seat "analyst-1"} result))
-    (is (= [{:agent-id "analyst-1" :agent-type :claude}] @calls))
+    (is (= [{:agent-id "analyst-1" :agent-type :claude
+             :model "claude-opus-5"}]
+           @calls))
     (is (= :claude (:agent/type agent)))
     (is (true? (:invoke-ready? roster)))
+    (is (= "claude-opus-5" (get-in roster [:metadata :model])))
     (is (true? (get-in agent [:agent/metadata :fresh-session?])))))
 
 (deftest analyst-remint-preserves-live-session
   (let [calls (atom 0)
         resets (atom 0)
-        opts {:prepare-seat-fn
+        opts {:model "claude-opus-5"
+              :prepare-seat-fn
               (fn [seat]
                 (swap! calls inc)
                 (assoc (ready-seat seat)
@@ -95,7 +121,8 @@
           (fn [{:keys [agent-type] :as seat}]
             (if (= :zai agent-type)
               {:invoke-fn nil :reason :adapter-unavailable}
-              (ready-seat seat)))}
+              (ready-seat seat)))
+          :model "test-model"}
          "broken-frame")]
     (is (false? (:ok result)))
     (is (= :seat-mint-incomplete (:error result)))
@@ -110,7 +137,8 @@
                            :uri "/api/alpha/frames/mint-seats"
                            :body (java.io.ByteArrayInputStream.
                                   (.getBytes (json/write-value-as-string
-                                              {:frame-id "http-frame"})
+                                              {:frame-id "http-frame"
+                                               :model "test-model"})
                                              "UTF-8"))})
         body (json/read-value (:body response) json/keyword-keys-object-mapper)]
     (is (= 200 (:status response)))
@@ -128,8 +156,9 @@
     [(:status response)
      (json/read-value (:body response) json/keyword-keys-object-mapper)]))
 
-(deftest absent-cast-preserves-default-seat-types-and-identities
-  (let [result (frame-seats/mint-seats! {:prepare-seat-fn ready-seat}
+(deftest global-model-preserves-default-seat-types-and-identities
+  (let [result (frame-seats/mint-seats! {:prepare-seat-fn ready-seat
+                                         :model "test-model"}
                                          "default-cast")
         expected-types {:solver :codex
                         :student :zai
@@ -144,7 +173,7 @@
         (is (= agent-id (get (:seats result)
                              (keyword "reg" (str (name suffix) "-seat")))))
         (is (= agent-type (:agent/type (registry/get-agent agent-id))))
-        (is (= {:agent-type agent-type}
+        (is (= {:agent-type agent-type :model "test-model"}
                (get-in result [:casting (name suffix)])))))))
 
 (deftest per-seat-cast-overrides-guide-and-scribe-only
@@ -224,7 +253,8 @@
                            :uri "/api/alpha/frames/mint-analyst"
                            :body (java.io.ByteArrayInputStream.
                                   (.getBytes (json/write-value-as-string
-                                              {:tenure 3})
+                                              {:tenure 3
+                                               :model "claude-opus-5"})
                                              "UTF-8"))})
         body (json/read-value (:body response) json/keyword-keys-object-mapper)
         roster (get-in (registry/registry-status) [:agents "analyst-3"])]
@@ -233,7 +263,7 @@
     (is (= :claude (:type roster)))
     (is (true? (:invoke-ready? roster)))))
 
-(deftest mint-http-routes-thread-optional-model-without-changing-absent-input
+(deftest mint-http-routes-require-claude-model-and-thread-it
   (let [prepared (atom [])
         prepare-seat (fn [seat]
                        (swap! prepared conj seat)
@@ -249,25 +279,23 @@
     (is (= 200 (:status (post! "/api/alpha/frames/mint-seats"
                                {:frame-id "model-frame"
                                 :model "requested-model"}))))
-    (is (= 200 (:status (post! "/api/alpha/frames/mint-seats"
+    (is (= 409 (:status (post! "/api/alpha/frames/mint-seats"
                                {:frame-id "default-frame"}))))
     (is (= 200 (:status (post! "/api/alpha/frames/mint-analyst"
                                {:tenure 11 :model "requested-model"}))))
-    (is (= 200 (:status (post! "/api/alpha/frames/mint-analyst"
+    (is (= 409 (:status (post! "/api/alpha/frames/mint-analyst"
                                {:tenure 12}))))
     (let [by-id (into {} (map (juxt :agent-id identity)) @prepared)]
       (is (= "requested-model" (:model (get by-id "model-frame-guide"))))
       (is (= "requested-model" (:model (get by-id "analyst-11"))))
-      (is (= {:agent-id "default-frame-guide" :agent-type :claude}
-             (get by-id "default-frame-guide")))
-      (is (= {:agent-id "analyst-12" :agent-type :claude}
-             (get by-id "analyst-12")))
+      (is (nil? (get by-id "default-frame-guide")))
+      (is (nil? (get by-id "analyst-12")))
       (is (= "requested-model"
              (:result ((:agent/invoke-fn (registry/get-agent "model-frame-guide"))
                        "probe" nil))))
-      (is (nil? (:result ((:agent/invoke-fn (registry/get-agent
-                                             "default-frame-guide"))
-                          "probe" nil)))))))
+      (is (= "requested-model"
+             (get-in (registry/get-agent "analyst-11")
+                     [:agent/metadata :model]))))))
 
 ;; Added by claude-2 (ground control) during review of 2bf90753.
 ;;
@@ -340,7 +368,7 @@
                   (fn [agent-type opts]
                     (swap! captured conj [agent-type opts])
                     (fn [_prompt _session-id] {:result :stub :session-id nil}))]
-      (is (:ok (http/mint-frame-seats! {} "domain-frame"))))
+      (is (:ok (http/mint-frame-seats! {} "domain-frame" "test-model"))))
     (let [by-id (into {} (map (fn [[agent-type opts]]
                                 [(:agent-id opts) [agent-type opts]]))
                       @captured)

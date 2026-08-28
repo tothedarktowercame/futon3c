@@ -369,7 +369,7 @@
   "Provision and certify one already-open frame using the production adapters.
 
   HTTP-FN remains injectable so qualification never dispatches a live role."
-  [{:keys [frame ledger manifest role-cards workspace-root substrate-path
+  [{:keys [frame ledger manifest role-cards workspace-root substrate-path seat-cast
            leases agency-base http-fn provision-fn validate-workspace-fn
            bootstrap-workspace-fn persist-lease-fn]
     :or {agency-base "http://localhost:7070" http-fn runtime/http-json
@@ -419,8 +419,13 @@
           :validate-workspace-fn validate-workspace-fn
           :mint-fn
           (fn [frame-id seat-types _timeouts]
-            (let [cast (into {} (map (fn [[role type]]
-                                       [(name role) {:type (name type)}]) seat-types))
+            (let [cast (into {}
+                             (map (fn [[role type]]
+                                    (let [role-name (name role)]
+                                      [role-name
+                                       (merge {:type (name type)}
+                                              (get seat-cast role-name))])))
+                             seat-types)
                   response (http-fn "POST" (str agency-base
                                                 "/api/alpha/frames/mint-seats")
                                     {:frame-id frame-id :cast cast})]
@@ -488,7 +493,7 @@
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
   explicit to avoid a namespace cycle; all resource effects below use the
   production lifecycle/Agency adapters."
-  [{:keys [frame-number-base campaign-prefix memory-cascade conditions
+  [{:keys [frame-number-base campaign-prefix memory-cascade conditions seat-cast
            generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
@@ -552,7 +557,8 @@
                (prepare-live!
                 {:frame opened-frame :ledger ledger :manifest manifest
                  :role-cards role-cards :workspace-root workspace-root
-                 :substrate-path substrate-path :leases persisted-leases
+                 :substrate-path substrate-path :seat-cast seat-cast
+                 :leases persisted-leases
                  :persist-lease-fn
                  (fn [role lease]
                    (let [next-state (swap! lease-state assoc role lease)]
