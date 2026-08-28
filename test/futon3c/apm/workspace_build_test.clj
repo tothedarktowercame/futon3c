@@ -57,3 +57,43 @@
                 (fn [_ _] {:exit 1 :err "broken"}))]
     (is (= :workspace-bootstrap-failed (:error/code result)))
     (is (= "Local.Module" (:module result)))))
+
+(deftest probe-builds-an-unbuilt-import-before-elaboration
+  (let [workspace
+        (temp-workspace
+         {"problems/p/lean/Main.lean" "import Local.Dependency\ntheorem ok : True := by trivial\n"
+          "Local/Dependency.lean" "theorem dependency : True := by trivial\n"})
+        built? (atom false)
+        calls (atom [])
+        result (sut/probe!
+                {:workspace/path workspace
+                 :problem/path "problems/p/lean/Main.lean"}
+                (fn [_ argv]
+                  (swap! calls conj argv)
+                  (case (first (drop 1 argv))
+                    "build" (do (reset! built? true) {:exit 0 :out "built" :err ""})
+                    "env" (if @built?
+                            {:exit 0 :out "" :err ""}
+                            {:exit 1 :out "" :err "unknown module"}))))]
+    (is (zero? (:exit result)))
+    (is (= ["Local.Dependency"] (:built/modules result)))
+    (is (= [["lake" "build" "Local.Dependency"]
+            ["lake" "env" "lean" "problems/p/lean/Main.lean"]]
+           @calls))))
+
+(deftest probe-preserves-a-genuine-elaboration-failure
+  (let [workspace
+        (temp-workspace
+         {"problems/p/lean/Main.lean"
+          "import Local.Dependency\ntheorem broken : False := by trivial\n"
+          "Local/Dependency.lean" "theorem dependency : True := by trivial\n"})
+        result (sut/probe!
+                {:workspace/path workspace
+                 :problem/path "problems/p/lean/Main.lean"}
+                (fn [_ argv]
+                  (if (= "build" (second argv))
+                    {:exit 0 :out "built" :err ""}
+                    {:exit 1 :out "" :err "type mismatch"})))]
+    (is (= 1 (:exit result)))
+    (is (= "type mismatch" (:err result)))
+    (is (= ["Local.Dependency"] (:built/modules result)))))

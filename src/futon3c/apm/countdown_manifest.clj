@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.toolchain-port :as toolchain-port]))
+            [futon3c.apm.toolchain-port :as toolchain-port]
+            [futon3c.apm.workspace-build :as workspace-build]))
 
 (def sha1-pattern #"[0-9a-f]{40}")
 
@@ -93,7 +94,8 @@
        :checkout checkout :checkout-finding (:finding checkout-result)
        :expected-revision revision :observed-revision (:revision checkout-result)
        :expected-blob blob :observed-blob observed-blob}
-      (let [result (apply shell/sh ["lake" "env" "lean" path :dir checkout])
+      (let [result (workspace-build/probe!
+                    {:workspace/path checkout :problem/path path})
             classified (toolchain-port/classify-output
                         (:exit result) (str (:out result) (:err result)))
             observation (select-keys classified

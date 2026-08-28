@@ -60,3 +60,25 @@
                (recur remaining (conj built module))
                {:ok false :error/code :workspace-bootstrap-failed
                 :module module :finding result}))))))))
+
+(defn probe!
+  "Build checkout-local imports, then elaborate the pinned problem file.
+
+  The returned process map is deliberately the Lean process result: callers
+  must continue to reject a genuine nonzero elaboration exit. Bootstrap
+  failures are returned as nonzero probe results with the typed bootstrap
+  failure retained under `:bootstrap`."
+  ([lease]
+   (probe! lease (fn [workspace argv]
+                   (apply shell/sh (concat argv [:dir workspace])))))
+  ([lease run-fn]
+   (let [bootstrapped (bootstrap! lease run-fn)]
+     (if-not (:ok bootstrapped)
+       {:exit (or (get-in bootstrapped [:finding :exit]) 1)
+        :out ""
+        :err (or (get-in bootstrapped [:finding :err])
+                 (pr-str bootstrapped))
+        :bootstrap bootstrapped}
+       (assoc (run-fn (:workspace/path lease)
+                      ["lake" "env" "lean" (:problem/path lease)])
+              :built/modules (:built/modules bootstrapped))))))

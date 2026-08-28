@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
-            [futon3c.apm.campaign-machine :as machine])
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.workspace-build :as workspace-build])
   (:import [java.nio.charset StandardCharsets]
            [java.nio.file CopyOption Files LinkOption OpenOption Path
             StandardCopyOption StandardOpenOption]
@@ -172,8 +173,7 @@
                                                  (make-array LinkOption 0))
          probe (if probe-fn
                  (probe-fn lease)
-                 (apply shell/sh (concat ["lake" "env" "lean" (:problem/path lease)
-                                          :dir (str workspace)])))
+                 (workspace-build/probe! lease))
          findings (cond-> []
                     (not= (:workspace/id lease) root-id) (conj :workspace-lease-address-invalid)
                     (not registered?) (conj :workspace-not-registered)
