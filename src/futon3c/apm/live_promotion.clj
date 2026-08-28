@@ -554,7 +554,7 @@
             {:ok true :status :certified :state done
              :certificate (:receipt published)}))))))
 
-(defn drive!
+(defn- drive-step!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
            persist-reviews-fn deposit-request reviewer-request
@@ -802,7 +802,7 @@
     (if (< (long (now-ms-fn)) (:transport-retry/not-before-ms state))
       {:ok true :status :transport-retry-scheduled :state state
        :retry/not-before-ms (:transport-retry/not-before-ms state)}
-      (drive! (assoc inputs :state
+      (drive-step! (assoc inputs :state
                      (assoc (:last-valid-state state)
                             :transport-retry/attempt
                             (inc (:transport-retry/attempt state))
@@ -849,14 +849,14 @@
 
       (and (string? contract-digest)
            (not= contract-digest (:contract-digest state)))
-      (drive! (assoc inputs :state
+      (drive-step! (assoc inputs :state
                      (assoc (:last-valid-state state)
                             :projection-repair-attempt 0)))
 
       (and (contains? #{:review-projection :promotion-publication}
                       (:repair/kind state))
            (< (:repair/attempts state) (:repair/max-attempts state)))
-      (drive! (assoc inputs :state
+      (drive-step! (assoc inputs :state
                      (assoc (:last-valid-state state)
                             :projection-repair-attempt
                             (inc (:repair/attempts state)))))
@@ -878,3 +878,28 @@
     {:ok true :status :certified :state state :certificate (:receipt state)}
 
     :else {:ok false :error/code :live-promotion-state-invalid}))
+
+(defn drive!
+  "Drive one promotion step, classifying transport failures before they escape.
+
+  `drive-step!` reports several failures by returning the raw failure map --
+  the deposit-stage persistence result among them. A substrate write that
+  times out is reported that way, so it reached the regulator as a plain tick
+  failure and stopped the campaign, even though the review path already had a
+  bounded transport retry. Classification belongs at the one exit rather than
+  at each `(:ok ...)` branch, so every stage gets the same treatment."
+  [{:keys [state promotion-policy contract-digest persist-fn now-ms-fn]
+    :as inputs}]
+  (let [result (drive-step! inputs)]
+    (if (and persist-fn
+             (map? result)
+             (false? (:ok result))
+             (transport-failure? result))
+      (hold-incomplete-pass!
+       state
+       (-> result
+           (update :repair/kind #(or % :promotion-transport))
+           (update :findings #(if (seq %) (vec %) [result])))
+       promotion-policy contract-digest persist-fn
+       (or now-ms-fn #(System/currentTimeMillis)))
+      result)))

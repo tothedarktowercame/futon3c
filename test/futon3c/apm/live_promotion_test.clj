@@ -891,3 +891,69 @@
                  :persist-fn (constantly {:ok false :error :disk-full})})]
     (is (= :promotion-review-archive-persistence-failed (:error/code result)))
     (is (zero? @called))))
+
+;; f50, 2026-08-28T11:55:00Z. A promotion candidate edge write to futon1b hit
+;; http-kit's 30s idle timeout. The deposit stage returned that failure raw, so
+;; it reached the regulator as a plain tick failure and stopped the campaign --
+;; the bounded transport retry added that morning only covered the review path.
+;; The same shape had already halted f50 once at 08:47:44 the same day.
+(def ^:private f50-edge-write-timeout
+  {:ok false
+   :error/code :promotion-candidate-edge-write-failed
+   :memory-id "e-apm-promotion-5ee5f9ebc3dacc34ade531388d5f6dce"
+   :finding {:ok false
+             :error {:error/component :transport
+                     :error/code :hyperedge-unreachable
+                     :error/message "Hyperedge write transport failed"
+                     :error/at "2026-08-28T11:55:00.828014398Z"
+                     :error/context
+                     {:detail
+                      "org.httpkit.client.TimeoutException: idle timeout: 30000ms"}}}})
+
+(deftest deposit-transport-timeout-schedules-a-retry-instead-of-failing
+  (let [persisted (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"
+                         :attempt 2}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn (constantly f50-edge-write-timeout)
+                 :persist-fn #(reset! persisted %)
+                 :promotion-policy {}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (:ok result))
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :awaiting-transport-retry (:stage @persisted)))
+    ;; the deposit state is preserved so the retry re-attempts the write
+    ;; against the same scribe job rather than re-running the scribe
+    (is (= "job-1" (get-in @persisted [:last-valid-state :job])))
+    (is (= :deposit (get-in @persisted [:last-valid-state :stage])))))
+
+(deftest deposit-transport-retry-is-bounded-not-endless
+  (let [persisted (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"
+                         :transport-retry/attempt 99}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn (constantly f50-edge-write-timeout)
+                 :persist-fn #(reset! persisted %)
+                 :promotion-policy {:transport-retry-max-attempts 3}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :awaiting-apparatus-repair (:stage @persisted)))))
+
+(deftest non-transport-deposit-failure-is-not-reclassified
+  (let [result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit :job "job-1"}
+                 :deposit-fn (fn [_] {:ok true :report {:candidates []}})
+                 :persist-candidates-fn
+                 (constantly {:ok false
+                              :error/code :promotion-candidate-id-conflict
+                              :memory-id "e-x"})
+                 :persist-fn identity
+                 :promotion-policy {}
+                 :contract-digest "digest"
+                 :now-ms-fn (constantly 1000)})]
+    (is (false? (:ok result)))
+    (is (= :promotion-candidate-id-conflict (:error/code result)))))
