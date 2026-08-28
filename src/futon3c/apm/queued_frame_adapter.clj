@@ -568,7 +568,7 @@
   [{:keys [frame-number-base campaign-prefix memory-cascade conditions
            campaign-root
            generated-contract-path
-           qualification-report-path manifest-fn ledger-fn
+           qualification-report-path manifest-fn ledger-fn contract
            role-cards workspace-root substrate-path agency-base http-fn
            open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
            persist-fn]
@@ -649,7 +649,10 @@
          result)))
    :frame-tick-fn
    (fn [frame]
-     (frame-tick-fn frame (campaign-paths config frame)))
+     (let [paths (campaign-paths config frame)
+           manifest (manifest-fn frame paths)]
+       (frame-tick-fn frame (assoc paths :manifest manifest
+                                   :contract contract))))
    :retire-frame-fn
    (or retire-frame-fn
        (fn [{:keys [frame terminal-receipt]}]

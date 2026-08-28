@@ -47,6 +47,39 @@
       (is (= "jit-manifest"
              (get-in @appended [:event/body :manifest-hash]))))))
 
+(deftest jit-frame-tick-and-launch-audit-never-read-countdown-manifest
+  (let [missing "/tmp/countdown-manifest-must-not-be-read.edn"
+        manifest {:manifest/id "jit-f51-manifest"
+                  :manifest/scope :one-off
+                  :campaign/id "jit-f51"
+                  :block/id "jit-f51-block"
+                  :units [{:frame/id "f51" :problem/id "p51"}]}
+        contract {:contract/id :apm-complete-frame-cycle-v2
+                  :phase-order [:preflight]}
+        observed (atom nil)
+        effects (queued-frame-adapter/live-effects
+                 {:campaign-root "/tmp/jit-no-countdown-manifest"
+                  :manifest-fn (fn [_ _] manifest)
+                  :contract contract
+                  :frame-tick-fn
+                  (fn [_ frame-config]
+                    (binding [sut/manifest-path missing]
+                      (sut/set-alight!
+                       {:target-frame "f51" :campaign-config frame-config}
+                       {:launch-audit-fn
+                        (fn []
+                          (reset! observed (#'sut/inputs))
+                          {:ok true})
+                        :inspect-fn
+                        (constantly {:ok true :stepper/status :complete})
+                        :project-fn (constantly {:ok true})
+                        :park-fn (constantly {:ok true})})))})]
+    (is (not (.exists (java.io.File. missing))))
+    (is (:ok ((:frame-tick-fn effects)
+              {:frame/id "f51" :campaign/id "jit-f51"})))
+    (is (= manifest (:manifest @observed)))
+    (is (= contract (:contract @observed)))))
+
 (deftest campaign-priors-use-legacy-ledgers-final-snapshots-and-declared-lineage
   (let [{:keys [current-campaign lineage queues ledgers snapshots expected]}
         campaign-priors-fixture

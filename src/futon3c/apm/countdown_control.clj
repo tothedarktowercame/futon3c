@@ -66,6 +66,8 @@
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
+(def ^:dynamic campaign-manifest nil)
+(def ^:dynamic campaign-contract nil)
 (def orchestration-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
 (def control-branch "master")
@@ -140,7 +142,9 @@
                campaign-prior-campaigns
                (or (:campaign-priors config#) campaign-prior-campaigns)
                analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
-               preparation-path (or (:preparation-path config#) preparation-path)]
+               preparation-path (or (:preparation-path config#) preparation-path)
+               campaign-manifest (or (:manifest config#) campaign-manifest)
+               campaign-contract (or (:contract config#) campaign-contract)]
        ~@body)))
 
 (defn- machine-regulator-authorized? [regulator-id capability]
@@ -179,18 +183,16 @@
                        {:required (set (map keyword required))}))]
     (assoc legacy :phases phases :receipt/schemas receipt-schemas)))
 
-(defn- inputs []
-  (let [manifest (edn/read-string (slurp (str (control-path manifest-path))))
-        legacy (edn/read-string (slurp (str (control-path contract-path))))]
+(defn- load-contract []
+  (let [legacy (edn/read-string (slurp (str (control-path contract-path))))]
     (if-not (= :apm-complete-frame-cycle-v2 (:contract/id legacy))
-      {:manifest manifest :contract legacy}
+      {:contract legacy}
       (let [result (generated-contract/validate-round-trip
                     (str (control-path generated-contract-path)) legacy)]
         (when-not (:ok result)
           (throw (ex-info "Lean-generated campaign contract rejected" result)))
         (let [generated (:contract result)]
-          {:manifest manifest
-           :contract (assoc (apply-generated-receipt-contract legacy generated)
+          {:contract (assoc (apply-generated-receipt-contract legacy generated)
                             :phase-order (mapv keyword (:phase-order generated))
                             :generated/bounds (:bounds generated)
                             :generated/dispatch-policy (:dispatch-policy generated)
@@ -201,6 +203,15 @@
                             :generated/terminal-policy (:terminal-policy generated)
                             :generated/source generated-contract-path)
            :generated/contract generated})))))
+
+(defn- inputs []
+  (let [manifest (or campaign-manifest
+                     (edn/read-string
+                      (slurp (str (control-path manifest-path)))))
+        loaded (if campaign-contract
+                 {:contract campaign-contract}
+                 (load-contract))]
+    (assoc loaded :manifest manifest)))
 
 (defn- generated-bound [contract bound fallback]
   (or (get-in contract [:generated/bounds bound]) fallback))
@@ -2214,12 +2225,14 @@
           (conj {:id "campaign-memory-lineage"
                  :kind :campaign-memory-lineage
                  :campaign/priors (vec declared-priors)}))
+        jit-contract (:contract (load-contract))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
          :conditions conditions
          :campaign-root campaign-root
          :campaign-priors (vec (or declared-priors []))
+         :contract jit-contract
          :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
          :generated-contract-path
          (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
@@ -2271,7 +2284,7 @@
                  {:ok true :already-open? true
                   :ledger/version (:version observed)
                   :ledger/digest (:digest observed)}
-                 (let [boot (bootstrap-one-off! manifest (:contract (inputs)))
+                 (let [boot (bootstrap-one-off! manifest jit-contract)
                        block (when (:ok boot) (advance! :open-block nil boot))
                        opened (when (:ok block) (advance! :open-frame nil boot))]
                    (if (:ok opened) {:ok true} (or opened block boot)))))))
