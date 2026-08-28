@@ -340,6 +340,7 @@ frame_start_ts = None
 phase_start_ts = None
 last_seen_transition_ts = None
 frame_durations = []  # [(frame_id, seconds), ...] this run
+suppressed_frame_alerts = set()
 
 while True:
     if CAMPAIGN_DIR is None:
@@ -458,7 +459,7 @@ while True:
         updated_at = parse_iso(c['updated_at']) if c['updated_at'] else None
         if updated_at is not None and queue_status not in ('complete', 'paused'):
             age = time.time() - updated_at
-            if age > COORD_STALE_S:
+            if age > COORD_STALE_S and q.get('active_frame') is None:
                 maybe_bell(
                     "coordinator-heartbeat-stale", "coordinator heartbeat stale",
                     f"Campaign {CAMPAIGN_ID}: coordinator.edn :regulator/updated-at "
@@ -473,6 +474,11 @@ while True:
                     f"2026-08-23T22:03Z; if current usage is again near that "
                     f"ceiling, that's a plausible cause to check first.)")
             else:
+                # While a frame is active, its contract-aware watcher owns
+                # heartbeat judgement together with job reachability and the
+                # declared role timeout. The queue-level age check lacks that
+                # context and otherwise emits a duplicate false alarm every
+                # time a synchronous tick waits on a healthy role job.
                 clear_bell("coordinator-heartbeat-stale")
 
         if last_coord is not None and c['failure_count'] > last_coord['failure_count']:
@@ -530,6 +536,7 @@ while True:
             frame_start_ts = None
             phase_start_ts = None
             last_seen_transition_ts = None
+            suppressed_frame_alerts = set()
 
         last_coord = c
 
@@ -560,6 +567,21 @@ while True:
                     # legacy shell-watcher shape: {:reason :x ...}
                     m = re.search(r':reason :(\S+)', line)
                     reason = m.group(1) if m else 'unknown'
+                waiting_on_healthy_job = (
+                    reason == 'coordinator-heartbeat-stale'
+                    and ':status :waiting-for-terminal-result' in line
+                    and ':agency-job-running' in line
+                    and ':job-within-declared-timeout' in line)
+                if waiting_on_healthy_job:
+                    key = (current_frame, reason)
+                    if key not in suppressed_frame_alerts:
+                        out(f"KNOWN CONDITION [{current_frame}]: coordinator "
+                            "heartbeat is stale while a reachable role job is "
+                            "running within its declared timeout; not belling")
+                        suppressed_frame_alerts.add(key)
+                    pending_frame_alert = None
+                    pending_frame_alert_count = 0
+                    continue
                 if reason == pending_frame_alert:
                     pending_frame_alert_count += 1
                 else:
