@@ -28,7 +28,7 @@
         (doseq [file (reverse (file-seq dir))]
           (io/delete-file file true))))))
 
-(deftest classifies-solved-terminal-receipts
+(deftest classifies-terminal-receipts-by-solver-head-content
   (with-temp-dir
     (fn [campaign-dir]
       (write-terminal! campaign-dir "campaign-f35"
@@ -36,14 +36,20 @@
       (write-terminal! campaign-dir "campaign-f36"
                        (receipt "f36" "a95J05" :solved "banked-head"))
       (write-terminal! campaign-dir "campaign-f37"
-                       (receipt "f37" "a95J06" :partial "partial-head"))
+                       (receipt "f37" "a95J06" :invalid "voided-different-head"))
       (write-terminal! campaign-dir "campaign-f38"
                        (receipt "f38" "a95J07" :solved "missing-head"))
+      (write-terminal! campaign-dir "campaign-f39"
+                       (receipt "f39" "a95J08" :unsolved "voided-banked-head"))
       (let [content {"different-head" "new proof"
                      "banked-head" "same proof"
+                     "voided-different-head" "rescued proof"
+                     "voided-banked-head" "already rescued proof"
                      "master" {"a95J04" "old proof"
                                "a95J05" "same proof"
-                               "a95J07" "old proof"}}
+                               "a95J06" "old partial proof"
+                               "a95J07" "old proof"
+                               "a95J08" "already rescued proof"}}
             read-at-rev (fn [rev path]
                           (let [problem-id (second (re-find #"problems/([^/]+)/" path))]
                             (if (= rev "master")
@@ -59,13 +65,16 @@
                  :head "different-head" :status :unbanked}
                 {:frame "f36" :problem-id "a95J05"
                  :head "banked-head" :status :banked}
+                {:frame "f37" :problem-id "a95J06"
+                 :head "voided-different-head" :status :unbanked}
                 {:frame "f38" :problem-id "a95J07"
-                 :head "missing-head" :status :head-unresolvable}]
+                 :head "missing-head" :status :head-unresolvable}
+                {:frame "f39" :problem-id "a95J08"
+                 :head "voided-banked-head" :status :banked}]
                results))
         ;; Regression: banking copies content into a new commit, so reachability
         ;; cannot distinguish this banked proof from an unbanked solver head.
-        (is (= :banked (:status (second results))))
-        (is (not-any? #(= "f37" (:frame %)) results))))))
+        (is (= :banked (:status (second results))))))))
 
 (deftest empty-campaign-has-no-unbanked-solves
   (with-temp-dir

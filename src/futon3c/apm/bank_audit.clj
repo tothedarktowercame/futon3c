@@ -34,7 +34,11 @@
        (map #(edn/read-string (slurp %)))))
 
 (defn unbanked-solved
-  "Classify solved frame receipts by comparing solver-head proof content to master."
+  "Classify terminal solver heads by comparing their proof content to master.
+
+  Frame outcome is deliberately not a predicate here: a frame can be voided by
+  an apparatus failure after its solver produced a complete proof. The axiom
+  gate in `verify-and-pin!` decides whether an unbanked head is safe to pin."
   [{:keys [campaign-dir read-at-rev master-rev]
     ;; origin/master, not master. bank-sweep branches from origin/master and
     ;; pushes there, and never advances the local branch — so comparing against
@@ -44,7 +48,6 @@
     ;; repo with no remote.
     :or {read-at-rev default-read-at-rev master-rev "origin/master"}}]
   (->> (terminal-receipts campaign-dir)
-       (filter #(= :solved (:problem/outcome %)))
        (mapv (fn [receipt]
                (let [frame (:frame/id receipt)
                      problem-id (:problem/id receipt)
