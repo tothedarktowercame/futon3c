@@ -177,6 +177,57 @@
       (is (= [park] (:parked @state)))
       (is (empty? (filter #(= :retire (first %)) @calls))))))
 
+(defn role-terminal-void [frame]
+  {:ok true :status :frame-complete :frame/result :void
+   :terminal-receipt
+   {:receipt/id (str "void-" (:frame/id frame))
+    :frame/result :void :problem/outcome :unsolved
+    :void/classification :role-terminal-unrecoverable
+    :void/failed-invariants
+    [:live-job-terminal-repair-exhausted :typed-submission-missing]}})
+
+(deftest isolated-role-terminal-void-advances-and-records-durable-streak
+  (let [{:keys [providers state]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [result (sut/tick! (assoc providers
+                                   :frame-tick-fn role-terminal-void))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= 1 (get-in @state [:consecutive-frame-failures :count])))
+      (is (= "q1" (get-in @state
+                           [:consecutive-frame-failures :last-frame-id])))
+      (is (= {:frame/id "q1" :problem/id "p1" :frame/result :void
+              :void/classification :role-terminal-unrecoverable
+              :void/failed-invariants
+              [:live-job-terminal-repair-exhausted :typed-submission-missing]
+              :terminal-receipt/id "void-q1"}
+             (first (:dispositions @state)))))))
+
+(deftest third-consecutive-identical-frame-failure-is-campaign-fatal
+  (let [{:keys [providers state calls]} (harness)
+        failing (assoc providers :frame-tick-fn role-terminal-void)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (is (= :frame-prepared (:status (sut/tick! failing))))
+    (is (= :frame-prepared (:status (sut/tick! failing))))
+    (let [result (sut/tick! failing)]
+      (is (= :problem-queue-systematic-frame-failure (:error/code result)))
+      (is (= sut/systematic-frame-failure-limit
+             (get-in result [:failure :count])))
+      (is (= :failed-systematic-frame-failure (:status @state)))
+      (is (nil? (:active @state)))
+      (is (= 3 (count (filter #(= :mint (first %)) @calls)))
+          "the fourth problem is not minted"))))
+
+(deftest successful-frame-resets-consecutive-failure-streak
+  (let [{:keys [providers state]} (harness)
+        failing (assoc providers :frame-tick-fn role-terminal-void)]
+    (sut/tick! providers)
+    (sut/tick! failing)
+    (is (= 1 (get-in @state [:consecutive-frame-failures :count])))
+    (sut/tick! providers)
+    (is (nil? (:consecutive-frame-failures @state)))
+    (is (= "p3" (get-in @state [:active :frame :problem/id])))))
+
 (deftest pause-after-active-retires-current-frame-without-minting-successor
   (let [{:keys [providers state calls]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))
