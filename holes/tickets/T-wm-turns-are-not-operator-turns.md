@@ -4,8 +4,8 @@
 WM with operator-facing considerations … WM 'turns' are not stored in quite such
 a durable or queriable or annotatable fashion."*
 
-**Status:** open. Diagnosis complete and measured; the repair is specified below
-and not started.
+**Status:** open. **Diagnosis substantially corrected 2026-08-27 — see
+"Correction" below. The repair is a switch and a verification, not a build.**
 
 ## The finding
 
@@ -24,6 +24,35 @@ Machine's ticks were never in that régime at all.
 **Bounds.** The store survey is over the most recent 1000 entries, in which no
 `wm-tick`-shaped event appears. The gitignore line, the file dates and the
 per-file shapes are direct reads and are not window-limited.
+
+## Correction, 2026-08-27 — built and switched off, not missing
+
+Joe named two records the original diagnosis had not searched, and both change
+the ticket:
+
+| what exists | where |
+|---|---|
+| a WM tick emitter to the Evidence Landscape, **disabled by default** behind `FUTON2_WM_EMIT_EVIDENCE`, emitting `wm-tick` / `wm-click` / `wm-cron` | `futon2/src/futon2/aif/evidence_emit.clj` |
+| a live click status route answering now — `{"running?":false,"click-id":null,"phase":null,"attempt-id":null,"started-at":null,"last-result":null}` | `GET /api/alpha/wm/click`, `futon3c/src/futon3c/wm/runner_service.clj` |
+| a deterministic visual surface over the traces | `futon2/scripts/wm_clicks_exhibit.bb` |
+| one complete attempt already cross-correlated against the paper's ①–㉙ steps — click `wm-click-f8569fae`, cohort 46, attempt-061 | `p4ng/empirics/TRACE-061-cross-correlation.md` |
+
+**So the "no per-tick id" row above is wrong.** A click carries a `click-id`, an
+`attempt-id`, a `phase` and a `started-at`, and a run has a three-level identity
+— cohort, attempt, click — which is *more* structure than the operator side
+carries. The store holds no `wm-tick` because an environment variable is unset.
+
+The repair is correspondingly smaller and differently shaped:
+
+1. Set `FUTON2_WM_EMIT_EVIDENCE` and run a click.
+2. **Read what it actually writes** against the acceptance below — a compact tick
+   summary may or may not carry a declared shape, and "best-effort" in the
+   docstring is a warning that a failed POST is likely swallowed.
+3. Only then decide what, if anything, needs building.
+
+The durability and annotatability rows still stand for `data/wm-trace/*.edn`.
+The queryability finding stands and is sharpened below. What does not stand is
+the framing that a writer must be built.
 
 ## Why this is a ticket rather than a note
 
