@@ -964,16 +964,18 @@
     (when-let [trace-id (extract-trace-id (:invoke-meta result))]
       (let [receipt {:surface (direct-delivery-surface-label surface)
                      :destination (str "caller " (or caller "http-caller"))
-                     :delivered? true
-                     :note "http-direct-response"}]
+                     ;; Constructing a Ring response proves neither that the
+                     ;; server wrote it nor that the caller consumed it.
+                     :delivered? false
+                     :note "http-response-consumption-unconfirmed"}]
         (record-invoke-job-delivery! trace-id receipt)
         (when-let [record-fn (*resolve-delivery-recorder*)]
           (try
             (record-fn (str agent-id) (str trace-id)
                        {:surface (direct-delivery-surface-label surface)
                         :destination (str "caller " (or caller "http-caller"))
-                        :delivered? true
-                        :note "http-direct-response"})
+                        :delivered? false
+                        :note "http-response-consumption-unconfirmed"})
             (catch Throwable _)))))))
 
 (defn- classify-terminal

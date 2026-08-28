@@ -1636,11 +1636,16 @@
               job-parsed (parse-body job-response)]
           (is (= 200 (:status invoke-response)))
           (is (= 200 (:status job-response)))
-          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
-          (is (= "http" (get-in job-parsed [:job :delivery :surface]))))))))
+          (is (= "delivery-failed" (get-in job-parsed [:job :delivery :status])))
+          (is (= "http" (get-in job-parsed [:job :delivery :surface])))
+          (is (= "http-response-consumption-unconfirmed"
+                 (get-in job-parsed [:job :delivery :note])))
+          (is (false? (get-in job-parsed
+                              [:job :trace/delivery-observation
+                               :registered-push-performed?]))))))))
 
-(deftest invoke-emacs-surface-auto-records-delivery-when-trace-present
-  (testing "direct Emacs invoke marks delivery delivered and keeps the Emacs surface label"
+(deftest invoke-emacs-surface-does-not-claim-unobserved-delivery
+  (testing "direct Emacs response construction is not a performed delivery"
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-emacs-delivery"
                                       "prompt" "hello from emacs delivery"
@@ -1662,9 +1667,14 @@
               job-parsed (parse-body job-response)]
           (is (= 200 (:status invoke-response)))
           (is (= 200 (:status job-response)))
-          (is (= "delivered" (get-in job-parsed [:job :delivery :status])))
+          (is (= "delivery-failed" (get-in job-parsed [:job :delivery :status])))
           (is (= "emacs-repl" (get-in job-parsed [:job :delivery :surface])))
-          (is (= "caller joe" (get-in job-parsed [:job :delivery :destination]))))))))
+          (is (= "caller joe" (get-in job-parsed [:job :delivery :destination])))
+          (is (= "http-response-consumption-unconfirmed"
+                 (get-in job-parsed [:job :delivery :note])))
+          (is (= "delivery-failed"
+                 (get-in job-parsed [:job :trace/delivery-observation
+                                     :delivery-status]))))))))
 
 (deftest invoke-job-delivery-records-on-job
   (testing "POST /api/alpha/invoke-delivery updates invoke-job delivery state via trace-id"
