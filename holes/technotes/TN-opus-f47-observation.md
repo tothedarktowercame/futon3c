@@ -483,3 +483,43 @@ Campaign tally after f52: 28 rows — 8 `fingerprinted`, 3 `weak-fingerprint`,
 10 `already-in-base`, 5 `unwitnessed`, 2 `no-source`. Of the 8 fingerprinted, the two above
 are the only ones deposited by a role in the SAME frame as the attempt that used them, and
 they carry by far the most novel tokens.
+
+## f53 (a99J03): the pattern repeats, and the shelf is mostly restatement
+
+| attempt | accessible | used | provenance | outcome |
+|---|---|---|---|---|
+| a1 | 94 (2 withheld) | 0 | — | partial |
+| a2 | 99 | 1 | `f53-scribe`/a99J03 | (re-dispatched after wall-clock death) |
+| a3 | 102 | 3 | `f53-guide`/a99J03, `f53-scribe`/a99J03 x2 | **closed** |
+
+No `superseded/` on any attempt; a1's holdout withheld 2 and leaked nothing. a2's use is
+`fingerprinted` on `contDiffOn_succ_iff_deriv_of_isOpen` — a specific Mathlib lemma, not a
+ubiquitous tactic. a3's three are `no-source` pending archival.
+
+**Every use is self-supply.** Not one of the 94-102 shelved memories predating the frame
+was touched by any attempt. This is the second consecutive frame in which the attempt that
+CLOSED the problem did so on its own frame's guide and scribe deposits — f52/a2 with eleven
+novel Mathlib tokens from its guide, f53/a3 with a guide deposit and two scribe deposits.
+
+Running tally since the depositor-truth holdout was repaired — ten clean attempt
+observations across f49, f50, f52, f53:
+
+**No attempt has used a shelved memory that predates its own frame.** The shelf grew
+76 -> 102 across them.
+
+### A second line of evidence: the shelf accumulates restatement
+
+f53's supply line ended at `2 approved this frame (+6 reassigned to existing patterns)`.
+Six of eight deposits matched patterns already in the library; only two minted new ones. It
+was `+3 reassigned` earlier in the same frame.
+
+That is independent of the uptake counts and bears on WHY the shelf goes unused. If most
+new material restates what is already held, then growth from 76 to 102 measures deposit
+volume, not coverage. A student searching such a shelf meets many phrasings of the same
+few things — which is consistent with what the students actually do: search, find the
+restatements unhelpful, and work from Mathlib primitives or from what their own frame's
+guide just told them.
+
+The campaign is not failing to produce memory. It is producing a great deal of it, mostly
+about what it already knew, and the transfer that demonstrably works happens over minutes
+inside a frame rather than across days through the accumulation.
