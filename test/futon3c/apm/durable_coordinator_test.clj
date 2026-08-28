@@ -518,6 +518,96 @@
     (is (= [:pre-state-version-relationship]
            (sut/intent-findings "c:rewind" rewound intent)))))
 
+(deftest expired-intent-is-archived-before-clear-and-queue-advances
+  (let [{:keys [registry state-a]} (temp-paths)
+        pre-state {:state/type :live-regulator :regulator/id "c:expired"
+                   :regulator/status :running :regulator/ticks 4}
+        intent (sut/make-intent
+                "c:expired" pre-state
+                {:job-id "job-expired" :dispatch/id "dispatch-expired"
+                 :dispatch/action :jit-problem-queue/tick
+                 :dispatch/parameters {:deadline-ms 1000}
+                 :expected/postcondition {:status/one-of [:advanced]}})
+        persisted (assoc pre-state
+                         :regulator/ticks 5
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))
+        writes (atom [])
+        persist! persistence/atomic-persist!]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:expired"
+                             :adapter :test/expired :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str persisted) "\n"))
+    (let [result
+          (binding [sut/*intent-recovery-now-fn*
+                    #(+ 1000 watchdog/external-deadline-grace-ms 1)]
+            (with-redefs [persistence/atomic-persist!
+                          (fn [path value]
+                            (swap! writes conj value)
+                            (persist! path value))]
+              (sut/supersede-expired-intent! registry "c:expired")))
+          archived (first @writes)
+          cleared (second @writes)
+          adapter {:decide-fn
+                   (fn [_]
+                     {:ok true :coordinator/action :activate
+                      :coordinator/intent
+                      {:job-id "job-successor"
+                       :dispatch/id "dispatch-successor"
+                       :dispatch/action :jit-problem-queue/tick
+                       :dispatch/parameters {:deadline-ms 999999}
+                       :expected/postcondition
+                       {:status/one-of [:advanced]}}})
+                   :reconcile-fn (fn [_ _] {:ok true :status :advanced})}
+          advanced (#'sut/coordinator-tick "c:expired" adapter cleared)]
+      (is (:ok result))
+      (is (= :expired-intent-superseded (:status result)))
+      (is (= intent (:coordinator/pending-intent archived)))
+      (is (= :expired
+             (get-in archived [:coordinator/superseded-intents 0
+                               :disposition])))
+      (is (nil? (:coordinator/pending-intent cleared)))
+      (is (= :expired
+             (get-in cleared [:coordinator/last-superseded-intent
+                              :disposition])))
+      (is (= :intent-persisted (:status advanced)))
+      (is (= "job-successor"
+             (get-in advanced [:regulator/state-updates
+                               :coordinator/pending-intent :job-id])))
+      (is (= :no-pending-intent
+             (:status (sut/supersede-expired-intent!
+                       registry "c:expired")))))))
+
+(deftest live-intent-cannot-be-superseded
+  (let [{:keys [registry state-a]} (temp-paths)
+        pre-state {:state/type :live-regulator :regulator/id "c:live"
+                   :regulator/status :running :regulator/ticks 8}
+        intent (sut/make-intent
+                "c:live" pre-state
+                {:job-id "job-live" :dispatch/id "dispatch-live"
+                 :dispatch/action :jit-problem-queue/tick
+                 :dispatch/parameters {:deadline-ms 10000}
+                 :expected/postcondition {:status/one-of [:advanced]}})
+        persisted (assoc pre-state
+                         :regulator/ticks 9
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:live"
+                             :adapter :test/live :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a (str (pr-str persisted) "\n"))
+    (let [result (binding [sut/*intent-recovery-now-fn* (constantly 10001)]
+                   (sut/supersede-expired-intent! registry "c:live"))
+          unchanged (edn/read-string (slurp state-a))]
+      (is (false? (:ok result)))
+      (is (= :durable-coordinator-intent-not-expired (:error/code result)))
+      (is (= intent (:coordinator/pending-intent unchanged)))
+      (is (empty? (:coordinator/superseded-intents unchanged))))))
+
 (deftest typed-registry-recovers-two-coordinators-without-directory-discovery
   (let [{:keys [registry state-a state-b]} (temp-paths)
         ticks (atom {})

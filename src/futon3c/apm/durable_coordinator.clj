@@ -21,6 +21,7 @@
 (def ^:dynamic *watchdog-now-fn* #(System/currentTimeMillis))
 (def ^:dynamic *enabled-transition-now-fn* #(System/currentTimeMillis))
 (def ^:dynamic *quiescence-now-fn* #(str (java.time.Instant/now)))
+(def ^:dynamic *intent-recovery-now-fn* #(System/currentTimeMillis))
 (def ^:dynamic *watchdog-start-fn* watchdog/start!)
 (def ^:dynamic *watchdog-stop-fn* watchdog/stop!)
 (def ^:dynamic *watchdog-running-fn* watchdog/running?)
@@ -335,6 +336,89 @@
       (get-in intent [:dispatch/parameters :deadline])
       (get-in intent [:dispatch/parameters :deadline-ms])))
 
+(defn supersede-expired-intent!
+  "Archive an expired pending intent before clearing it. The two durable
+   writes run under the coordinator tick lock. A crash after the archive write
+   is recoverable: replay recognizes the same intent digest and performs only
+   the clearing write. Live intents are never superseded."
+  [registry-path coordinator-id]
+  (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])]
+    (cond
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+
+      :else
+      (let [state-path (Path/of (:coordinator/state-path entry)
+                                (make-array String 0))
+            tick-lock (regulator/with-file-tick-lock
+                       (Path/of (str state-path ".tick-claim.lock")
+                                (make-array String 0)))]
+        (tick-lock
+         (fn []
+           (let [state (read-edn state-path)
+                 intent (:coordinator/pending-intent state)
+                 now-ms (long (*intent-recovery-now-fn*))
+                 deadline (some-> intent intent-deadline long)
+                 grace-ms (long watchdog/external-deadline-grace-ms)
+                 disposition-id (:intent/digest intent)
+                 archived? (some #(= disposition-id (:intent/digest %))
+                                 (:coordinator/superseded-intents state))]
+             (cond
+               (nil? intent)
+               {:ok true :status :no-pending-intent :state state}
+
+               (not (valid-intent? coordinator-id state intent))
+               {:ok false
+                :error/code :durable-coordinator-intent-integrity-invalid
+                :findings (intent-findings coordinator-id state intent)}
+
+               (nil? deadline)
+               {:ok false
+                :error/code :durable-coordinator-intent-deadline-missing
+                :finding {:job-id (:job-id intent)}}
+
+               (<= now-ms (+ deadline grace-ms))
+               {:ok false
+                :error/code :durable-coordinator-intent-not-expired
+                :finding {:job-id (:job-id intent) :deadline-ms deadline
+                          :grace-ms grace-ms :observed-at-ms now-ms}}
+
+               :else
+               (let [disposition
+                     {:state/type :durable-coordinator-intent-disposition
+                      :intent/digest disposition-id
+                      :intent intent
+                      :disposition :expired
+                      :deadline-ms deadline
+                      :grace-ms grace-ms
+                      :disposed-at-ms now-ms}
+                     archived-state
+                     (if archived?
+                       state
+                       (update state :coordinator/superseded-intents
+                               (fnil conj []) disposition))
+                     archived-write
+                     (if archived?
+                       {:ok true}
+                       (persistence/atomic-persist! state-path archived-state))]
+                 (if-not (:ok archived-write)
+                   {:ok false
+                    :error/code :durable-coordinator-intent-archive-failed
+                    :finding archived-write}
+                   (let [cleared (-> archived-state
+                                     (assoc :coordinator/pending-intent nil
+                                            :coordinator/pending-pre-state-digest nil
+                                            :coordinator/last-superseded-intent
+                                            disposition))
+                         cleared-write
+                         (persistence/atomic-persist! state-path cleared)]
+                     (if (:ok cleared-write)
+                       {:ok true :status :expired-intent-superseded
+                        :disposition disposition :state cleared}
+                       {:ok false
+                        :error/code :durable-coordinator-intent-clear-failed
+                        :finding cleared-write}))))))))))))
+
 (defn watchdog-observation [entry state]
   (let [intent (:coordinator/pending-intent state)
         result (:regulator/last-result state)]
@@ -645,10 +729,23 @@
   ([registry-path coordinator-id repair-reason]
    (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])
          state (when entry (read-edn (:coordinator/state-path entry)))
+         intent-recovery
+         (when (:coordinator/pending-intent state)
+           (supersede-expired-intent! registry-path coordinator-id))
+         recovery-ok?
+         (or (nil? intent-recovery)
+             (:ok intent-recovery)
+             (= :durable-coordinator-intent-not-expired
+                (:error/code intent-recovery)))
+         state (if (= :expired-intent-superseded (:status intent-recovery))
+                 (:state intent-recovery)
+                 state)
          persist-state! #(persistence/atomic-persist!
                           (Path/of (:coordinator/state-path entry)
                                    (make-array String 0)) %)
-         repaired (case (:regulator/status state)
+         repaired (if-not recovery-ok?
+                    intent-recovery
+                    (case (:regulator/status state)
                     :failed (regulator/repair-resume!
                              {:state state :reason repair-reason
                               :persist-fn persist-state!})
@@ -658,7 +755,7 @@
                     :stopped (regulator/resume-stopped!
                               {:state state :persist-fn persist-state!
                                :now-fn *quiescence-now-fn*})
-                    {:ok true})]
+                    {:ok true}))]
      (if-not (:ok repaired)
        repaired
        (let [enabled (set-enabled! registry-path coordinator-id true
