@@ -256,9 +256,9 @@
                               :turn-timeout-ms (if (= role :student)
                                                  1800000
                                                  3600000)}}}]))
-         {:solver :codex :student :zai :guide :claude
+         {:solver :codex :student :zai :guide :zai
           :proctor :codex :promotion-proctor :codex
-          :scribe :codex :zai-scribe :zai :analyst :claude})})
+          :scribe :codex :zai-scribe :zai :analyst :zai})})
 
 (deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
   (let [calls (atom [])
@@ -267,12 +267,12 @@
                         (make-array java.nio.file.attribute.FileAttribute 0)))
         seat-cast {"solver" {:model "gpt-5.6-sol"}
                    "student" {:model "glm-5.3"}
-                   "guide" {:model "claude-opus-5"}
+                   "guide" {:model "glm-5.3"}
                    "proctor" {:model "gpt-5.6-sol"}
                    "promotion-proctor" {:model "gpt-5.6-sol"}
                    "scribe" {:model "gpt-5.6-sol"}
                    "zai-scribe" {:model "glm-5.3"}
-                   "analyst" {:model "claude-opus-5"}}
+                   "analyst" {:model "glm-5.3"}}
         manifest {:manifest/id digest}
         _ (spit cast-path (pr-str seat-cast))
         result (sut/prepare-live!
@@ -319,9 +319,9 @@
                                           (.endsWith ^String url "/mint-seats"))
                                  payload))
                              @calls)]
-      (is (= "claude-opus-5"
+      (is (= "glm-5.3"
              (get-in mint-payload [:cast "guide" :model])))
-      (is (= "claude-opus-5"
+      (is (= "glm-5.3"
              (get-in mint-payload [:cast "analyst" :model])))
       (is (= "gpt-5.6-sol"
              (get-in mint-payload [:cast "solver" :model])))
@@ -344,7 +344,7 @@
 (deftest incomplete-campaign-seat-cast-refuses-before-resource-effects
   (let [calls (atom [])
         result (sut/prepare-live!
-                {:seat-cast {"guide" {:model "claude-opus-5"}}
+                {:seat-cast {"guide" {:model "glm-5.3"}}
                  :provision-fn #(swap! calls conj [:provision %])
                  :http-fn #(swap! calls conj [:http %1 %2])})]
     (is (false? (:ok result)))
@@ -357,12 +357,12 @@
   (let [calls (atom [])
         cast {"solver" {:model "gpt-5.6-sol"}
               "student" {:model "glm-5.3"}
-              "guide" {:model "claude-opus-5"}
+              "guide" {:model "glm-5.3"}
               "proctor" {:model "gpt-5.6-sol"}
               "promotion-proctor" {:model "gpt-5.6-sol"}
               "scribe" {:model "glm-5.3"}
               "zai-scribe" {:model "glm-5.3"}
-              "analyst" {:model "claude-opus-5"}}
+              "analyst" {:model "glm-5.3"}}
         result (sut/prepare-live!
                 {:seat-cast cast
                  :provision-fn #(swap! calls conj [:provision %])

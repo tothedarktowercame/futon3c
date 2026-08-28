@@ -453,7 +453,7 @@
               (into {} (map (fn [[role type]]
                               [role {:agent-id (str frame-id "-" (name role))
                                      :type type}])
-                            {:solver :codex :student :zai :guide :claude
+                            {:solver :codex :student :zai :guide :zai
                              :proctor :codex :promotion-proctor :codex
                              :scribe :codex :zai-scribe :zai}))}]
     (assoc body :preparation/id (machine/ledger-digest [body]))))

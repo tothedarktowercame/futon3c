@@ -44,7 +44,7 @@
         (is (= "test-model" (get-in roster [:metadata :model])) (name seat-key))
         (is (true? (get-in agent [:agent/metadata :fresh-session?])) (name seat-key))))))
 
-(deftest claude-seats-refuse-without-an-explicit-model
+(deftest seats-refuse-without-an-explicit-model
   (let [frame-result (frame-seats/mint-seats!
                       {:prepare-seat-fn ready-seat}
                       "model-less-frame")
@@ -53,13 +53,18 @@
                         19)]
     (is (false? (:ok frame-result)))
     (is (= :seat-mint-incomplete (:error frame-result)))
-    (is (= #{:reg/guide-seat :reg/analyst-seat}
+    ;; Every seat must name its model, not only the Claude ones -- the
+    ;; provider-specific check would have gone quiet the moment guide and
+    ;; analyst moved to :zai.
+    (is (= #{:reg/solver-seat :reg/student-seat :reg/guide-seat
+             :reg/proctor-seat :reg/promotion-proctor-seat :reg/scribe-seat
+             :reg/zai-scribe-seat :reg/analyst-seat}
            (set (map :seat (:findings frame-result)))))
-    (is (every? #(= :claude-model-required (:finding %))
+    (is (every? #(= :seat-model-required (:finding %))
                 (:findings frame-result)))
     (is (empty? (registry/registered-agents)))
-    (is (= :claude-model-required (:error analyst-result)))
-    (is (= :claude-model-required
+    (is (= :seat-model-required (:error analyst-result)))
+    (is (= :seat-model-required
            (get-in analyst-result [:findings 0 :finding])))))
 
 (deftest mint-is-idempotent-per-frame
@@ -162,11 +167,11 @@
                                          "default-cast")
         expected-types {:solver :codex
                         :student :zai
-                        :guide :claude
+                        :guide :zai
                         :proctor :codex
                         :promotion-proctor :codex
                         :scribe :codex
-                        :analyst :claude}]
+                        :analyst :zai}]
     (is (:ok result))
     (doseq [[suffix agent-type] expected-types]
       (let [agent-id (str "default-cast-" (name suffix))]
@@ -196,7 +201,7 @@
   (doseq [[seat model expected-type]
           [[:scribe "glm-5.3" "codex"]
            [:zai-scribe "gpt-5.6-sol" "zai"]
-           [:guide "gpt-5.6-sol" "claude"]]]
+           [:guide "gpt-5.6-sol" "zai"]]]
     (let [prepared (atom [])
           result (frame-seats/mint-seats!
                   {:prepare-seat-fn (fn [spec]
@@ -392,7 +397,13 @@
               :turn/source :apm-contract/student-turn-timeout-ms}
              (get-in (registry/get-agent "domain-frame-student")
                      [:agent/metadata :effective-timeouts])))
-      (doseq [agent-id ["domain-frame-solver" "domain-frame-guide"
+      ;; The guide is a :zai seat now, so it carries the zai request timeout
+      ;; rather than :not-applicable -- only the codex seats have no request
+      ;; timeout of their own.
+      (is (= zai-api/default-request-timeout-ms
+             (get-in (registry/get-agent "domain-frame-guide")
+                     [:agent/metadata :effective-timeouts :request-timeout-ms])))
+      (doseq [agent-id ["domain-frame-solver"
                         "domain-frame-proctor" "domain-frame-scribe"]]
         (is (not (contains? (second (get by-id agent-id)) :memory-domain))
             agent-id)

@@ -6,12 +6,12 @@
 (def ^:private seat-specs
   [[:reg/solver-seat "solver" :codex nil]
    [:reg/student-seat "student" :zai :mathematics]
-   [:reg/guide-seat "guide" :claude nil]
+   [:reg/guide-seat "guide" :zai nil]
    [:reg/proctor-seat "proctor" :codex nil]
    [:reg/promotion-proctor-seat "promotion-proctor" :codex nil]
    [:reg/scribe-seat "scribe" :codex nil]
    [:reg/zai-scribe-seat "zai-scribe" :zai nil]
-   [:reg/analyst-seat "analyst" :claude nil]])
+   [:reg/analyst-seat "analyst" :zai nil]])
 
 (def seat-types
   "Authoritative agent type for every frame role."
@@ -190,16 +190,18 @@
                          (some? model) (assoc :model model))]))
         specs))
 
-(defn- missing-claude-model-findings [specs]
+(defn- missing-seat-model-findings [specs]
+  ;; Every seat must name its model explicitly, not only Claude seats. f49 lost
+  ;; a frame to a Claude seat minted with no model; when guide and analyst moved
+  ;; to :zai the provider-specific test would have switched that check off for
+  ;; every seat at once.
   (into []
         (keep (fn [[registration-key suffix agent-type _memory-domain model]]
-                (when (and (= :claude agent-type)
-                           (not (and (string? model)
-                                     (not (str/blank? model)))))
-                  {:finding :claude-model-required
+                (when-not (and (string? model) (not (str/blank? model)))
+                  {:finding :seat-model-required
                    :seat registration-key
                    :agent-id-suffix suffix
-                   :agent-type :claude})))
+                   :agent-type agent-type})))
         specs))
 
 (defn mint-seats!
@@ -235,7 +237,7 @@
       :else
       (locking mint-lock
         (let [specs (effective-seat-specs model cast)
-              model-findings (missing-claude-model-findings specs)
+              model-findings (missing-seat-model-findings specs)
               seats (seat-map frame-id)
               findings
               (if (seq model-findings)
@@ -296,8 +298,8 @@
 
     (not (and (string? model) (not (str/blank? model))))
     {:ok false
-     :error :claude-model-required
-     :findings [{:finding :claude-model-required
+     :error :seat-model-required
+     :findings [{:finding :seat-model-required
                  :seat :reg/analyst-seat
                  :agent-type :claude}]}
 
