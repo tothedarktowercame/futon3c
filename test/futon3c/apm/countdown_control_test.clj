@@ -665,45 +665,6 @@
       (is (fn? (:mint-frame-fn @tick-options)))
       (is (nil? (:jit/config @tick-options))))))
 
-(deftest jit-frame-tick-voids-exhausted-role-terminal-at-production-call-site
-  (let [adapter-config (atom nil)
-        void-request (atom nil)
-        exhausted {:ok false
-                   :error/code :live-job-terminal-repair-exhausted
-                   :repair/attempts 1
-                   :findings [:typed-submission-missing]}]
-    (with-redefs [queued-frame-adapter/live-effects
-                  (fn [config]
-                    (reset! adapter-config config)
-                    {:mint-frame-fn identity})
-                  problem-queue/tick!
-                  (constantly {:ok true :status :frame-prepared})
-                  queued-frame-adapter/terminal-from-ledger
-                  (constantly {:ok false
-                               :error/code :queued-frame-terminal-derivation-failed})
-                  sut/set-alight! (constantly exhausted)
-                  queued-frame-adapter/void-exhausted-role-terminal!
-                  (fn [request]
-                    (reset! void-request request)
-                    {:ok true :status :terminal-collected
-                     :frame/void {:classification
-                                  :role-terminal-unrecoverable}})]
-      (sut/set-alight-problem-queue!
-       {:problems [{:problem/id "p1" :repository "/repo" :revision "r"
-                    :path "p.lean" :blob "b" :classification :non-excluded}]
-        :authority {:agent "codex-3"}}
-       {:jit/config {:campaign-root "/campaigns"}})
-      (let [result ((:frame-tick-fn @adapter-config)
-                    {:frame/id "f49" :problem/id "p1"}
-                    {:state-directory "/tmp"
-                     :ledger-path "/tmp/f49-ledger.edn"
-                     :preparation-path "/tmp/preparation.edn"})]
-        (is (= :terminal-collected (:status result)))
-        (is (= exhausted (:result @void-request)))
-        (is (= "f49" (get-in @void-request [:frame :frame/id])))
-        (is (.endsWith (str (:ledger-path @void-request))
-                       "f49-ledger.edn"))))))
-
 (deftest list-only-entry-point-supplies-all-concrete-jit-services
   (let [captured (atom nil)
         problem {:problem/id "m-test" :repository "/repo" :revision "r"

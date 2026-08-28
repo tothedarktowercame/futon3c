@@ -16,7 +16,6 @@
   housekeeping failure."
   {:known-failing-baseline :known-failing-baseline
    :apparatus-invalidated :apparatus-invalidated
-   :role-terminal-unrecoverable :role-terminal-unrecoverable
    :statement-refuted :statement-refuted})
 
 (defn prepare

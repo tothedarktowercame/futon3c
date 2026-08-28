@@ -1873,12 +1873,24 @@
                                           (if (= :live-job-terminal-repair-exhausted
                                                  (:error/code driven))
                                             (with-campaign frame-config
-                                              (queued-frame-adapter/void-exhausted-role-terminal!
-                                               {:frame frame
-                                                :ledger-path
-                                                (control-path ledger-path)
-                                                :actor "countdown-control"
-                                                :result driven}))
+                                              (let [loaded
+                                                    (ledger/read-ledger
+                                                     (control-path ledger-path))
+                                                    phase
+                                                    (get-in loaded
+                                                            [:projection
+                                                             :active/frame
+                                                             :phase])]
+                                                (queued-frame-adapter/role-terminal-repair-park
+                                                 {:frame frame
+                                                  :ledger loaded
+                                                  :role-state-path
+                                                  (when (keyword? phase)
+                                                    (str (control-path
+                                                          (state-path-for
+                                                           (:frame/id frame)
+                                                           phase))))
+                                                  :result driven})))
                                             driven))))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))

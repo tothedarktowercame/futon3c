@@ -6,7 +6,6 @@
   (:require [futon3c.apm.campaign-machine :as machine]))
 
 (def terminal-results #{:closed :partial :void})
-(def systematic-frame-failure-limit 3)
 
 (declare prepare-next)
 
@@ -92,23 +91,9 @@
               :active nil :completed []}]
     (assoc body :state/id (machine/ledger-digest [body]))))
 
-(defn- valid-consecutive-frame-failures? [failure]
-  (or (nil? failure)
-      (and (= :role-terminal-unrecoverable
-              (get-in failure [:signature :classification]))
-           (vector? (get-in failure [:signature :failed-invariants]))
-           (seq (get-in failure [:signature :failed-invariants]))
-           (every? keyword?
-                   (get-in failure [:signature :failed-invariants]))
-           (pos-int? (:count failure))
-           (every? #(and (string? %) (not-empty %))
-                   ((juxt :last-frame-id :last-problem-id) failure)))))
-
 (defn valid-state? [state]
   (and (= :apm-problem-queue (:state/type state))
        (= 1 (:state/version state))
-       (valid-consecutive-frame-failures?
-        (:consecutive-frame-failures state))
        (or (not= :voided-slot-awaiting-revision (:status state))
            (let [handoff (:statement-repair/handoff state)]
              (and (= :statement-repair (:obligation/type handoff))
@@ -126,25 +111,6 @@
 (defn- addressed [state]
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
-
-(defn- frame-failure-signature [terminal-receipt]
-  (when (= :role-terminal-unrecoverable
-           (:void/classification terminal-receipt))
-    {:classification :role-terminal-unrecoverable
-     :failed-invariants (vec (sort (:void/failed-invariants
-                                    terminal-receipt)))}))
-
-(defn- record-frame-outcome [state frame terminal-receipt]
-  (if-let [signature (frame-failure-signature terminal-receipt)]
-    (let [prior (:consecutive-frame-failures state)
-          count (if (= signature (:signature prior))
-                  (inc (:count prior))
-                  1)]
-      (assoc state :consecutive-frame-failures
-             {:signature signature :count count
-              :last-frame-id (:frame/id frame)
-              :last-problem-id (:problem/id frame)}))
-    (dissoc state :consecutive-frame-failures)))
 
 (defn- statement-repair-handoff [frame terminal-receipt]
   (let [problem (:problem frame)
@@ -426,9 +392,6 @@
       {:ok true :status :batch-complete :state state}
       (= :paused (:status state))
       {:ok true :status :batch-paused :state state}
-      (= :failed-systematic-frame-failure (:status state))
-      {:ok false :error/code :problem-queue-systematic-frame-failure
-       :failure (:consecutive-frame-failures state) :state state}
       (= :voided-slot-awaiting-revision (:status state))
       (if (= :dispatched
              (get-in state [:statement-repair/handoff :dispatch/status]))
@@ -490,39 +453,14 @@
                                        [:statement-repair-attempts problem-id]
                                        0)))
                     pause? (= :pause-after-active (:status state))
-                    outcome-state (record-frame-outcome
-                                   state (:frame active)
-                                   (:terminal-receipt result))
-                    systematic?
-                    (>= (get-in outcome-state
-                                [:consecutive-frame-failures :count] 0)
-                        systematic-frame-failure-limit)
                     cleared (addressed
-                             (cond-> (assoc outcome-state :active nil)
+                             (cond-> (assoc state :active nil)
                                (not void?)
                                (update :completed conj
                                        {:frame/id (get-in active [:frame :frame/id])
                                         :problem/id (get-in active
                                                             [:frame :problem/id])
                                         :frame/result (:frame/result result)
-                                        :terminal-receipt/id
-                                        (get-in result
-                                                [:terminal-receipt :receipt/id])})
-                               void?
-                               (update :dispositions (fnil conj [])
-                                       {:frame/id
-                                        (get-in active [:frame :frame/id])
-                                        :problem/id
-                                        (get-in active [:frame :problem/id])
-                                        :frame/result :void
-                                        :void/classification
-                                        (get-in result
-                                                [:terminal-receipt
-                                                 :void/classification])
-                                        :void/failed-invariants
-                                        (get-in result
-                                                [:terminal-receipt
-                                                 :void/failed-invariants])
                                         :terminal-receipt/id
                                         (get-in result
                                                 [:terminal-receipt :receipt/id])})
@@ -534,22 +472,14 @@
                                       (statement-repair-handoff
                                        (:frame active)
                                        (:terminal-receipt result)))
-                               pause? (assoc :status :paused)
-                               systematic?
-                               (assoc :status
-                                      :failed-systematic-frame-failure)))
+                               pause? (assoc :status :paused)))
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
-                  (if systematic?
-                    {:ok false
-                     :error/code :problem-queue-systematic-frame-failure
-                     :failure (:consecutive-frame-failures cleared)
-                     :state cleared}
-                    (if (and refuted? (not repair-exhausted?))
+                  (if (and refuted? (not repair-exhausted?))
                     (dispatch-repair cleared dispatch-statement-repair-fn
                                      persist-state-fn)
                     (if pause?
                     {:ok true :status :batch-paused :state cleared}
-                    (prepare-next plan cleared providers)))))))))))))
+                    (prepare-next plan cleared providers))))))))))))

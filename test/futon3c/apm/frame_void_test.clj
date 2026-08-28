@@ -59,18 +59,3 @@
                         :expected-version 11 :expected-ledger-digest "digest"
                         :classification :ad-hoc
                         :failures [:known]})))))
-
-(deftest unrecoverable-role-terminal-is-a-frame-not-apparatus-void
-  (let [result (sut/prepare
-                {:projection projection :events (vec (repeat 11 {}))}
-                {:frame-id "f18" :problem-id "a97J07"
-                 :expected-version 11 :expected-ledger-digest "digest"
-                 :classification :role-terminal-unrecoverable
-                 :failures [:live-job-terminal-repair-exhausted
-                            :typed-submission-missing]
-                 :now "2026-08-28T09:00:00Z"})]
-    (is (:ok result))
-    (is (= :role-terminal-unrecoverable
-           (get-in result [:certificate :classification])))
-    (is (= :role-terminal-unrecoverable
-           (get-in result [:event :event/body :reason])))))
