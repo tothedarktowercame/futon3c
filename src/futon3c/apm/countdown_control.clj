@@ -503,10 +503,15 @@
                                             jobs)))
                             value))))
                     paths)
+              prepared
+              (campaign-trace/persist-clean-successor-observation!
+               {:durable-documents documents
+                :disposition-path (.resolve frame-root
+                                            "terminal/successor-disposition.edn")})
               issued
               (campaign-trace/issue-combined-trace-receipt!
                {:certificate receipt
-                :durable-documents documents
+                :durable-documents (:durable-documents prepared)
                 :trace-path (.resolve frame-root
                                       "terminal/combined-operational-trace.json")})]
           (if (:ok issued)

@@ -9,7 +9,7 @@
 (def default-contract-path
   "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
 
-(declare canonical sha256 combined-trace-digest)
+(declare canonical sha256 combined-trace-digest durable-records)
 
 (defn observation-schemas
   ([] (observation-schemas default-contract-path))
@@ -90,6 +90,58 @@
                         {:error/code :campaign-trace-observation-absent
                          :observation/kind source-key})))))
   sources)
+
+(def clean-successor-observation
+  "The close transition's durable statement that no repair successor was
+  announced or activated. Lean's successorAbsent branch validates this shape."
+  {:predecessor-id ""
+   :terminal-evidence-id ""
+   :collection-evidence-id ""
+   :disposition "no-supersession"
+   :predecessor-persisted? false
+   :successor-announced-id ""
+   :successor-activated-id ""})
+
+(defn persist-clean-successor-observation!
+  "When a closing frame has no repair-successor observation, persist the
+  close transition's positive no-supersession disposition and return it as an
+  additional durable document. Existing repair observations pass through
+  unchanged. The ordinary assembler remains strict if this producer is not
+  invoked."
+  [{:keys [durable-documents disposition-path]}]
+  (let [schema (some #(when (= "successor" (:kind %)) %)
+                     (observation-schemas))
+        record-key (keyword (:durable-record-key schema))
+        existing (durable-records durable-documents record-key)]
+    (if (seq existing)
+      {:ok true :durable-documents durable-documents :persisted? false}
+      (let [observation (validate-authoritative-observation
+                         :successor clean-successor-observation)
+            document {record-key observation}
+            target (io/file disposition-path)
+            parent (.getParentFile target)]
+        (.mkdirs parent)
+        (when (.exists target)
+          (let [on-disk (clojure.edn/read-string (slurp target))]
+            (when-not (= document on-disk)
+              (throw (ex-info "Clean successor disposition conflicts with durable state"
+                              {:error/code :campaign-trace-successor-disposition-conflict
+                               :path (.getCanonicalPath target)})))))
+        (when-not (.exists target)
+          (let [temporary (java.io.File/createTempFile
+                           ".successor-disposition-" ".edn" parent)]
+            (try
+              (spit temporary (str (pr-str document) "\n"))
+              (java.nio.file.Files/move
+               (.toPath temporary) (.toPath target)
+               (into-array java.nio.file.CopyOption
+                           [java.nio.file.StandardCopyOption/ATOMIC_MOVE]))
+              (finally
+                (when (.exists temporary) (.delete temporary))))))
+        {:ok true
+         :durable-documents (conj (vec durable-documents) document)
+         :persisted? true
+         :path (.getCanonicalPath target)}))))
 
 (defn valid-combined-trace-receipt?
   "Closure gate over the Lean-declared observation inventory. The receipt is

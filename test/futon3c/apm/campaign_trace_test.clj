@@ -143,6 +143,49 @@
            (set (keys (sut/project-operational-observations
                        (sut/require-complete-operational-sources sources))))))))
 
+(deftest clean-close-persists-positive-successor-disposition
+  (let [schemas (sut/observation-schemas)
+        samples (:operational-observations valid)
+        documents (->> schemas
+                       (remove #(= "successor" (:kind %)))
+                       (mapv (fn [{:keys [kind durable-record-key]}]
+                               {(keyword durable-record-key)
+                                (first (get samples (keyword kind)))})))
+        directory (.toFile (java.nio.file.Files/createTempDirectory
+                            "clean-successor"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+        path (java.io.File. directory "successor-disposition.edn")
+        prepared (sut/persist-clean-successor-observation!
+                  {:durable-documents documents :disposition-path path})
+        trace (sut/assemble-combined-operational-trace
+               (:durable-documents prepared))]
+    (is (:ok prepared))
+    (is (:persisted? prepared))
+    (is (= {:trace/successor-observation sut/clean-successor-observation}
+           (edn/read-string (slurp path))))
+    (is (= [{"predecessorId" ""
+             "terminalEvidenceId" ""
+             "collectionEvidenceId" ""
+             "disposition" "no-supersession"
+             "predecessorPersisted" false
+             "successorAnnouncedId" ""
+             "successorActivatedId" ""}]
+           (get trace "successorObservations")))))
+
+(deftest clean-successor-producer-does-not-replace-repair-observation
+  (let [repair (first (get-in valid [:operational-observations :successor]))
+        documents [{:trace/successor-observation repair}]
+        directory (.toFile (java.nio.file.Files/createTempDirectory
+                            "repair-successor"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+        path (java.io.File. directory "successor-disposition.edn")
+        prepared (sut/persist-clean-successor-observation!
+                  {:durable-documents documents :disposition-path path})]
+    (is (:ok prepared))
+    (is (false? (:persisted? prepared)))
+    (is (= documents (:durable-documents prepared)))
+    (is (false? (.exists path)))))
+
 (deftest historical-f46-f48-authorities-are-rejected-not-backfilled
   ;; Those flights predate the durable watchdog observation. Their repair
   ;; archives are useful evidence, but cannot manufacture progress evidence.
