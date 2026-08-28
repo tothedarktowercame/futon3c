@@ -397,3 +397,45 @@ Three of the four are invisible in a naive read of `:used-ids` and
 `:accessible-memory-ids`. The instrument for each is now different: check `superseded/` for
 (1), read `novel-hits` for (2), resolve depositor and subject for (3), and require a
 snapshot to exist at all for (4).
+
+## f52/a1: the first solve, with zero uptake
+
+f52 (a99J01) is the first frame registered with the phase order repaired after A10, so its
+student arm had a real shelf: **84 accessible, 1 withheld** under `:shelf/holdout
+:same-problem`. There is no `superseded/` directory; the record is the attempt's first and
+only report; no withheld id appears among the used.
+
+    :outcome                "solved"
+    accessible 84   withheld 1   used 0   leak none
+
+**The student solved the problem on attempt 1 using none of the 84 memories.**
+
+The claim needed checking, because `outcome` and artifact have disagreed twice today. The
+student BRANCH head is `9fa428f7`, the base revision, carrying 3 sorries and `sorryAx`. The
+proof is in the worktree, uncommitted:
+
+    /home/joe/code/apm-frames/f52-a99J01-student
+      problems/a99J01/lean/Main.lean   0 sorries, 264 lines, " M" (modified, uncommitted)
+
+Elaborated directly: `apm_a99j01` depends on axioms
+`[propext, Classical.choice, Quot.sound]`. No `sorryAx`. The solve is real.
+
+Two things follow.
+
+**For the shelf question.** Every clean observation so far has shown the shelf contributing
+little, but they were all failed or partial attempts, where "found nothing useful" is weakly
+evidenced — perhaps nothing on the shelf could have helped. f52/a1 is a SUCCESS. The
+strongest student result the campaign has produced used the shelf least. That is a harder
+fact for the shelf than any of the null results before it.
+
+**For the apparatus.** The machine did not archive the student source. f49 has a
+`student-attempt-1-source` directory; f52 does not. A verified proof existed only as a dirty
+worktree, and any cleanup would have destroyed it. Preserved out-of-band as blob
+`b42979bbbf150035e39d990f8c0d6675ca1c128d`, pinned at
+`refs/apm/rescued-blobs/a99J01-f52-student`, without touching the student branch.
+
+That is the third distinct way today that a completed proof was one step from being lost:
+f48 and f49 voided with `:solve/pin-status :skipped`, f51's solver reported
+`:sorry-warnings 0` for rounds whose heads still carried sorries, and now a solved student
+attempt left unarchived. The axiom gate in `verify-and-pin!` protects what reaches master.
+Nothing protects what never gets committed.
