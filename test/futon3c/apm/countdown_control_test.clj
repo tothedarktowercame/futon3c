@@ -21,6 +21,32 @@
   (-> "test/resources/apm-regressions/campaign-priors-legacy-v1.edn"
       slurp edn/read-string))
 
+(deftest jit-one-off-registration-does-not-read-countdown-registration
+  (let [manifest {:manifest/id "jit-manifest"
+                  :manifest/scope :one-off
+                  :campaign/id "jit-frame"
+                  :block/id "jit-block"
+                  :units [{:frame/id "f51" :problem/id "p51"}]}
+        contract {:phase-order [:preflight]
+                  :phases {:preflight {:kind :proof :role :solver :ordinal 1}}
+                  :terminal-policy {:closure-policy-version "v1"}}
+        appended (atom nil)]
+    (with-redefs [sut/registration-body
+                  (fn [] (throw (ex-info "F19 registration reached" {})))
+                  countdown-manifest/validate (constantly {:valid? true})
+                  admission/validate (constantly {:ok true :registration/hash "r"})
+                  ledger/read-ledger
+                  (constantly {:ok true :events []
+                               :projection (machine/projection [])})
+                  ledger/compare-and-append!
+                  (fn [_ _ _ event]
+                    (reset! appended event)
+                    {:ok true :status :appended})]
+      (is (:ok (sut/bootstrap-one-off! manifest contract)))
+      (is (= "jit-frame" (:event/campaign-id @appended)))
+      (is (= "jit-manifest"
+             (get-in @appended [:event/body :manifest-hash]))))))
+
 (deftest campaign-priors-use-legacy-ledgers-final-snapshots-and-declared-lineage
   (let [{:keys [current-campaign lineage queues ledgers snapshots expected]}
         campaign-priors-fixture

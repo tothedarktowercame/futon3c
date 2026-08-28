@@ -361,9 +361,8 @@
             :preparation preparation}
            (if-not (:ok validated) validated live-validation)))))))
 
-(defn registration-body []
-  (let [{:keys [manifest contract]} (inputs)
-        units (if (= :one-off (:manifest/scope manifest))
+(defn- registration-body-for [manifest contract]
+  (let [units (if (= :one-off (:manifest/scope manifest))
                 (:units manifest)
                 (subvec (:units manifest) 1))
         manifest-check (countdown-manifest/validate manifest)
@@ -394,9 +393,12 @@
                    (:phases contract)))
      :claims-required? true}))
 
-(defn bootstrap! []
-  (let [{:keys [manifest contract]} (inputs)
-        loaded (ledger/read-ledger (control-path ledger-path))
+(defn registration-body []
+  (let [{:keys [manifest contract]} (inputs)]
+    (registration-body-for manifest contract)))
+
+(defn- bootstrap-registration! [manifest contract]
+  (let [loaded (ledger/read-ledger (control-path ledger-path))
         projection (:projection loaded)
         registration-matches?
         (and (= (:campaign/id manifest) (:campaign/id projection))
@@ -417,9 +419,9 @@
                               :manifest-hash (:campaign/manifest-hash projection)
                               :phase-order (:campaign/phase-order projection)}}})
       :else
-      (let [body (registration-body)
+      (let [body (registration-body-for manifest contract)
             base {:event/seq 0 :event/type :campaign/registered
-                  :event/campaign-id (:campaign/id (:manifest (inputs)))
+                  :event/campaign-id (:campaign/id manifest)
                   :event/actor "countdown-control"
                   :event/at (str (Instant/now)) :event/expected-version 0
                   :event/body body}
@@ -427,6 +429,19 @@
             empty-projection (machine/projection [])]
         (ledger/compare-and-append! (control-path ledger-path) 0
                                     (:ledger/digest empty-projection) event)))))
+
+(defn bootstrap! []
+  (let [{:keys [manifest contract]} (inputs)]
+    (bootstrap-registration! manifest contract)))
+
+(defn bootstrap-one-off!
+  "Register an explicitly supplied JIT one-off manifest.
+
+   This boundary deliberately does not read the countdown manifest."
+  [manifest contract]
+  (if-not (= :one-off (:manifest/scope manifest))
+    {:ok false :error/code :jit-registration-manifest-not-one-off}
+    (bootstrap-registration! manifest contract)))
 
 (defn- projection-sink [payload]
   (if-let [frame (get-in payload [:certificate :active/frame])]
@@ -2239,7 +2254,7 @@
                  (live-preflight-runtime/atomic-persist! path manifest)
                  manifest))))
          :open-frame-fn
-         (fn [frame _ paths]
+         (fn [frame manifest paths]
            (with-campaign paths
              (let [observed (jit-ledger-observation frame paths)]
                (if (and (:ok observed)
@@ -2250,7 +2265,7 @@
                  {:ok true :already-open? true
                   :ledger/version (:version observed)
                   :ledger/digest (:digest observed)}
-                 (let [boot (bootstrap!)
+                 (let [boot (bootstrap-one-off! manifest (:contract (inputs)))
                        block (when (:ok boot) (advance! :open-block))
                        opened (when (:ok block) (advance! :open-frame))]
                    (if (:ok opened) {:ok true} (or opened block boot)))))))
