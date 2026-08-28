@@ -439,3 +439,47 @@ f48 and f49 voided with `:solve/pin-status :skipped`, f51's solver reported
 `:sorry-warnings 0` for rounds whose heads still carried sorries, and now a solved student
 attempt left unarchived. The axiom gate in `verify-and-pin!` protects what reaches master.
 Nothing protects what never gets committed.
+
+## f52 complete: three solves, and the one real transfer is within-frame guidance
+
+All three attempts on a99J01 solved. None used any memory that predates the frame.
+
+| attempt | accessible | used | provenance | fingerprint |
+|---|---|---|---|---|
+| a1 | 84 (1 withheld) | 0 | — | — |
+| a2 | 87 | 2 | `f52-scribe`/a99J01, `f52-guide`/a99J01 | both **fingerprinted** |
+| a3 | 89 | 2 | `f52-scribe`/a99J01, `f52-guide`/a99J01 | `no-source` (not yet archived) |
+
+No `superseded/` on any of them; a1's holdout withheld 1 and leaked nothing.
+
+**The shelf finding is now as strong as this campaign can make it.** Three independent
+solves, fresh sessions reset to base, a shelf of 84-89 memories, and not one memory from
+before this frame was used by any of them. The earlier clean observations were failures and
+partials, where "nothing on the shelf helped" is weakly evidenced. These are successes.
+
+**But two of the uses are real, and that matters.** a2's are not `norm_num`-grade artefacts:
+
+    f52-scribe  novel-hits ["ae_lt_top"]                                    fingerprinted
+    f52-guide   novel-hits ["EReal.coe_ennreal_toReal" "ENNReal.add_lt_top.mpr"
+                            "EReal.coe_le_coe_iff" "lintegral_add_left"
+                            "lintegral_congr_ae" "Real.norm_eq_abs"
+                            "IsFiniteMeasure" "EReal.coe_sub" "abs_of_nonneg"
+                            "abs_of_nonpos" "le_total"]                     fingerprinted
+
+Eleven specific Mathlib lemmas from the guide's deposit appearing in a proof that did not
+have them. That is a witnessed, unambiguous memory use — the clearest in the corpus.
+
+So the mechanism that demonstrably works is **within-frame guidance**: the guide observes a
+failing attempt, deposits specific material, and the next attempt uses it and solves. The
+mechanism that does not show up is **the shelf as a library of prior campaign memory**.
+
+This reframes the null results rather than merely adding to them. It is not that memory
+does not transfer; it is that the transfer we can witness happens over minutes and within a
+frame, between roles working the same problem, and not over days and across problems
+through an accumulating shelf. The shelf grows — 76, 81, 83, 84, 87, 89 — and the frames
+keep reaching past it to what they just made.
+
+Campaign tally after f52: 28 rows — 8 `fingerprinted`, 3 `weak-fingerprint`,
+10 `already-in-base`, 5 `unwitnessed`, 2 `no-source`. Of the 8 fingerprinted, the two above
+are the only ones deposited by a role in the SAME frame as the attempt that used them, and
+they carry by far the most novel tokens.
