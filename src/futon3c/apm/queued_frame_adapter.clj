@@ -426,7 +426,18 @@
                                                 "/api/alpha/frames/mint-seats")
                                     {:frame-id frame-id :cast cast})]
               (reset! minted-response response)
-              {:ok (and (= 200 (:http/status response)) (:ok response))}))
+              ;; Carry the reason. Returning a bare boolean here discarded the
+              ;; status, body and findings, so a failed mint reached the
+              ;; regulator as :finding {:ok false} -- a failure with no
+              ;; diagnosis, which is unactionable from the coordinator state.
+              (let [ok? (and (= 200 (:http/status response)) (:ok response))]
+                (cond-> {:ok ok?}
+                  (not ok?)
+                  (assoc :http/status (:http/status response)
+                         :mint/response (select-keys response
+                                                     [:ok :error :error/code
+                                                      :findings :message
+                                                      :seat :agent-id]))))))
           :roster-fn
           (fn [frame-id]
             (let [response (http-fn "GET" (str agency-base "/api/alpha/agents"))]
