@@ -8,6 +8,13 @@ drop them and use the return path instead.
 
 ## What the role is
 
+> **Autonomy correction, 2026-08-28 (Joe).** The campaign is intended to run
+> autonomously. Nothing in the watcher loop routes an operational decision
+> through Joe. A stop while work remains is an apparatus failure: diagnose the
+> cause, repair it without weakening an invariant, and resume from durable
+> state. Historical passages below that say to await or escalate to Joe are
+> superseded by this rule.
+
 Joe, on assigning it: *"how about you watch the next frames live? ... I feel
 like you know enough about the project to get Codex to stop the machine and
 fix it. Your 0 out of 27 memory finding is exactly the kind of thing that, if
@@ -40,9 +47,12 @@ new condition, or a result, is a report.
   reviewer returned a verdict, it stands; you fix the machine around it;
 - relax the proof-text limit or the witness rule.
 
-**Escalate to Joe rather than decide**: parameter changes (e.g. the student
-turn budget), whether to resume a paused queue, anything that changes what
-the experiment measures.
+**Preserve the experiment while acting autonomously.** Do not silently change
+parameters (for example the student turn budget) or anything else that changes
+what the experiment measures. If such a change is genuinely required, stop
+with a precise invariant conflict and a proposed structural change. A stopped
+or paused queue with remaining planned work is not an operator decision: find
+the apparatus fault, repair it, and resume from durable state.
 
 ## The loop, per tick
 
@@ -208,8 +218,9 @@ ack on consumption. That is the whole point of the adapter.
 
 ## State at handoff, 2026-08-26
 
-- **Campaign paused** at `next-index=14`; f41 certified `:partial`. Resuming
-  is Joe's call.
+- **Historical state at this handoff:** campaign paused at `next-index=14`;
+  f41 certified `:partial`. This did not authorize leaving later campaigns
+  stopped; the autonomy correction above governs current watcher behaviour.
 - **Tier-A**: conditions 1 (approvals non-zero) and 2 (zero unresolved
   passes) hold; 3 (cross-problem transfer) is **open and is the point of the
   campaign**; 4 (paste zero) holds.
@@ -286,8 +297,9 @@ once something refreshes the JVM's contract. That is what cost f51.
 
 Must print `True` and list 11 phases. If it prints `False`, the JVM is running
 an old contract: the frame is not repairable forward (`promote-solver` belongs
-before `student-attempt-1`), so reload from master and escalate the frame's
-disposal to Joe. **Frame disposal is Joe's call, never the watcher's.**
+before `student-attempt-1`), so reload from master. Do not repair the frame
+forward or void it. Preserve its evidence, record the apparatus invalidation,
+and apply the contract's durable successor/disposition mechanism.
 
 ### Failure catalogue, symptom -> cause -> action
 
@@ -331,8 +343,11 @@ This is cheap, reversible, and loses nothing if it turns out to be unnecessary.
 - **Do not accommodate the machine.** Joe: the machine is built to accommodate
   him. Prefer subtractive fixes -- remove a source of truth -- over adding a
   checker. Widening an audit so a frame passes is the failure mode, not the fix.
-- **Escalate to Joe**: frame disposal, restarting a shared JVM, anything that
-  changes the protocol mid-campaign.
+- **Do not wait for Joe to keep the campaign moving.** Use the contract's
+  durable disposition path for invalid frames. Repair and resume stopped
+  coordinators after the cause is cleared. A shared-JVM restart remains
+  forbidden from the Agency-routed watcher session; use reload-from-master or
+  an independent restart session and verify Agency recovery before continuing.
 - A known condition recurring is one line. A new condition, or a result, is a
   report.
 
