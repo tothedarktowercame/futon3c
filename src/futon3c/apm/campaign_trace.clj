@@ -94,6 +94,20 @@
                          (keep :trace/delivery-observation))
                    delivery-ledgers)})
 
+(defn delivery-ledger-for-frame
+  "Select frame delivery jobs using immutable typed-submission authority.
+   A transport-level :frame-id remains accepted for non-role producers, but
+   absence of that transport annotation must not discard a registered role
+   job's already-recorded delivery observation."
+  [ledger frame-id registered-job-ids]
+  (update ledger :jobs
+          (fn [jobs]
+            (into {}
+                  (filter (fn [[job-id job]]
+                            (or (= frame-id (:frame-id job))
+                                (contains? registered-job-ids job-id))))
+                  (or jobs {})))))
+
 (defn require-complete-operational-sources [sources]
   (doseq [{:keys [kind]} (observation-schemas)]
     (let [source-key (keyword kind)]

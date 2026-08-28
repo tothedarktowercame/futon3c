@@ -100,6 +100,24 @@
   (let [file (record-path job-id)]
     (when (.isFile file) (edn/read-string (slurp file)))))
 
+(defn registered-job-ids-for-frame
+  "Return job ids whose immutable typed-submission authority names FRAME-ID.
+   This is the durable membership authority for frame jobs; the transport
+   ledger records delivery but does not own campaign identity."
+  [frame-id]
+  (let [root (io/file *submission-root*)]
+    (if-not (.isDirectory root)
+      #{}
+      (into #{}
+            (comp
+             (filter #(.isFile ^java.io.File %))
+             (filter #(.endsWith (.getName ^java.io.File %) ".edn"))
+             (map #(edn/read-string (slurp ^java.io.File %)))
+             (keep (fn [{:keys [authority]}]
+                     (when (= frame-id (:frame-id authority))
+                       (:job-id authority)))))
+            (.listFiles root)))))
+
 (defn- atomic-write! [file value]
   (io/make-parents file)
   (let [temporary (io/file (.getParentFile file)

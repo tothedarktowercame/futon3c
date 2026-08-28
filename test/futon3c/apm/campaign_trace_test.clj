@@ -143,6 +143,25 @@
            (set (keys (sut/project-operational-observations
                        (sut/require-complete-operational-sources sources))))))))
 
+(deftest delivery-ledger-membership-uses-registered-frame-authority
+  (let [observation (first (get-in valid [:operational-observations :delivery]))
+        selected (sut/delivery-ledger-for-frame
+                  {:jobs {"registered-untagged"
+                          {:trace/delivery-observation observation}
+                          "transport-tagged"
+                          {:frame-id "f52"
+                           :trace/delivery-observation observation}
+                          "other-frame"
+                          {:frame-id "f51"
+                           :trace/delivery-observation observation}}}
+                  "f52" #{"registered-untagged"})
+        sources (sut/operational-sources-from-durable
+                 {:watchdog-states [] :successor-states []
+                  :delivery-ledgers [selected]})]
+    (is (= #{"registered-untagged" "transport-tagged"}
+           (set (keys (:jobs selected)))))
+    (is (= 2 (count (:delivery sources))))))
+
 (deftest clean-close-persists-positive-successor-disposition
   (let [schemas (sut/observation-schemas)
         samples (:operational-observations valid)

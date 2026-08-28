@@ -40,7 +40,8 @@
             [futon3c.apm.series-terminal :as series-terminal]
             [futon3c.apm.solver-progress-rollover :as progress-rollover]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle]
-            [futon3c.apm.qualification :as qualification])
+            [futon3c.apm.qualification :as qualification]
+            [futon3c.apm.typed-role-submission :as typed-submission])
   (:import [java.nio.file Path]
            [java.time Instant]))
 
@@ -514,19 +515,17 @@
                             (map #(.toPath ^java.io.File %))))
                      [(.resolve campaign-root "coordinator.edn.watchdog.edn")
                       invoke-path])
+              registered-job-ids
+              (typed-submission/registered-job-ids-for-frame
+               (:frame-id action))
               documents
               (keep (fn [^Path path]
                       (when (java.nio.file.Files/isRegularFile
                              path (make-array java.nio.file.LinkOption 0))
                         (let [value (edn/read-string (slurp (str path)))]
                           (if (= path invoke-path)
-                            (update value :jobs
-                                    (fn [jobs]
-                                      (into {}
-                                            (filter (fn [[_ job]]
-                                                      (= (:frame-id action)
-                                                         (:frame-id job))))
-                                            jobs)))
+                            (campaign-trace/delivery-ledger-for-frame
+                             value (:frame-id action) registered-job-ids)
                             value))))
                     paths)
               prepared

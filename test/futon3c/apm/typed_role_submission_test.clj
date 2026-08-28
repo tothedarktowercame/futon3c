@@ -117,3 +117,14 @@
     (is (not (contains? (sut/evidence-required codex-auth)
                         :memory-candidates)))
     (is (contains? (sut/evidence-required zai-auth) :memory-candidates))))
+
+(deftest registered-job-membership-is-readable-by-frame
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "typed-authorities"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [sut/*submission-root* root]
+      (is (:ok (sut/register! (authority :solve) {:job-id "job-solve"})))
+      (is (:ok (sut/register! (assoc (authority :verify) :frame-id "f31")
+                              {:job-id "job-verify"})))
+      (is (= #{"job-solve"} (sut/registered-job-ids-for-frame "f30")))
+      (is (= #{"job-verify"} (sut/registered-job-ids-for-frame "f31"))))))
