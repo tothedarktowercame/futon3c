@@ -144,6 +144,66 @@ against 494 in the layer it specifies. With the vector it is exact, per repo, at
 any moment, and it is the number that distinguishes Joe's *trailing* (bounded)
 from *not keeping up* (growing).
 
+## Why inbox zero is not holding — three categories, one of them unreachable
+
+*Joe, 2026-08-28: "this is where the README-inbox-zero feature is useful —
+clearly it isn't working properly yet. If we get to inbox zero, we can push to
+prod, pin the heredity, and get set for experiments."*
+
+`futon0/README-inbox-zero.md` states the goal — *no repo carries uncommitted work
+older than a day* — and its third cost is exactly the pin problem: **"a dirty tree
+is an unreliable narrator, and agents believe it."** A tree with uncommitted
+changes has no sha, so it cannot be a component of the vector.
+
+Census of the 22 dirty items, 2026-08-28. They are **three different things and
+only two of them are an inbox**:
+
+**1 · Live run-products in tracked paths — 3 items, and these make the goal
+unreachable as stated.**
+
+    holes/labs/M-diagramprover/apm-driver/axiom-audit.jsonl        modified 73 minutes ago
+    holes/labs/M-diagramprover/apm-driver/campaign-ledger.jsonl    git diff: +1 −0, a pure append
+    holes/labs/M-diagramprover/apm-driver/statements-manifest.jsonl
+
+The running machine appends to these. Committing them clears the tree for as long
+as it takes the next frame to write a line. **No amount of discipline reaches
+inbox zero while a live process writes into tracked paths** — this is a category
+error in what is tracked, not a failure to tidy.
+
+**2 · Finished work sitting unstaged — 13 items.** Eleven pattern-library scribe
+outputs for frames f37–f49 (codex and zai), a hole-review resolution-witness
+`.edn`, and two `.flexiarg` library files in `futon3`. This is the README's cost
+#1 verbatim, still happening: *finished work sits unstaged and is forgotten*, and
+frame outputs are exactly the artefacts already known to strand
+(`rescued-solves-refs`, 2026-08-27).
+
+**3 · Source edits and one stray — 6 items.** `apm-coordinator-enabled.py`,
+`substrate/client.clj`, `live-map-pca3-v1.json`, `README-termux.md`,
+`patterns-index.tsv`, and a file in `futon3` named **`li`** — almost certainly a
+mistyped `ls`, and precisely the noise the README means by an unreliable
+narrator.
+
+### What this asks of the pin
+
+The vector wants to pin **source**. The working tree does not distinguish source
+from product, so the pin cannot be taken while category 1 exists. The fix is the
+one already applied to `futon2/data/` — which is gitignored, and which is why
+`futon2` is clean in the table above while `futon3c` is not.
+
+So: **the tracked/untracked boundary is a declared coverage boundary**, and it is
+currently undeclared for run-products. That is `declaresCoverage` and
+`outsideIsTyped` (`CoverageReport.lean`) applied to a working tree — the same
+shape as the census cleanup and the contract's `reserved` list.
+
+Order of work: move category 1 out of tracked paths *first*. Categories 2 and 3
+are then a genuine inbox that a person can clear in an afternoon, and the pin
+becomes takeable. Clearing 2 and 3 first would feel like progress and would be
+undone by the next frame.
+
+**Not mine to clear.** The 13 unstaged items in category 2 are other agents'
+frame outputs; committing them is a judgement about their content that belongs to
+whoever authored them. Flagged, not staged.
+
 ## Acceptance
 
 - `GET /api/alpha/provenance` answers on futon3c, including `reloaded-from`.
