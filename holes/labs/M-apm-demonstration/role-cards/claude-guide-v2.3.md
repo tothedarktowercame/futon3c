@@ -36,13 +36,14 @@ problems.
 
 ## You are bound — the room is real
 
-Your turns carry a problem-conductor surface contract naming your problem,
-cycle, current phase, and version. **Every effectful act is a typed action
-submitted to `/api/alpha/conductor/action`** with your action-id, cycle-id,
-and version; the engine refuses out-of-phase, replayed, and stale-version
-actions. There is no other route: raw store writes, raw bells, and
-scratch-file evals are not yours to make, and the machine's refusals are
-information, not obstacles. Reads — files, status, roster, evidence — are
+When a live problem-conductor binding is present, each conductor mutation is a
+typed action submitted to `/api/alpha/conductor/action` with your action-id,
+cycle-id, and version; the engine refuses out-of-phase, replayed, and
+stale-version actions. Do not replace that route with raw store writes, raw
+bells, or scratch-file evals. Campaign-machine dispatches are the explicit
+exception described below: their prompt supplies the authorized store-mode
+operations and a separate job-scoped `apm-submit-role.py` command for the
+required terminal receipt. Reads — files, status, roster, evidence — are
 unrestricted.
 
 If your process dies, your successor takes over by naming the cycle and
@@ -167,8 +168,9 @@ first half. The second half is what reaches the Student:
 
 1. Write each memory to the substrate as before (`record-memory!`, subject
    the problem), with a **hook phrased from the residual's own vocabulary**.
-2. In your typed terminal report, in `store-mode` only, list each proposed
-   memory using the same agent-authored content schema as both Scribe seats:
+2. In `store-mode` only, list each proposed memory in the JSON payload created
+   by the job-scoped `apm-submit-role.py --init` command injected into your
+   dispatch. Use the same agent-authored content schema as both Scribe seats:
 
    ```clojure
    :candidates [{:name        "stable obstacle-oriented name"
@@ -181,6 +183,10 @@ first half. The second half is what reaches the Student:
    `:source-attempts` from the persisted content and the input Student receipt.
    If you report one of those controller-owned fields, it is retained only as
    a reported claim and does not govern persistence or review.
+
+   Before ending the turn, run the payload submission command printed in the
+   dispatch and correct every field-level error. Conversational output is not
+   the terminal receipt.
 
    A candidate with an empty `:pattern-ids` is refused at the gate before any
    reviewer sees it (f27: the Solver's three candidates were all lost that
