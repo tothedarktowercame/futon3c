@@ -229,6 +229,78 @@
         (doseq [file (reverse (file-seq directory))]
           (io/delete-file file true))))))
 
+(deftest f49-guide-usage-limit-waits-without-spending-role-repair
+  (let [incident (:substrate incidents)
+        clock (atom 1000)
+        persisted (atom [])
+        announcements (atom [])
+        request {:dispatch/id "f49-guide-original"
+                 :agent-id "f49-guide"
+                 :frame-id (:frame-id incident)
+                 :problem-id (:problem-id incident)
+                 :phase (:phase incident)}
+        state {:state/type :live-job-dispatched
+               :request request
+               :ticket {:job-id "f49-guide-job"}
+               :activation/accepted? true
+               :terminal-repair-attempts (:repair-attempts incident)
+               :terminal-collection
+               {:evidence {:collection/id "f49-guide-terminal"}
+                :submission nil}}
+        job {:job-id "f49-guide-job" :state :done
+             :report {:error (:lint-error incident)}}
+        effects {:request request :state state
+                 :now-ms-fn #(deref clock)
+                 :provider-usage-limit-window-ms 5000
+                 :job-fn (constantly job)
+                 :persist-fn (fn [value]
+                               (swap! persisted conj value)
+                               {:ok true})
+                 :terminal-submission-provider (constantly nil)
+                 :terminal-validator
+                 (fn [& _]
+                   (assoc (:lint-error incident)
+                          :ok false :findings [:typed-submission-missing]))
+                 :receipt-provider (constantly {:ok true})
+                 :terminal-repair-request-fn
+                 (fn [original & _]
+                   {:ok true
+                    :request (assoc original :dispatch/id "f49-guide-after-window")})
+                 :announce-fn
+                 (fn [planned]
+                   (swap! announcements conj planned)
+                   {:ok true :job-id "f49-guide-resumed-job"})
+                 :ticket-register-fn (fn [& _] {:ok true})
+                 :activate-fn (fn [& _] {:ok true})}
+        waiting (job-driver/drive! effects)
+        waiting-state (:state waiting)
+        still-waiting (job-driver/drive! (assoc effects :state waiting-state))
+        announcements-before-resume (count @announcements)
+        _ (reset! clock 6000)
+        resumed (job-driver/drive! (assoc effects :state waiting-state))]
+    (is (= :claude-cli-limit-message
+           (:signature/id (job-driver/provider-usage-limit
+                           (:lint-error incident)))))
+    (is (= :awaiting-substrate (:status waiting)))
+    (is (= 6000 (get-in waiting [:substrate/condition :resume-at-ms])))
+    (is (= 0 (get-in waiting [:state :terminal-repair-attempts])))
+    (is (= :awaiting-substrate (:status still-waiting)))
+    (is (zero? announcements-before-resume))
+    (is (= :awaiting-terminal (:status resumed)))
+    (is (true? (:substrate/resumed? resumed)))
+    (is (= 0 (get-in resumed [:state :terminal-repair-attempts])))
+    (is (string? (get-in resumed [:state :active-request :dispatch/id])))
+    (is (not= "f49-guide-original"
+              (get-in resumed [:state :active-request :dispatch/id])))
+    (is (= :provider-usage-limit
+           (get-in resumed [:state :active-request :substrate/resumption])))
+    (is (nil? (get-in resumed [:state :active-request :repair/attempt])))
+    (is (= :provider-usage-limit
+           (get-in resumed [:state :superseded-terminals 0
+                            :substrate/condition :condition/type])))
+    (is (= 1 (count @announcements)))
+    (is (seq @persisted))))
+
 (deftest delivery-pair-is-produced-by-pull-only-completion-path
   (let [historical (first (get-in incidents [:delivery :historical]))
         directory (.toFile (java.nio.file.Files/createTempDirectory

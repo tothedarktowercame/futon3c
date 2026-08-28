@@ -56,6 +56,19 @@
             :sha256 "b5dfecd72a5a3e7348a2fc74989da9770b8d2a595250372987e65b5457bff2c2"}
            {:path "data/apm-campaigns/jit-all-open-v2/coordinator.edn"
             :sha256 "67c49a9a488137da977a1c112a66847a40882b96a858b35f80528bbaaebae837"}]}
+ :substrate
+ {:id :f49-guide-usage-limit
+  :frame-id "f49"
+  :problem-id "a98A04"
+  :phase :guide-intervention-1
+  :repair-attempts 0
+  :lint-error
+  {:error/code :report-edn-lint-failed
+   :error/message
+   "apm-role-report-f49-guide.edn:1:88: error: Invalid symbol: claude.ai/settings/usage?from=cc_cli_limit_message."}
+  :source
+  {:path "data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f49/live/guide-intervention-1.edn"
+   :note "Checked-in diagnostic only; tests do not read the live campaign."}}
  :delivery
  {:historical [{:job-id "invoke-1787838800874-2379-903d5af6"
                 :status "delivered" :note "bell-job-ready"

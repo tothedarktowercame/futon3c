@@ -20,6 +20,20 @@
                        (swap! calls conj :receipt)
                        {:ok true :certificate {:receipt/id "receipt-1"}})})
 
+(deftest provider-usage-signatures-are-declared-and-extendable
+  (is (= :usage-limit
+         (:signature/id (sut/provider-usage-limit
+                         {:error/message "Provider usage limit reached"}))))
+  (is (= :glm-capacity
+         (:signature/id
+          (sut/provider-usage-limit
+           {:error/message "GLM seat capacity window is closed"}
+           [{:signature/id :glm-capacity
+             :provider :glm
+             :pattern #"GLM seat capacity window"}]))))
+  (is (nil? (sut/provider-usage-limit
+             {:error/message "ordinary invalid EDN"}))))
+
 (deftest announce-is-persisted-before-activation-and-never-repeated
   (let [calls (atom []) job (atom {:state :running})
         first-pass (sut/drive! (effects calls job))

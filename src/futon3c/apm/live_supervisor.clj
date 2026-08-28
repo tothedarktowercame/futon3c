@@ -105,6 +105,30 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
+                (= :awaiting-substrate (:status driven))
+                (let [resume-at-ms (get-in driven
+                                           [:substrate/condition :resume-at-ms])
+                      projected (project-fn)
+                      parked (when (and (:ok projected) (nat-int? resume-at-ms))
+                               (park-fn {:awaiting []
+                                         :retry/not-before-ms resume-at-ms
+                                         :payload continuation-payload}))]
+                  (cond
+                    (not (nat-int? resume-at-ms))
+                    {:ok false
+                     :error/code :live-supervisor-substrate-resumption-invalid
+                     :finding driven}
+                    (not (:ok projected))
+                    {:ok false :error/code :live-supervisor-projection-failed
+                     :finding projected}
+                    (:ok parked)
+                    {:ok true :status :awaiting-substrate
+                     :phase (:phase action) :projection projected :park parked
+                     :substrate/resume-at-ms resume-at-ms}
+                    :else
+                    {:ok false :error/code :live-supervisor-park-failed
+                     :finding parked}))
+
                 (= :transport-retry-scheduled (:status driven))
                 (let [projected (project-fn)
                       parked (when (:ok projected)

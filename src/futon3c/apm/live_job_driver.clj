@@ -6,10 +6,40 @@
    a duplicate. Terminal evidence is delegated to a phase-specific validator."
   (:require [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-trace :as campaign-trace]
-            [futon3c.apm.job-state :as job-state]))
+            [futon3c.apm.job-state :as job-state]
+            [futon3c.apm.typed-role-submission :as submission]))
 
 (def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
+(def default-provider-usage-limit-window-ms (* 5 60 60 1000))
+
+(def provider-usage-limit-signatures
+  "Declared substrate signatures. Callers may append provider-specific entries
+  through `:provider-usage-limit-signatures`; the generic entries deliberately
+  describe conditions rather than one vendor's complete notice text."
+  [{:signature/id :claude-cli-limit-message
+    :provider :anthropic
+    :pattern #"(?i)claude\.ai/settings/usage\?from=cc_cli_limit_message"}
+   {:signature/id :usage-limit
+    :provider :unspecified
+    :pattern #"(?i)\busage[ -]limit(?:ed| reached| exceeded)?\b"}
+   {:signature/id :quota-exhausted
+    :provider :unspecified
+    :pattern #"(?i)\bquota (?:is )?(?:exhausted|exceeded|reached)\b"}
+   {:signature/id :rate-limit
+    :provider :unspecified
+    :pattern #"(?i)\brate[ -]limit(?:ed| reached| exceeded)?\b"}])
+
+(defn provider-usage-limit
+  "Classify an invalid terminal diagnostic against declared signatures."
+  ([diagnostic] (provider-usage-limit diagnostic []))
+  ([diagnostic additional-signatures]
+   (let [text (pr-str diagnostic)]
+     (some (fn [{:keys [pattern] :as signature}]
+             (when (and (instance? java.util.regex.Pattern pattern)
+                        (re-find pattern text))
+               (dissoc signature :pattern)))
+           (concat provider-usage-limit-signatures additional-signatures)))))
 
 (defn- successor-observation [job terminal-collection findings]
   (campaign-trace/validate-authoritative-observation
@@ -28,7 +58,117 @@
     (update-in state [:superseded-terminals index
                       :trace/successor-observation]
                #(campaign-trace/validate-authoritative-observation
-                 :successor (f %)))))
+               :successor (f %)))))
+
+(declare ticket)
+
+(defn- substrate-wait-result [state]
+  {:ok true :status :awaiting-substrate :state state
+   :substrate/condition (:substrate/wait state)})
+
+(defn- substrate-resumption-request [planned signature]
+  (let [body (-> planned
+                 (dissoc :dispatch/id :submission/token :submission/job-id
+                         :repair/attempt :repair/of-job-id :repair/of-ticket-id
+                         :repair/findings :repair/validation-output :repair/kind)
+                 (assoc :substrate/resumption :provider-usage-limit
+                        :substrate/signature-id (:signature/id signature)))
+        addressed (assoc body :dispatch/id (machine/ledger-digest [body]))]
+    (submission/prepare-request addressed)))
+
+(defn- begin-substrate-wait!
+  [{:keys [state active-request job validated signature now-ms window-ms
+           terminal-repair-request-fn persist-fn]}]
+  (let [planned (when (fn? terminal-repair-request-fn)
+                  (terminal-repair-request-fn
+                   active-request (:ticket state) job
+                   (assoc validated
+                          :repair/kind :provider-usage-limit
+                          :repair/budget-consumed? false)))
+        planned-request (:request planned)
+        request (when (map? planned-request)
+                  (substrate-resumption-request planned-request signature))]
+    (if-not (and (:ok planned) (map? request)
+                 (string? (:dispatch/id request)))
+      {:ok false :error/code :live-job-substrate-resumption-plan-invalid
+       :finding planned}
+      (let [wait {:condition/type :provider-usage-limit
+                  :signature/id (:signature/id signature)
+                  :provider (:provider signature)
+                  :observed-at-ms now-ms
+                  :resume-at-ms (+ now-ms window-ms)
+                  :window-ms window-ms
+                  :repair/attempts-preserved
+                  (or (:terminal-repair-attempts state) 0)
+                  :resumption/request request}
+            waiting-state (assoc state :substrate/wait wait)]
+        (if (:ok (persist-fn waiting-state))
+          (substrate-wait-result waiting-state)
+          {:ok false :error/code :live-job-substrate-wait-persistence-failed
+           :state state})))))
+
+(defn- resume-after-substrate-wait!
+  [{:keys [state job announce-fn activate-fn persist-fn ticket-register-fn]}]
+  (let [wait (:substrate/wait state)
+        request (:resumption/request wait)
+        predecessor {:job job
+                     :ticket (:ticket state)
+                     :terminal-collection (:terminal-collection state)
+                     :findings [:provider-usage-limit]
+                     :substrate/condition (dissoc wait :resumption/request)
+                     :trace/successor-observation
+                     (successor-observation job (:terminal-collection state)
+                                            [:provider-usage-limit])}
+        already-archived?
+        (= (:job-id job)
+           (get-in (peek (:superseded-terminals state)) [:job :job-id]))
+        archived-state (cond-> state
+                         (not already-archived?)
+                         (update :superseded-terminals (fnil conj []) predecessor))]
+    (if-not (:ok (persist-fn archived-state))
+      {:ok false :error/code :live-job-substrate-predecessor-persistence-failed
+       :state state}
+      (let [announced (ticket request (announce-fn request))]
+        (if-not (:ok announced)
+          (assoc (substrate-wait-result archived-state)
+                 :substrate/resumption-finding announced)
+          (let [announced-state
+                (update-last-successor-observation
+                 archived-state
+                 #(assoc % :successor-announced-id
+                         (get-in announced [:ticket :job-id])))
+                next-state (-> announced-state
+                               (dissoc :terminal-collection :substrate/wait)
+                               (assoc :active-request request
+                                      :ticket (:ticket announced)
+                                      :activation/accepted? false
+                                      :substrate/last-wait
+                                      (dissoc wait :resumption/request)))]
+            (if-not (:ok (persist-fn next-state))
+              {:ok false :error/code :live-job-substrate-resumption-persistence-failed
+               :state archived-state}
+              (let [registered (if (fn? ticket-register-fn)
+                                 (ticket-register-fn request (:ticket announced))
+                                 {:ok true})
+                    activated (when (:ok registered)
+                                (activate-fn request (:ticket announced)))]
+                (cond
+                  (not (:ok registered))
+                  {:ok false
+                   :error/code :live-job-submission-authority-registration-failed
+                   :state next-state :finding registered}
+                  (not (:ok activated))
+                  {:ok false :error/code :live-job-activation-failed
+                   :state next-state :finding activated}
+                  :else
+                  (let [accepted (assoc next-state :activation/accepted? true)]
+                    (if (:ok (persist-fn accepted))
+                      {:ok true :status :awaiting-terminal
+                       :substrate/resumed? true :state accepted}
+                      {:ok false
+                       :error/code
+                       :live-job-activation-acceptance-persistence-failed
+                       :state next-state})))))))))))
 
 (def durable-reference-keys
   #{:job-id :solver/prior-job-id :repair/of-job-id :submission/id :receipt/id
@@ -80,8 +220,6 @@
                              :durable-reference-missing)
              :reference reference
              :finding (dissoc resolved :value)}))))))
-
-(declare ticket)
 
 (defn- supersede-unaccepted!
   [{:keys [active-request state announce-fn activate-fn persist-fn cancel-fn
@@ -173,12 +311,18 @@
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
            ticket-register-fn terminal-submission-provider cancel-fn
-           missing-observation-provider terminal-budget-config]}]
+           missing-observation-provider terminal-budget-config now-ms-fn
+           provider-usage-limit-signatures provider-usage-limit-window-ms]
+    :or {now-ms-fn #(System/currentTimeMillis)
+         provider-usage-limit-signatures []
+         provider-usage-limit-window-ms default-provider-usage-limit-window-ms}}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
                             terminal-validator receipt-provider])
-              (valid-terminal-budget? terminal-budget-config)))
+              (valid-terminal-budget? terminal-budget-config)
+              (pos-int? provider-usage-limit-window-ms)
+              (sequential? provider-usage-limit-signatures)))
     {:ok false :error/code :live-job-driver-input-invalid}
 
     (nil? state)
@@ -277,8 +421,33 @@
 
     :else
     (let [active-request (or (:active-request state) request)
-          job (job-fn (get-in state [:ticket :job-id]))]
+          job (job-fn (get-in state [:ticket :job-id]))
+          job-usage-limit (provider-usage-limit
+                           {:report (:report job)
+                            :output (:output job)
+                            :result (:result job)
+                            :error (:error job)}
+                           provider-usage-limit-signatures)]
       (cond
+        (:substrate/wait state)
+        (if (< (now-ms-fn) (get-in state [:substrate/wait :resume-at-ms]))
+          (substrate-wait-result state)
+          (resume-after-substrate-wait!
+           {:state state :job job :announce-fn announce-fn
+            :activate-fn activate-fn :persist-fn persist-fn
+            :ticket-register-fn ticket-register-fn}))
+
+        (and job-usage-limit (:terminal-collection state))
+        (begin-substrate-wait!
+         {:state state :active-request active-request :job job
+          :validated {:ok false :error/code :live-job-submission-missing
+                      :findings [:typed-submission-missing]
+                      :substrate/condition :provider-usage-limit}
+          :signature job-usage-limit :now-ms (now-ms-fn)
+          :window-ms provider-usage-limit-window-ms
+          :terminal-repair-request-fn terminal-repair-request-fn
+          :persist-fn persist-fn})
+
         (= :unknown (job-state/classify (:state job)))
         {:ok false :error/code :live-job-state-unclassified
          :finding {:job-id (:job-id job) :state (:state job)}}
@@ -338,7 +507,11 @@
               (and (fn? terminal-submission-provider)
                    (= [:typed-submission-missing] (:findings validated))
                    (pos? (or (:terminal-repair-attempts state) 0))
-                   (zero? (or (:typed-submission-migration-attempts state) 0)))]
+                   (zero? (or (:typed-submission-migration-attempts state) 0)))
+              usage-limit
+              (when-not (:ok validated)
+                (provider-usage-limit {:job job :validation validated}
+                                      provider-usage-limit-signatures))]
           (if (:ok validated)
             (let [provided (receipt-provider active-request (:ticket state)
                                              job validated)]
@@ -374,6 +547,15 @@
                     {:ok false
                      :error/code :live-job-receipt-persistence-failed}))))
             (cond
+              usage-limit
+              (begin-substrate-wait!
+               {:state state :active-request active-request :job job
+                :validated validated :signature usage-limit
+                :now-ms (now-ms-fn)
+                :window-ms provider-usage-limit-window-ms
+                :terminal-repair-request-fn terminal-repair-request-fn
+                :persist-fn persist-fn})
+
               (and (>= (or (:terminal-repair-attempts state) 0) max-repairs)
                    (not typed-contract-migration?))
               (if (and (= [:typed-submission-missing] (:findings validated))

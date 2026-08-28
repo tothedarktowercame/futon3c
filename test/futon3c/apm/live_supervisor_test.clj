@@ -74,6 +74,22 @@
     (is (= [] (get-in (last @calls) [1 :awaiting])))
     (is (= 601000 (get-in (last @calls) [1 :retry/not-before-ms])))))
 
+(deftest provider-usage-limit-parks-until-recorded-resumption-time
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls
+                      {:ok true :status :awaiting-substrate
+                       :substrate/condition
+                       {:condition/type :provider-usage-limit
+                        :resume-at-ms 18001000}}))]
+    (is (= :awaiting-substrate (:status result)))
+    (is (= 18001000 (:substrate/resume-at-ms result)))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (not-any? #{:advance} @calls))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))
+    (is (= 18001000
+           (get-in (last @calls) [1 :retry/not-before-ms])))))
+
 (deftest audit-and-projection-failures-stop-without-routing-around
   (testing "audit"
     (let [calls (atom [])
