@@ -60,6 +60,8 @@
      :session-id (:session-id job)
      :invocation/model (:invocation/model job)
      :state (some-> (:state job) keyword)
+     :terminal-code (some-> (:terminal-code job) keyword)
+     :terminal-message (:terminal-message job)
      :trace/delivery-observation (:trace/delivery-observation job)
      :report (:report parsed)
      :report/error (when-not (:ok parsed) (dissoc parsed :ok))}))

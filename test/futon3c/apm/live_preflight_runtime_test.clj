@@ -10,11 +10,15 @@
                   :registered-push-performed? false
                   :polling-available? true}
         terminal (sut/job->terminal
-                  {:job {:job-id "j1" :agent-id "f19-proctor" :state "done"
+                  {:job {:job-id "j1" :agent-id "f19-proctor" :state "failed"
+                         :terminal-code "invoke-error"
+                         :terminal-message "wall-clock-budget"
                          :invocation/model "gpt-5.6-sol"
                          :trace/delivery-observation delivery
                          :result (str "```edn\n" (pr-str report) "\n```")}})]
-    (is (= :done (:state terminal)))
+    (is (= :failed (:state terminal)))
+    (is (= :invoke-error (:terminal-code terminal)))
+    (is (= "wall-clock-budget" (:terminal-message terminal)))
     (is (= report (:report terminal)))
     (is (= "gpt-5.6-sol" (:invocation/model terminal)))
     (is (= delivery (:trace/delivery-observation terminal)))))
