@@ -276,6 +276,55 @@
      :error (social-error :E-store :missing-substrate-url
                           "No substrate URL is configured on the evidence backend or environment")}))
 
+(defn post-memory-assert!
+  "Atomically POST one evidence entry and its memory/assert hyperedge through
+  Futon1b's semantic paired-write route."
+  [{:keys [evidence-store]} entry hyperedge]
+  (if-let [base-url (store-base-url evidence-store)]
+    (try
+      (let [{:keys [status body error]}
+            @(http/post (str base-url "/api/alpha/memory/assert")
+                        {:timeout 30000
+                         :as :text
+                         :headers {"content-type" "application/edn"
+                                   "accept" "application/edn"
+                                   "x-penholder" (penholder)}
+                         :body (pr-str {:evidence entry
+                                        :hyperedge hyperedge})})
+            parsed (when (seq (str body))
+                     (try (edn/read-string {:default (fn [_tag value] value)} body)
+                          (catch Throwable _ body)))]
+        (cond
+          error
+          {:ok false
+           :error (social-error :transport :memory-assert-unreachable
+                                "Atomic memory assertion transport failed"
+                                :detail (str error))}
+
+          (<= 200 (long status) 299)
+          {:ok true :receipt parsed}
+
+          (= 409 (long status))
+          {:ok false :duplicate? true
+           :error (social-error :E-store :memory-assert-duplicate
+                                "Atomic memory assertion already exists"
+                                :status status :body parsed)}
+
+          :else
+          {:ok false
+           :error (social-error :E-store :memory-assert-rejected
+                                (str "Atomic memory assertion returned HTTP " status)
+                                :status status :body parsed)}))
+      (catch Throwable error
+        {:ok false
+         :error (social-error :transport :memory-assert-unreachable
+                              (or (.getMessage error)
+                                  "Atomic memory assertion transport failed")
+                              :exception-class (.getName (class error)))}))
+    {:ok false
+     :error (social-error :E-store :missing-substrate-url
+                          "No substrate URL is configured on the evidence backend or environment")}))
+
 (declare ^:private record-memory-validated!)
 
 (defn record-memory!

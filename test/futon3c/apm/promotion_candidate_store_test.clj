@@ -1,6 +1,7 @@
 (ns futon3c.apm.promotion-candidate-store-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.promotion-candidate-store :as sut]))
 
 (def candidate
@@ -13,6 +14,13 @@
    :pattern-ids ["math-formalization/integrability-by-comparison"]
    :source-attempts [1]})
 
+(def deposit-request
+  {:dispatch/id "dispatch-atomic" :problem-id "p-atomic"
+   :job-id "scribe-job" :agent-id "scribe"
+   :source-attempt-ids ["solver-job"]})
+
+(def deposit {:depositor "scribe" :candidates [candidate]})
+
 (deftest controller-persists-and-verifies-candidates-before-review
   (let [entries (atom {}) edges (atom {})
         request {:dispatch/id "dispatch-1" :problem-id "p1"
@@ -23,12 +31,12 @@
          {:depositor "scribe" :candidates [(dissoc candidate :kind)] :lanes []}
          request
          {:fetch-entry #(get @entries %)
-          :append-entry (fn [entry]
-                          (swap! entries assoc (:evidence/id entry) entry)
-                          {:ok true :entry entry})
-          :post-edge (fn [edge]
-                       (swap! edges assoc (:hx/id edge) edge)
-                       {:ok true :hyperedge edge})
+          :post-memory-assert
+          (fn [entry edge]
+            (swap! entries assoc (:evidence/id entry) entry)
+            (swap! edges assoc (:hx/id edge) edge)
+            {:ok true :receipt {:evidence/id (:evidence/id entry)
+                                :hx/id (:hx/id edge)}})
           :fetch-hyperedges
           (fn [end]
             (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))})
@@ -66,8 +74,8 @@
                  :agent-id "scribe"
                  :source-attempt-ids ["source"]}
                 {:fetch-entry (constantly nil)
-                 :append-entry #(do (swap! writes inc) {:ok true})
-                 :post-edge #(do (swap! writes inc) {:ok true})
+                 :post-memory-assert
+                 (fn [_ _] (swap! writes inc) {:ok true})
                  :fetch-hyperedges (constantly [])})]
     (is (= :promotion-candidate-content-invalid (:error/code result)))
     (is (some #{:candidate-body-missing}
@@ -89,8 +97,8 @@
                 {:dispatch/id "dispatch" :problem-id "p"
                  :agent-id "scribe"}
                 {:fetch-entry (constantly nil)
-                 :append-entry #(do (swap! writes inc) {:ok true})
-                 :post-edge #(do (swap! writes inc) {:ok true})
+                 :post-memory-assert
+                 (fn [_ _] (swap! writes inc) {:ok true})
                  :fetch-hyperedges (constantly [])})]
     (is (= :promotion-candidate-content-invalid (:error/code result)))
     (is (some #(= :controller-source-attempts-missing (:finding %))
@@ -105,10 +113,11 @@
          {:dispatch/id "dispatch" :problem-id "p" :agent-id "f40-scribe"
           :source-attempt-ids ["solver-job"]}
          {:fetch-entry #(get @entries %)
-          :append-entry #(do (swap! entries assoc (:evidence/id %) %)
-                             {:ok true :entry %})
-          :post-edge #(do (swap! edges assoc (:hx/id %) %)
-                          {:ok true :hyperedge %})
+          :post-memory-assert
+          (fn [entry edge]
+            (swap! entries assoc (:evidence/id entry) entry)
+            (swap! edges assoc (:hx/id edge) edge)
+            {:ok true})
           :fetch-hyperedges
           (fn [end]
             (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))})]
@@ -181,6 +190,113 @@
                            #(when (= memory-id %)
                               {:evidence/id memory-id :evidence/body body})
                            (constantly [edge]))))))
+
+(deftest rejected-pair-never-falls-back-to-separate-entry-or-edge-writes
+  (let [separate-entry-writes (atom 0)
+        separate-edge-writes (atom 0)
+        result
+        (sut/persist!
+         deposit deposit-request
+         {:fetch-entry (constantly nil)
+          ;; Deliberately supplied sentinels prove the migrated store no longer
+          ;; has a two-call fallback.
+          :append-entry (fn [_] (swap! separate-entry-writes inc))
+          :post-edge (fn [_] (swap! separate-edge-writes inc))
+          :post-memory-assert
+          (fn [_ _]
+            {:ok false
+             :error {:error/component :E-store
+                     :error/code :memory-assert-rejected
+                     :error/context {:status 400 :body {:error "invalid"}}}})
+          :fetch-hyperedges (constantly [])})]
+    (is (= :promotion-candidate-evidence-write-failed (:error/code result)))
+    (is (zero? @separate-entry-writes))
+    (is (zero? @separate-edge-writes))))
+
+(deftest atomic-route-transport-failure-remains-retryable
+  (let [result
+        (sut/persist!
+         deposit deposit-request
+         {:fetch-entry (constantly nil)
+          :post-memory-assert
+          (fn [_ _]
+            {:ok false
+             :error {:error/component :transport
+                     :error/code :memory-assert-unreachable}})
+          :fetch-hyperedges (constantly [])})]
+    (is (= :promotion-candidate-edge-write-failed (:error/code result)))
+    (is (= :transport
+           (get-in result [:finding :error :error/component])))
+    (is (#'live-promotion/transport-failure? result))))
+
+(deftest already-persisted-pair-replays-without-writing
+  (let [entries (atom {}) edges (atom {}) writes (atom 0)
+        ports {:fetch-entry #(get @entries %)
+               :post-memory-assert
+               (fn [entry edge]
+                 (swap! writes inc)
+                 (swap! entries assoc (:evidence/id entry) entry)
+                 (swap! edges assoc (:hx/id edge) edge)
+                 {:ok true})
+               :fetch-hyperedges
+               (fn [end]
+                 (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))}
+        first-result (sut/persist! deposit deposit-request ports)
+        replay (sut/persist! deposit deposit-request ports)]
+    (is (:ok first-result))
+    (is (:ok replay))
+    (is (= 1 @writes))))
+
+(deftest preserved-write-error-codes-remain-reachable
+  (let [base {:fetch-hyperedges (constantly [])}
+        evidence-not-visible
+        (sut/persist! deposit deposit-request
+                      (merge base {:fetch-entry (constantly nil)
+                                   :post-memory-assert
+                                   (fn [_ _] {:ok true})}))
+        stored-entry (atom nil)
+        edge-not-visible
+        (sut/persist! deposit deposit-request
+                      (merge base
+                             {:fetch-entry (fn [_] @stored-entry)
+                              :post-memory-assert
+                              (fn [entry _]
+                                (reset! stored-entry entry)
+                                {:ok true})}))
+        edge-write-failed
+        (sut/persist!
+         deposit deposit-request
+         (merge base {:fetch-entry (constantly nil)
+                      :post-memory-assert
+                      (fn [_ _]
+                        {:ok false
+                         :error {:error/component :E-store
+                                 :error/code :memory-assert-rejected
+                                 :error/context
+                                 {:body {:error
+                                         {:reason :invalid-hyperedge}}}}})}))
+        id-conflict
+        (sut/persist! deposit deposit-request
+                      (merge base {:fetch-entry
+                                   (constantly {:evidence/id "occupied"
+                                                :evidence/body {:body "other"}})
+                                   :post-memory-assert
+                                   (fn [_ _] {:ok true})}))]
+    (is (= :promotion-candidate-evidence-not-visible
+           (:error/code evidence-not-visible)))
+    (is (= :promotion-candidate-edge-not-visible
+           (:error/code edge-not-visible)))
+    (is (= :promotion-candidate-edge-write-failed
+           (:error/code edge-write-failed)))
+    (is (= :promotion-candidate-id-conflict (:error/code id-conflict)))
+    ;; Content validation is exercised independently before any port call.
+    (is (= :promotion-candidate-content-invalid
+           (:error/code
+            (sut/persist! (assoc deposit :candidates [(dissoc candidate :body)])
+                          deposit-request
+                          {:fetch-entry (constantly nil)
+                           :post-memory-assert (fn [_ _] {:ok true})
+                           :fetch-hyperedges (constantly [])}))))))
 
 (deftest review-inputs-require-a-full-persisted-body
   (let [body {:name "n" :hook "h" :kind :memory :body "complete body"}

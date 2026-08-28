@@ -7,7 +7,6 @@
   (:require [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.promotion-pipeline :as pipeline]
-            [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-write :as memory-write]
@@ -114,6 +113,19 @@
               (= (:hx/props expected) (:hx/props %)))
         (fetch-hyperedges (get-in expected [:hx/props :roles :entry]))))
 
+(def ^:private hyperedge-refusal-reasons
+  #{:invalid-hyperedge :invalid-hyperedge-end
+    :invalid-memory-assert-hyperedge
+    :memory-assert-evidence-endpoint-missing})
+
+(defn- pair-write-error-code [result]
+  (let [error (:error result)
+        reason (get-in error [:error/context :body :error :reason])]
+    (if (or (= :transport (:error/component error))
+            (contains? hyperedge-refusal-reasons reason))
+      :promotion-candidate-edge-write-failed
+      :promotion-candidate-evidence-write-failed)))
+
 (defn- materialization-witness [candidate observed]
   (let [digest (machine/ledger-digest [(:evidence/body observed)])]
     {:artifact-id (:memory-id candidate)
@@ -134,12 +146,12 @@
    (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
      (persist! deposit deposit-request
                {:fetch-entry #(estore/get-entry* backend %)
-                :append-entry #(boundary/append! backend %)
-                :post-edge #(memory-write/post-hyperedge!
-                             {:evidence-store backend} %)
+                :post-memory-assert
+                #(memory-write/post-memory-assert!
+                  {:evidence-store backend} %1 %2)
                 :fetch-hyperedges substrate/hyperedges-by-end})))
   ([{:keys [depositor candidates] :as deposit} deposit-request
-    {:keys [fetch-entry append-entry post-edge fetch-hyperedges]}]
+    {:keys [fetch-entry post-memory-assert fetch-hyperedges]}]
    (let [reported-depositor depositor
          depositor (:agent-id deposit-request)
          deposit (assoc deposit
@@ -168,29 +180,28 @@
                                                 (inc index) candidate)
                  entry (memory-entry deposit-request depositor canonical)
                  edge (memory-edge deposit-request canonical)
-                 existing (fetch-entry (:memory-id canonical))
-                 appended (when-not existing (append-entry entry))
-                 observed (fetch-entry (:memory-id canonical))]
+                 existing (fetch-entry (:memory-id canonical))]
              (cond
                (and existing (not (exact-entry? entry existing)))
                {:ok false :error/code :promotion-candidate-id-conflict
                 :memory-id (:memory-id canonical)}
 
-               (and (nil? existing) (not (:ok appended)))
-               {:ok false :error/code :promotion-candidate-evidence-write-failed
-                :memory-id (:memory-id canonical) :finding appended}
-
-               (not (exact-entry? entry observed))
-               {:ok false :error/code :promotion-candidate-evidence-not-visible
-                :memory-id (:memory-id canonical)}
-
                :else
                (let [edge-visible? (exact-edge-visible? edge fetch-hyperedges)
-                     edge-result (when-not edge-visible? (post-edge edge))]
+                     pair-result (when (or (nil? existing) (not edge-visible?))
+                                   (post-memory-assert entry edge))
+                     pair-refused? (and pair-result
+                                        (not (:ok pair-result))
+                                        (not (:duplicate? pair-result)))
+                     observed (fetch-entry (:memory-id canonical))]
                  (cond
-                   (and (not edge-visible?) (not (:ok edge-result)))
-                   {:ok false :error/code :promotion-candidate-edge-write-failed
-                    :memory-id (:memory-id canonical) :finding edge-result}
+                   pair-refused?
+                   {:ok false :error/code (pair-write-error-code pair-result)
+                    :memory-id (:memory-id canonical) :finding pair-result}
+
+                   (not (exact-entry? entry observed))
+                   {:ok false :error/code :promotion-candidate-evidence-not-visible
+                    :memory-id (:memory-id canonical)}
 
                    (not (exact-edge-visible? edge fetch-hyperedges))
                    {:ok false :error/code :promotion-candidate-edge-not-visible

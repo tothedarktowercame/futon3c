@@ -11,7 +11,8 @@
             [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.tools :as tools]
-            [futon3c.social.shapes :as shapes]))
+            [futon3c.social.shapes :as shapes]
+            [org.httpkit.client :as http]))
 
 (def fixture-path
   "holes/labs/M-typed-memories/p0-fixtures.edn")
@@ -41,6 +42,47 @@
   (fn [f]
     (estore/reset-store!)
     (try (f) (finally (estore/reset-store!)))))
+
+(deftest atomic-memory-assert-client-carries-authority-and-parses-success
+  (let [request (atom nil)
+        entry {:evidence/id "e-atomic"}
+        edge {:hx/id "hx-atomic" :hx/type :memory/assert
+              :hx/endpoints ["e-atomic"]}]
+    (with-redefs [http/post
+                  (fn [url options]
+                    (reset! request [url options])
+                    (delay {:status 201
+                            :body (pr-str {:ok true :evidence/id "e-atomic"
+                                           :hx/id "hx-atomic"})}))]
+      (let [result (memory-write/post-memory-assert!
+                    {:evidence-store {:base-url "http://store/"}} entry edge)
+            [url options] @request]
+        (is (:ok result))
+        (is (= "http://store/api/alpha/memory/assert" url))
+        (is (= "application/edn" (get-in options [:headers "content-type"])))
+        (is (string? (get-in options [:headers "x-penholder"])))
+        (is (= {:evidence entry :hyperedge edge}
+               (edn/read-string (:body options))))))))
+
+(deftest atomic-memory-assert-client-preserves-transport-and-duplicate-outcomes
+  (let [call (fn [response]
+               (with-redefs [http/post (fn [_ _] (delay response))]
+                 (memory-write/post-memory-assert!
+                  {:evidence-store {:base-url "http://store"}}
+                  {:evidence/id "e"}
+                  {:hx/id "h" :hx/type :memory/assert :hx/endpoints ["e"]})))
+        transport (call {:error (java.util.concurrent.TimeoutException. "idle")})
+        rejected (call {:status 400 :body "{:error {:reason :invalid-hyperedge}}"})
+        duplicate (call {:status 409 :body "{:error \"duplicate evidence id\"}"})]
+    (is (= :transport (get-in transport [:error :error/component])))
+    (is (= :memory-assert-unreachable
+           (get-in transport [:error :error/code])))
+    (is (= :E-store (get-in rejected [:error :error/component])))
+    (is (= :memory-assert-rejected (get-in rejected [:error :error/code])))
+    (is (= 400 (get-in rejected [:error :error/context :status])))
+    (is (:duplicate? duplicate))
+    (is (= :memory-assert-duplicate
+           (get-in duplicate [:error :error/code])))))
 
 (deftest all-fourteen-fixtures-land-unmodified
   (let [payloads (fixtures)
