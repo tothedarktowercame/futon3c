@@ -807,13 +807,15 @@
                        {:problems [problem]
                         :authority {:agent "codex-10"
                                     :control-root
-                                    "/home/joe/code/futon3c-apm-control"
+                                    "/home/joe/code/futon3c"
                                     :apparatus-root
                                     "/home/joe/code/futon3c-apm-control"
                                     :campaign-root "/durable/f25"}}))))
       (let [config (get-in @captured [:effects :jit/config])]
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
+        (is (some #{:promote-solver} (get-in config [:contract :phase-order]))
+            "the JIT contract is loaded under its v2 path before registration")
         (is (= 24 (:frame-number-base config)))
         (is (= "/durable/f25" (:campaign-root config)))
         (let [directory (java.nio.file.Files/createTempDirectory

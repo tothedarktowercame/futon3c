@@ -27,7 +27,28 @@
   {:contract contract :ledger {:digest (apply str (repeat 64 "a"))} :unit unit
    :role-card {:path "card.md" :blob "card-blob"}
    :workspace {:workspace/path "/tmp/student"}
-   :receipts {:preflight preflight-receipt}})
+   :receipts {:preflight preflight-receipt
+              :promote-solver {:receipt/id "promotion-receipt"
+                               :receipt/snapshot-id "snapshot"
+                               :receipt/snapshot-digest "snapshot-digest"}}
+   :snapshot-access {:ok true
+                     :snapshot {:snapshot/digest "snapshot-digest"
+                                :snapshot/memories []}
+                     :accessible-memory-ids #{}}})
+
+(deftest student-dispatch-refuses-without-a-promotion-bound-memory-snapshot
+  (let [result (sut/build-request
+                (-> base
+                    (assoc :action {:kind :student-attempt
+                                    :phase :student-attempt-1 :role :student
+                                    :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+                           :seat {:agent-id "f19-student" :invoke-ready? true})
+                    (update :receipts dissoc :promote-solver)
+                    (dissoc :snapshot-access)))]
+    (is (false? (:ok result)))
+    (is (= :student-memory-snapshot-required (:error/code result)))
+    (is (= [:promotion-receipt-missing] (:findings result)))
+    (is (nil? (:request result)))))
 
 (defn certified-candidate [frame-id problem-id ordinal]
   (let [head (apply str (repeat 40 (str ordinal)))
@@ -140,18 +161,30 @@
 
 (defn- cascade-request
   [cascade-fn]
-  (:request
-   (sut/build-request
-    (merge base
+  (let [result
+        (sut/build-request
+         (merge base
            {:unit (assoc unit :memory-cascade
                          {:enabled? true :routes [:sibling] :cap 10})
             :action cascade-action
-            :snapshot-access {:accessible-memory-ids #{"shelf-memory"}}
+            :snapshot-access {:ok true
+                              :snapshot
+                              {:snapshot/digest "snapshot-digest"
+                               :snapshot/memories
+                               [{:memory-id "shelf-memory"
+                                 :depositor "f18-guide"
+                                 :provenance {:campaign-id "c"
+                                              :frame-id "f18"
+                                              :problem-id "different"}}]}
+                              :accessible-memory-ids #{"shelf-memory"}}
             :seat {:agent-id "f19-student" :invoke-ready? true}
             :cascade-fn cascade-fn
             :cascade-readers {:attachments-fn (constantly [])
                               :why-targets-fn (constantly [])
-                              :pattern-fn (constantly nil)}}))))
+                              :pattern-fn (constantly nil)}}))]
+    (when-not (:ok result)
+      (throw (ex-info "cascade request fixture invalid" result)))
+    (:request result)))
 
 (defn- student-job
   [used-ids]
@@ -229,9 +262,10 @@
     (is (= "substrate unavailable" (get-in request [:memory-cascade :error])))
     (is (not (re-find #"memory-cascade offers are also readable"
                       (sut/prompt request))))
-    (is (= (dissoc plain :dispatch/id :fresh-session-nonce :submission/token)
+    (is (= (dissoc plain :dispatch/id :fresh-session-nonce :submission/token
+                   :memory-snapshot)
            (dissoc request :dispatch/id :fresh-session-nonce :submission/token
-                   :memory-cascade :memory-snapshot)))
+                   :memory-cascade :memory-snapshot :memory-access-decisions)))
     (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
       (let [ticket {:job-id "cascade-job"}
             job (student-job [])
@@ -778,6 +812,7 @@
                         :action {:kind :student-attempt
                                  :phase :student-attempt-1 :role :student
                                  :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+                        :snapshot-access nil
                         :seat {:agent-id "f19-student" :invoke-ready? true}}))]
     (is (= :live-learning-request-invalid (:error/code result)))
     (is (some #{:student-snapshot-access-unverified} (:findings result)))))
@@ -988,6 +1023,8 @@
                                          :base-revision base-revision
                                          :problem/path "problems/a01J05/lean/Main.lean"}
                              :receipts {:preflight preflight-receipt
+                                        :promote-solver
+                                        (get-in base [:receipts :promote-solver])
                                         :guide-intervention-1
                                         (let [body {:receipt/type :guide-intervention
                                                     :receipt/frame-id "f19"

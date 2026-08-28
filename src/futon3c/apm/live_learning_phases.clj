@@ -185,8 +185,17 @@
                    (and (= :student-attempt kind) (= 1 attempt-ordinal)
                         (some invalid-origin? snapshot-memories))
                    (conj :student-snapshot-provenance-invalid))]
-    (if (seq findings)
+    (cond
+      (and (= :student-attempt kind) (nil? promotion-receipt))
+      {:ok false
+       :error/code :student-memory-snapshot-required
+       :findings [:promotion-receipt-missing]
+       :phase phase :frame-id (:frame-id action) :problem-id (:problem-id action)}
+
+      (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
+
+      :else
       (let [all-accessible-ids (set (:accessible-memory-ids snapshot-access))
             holdout? (and (= :student-attempt kind) (= 1 attempt-ordinal))
             holdout-authority {:problem-id (:problem/id unit)

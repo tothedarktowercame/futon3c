@@ -2230,7 +2230,20 @@
           (conj {:id "campaign-memory-lineage"
                  :kind :campaign-memory-lineage
                  :campaign/priors (vec declared-priors)}))
-        jit-contract (:contract (load-contract))
+        jit-contract-path
+        (str control-root
+             "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
+        jit-generated-contract-path
+        (str control-root
+             "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
+        ;; Resolve the JIT contract under its own authority. Calling
+        ;; load-contract before these paths were bound selected the dynamic
+        ;; F19/v1 default and registered f51 without :promote-solver.
+        jit-contract
+        (:contract
+         (with-campaign {:contract-path jit-contract-path
+                         :generated-contract-path jit-generated-contract-path}
+           (load-contract)))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
@@ -2238,9 +2251,8 @@
          :campaign-root campaign-root
          :campaign-priors (vec (or declared-priors []))
          :contract jit-contract
-         :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
-         :generated-contract-path
-         (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
+         :contract-path jit-contract-path
+         :generated-contract-path jit-generated-contract-path
          :qualification-report-path
          (str control-root "/data/apm-validation/qualification-report-v1.edn")
          :apparatus-repository apparatus-repository
