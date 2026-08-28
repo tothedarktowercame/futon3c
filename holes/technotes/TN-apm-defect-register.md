@@ -35,6 +35,7 @@ Two failure classes matter most (Joe, 2026-08-27): **frames not advancing** and
 | A6 | Durable state read `:regulator/status :running` with an empty runner table | unchanged | **none** |
 | A7 | `live-regulator-tick-threw` — exception escaping the tick, 13 occurrences, 23 Aug–27 Aug | outer containment only, no classification | **none** |
 | A8 | `live-supervisor-launch-audit-failed` — 13 occurrences | unchanged | **none** |
+| A9 | Deposit-stage promotion failures escaped `live-promotion/drive!` raw, so a transient futon1b write timeout reached the regulator as a plain tick failure and stopped the campaign. f50 halted twice this way on 2026-08-28 (08:47:44, 11:55:00); the bounded transport retry added after the first halt lived in `hold-incomplete-pass!`, which only the review and publication paths call | **fixed** `b0f56c7a` — `drive!` is now a wrapper classifying any escaping `:ok false` at the single exit; three regression tests in `live-promotion-test` use the f50 failure map verbatim | **partial** — transport failures on every stage now hold and retry instead of halting; the retry bound itself is still an arbitrary constant |
 
 ## Class 3 — measurement contaminated (causes of the above)
 
