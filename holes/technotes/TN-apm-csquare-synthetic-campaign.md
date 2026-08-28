@@ -95,3 +95,41 @@ and a real terminal work; C□ is the check that the cycle repeats.
 
 Run both before a production restart: F△ for depth on one frame, C□ for the
 campaign path across ten.
+
+## Pre-registered prediction (Joe, 2026-08-28, before C□ was built)
+
+Joe's expectation, recorded in advance so the outcome is interpretable rather
+than rationalised afterwards: **under current conditions C□ will likely start
+failing**, because of the coordination problems observed overnight.
+
+The specific mechanisms that make that prediction plausible, each already
+evidenced:
+
+- **A9** — no watchdog leads to a halt rather than an arm. C□ starts a campaign
+  ten times over; if arming is at all flaky across frame boundaries, C□ halts
+  rather than repairs.
+- **M7 / committed-not-running** — the 2026-08-28 outage was a stale JVM. C□
+  cannot detect that about itself unless it checks loaded-namespace currency,
+  as F△'s preflight C3 does.
+- **Watchdog re-arming across frames** — armed once at campaign start is not the
+  same as armed at frame ten. Nothing has ever tested the second.
+- **Tick claims and leases across frame boundaries** — A5 brackets a tick; A4
+  drains a coordinator. Neither has been exercised over a ten-frame series.
+- **Prior accumulation** — the shelf grows frame over frame, and the
+  2026-08-27 closure-gate regression silently emptied it. C□ is the first thing
+  that would notice mid-series.
+
+Recording this in advance matters because the two outcomes carry different
+information:
+
+- **C□ fails** — confirms the coordination diagnosis, and the failure point
+  names which mechanism. This is the expected result and is a success for the
+  test.
+- **C□ passes** — the coordination problems are narrower than the overnight
+  evidence suggested, and the burden shifts back to explaining why f49 ran six
+  hours unwatched. That would be the surprising result and should be treated
+  with suspicion until the pass is shown to be non-vacuous, i.e. that C□ really
+  did traverse all ten frames through real gates.
+
+A pass obtained with stubbed gates is not a pass. See the design decision
+above.
