@@ -91,22 +91,46 @@ def fmt_duration(seconds):
 
 
 def split_registry_entries(text):
-    """Yield (coordinator-id, entry-chunk) pairs. Cheap, not a real EDN parser:
-    relies on :coordinator/id being the first field written per entry."""
-    parts = text.split(':coordinator/id "')
-    for part in parts[1:]:
-        m = re.match(r'([^"]+)"', part)
-        if m:
-            yield m.group(1), part
+    """Yield brace-matched registry entries keyed by their map key.
+
+    Coordinator ids recur inside config and enabled-history records, so
+    splitting on ``:coordinator/id`` eventually mistakes a nested history
+    record for the registration that owns it.
+    """
+    for match in re.finditer(r'"(jit-queue:[^"]+)"\s+\{', text):
+        cid = match.group(1)
+        start = text.find('{', match.start())
+        depth, i, in_string, escaped = 0, start, False, False
+        while i < len(text):
+            ch = text[i]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == '\\':
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+            elif ch == '"':
+                in_string = True
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    yield cid, text[start:i + 1]
+                    break
+            i += 1
 
 
 def discover_queue(known_campaign_dir):
     """Find an enabled :apm/jit-problem-queue coordinator with >1 problems
     whose campaign dir differs from the one we're already attached to (if
-    any). Returns a dict or None."""
+    any). Prefer a queue with an active frame over an older paused queue;
+    registry map order is not an activity signal. Returns a dict or None."""
     text = read_text(REGISTRY)
     if text is None:
         return None
+    candidates = []
     for cid, chunk in split_registry_entries(text):
         if ':coordinator/adapter :apm/jit-problem-queue' not in chunk:
             continue
@@ -123,9 +147,27 @@ def discover_queue(known_campaign_dir):
         campaign_dir = sm.group(1).rsplit('/', 1)[0]
         if campaign_dir == known_campaign_dir:
             continue
-        return {'coordinator_id': cid, 'queue_name': qm.group(1),
-                'campaign_dir': campaign_dir, 'problem_count': problem_count}
-    return None
+        queue = parse_queue_state(read_text(f"{campaign_dir}/queue-state.edn")) or {}
+        coordinator_path = f"{campaign_dir}/coordinator.edn"
+        coordinator = parse_coordinator(read_text(coordinator_path)) or {}
+        try:
+            touched = os.path.getmtime(coordinator_path)
+        except OSError:
+            touched = 0
+        queue_status = queue.get('queue_status')
+        active = queue.get('active_frame') is not None
+        nonterminal = queue_status not in ('paused', 'complete')
+        running = coordinator.get('status') in ('running', 'failed', 'stopped')
+        candidates.append({
+            'coordinator_id': cid, 'queue_name': qm.group(1),
+            'campaign_dir': campaign_dir, 'problem_count': problem_count,
+            '_rank': (active, nonterminal, running, touched),
+        })
+    if not candidates:
+        return None
+    selected = max(candidates, key=lambda candidate: candidate['_rank'])
+    selected.pop('_rank')
+    return selected
 
 
 def parse_coordinator(text):
@@ -148,7 +190,11 @@ def parse_queue_state(text):
     if text is None:
         return None
     d = {}
-    m = re.search(r':active \{:frame \{:frame/id "([^"]+)"', text)
+    active = text.find(':active ')
+    if active >= 0 and not text.startswith(':active nil', active):
+        m = re.search(r':frame/id "([^"]+)"', text[active:])
+    else:
+        m = None
     d['active_frame'] = m.group(1) if m else None
     m = re.search(r':next-index (\d+)', text)
     d['next_index'] = int(m.group(1)) if m else None
