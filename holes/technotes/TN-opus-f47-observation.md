@@ -309,3 +309,34 @@ should NOT be recorded as the first instance of condition 3. It remains the firs
 where every structural precondition held — clean holdout, unrepaired record, cross-problem
 memory delivered through the shelf — and that is worth keeping. What is missing is the
 artifact-level evidence that the memory changed the proof.
+
+## f50/a2: the shelf supplied the frame itself; the useful memory came around it
+
+a2 carries no holdout — that is a1-only — so it saw everything, 81 accessible after this
+frame's own five deposits landed. It used two, and closed bridge 1
+(`outcome=partial-bridge-1-closed`), so this is an attempt that made real progress.
+
+    e-apm-promotion-5ee5f9ebc3dacc34ade531388d5f6dce
+      author f50-scribe, subject a98A07        ON SHELF
+    e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence
+      author codex-5,    subject M-codex-sorry-loop    NOT ON SHELF
+
+The shelf's entire contribution to a successful attempt was the frame's own scribe deposit
+on the frame's own problem, made minutes earlier. That is self-supply, not transfer.
+
+The memory that carried knowledge from elsewhere — an L1-to-local-uniform convergence
+upgrade, deposited by codex-5 against `M-codex-sorry-loop`, a different lab and not part
+of the APM problem corpus at all — was **not on the shelf**. It arrived through search or
+cascade.
+
+This is the third frame with the shape the note opened with, and the first where the
+holdout was sound and the record unrepaired, so it is not an artefact of either defect.
+It sharpens the second observation: it is not only that a large shelf yields little. When
+something useful does arrive, it arrives **around** the shelf, and what the shelf itself
+supplies is the depositing frame's own recent work.
+
+Note also what this does to the arithmetic. a2's "2 of 81 used" is not two units of
+transfer: one is self-supply and one bypassed the mechanism under measurement. Counting
+`:used-ids` without asking where each memory came from and who deposited it will report
+transfer that did not occur — the same failure mode as counting `norm_num` as a
+fingerprint, arriving by a different route.
