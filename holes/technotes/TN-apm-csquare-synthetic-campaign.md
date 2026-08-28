@@ -133,3 +133,59 @@ information:
 
 A pass obtained with stubbed gates is not a pass. See the design decision
 above.
+
+## C□ as a mutation harness (Joe, 2026-08-28)
+
+C□'s first run passed: ten frames in 47 seconds, real Lean elaboration, real
+checker acceptance, priors growing, watchdog armed, `:batch-complete`.
+
+**That result is not meaningful on its own, and should not be reported as
+though it were.** Joe: *"the fact that the synthetic campaign works should not
+be taken as meaningful given that the real machine just failed badly. The
+synthetic campaign ONLY succeeded because it managed some kind of happy path."*
+
+He is right, and the same morning proves it: `jit-all-open-v2` also ran its
+happy path — preflight, solve, verify, promote-solver and student-attempt-1 all
+certified — and then failed at the guide phase. A harness that traverses the
+same happy path and stops there tells us nothing we did not already know.
+
+### What would make it meaningful
+
+Use C□ the way `generated-contract-test` uses mutation: **a harness earns trust
+by killing mutants, not by going green.** Take each failure the machine has
+actually produced, inject it into C□ as a mutation, and require C□ to fail and
+name the mechanism. A mutation C□ does not catch is a blind spot, stated
+explicitly rather than discovered later in production.
+
+The mutation set is not hypothetical — every entry below has been observed:
+
+| # | mutation | observed as |
+|---|---|---|
+| 1 | a consumer does not classify a state the producer can emit | `delivering` unrecognised by `job_port/terminal-states`, 2026-08-28 |
+| 2 | a terminal job rests at `pending` for some caller shape | non-seat callers, F△ run 5 |
+| 3 | an observation is stripped in transit | `job->terminal` dropping `:trace/delivery-observation`, F△ run 6 |
+| 4 | a withheld memory is served by some channel | f46 and f48 holdout breaches, 2026-08-27 |
+| 5 | a successor is announced before its predecessor is archived | f46/f48 evidence loss |
+| 6 | a coordinator runs with no watchdog armed | A9, overnight 2026-08-27 |
+| 7 | terminal state is published before the delivery disposition commits | the race fixed by `6ad6d55b` |
+| 8 | a role returns prose where a typed submission is required | f49 `guide-intervention-1`, `:submission nil` |
+| 9 | loaded namespaces diverge from committed source | C1, the inert watchdog, the 2026-08-28 outage |
+
+### The property
+
+For each mutation: C□ **fails**, and its failure **names the mutated
+mechanism** rather than surfacing as a timeout, a nil, or a generic halt. Two
+of today's defects presented as "no terminal observed" and "typed submission
+missing" — verdicts that pointed away from their causes.
+
+A mutation C□ silently survives is the finding. Record it rather than removing
+the mutation.
+
+### Why this is worth more than another fix
+
+Seven distinct delivery-protocol defects have surfaced in about twenty-four
+hours (C1, non-seat callers, transit stripping, the terminal/delivery race, the
+unrecognised `delivering` state, caller attribution, F△'s own pending
+dispatch). That is not a run of bad luck in one subsystem; it is an unvalidated
+subsystem. Fixing them one at a time and re-running the happy path will keep
+producing green results and further defects.
