@@ -74,6 +74,57 @@
     (is (= (+ now (* 30 60 1000))
            (get-in intent [:dispatch/parameters :deadline-ms])))))
 
+(deftest delayed-transport-retry-survives-restart-and-wakes-at-deadline
+  (let [clock (atom 1000)
+        config {:coordinator-id "jit-queue:q" :queue-name "q"
+                :queue-id "queue-id" :coordinator/period-ms 500}
+        initial {:state/type :live-regulator :regulator/id "jit-queue:q"
+                 :regulator/status :running :regulator/ticks 7}
+        adapter (sut/adapter-constructor config)
+        requested (binding [sut/*intent-now-fn* #(long @clock)]
+                    ((:decide-fn adapter) initial))
+        pending (merge initial (:regulator/state-updates requested))
+        reconciled
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (constantly
+                       {:ok true :status :transport-retry-scheduled
+                        :retry/not-before-ms 601000
+                        :transport-retry {:attempt 1 :max-attempts 3}
+                        :transport-retry/history
+                        [{:attempt 1 :failed-at-ms 1000
+                          :error/component :transport}]})]
+          (binding [sut/*intent-now-fn* #(long @clock)]
+            ((:reconcile-fn adapter)
+             (:coordinator/pending-intent pending) pending)))
+        restarted-state (-> pending
+                            (merge (:regulator/state-updates reconciled))
+                            (assoc :coordinator/pending-intent nil
+                                   :coordinator/pending-pre-state-digest nil))
+        restarted-adapter (sut/adapter-constructor config)
+        waiting (binding [sut/*intent-now-fn* #(long @clock)]
+                  (#'durable/coordinator-tick
+                   "jit-queue:q" restarted-adapter restarted-state))
+        watchdog-observation
+        (durable/watchdog-observation
+         {:coordinator/id "jit-queue:q" :coordinator/enabled? true}
+         restarted-state)]
+    (is (= :queue-tick-complete (:status reconciled)))
+    (is (= 601000
+           (get-in restarted-state
+                   [:coordinator/delayed-retry :not-before-ms])))
+    (is (= :awaiting-substrate (:status waiting)))
+    (is (= 601000 (get-in watchdog-observation [:awaiting-job :deadline])))
+    (reset! clock 601000)
+    (let [woken (binding [sut/*intent-now-fn* #(long @clock)]
+                  (#'durable/coordinator-tick
+                   "jit-queue:q" restarted-adapter restarted-state))]
+      (is (= :intent-persisted (:status woken)))
+      (is (nil? (get-in woken [:regulator/state-updates
+                               :coordinator/delayed-retry])))
+      (is (= 601000
+             (get-in woken [:regulator/state-updates
+                            :coordinator/last-woken-retry :woken-at-ms]))))))
+
 (deftest adapter-runs-without-initiator-and-survives-runner-restart
   (let [root (Files/createTempDirectory "jit-coordinator-"
                                         (make-array FileAttribute 0))

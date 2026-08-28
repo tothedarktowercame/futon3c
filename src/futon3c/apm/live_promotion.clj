@@ -496,6 +496,14 @@
               :repair/attempts (or (:projection-repair-attempt state) 0)
               :repair/max-attempts
               (or (:projection-repair-max-attempts promotion-policy) 1)}
+        exhausted-transport? (and transport? (not retryable-transport?))
+        first-failed-at-ms (some-> transport-history first :failed-at-ms)
+        escalation (when exhausted-transport?
+                     {:error/code :promotion-substrate-retry-exhausted
+                      :attempts (count transport-history)
+                      :elapsed-ms (when first-failed-at-ms
+                                    (max 0 (- now-ms first-failed-at-ms)))
+                      :history transport-history})
         hold (if retryable-transport?
                (assoc hold
                       :stage :awaiting-transport-retry
@@ -507,7 +515,10 @@
                       :transport-retry/history transport-history)
                (cond-> hold
                  transport?
-                 (assoc :transport-retry/attempt transport-attempt
+                 (assoc :error/code :promotion-substrate-retry-exhausted
+                        :transport-retry/last-error-code (:error/code checked)
+                        :transport-retry/escalation escalation
+                        :transport-retry/attempt transport-attempt
                         :transport-retry/max-attempts transport-max
                         :transport-retry/history transport-history
                         :repair/attempts (:repair/max-attempts hold))))]
@@ -515,7 +526,8 @@
     {:ok true :status (if retryable-transport?
                         :transport-retry-scheduled
                         :awaiting-apparatus-repair)
-     :state hold :findings (:findings checked)}))
+     :state hold :findings (:findings checked)
+     :transport-retry/escalation escalation}))
 
 (defn- publish-completed-pass!
   [state action promotion-policy contract-digest publish-fn persist-fn now-ms-fn]

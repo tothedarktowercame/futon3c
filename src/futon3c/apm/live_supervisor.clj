@@ -149,7 +149,14 @@
                     {:ok true :status :transport-retry-scheduled
                      :phase (:phase action) :projection projected :park parked
                      :retry/not-before-ms
-                     (get-in driven [:state :transport-retry/not-before-ms])}
+                     (get-in driven [:state :transport-retry/not-before-ms])
+                     :transport-retry
+                     {:attempt (get-in driven [:state :transport-retry/attempt])
+                      :max-attempts
+                      (get-in driven [:state
+                                      :transport-retry/max-attempts])}
+                     :transport-retry/history
+                     (get-in driven [:state :transport-retry/history])}
                     :else
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))

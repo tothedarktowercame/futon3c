@@ -314,9 +314,10 @@
             {:ok true :status :intent-persisted
              :job-id (:job-id intent)
              :regulator/state-updates
-             {:coordinator/pending-intent intent
-              :coordinator/pending-pre-state-digest
-              (:pre-state/digest intent)}}
+             (merge (:regulator/state-updates decision)
+                    {:coordinator/pending-intent intent
+                     :coordinator/pending-pre-state-digest
+                     (:pre-state/digest intent)})}
             {:ok false :error/code :durable-coordinator-intent-invalid}))
         :else decision))))
 
@@ -421,6 +422,7 @@
 
 (defn watchdog-observation [entry state]
   (let [intent (:coordinator/pending-intent state)
+        delayed-retry (:coordinator/delayed-retry state)
         result (:regulator/last-result state)]
     (cond->
      {:cursor {:frame-id (or (:frame-id state)
@@ -431,7 +433,8 @@
                                     (:submission/attempt state))
                :obligation/status (or (:obligation/status state)
                                       (:status result))
-               :active-job-id (:job-id intent)
+               :active-job-id (or (:job-id intent)
+                                  (:retry/id delayed-retry))
                :last-committed-event-id
                (or (:last-committed-event-id state)
                    (:event/id state))}
@@ -445,7 +448,10 @@
       :failed-launch-audit?
       (= :live-supervisor-launch-audit-failed (:error/code result))}
       intent (assoc :awaiting-job {:job-id (:job-id intent)
-                                   :deadline (intent-deadline intent)}))))
+                                   :deadline (intent-deadline intent)})
+      (and (nil? intent) delayed-retry)
+      (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
+                            :deadline (:not-before-ms delayed-retry)}))))
 
 (defn- arm-watchdog! [registry-path entry]
   (let [id (watchdog-id (:coordinator/id entry))

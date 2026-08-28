@@ -38,8 +38,18 @@
 (defn adapter-constructor [config]
   {:decide-fn
    (fn [state]
-     {:ok true :coordinator/action :activate
-      :coordinator/intent (next-intent config state)})
+     (let [retry (:coordinator/delayed-retry state)
+           now-ms (long (*intent-now-fn*))]
+       (if (and retry (< now-ms (:not-before-ms retry)))
+         {:ok true :status :awaiting-substrate
+          :retry/not-before-ms (:not-before-ms retry)}
+         {:ok true :coordinator/action :activate
+          :coordinator/intent (next-intent config state)
+          :regulator/state-updates
+          (when retry
+            {:coordinator/delayed-retry nil
+             :coordinator/last-woken-retry
+             (assoc retry :woken-at-ms now-ms)})})))
    :reconcile-fn
    (fn [_intent _state]
      (let [step (requiring-resolve
@@ -47,6 +57,28 @@
            result (step (:launch config))]
        (cond
          (not (:ok result)) result
+         (= :transport-retry-scheduled (:status result))
+         (let [not-before-ms (:retry/not-before-ms result)
+               retry {:retry/id
+                      (str "substrate-retry-"
+                           (machine/ledger-digest
+                            [(:queue-id config) not-before-ms
+                             (:transport-retry/history result)]))
+                      :kind :transport
+                      :not-before-ms not-before-ms
+                      :scheduled-at-ms (*intent-now-fn*)
+                      :attempt (get-in result [:transport-retry :attempt])
+                      :max-attempts
+                      (get-in result [:transport-retry :max-attempts])
+                      :history (:transport-retry/history result)}]
+           (if-not (nat-int? not-before-ms)
+             {:ok false
+              :error/code :jit-transport-retry-deadline-invalid
+              :finding result}
+             {:ok true :status :queue-tick-complete
+              :coordinator/clear-intent? true :queue/result result
+              :regulator/state-updates
+              {:coordinator/delayed-retry retry}}))
          (contains? #{:batch-complete :batch-paused} (:status result))
          {:ok true :status :frame-complete
           :coordinator/clear-intent? true :queue/result result}

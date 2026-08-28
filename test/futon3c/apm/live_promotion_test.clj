@@ -941,7 +941,16 @@
                  :contract-digest "digest"
                  :now-ms-fn (constantly 1000)})]
     (is (= :awaiting-apparatus-repair (:status result)))
-    (is (= :awaiting-apparatus-repair (:stage @persisted)))))
+    (is (= :awaiting-apparatus-repair (:stage @persisted)))
+    (is (= :promotion-substrate-retry-exhausted
+           (:error/code @persisted)))
+    (is (= 1 (get-in @persisted
+                     [:transport-retry/escalation :attempts])))
+    (is (= [{:attempt 99 :failed-at-ms 1000
+             :error/component :transport
+             :error/code :promotion-candidate-edge-write-failed}]
+           (get-in @persisted
+                   [:transport-retry/escalation :history])))))
 
 (deftest non-transport-deposit-failure-is-not-reclassified
   (let [result (sut/drive!
