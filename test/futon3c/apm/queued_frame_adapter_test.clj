@@ -1,6 +1,7 @@
 (ns futon3c.apm.queued-frame-adapter-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.problem-queue-supervisor :as queue]
             [futon3c.apm.queued-frame-adapter :as sut]))
 
@@ -9,6 +10,37 @@
 (def frame (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
                               :frame-number-base 30})))
 (def digest (apply str (repeat 64 "a")))
+
+(def coherent-seat-cast
+  {"solver" {:model "gpt-5.6-sol"}
+   "student" {:model "glm-5.3"}
+   "guide" {:model "glm-5.3"}
+   "proctor" {:model "gpt-5.6-sol"}
+   "promotion-proctor" {:model "gpt-5.6-sol"}
+   "scribe" {:model "gpt-5.6-sol"}
+   "zai-scribe" {:model "glm-5.3"}
+   "analyst" {:model "glm-5.3"}})
+
+(deftest failed-seat-mint-surfaces-source-error-and-findings
+  (with-redefs [live-preparation/prepare!
+                (fn [{:keys [mint-fn]}]
+                  (let [minted (mint-fn "f53" {:guide :claude} {})]
+                    {:ok false :error/code :seat-mint-failed
+                     :finding minted}))]
+    (let [result
+          (sut/prepare-live!
+           {:seat-cast coherent-seat-cast
+            :http-fn
+            (fn [_method _url _payload]
+              {:ok false :http/status 409 :error "invalid-seat-cast"
+               :findings [{:finding "seat-type-mismatch"
+                           :seat "guide" :expected-type "zai"
+                           :actual-type "claude"}]})})]
+      (is (= :seat-mint-failed (:error/code result)))
+      (is (= :invalid-seat-cast (get-in result [:finding :error])))
+      (is (= [{:finding :seat-type-mismatch
+               :seat "guide" :expected-type "zai" :actual-type "claude"}]
+             (get-in result [:finding :findings]))))))
 
 (deftest campaign-paths-use-a-stable-operator-buffer
   (let [paths (sut/campaign-paths {:campaign-root "/tmp/apm-campaigns"}

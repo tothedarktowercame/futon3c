@@ -433,7 +433,12 @@
               (let [ok? (and (= 200 (:http/status response)) (:ok response))]
                 (cond-> {:ok ok?}
                   (not ok?)
-                  (assoc :http/status (:http/status response)
+                  (assoc :error (some-> (:error response) keyword)
+                         :findings
+                         (mapv #(cond-> %
+                                  (:finding %) (update :finding keyword))
+                               (or (:findings response) []))
+                         :http/status (:http/status response)
                          :mint/response (select-keys response
                                                      [:ok :error :error/code
                                                       :findings :message
