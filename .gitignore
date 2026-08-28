@@ -67,7 +67,12 @@ capability-proof-arxiv.out
 logs/data/
 
 # 2026-08-14 (claude-2): apm-driver transient run state. Heartbeats and lane
-# logs are written continuously by the driver; the lock is process state. The
-# .jsonl ledgers beside them are NOT ignored — they are cited evidence.
+# logs are written continuously by the driver; the lock is process state.
 holes/labs/M-diagramprover/apm-driver/*.log
 holes/labs/M-diagramprover/apm-driver/.bridge-lane.lock
+
+# 2026-08-28: append-only run products are live state, not checkout inputs.
+# Match their semantic suffixes so later campaigns do not need named entries.
+holes/labs/**/apm-driver/*-audit.jsonl
+holes/labs/**/apm-driver/*-ledger.jsonl
+holes/labs/**/apm-driver/*-manifest.jsonl
