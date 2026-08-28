@@ -1653,7 +1653,7 @@
   ([continuation] (set-alight! continuation {}))
   ([{:keys [agent session surface agency-base control-root target-frame
             batch-authority regulator-id regulator-capability campaign-config]}
-    {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
+    {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn booted project-fn
             park-fn now-ms-fn continuation-payload]
      :or {now-ms-fn #(System/currentTimeMillis)}}]
    (with-campaign campaign-config
@@ -1706,7 +1706,7 @@
        :drive-phase-fn (or drive-phase-fn drive-live-action!)
        :advance-fn (or advance-fn
                        (fn [kind certificate]
-                         (let [advanced (advance! kind batch-authority)]
+                         (let [advanced (advance! kind batch-authority booted)]
                            (if (and (:ok advanced) (= :close-frame kind))
                              (let [wake (record-analyst-wake! target-frame
                                                               certificate)]
@@ -1859,12 +1859,17 @@
                                 (if (:ok observed-terminal)
                                   (assoc observed-terminal
                                          :status :frame-complete)
-                                  (let [driven
+                                  (let [booted
+                                        (with-campaign frame-config
+                                          (bootstrap-one-off!
+                                           (:manifest frame-config)
+                                           (:contract frame-config)))
+                                        driven
                                         (set-alight!
                                          (merge authority
                                                 {:target-frame (:frame/id frame)
                                                  :campaign-config frame-config})
-                                         (cond-> {}
+                                         (cond-> {:booted booted}
                                            (:continuation-payload authority)
                                            (assoc :continuation-payload
                                                   (:continuation-payload authority))

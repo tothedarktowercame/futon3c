@@ -12,6 +12,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
@@ -79,6 +80,23 @@
               {:frame/id "f51" :campaign/id "jit-f51"})))
     (is (= manifest (:manifest @observed)))
     (is (= contract (:contract @observed)))))
+
+(deftest supplied-jit-boot-authority-reaches-default-supervisor-advance
+  (let [booted {:ok true :status :already-registered
+                :projection {:campaign/id "jit-f51"}}
+        observed (atom nil)]
+    (with-redefs [live-supervisor/tick!
+                  (fn [{:keys [advance-fn]}]
+                    (advance-fn :solve {:certificate/id "phase-certificate"}))
+                  sut/advance!
+                  (fn [kind batch-authority boot]
+                    (reset! observed [kind batch-authority boot])
+                    {:ok true :status :advanced})
+                  sut/bootstrap!
+                  (fn []
+                    (throw (ex-info "F19 bootstrap reached" {})))]
+      (is (:ok (sut/set-alight! {} {:booted booted})))
+      (is (= [:solve nil booted] @observed)))))
 
 (deftest campaign-priors-use-legacy-ledgers-final-snapshots-and-declared-lineage
   (let [{:keys [current-campaign lineage queues ledgers snapshots expected]}
@@ -723,6 +741,47 @@
           "an already terminal ledger bypasses obsolete launch authority")
       (is (fn? (:mint-frame-fn @tick-options)))
       (is (nil? (:jit/config @tick-options))))))
+
+(deftest jit-queue-frame-tick-supplies-one-off-boot-to-supervision
+  (let [adapter-config (atom nil)
+        supervised-options (atom nil)
+        state-directory
+        (str (java.nio.file.Files/createTempDirectory
+              "jit-f51-no-terminal-"
+              (make-array java.nio.file.attribute.FileAttribute 0)))
+        manifest {:manifest/id "jit-f51-manifest" :manifest/scope :one-off}
+        contract {:contract/id :jit-contract}
+        booted {:ok true :status :already-registered}]
+    (with-redefs [queued-frame-adapter/live-effects
+                  (fn [config]
+                    (reset! adapter-config config)
+                    {:mint-frame-fn identity})
+                  problem-queue/tick! (constantly {:ok true :status :frame-prepared})
+                  ledger/read-ledger (constantly {:ok true :events []})
+                  runtime/read-state (constantly {:preparation/version 2})
+                  queued-frame-adapter/terminal-from-ledger
+                  (constantly {:ok false :error/code :frame-not-terminal})
+                  sut/bootstrap-one-off!
+                  (fn [actual-manifest actual-contract]
+                    (is (= manifest actual-manifest))
+                    (is (= contract actual-contract))
+                    booted)
+                  sut/set-alight!
+                  (fn [_ options]
+                    (reset! supervised-options options)
+                    {:ok true :status :awaiting})]
+      (sut/set-alight-problem-queue!
+       {:problems [{:problem/id "p1" :repository "/repo" :revision "r"
+                    :path "p.lean" :blob "b" :classification :non-excluded}]
+        :authority {:agent "codex-12"}}
+       {:jit/config {:campaign-root "/campaigns"}})
+      ((:frame-tick-fn @adapter-config)
+       {:frame/id "f51" :problem/id "p1"}
+       {:state-directory state-directory
+        :ledger-path "/tmp/jit-f51-ledger"
+        :preparation-path "/tmp/jit-f51-preparation"
+        :manifest manifest :contract contract})
+      (is (= booted (:booted @supervised-options))))))
 
 (deftest list-only-entry-point-supplies-all-concrete-jit-services
   (let [captured (atom nil)
