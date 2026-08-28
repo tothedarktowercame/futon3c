@@ -13,6 +13,13 @@
    [:reg/zai-scribe-seat "zai-scribe" :zai nil]
    [:reg/analyst-seat "analyst" :claude nil]])
 
+(def seat-types
+  "Authoritative agent type for every frame role."
+  (into {}
+        (map (fn [[_registration-key suffix agent-type _memory-domain]]
+               [(keyword suffix) agent-type]))
+        seat-specs))
+
 (def ^:private accepted-seat-suffixes
   (set (map second seat-specs)))
 
@@ -117,13 +124,21 @@
                        :accepted-types (vec (sort (map name accepted-agent-types)))}]
 
                      :else
-                     (let [agent-type (some-> raw-type keyword)]
-                       (when (and (some? agent-type)
-                                  (not (contains? accepted-agent-types agent-type)))
+                     (let [agent-type (some-> raw-type keyword)
+                           declared-type (get seat-types (keyword seat))]
+                       (cond
+                         (and (some? agent-type)
+                              (not (contains? accepted-agent-types agent-type)))
                          [{:finding :unknown-agent-type
                            :seat seat
                            :agent-type (name agent-type)
-                           :accepted-types (vec (sort (map name accepted-agent-types)))}]))))))
+                           :accepted-types (vec (sort (map name accepted-agent-types)))}]
+
+                         (and (some? agent-type) (not= declared-type agent-type))
+                         [{:finding :seat-type-mismatch
+                           :seat seat
+                           :expected-type (name declared-type)
+                           :actual-type (name agent-type)}]))))))
              cast)))))
 
 (defn- effective-seat-specs [model cast]

@@ -176,31 +176,21 @@
         (is (= {:agent-type agent-type :model "test-model"}
                (get-in result [:casting (name suffix)])))))))
 
-(deftest per-seat-cast-overrides-guide-and-scribe-only
+(deftest per-seat-cast-refuses-type-contradictions
   (let [prepared (atom [])
         result (frame-seats/mint-seats!
                 {:prepare-seat-fn (fn [seat]
                                     (swap! prepared conj seat)
                                     (ready-seat seat))
-                 :model "global-model"
-                 :cast {:guide {:type "zai" :model "glm-5.3"}
-                        :scribe {:type "zai" :model "glm-5.3"}}}
-                "recast")
-        by-id (into {} (map (juxt :agent-id identity)) @prepared)]
-    (is (:ok result))
-    (is (= :zai (:agent-type (get by-id "recast-guide"))))
-    (is (= :zai (:agent-type (get by-id "recast-scribe"))))
-    (is (= :codex (:agent-type (get by-id "recast-solver"))))
-    (is (= :zai (:agent-type (get by-id "recast-student"))))
-    (is (= :codex (:agent-type (get by-id "recast-proctor"))))
-    (is (= :codex (:agent-type
-                   (get by-id "recast-promotion-proctor"))))
-    (is (= "glm-5.3" (get-in result [:casting "guide" :model])))
-    (is (= "global-model" (get-in result [:casting "solver" :model])))
-    (is (not-any? (fn [[_ casting]]
-                    (and (contains? casting :model) (nil? (:model casting))))
-                  (:casting result)))
-    (is (not-any? #(and (contains? % :model) (nil? (:model %))) @prepared))))
+                 :cast {:scribe {:type "zai" :model "glm-5.3"}}}
+                "recast")]
+    (is (false? (:ok result)))
+    (is (= [{:finding :seat-type-mismatch
+             :seat "scribe"
+             :expected-type "codex"
+             :actual-type "zai"}]
+           (:findings result)))
+    (is (empty? @prepared))))
 
 (deftest frame-seat-cast-refuses-unknown-seat-and-type
   (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})

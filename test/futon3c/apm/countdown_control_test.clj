@@ -378,7 +378,7 @@
                                      :type type}])
                             {:solver :codex :student :zai :guide :claude
                              :proctor :codex :promotion-proctor :codex
-                             :scribe :zai :zai-scribe :zai}))}]
+                             :scribe :codex :zai-scribe :zai}))}]
     (assoc body :preparation/id (machine/ledger-digest [body]))))
 
 (deftest future-frame-contexts-select-exact-units-and-fail-closed-unprovisioned

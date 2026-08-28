@@ -258,7 +258,7 @@
                                                  3600000)}}}]))
          {:solver :codex :student :zai :guide :claude
           :proctor :codex :promotion-proctor :codex
-          :scribe :zai :zai-scribe :zai :analyst :claude})})
+          :scribe :codex :zai-scribe :zai :analyst :claude})})
 
 (deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
   (let [calls (atom [])
@@ -270,7 +270,7 @@
                    "guide" {:model "claude-opus-5"}
                    "proctor" {:model "gpt-5.6-sol"}
                    "promotion-proctor" {:model "gpt-5.6-sol"}
-                   "scribe" {:model "glm-5.3"}
+                   "scribe" {:model "gpt-5.6-sol"}
                    "zai-scribe" {:model "glm-5.3"}
                    "analyst" {:model "claude-opus-5"}}
         manifest {:manifest/id digest}
@@ -305,7 +305,7 @@
            (set (keys (get-in result [:preparation :workspaces])))))
     (is (= "f30-student"
            (get-in result [:preparation :seats :student :agent-id])))
-    (is (= :zai (get-in result [:preparation :seats :scribe :type])))
+    (is (= :codex (get-in result [:preparation :seats :scribe :type])))
     (is (= :zai (get-in result [:preparation :seats :zai-scribe :type])))
     (is (= (:preparation/id (:preparation result))
            (machine/ledger-digest
@@ -327,8 +327,8 @@
              (get-in mint-payload [:cast "solver" :model])))
       (is (= "glm-5.3"
              (get-in mint-payload [:cast "student" :model])))
-      (is (= "zai" (get-in mint-payload [:cast "scribe" :type])))
-      (is (= "glm-5.3"
+      (is (= "codex" (get-in mint-payload [:cast "scribe" :type])))
+      (is (= "gpt-5.6-sol"
              (get-in mint-payload [:cast "scribe" :model]))))))
 
 (deftest missing-campaign-seat-cast-refuses-before-resource-effects

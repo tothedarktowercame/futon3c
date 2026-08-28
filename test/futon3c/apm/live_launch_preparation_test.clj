@@ -92,7 +92,7 @@
     (is (= #{:solver :student}
            (set (keys (get-in result [:receipt :workspace/ids])))))
     (is (= {:solver :codex :student :zai :guide :claude
-            :proctor :codex :scribe :zai :zai-scribe :zai
+            :proctor :codex :scribe :codex :zai-scribe :zai
             :promotion-proctor :codex
             :analyst :claude}
            @observed))))

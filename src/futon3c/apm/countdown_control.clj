@@ -272,9 +272,7 @@
                   (let [seat (get-in preparation [:seats role])]
                     (or (not= (str frame-id "-" (name role)) (:agent-id seat))
                         (not= expected-type (:type seat)))))
-                {:solver :codex :student :zai :guide :claude
-                 :proctor :codex :promotion-proctor :codex :scribe :zai
-                 :zai-scribe :zai})
+                (dissoc live-preparation/required-seat-types :analyst))
           (conj :preparation-seat-mismatch))]
     (if (seq findings)
       {:ok false :error/code :countdown-frame-preparation-invalid

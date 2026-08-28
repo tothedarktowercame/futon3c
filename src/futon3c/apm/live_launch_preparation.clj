@@ -1,14 +1,11 @@
 (ns futon3c.apm.live-launch-preparation
   "Fail-closed workspace and seat preparation before live countdown dispatch."
-  (:require [futon3c.apm.campaign-machine :as machine]))
+  (:require [futon3c.agency.frame-seats :as frame-seats]
+            [futon3c.apm.campaign-machine :as machine]))
 
 (def required-workspace-roles #{:solver :student})
 
-(def required-seat-types
-  {:solver :codex :student :zai :guide :claude :proctor :codex :scribe :zai
-   :zai-scribe :zai
-   :promotion-proctor :codex
-   :analyst :claude})
+(def required-seat-types frame-seats/seat-types)
 
 (def required-timeouts
   {:request-timeout-ms 300000
