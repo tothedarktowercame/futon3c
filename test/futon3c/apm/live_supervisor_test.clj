@@ -1,5 +1,6 @@
 (ns futon3c.apm.live-supervisor-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.phase-status :as phase-status]
             [futon3c.apm.live-supervisor :as sut]))
 
 (def inspection
@@ -89,6 +90,24 @@
     (is (= [] (get-in (last @calls) [1 :awaiting])))
     (is (= 18001000
            (get-in (last @calls) [1 :retry/not-before-ms])))))
+
+(deftest phase-status-vocabulary-is-closed-and-unknowns-name-the-gap
+  (is (= #{:awaiting-terminal :awaiting-substrate
+           :transport-retry-scheduled :terminal-collected :certified}
+         phase-status/known-statuses))
+  (is (= :waiting-substrate
+         (phase-status/classify :awaiting-substrate)))
+  (is (= :unknown (phase-status/classify :new-producer-status)))
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls {:ok true :status :new-producer-status}))]
+    (is (= :live-supervisor-phase-status-vocabulary-incomplete
+           (:error/code result)))
+    (is (= :new-producer-status (get-in result [:finding :status])))
+    (is (= :unknown (get-in result [:finding :classification])))
+    (is (= (vec (sort phase-status/known-statuses))
+           (get-in result [:finding :known-statuses])))
+    (is (not-any? #(and (vector? %) (= :park (first %))) @calls))))
 
 (deftest audit-and-projection-failures-stop-without-routing-around
   (testing "audit"

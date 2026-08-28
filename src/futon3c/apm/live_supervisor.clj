@@ -1,5 +1,6 @@
 (ns futon3c.apm.live-supervisor
-  "Fail-closed one-command supervisor for one complete APM frame.")
+  "Fail-closed one-command supervisor for one complete APM frame."
+  (:require [futon3c.apm.phase-status :as phase-status]))
 
 (defn tick!
   "Perform one deterministic supervisor tick.
@@ -42,11 +43,12 @@
              :inspection inspection}
             :else
             (let [action (get-in inspection [:obligation :obligation/action])
-                  driven (drive-phase-fn action)]
+                  driven (drive-phase-fn action)
+                  status-class (phase-status/classify (:status driven))]
               (cond
                 (not (:ok driven)) driven
 
-                (= :awaiting-terminal (:status driven))
+                (= :waiting-terminal status-class)
                 (let [job-id (or (:job-id driven)
                                  (get-in driven [:state :ticket :job-id])
                                  (get-in driven [:state :active :ticket :job-id]))
@@ -70,7 +72,7 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
-                (= :certified (:status driven))
+                (= :certified status-class)
                 (let [advanced (advance-fn (:kind action)
                                            (:certificate driven))]
                   (if-not (:ok advanced)
@@ -88,7 +90,7 @@
                             {:ok false :error/code :live-supervisor-park-failed
                              :finding parked}))))))
 
-                (= :terminal-collected (:status driven))
+                (= :terminal-evidence-collected status-class)
                 (let [projected (project-fn)
                       parked (when (:ok projected)
                                (park-fn {:awaiting []
@@ -105,7 +107,7 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
-                (= :awaiting-substrate (:status driven))
+                (= :waiting-substrate status-class)
                 (let [resume-at-ms (get-in driven
                                            [:substrate/condition :resume-at-ms])
                       projected (project-fn)
@@ -129,7 +131,7 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
-                (= :transport-retry-scheduled (:status driven))
+                (= :waiting-transport-retry status-class)
                 (let [projected (project-fn)
                       parked (when (:ok projected)
                                (park-fn {:awaiting []
@@ -152,5 +154,10 @@
                      :finding parked}))
 
                 :else
-                {:ok false :error/code :live-supervisor-phase-status-invalid
-                 :finding driven}))))))))
+                {:ok false
+                 :error/code :live-supervisor-phase-status-vocabulary-incomplete
+                 :finding {:status (:status driven)
+                           :classification status-class
+                           :known-statuses
+                           (vec (sort phase-status/known-statuses))
+                           :phase-result driven}}))))))))
