@@ -251,15 +251,50 @@
                  :problem-id "m94A02" :fresh-session? true
                  :memory-snapshot {:snapshot-digest "snapshot"}}
                 {:ticket/id "ticket-1"}
-                {:job-id "job-1"}
-                {:findings [:command-own-exit-nonzero :frame-mismatch]})
+                {:job-id "job-1"
+                 :report/error {:error/code :report-edn-lint-failed
+                                :error/message "invalid EDN at 1:1"}}
+                {:error/code :live-learning-terminal-invalid
+                 :findings [:command-own-exit-nonzero :frame-mismatch]})
         request (:request repair)]
     (is (:ok repair))
     (is (false? (:fresh-session? request)))
     (is (= "snapshot" (get-in request [:memory-snapshot :snapshot-digest])))
     (is (= [:command-own-exit-nonzero :frame-mismatch]
            (:repair/findings request)))
+    (is (= :report-edn-lint-failed
+           (get-in request [:repair/validation-output :report/error
+                            :error/code])))
     (is (not= "original" (:dispatch/id request)))))
+
+(deftest repair-packet-leads-with-actionable-revision-instructions
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :dispatch/type :guide-intervention
+                 :frame-id "f49" :phase :guide-intervention-1
+                 :problem-id "a98A04" :agent-id "f49-guide"
+                 :role-card-path "guide.md" :role-card-blob "blob"}
+                {:ticket/id "ticket-1"}
+                {:job-id "job-1"
+                 :report/error {:error/code :report-edn-lint-failed
+                                :error/message "Invalid symbol: Gist:."}}
+                {:error/code :live-job-submission-missing
+                 :findings [:typed-submission-missing]})
+        packet (sut/prompt (:request repair))]
+    (is (:ok repair))
+    (is (.startsWith packet
+                     "REVISE AND RESUBMIT — THE PREVIOUS COMPLETION WAS REJECTED."))
+    (is (re-find #"no typed submission was received" packet))
+    (is (re-find #"Invalid symbol: Gist" packet))
+    (is (re-find #"scripts/apm-submit-role.py --job-id" packet))
+    (is (re-find #"repair budget is exhausted" packet))))
+
+(deftest repair-refuses-a-finding-without-actionable-instructions
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :frame-id "f49"}
+                {:ticket/id "ticket-1"} {:job-id "job-1"}
+                {:findings [:new-unrendered-finding]})]
+    (is (= :terminal-repair-instruction-missing (:error/code repair)))
+    (is (= [:new-unrendered-finding] (:findings repair)))))
 
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"

@@ -682,8 +682,89 @@
                  :archive-directory (source-archive-directory
                                      state-path (:phase request))})))
 
+(def repair-finding-instructions
+  {:typed-submission-missing
+   ["Your completion was rejected because no typed submission was received."
+    "Conversational prose is not a receipt; the registered submission record was absent."
+    "Use the command below to create, complete, and submit the typed JSON payload."]
+   :job-id-mismatch
+   ["Your completion named the wrong job." "The submitted job id did not match this dispatch."
+    "Regenerate the payload with the command below; do not copy authority fields from another turn."]
+   :agent-id-mismatch
+   ["Your completion named the wrong agent." "The submitted agent id did not match this role seat."
+    "Regenerate the payload below and retain its generated authority fields."]
+   :job-not-done
+   ["Your completion was submitted before the job was terminal." "Validation observed a non-done job state."
+    "Finish the assigned work, then submit the completed payload with the command below."]
+   :command-own-exit-nonzero
+   ["Your completion reported a failing command." "The command-owned exit code was not zero."
+    "Fix the command failure, rerun it, record exit 0, and submit the revised payload below."]
+   :frame-mismatch
+   ["Your completion named the wrong frame." "The report frame id differed from this dispatch."
+    "Use the generated payload below without replacing its frame authority."]
+   :problem-mismatch
+   ["Your completion named the wrong problem." "The report problem id differed from this dispatch."
+    "Use the generated payload below without replacing its problem authority."]
+   :fresh-session-id-missing
+   ["Your Student completion lacked a fresh session identity." "The terminal job carried no session id."
+    "Complete this repair in the active session and submit through the command below."]
+   :memory-use-evidence-missing
+   ["Your Student completion omitted memory-use evidence." "The report did not contain a memory-use map."
+    "Fill memory-use.used-ids with a JSON array (empty if none were used), then submit below."]
+   :student-memory-use-ids-invalid
+   ["Your memory-use evidence had the wrong shape." "used-ids must be a vector of memory-id strings."
+    "Replace used-ids with a JSON array of strings and resubmit below."]
+   :student-memory-used-without-surfacing
+   ["Your completion cited memory that was not made available." "At least one used id was absent from the controller-authorized shelf and searches."
+    "Remove unauthorized ids, retaining only memories actually surfaced to this turn, then submit below."]
+   :student-memory-used-despite-holdout
+   ["Your completion cited a withheld same-problem memory." "The holdout receipt forbids that memory on this attempt."
+    "Remove every withheld id and revise the work without it before submitting below."]
+   :guide-channel-isolation-unproved
+   ["Your Guide completion did not prove channel isolation." "channel-audit.direct-student-contact? was not explicitly false."
+    "Do not contact the Student; set the audit field from the actual conduct and submit below."]
+   :guide-candidates-invalid
+   ["Your Guide candidates were rejected." "The candidates did not satisfy the typed guide-deposit contract."
+    "Correct each candidate to the generated schema, or submit an empty candidate vector, using the command below."]
+   :guide-candidates-outside-store-mode
+   ["Your Guide completion proposed candidates outside store mode." "Non-empty candidates require mode store-mode."
+    "Set mode to store-mode for genuine deposits, otherwise remove the candidates, then submit below."]
+   :scribe-reduction-evidence-missing
+   ["Your Scribe reduction was incomplete." "Lanes, dispositions, or promotion reviews were missing or not collections."
+    "Fill all generated reduction collections, including explicit empty dispositions, then submit below."]
+   :solver-promotion-candidates-invalid
+   ["Your Solver promotion supplied no valid memory candidates." "Promotion requires a non-empty vector of typed candidates."
+    "Add at least one schema-valid candidate derived from the verified trace, then submit below."]
+   :close-evidence-invalid
+   ["Your close-frame evidence was rejected." "A trace id and canonical closed-or-partial result were not both present."
+    "Supply the checker-bound trace id and a closed or partial result, then submit below."]})
+
+(defn repair-instructions [request]
+  (when-let [findings (seq (:repair/findings request))]
+    (let [missing (remove repair-finding-instructions findings)]
+      (when (seq missing)
+        (throw (ex-info "Terminal repair finding has no actionable instruction"
+                        {:error/code :terminal-repair-instruction-missing
+                         :findings (vec missing)})))
+      (str "REVISE AND RESUBMIT — THE PREVIOUS COMPLETION WAS REJECTED.\n"
+           (str/join
+            "\n"
+            (map-indexed
+             (fn [index finding]
+               (let [[rejected why action]
+                     (get repair-finding-instructions finding)]
+                 (str (inc index) ". " rejected "\nWHY: " why
+                      "\nDO THIS: " action)))
+             findings))
+           (when-let [validation (:repair/validation-output request)]
+             (str "\nACTUAL VALIDATION OUTPUT:\n" (pr-str validation)))
+           "\nCORRECTIVE COMMAND:\n"
+           (submission/command request {:job-id (:submission/job-id request)})
+           "\nIf the revised typed submission is still invalid, the existing repair budget is exhausted and this role terminal will be rejected.\n\n"))))
+
 (defn prompt [request]
-  (str (str/upper-case (:frame-id request)) " " (name (:phase request))
+  (str (repair-instructions request)
+       (str/upper-case (:frame-id request)) " " (name (:phase request))
        " — follow frozen role card "
        (:role-card-path request) " at blob " (:role-card-blob request) ".\n"
        "Authority and exact receipt inputs:\n" (pr-str request) "\n"
@@ -732,6 +813,8 @@
                           (machine/ledger-digest
                            [(:dispatch/id request) (:ticket/id ticket)
                             (:job-id job) submission/completion-contract]))
+        findings (vec (:findings failure))
+        missing-instructions (vec (remove repair-finding-instructions findings))
         body (-> request
                  (dissoc :dispatch/id)
                  (assoc :fresh-session? contract-migration?
@@ -740,13 +823,20 @@
                                           (:repair/next-attempt failure 1))
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
-                        :repair/findings (vec (:findings failure)))
+                        :repair/findings findings
+                        :repair/validation-output
+                        {:error/code (:error/code failure)
+                         :findings findings
+                         :report/error (:report/error job)})
                  (cond-> contract-migration?
                    (assoc :fresh-session-nonce migration-nonce
                           :repair/kind :typed-submission-contract-migration)))]
-    {:ok true :request (submission/prepare-request
-                        (assoc body :dispatch/id
-                               (machine/ledger-digest [body])))}))
+    (if (seq missing-instructions)
+      {:ok false :error/code :terminal-repair-instruction-missing
+       :findings missing-instructions}
+      {:ok true :request (submission/prepare-request
+                          (assoc body :dispatch/id
+                                 (machine/ledger-digest [body])))})))
 
 (declare guide-promotion-step!)
 
