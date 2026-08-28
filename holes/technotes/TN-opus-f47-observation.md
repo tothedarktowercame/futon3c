@@ -255,3 +255,57 @@ It is, though, the first point in this table that means what it says.
 cannot be withheld by a predicate keyed on shelf membership. M2 keys on depositor truth at
 a common pre-serve gate, which closes the leak for memories that HAVE a depositor
 recorded; the never-shelved, provenance-absent category is what remains.
+
+## The fingerprint audit does not discriminate (2026-08-28)
+
+f50/a1 on a98A07 looked, at first reading, like the first observation of condition 3.
+The student used one memory of 76; the record has no `superseded/` directory; the holdout
+withheld 2 and none leaked; the memory was deposited by **f34-guide on a95J03** — a
+different problem, sixteen frames and three days earlier — and it was **on the shelf**
+(`:accessible-memory-ids` contains it), so it arrived through the shelf rather than
+through search or cascade. Every structural condition for cross-problem transfer holds.
+
+`fingerprint_audit.py` returns `"verdict": "fingerprinted"` for it. That verdict does not
+survive reading the row:
+
+    tokens-named 30, tokens-hit 4, tokens-novel 1
+    novel-hits ["norm_num"]
+    in-base-already 3
+    paste-longest-run 0, paste-lines-hit 0
+
+Of the 30 tokens the memory names, 4 appear in the student's artifact, and 3 were already
+in the base file. The entire witness is `norm_num`. There is no pasted text at all. A
+student reaching for `norm_num` is not a student using a memory from f34.
+
+**Across the campaign, 20 rows: 8 `already-in-base`, 4 `unwitnessed`, 8 `fingerprinted`.**
+Four of the eight fingerprinted rows rest on a single token with zero paste, and three of
+those tokens are ubiquitous:
+
+| row | sole witness | discriminating |
+|---|---|---|
+| f46/a3 a96J08 | `Mathlib.Analysis.SpecialFunctions.Trigonometric.Cotangent` | yes — a specific import |
+| f47/a3 a97A01 | `exact_mod_cast` | no |
+| f47/a3 a97A01 | `exact_mod_cast` | no |
+| f50/a1 a98A07 | `norm_num` | no |
+
+`exact_mod_cast` alone accounts for four novel-hits across the corpus. The other four
+fingerprinted rows carry genuinely specific names — `intervalIntegral.integral_comp_neg`,
+`hasSum_geometric_of_norm_lt_one`, `Real.exp_lt_one_iff`, `Complex.norm_exp` — and those
+are real witnesses.
+
+So the instrument is not broken; it fails to weight tokens by how much seeing one tells
+you. A fully-qualified Mathlib lemma or import appearing in a proof that did not have it
+before is evidence. A bare tactic name is not: it is in thousands of proofs, and its
+presence is explained without reference to any memory.
+
+**On a specificity rule the corpus has 5 fingerprinted uses, not 8.** These counts feed the
+preregistered capability-transfer analysis, so the difference is not cosmetic — it is the
+difference between a reported transfer rate and an artefact of counting `norm_num`.
+
+Two consequences for the reading of this note as a whole. First, the earlier sections'
+"the shelf is not where transfer happens" survives, and is if anything strengthened: the
+uses that looked like shelf transfer include some that are not uses at all. Second, f50/a1
+should NOT be recorded as the first instance of condition 3. It remains the first attempt
+where every structural precondition held — clean holdout, unrepaired record, cross-problem
+memory delivered through the shelf — and that is worth keeping. What is missing is the
+artifact-level evidence that the memory changed the proof.
