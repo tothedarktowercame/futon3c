@@ -340,3 +340,60 @@ transfer: one is self-supply and one bypassed the mechanism under measurement. C
 `:used-ids` without asking where each memory came from and who deposited it will report
 transfer that did not occur — the same failure mode as counting `norm_num` as a
 fingerprint, arriving by a different route.
+
+## f51/a1: an empty shelf recorded as a null result
+
+f51 (a98J03) skipped `promote-solver` entirely — the phase is simply absent from
+`jit-all-open-v2-f51/live/`, where f50 had it at `:promotion-certified` with 8 approved
+supply. The consequence runs through `live_learning_phases.clj:251`:
+
+    (and (= :student-attempt kind) promotion-receipt)
+    (assoc :memory-snapshot {... :accessible-memory-ids accessible-ids})
+
+No promotion phase means no receipt, means no snapshot, means no accessible memories. The
+attempt ran anyway. Its record:
+
+    :outcome                "not-closed"
+    :used-ids               []
+    :shelf/withheld-count   0
+    :accessible-memory-ids  ABSENT
+    :memory-snapshot        ABSENT
+    superseded/             does not exist
+
+The monitor line for it is `a1: memory 0/0 used outcome=not-closed`.
+
+**The shelf was not empty.** `campaign-prior-memories` for this campaign returns **504
+candidates**, 1 dropped, lineage `["jit-all-open-nontopology-v1" "jit-all-open-v2"]`. Five
+hundred and four memories existed and none were offered.
+
+This is the most dangerous shape a defect in this campaign can take, and it is worth
+separating from the others in this note. Every other failure recorded here STOPS
+something: a leak voids a frame, a halt stops the machine, a weak fingerprint is at least
+visible in the audit. This one produces a well-formed record that passes every check and
+means nothing. "0 of 0 used" is not distinguishable, in the data, from a student that had
+504 memories available and reached for none. Counted naively it is a null observation of
+transfer; it is actually an observation of nothing at all.
+
+The record is clean by every structural test this note has used to validate the others: no
+`superseded/` directory, an unrepaired first report, an honest outcome. Those tests were
+built to catch contamination. They do not catch absence.
+
+**f51's learning arm should be excluded from the transfer analysis.** Its solve is
+unaffected and banks normally.
+
+## The four ways this campaign can report transfer that did not happen
+
+Collected, because they are independent and all inflate rather than deflate:
+
+1. **Contaminated holdout** (f46, f48) — the withheld memory was served anyway, and
+   terminal repair rewrote the record so the breach survives only in `superseded/`.
+2. **Ubiquitous-token fingerprints** — `norm_num`, `exact_mod_cast` counted as witnesses.
+   Fixed by weighting on rarity; 5 fingerprinted, not 8.
+3. **Self-supply counted as transfer** (f50/a2) — the shelf's contribution was the frame's
+   own scribe deposit on its own problem, minutes old.
+4. **Empty shelf counted as a null result** (f51/a1) — no snapshot offered, "0 of 0 used".
+
+Three of the four are invisible in a naive read of `:used-ids` and
+`:accessible-memory-ids`. The instrument for each is now different: check `superseded/` for
+(1), read `novel-hits` for (2), resolve depositor and subject for (3), and require a
+snapshot to exist at all for (4).
