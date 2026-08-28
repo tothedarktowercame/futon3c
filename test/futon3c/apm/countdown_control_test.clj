@@ -790,15 +790,3 @@
     (is (nil? (sut/memory-cascade-arm nil root)) "a non-map file is off")
     (spit (str root "/memory-cascade-arm.edn") "{:unbalanced")
     (is (nil? (sut/memory-cascade-arm nil root)) "an unreadable file is off, not an exception")))
-
-(deftest campaign-seat-cast-is-read-from-campaign-configuration
-  (let [dir (java.nio.file.Files/createTempDirectory
-             "seat-cast-" (make-array java.nio.file.attribute.FileAttribute 0))
-        root (str dir)
-        cast {"solver" {:model "gpt-5.6-sol"}
-              "guide" {:model "claude-opus-5"}}]
-    (is (= {} (sut/campaign-seat-cast root)))
-    (spit (str root "/seat-cast.edn") (pr-str cast))
-    (is (= cast (sut/campaign-seat-cast root)))
-    (spit (str root "/seat-cast.edn") "[:not :a :map]")
-    (is (= {} (sut/campaign-seat-cast root)))))

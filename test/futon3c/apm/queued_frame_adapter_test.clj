@@ -262,7 +262,19 @@
 
 (deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
   (let [calls (atom [])
+        cast-path (str (java.nio.file.Files/createTempFile
+                        "seat-cast-" ".edn"
+                        (make-array java.nio.file.attribute.FileAttribute 0)))
+        seat-cast {"solver" {:model "gpt-5.6-sol"}
+                   "student" {:model "glm-5.3"}
+                   "guide" {:model "claude-opus-5"}
+                   "proctor" {:model "gpt-5.6-sol"}
+                   "promotion-proctor" {:model "gpt-5.6-sol"}
+                   "scribe" {:model "glm-5.3"}
+                   "zai-scribe" {:model "glm-5.3"}
+                   "analyst" {:model "claude-opus-5"}}
         manifest {:manifest/id digest}
+        _ (spit cast-path (pr-str seat-cast))
         result (sut/prepare-live!
                 {:frame frame
                  :ledger {:version 5 :digest digest :phase :preflight :claim nil}
@@ -273,14 +285,7 @@
                                             :promotion-proctor :scribe
                                             :zai-scribe :analyst]))
                  :workspace-root "/work" :substrate-path "/lake"
-                 :seat-cast {"solver" {:model "gpt-5.6-sol"}
-                             "student" {:model "glm-5.3"}
-                             "guide" {:model "claude-opus-5"}
-                             "proctor" {:model "gpt-5.6-sol"}
-                             "promotion-proctor" {:model "gpt-5.6-sol"}
-                             "scribe" {:model "gpt-5.6-sol"}
-                             "zai-scribe" {:model "glm-5.3"}
-                             "analyst" {:model "claude-opus-5"}}
+                 :seat-cast-path cast-path
                  :provision-fn
                  (fn [{:keys [role]}]
                    (swap! calls conj [:provision role])
@@ -321,7 +326,32 @@
       (is (= "gpt-5.6-sol"
              (get-in mint-payload [:cast "solver" :model])))
       (is (= "glm-5.3"
-             (get-in mint-payload [:cast "student" :model]))))))
+             (get-in mint-payload [:cast "student" :model])))
+      (is (= "zai" (get-in mint-payload [:cast "scribe" :type])))
+      (is (= "glm-5.3"
+             (get-in mint-payload [:cast "scribe" :model]))))))
+
+(deftest missing-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        result (sut/prepare-live!
+                {:seat-cast-path "/definitely/missing/seat-cast.edn"
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-missing (:error/code result)))
+    (is (empty? @calls))))
+
+(deftest incomplete-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        result (sut/prepare-live!
+                {:seat-cast {"guide" {:model "claude-opus-5"}}
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-invalid (:error/code result)))
+    (is (= :seat-cast-roles-missing
+           (get-in result [:findings 0 :finding])))
+    (is (empty? @calls))))
 
 (deftest five-problem-live-effects-never-prepare-a-successor-early
   (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"

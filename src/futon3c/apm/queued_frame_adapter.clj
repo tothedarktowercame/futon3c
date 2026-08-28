@@ -365,7 +365,7 @@
                           :effective-timeouts (get policies role)}]))
           ids))))
 
-(defn prepare-live!
+(defn- prepare-live-with-seat-cast!
   "Provision and certify one already-open frame using the production adapters.
 
   HTTP-FN remains injectable so qualification never dispatches a live role."
@@ -461,6 +461,72 @@
              :launch-receipt (:receipt result)
              :seat-mint @minted-response}))))))
 
+(defn- seat-cast-result [{:keys [seat-cast seat-cast-path]}]
+  (let [loaded
+        (cond
+          (some? seat-cast) seat-cast
+          (some? seat-cast-path)
+          (let [file (java.io.File. (str seat-cast-path))]
+            (cond
+              (not (.isFile file))
+              {:error/code :campaign-seat-cast-missing
+               :seat-cast/path (.getPath file)}
+
+              :else
+              (try
+                (edn/read-string (slurp file))
+                (catch Throwable t
+                  {:error/code :campaign-seat-cast-unreadable
+                   :seat-cast/path (.getPath file)
+                   :exception/message (.getMessage t)}))))
+
+          :else
+          {:error/code :campaign-seat-cast-missing
+           :finding :seat-cast-path-not-supplied})]
+    (if (:error/code loaded)
+      {:ok false :error/code (:error/code loaded) :finding loaded}
+      (let [required-roles (set (map (comp name key)
+                                    live-preparation/required-seat-types))
+            declared-roles (if (map? loaded) (set (map name (keys loaded))) #{})
+            missing-roles (sort (remove declared-roles required-roles))
+            model-less-roles
+            (if (map? loaded)
+              (->> required-roles
+                   (filter (fn [role]
+                             (let [override (or (get loaded role)
+                                                (get loaded (keyword role)))
+                                   model (:model override)]
+                               (not (and (string? model)
+                                         (not (str/blank? model)))))))
+                   sort)
+              (sort required-roles))]
+        (if (or (not (map? loaded)) (seq missing-roles) (seq model-less-roles))
+          {:ok false
+           :error/code :campaign-seat-cast-invalid
+           :findings (cond-> []
+                       (not (map? loaded))
+                       (conj {:finding :seat-cast-not-a-map})
+                       (seq missing-roles)
+                       (conj {:finding :seat-cast-roles-missing
+                              :roles (vec missing-roles)})
+                       (seq model-less-roles)
+                       (conj {:finding :seat-models-missing
+                              :roles (vec model-less-roles)}))}
+          {:ok true :seat-cast loaded})))))
+
+(defn prepare-live!
+  "Read and validate the campaign seat cast at the mint boundary, then prepare.
+
+   Long-lived queue effects must not capture a model declaration at launch.
+   Missing, unreadable, incomplete, or model-less declarations refuse before
+   provisioning or Agency registration."
+  [opts]
+  (let [cast-result (seat-cast-result opts)]
+    (if-not (:ok cast-result)
+      cast-result
+      (prepare-live-with-seat-cast!
+       (assoc opts :seat-cast (:seat-cast cast-result))))))
+
 (defn- observe-statement-repair
   [{:keys [agency-base http-fn]} handoff]
   (let [request-fn (or http-fn runtime/http-json)
@@ -493,7 +559,8 @@
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
   explicit to avoid a namespace cycle; all resource effects below use the
   production lifecycle/Agency adapters."
-  [{:keys [frame-number-base campaign-prefix memory-cascade conditions seat-cast
+  [{:keys [frame-number-base campaign-prefix memory-cascade conditions
+           campaign-root
            generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
@@ -557,7 +624,8 @@
                (prepare-live!
                 {:frame opened-frame :ledger ledger :manifest manifest
                  :role-cards role-cards :workspace-root workspace-root
-                 :substrate-path substrate-path :seat-cast seat-cast
+                 :substrate-path substrate-path
+                 :seat-cast-path (str campaign-root "/seat-cast.edn")
                  :leases persisted-leases
                  :persist-lease-fn
                  (fn [role lease]

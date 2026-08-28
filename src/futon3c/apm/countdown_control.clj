@@ -2110,25 +2110,6 @@
                          (str path) (.getMessage t)))
               nil))))))
 
-(defn campaign-seat-cast
-  "Read <campaign-root>/seat-cast.edn, the campaign-owned model declaration.
-
-   Missing or malformed configuration yields an empty cast; frame-seat minting
-   then refuses a model-less Claude seat with :claude-model-required instead of
-   inheriting the Claude CLI default."
-  [campaign-root]
-  (let [path (java.io.File. (str campaign-root) "seat-cast.edn")]
-    (if-not (.isFile path)
-      {}
-      (try
-        (let [value (edn/read-string (slurp path))]
-          (if (map? value) value {}))
-        (catch Throwable t
-          (binding [*out* *err*]
-            (println "[apm.seat-cast] unreadable"
-                     (str path) (.getMessage t)))
-          {})))))
-
 (defn campaign-conditions
   "Operational conditions registered for frames minted from CAMPAIGN-ROOT.
 
@@ -2199,7 +2180,6 @@
                             :promotion-proctor
                             :scribe :zai-scribe :analyst]))
         memory-cascade (memory-cascade-arm memory-cascade campaign-root)
-        seat-cast (campaign-seat-cast campaign-root)
         declared-priors
         (or (:campaign/priors authority)
             (declared-campaign-priors
@@ -2213,7 +2193,6 @@
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
-         :seat-cast seat-cast
          :conditions conditions
          :campaign-root campaign-root
          :campaign-priors (vec (or declared-priors []))
