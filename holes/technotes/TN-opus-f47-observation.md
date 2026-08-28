@@ -216,3 +216,42 @@ now answered for the search channel, which is enforced. The cascade already excl
 withheld ids. What remains open is the category f47 identified: a memory that was never on
 any shelf cannot be withheld by a predicate that keys on shelf membership, and that is
 still true.
+
+## f49 (2026-08-28): the first uncontaminated holdout observation
+
+f49/a1 on a98A04 is the first attempt to run with the depositor-truth gate live
+(codex-12, `aec461a4`/`a79ac3c3`, M2), and the first whose numbers can be taken at
+face value:
+
+| frame | withheld | served & used | record repaired? |
+|---|---|---|---|
+| f46 | 2 | 2 of 2, student disclosed | yes — `superseded/` |
+| f48 | 4 | 1 of 4, student disclosed | yes — `superseded/` |
+| f49 | 3 | **0** | **no `superseded/` directory** |
+
+The last column is the part that matters for reading the earlier rows. Terminal repair
+rewrites `live/student-attempt-N.edn` in place, so f46's and f48's surviving records both
+show a clean re-run with `:used-ids []`. Their real breaches are visible only in
+`superseded/student-attempt-1.repair-1.original-job.json`. A zero in a repaired record is
+not a measurement; it is the absence of one. I read f48's `0/76` as an honest empty on the
+day and was wrong.
+
+f49 has no `superseded/` directory, `:used-ids []` is the attempt's own first and only
+report, and `:shelf/withheld-count 3` is intact. Independently, none of the three withheld
+ids appears in the job's prompt, result, or events — they occur only in the dispatch
+authority, which is where they are declared.
+
+**So the shelf-utility observation survives, and now rests on something.** 76 accessible
+memories, zero used. The student worked from Mathlib primitives, hit the 30-minute stop
+mid-bridge-1 of a98A04, and reported the FTC computational kernel it had compiled but not
+merged. Nothing was withheld from it that it reached for; nothing on the shelf was reached
+for at all.
+
+That is the same shape as f47 — a large shelf yielding nothing — but for the first time it
+is not confounded by a leak, and not erased by a repair. One clean point is not a trend.
+It is, though, the first point in this table that means what it says.
+
+**Still open**, unchanged from the f47 section above: a memory that was never on any shelf
+cannot be withheld by a predicate keyed on shelf membership. M2 keys on depositor truth at
+a common pre-serve gate, which closes the leak for memories that HAVE a depositor
+recorded; the never-shelved, provenance-absent category is what remains.
