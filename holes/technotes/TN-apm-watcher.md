@@ -254,3 +254,92 @@ ack on consumption. That is the whole point of the adapter.
 Every one of these is the same error — trusting a claim-shaped thing instead
 of reading the artifact. It is worth re-reading the claims/artifacts table
 above whenever a report feels obvious.
+
+---
+
+## Handoff to a Codex seat, 2026-08-28 (Claude, claude-clink-1)
+
+Written because Joe is at ~96% of the Claude budget and the watcher itself was
+spending it. Everything below is state and diagnosis, not narrative.
+
+### State at handoff
+
+- **f50** closed, `:frame/result :partial`. First production frame to reach the
+  closure gate. Its `terminal/successor-disposition.edn` is the explicit
+  `no-supersession` witness (codex-2, futon3c `905d5cd9` / apm-lean `59820f96`).
+- **f51** voided, `:apparatus-invalidated`, failures
+  `[:registered-phase-order-missing-promote-solver :stale-in-jvm-contract-at-mint]`.
+  Its solve is pinned at `refs/apm/rescued-solves/f51-a98J03` (`28a1381f`).
+- **f52** running on a99J01, minted with the correct **11-phase** order.
+- **f53 onward**: guide and analyst are `:zai` / `glm-5.3` (futon3c `12cf8b48`).
+  No frame role draws on the Claude budget any more.
+- Condition 3 (cross-problem transfer through the shelf) stands at **n=2**;
+  see `holes/labs/M-apm-demonstration/analysis/` and the f50 a1 receipt.
+
+### The check that matters most at a frame boundary
+
+A frame minted against a **stale in-JVM contract** registers a 10-phase order
+missing `:promote-solver`, runs five phases looking healthy, and only fails
+once something refreshes the JVM's contract. That is what cost f51.
+
+    python3 -c "import re;s=open('data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-fNN/ledger.edn').read();m=re.search(r':phase-order\s+(\[[^\]]*\])',s);print(':promote-solver' in m.group(1), m.group(1)[:200])"
+
+Must print `True` and list 11 phases. If it prints `False`, the JVM is running
+an old contract: the frame is not repairable forward (`promote-solver` belongs
+before `student-attempt-1`), so reload from master and escalate the frame's
+disposal to Joe. **Frame disposal is Joe's call, never the watcher's.**
+
+### Failure catalogue, symptom -> cause -> action
+
+| symptom | cause | action |
+|---|---|---|
+| flat ticks, `:regulator/status :running` | coordinator disabled; durable status lies | `python3 scripts/apm-coordinator-enabled.py jit-all-open-v2` is the truth |
+| `:live-regulator-tick-threw`, "Lean-generated campaign contract rejected" | contract round-trip broken, usually an edit in the shared checkout | `git status holes/labs/M-apm-demonstration/ src/futon3c/apm/generated_contract.clj`; restore, then check apm-lean for a half-landed commit |
+| `:apm-qualification-report-invalid`, `*-artifact-stale` | contract artifacts changed under the qualification report | re-run `futon3c.apm.qualification/run-qualification!`; all four gates must pass |
+| `:set-alight-registration-mismatch` | frame's registered phase-order != contract | see above; do not "fix" by widening the audit |
+| `:lifecycle :draining`, watchdog `:semantic-cursor-advanced? false` | semantic-progress watchdog halted it after no progress | `futon3c.apm.durable-coordinator/resume!` once the real block is cleared |
+| `:promotion-candidate-edge-write-failed` / `:hyperedge-unreachable` | futon1b substrate transport | substrate class: check :7073 `/health` (cheap fields only -- `?deep=true` has OOM'd it), retry, do not void the frame |
+| HTTP 400 `modelCode: does not exist` | seat type and cast model disagree | `frame-seats/seat-types` is the single declaration; the cast must match its provider prefix |
+| attempt receipt has `:candidate/head` absent | student work never committed | **rescue it before the next attempt starts** -- see below |
+
+### Rescuing uncommitted student work (do this without asking)
+
+Two of f50's three attempts committed nothing while leaving compiling,
+bridge-closing proofs in the worktree, and the next attempt's reset erased
+them ~10 minutes later. When a receipt shows memories used and no
+`:candidate/head`:
+
+    W=/home/joe/code/apm-frames/fNN-<problem>-student
+    cd /home/joe/code/apm-lean
+    BLOB=$(git hash-object -w $W/problems/<problem>/lean/Main.lean)
+    TREE=$(printf '100644 blob %s\tMain.lean\n' "$BLOB" | git mktree)
+    C=$(echo "<why>" | git commit-tree $TREE)
+    git update-ref refs/apm/rescued-student-work/fNN-<problem>/attempt-N $C
+
+This is cheap, reversible, and loses nothing if it turns out to be unnecessary.
+
+### Standing rules
+
+- **Never `load-file` a worktree copy into the shared JVM.** Reload from
+  `/home/joe/code/futon3c` on master. See the workspace CLAUDE.md.
+- **Never dispatch a code change into the shared checkout while a frame is
+  live.** On 2026-08-28 the watcher belled a contract change to codex-2
+  mid-campaign; it rewrote `generated_contract.clj` and the emitted JSON in
+  place, every tick threw, and cancelling it left a half-landed apm-lean
+  commit that had to be reverted. Roughly an hour of downtime, entirely
+  self-inflicted. Contract work belongs in a worktree with its own JVM.
+- **Do not accommodate the machine.** Joe: the machine is built to accommodate
+  him. Prefer subtractive fixes -- remove a source of truth -- over adding a
+  checker. Widening an audit so a frame passes is the failure mode, not the fix.
+- **Escalate to Joe**: frame disposal, restarting a shared JVM, anything that
+  changes the protocol mid-campaign.
+- A known condition recurring is one line. A new condition, or a result, is a
+  report.
+
+### Instruments
+
+    scripts/apm-watch.sh                          # the live watch loop
+    python3 scripts/apm-coordinator-enabled.py jit-all-open-v2
+    python3 scripts/apm-frame-pulse.py data/apm-campaigns/jit-all-open-v2
+    python3 holes/labs/M-apm-demonstration/analysis/consumption_witness_audit.py --frame fNN
+    scripts/proof-eval.sh '<form>'                # in-JVM eval, refuses off-classpath load-file
