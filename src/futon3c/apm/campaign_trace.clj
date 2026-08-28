@@ -118,7 +118,10 @@
       (let [observation (validate-authoritative-observation
                          :successor clean-successor-observation)
             document {record-key observation}
-            target (io/file disposition-path)
+            ;; countdown-control passes a java.nio.file.Path (from .resolve),
+            ;; which clojure.java.io/file cannot coerce; str covers Path, File
+            ;; and String alike.
+            target (io/file (str disposition-path))
             parent (.getParentFile target)]
         (.mkdirs parent)
         (when (.exists target)

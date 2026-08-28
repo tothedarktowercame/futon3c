@@ -369,3 +369,26 @@
                (mapv #(count (filter #{:cannot-judge} (:verdicts %)))
                      passes))
             frame)))))
+
+;; countdown-control calls this with (.resolve frame-root "terminal/...") --
+;; a java.nio.file.Path, not a File. clojure.java.io/file has no Coercions
+;; implementation for Path, so f50 closed the whole cycle and then died on the
+;; close tick with "No implementation of method: :as-file ... UnixPath".
+(deftest clean-successor-producer-accepts-a-nio-path
+  (let [schemas (sut/observation-schemas)
+        samples (:operational-observations valid)
+        documents (->> schemas
+                       (remove #(= "successor" (:kind %)))
+                       (mapv (fn [{:keys [kind durable-record-key]}]
+                               {(keyword durable-record-key)
+                                (first (get samples (keyword kind)))})))
+        directory (java.nio.file.Files/createTempDirectory
+                   "clean-successor-path"
+                   (make-array java.nio.file.attribute.FileAttribute 0))
+        path (.resolve ^java.nio.file.Path directory
+                       "terminal/successor-disposition.edn")
+        prepared (sut/persist-clean-successor-observation!
+                  {:durable-documents documents :disposition-path path})]
+    (is (:ok prepared))
+    (is (:persisted? prepared))
+    (is (.exists (java.io.File. (str path))))))
