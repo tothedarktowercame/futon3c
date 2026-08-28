@@ -149,9 +149,11 @@
                 :post-memory-assert
                 #(memory-write/post-memory-assert!
                   {:evidence-store backend} %1 %2)
+                :post-edge #(memory-write/post-hyperedge!
+                             {:evidence-store backend} %)
                 :fetch-hyperedges substrate/hyperedges-by-end})))
   ([{:keys [depositor candidates] :as deposit} deposit-request
-    {:keys [fetch-entry post-memory-assert fetch-hyperedges]}]
+    {:keys [fetch-entry post-memory-assert post-edge fetch-hyperedges]}]
    (let [reported-depositor depositor
          depositor (:agent-id deposit-request)
          deposit (assoc deposit
@@ -188,16 +190,31 @@
 
                :else
                (let [edge-visible? (exact-edge-visible? edge fetch-hyperedges)
-                     pair-result (when (or (nil? existing) (not edge-visible?))
-                                   (post-memory-assert entry edge))
-                     pair-refused? (and pair-result
-                                        (not (:ok pair-result))
-                                        (not (:duplicate? pair-result)))
+                     ;; Two different writes, because they repair two
+                     ;; different states. With no evidence yet the pair has
+                     ;; to land together or not at all. With the evidence
+                     ;; already committed and no edge -- what a pre-atomic
+                     ;; write could leave behind -- the paired route refuses
+                     ;; that id with 409, so only an edge-only write
+                     ;; completes it, and the durable entry means writing
+                     ;; the edge alone leaves nothing partial.
+                     write-kind (cond (nil? existing) :pair
+                                      (not edge-visible?) :edge)
+                     write-result (case write-kind
+                                    :pair (post-memory-assert entry edge)
+                                    :edge (post-edge edge)
+                                    nil)
+                     refused? (and write-result
+                                   (not (:ok write-result))
+                                   (not (:duplicate? write-result)))
                      observed (fetch-entry (:memory-id canonical))]
                  (cond
-                   pair-refused?
-                   {:ok false :error/code (pair-write-error-code pair-result)
-                    :memory-id (:memory-id canonical) :finding pair-result}
+                   refused?
+                   {:ok false
+                    :error/code (if (= :edge write-kind)
+                                  :promotion-candidate-edge-write-failed
+                                  (pair-write-error-code write-result))
+                    :memory-id (:memory-id canonical) :finding write-result}
 
                    (not (exact-entry? entry observed))
                    {:ok false :error/code :promotion-candidate-evidence-not-visible

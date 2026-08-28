@@ -318,3 +318,38 @@
                                (constantly {:evidence/id "m"
                                             :evidence/body {:hook "only"}})
                                "http://substrate"))))))
+
+;; A pair written before the atomic route existed can be half-present: the
+;; evidence committed and the edge did not. The atomic route refuses that
+;; evidence id with 409, so the pair write cannot supply the missing edge --
+;; only an edge-only write repairs it. Without one this state is permanent.
+(deftest half-written-legacy-pair-is-repaired-by-an-edge-only-write
+  (let [entries (atom {}) edges (atom {})
+        pair-writes (atom 0) edge-writes (atom 0)
+        ;; seed the orphan: evidence present, no edge
+        seeded (sut/persist! deposit deposit-request
+                             {:fetch-entry (constantly nil)
+                              :post-memory-assert
+                              (fn [entry _edge]
+                                (swap! entries assoc (:evidence/id entry) entry)
+                                {:ok true})
+                              :fetch-hyperedges (constantly [])})
+        result (sut/persist!
+                deposit deposit-request
+                {:fetch-entry #(get @entries %)
+                 :post-memory-assert
+                 (fn [_ _]
+                   (swap! pair-writes inc)
+                   {:ok false :duplicate? true
+                    :error {:error/component :E-store
+                            :error/code :memory-assert-duplicate}})
+                 :post-edge (fn [edge]
+                              (swap! edge-writes inc)
+                              (swap! edges assoc (:hx/id edge) edge)
+                              {:ok true})
+                 :fetch-hyperedges
+                 (fn [end]
+                   (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))})]
+    (is (false? (:ok seeded)) "seeding leaves the edge missing")
+    (is (:ok result) "the orphaned entry gets its edge and the deposit completes")
+    (is (= 1 @edge-writes) "repaired by exactly one edge-only write")))
