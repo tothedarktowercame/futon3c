@@ -15,13 +15,16 @@
           (= attempt 150) false
           :else (do (Thread/sleep 20) (recur (inc attempt))))))
 
-(deftest pending-jit-tick-carries-scheduler-period-deadline
+(deftest pending-jit-tick-carries-work-budget-deadline
   (let [now 1000000
         period-ms 500
+        work-timeout-minutes 30
+        work-timeout-ms (* work-timeout-minutes 60 1000)
         config {:coordinator-id "jit-queue:q"
                 :queue-name "q"
                 :queue-id "queue-id"
-                :coordinator/period-ms period-ms}
+                :coordinator/period-ms period-ms
+                :tick-work-timeout-minutes work-timeout-minutes}
         decide (:decide-fn (sut/adapter-constructor config))
         state {:state/type :live-regulator
                :regulator/status :running
@@ -36,16 +39,40 @@
         watching (watchdog/evaluate nil observation now)
         expired (watchdog/evaluate
                  nil observation
-                 (+ now period-ms watchdog/external-deadline-grace-ms 1))]
-    (is (= period-ms
+                 (+ now work-timeout-ms
+                    watchdog/external-deadline-grace-ms 1))]
+    (is (= work-timeout-ms
            (get-in intent [:dispatch/parameters :permitted-duration-ms])))
-    (is (= (+ now period-ms)
+    (is (= :coordinator/tick-work-timeout-minutes
+           (get-in intent [:dispatch/parameters
+                           :permitted-duration-source])))
+    (is (= (+ now work-timeout-ms)
            (get-in observation [:awaiting-job :deadline])))
     (is (= :watching (:status watching)))
+    (is (= :watching
+           (:status (watchdog/evaluate
+                     nil observation
+                     (+ now period-ms
+                        watchdog/external-deadline-grace-ms 1)))))
     (is (not= :external-job-deadline-missing
               (get-in watching [:reason :code])))
     (is (= :external-job-deadline-exceeded
            (get-in expired [:reason :code])))))
+
+(deftest pending-jit-tick-defaults-to-student-role-work-budget
+  (let [now 2000000
+        decide (:decide-fn
+                (sut/adapter-constructor
+                 {:coordinator-id "jit-queue:q"
+                  :queue-name "q" :queue-id "queue-id"
+                  :coordinator/period-ms 500}))
+        intent (binding [sut/*intent-now-fn* (constantly now)]
+                 (:coordinator/intent
+                  (decide {:regulator/ticks 1})))]
+    (is (= (* 30 60 1000)
+           (get-in intent [:dispatch/parameters :permitted-duration-ms])))
+    (is (= (+ now (* 30 60 1000))
+           (get-in intent [:dispatch/parameters :deadline-ms])))))
 
 (deftest adapter-runs-without-initiator-and-survives-runner-restart
   (let [root (Files/createTempDirectory "jit-coordinator-"

@@ -5,10 +5,17 @@
 
 (def adapter-key :apm/jit-problem-queue)
 (def default-registry-path "data/apm-coordinators/registry.edn")
+(def default-tick-work-timeout-minutes 30)
 (def ^:dynamic *intent-now-fn* #(System/currentTimeMillis))
 
+(defn- minutes->ms [minutes]
+  (* minutes 60 1000))
+
 (defn- next-intent [config state]
-  (let [tick-duration-ms (:coordinator/period-ms config)
+  (let [tick-work-timeout-minutes
+        (or (:tick-work-timeout-minutes config)
+            default-tick-work-timeout-minutes)
+        tick-work-timeout-ms (minutes->ms tick-work-timeout-minutes)
         body {:coordinator/id (:coordinator-id config)
               :queue/name (:queue-name config)
               :queue/id (:queue-id config)
@@ -20,8 +27,9 @@
                    [(assoc body :dispatch/type :jit-problem-queue-tick)])
      :dispatch/action :jit-problem-queue/tick
      :dispatch/parameters
-     {:deadline-ms (+ (*intent-now-fn*) tick-duration-ms)
-      :permitted-duration-ms tick-duration-ms}
+     {:deadline-ms (+ (*intent-now-fn*) tick-work-timeout-ms)
+      :permitted-duration-ms tick-work-timeout-ms
+      :permitted-duration-source :coordinator/tick-work-timeout-minutes}
      :expected/postcondition
      {:status/one-of [:frame-prepared :parked :phase-advanced
                       :terminal-collected :claim-recovered :batch-paused
@@ -50,18 +58,24 @@
 
 (defn start!
   "Register and start one JIT queue from EDN-serializable launch authority."
-  [{:keys [registry-path state-path coordinator-id launch period-ms]
-    :or {registry-path default-registry-path period-ms 500}}]
-  (let [config {:coordinator-id coordinator-id
-                :queue-name (:queue-name launch) :queue-id (:queue-id launch)
-                :launch launch}
+  [{:keys [registry-path state-path coordinator-id launch period-ms
+           tick-work-timeout-minutes]
+    :or {registry-path default-registry-path period-ms 500
+         tick-work-timeout-minutes default-tick-work-timeout-minutes}}]
+  (if-not (pos-int? tick-work-timeout-minutes)
+    {:ok false :error/code :jit-tick-work-timeout-invalid
+     :tick-work-timeout-minutes tick-work-timeout-minutes}
+    (let [config {:coordinator-id coordinator-id
+                  :queue-name (:queue-name launch) :queue-id (:queue-id launch)
+                  :launch launch
+                  :tick-work-timeout-minutes tick-work-timeout-minutes}
         registered (coordinator/register!
                     {:registry-path registry-path :coordinator-id coordinator-id
                      :adapter adapter-key :config config :state-path state-path
                      :period-ms period-ms})]
-    (if (:ok registered)
-      (coordinator/start-registered! registry-path coordinator-id)
-      registered)))
+      (if (:ok registered)
+        (coordinator/start-registered! registry-path coordinator-id)
+        registered))))
 
 (defn recover!
   ([] (recover! default-registry-path))
