@@ -10,6 +10,7 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-ledger :as campaign-ledger]
             [futon3c.apm.campaign-qualification :as campaign-qualification]
+            [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.frame-void :as frame-void]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-launch-preparation :as live-preparation]
@@ -610,8 +611,21 @@
                  :memory-cascade memory-cascade
                  :conditions conditions))
    :qualify-frame-fn
-   #(qualify-current {:frame % :generated-contract-path generated-contract-path
-                      :qualification-report-path qualification-report-path})
+   (fn [frame]
+     (let [paths (campaign-paths config frame)
+           manifest (manifest-fn frame paths)
+           eligibility (countdown-manifest/validate manifest)]
+       (if-not (:valid? eligibility)
+         {:ok false
+          :error/code :queued-frame-eligibility-invalid
+          :frame/id (:frame/id frame)
+          :problem/id (:problem/id frame)
+          :manifest/id (:manifest/id manifest)
+          :findings (:findings eligibility)
+          :eligibility/observations (:eligibility-observations eligibility)}
+         (qualify-current
+          {:frame frame :generated-contract-path generated-contract-path
+           :qualification-report-path qualification-report-path}))))
    :prepare-frame-fn
    (fn [frame]
      (let [paths (campaign-paths config frame)

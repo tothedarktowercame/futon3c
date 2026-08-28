@@ -61,6 +61,34 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest ineligible-unit-is-parked-and-next-problem-is-prepared
+  (let [{:keys [providers state calls]} (harness)
+        result
+        (sut/tick!
+         (assoc providers :qualify-frame-fn
+                (fn [frame]
+                  (swap! calls conj [:qualify (:frame/id frame)])
+                  (if (= "p1" (:problem/id frame))
+                    {:ok false :error/code :queued-frame-eligibility-invalid
+                     :findings [:countdown-manifest-eligibility-shape-invalid]
+                     :manifest/id "bad-manifest"}
+                    {:ok true}))))]
+    (is (= :frame-prepared (:status result)))
+    (is (= "p2" (get-in @state [:active :frame :problem/id])))
+    (is (= 2 (:next-index @state)))
+    (is (= [{:state/type :eligibility-frame-park
+             :frame/id "q1" :problem/id "p1"
+             :decision/status :parked
+             :park/reason :problem-ineligible
+             :qualification
+             {:ok false :error/code :queued-frame-eligibility-invalid
+              :findings [:countdown-manifest-eligibility-shape-invalid]
+              :manifest/id "bad-manifest"}}]
+           (:parked @state)))
+    (is (= [[:mint "p1"] [:qualify "q1"] [:persist]
+            [:mint "p2"] [:qualify "q2"] [:prepare "q2"] [:persist]]
+           @calls))))
+
 (deftest solver-round-exhaustion-parks-frame-and-prepares-successor
   (let [{:keys [providers state calls]} (harness)
         park {:state/type :solver-human-intervention-frame-park

@@ -348,6 +348,26 @@
           qualification (when (:ok minted) (qualify-frame-fn (:frame minted)))]
       (cond
         (not (:ok minted)) minted
+        (= :queued-frame-eligibility-invalid (:error/code qualification))
+        (let [frame (:frame minted)
+              park {:state/type :eligibility-frame-park
+                    :frame/id (:frame/id frame)
+                    :problem/id (:problem/id frame)
+                    :decision/status :parked
+                    :park/reason :problem-ineligible
+                    :qualification qualification}
+              advanced (addressed
+                        (-> state
+                            (update :parked (fnil conj []) park)
+                            (update :next-index inc)))
+              persisted (persist-state-fn advanced)]
+          (if-not (:ok persisted)
+            {:ok false :error/code :problem-queue-state-persistence-failed}
+            (prepare-next plan advanced
+                          {:mint-frame-fn mint-frame-fn
+                           :qualify-frame-fn qualify-frame-fn
+                           :prepare-frame-fn prepare-frame-fn
+                           :persist-state-fn persist-state-fn})))
         (not (:ok qualification))
         {:ok false :error/code :problem-queue-frame-qualification-failed
          :frame (:frame minted) :qualification qualification}
