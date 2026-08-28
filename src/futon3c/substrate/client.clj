@@ -65,7 +65,23 @@
 ;; Keep one page comfortably inside short live-view deadlines. The substrate
 ;; permits 1,000, but several 1,000-row hydrations measured at 4-5 seconds,
 ;; leaving no room inside cascade-real's 5-second per-request timeout.
-(def ^:private substrate-page-size 250)
+;;
+;; Re-derived 2026-08-23 by the same criterion, after the mission-scope/pattern
+;; layer was repaired from 115 edges to 971. Those edges are ~2.5 KB each, so
+;; per-page cost is dominated by payload rather than row count, and 250 stopped
+;; fitting: measured against the live store with one writer active,
+;;
+;;     limit=50  2.7s   limit=100 2.6s   limit=150 4.2s   limit=250 4.9-7.0s
+;;
+;; i.e. ~2.5s fixed overhead plus a per-row term. At 250 the first page alone
+;; blew the 5s budget and threw, which 500s the WHOLE cascade graph -- fixing
+;; the cascade is what made it unfetchable.
+;;
+;; 100 restores the margin this constant exists to provide. Note the budget was
+;; deliberately NOT raised instead: the 5-second deadline is the only signal
+;; that distinguishes a big page from a slow substrate, and inflating it to fit
+;; would spend that signal to buy nothing.
+(def ^:private substrate-page-size 100)
 (def default-request-budget 50)
 (def ^:private admission-retries 3)
 
