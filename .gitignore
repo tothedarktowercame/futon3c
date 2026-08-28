@@ -72,7 +72,23 @@ holes/labs/M-diagramprover/apm-driver/*.log
 holes/labs/M-diagramprover/apm-driver/.bridge-lane.lock
 
 # 2026-08-28: append-only run products are live state, not checkout inputs.
-# Match their semantic suffixes so later campaigns do not need named entries.
+#
+# These three suffixes cover a new CAMPAIGN's products (foo-ledger.jsonl
+# matches) but NOT a new KIND of product: frame-trace.jsonl, solver-rounds.jsonl
+# and even the existing ledger.jsonl are not matched, because *-ledger.jsonl
+# requires a hyphen prefix. Verified 2026-08-28 with git check-ignore.
+#
+# This is knowingly a list, and it is the second ignore rule this one directory
+# has needed in two weeks (see *.log at 2026-08-14). It was NOT inverted to
+# "ignore *.jsonl here, un-ignore the ten tracked corpora", because the two
+# failure modes are not equally bad: a rule that under-matches lets a new
+# product make the tree dirty, which someone SEES; ignore-by-default would let a
+# new input corpus vanish unstaged, which is README-inbox-zero's cost #1
+# automated and silent.
+#
+# The repair that removes the choice is a location convention -- products to
+# their own subdirectory, ignored wholesale -- so that a misplaced product shows
+# as dirt and a new corpus stays tracked. Both failures visible. Not done here.
 holes/labs/**/apm-driver/*-audit.jsonl
 holes/labs/**/apm-driver/*-ledger.jsonl
 holes/labs/**/apm-driver/*-manifest.jsonl
