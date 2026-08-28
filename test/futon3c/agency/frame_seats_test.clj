@@ -192,6 +192,27 @@
            (:findings result)))
     (is (empty? @prepared))))
 
+(deftest per-seat-cast-refuses-model-provider-mismatches
+  (doseq [[seat model expected-type]
+          [[:scribe "glm-5.3" "codex"]
+           [:zai-scribe "gpt-5.6-sol" "zai"]
+           [:guide "gpt-5.6-sol" "claude"]]]
+    (let [prepared (atom [])
+          result (frame-seats/mint-seats!
+                  {:prepare-seat-fn (fn [spec]
+                                      (swap! prepared conj spec)
+                                      (ready-seat spec))
+                   :cast {seat {:model model}}}
+                  (str "bad-model-" (name seat)))]
+      (is (false? (:ok result)))
+      (is (= :invalid-seat-cast (:error result)))
+      (is (= {:finding :seat-model-provider-mismatch
+              :seat (name seat) :agent-type expected-type :model model
+              :accepted-prefixes
+              (get frame-seats/provider-model-prefixes (keyword expected-type))}
+             (first (:findings result))))
+      (is (empty? @prepared)))))
+
 (deftest frame-seat-cast-refuses-unknown-seat-and-type
   (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})
         [seat-status seat-body]

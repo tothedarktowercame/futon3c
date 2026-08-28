@@ -353,6 +353,29 @@
            (get-in result [:findings 0 :finding])))
     (is (empty? @calls))))
 
+(deftest provider-incoherent-campaign-seat-cast-refuses-before-resource-effects
+  (let [calls (atom [])
+        cast {"solver" {:model "gpt-5.6-sol"}
+              "student" {:model "glm-5.3"}
+              "guide" {:model "claude-opus-5"}
+              "proctor" {:model "gpt-5.6-sol"}
+              "promotion-proctor" {:model "gpt-5.6-sol"}
+              "scribe" {:model "glm-5.3"}
+              "zai-scribe" {:model "glm-5.3"}
+              "analyst" {:model "claude-opus-5"}}
+        result (sut/prepare-live!
+                {:seat-cast cast
+                 :provision-fn #(swap! calls conj [:provision %])
+                 :http-fn #(swap! calls conj [:http %1 %2])})]
+    (is (false? (:ok result)))
+    (is (= :campaign-seat-cast-invalid (:error/code result)))
+    (is (= {:finding :seat-model-provider-mismatch
+            :seat "scribe" :agent-type "codex" :model "glm-5.3"
+            :accepted-prefixes ["gpt-"]}
+           (first (filter #(= :seat-model-provider-mismatch (:finding %))
+                          (:findings result)))))
+    (is (empty? @calls))))
+
 (deftest five-problem-live-effects-never-prepare-a-successor-early
   (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
                                  :revision "r" :path "Main.lean" :blob "b"

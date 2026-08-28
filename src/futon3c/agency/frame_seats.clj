@@ -26,6 +26,20 @@
 (def ^:private accepted-agent-types
   #{:claude :codex :zai})
 
+(def provider-model-prefixes
+  "Declared model namespaces accepted by each frame-seat provider."
+  {:claude ["claude-"]
+   :codex ["gpt-"]
+   :zai ["glm-"]})
+
+(defn model-compatible?
+  "True when MODEL belongs to the model namespace served by AGENT-TYPE."
+  [agent-type model]
+  (and (string? model)
+       (not (str/blank? model))
+       (some #(str/starts-with? model %)
+             (get provider-model-prefixes agent-type []))))
+
 (def ^:private accepted-override-keys
   #{:type :model})
 
@@ -80,7 +94,9 @@
   (when (map? cast)
     (into {} (map (fn [[seat override]] [(name seat) override])) cast)))
 
-(defn- cast-findings [cast]
+(defn cast-findings
+  "Return typed findings for a cast that cannot be routed coherently."
+  [cast]
   (let [cast (normalize-cast cast)]
     (cond
       (nil? cast)
@@ -125,7 +141,9 @@
 
                      :else
                      (let [agent-type (some-> raw-type keyword)
-                           declared-type (get seat-types (keyword seat))]
+                           declared-type (get seat-types (keyword seat))
+                           effective-type (or agent-type declared-type)
+                           model (:model override)]
                        (cond
                          (and (some? agent-type)
                               (not (contains? accepted-agent-types agent-type)))
@@ -138,7 +156,20 @@
                          [{:finding :seat-type-mismatch
                            :seat seat
                            :expected-type (name declared-type)
-                           :actual-type (name agent-type)}]))))))
+                           :actual-type (name agent-type)}]
+
+                         (and (some? model) (not (string? model)))
+                         [{:finding :invalid-seat-model
+                           :seat seat :model (pr-str model)}]
+
+                         (and (some? model)
+                              (not (model-compatible? effective-type model)))
+                         [{:finding :seat-model-provider-mismatch
+                           :seat seat
+                           :agent-type (name effective-type)
+                           :model model
+                           :accepted-prefixes
+                           (get provider-model-prefixes effective-type)}]))))))
              cast)))))
 
 (defn- effective-seat-specs [model cast]

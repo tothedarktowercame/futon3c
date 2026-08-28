@@ -6,6 +6,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-ledger :as campaign-ledger]
             [futon3c.apm.campaign-qualification :as campaign-qualification]
@@ -499,8 +500,11 @@
                                (not (and (string? model)
                                          (not (str/blank? model)))))))
                    sort)
-              (sort required-roles))]
-        (if (or (not (map? loaded)) (seq missing-roles) (seq model-less-roles))
+              (sort required-roles))
+            coherence-findings (when (map? loaded)
+                                 (frame-seats/cast-findings loaded))]
+        (if (or (not (map? loaded)) (seq missing-roles)
+                (seq model-less-roles) (seq coherence-findings))
           {:ok false
            :error/code :campaign-seat-cast-invalid
            :findings (cond-> []
@@ -511,7 +515,9 @@
                               :roles (vec missing-roles)})
                        (seq model-less-roles)
                        (conj {:finding :seat-models-missing
-                              :roles (vec model-less-roles)}))}
+                              :roles (vec model-less-roles)})
+                       (seq coherence-findings)
+                       (into coherence-findings))}
           {:ok true :seat-cast loaded})))))
 
 (defn prepare-live!
