@@ -41,6 +41,16 @@
                (dissoc signature :pattern)))
            (concat provider-usage-limit-signatures additional-signatures)))))
 
+(defn wall-clock-budget-exhausted?
+  "True only for Agency's expected role wall-clock exhaustion terminal.
+
+  This classification is deliberately narrower than terminal failure: other
+  invoke errors still stop the driver for inspection."
+  [job]
+  (and (= :failed (:state job))
+       (= :invoke-error (:terminal-code job))
+       (= "wall-clock-budget" (:terminal-message job))))
+
 (defn- successor-observation [job terminal-collection findings]
   (campaign-trace/validate-authoritative-observation
    :successor
@@ -455,9 +465,12 @@
         (not (contains? terminal-states (:state job)))
         {:ok true :status :awaiting-terminal :state state}
 
-        (not= :done (:state job))
+        (and (not= :done (:state job))
+             (not (and (wall-clock-budget-exhausted? job)
+                       (fn? terminal-submission-provider))))
         {:ok false :error/code :live-job-terminal-failure
-         :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
+         :finding (select-keys job [:job-id :agent-id :state :terminal-code
+                                    :terminal-message])}
 
         :else
         (if (and (fn? terminal-submission-provider)

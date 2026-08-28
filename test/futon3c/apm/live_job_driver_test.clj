@@ -159,6 +159,62 @@
                                     :state dispatched))]
       (is (= :live-job-request-state-mismatch (:error/code result))))))
 
+(deftest wall-clock-budget-exhaustion-enters-durable-terminal-repair
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "student-attempt-2"
+                              :state :failed :terminal-code :invoke-error
+                              :terminal-message "wall-clock-budget"}
+                    "job-2" {:job-id "job-2" :agent-id "student-attempt-2"
+                              :state :running}})
+        persisted (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (fn [id] (get @jobs id))
+                    :persist-fn (fn [state]
+                                  (swap! persisted conj state)
+                                  {:ok true})
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (fn [& _]
+                      (throw (ex-info "missing submission must be classified first" {})))
+                    :terminal-repair-request-fn
+                    (fn [r _ticket job failure]
+                      {:ok true
+                       :request (assoc r :dispatch/id "repair-dispatch"
+                                         :repair/of-job-id (:job-id job)
+                                         :repair/findings (:findings failure))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true}
+        collected (sut/drive! (assoc base :state dispatched))
+        repairing (sut/drive! (assoc base :state (:state collected)))
+        archived (first (get-in repairing [:state :superseded-terminals]))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (= "job-1" (get-in archived [:job :job-id])))
+    (is (= "wall-clock-budget" (get-in archived [:job :terminal-message])))
+    (is (= [:typed-submission-missing] (:findings archived)))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))
+    (is (some #(= :live-job-dispatched (:state/type %)) @persisted))))
+
+(deftest unrecognized-terminal-failure-remains-fatal-with-submission-provider
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "student-attempt-2"
+                   :state :failed :terminal-code :invoke-error
+                   :terminal-message "worker-crashed"})
+        result (sut/drive!
+                (assoc (effects calls job)
+                       :state {:state/type :live-job-dispatched
+                               :request request
+                               :ticket {:job-id "job-1"}
+                               :activation/accepted? true}
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :live-job-terminal-failure (:error/code result)))
+    (is (not-any? #{:validate :receipt} @calls))))
+
 (deftest invalid-typed-terminal-gets-one-durable-repair-job
   (let [calls (atom [])
         jobs (atom {"job-1" {:job-id "job-1" :agent-id "f19-proctor"
