@@ -131,3 +131,35 @@ into something executable rather than a paragraph someone has to remember.
 
 The preflight is also independently valuable: it is a cheap, honest answer to
 "is the machine ready?", runnable at any time without starting anything.
+
+## Seventh traversal item: the model actually dispatched (Joe, 2026-08-28)
+
+F△ dispatches a real role turn, so it can check something no unit test can:
+that the model a seat was **declared** with is the model it was **invoked**
+with.
+
+The gap this closes was found on 2026-08-28. `frame-seats` supports a `model`
+and per-seat `:model` overrides; `mint-frame-seats!` assigns one only if a
+caller passes it; `agent_pouch` adds `--model` only when a model is present;
+and the `jit-all-open-v2` campaign config declared none. So every
+`type=claude` seat — guide and analyst — inherited the CLI default. All 24 APM
+role seats read `model=None` on the roster, and f49's guide burned Fable quota
+that Joe had never intended to spend on frame roles.
+
+Nothing was wrong-looking anywhere. A field was absent, and absence silently
+meant "whatever the CLI happens to be set to".
+
+**The check:** for each role F△ dispatches, assert the seat's declared model is
+non-nil and equals the model the invocation actually used. A seat with no
+declared model fails F△; a mismatch between declared and invoked fails F△ and
+names both values.
+
+This is the same property as the rest of F△: a declaration surviving the trip
+to the running system. `authority-fields` dropped a declared key,
+`job->terminal` dropped a declared observation, `campaign_trace` declared
+producers that emitted nothing — and here a declaration was never made at all,
+which is the degenerate case of the same defect.
+
+**Sequencing:** this item can only be asserted once role models are declared
+(codex-1, job `…3142-90203f38`). Add it after that lands, not before, or F△
+fails on a condition nothing yet satisfies.
