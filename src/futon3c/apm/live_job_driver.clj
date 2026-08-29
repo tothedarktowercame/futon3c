@@ -497,21 +497,31 @@
               max-repairs (:repair-attempts configured)
               job (if submission
                     (let [payload (:payload submission)]
-                      (assoc job
-                             :report (merge (:authority submission)
-                                            (:evidence payload)
-                                            (select-keys payload
-                                                         [:command-own-exit
-                                                          :outcome
-                                                          :failure-account
-                                                          ;; Some JSON clients
-                                                          ;; emit the Student's
-                                                          ;; query ledger beside
-                                                          ;; :evidence. Preserve
-                                                          ;; it for canonical
-                                                          ;; memory-use validation.
-                                                          :queries]))
-                             :typed-submission submission))
+                      (let [report
+                            (merge (:authority submission)
+                                   (:evidence payload)
+                                   (select-keys payload
+                                                [:command-own-exit
+                                                 :outcome
+                                                 :failure-account
+                                                 ;; Some JSON clients emit the
+                                                 ;; Student's query ledger
+                                                 ;; beside :evidence.
+                                                 :queries]))
+                            ;; Guide clients have historically placed the
+                            ;; authorized mode and deposit candidates inside
+                            ;; channel-audit. Accept that documented evidence
+                            ;; shape while retaining explicit top-level values
+                            ;; when both are supplied.
+                            report
+                            (if (= :guide-intervention
+                                   (:dispatch/type active-request))
+                              (merge (select-keys (:channel-audit report)
+                                                  [:mode :candidates])
+                                     report)
+                              report)]
+                        (assoc job :report report
+                               :typed-submission submission)))
                     job)
               validated (or (:posthoc-rejection state)
                             (if (and (fn? terminal-submission-provider)

@@ -1207,6 +1207,42 @@
     (is (some #{:guide-mode-authority-mismatch}
               (findings "harness-mode")))))
 
+(deftest guide-candidate-repair-renders-the-specific-validator-finding
+  (let [base-request {:dispatch/id "d" :dispatch/type :guide-intervention
+                      :agent-id "f54-guide" :frame-id "f54"
+                      :problem-id "a99J05" :phase :guide-intervention-1
+                      :mode :store-mode :role-card-path "guide.md"
+                      :role-card-blob "blob"}
+        report {:command-own-exit 0 :frame-id "f54" :problem-id "a99J05"
+                :mode "store-mode"
+                :channel-audit {:direct-student-contact? false}}
+        validate (fn [request candidates]
+                   (sut/validate-terminal
+                    request {:job-id "j"}
+                    {:job-id "j" :agent-id (:agent-id request) :state :done
+                     :report (assoc report :candidates candidates)}))
+        shape-failure (validate base-request
+                                [{:memory-id "m" :pattern-ids []
+                                  :source-attempts []}])
+        depositor-failure (validate (assoc base-request :agent-id nil)
+                                    [{:memory-id "m" :content-digest "d"
+                                      :pattern-ids [] :source-attempts []}])
+        packet (fn [failure]
+                 (-> (sut/terminal-repair-request
+                      base-request {:ticket/id "t"} {:job-id "j"} failure)
+                     :request sut/prompt))
+        shape-packet (packet shape-failure)
+        depositor-packet (packet depositor-failure)]
+    (is (= [:candidate-shape-invalid]
+           (get-in shape-failure
+                   [:finding/details :guide-candidates-invalid])))
+    (is (= [:depositor-missing]
+           (get-in depositor-failure
+                   [:finding/details :guide-candidates-invalid])))
+    (is (re-find #":content-digest" shape-packet))
+    (is (re-find #":depositor" depositor-packet))
+    (is (not= shape-packet depositor-packet))))
+
 (deftest guide-receipt-carries-the-union-snapshot-when-one-was-published
   (let [action {:kind :guide-intervention :phase :guide-intervention-1 :role :guide
                 :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
