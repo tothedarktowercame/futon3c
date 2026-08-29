@@ -22,6 +22,22 @@
     (is (:ok (sut/validate-payload (authority phase) (payload phase)))
         (name phase))))
 
+(deftest schema-materializes-nested-null-leaf-evidence-from-validation-authority
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "apm-schema-shapes"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [sut/*submission-root* root]
+      (doseq [[phase expected]
+              [[:guide-intervention-1
+                {:channel-audit {:direct-student-contact? nil}}]
+               [:student-attempt-1 {:memory-use {:used-ids nil}}]]]
+        (let [auth (authority phase)
+              _ (sut/register! auth {:job-id (:job-id auth)})
+              schema (sut/schema (:job-id auth) "secret")]
+          (is (= expected (:evidence-shape schema)))
+          (is (= (set (keys expected))
+                 (set (:evidence-required schema)))))))))
+
 (deftest solver-checkpoint-schema-requires-structured-strategy-evidence
   (let [ordinary (authority :solve)
         checkpoint (assoc ordinary :solver/round 10

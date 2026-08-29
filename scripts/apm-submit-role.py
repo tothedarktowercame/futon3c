@@ -10,6 +10,15 @@ import urllib.parse
 import urllib.request
 
 
+def submission_template(schema: dict) -> dict:
+    """Materialize the server-declared evidence shape; nulls are leaves."""
+    evidence = schema.get("evidence-shape")
+    if evidence is None:
+        raise ValueError("submission schema omitted evidence-shape")
+    return {"command-own-exit": None, "outcome": None,
+            "failure-account": [], "evidence": evidence}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--job-id", required=True)
@@ -24,9 +33,7 @@ def main() -> int:
         query = urllib.parse.urlencode({"token": args.token})
         with urllib.request.urlopen(f"{endpoint}?{query}") as response:
             schema = json.load(response)
-        evidence = {key: None for key in schema["evidence-required"]}
-        template = {"command-own-exit": None, "outcome": None,
-                    "failure-account": [], "evidence": evidence}
+        template = submission_template(schema)
         args.payload.write_text(json.dumps(template, indent=2, sort_keys=True) + "\n",
                                 encoding="utf-8")
         print(f"Wrote {args.payload}; fill every null value before submitting.")

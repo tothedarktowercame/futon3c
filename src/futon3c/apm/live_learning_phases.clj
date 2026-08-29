@@ -377,7 +377,10 @@
         channel-audit-normalization
         (if (= :guide-intervention kind)
           (submission/normalize-predicate-keys
-           (:channel-audit report) [:direct-student-contact?])
+           (:channel-audit report)
+           (->> (get-in (submission/evidence-shape request) [:channel-audit])
+                keys
+                (filter #(.endsWith ^String (name %) "?"))))
           {:ok true :value (:channel-audit report)})
         channel-audit (:value channel-audit-normalization)
         findings

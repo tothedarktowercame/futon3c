@@ -83,25 +83,45 @@
 
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
-(def evidence-required-by-phase
-  {:preflight #{:mutations :clean-before? :clean-after? :statement-unchanged? :lean}
-   :solve #{:branch :base-revision :final-head :committed? :statement-unchanged?
-            :lean :axioms :clean-before? :clean-after? :mutations}
-   :verify #{:branch :base-revision :final-head :committed? :statement-unchanged?
-             :lean :axioms :clean-before? :clean-after? :mutations}
+(def evidence-shape-by-phase
+  {:preflight {:mutations nil :clean-before? nil :clean-after? nil
+               :statement-unchanged? nil :lean nil}
+   :solve {:branch nil :base-revision nil :final-head nil :committed? nil
+           :statement-unchanged? nil :lean nil :axioms nil :clean-before? nil
+           :clean-after? nil :mutations nil}
+   :verify {:branch nil :base-revision nil :final-head nil :committed? nil
+            :statement-unchanged? nil :lean nil :axioms nil :clean-before? nil
+            :clean-after? nil :mutations nil}
    ;; The downstream promotion validators distinguish the Solver-mining and
    ;; deposit forms; the common wrapper is deterministic for both.
-   :promote-solver #{}
-   :promotion-review #{:candidate-set-digest :base-problem-blob
-                       :open-residuals :reviews}
-   :student-attempt-1 #{:memory-use}
-   :student-attempt-2 #{:memory-use}
-   :student-attempt-3 #{:memory-use}
-   :guide-intervention-1 #{:channel-audit}
-   :guide-intervention-2 #{:channel-audit}
-   :scribe-reduce #{:lanes :dispositions :promotion-reviews}
-   :close-frame #{:trace-id :result}
-   :analyst #{:analysis}})
+   :promote-solver {}
+   :promotion-review {:candidate-set-digest nil :base-problem-blob nil
+                      :open-residuals nil :reviews nil}
+   :student-attempt-1 {:memory-use {:used-ids nil}}
+   :student-attempt-2 {:memory-use {:used-ids nil}}
+   :student-attempt-3 {:memory-use {:used-ids nil}}
+   :guide-intervention-1
+   {:channel-audit {:direct-student-contact? nil}}
+   :guide-intervention-2
+   {:channel-audit {:direct-student-contact? nil}}
+   :scribe-reduce {:lanes nil :dispositions nil :promotion-reviews nil}
+   :close-frame {:trace-id nil :result nil}
+   :analyst {:analysis nil}})
+
+(def evidence-required-by-phase
+  (update-vals evidence-shape-by-phase #(set (keys %))))
+
+(defn evidence-shape [auth]
+  (cond-> (get evidence-shape-by-phase (:phase auth))
+    (and (= :scribe-reduce (:phase auth))
+         (= :zai-scribe (:role auth)))
+    (assoc :memory-candidates nil)
+    (and (= :promote-solver (:phase auth))
+         (= :scribe (:role auth)))
+    (assoc :receipt nil)
+    (and (= :solve (:phase auth))
+         (true? (:solver/strategy-checkpoint? auth)))
+    (assoc :solver/strategy nil)))
 
 (defn evidence-required
   "Return the evidence schema owned by immutable dispatch authority.
@@ -109,16 +129,8 @@
    Strategy evidence is required only for an addressed Solver checkpoint;
    ordinary solve turns retain the ordinary proof-report schema."
   [auth]
-  (cond-> (get evidence-required-by-phase (:phase auth))
-    (and (= :scribe-reduce (:phase auth))
-         (= :zai-scribe (:role auth)))
-    (conj :memory-candidates)
-    (and (= :promote-solver (:phase auth))
-         (= :scribe (:role auth)))
-    (conj :receipt)
-    (and (= :solve (:phase auth))
-         (true? (:solver/strategy-checkpoint? auth)))
-    (conj :solver/strategy)))
+  (let [shape (evidence-shape auth)]
+    (when (some? shape) (set (keys shape)))))
 
 (defn new-token [] (str (UUID/randomUUID)))
 
@@ -284,6 +296,7 @@
       {:ok false :error/code :role-submission-token-mismatch}
       :else {:ok true :phase (:phase auth)
              :required (vec (sort common-required))
+             :evidence-shape (evidence-shape auth)
              :evidence-required
              (vec (sort (evidence-required auth)))})))
 

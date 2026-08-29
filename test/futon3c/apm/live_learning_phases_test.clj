@@ -1230,7 +1230,8 @@
   (let [validate (fn [audit]
                    (sut/validate-terminal
                     {:dispatch/type :guide-intervention :agent-id "f56-guide"
-                     :frame-id "f56" :problem-id "a99J07" :mode :store-mode}
+                     :frame-id "f56" :problem-id "a99J07"
+                     :phase :guide-intervention-1 :mode :store-mode}
                     {:job-id "j"}
                     {:job-id "j" :agent-id "f56-guide" :state :done
                      :report {:command-own-exit 0 :frame-id "f56"
