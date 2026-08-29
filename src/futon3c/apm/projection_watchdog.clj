@@ -33,6 +33,7 @@
   [{:keys [now coordinator coordinator-age-seconds transition publication
            phase-state agent job frame-closed? max-heartbeat-age-seconds]}]
   (let [operation (:operation transition)
+        transport-retry? (= :awaiting-transport-retry (:stage phase-state))
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
         ;; identity, timeout, or terminal-budget check.
@@ -48,7 +49,8 @@
                        (true? (get-in coordinator [:regulator/last-result :ok]))
                        (= :frame-complete
                           (get-in coordinator [:regulator/last-result :status])))
-        waiting? (and (not complete?)
+        waiting? (and (not transport-retry?)
+                      (not complete?)
                       (not frame-closed?)
                       (= :waiting-for-terminal-result (:status operation)))
         request (:request phase-state)
@@ -76,12 +78,14 @@
                             :pre-state/digest :pre-state/version
                             :expected/postcondition]))
           (conj (finding :pending-intent-shaped :pending-intent-incomplete {}))
-          (not= (:event/id transition) (:transition/event-id publication))
+          (and (not transport-retry?)
+               (not= (:event/id transition) (:transition/event-id publication)))
           (conj (finding :projection-publication-current
                          :projection-publication-diverged
                          {:transition (:event/id transition)
                           :publication-transition (:transition/event-id publication)}))
-          (and (not waiting?) (not frame-closed?) transition-age
+          (and (not transport-retry?) (not waiting?)
+               (not frame-closed?) transition-age
                (> transition-age max-heartbeat-age-seconds)
                (not= :complete (:regulator/status coordinator)))
           (conj (finding :unattended-transition-current

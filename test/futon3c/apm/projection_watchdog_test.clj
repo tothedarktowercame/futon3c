@@ -87,6 +87,23 @@
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
 
+(deftest scheduled-promotion-transport-retry-retires-projected-terminal
+  (let [retrying (-> healthy
+                     (assoc :phase-state
+                            {:state/type :promotion
+                             :stage :awaiting-transport-retry
+                             :transport-retry/not-before-ms 9999999999999})
+                     (assoc-in [:publication :transition/event-id] "prior")
+                     (assoc-in [:transition :event/observed-at]
+                               "2026-08-23T21:00:00Z")
+                     (assoc :agent {:ok false}
+                            :job {:ok true :job
+                                  {:state "done"
+                                   :finished-at "2026-08-23T21:00:00Z"}}))
+        result (watchdog/evaluate retrying)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
 (deftest durable-frame-closure-retires-the-last-projected-role-job
   (let [closed (-> healthy
                    (assoc :frame-closed? true
