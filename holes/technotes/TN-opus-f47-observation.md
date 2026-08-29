@@ -428,17 +428,27 @@ evidenced — perhaps nothing on the shelf could have helped. f52/a1 is a SUCCES
 strongest student result the campaign has produced used the shelf least. That is a harder
 fact for the shelf than any of the null results before it.
 
-**For the apparatus.** The machine did not archive the student source. f49 has a
-`student-attempt-1-source` directory; f52 does not. A verified proof existed only as a dirty
-worktree, and any cleanup would have destroyed it. Preserved out-of-band as blob
-`b42979bbbf150035e39d990f8c0d6675ca1c128d`, pinned at
-`refs/apm/rescued-blobs/a99J01-f52-student`, without touching the student branch.
+**For the apparatus — and a correction.** I first recorded here that the machine had NOT
+archived the student source, and preserved the proof out-of-band as blob
+`b42979bbbf150035e39d990f8c0d6675ca1c128d`. That was wrong. `student-attempt-1-source`
+exists for f52 and contains
+`b42979bbbf150035e39d990f8c0d6675ca1c128d-Main.lean` — byte-identical to what I
+"rescued", named by the same content hash. The machine had archived it before I looked.
+f54 did the same for a99J05 (`4190ca5c…-Main.lean`).
 
-That is the third distinct way today that a completed proof was one step from being lost:
-f48 and f49 voided with `:solve/pin-status :skipped`, f51's solver reported
-`:sorry-warnings 0` for rounds whose heads still carried sorries, and now a solved student
-attempt left unarchived. The axiom gate in `verify-and-pin!` protects what reaches master.
-Nothing protects what never gets committed.
+My check printed nothing and I read absence into it, which is precisely the error this note
+spends its length documenting elsewhere. The rescue blobs are harmless duplicates of the
+machine's own archives.
+
+So the standing work-preservation gaps are two, not three: f48 and f49 voided with
+`:solve/pin-status :skipped`, and f51's solver reported `:sorry-warnings 0` for rounds whose
+heads still carried sorries. A solving student attempt IS archived, content-addressed, at
+the time it completes.
+
+What remains true is narrower and still worth knowing: the student BRANCH head stays at the
+base revision with its sorries, and the proof lives in the worktree and the content-addressed
+archive. Reading the branch alone says "not solved"; reading `:outcome` alone says "solved".
+Only the archive and the worktree carry the proof.
 
 ## f52 complete: three solves, and the one real transfer is within-frame guidance
 
