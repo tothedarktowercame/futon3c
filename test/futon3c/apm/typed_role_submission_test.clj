@@ -128,3 +128,16 @@
                               {:job-id "job-verify"})))
       (is (= #{"job-solve"} (sut/registered-job-ids-for-frame "f30")))
       (is (= #{"job-verify"} (sut/registered-job-ids-for-frame "f31"))))))
+
+(deftest predicate-key-normalization-is-exact-and-conflict-sensitive
+  (is (= {:ok true :value {:direct-student-contact? false}}
+         (sut/normalize-predicate-keys
+          {:direct-student-contact false} [:direct-student-contact?])))
+  (is (= {:ok true :value {}}
+         (sut/normalize-predicate-keys {} [:direct-student-contact?])))
+  (let [result (sut/normalize-predicate-keys
+                {:direct-student-contact? false
+                 :direct-student-contact true}
+                [:direct-student-contact?])]
+    (is (= :wire-predicate-key-conflict (:error/code result)))
+    (is (= [:wire-predicate-key-conflict] (:findings result)))))

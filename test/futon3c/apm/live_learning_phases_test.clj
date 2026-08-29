@@ -1226,6 +1226,27 @@
     (is (some #{:guide-mode-authority-mismatch}
               (findings :store-mode nil)))))
 
+(deftest guide-channel-audit-normalizes-only-the-json-predicate-alias
+  (let [validate (fn [audit]
+                   (sut/validate-terminal
+                    {:dispatch/type :guide-intervention :agent-id "f56-guide"
+                     :frame-id "f56" :problem-id "a99J07" :mode :store-mode}
+                    {:job-id "j"}
+                    {:job-id "j" :agent-id "f56-guide" :state :done
+                     :report {:command-own-exit 0 :frame-id "f56"
+                              :problem-id "a99J07" :mode "store-mode"
+                              :channel-audit audit}}))
+        alias-only (validate {:direct-student-contact false})
+        conflict (validate {:direct-student-contact? false
+                            :direct-student-contact true})
+        missing (validate {})]
+    (is (:ok alias-only))
+    (is (= false
+           (get-in alias-only [:report :channel-audit
+                               :direct-student-contact?])))
+    (is (some #{:wire-predicate-key-conflict} (:findings conflict)))
+    (is (some #{:guide-channel-isolation-unproved} (:findings missing)))))
+
 (deftest guide-candidate-repair-renders-the-specific-validator-finding
   (let [base-request {:dispatch/id "d" :dispatch/type :guide-intervention
                       :agent-id "f54-guide" :frame-id "f54"

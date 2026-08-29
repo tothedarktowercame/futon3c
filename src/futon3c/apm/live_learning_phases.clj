@@ -374,6 +374,12 @@
            {:depositor (:agent-id request)
             :candidates (:candidates report)}))
         submitted-mode (submission/wire-keyword (:mode report))
+        channel-audit-normalization
+        (if (= :guide-intervention kind)
+          (submission/normalize-predicate-keys
+           (:channel-audit report) [:direct-student-contact?])
+          {:ok true :value (:channel-audit report)})
+        channel-audit (:value channel-audit-normalization)
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -400,7 +406,11 @@
                (seq (set/intersection used-memory-ids withheld-memory-ids)))
           (conj :student-memory-used-despite-holdout)
           (and (= :guide-intervention kind)
-               (not= false (get-in report [:channel-audit :direct-student-contact?])))
+               (not (:ok channel-audit-normalization)))
+          (conj :wire-predicate-key-conflict)
+          (and (= :guide-intervention kind)
+               (:ok channel-audit-normalization)
+               (not= false (:direct-student-contact? channel-audit)))
           (conj :guide-channel-isolation-unproved)
           (and (= :guide-intervention kind)
                (not= (:mode request) submitted-mode))
@@ -450,6 +460,8 @@
                                     (canonical-close-result (:result report))))
                     (conj :result))))
       {:ok true :report (cond-> report
+                          (= :guide-intervention kind)
+                          (assoc :channel-audit channel-audit)
                           (= :student-attempt kind)
                           (assoc :memory-use memory-use))})))
 
@@ -761,6 +773,10 @@
    :guide-channel-isolation-unproved
    ["Your Guide completion did not prove channel isolation." "channel-audit.direct-student-contact? was not explicitly false."
     "Do not contact the Student; set the audit field from the actual conduct and submit below."]
+   :wire-predicate-key-conflict
+   ["Your completion supplied two spellings of the same predicate field."
+    "The trailing-question-mark key and its JSON alias carried different values."
+    "Remove the duplicate and submit one truthful value for direct-student-contact?."]
    :guide-candidates-invalid
    ["Your Guide candidates were rejected." "The candidates did not satisfy the typed guide-deposit contract."
     "Correct every candidate to the generated schema and submit a non-empty candidate vector using the command below."]

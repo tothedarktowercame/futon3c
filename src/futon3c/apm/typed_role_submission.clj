@@ -26,6 +26,42 @@
                                value))
     :else nil))
 
+(defn normalize-predicate-keys
+  "Canonicalize declared trailing-? keys in a JSON-originated map. The sole
+  alias is the same key without the final question mark. Absence remains
+  absence; conflicting canonical and alias values are refused."
+  [value declared-keys]
+  (if-not (map? value)
+    {:ok true :value value}
+    (let [conflicts
+          (->> declared-keys
+               (keep (fn [declared]
+                       (let [spelling (name declared)
+                             alias (keyword (subs spelling 0 (dec (count spelling))))]
+                         (when (and (contains? value declared)
+                                    (contains? value alias)
+                                    (not= (get value declared) (get value alias)))
+                           {:declared-key declared :alias-key alias
+                            :declared-value (get value declared)
+                            :alias-value (get value alias)}))))
+               vec)]
+      (if (seq conflicts)
+        {:ok false :error/code :wire-predicate-key-conflict
+         :findings [:wire-predicate-key-conflict]
+         :conflicts conflicts}
+        {:ok true
+         :value
+         (reduce (fn [normalized declared]
+                   (let [spelling (name declared)
+                         alias (keyword (subs spelling 0 (dec (count spelling))))
+                         alias-present? (contains? normalized alias)
+                         alias-value (get normalized alias)
+                         declared-present? (contains? normalized declared)]
+                     (cond-> (dissoc normalized alias)
+                       (and (not declared-present?) alias-present?)
+                       (assoc declared alias-value))))
+                 value declared-keys)}))))
+
 (def completion-contract
   {:path "holes/labs/M-apm-demonstration/role-cards/typed-completion-v1.md"
    :blob "d3351807f1597baf97e8ba7ae5605274f0f9a92c"})
