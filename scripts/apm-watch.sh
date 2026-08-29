@@ -28,7 +28,19 @@ while true; do
     case "$rstat" in :complete*) continue;; esac
     C="$candidate"; break
   done
-  [ -z "$C" ] && C=$(ls -dt data/apm-campaigns/*/ | head -1)
+  # If nothing passed the filter, KEEP WATCHING THE LAST CAMPAIGN. The old
+  # fallback took the newest directory regardless, which defeated the filter
+  # entirely: when jit-all-open-v2 read momentarily "unknown" (its registry
+  # entry mid-rewrite) and nontopology-v1 was skipped as :complete, the
+  # fallback selected the very campaign the filter had just rejected, and the
+  # watch oscillated between them reporting a finished f44 as current.
+  if [ -z "$C" ]; then
+    if [ -n "$lastcampaign" ]; then
+      C="data/apm-campaigns/$lastcampaign/"
+    else
+      C=$(ls -dt data/apm-campaigns/*/ | head -1)
+    fi
+  fi
   campaign=$(basename "$C")
 
   # Enable/disable and tick deltas are only meaningful WITHIN one campaign.
