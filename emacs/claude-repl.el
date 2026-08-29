@@ -112,6 +112,8 @@ automatically."
   "Session ID associated with `claude-repl--last-evidence-id'.")
 (defvar-local claude-repl--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
+(defvar-local claude-repl--registry-model nil
+  "Model read from this agent's registry metadata at attach time.")
 
 ;;; Cost awareness
 
@@ -1592,9 +1594,13 @@ exists anywhere yet."
   "Draw the buffer header and prompt. Does NOT register or change identity.
 Used by `claude-repl-clear' to redraw without losing the agent binding."
   (let* ((existing-sid (claude-repl--resolve-session-id))
-         (title (if (claude-repl--workspace)
-                    (format "claude repl [%s]" (claude-repl--workspace))
-                  "claude repl")))
+         (base-title (if (claude-repl--workspace)
+                         (format "claude repl [%s]" (claude-repl--workspace))
+                       "claude repl"))
+         (title (if (and (stringp claude-repl--registry-model)
+                         (not (string-empty-p claude-repl--registry-model)))
+                    (format "%s · %s" base-title claude-repl--registry-model)
+                  base-title)))
     (setq-local agent-chat--cost-vendor "claude")
     (agent-chat-init-buffer
      (list :title title
@@ -1684,6 +1690,41 @@ Then auto-register with the server and load existing session-id."
          (parsed (plist-get response :json)))
     (when (and (integerp status) (<= 200 status) (< status 300))
       parsed)))
+
+(defun claude-repl--registry-model-for-agent (agent-id)
+  "Return AGENT-ID's recorded `metadata.model', or nil without disruption.
+This deliberately has a short outer timeout: a title label must never make
+opening a REPL wait for Agency's ordinary request timeout."
+  (condition-case nil
+      (with-timeout (0.25 nil)
+        (when-let* ((parsed (claude-repl--live-agents-response))
+                    (agents (plist-get parsed :agents))
+                    (agent (plist-get agents (intern (concat ":" agent-id))))
+                    (metadata (plist-get agent :metadata))
+                    (model (plist-get metadata :model)))
+          (and (stringp model) (not (string-empty-p model)) model)))
+    (error nil)))
+
+(defun claude-repl--refresh-registry-model (&optional agent-id)
+  "Refresh this buffer's cached registry model for AGENT-ID."
+  (setq-local claude-repl--registry-model
+              (claude-repl--registry-model-for-agent
+               (or agent-id claude-repl-agent-id))))
+
+(defun claude-repl--refresh-displayed-model-title ()
+  "Add the cached model to an already drawn first header line."
+  (when (and (stringp claude-repl--registry-model)
+             (not (string-empty-p claude-repl--registry-model)))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward " (session:" (line-end-position) t)
+          (let* ((end (match-beginning 0))
+                 (current (buffer-substring-no-properties (point-min) end)))
+            (unless (string-suffix-p
+                     (concat " · " claude-repl--registry-model) current)
+              (goto-char end)
+              (insert (concat " · " claude-repl--registry-model)))))))))
 
 (defun claude-repl--canonical-agent-for-session-id (session-id)
   "Return the live Claude agent-id currently advertising SESSION-ID."
@@ -1791,7 +1832,9 @@ auto-registration — binds directly to the named agent."
         ;; Restore the exact identity if the JVM restart dropped it, and
         ;; refresh the socket binding when it already exists.
         (claude-repl--restore-agent agent-id session-file)
+        (claude-repl--refresh-registry-model agent-id)
         (claude-repl--init-display)
+        (claude-repl--refresh-displayed-model-title)
         ;; Emit session-start evidence if a session file exists
         (when-let ((sid (claude-repl--read-session-id-file session-file)))
           (claude-repl--emit-session-start-evidence! sid))))

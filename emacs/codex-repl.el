@@ -22,6 +22,7 @@
 (require 'url)
 (require 'url-http)
 (require 'url-util)
+(declare-function claude-repl--registry-model-for-agent "claude-repl" (agent-id))
 (load (expand-file-name "futon3c-blackboard.el"
                         (file-name-directory (or load-file-name (buffer-file-name))))
       nil t)
@@ -205,6 +206,23 @@ Interpreted as width on left/right and height on top/bottom."
   "Cached invoke-routing diagnostics keyed by Agency base.")
 (defvar-local codex-repl--routing-diagnostic-cached-at 0
   "Epoch seconds when routing diagnostics were last refreshed.")
+(defvar-local codex-repl--registry-model nil
+  "Model read from this agent's registry metadata at attach time.")
+
+(defun codex-repl--refresh-displayed-model-title ()
+  "Add the cached model to an already drawn first header line."
+  (when (and (stringp codex-repl--registry-model)
+             (not (string-empty-p codex-repl--registry-model)))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward " (session:" (line-end-position) t)
+          (let* ((end (match-beginning 0))
+                 (current (buffer-substring-no-properties (point-min) end)))
+            (unless (string-suffix-p
+                     (concat " · " codex-repl--registry-model) current)
+              (goto-char end)
+              (insert (concat " · " codex-repl--registry-model)))))))))
 
 (defvar-local codex-repl--resolved-api-base-cache nil
   "Cached reachable futon3c API base URL for Codex REPL.")
@@ -4494,10 +4512,15 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
   (when (local-variable-p 'codex-repl-agency-agent-id (current-buffer))
     (or (codex-repl--re-register-current)
         (codex-repl--auto-register)))
-  (agent-chat-init-buffer
-   (list :title (replace-regexp-in-string
-                 "\\`\\*\\|\\*\\'" ""
-                 (or codex-repl-buffer-name "*codex-repl*"))
+  (let* ((base-title (replace-regexp-in-string
+                      "\\`\\*\\|\\*\\'" ""
+                      (or codex-repl-buffer-name "*codex-repl*")))
+         (title (if (and (stringp codex-repl--registry-model)
+                         (not (string-empty-p codex-repl--registry-model)))
+                    (format "%s · %s" base-title codex-repl--registry-model)
+                  base-title)))
+    (agent-chat-init-buffer
+   (list :title title
          :session-id (or codex-repl-session-id "pending")
          :modeline-fn #'codex-repl--build-modeline
          :face-alist `(("codex" . codex-repl-codex-face))
@@ -4513,7 +4536,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          :thinking-text "codex is thinking..."
          :thinking-prop 'codex-repl-thinking
          :evidence-url codex-repl-evidence-url
-         :evidence-timeout codex-repl-evidence-timeout))
+         :evidence-timeout codex-repl-evidence-timeout)))
   (agent-chat-invariants-setup)
   (add-hook 'kill-buffer-hook #'codex-repl--cleanup-buffer nil t)
   (codex-repl--ensure-header-line!))
@@ -4635,7 +4658,15 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
          (working-directory (or (let ((wd (plist-get state :working-directory)))
                                   (and (stringp wd) wd))
                                 default-directory))
-         (buffer (codex-repl--open-instance (codex-repl--lane-buffer-name agent-id)
+         (buffer-name (codex-repl--lane-buffer-name agent-id))
+         (_model-cache
+          (with-current-buffer (get-buffer-create buffer-name)
+            (unless (eq major-mode 'codex-repl-mode)
+              (codex-repl-mode))
+            (setq-local codex-repl--registry-model
+                        (and (fboundp 'claude-repl--registry-model-for-agent)
+                             (claude-repl--registry-model-for-agent agent-id)))))
+         (buffer (codex-repl--open-instance buffer-name
                                             (codex-repl--lane-invoke-buffer-name agent-id)
                                             codex-repl-api-url
                                             agent-id
@@ -4645,6 +4676,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (codex-repl--restore-agent agent-id session-file working-directory)
+        (codex-repl--refresh-displayed-model-title)
         (codex-repl--refresh-session-header (current-buffer))))
     (message "codex-repl: attached %s (%s)"
              agent-id

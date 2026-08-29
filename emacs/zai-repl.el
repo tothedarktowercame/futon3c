@@ -10,6 +10,7 @@
 (require 'subr-x)
 (require 'agent-chat)
 (require 'agent-chat-invariants)
+(declare-function claude-repl--registry-model-for-agent "claude-repl" (agent-id))
 
 ;;; Configuration
 
@@ -130,6 +131,23 @@ Inverse video rather than the shared orange, matching Z.AI branding
 
 (defvar-local zai-repl--pending-tool-uses nil
   "Alist of tool-call id to display detail for the active Agency turn.")
+(defvar-local zai-repl--registry-model nil
+  "Model read from this agent's registry metadata at attach time.")
+
+(defun zai-repl--refresh-displayed-model-title ()
+  "Add the cached model to an already drawn first header line."
+  (when (and (stringp zai-repl--registry-model)
+             (not (string-empty-p zai-repl--registry-model)))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward " (session:" (line-end-position) t)
+          (let* ((end (match-beginning 0))
+                 (current (buffer-substring-no-properties (point-min) end)))
+            (unless (string-suffix-p
+                     (concat " · " zai-repl--registry-model) current)
+              (goto-char end)
+              (insert (concat " · " zai-repl--registry-model)))))))))
 
 ;;; Helpers
 
@@ -485,7 +503,10 @@ the id is display-only, so a failed read must never break buffer setup."
   "Draw the Z.AI REPL header and prompt."
   (setq-local agent-chat--cost-vendor nil)
   (agent-chat-init-buffer
-   (list :title "z.ai repl"
+   (list :title (if (and (stringp zai-repl--registry-model)
+                         (not (string-empty-p zai-repl--registry-model)))
+                    (format "z.ai repl · %s" zai-repl--registry-model)
+                  "z.ai repl")
          :session-id (zai-repl--session-id)
          :modeline-fn #'zai-repl--build-modeline
          :face-alist `(("zai" . zai-repl-zai-face))
@@ -632,12 +653,22 @@ With prefix argument, prompt for a clock TARGET."
         (user-error "Cannot verify ZAI agent: Agency roster unavailable"))
       (unless (member agent-id all-zai-ids)
         (user-error "%s is not a registered ZAI agent" agent-id)))
-    (let ((buffer
+    (let* ((buffer-name (format "*zai-repl:%s*" agent-id))
+           (_model-cache
+            (with-current-buffer (get-buffer-create buffer-name)
+              (unless (eq major-mode 'zai-repl-mode)
+                (zai-repl-mode))
+              (setq-local zai-repl--registry-model
+                          (and (fboundp 'claude-repl--registry-model-for-agent)
+                               (claude-repl--registry-model-for-agent agent-id)))))
+           (buffer
            (zai-repl--open-instance
-            (format "*zai-repl:%s*" agent-id)
+            buffer-name
             agent-id
             (format "/tmp/futon-zai-session-id-%s" agent-id))))
       (message "zai-repl: attached to %s" agent-id)
+      (with-current-buffer buffer
+        (zai-repl--refresh-displayed-model-title))
       buffer)))
 
 ;;;###autoload
