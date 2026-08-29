@@ -332,4 +332,36 @@
    (str "The frame is not voided or forgotten. It is disposed :partial with "
         "the valid Student receipt and exact [:guide-candidates-invalid] "
         "residual preserved in queue-state.edn. No Guide verdict or memory "
-        "review was invented.")}]}
+        "review was invented.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f55"
+   :problem/id "a99J06"
+   :last-valid-receipt/id
+   "4b524f0bf69bb81d049f5e330882200787353cbf27fce33cc72907097f87e0e6"
+   :decision/at "2026-08-29T20:30:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-terminal-payload-normalization-apparatus-mismatch
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The Student receipt is valid and preserved. The Guide supplied the "
+        "authorized store-mode value, channel-isolation proof, and candidate "
+        "family inside :channel-audit, while terminal validation expected "
+        ":mode and :candidates at report top level. The role terminal therefore "
+        "failed at an apparatus schema seam after its bounded repairs; this is "
+        "not a mathematical failure and does not invalidate the Student work. "
+        "Commits 14441f4e, d6a73798/8bde09ed, and 2b8c572b repair independent "
+        "apparatus budgets, legacy Guide authority reconstruction, and nested "
+        "channel-audit normalization for later frames.")
+   :decision/recommended-route
+   (str "Keep f55 partial with its valid Student receipt and exact residual. "
+        "Do not redispatch the exhausted Guide phase after the queue advance. "
+        "Apply the repaired normalization to subsequent Guide terminals and "
+        "continue the campaign.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No Guide receipt, promotion "
+        "review, or memory publication was invented; the preserved residual "
+        "remains authoritative.")}]}
