@@ -850,6 +850,8 @@
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
                         :repair/findings findings
+                        :repair/fault-origin
+                        (or (:repair/fault-origin failure) :agent)
                         :repair/validation-output
                         {:error/code (:error/code failure)
                          :findings findings
@@ -864,10 +866,28 @@
                           (assoc body :dispatch/id
                                  (machine/ledger-digest [body])))})))
 
+(defn posthoc-terminal-repair-request
+  "Rebuild a post-hoc repair from current campaign authority. A predecessor
+  packet that lacked Guide mode is an apparatus fault; other validated role
+  failures remain agent faults unless their producer classified them more
+  specifically."
+  [fresh-request active-request ticket job failure]
+  (let [rebuilt (or fresh-request active-request)
+        apparatus-packet-defect?
+        (and (= :frame-cycle-guide-mode-invalid (:error/code failure))
+             (nil? (:mode active-request))
+             (contains? #{:store-mode :harness-mode} (:mode rebuilt)))]
+    (terminal-repair-request
+     rebuilt ticket job
+     (cond-> failure
+       apparatus-packet-defect?
+       (assoc :findings [:guide-mode-authority-mismatch]
+              :repair/fault-origin :apparatus)))))
+
 (declare guide-promotion-step!)
 
 (defn run-live!
-  [{:keys [contract action receipts request state-path agency-base
+  [{:keys [contract action receipts request fresh-request state-path agency-base
            snapshot-publish-fn workspace-reset-fn source-archive-fn
            student-candidate-fn preparation guide-promotion]
     :or {agency-base "http://localhost:7070"
@@ -925,7 +945,10 @@
     :terminal-submission-provider (fn [_ ticket _]
                                     (submission/submitted (:job-id ticket)))
     :terminal-validator validate-terminal
-    :terminal-repair-request-fn terminal-repair-request
+    :terminal-repair-request-fn
+    (fn [active-request ticket job failure]
+      (posthoc-terminal-repair-request fresh-request active-request ticket job
+                                       failure))
     :terminal-budget-config (or (:terminal-budget request)
                                 driver/default-terminal-budget)
     :missing-observation-provider

@@ -331,6 +331,30 @@
     (is (= :terminal-repair-instruction-missing (:error/code repair)))
     (is (= [:new-unrendered-finding] (:findings repair)))))
 
+(deftest posthoc-guide-repair-rebuilds-current-authority-and-records-fault-origin
+  (let [base-request {:dispatch/id "old" :dispatch/type :guide-intervention
+                      :frame-id "f55" :problem-id "a99J06"
+                      :phase :guide-intervention-1 :agent-id "f55-guide"
+                      :role-card-path "guide.md" :role-card-blob "blob"}
+        current (assoc base-request :dispatch/id "current" :mode :store-mode)
+        apparatus (sut/posthoc-terminal-repair-request
+                   current base-request {:ticket/id "ticket-1"}
+                   {:job-id "job-1"}
+                   {:error/code :frame-cycle-guide-mode-invalid})
+        agent (sut/posthoc-terminal-repair-request
+               current current {:ticket/id "ticket-2"} {:job-id "job-2"}
+               {:error/code :live-learning-terminal-invalid
+                :findings [:guide-channel-isolation-unproved]})]
+    (is (:ok apparatus))
+    (is (= :store-mode (get-in apparatus [:request :mode])))
+    (is (= :apparatus (get-in apparatus [:request :repair/fault-origin])))
+    (is (= [:guide-mode-authority-mismatch]
+           (get-in apparatus [:request :repair/findings])))
+    (is (re-find #"AUTHORIZED MODE: store-mode"
+                 (sut/prompt (:request apparatus))))
+    (is (:ok agent))
+    (is (= :agent (get-in agent [:request :repair/fault-origin])))))
+
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"
                  :frame-id "f19" :problem-id "a01J05"}

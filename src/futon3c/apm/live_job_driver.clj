@@ -511,11 +511,13 @@
                                                           :queries]))
                              :typed-submission submission))
                     job)
-              validated (if (and (fn? terminal-submission-provider)
-                                 (nil? submission))
-                          {:ok false :error/code :live-job-submission-missing
-                           :findings [:typed-submission-missing]}
-                          (terminal-validator active-request (:ticket state) job))
+              validated (or (:posthoc-rejection state)
+                            (if (and (fn? terminal-submission-provider)
+                                     (nil? submission))
+                              {:ok false :error/code :live-job-submission-missing
+                               :findings [:typed-submission-missing]}
+                              (terminal-validator active-request
+                                                  (:ticket state) job)))
               typed-contract-migration?
               (and (fn? terminal-submission-provider)
                    (= [:typed-submission-missing] (:findings validated))
@@ -530,7 +532,13 @@
                                              job validated)]
               (cond
                 (not (:ok provided))
-                provided
+                (let [next-state (assoc state :posthoc-rejection provided)]
+                  (if (:ok (persist-fn next-state))
+                    {:ok true :status :awaiting-terminal :state next-state
+                     :posthoc-rejection provided}
+                    {:ok false
+                     :error/code :live-job-posthoc-rejection-persistence-failed
+                     :finding provided}))
 
                 ;; A provider may defer certification behind a further job
                 ;; (a Guide deposit's independent review); the validated
@@ -624,7 +632,8 @@
                            (get-in (peek (:superseded-terminals state))
                                    [:job :job-id]))
                         archived-state
-                        (cond-> (dissoc state :terminal-collection)
+                        (cond-> (dissoc state :terminal-collection
+                                        :posthoc-rejection)
                           (not already-archived?)
                           (update :superseded-terminals (fnil conj []) predecessor))
                         archived-persisted (persist-fn archived-state)]

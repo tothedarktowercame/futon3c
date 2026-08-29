@@ -289,6 +289,85 @@
             :successor-activated-id "job-2"}
            (:trace/successor-observation discarded)))))
 
+(deftest posthoc-rejection-enters-the-bounded-terminal-repair-transition
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        base (assoc (effects calls job)
+                    :job-fn (fn [job-id]
+                              (if (= "job-1" job-id)
+                                @job
+                                {:job-id job-id :agent-id "f19-proctor"
+                                 :state :running}))
+                    :receipt-provider
+                    (fn [_ _ _ _]
+                      {:ok false :error/code :posthoc-invalid
+                       :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket predecessor failure]
+                      {:ok true
+                       :request (assoc request :dispatch/id "repair-dispatch"
+                                      :repair/of-job-id (:job-id predecessor)
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [request]
+                                   {:ok true :job-id
+                                    (if (= "repair-dispatch"
+                                           (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        results (loop [results [] state nil remaining 6]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (recur (conj results result) (:state result)
+                             (dec remaining)))))
+        rejected (first (filter :posthoc-rejection results))
+        repaired (first (filter :repair? results))]
+    (is (= :awaiting-terminal (:status rejected)))
+    (is (= :posthoc-invalid
+           (get-in rejected [:state :posthoc-rejection :error/code])))
+    (is (= :awaiting-terminal (:status repaired)))
+    (is (= 1 (get-in repaired [:state :terminal-repair-attempts])))
+    (is (= "job-2" (get-in repaired [:state :ticket :job-id])))
+    (is (nil? (get-in repaired [:state :posthoc-rejection])))))
+
+(deftest repeated-posthoc-rejection-exhausts-one-repair-budget
+  (let [repairs (atom 0)
+        base (assoc (effects (atom [])
+                             (atom {:job-id "ignored" :agent-id "f19-proctor"
+                                    :state :done}))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state :done})
+                    :receipt-provider
+                    (constantly {:ok false :error/code :posthoc-invalid
+                                 :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket job failure]
+                      (swap! repairs inc)
+                      {:ok true
+                       :request (assoc request :dispatch/id "repair-dispatch"
+                                      :repair/of-job-id (:job-id job)
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [request]
+                                   {:ok true :job-id
+                                    (if (= "repair-dispatch"
+                                           (:dispatch/id request))
+                                      "job-2" "job-1")}))
+        results (loop [results [] state nil remaining 12]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (if (= :live-job-terminal-repair-exhausted
+                             (:error/code result))
+                        (conj results result)
+                        (recur (conj results result) (:state result)
+                               (dec remaining))))))
+        exhausted (last results)]
+    (is (= 1 @repairs))
+    (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
+    (is (= [:frame-mismatch] (:findings exhausted)))))
+
 (deftest repair-archive-failure-blocks-successor-announcement
   (let [calls (atom [])
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
