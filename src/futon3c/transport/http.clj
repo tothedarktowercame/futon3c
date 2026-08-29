@@ -3241,8 +3241,8 @@
             emacs-socket (some-> (or (:emacs-socket payload)
                                      (get payload "emacs-socket"))
                                  str str/trim not-empty)
-            model (some-> (or (:model payload) (get payload "model"))
-                          str str/trim not-empty)
+            requested-model (some-> (or (:model payload) (get payload "model"))
+                                    str str/trim not-empty)
             memory-domain (or
                            (some-> (or (:memory-domain payload)
                                        (get payload "memory-domain"))
@@ -3265,6 +3265,17 @@
                                         agent-type agent-id))
                                    str str/trim not-empty))
             existing (when agent-id (reg/get-agent agent-id))
+            ;; A restore that says nothing about the model keeps the one the seat
+            ;; already runs on. Most callers omit it — claude-repl.el's attach and
+            ;; emacs-agency-restore both send agent-id/type/cwd and no model — and
+            ;; rebuilding the invoke-fn without it moved the seat to the CLI's
+            ;; default while the merged metadata still read "fable": the roster,
+            ;; the voxterm chip and the operator all agreed on a model the process
+            ;; was not running (2026-08-29). Silent, and invisible until a bill.
+            model (or requested-model
+                      (let [m (:agent/metadata existing)]
+                        (some-> (or (:model m) (get m "model"))
+                                str str/trim not-empty)))
             restore-session-id (or initial-session-id
                                    (:agent/session-id existing))
             effective-cwd (or (when (= :claude agent-type)
@@ -3411,7 +3422,15 @@
                                 {:agent-id agent-id
                                  :session-file (default-session-file-for-agent :claude agent-id)
                                  :initial-session-id (:agent/session-id agent)
-                                 :emacs-socket emacs-socket})]
+                                 :emacs-socket emacs-socket
+                                 ;; Carry the seat's model across the rebuild, for
+                                 ;; the same reason /agents/restore does: this
+                                 ;; endpoint is about the socket, and moving a
+                                 ;; Fable seat back to the default model as a side
+                                 ;; effect of rebinding it would be silent.
+                                 :model (let [m (:agent/metadata agent)]
+                                          (some-> (or (:model m) (get m "model"))
+                                                  str str/trim not-empty))})]
               (do
                 (reg/update-agent! agent-id
                                    :agent/invoke-fn invoke-fn
