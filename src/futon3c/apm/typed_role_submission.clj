@@ -15,6 +15,17 @@
 (def ^:dynamic *submission-root*
   "data/apm-role-submissions")
 
+(defn wire-keyword
+  "Normalize a JSON string representation at the typed-submission boundary.
+  Keywords remain keywords; absent and non-string values remain invalid."
+  [value]
+  (cond
+    (keyword? value) value
+    (string? value) (keyword (if (.startsWith ^String value ":")
+                               (subs value 1)
+                               value))
+    :else nil))
+
 (def completion-contract
   {:path "holes/labs/M-apm-demonstration/role-cards/typed-completion-v1.md"
    :blob "d3351807f1597baf97e8ba7ae5605274f0f9a92c"})

@@ -373,6 +373,7 @@
           (pipeline/validate-guide-deposit
            {:depositor (:agent-id request)
             :candidates (:candidates report)}))
+        submitted-mode (submission/wire-keyword (:mode report))
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -402,8 +403,7 @@
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)
           (and (= :guide-intervention kind)
-               (not= (some-> (:mode request) name)
-                     (some-> (:mode report) name)))
+               (not= (:mode request) submitted-mode))
           (conj :guide-mode-authority-mismatch)
           ;; Store-mode candidates are the Guide's channel to the Student's
           ;; shelf; they must be gate-shaped here so the reviewer never sees
@@ -415,7 +415,7 @@
           (conj :guide-candidates-invalid)
           (and (= :guide-intervention kind)
                (seq (:candidates report))
-               (not= "store-mode" (some-> (:mode report) name)))
+               (not= :store-mode submitted-mode))
           (conj :guide-candidates-outside-store-mode)
           (and (= :scribe-reduce kind)
                (not (every? #(coll? (get report %))

@@ -1207,6 +1207,25 @@
     (is (some #{:guide-mode-authority-mismatch}
               (findings "harness-mode")))))
 
+(deftest guide-mode-normalizes-json-strings-without-weakening-authority
+  (let [report {:command-own-exit 0 :frame-id "f56" :problem-id "a99J07"
+                :channel-audit {:direct-student-contact? false}
+                :candidates [guide-candidate]}
+        findings (fn [authorized submitted]
+                   (:findings
+                    (sut/validate-terminal
+                     {:dispatch/type :guide-intervention :agent-id "f56-guide"
+                      :frame-id "f56" :problem-id "a99J07"
+                      :mode authorized}
+                     {:job-id "j"}
+                     {:job-id "j" :agent-id "f56-guide" :state :done
+                      :report (assoc report :mode submitted)})))]
+    (is (nil? (findings :store-mode "store-mode")))
+    (is (some #{:guide-candidates-outside-store-mode}
+              (findings :harness-mode "harness-mode")))
+    (is (some #{:guide-mode-authority-mismatch}
+              (findings :store-mode nil)))))
+
 (deftest guide-candidate-repair-renders-the-specific-validator-finding
   (let [base-request {:dispatch/id "d" :dispatch/type :guide-intervention
                       :agent-id "f54-guide" :frame-id "f54"
