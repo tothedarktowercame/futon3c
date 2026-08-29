@@ -1126,7 +1126,6 @@
             body (cond-> {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
-                  :receipt/job-id (:job-id published)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) (:lanes-run deposit) [])
                   :receipt/dispositions (or dispositions
@@ -1203,7 +1202,6 @@
             body (cond-> {:receipt/type :scribe-reduce
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
-                  :receipt/job-id (:job-id published)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) [])
                   :receipt/dispositions (or dispositions
