@@ -534,3 +534,47 @@ guide just told them.
 The campaign is not failing to produce memory. It is producing a great deal of it, mostly
 about what it already knew, and the transfer that demonstrably works happens over minutes
 inside a frame rather than across days through the accumulation.
+
+## f58/a1: every structural condition met, and still nothing transferred
+
+This is the strongest test the campaign has run, and it is worth recording in full because
+it came back negative.
+
+f58 (`aunk04`), student-attempt-1, **solved the problem**, using one memory of 110:
+
+    e-63b7c7c1-1906-412c-ae18-b4644762fbea
+      author   f34-guide
+      subject  a95J03           — a DIFFERENT problem
+      at       2026-08-25       — four days and 24 frames earlier
+      on-shelf true             — delivered THROUGH the shelf, not by search or cascade
+
+2 withheld, no leak, no `superseded/`, unrepaired first report. Cross-problem,
+cross-frame, shelf-delivered, on a successful attempt. Every precondition for condition 3
+holds simultaneously, which has not happened before.
+
+The fingerprint audit, once the archive landed:
+
+    verdict already-in-base
+    tokens-named 30   tokens-hit 5   tokens-novel 0
+    in-base-already 5   paste-longest-run 0
+
+All five of the memory's tokens that appear in the proof were **already in the base file**
+before the student began. Zero novel tokens. No pasted text.
+
+`already-in-base` is a harder negative than `unwitnessed`. It does not say "we could not
+find evidence"; it says the memory's entire detectable contribution was present in the file
+the student was already editing. Nothing crossed.
+
+Note this is the SAME memory f50/a1 claimed, where the verdict was `weak-fingerprint` on
+`norm_num` alone. Two different students, on two different problems, four days apart, have
+now both reported using this one f34-guide memory, and neither use left a trace. That is
+worth its own attention: a memory that reads as relevant, gets selected, gets reported as
+used, and changes nothing is a specific failure of the shelf rather than a null result.
+
+**Sixteen clean observations. Still zero witnessed uses of a shelved memory predating its
+own frame.** The strongest candidate the campaign has produced is a solve whose one memory
+contributed nothing the base file did not already contain.
+
+Campaign tally at this point: 33 rows — 14 `fingerprinted`, 3 `weak-fingerprint`,
+10 `already-in-base`, 5 `unwitnessed`, 1 `no-source`. Every one of the 14 fingerprinted
+uses is a within-frame deposit.
