@@ -3059,7 +3059,9 @@
 
 (defn- handle-agents-auto-register
   "POST /api/alpha/agents/auto — allocate and register next available agent.
-   Body: {\"type\": \"claude\", \"session-id\": \"...\", \"cwd\": \"...\"} — type is required.
+   Body: {\"type\": \"claude\", \"session-id\": \"...\", \"cwd\": \"...\",
+          \"model\": \"fable\"} — type is required, model is optional
+   (CLI alias or full id; nil leaves the runtime's own default).
    Finds the next unused ID (e.g. claude-2 if claude-1 exists) and registers it
    with a real invoke-fn (resolved from dev.clj's local factories).
    Each call creates a new, independent agent (I-1: one agent = one identity)."
@@ -3129,6 +3131,14 @@
                                          str/trim
                                          not-empty)
                     emacs-socket (or (:emacs-socket payload) (get payload "emacs-socket"))
+                    ;; Which model this seat runs on. /agents/restore has always
+                    ;; taken it; without it here a caller that wanted a Fable or
+                    ;; Sonnet seat had to register first and then restore the same
+                    ;; id purely to rebuild the invoke-fn.
+                    model (some-> (or (:model payload) (get payload "model"))
+                                  str
+                                  str/trim
+                                  not-empty)
                     session-file (default-session-file-for-agent agent-type agent-id)]
                 (when ghost
                   (when-let [stale-sf (case agent-type
@@ -3155,6 +3165,7 @@
                                   :requested-cwd requested-cwd
                                   :memory-domain memory-domain
                                   :emacs-socket emacs-socket
+                                  :model model
                                   :evidence-store (evidence-store-for-config config)
                                   :irc-send-fn (:irc-send-fn config)})
                       result (when invoke-fn
@@ -3168,6 +3179,7 @@
                                  :metadata (cond-> {:auto-registered? true}
                                              (= agent-type :codex) (assoc :require-execution? true)
                                              requested-cwd (assoc :cwd requested-cwd)
+                                             model (assoc :model model)
                                              memory-domain (assoc :memory-domain memory-domain)
                                              campaign-id (assoc :campaign-id campaign-id)
                                              mission-id (assoc :mission-id mission-id)
@@ -3187,6 +3199,7 @@
                                         :session-id initial-session-id
                                         :session-file session-file
                                         :cwd requested-cwd
+                                        :model model
                                         :memory-domain memory-domain})
                     (json-response 409 {:ok false
                                         :err "registration-failed"
