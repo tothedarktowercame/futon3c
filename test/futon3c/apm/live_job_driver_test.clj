@@ -368,6 +368,81 @@
     (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
     (is (= [:frame-mismatch] (:findings exhausted)))))
 
+(deftest apparatus-repair-does-not-consume-the-agent-repair-turn
+  (let [announcements (atom 0)
+        repairs (atom [])
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state (if (= "job-3" job-id) :running :done)})
+                    :receipt-provider
+                    (fn [_ ticket _ _]
+                      {:ok false :error/code :posthoc-invalid
+                       :repair/fault-origin
+                       (if (= "job-1" (:job-id ticket)) :apparatus :agent)
+                       :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket job failure]
+                      (let [origin (if (= "job-1" (:job-id job))
+                                     :apparatus :agent)]
+                        (swap! repairs conj origin)
+                        {:ok true
+                         :request (assoc request
+                                        :dispatch/id (str "repair-" (count @repairs))
+                                        :repair/fault-origin origin
+                                        :repair/findings (:findings failure))}))
+                    :announce-fn (fn [_]
+                                   {:ok true :job-id
+                                    (str "job-" (swap! announcements inc))}))
+        results (loop [results [] state nil remaining 14]
+                  (if (zero? remaining)
+                    results
+                    (let [result (sut/drive! (cond-> base state
+                                               (assoc :state state)))]
+                      (recur (conj results result) (:state result)
+                             (dec remaining)))))
+        final-state (:state (last results))]
+    (is (= [:apparatus :agent] @repairs))
+    (is (= 1 (:apparatus-repair-attempts final-state)))
+    (is (= 1 (:terminal-repair-attempts final-state)))
+    (is (= [:apparatus :agent]
+           (mapv :fault-origin (:repair-attempt-history final-state))))))
+
+(deftest apparatus-origin-repairs-have-an-independent-bound
+  (let [announcements (atom 0)
+        repairs (atom 0)
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f19-proctor"
+                               :state :done})
+                    :receipt-provider
+                    (constantly {:ok false :error/code :posthoc-invalid
+                                 :repair/fault-origin :apparatus
+                                 :findings [:frame-mismatch]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket _job failure]
+                      (swap! repairs inc)
+                      {:ok true
+                       :request (assoc request :dispatch/id "apparatus-repair"
+                                      :repair/fault-origin :apparatus
+                                      :repair/findings (:findings failure))})
+                    :announce-fn (fn [_]
+                                   {:ok true :job-id
+                                    (str "job-" (swap! announcements inc))}))
+        exhausted
+        (loop [state nil remaining 12]
+          (let [result (sut/drive! (cond-> base state (assoc :state state)))]
+            (if (or (= :live-job-apparatus-repair-exhausted
+                       (:error/code result))
+                    (zero? remaining))
+              result
+              (recur (:state result) (dec remaining)))))]
+    (is (= 1 @repairs))
+    (is (= :live-job-apparatus-repair-exhausted (:error/code exhausted)))
+    (is (= :apparatus (:repair/fault-origin exhausted)))
+    (is (= 1 (:repair/attempts exhausted)))
+    (is (= 1 (count (:repair/history exhausted))))))
+
 (deftest repair-archive-failure-blocks-successor-announcement
   (let [calls (atom [])
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})

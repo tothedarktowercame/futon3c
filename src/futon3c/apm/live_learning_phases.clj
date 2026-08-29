@@ -945,6 +945,14 @@
     :terminal-submission-provider (fn [_ ticket _]
                                     (submission/submitted (:job-id ticket)))
     :terminal-validator validate-terminal
+    :posthoc-fault-origin-fn
+    (fn [active-request failure]
+      (if (and (= :frame-cycle-guide-mode-invalid (:error/code failure))
+               (nil? (:mode active-request))
+               (contains? #{:store-mode :harness-mode}
+                          (:mode (or fresh-request active-request))))
+        :apparatus
+        :agent))
     :terminal-repair-request-fn
     (fn [active-request ticket job failure]
       (posthoc-terminal-repair-request fresh-request active-request ticket job

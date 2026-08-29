@@ -11,6 +11,7 @@
 
 (def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
+(def default-apparatus-repair-attempts 1)
 (def default-provider-usage-limit-window-ms (* 5 60 60 1000))
 
 (def provider-usage-limit-signatures
@@ -320,6 +321,7 @@
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
+           posthoc-fault-origin-fn
            ticket-register-fn terminal-submission-provider cancel-fn
            missing-observation-provider terminal-budget-config now-ms-fn
            provider-usage-limit-signatures provider-usage-limit-window-ms]
@@ -532,7 +534,12 @@
                                              job validated)]
               (cond
                 (not (:ok provided))
-                (let [next-state (assoc state :posthoc-rejection provided)]
+                (let [provided (cond-> provided
+                                 (fn? posthoc-fault-origin-fn)
+                                 (assoc :repair/fault-origin
+                                        (posthoc-fault-origin-fn active-request
+                                                                 provided)))
+                      next-state (assoc state :posthoc-rejection provided)]
                   (if (:ok (persist-fn next-state))
                     {:ok true :status :awaiting-terminal :state next-state
                      :posthoc-rejection provided}
@@ -577,53 +584,78 @@
                 :terminal-repair-request-fn terminal-repair-request-fn
                 :persist-fn persist-fn})
 
-              (and (>= (or (:terminal-repair-attempts state) 0) max-repairs)
-                   (not typed-contract-migration?))
-              (if (and (= [:typed-submission-missing] (:findings validated))
-                       (fn? missing-observation-provider))
-                (let [provided (missing-observation-provider
-                                active-request (:ticket state) job
-                                (:terminal-repair-attempts state)
-                                (get-in state [:terminal-collection :evidence]))]
-                  (if-not (:ok provided)
-                    provided
-                    (let [receipt (:certificate provided)
-                          recovered? (= :student-observation-recovered
-                                        (:receipt/type receipt))
-                          next-state (assoc state :state/type :live-job-certified
-                                            :receipt receipt
-                                            :learning/outcome
-                                            (if recovered? :observed :unobserved))]
-                      (if (:ok (persist-fn next-state))
-                        {:ok true :status :certified :state next-state
-                         :certificate (:certificate provided)}
-                        {:ok false :error/code :live-job-receipt-persistence-failed}))))
-                (assoc validated :error/code :live-job-terminal-repair-exhausted
-                       :repair/attempts (:terminal-repair-attempts state)))
-
-              (not (fn? terminal-repair-request-fn)) validated
-
               :else
-              (let [repair (terminal-repair-request-fn
-                            active-request (:ticket state) job
-                            (cond-> validated
-                              typed-contract-migration?
-                              (assoc :repair/kind
-                                     :typed-submission-contract-migration)
-                              (not typed-contract-migration?)
-                              (assoc :repair/next-attempt
-                                     (inc (or (:terminal-repair-attempts state) 0)))))
+              (let [repair-origin (or (:repair/fault-origin validated) :agent)
+                    agent-repairs (or (:terminal-repair-attempts state) 0)
+                    apparatus-repairs (or (:apparatus-repair-attempts state) 0)
+                    exhausted? (and (not typed-contract-migration?)
+                                    (if (= :apparatus repair-origin)
+                                      (>= apparatus-repairs
+                                          default-apparatus-repair-attempts)
+                                      (>= agent-repairs max-repairs)))
+                    repair (when (and (not exhausted?)
+                                      (fn? terminal-repair-request-fn))
+                             (terminal-repair-request-fn
+                              active-request (:ticket state) job
+                              (cond-> validated
+                                typed-contract-migration?
+                                (assoc :repair/kind
+                                       :typed-submission-contract-migration)
+                                (not typed-contract-migration?)
+                                (assoc :repair/next-attempt
+                                       (inc (if (= :apparatus repair-origin)
+                                              apparatus-repairs
+                                              agent-repairs))))))
                     repair-request (:request repair)]
-                (if-not (and (:ok repair) (map? repair-request)
-                             (string? (:dispatch/id repair-request)))
-                  {:ok false
-                   :error/code :live-job-terminal-repair-request-invalid
-                   :finding repair}
+                (cond
+                  exhausted?
+                  (if (and (= :agent repair-origin)
+                           (= [:typed-submission-missing] (:findings validated))
+                           (fn? missing-observation-provider))
+                    (let [provided (missing-observation-provider
+                                    active-request (:ticket state) job
+                                    agent-repairs
+                                    (get-in state [:terminal-collection :evidence]))]
+                      (if-not (:ok provided)
+                        provided
+                        (let [receipt (:certificate provided)
+                              recovered? (= :student-observation-recovered
+                                            (:receipt/type receipt))
+                              next-state
+                              (assoc state :state/type :live-job-certified
+                                     :receipt receipt :learning/outcome
+                                     (if recovered? :observed :unobserved))]
+                          (if (:ok (persist-fn next-state))
+                            {:ok true :status :certified :state next-state
+                             :certificate (:certificate provided)}
+                            {:ok false
+                             :error/code :live-job-receipt-persistence-failed}))))
+                    (assoc validated
+                           :error/code
+                           (if (= :apparatus repair-origin)
+                             :live-job-apparatus-repair-exhausted
+                             :live-job-terminal-repair-exhausted)
+                           :repair/fault-origin repair-origin
+                           :repair/attempts
+                           (if (= :apparatus repair-origin)
+                             apparatus-repairs agent-repairs)
+                           :repair/history (:repair-attempt-history state)))
+
+                  (not (and (:ok repair) (map? repair-request)
+                            (string? (:dispatch/id repair-request))))
+                  (if (fn? terminal-repair-request-fn)
+                    {:ok false
+                     :error/code :live-job-terminal-repair-request-invalid
+                     :finding repair}
+                    validated)
+
+                  :else
                   (let [predecessor
                         {:job job
                          :ticket (:ticket state)
                          :terminal-collection (:terminal-collection state)
                          :findings (:findings validated)
+                         :repair/fault-origin repair-origin
                          :trace/successor-observation
                          (successor-observation job (:terminal-collection state)
                                                 (:findings validated))}
@@ -658,10 +690,22 @@
                                     :activation/accepted? false
                                     :terminal-repair-attempts
                                     (if typed-contract-migration?
-                                      (:terminal-repair-attempts state)
-                                      (inc (or (:terminal-repair-attempts state) 0)))
+                                      agent-repairs
+                                      (if (= :agent repair-origin)
+                                        (inc agent-repairs)
+                                        agent-repairs))
+                                    :apparatus-repair-attempts
+                                    (if (= :apparatus repair-origin)
+                                      (inc apparatus-repairs)
+                                      apparatus-repairs)
                                     :terminal-repair/original-job-id (:job-id job)
-                                    :terminal-repair/findings (:findings validated))
+                                    :terminal-repair/findings (:findings validated)
+                                    :terminal-repair/fault-origin repair-origin)
+                              (not typed-contract-migration?)
+                              (update :repair-attempt-history (fnil conj [])
+                                      {:job-id (:job-id job)
+                                       :fault-origin repair-origin
+                                       :findings (:findings validated)})
                               typed-contract-migration?
                               (assoc :typed-submission-migration-attempts 1
                                      :typed-submission-migration/of-job-id
