@@ -618,7 +618,7 @@
                       mechanical (:mechanical-reviews checked)
                       patterns (prepare-patterns-fn deposit)]
                   (if-not (:ok patterns)
-                    patterns
+                    (retry-deposit! state patterns deposit-fn persist-fn)
                     (let [review-successor? (some? (:abandoned-review-job state))
                           review-attempt (inc (or (:review-successor-attempt state) 0))
                           review (if (seq candidates)

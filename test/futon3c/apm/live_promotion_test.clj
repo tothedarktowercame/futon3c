@@ -317,6 +317,41 @@
     (is (empty? (:candidates validated)))
     (is (:ok (pipeline/validate-publication-accounting [review] [])))))
 
+(deftest coined-pattern-failure-dispatches-corrective-deposit
+  (let [saved (atom nil)
+        successor-failure (atom nil)
+        deposit {:depositor "scribe"
+                 :new-pattern-rationales {"new-pattern" "No witness."}
+                 :candidates [{:memory-id "memory" :content-digest "digest"
+                               :pattern-ids ["other-pattern"]
+                               :source-attempts [1]}]
+                 :lanes [{:lane :solve :status :ran}
+                         {:lane :arc :status :ran-empty :reason "none"}
+                         {:lane :trajectory :status :ran-empty :reason "none"}
+                         {:lane :challenge :status :ran-empty :reason "none"}]}
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :deposit :job "deposit-job"
+                  :ticket {:job-id "deposit-job"} :attempt 1}
+          :deposit-fn (fn [arg]
+                        (if (= arg "deposit-job")
+                          {:ok true :report deposit}
+                          (do (reset! successor-failure arg)
+                              {:ok true :job "corrective-deposit"})))
+          :prepare-patterns-fn
+          (constantly {:ok false :findings [:pattern-without-witness]
+                       :pattern-ids ["new-pattern"]})
+          :review-fn (fn [& _] (throw (ex-info "review forbidden" {})))
+          :persist-fn #(do (reset! saved %) {:ok true})
+          :deposit-request {}})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrective-deposit" (:job-id result)))
+    (is (= [:pattern-without-witness] (:findings @successor-failure)))
+    (is (= ["new-pattern"] (:pattern-ids @successor-failure)))
+    (is (= "deposit-job"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))))
+
 (deftest coined-pattern-is-published-before-independent-review
   (let [visible? (atom false)
         reviewed? (atom false)
