@@ -367,6 +367,12 @@
         used-memory-ids (set (:used-ids submitted-memory-use))
         memory-use (controller-memory-use request ticket
                                           (:used-ids submitted-memory-use))
+        guide-deposit-validation
+        (when (and (= :guide-intervention kind)
+                   (some? (:candidates report)))
+          (pipeline/validate-guide-deposit
+           {:depositor (:agent-id request)
+            :candidates (:candidates report)}))
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -405,9 +411,7 @@
           (and (= :guide-intervention kind)
                (some? (:candidates report))
                (not (and (vector? (:candidates report))
-                         (:ok (pipeline/validate-guide-deposit
-                               {:depositor (:agent-id request)
-                                :candidates (:candidates report)})))))
+                         (:ok guide-deposit-validation))))
           (conj :guide-candidates-invalid)
           (and (= :guide-intervention kind)
                (seq (:candidates report))
@@ -428,7 +432,23 @@
                                      (:result report))))))
           (conj :close-evidence-invalid))]
     (if (seq findings)
-      {:ok false :error/code :live-learning-terminal-invalid :findings findings}
+      (cond-> {:ok false :error/code :live-learning-terminal-invalid
+               :findings findings}
+        (and (some #{:guide-candidates-invalid} findings)
+             (seq (:findings guide-deposit-validation)))
+        (assoc-in [:finding/details :guide-candidates-invalid]
+                  (:findings guide-deposit-validation))
+        (some #{:scribe-reduction-evidence-missing} findings)
+        (assoc-in [:finding/details :scribe-reduction-evidence-missing]
+                  (->> [:lanes :dispositions :promotion-reviews]
+                       (remove #(coll? (get report %))) vec))
+        (some #{:close-evidence-invalid} findings)
+        (assoc-in [:finding/details :close-evidence-invalid]
+                  (cond-> []
+                    (not (string? (:trace-id report))) (conj :trace-id)
+                    (not (contains? #{:closed :partial}
+                                    (canonical-close-result (:result report))))
+                    (conj :result))))
       {:ok true :report (cond-> report
                           (= :student-attempt kind)
                           (assoc :memory-use memory-use))})))
@@ -743,7 +763,7 @@
     "Do not contact the Student; set the audit field from the actual conduct and submit below."]
    :guide-candidates-invalid
    ["Your Guide candidates were rejected." "The candidates did not satisfy the typed guide-deposit contract."
-    "Correct each candidate to the generated schema, or submit an empty candidate vector, using the command below."]
+    "Correct every candidate to the generated schema and submit a non-empty candidate vector using the command below."]
    :guide-candidates-outside-store-mode
    ["Your Guide completion proposed candidates outside store mode." "Non-empty candidates require mode store-mode."
     "Set mode to store-mode for genuine deposits, otherwise remove the candidates, then submit below."]
@@ -761,6 +781,34 @@
    ["Your close-frame evidence was rejected." "A trace id and canonical closed-or-partial result were not both present."
     "Supply the checker-bound trace id and a closed or partial result, then submit below."]})
 
+(def specific-finding-instructions
+  {:depositor-missing
+   "The deposit's :depositor must be a string naming this Guide seat."
+   :candidates-missing
+   "The deposit's :candidates must be a non-empty vector."
+   :candidate-shape-invalid
+   (str "Every candidate must contain string :memory-id and :content-digest, "
+        "plus vector :pattern-ids and :source-attempts.")})
+
+(defn- rendered-finding-detail [request finding]
+  (let [detail (get-in request [:repair/validation-output
+                                :finding/details finding])]
+    (cond
+      (and (= :guide-candidates-invalid finding) (seq detail))
+      (str/join " " (map #(or (specific-finding-instructions %)
+                              (str "Unrendered validator finding " (name %) "."))
+                           detail))
+
+      (and (= :scribe-reduction-evidence-missing finding) (seq detail))
+      (str "Missing or invalid collection fields: "
+           (str/join ", " (map name detail)) ".")
+
+      (and (= :close-evidence-invalid finding) (seq detail))
+      (str "Missing or invalid close fields: "
+           (str/join ", " (map name detail)) ".")
+
+      :else nil)))
+
 (defn repair-instructions [request]
   (when-let [findings (seq (:repair/findings request))]
     (let [missing (remove repair-finding-instructions findings)]
@@ -774,12 +822,15 @@
             (map-indexed
              (fn [index finding]
                (let [[rejected why action]
-                     (get repair-finding-instructions finding)]
+                     (get repair-finding-instructions finding)
+                     detail (rendered-finding-detail request finding)]
                  (str (inc index) ". " rejected "\nWHY: " why
+                      (when detail (str "\nDETAIL: " detail))
                       "\nDO THIS: " action)))
              findings))
-           (when-let [validation (:repair/validation-output request)]
-             (str "\nACTUAL VALIDATION OUTPUT:\n" (pr-str validation)))
+           (when-let [message (get-in request [:repair/validation-output
+                                               :report/error :error/message])]
+             (str "\nVALIDATOR MESSAGE: " message "\n"))
            "\nCORRECTIVE COMMAND:\n"
            (submission/command request {:job-id (:submission/job-id request)})
            "\nIf the revised typed submission is still invalid, the existing repair budget is exhausted and this role terminal will be rejected.\n\n"))))
@@ -855,6 +906,7 @@
                         :repair/validation-output
                         {:error/code (:error/code failure)
                          :findings findings
+                         :finding/details (:finding/details failure)
                          :report/error (:report/error job)})
                  (cond-> contract-migration?
                    (assoc :fresh-session-nonce migration-nonce
