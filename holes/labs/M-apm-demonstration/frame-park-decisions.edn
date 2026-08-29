@@ -296,4 +296,40 @@
         "as :partial with its residual, receipt and three artifact commits "
         "intact. I did not hand-edit queue-state.edn; this record is applied "
         "through futon3c.apm.frame-park-decisions, which matches on "
-        ":last-valid-receipt/id and preserves the park's residual.")}]}
+        ":last-valid-receipt/id and preserves the park's residual.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f54"
+   :problem/id "a99J05"
+   :last-valid-receipt/id
+   "6952df6a8a785326f24ba2c08ccd069eb5937e0b5db702195cd8300fb981f03a"
+   :decision/at "2026-08-29T19:10:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-terminal-schema-apparatus-mismatch
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved Student receipt is valid and records a clean Lean "
+        "candidate. Both Guide terminals failed only at the controller gate. "
+        "The pinned Guide card says the role submits {:name :hook :body "
+        ":pattern-ids} and that the controller derives :memory-id, "
+        ":content-digest, and :source-attempts. The production "
+        "validate-guide-deposit gate instead required all three derived "
+        "fields before candidate persistence. The repair terminal supplied "
+        ":memory-id and :source-attempts but could not author the missing "
+        ":content-digest, so it repeated :candidate-shape-invalid. This is "
+        "an apparatus contract-ordering fault, not a mathematical or role "
+        "failure.")
+   :decision/recommended-route
+   (str "Validate the documented agent-authored Guide candidate shape first, "
+        "materialize it through persist-candidates-fn, then apply the full "
+        "identity/digest/source-attempt gate and mechanical reviews to the "
+        "materialized candidates. Do not redispatch this exhausted Guide "
+        "phase: the queue has already preserved f54 and advanced to f55.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. It is disposed :partial with "
+        "the valid Student receipt and exact [:guide-candidates-invalid] "
+        "residual preserved in queue-state.edn. No Guide verdict or memory "
+        "review was invented.")}]}
