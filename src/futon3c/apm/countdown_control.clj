@@ -815,7 +815,13 @@
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
                        :frame-id (:frame-id metadata)
-                       :invoke-ready? (:invoke-ready? agent)}
+                       ;; Existing durable phase state means this build is
+                       ;; reconstructing current authority for validation or
+                       ;; repair, not authorizing a new dispatch. A terminal
+                       ;; role is no longer invoke-ready, but its transition
+                       ;; must still retain fields such as Guide :mode.
+                       :invoke-ready? (or (:invoke-ready? agent)
+                                          (some? existing))}
                 :workspace (get-in preparation [:workspaces :student])
                 :receipts receipts :snapshot-access snapshot-access
                 :seat-role role
@@ -832,7 +838,15 @@
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
        :manifest manifest :unit unit :preparation preparation
-       :request (:request existing) :fresh-request (:request built)
+       :request (:request existing)
+       ;; Older durable Guide packets may predate the explicit :mode field.
+       ;; This campaign's authority fixes Guide dispatches to store-mode
+       ;; above, so retain that authority even if rebuilding the whole packet
+       ;; is unavailable after the role has become terminal.
+       :fresh-request (or (:request built)
+                          (cond-> (:request existing)
+                            (= :guide-intervention kind)
+                            (assoc :mode :store-mode)))
        :state-path state-path}
       (:ok built)
       {:ok true :contract contract :action action :receipts receipts
@@ -1112,6 +1126,7 @@
             body (cond-> {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
+                  :receipt/job-id (:job-id published)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) (:lanes-run deposit) [])
                   :receipt/dispositions (or dispositions
@@ -1188,6 +1203,7 @@
             body (cond-> {:receipt/type :scribe-reduce
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
+                  :receipt/job-id (:job-id published)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) [])
                   :receipt/dispositions (or dispositions

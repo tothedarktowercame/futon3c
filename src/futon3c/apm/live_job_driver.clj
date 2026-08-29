@@ -520,6 +520,18 @@
                                :findings [:typed-submission-missing]}
                               (terminal-validator active-request
                                                   (:ticket state) job)))
+              ;; Rejections persisted before fault-origin classification was
+              ;; introduced must receive the same apparatus/agent decision
+              ;; as newly produced post-hoc rejections. Otherwise resuming a
+              ;; preserved apparatus failure incorrectly consumes the already
+              ;; exhausted agent repair budget.
+              validated (cond-> validated
+                          (and (:posthoc-rejection state)
+                               (nil? (:repair/fault-origin validated))
+                               (fn? posthoc-fault-origin-fn))
+                          (assoc :repair/fault-origin
+                                 (posthoc-fault-origin-fn active-request
+                                                          validated)))
               typed-contract-migration?
               (and (fn? terminal-submission-provider)
                    (= [:typed-submission-missing] (:findings validated))
