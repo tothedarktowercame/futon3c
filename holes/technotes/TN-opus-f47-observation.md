@@ -509,9 +509,10 @@ observations across f49, f50, f52, f53:
 
 ### A second line of evidence: the shelf accumulates restatement
 
-f53's supply line ended at `2 approved this frame (+6 reassigned to existing patterns)`.
-Six of eight deposits matched patterns already in the library; only two minted new ones. It
-was `+3 reassigned` earlier in the same frame.
+f53's supply line finished at `5 approved this frame (+11 reassigned to existing
+patterns)`. Eleven of sixteen deposits matched patterns already in the library; five minted
+new ones. The ratio held as the frame ran — `+3 reassigned` early, `+6` at a2, `+11` at
+close — so this is the frame's steady behaviour, not an artefact of when it was read.
 
 That is independent of the uptake counts and bears on WHY the shelf goes unused. If most
 new material restates what is already held, then growth from 76 to 102 measures deposit
