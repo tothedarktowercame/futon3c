@@ -807,6 +807,11 @@
                {:contract contract :action action
                 :ledger {:digest (:ledger/digest projection)} :unit unit
                 :role-card (:card card)
+                ;; This live campaign publishes independently reviewed Guide
+                ;; deposits between Student attempts, so its authorized mode
+                ;; is store-mode. Harness-mode would prohibit those deposits.
+                :authorized-mode (when (= :guide-intervention kind)
+                                   :store-mode)
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
                        :frame-id (:frame-id metadata)

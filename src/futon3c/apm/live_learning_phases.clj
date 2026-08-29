@@ -104,7 +104,7 @@
 (defn build-request
   [{:keys [contract action ledger unit role-card seat seat-role workspace receipts
            snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets
-           cascade-fn cascade-readers cascade-readers-fn]
+           cascade-fn cascade-readers cascade-readers-fn authorized-mode]
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
@@ -148,6 +148,10 @@
                    (and (= :student-attempt kind)
                         (not (contains? #{1 2 3} attempt-ordinal)))
                    (conj :student-attempt-ordinal-missing)
+                   (and (= :guide-intervention kind)
+                        (not (contains? #{:store-mode :harness-mode}
+                                        authorized-mode)))
+                   (conj :guide-authorized-mode-missing)
                    (and (= :student-attempt kind) promotion-receipt
                         (not (and (:ok snapshot-access)
                                   (= (:receipt/snapshot-digest promotion-receipt)
@@ -279,7 +283,8 @@
                           :solver-final-head
                           (:receipt/final-head (get receipts :solve)))
                    (= :guide-intervention kind)
-                   (assoc :intervention-ordinal phase-ordinal
+                   (assoc :mode authorized-mode
+                          :intervention-ordinal phase-ordinal
                           :input-attempt-id
                           (:receipt/id (get receipts
                                            (keyword (str "student-attempt-"
@@ -390,6 +395,10 @@
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)
+          (and (= :guide-intervention kind)
+               (not= (some-> (:mode request) name)
+                     (some-> (:mode report) name)))
+          (conj :guide-mode-authority-mismatch)
           ;; Store-mode candidates are the Guide's channel to the Student's
           ;; shelf; they must be gate-shaped here so the reviewer never sees
           ;; an unbound candidate, and harness-mode may not carry any.
@@ -475,7 +484,7 @@
                    (cond-> {:receipt/type :guide-intervention
                             :receipt/intervention-ordinal
                             (get-in contract [:phases (:phase action) :ordinal])
-                            :receipt/mode (some-> (:mode report) keyword)
+                            :receipt/mode (:mode request)
                             :receipt/input-attempt-id
                             (:receipt/id
                              (get receipts
@@ -738,6 +747,10 @@
    :guide-candidates-outside-store-mode
    ["Your Guide completion proposed candidates outside store mode." "Non-empty candidates require mode store-mode."
     "Set mode to store-mode for genuine deposits, otherwise remove the candidates, then submit below."]
+   :guide-mode-authority-mismatch
+   ["Your Guide completion did not echo its authorized mode."
+    "The submitted mode differed from the mode fixed in this dispatch packet."
+    "Copy the packet's :mode value exactly into the typed submission; do not choose a mode yourself."]
    :scribe-reduction-evidence-missing
    ["Your Scribe reduction was incomplete." "Lanes, dispositions, or promotion reviews were missing or not collections."
     "Fill all generated reduction collections, including explicit empty dispositions, then submit below."]
@@ -791,7 +804,11 @@
               "binding, surfaced ids, queries, and search receipt ids are "
               "controller-owned and must not be copied into the submission. "
               "Record an explicit failure account even on success.")
-         :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
+         :guide-intervention
+         (str "AUTHORIZED MODE: " (name (:mode request)) ". "
+              "Echo this exact value as :mode in the typed submission. "
+              "Improve only the memory store or harness channel. "
+              "Do not contact the Student directly.")
          :scribe-reduce (if (= :promote-solver (:phase request))
                           (str "Mine the verified Solver trace and return memory "
                                "candidates plus all four typed lane entries. Each "

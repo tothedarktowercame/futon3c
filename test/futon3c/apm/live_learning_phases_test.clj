@@ -306,6 +306,7 @@
                 {:dispatch/id "original" :dispatch/type :guide-intervention
                  :frame-id "f49" :phase :guide-intervention-1
                  :problem-id "a98A04" :agent-id "f49-guide"
+                 :mode :store-mode
                  :role-card-path "guide.md" :role-card-blob "blob"}
                 {:ticket/id "ticket-1"}
                 {:job-id "job-1"
@@ -823,12 +824,14 @@
         attempt {:receipt/id "attempt"}
         good (sut/build-request
               (merge base {:action action
+                           :authorized-mode :store-mode
                            :receipts {:student-attempt-1 attempt}
                            :seat {:agent-id "f19-guide" :invoke-ready? true}
                            :terminal-budgets {:guide {:collection-attempts 1
                                                       :repair-attempts 2}}}))
         bad (sut/build-request
              (merge base {:action action
+                          :authorized-mode :store-mode
                           :receipts {:student-attempt-1 attempt}
                           :seat {:agent-id "f19-guide" :invoke-ready? true}
                           :terminal-budgets {:guide {:collection-attempts 0
@@ -843,10 +846,14 @@
         attempt {:receipt/id "attempt"}
         result (sut/build-request
                 (merge base {:action action
+                             :authorized-mode :store-mode
                              :receipts {:student-attempt-1 attempt}
                              :seat {:agent-id "f19-guide"
                                     :invoke-ready? true}}))]
     (is (:ok result))
+    (is (= :store-mode (get-in result [:request :mode])))
+    (is (re-find #"AUTHORIZED MODE: store-mode"
+                 (sut/prompt (:request result))))
     (is (= 1 (get-in result [:request :intervention-ordinal])))
     (is (= "attempt" (get-in result [:request :input-attempt-id])))))
 
@@ -1144,7 +1151,7 @@
 
 (deftest guide-candidates-must-be-gate-shaped-and-store-mode
   (let [request {:dispatch/type :guide-intervention :agent-id "f27-guide"
-                 :frame-id "f27" :problem-id "m94A03"}
+                 :frame-id "f27" :problem-id "m94A03" :mode :store-mode}
         report {:command-own-exit 0 :frame-id "f27" :problem-id "m94A03"
                 :mode "store-mode" :channel-audit {:direct-student-contact? false}}
         findings (fn [r] (:findings (sut/validate-terminal
@@ -1160,11 +1167,27 @@
               (findings (assoc report :mode "harness-mode"
                                :candidates [guide-candidate]))))))
 
+(deftest guide-terminal-must-echo-authorized-mode
+  (let [request {:dispatch/type :guide-intervention :agent-id "f27-guide"
+                 :frame-id "f27" :problem-id "m94A03" :mode :store-mode}
+        report {:command-own-exit 0 :frame-id "f27" :problem-id "m94A03"
+                :channel-audit {:direct-student-contact? false}}
+        findings (fn [mode]
+                   (:findings
+                    (sut/validate-terminal
+                     request {:job-id "j"}
+                     {:job-id "j" :agent-id "f27-guide" :state :done
+                      :report (assoc report :mode mode)})))]
+    (is (nil? (findings "store-mode")))
+    (is (some #{:guide-mode-authority-mismatch} (findings nil)))
+    (is (some #{:guide-mode-authority-mismatch}
+              (findings "harness-mode")))))
+
 (deftest guide-receipt-carries-the-union-snapshot-when-one-was-published
   (let [action {:kind :guide-intervention :phase :guide-intervention-1 :role :guide
                 :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
         request {:dispatch/type :guide-intervention :agent-id "f19-guide"
-                 :frame-id "f19" :problem-id "a01J05"}
+                 :frame-id "f19" :problem-id "a01J05" :mode :store-mode}
         report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                 :mode "store-mode" :effect {:channel "memory-store"}
                 :channel-audit {:direct-student-contact? false}}
@@ -1188,6 +1211,7 @@
                                     :promotion-reviews [{:memory-id "e-guide-1"}]
                                     :independent-review? true})})]
     (is (:ok bare))
+    (is (= :store-mode (get-in bare [:certificate :receipt/mode])))
     (is (not (contains? (:certificate bare) :receipt/snapshot-digest)))
     (is (:ok union))
     (is (= "s" (get-in union [:certificate :receipt/snapshot-digest])))
@@ -1280,6 +1304,7 @@
                      (merge base {:action {:kind :guide-intervention
                                            :phase :guide-intervention-2 :role :guide
                                            :ordinal 2 :frame-id "f19" :problem-id "a01J05"}
+                                  :authorized-mode :store-mode
                                   :seat {:agent-id "f19-guide" :invoke-ready? true}
                                   :receipts {:preflight preflight-receipt
                                              :promote-solver promotion
