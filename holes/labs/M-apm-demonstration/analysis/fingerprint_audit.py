@@ -61,6 +61,9 @@ MEMORY_USE_KIND_PAIR = re.compile(
 MEMORY_USE_REASON_KIND = re.compile(
     r':memory-id\s+"(e-[^"]+)"(?:(?!:memory-id).){0,1000}?'
     r':memory-use/kind\s+:(substitutive|regulative)', re.DOTALL)
+FRAME_VOID_EVENT = re.compile(r":event/type\s+:frame/stopped")
+FRAME_VOID_CERTIFICATE = re.compile(r":certificate/type\s+:frame-void")
+VOID_CLASSIFICATION = re.compile(r":classification\s+:([A-Za-z0-9_-]+)")
 
 # A Lean-ish identifier: letters/digits/underscore/dot/prime, at least one
 # underscore or interior dot, no hyphen or slash (those are Clojure/EDN keys).
@@ -235,19 +238,45 @@ def paste_run(body, novel_lines):
     return best, n_hit
 
 
+def frame_exclusion(frame_path):
+    """Return the durable reason a frame is excluded from experiment totals.
+
+    The ledger remains the authority.  In particular, the existence of a
+    student receipt is not evidence that a later apparatus-invalidating void
+    should count: the receipt remains available for diagnosis while the frame
+    contributes no attempts or memory uses to the experiment.
+    """
+    ledger = os.path.join(frame_path, "ledger.edn")
+    try:
+        with open(ledger, encoding="utf-8", errors="replace") as stream:
+            text = stream.read()
+    except OSError:
+        return None
+    for line in text.splitlines():
+        if FRAME_VOID_EVENT.search(line) and FRAME_VOID_CERTIFICATE.search(line):
+            classification = VOID_CLASSIFICATION.search(line)
+            return {"reason": "void-frame",
+                    "classification": (classification.group(1)
+                                           if classification else "unspecified")}
+    return None
+
+
 def attempts(campaign_dir):
     """Attempt records, including any reviewed per-memory use classification."""
     out = []
     for frame_dir in sorted(os.listdir(campaign_dir)):
-        live = os.path.join(campaign_dir, frame_dir, "live")
+        frame_path = os.path.join(campaign_dir, frame_dir)
+        live = os.path.join(frame_path, "live")
         if not os.path.isdir(live):
             continue
         frame = frame_dir.rsplit("-", 1)[-1]
+        exclusion = frame_exclusion(frame_path)
         for n in (1, 2, 3):
             rec = os.path.join(live, f"student-attempt-{n}.edn")
             if not os.path.exists(rec):
                 continue
-            t = open(rec, encoding="utf-8", errors="replace").read()
+            with open(rec, encoding="utf-8", errors="replace") as stream:
+                t = stream.read()
             ids = []
             for block in USED_IDS.findall(t):
                 for i in ID_STR.findall(block):
@@ -265,30 +294,50 @@ def attempts(campaign_dir):
                     src = os.path.join(srcdir, files[0])
             out.append((frame, n, pid.group(1) if pid else "?", ids, use_kinds, src,
                         rev.group(1) if rev else None,
-                        ppath.group(1) if ppath else None))
+                        ppath.group(1) if ppath else None, exclusion))
     return out
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--campaign", default="jit-all-open-nontopology-v1")
-    ap.add_argument("--write")
-    ap.add_argument("--json", action="store_true")
-    a = ap.parse_args()
+def audit_campaign(cdir, campaign):
+    """Build diagnostic rows and experimental totals for one campaign."""
+    rows, excluded_frames = [], []
+    summary = {"attempts": 0, "attempts-with-used": 0, "use-events": 0,
+               "fingerprinted": 0, "paste": 0, "already-in-base": 0,
+               "weak-fingerprint": 0, "unwitnessed": 0,
+               "not-adjudicable-by-token": 0,
+               "no-source": 0, "no-base": 0, "unfetchable": 0,
+               "excluded-void-frames": 0, "excluded-attempts": 0,
+               "excluded-use-events": 0}
 
-    cdir = os.path.join(CAMPAIGNS, a.campaign)
-    rows, summary = [], {"attempts": 0, "attempts-with-used": 0, "use-events": 0,
-                         "fingerprinted": 0, "paste": 0, "already-in-base": 0,
-                         "weak-fingerprint": 0, "unwitnessed": 0,
-                         "not-adjudicable-by-token": 0,
-                         "no-source": 0, "no-base": 0,
-                         "unfetchable": 0}
+    excluded_seen = set()
+    for frame, n, pid, ids, use_kinds, src, rev, ppath, exclusion in attempts(cdir):
+        if exclusion:
+            if frame not in excluded_seen:
+                excluded_seen.add(frame)
+                summary["excluded-void-frames"] += 1
+                excluded_frames.append({"frame": frame,
+                                        "classification": exclusion["classification"],
+                                        "reason": exclusion["reason"]})
+            summary["excluded-attempts"] += 1
+            summary["excluded-use-events"] += len(ids)
+            for mid in ids:
+                rows.append({"frame": frame, "attempt": n, "problem": pid,
+                             "memory": mid, "source": (os.path.basename(src)
+                                                        if src else None),
+                             "memory-use-kind": use_kinds.get(mid),
+                             "verdict": "excluded-void-frame",
+                             "experimental-evidence": False,
+                             "exclusion-classification": exclusion["classification"]})
+            continue
 
-    for frame, n, pid, ids, use_kinds, src, rev, ppath in attempts(cdir):
         summary["attempts"] += 1
         if ids:
             summary["attempts-with-used"] += 1
-        source = open(src, encoding="utf-8", errors="replace").read() if src else None
+        if src:
+            with open(src, encoding="utf-8", errors="replace") as stream:
+                source = stream.read()
+        else:
+            source = None
         base = base_file(rev, ppath) if (rev and ppath) else None
         novel_lines = set()
         if source is not None and base is not None:
@@ -303,7 +352,8 @@ def main():
             row = {"frame": frame, "attempt": n, "problem": pid, "memory": mid,
                    "source": os.path.basename(src) if src else None,
                    "tokens-named": len(toks),
-                   "memory-use-kind": use_kinds.get(mid)}
+                   "memory-use-kind": use_kinds.get(mid),
+                   "experimental-evidence": True}
             if not raw:
                 row["verdict"] = "unfetchable"
                 summary["unfetchable"] += 1
@@ -332,27 +382,41 @@ def main():
                 summary[row["verdict"]] += 1
             rows.append(row)
 
-    out = {"campaign": a.campaign, "substrate": SUBSTRATE,
-           "standard": "retrieval-whitepaper-v3 3.1 (artifact carries the memory's fingerprint)",
-           "token-witness-rule": {
-               "measure": "origin/master problem-file document frequency",
-               "witnessing-when": "frequency < 0.05",
-               "threshold": MAX_WITNESS_DOC_FRACTION,
-               "corpus-problem-files": master_problem_count()},
-           "summary": summary, "rows": rows}
+    return {"campaign": campaign, "substrate": SUBSTRATE,
+            "standard": "retrieval-whitepaper-v3 3.1 (artifact carries the memory's fingerprint)",
+            "experimental-population": "non-void frames only; void frames remain diagnostic",
+            "excluded-frames": excluded_frames,
+            "token-witness-rule": {
+                "measure": "origin/master problem-file document frequency",
+                "witnessing-when": "frequency < 0.05",
+                "threshold": MAX_WITNESS_DOC_FRACTION,
+                "corpus-problem-files": master_problem_count()},
+            "summary": summary, "rows": rows}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--campaign", default="jit-all-open-nontopology-v1")
+    ap.add_argument("--write")
+    ap.add_argument("--json", action="store_true")
+    a = ap.parse_args()
+
+    cdir = os.path.join(CAMPAIGNS, a.campaign)
+    out = audit_campaign(cdir, a.campaign)
     if a.write:
-        open(a.write, "w").write(json.dumps(out, indent=1))
+        with open(a.write, "w") as stream:
+            stream.write(json.dumps(out, indent=1))
         print("wrote", a.write, file=sys.stderr)
     if a.json:
         print(json.dumps(out, indent=1))
     else:
-        for r in rows:
+        for r in out["rows"]:
             print(f"{r['frame']:>4} a{r['attempt']} {r.get('verdict','?'):>15} "
                   f"kind={r.get('memory-use-kind') or '-':<12} "
-                  f"novel={r.get('tokens-novel','-')}/{r['tokens-named']:<4} "
+                  f"novel={r.get('tokens-novel','-')}/{r.get('tokens-named','-'):<4} "
                   f"inbase={r.get('in-base-already','-'):<3} "
                   f"run={r.get('paste-longest-run','-'):<3} {r['memory'][:52]}")
-        print("\n", json.dumps(summary, indent=1))
+        print("\n", json.dumps(out["summary"], indent=1))
 
 
 if __name__ == "__main__":
