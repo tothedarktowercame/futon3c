@@ -6,7 +6,9 @@
   (:require [babashka.http-client :as http]
             [clojure.edn :as edn]
             [clojure.string :as str])
-  (:import [java.net URLEncoder]))
+  (:import [java.net URLEncoder]
+           [java.util.concurrent CompletableFuture ExecutionException
+            TimeUnit TimeoutException]))
 
 (defn configured-url []
   ;; Fallback 7073, the standalone futon1b-server (two-JVM standard,
@@ -39,9 +41,18 @@
 (defn- get-edn!
   ([url timeout-ms] (get-edn! url timeout-ms nil))
   ([url timeout-ms trace-id]
-   (let [response (http/get url {:headers (request-headers trace-id)
-                                 :timeout timeout-ms
-                                 :throw false})
+   (let [future ^CompletableFuture
+         (http/get url {:headers (request-headers trace-id)
+                        :timeout timeout-ms :async true :throw false})
+         response (try
+                    (.get future timeout-ms TimeUnit/MILLISECONDS)
+                    (catch TimeoutException error
+                      (.cancel future true)
+                      (throw (ex-info "authoritative substrate read timed out"
+                                      {:url url :timeout-ms timeout-ms}
+                                      error)))
+                    (catch ExecutionException error
+                      (throw (or (.getCause error) error))))
          body (response-body response)]
      (if (= 200 (:status response))
        body

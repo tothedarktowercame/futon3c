@@ -1,7 +1,24 @@
 (ns futon3c.substrate.client-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
-            [futon3c.substrate.client :as sut]))
+            [futon3c.substrate.client :as sut])
+  (:import [java.util.concurrent CompletableFuture]))
+
+(deftest substrate-get-has-a-wall-clock-body-timeout
+  (let [get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)
+        http-get-var (ns-resolve 'babashka.http-client 'get)
+        pending (CompletableFuture.)]
+    (with-redefs-fn
+      {http-get-var (fn [_url options]
+                      (is (:async options))
+                      pending)}
+      #(let [error (try (get-edn-var "http://substrate.test/stalled" 10)
+                        nil
+                        (catch clojure.lang.ExceptionInfo error error))]
+         (is (= "authoritative substrate read timed out"
+                (some-> error .getMessage)))
+         (is (= 10 (:timeout-ms (ex-data error))))
+         (is (.isCancelled pending))))))
 
 (deftest hyperedge-read-follows-server-cursor
   (let [urls (atom [])
