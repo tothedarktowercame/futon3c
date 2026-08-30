@@ -169,5 +169,43 @@ class VoidedFramePopulationTest(unittest.TestCase):
             self.assertFalse(result["rows"][0]["experimental-evidence"])
 
 
+class ReviewedEdgeKindTest(unittest.TestCase):
+    EDGES = [{"hx/type": "memory/assert",
+              "hx/props": {"state": "current", "attachment-status": "reviewed",
+                           "review": {"evidence-id": "e-apm-promotion-review-1",
+                                      "verdict": "approve",
+                                      "memory-use/kind": "regulative"}}},
+             {"hx/type": "memory/assert",
+              "hx/props": {"state": "superseded",
+                           "review": {"memory-use/kind": "substitutive"}}}]
+
+    def test_current_assert_edge_review_kind_is_authoritative(self):
+        self.assertEqual("regulative", AUDIT.review_kind_from_edges(self.EDGES))
+        self.assertEqual("regulative", AUDIT.memory_metadata(
+            "{:evidence/author \"f60-scribe\"}", "regulative")["memory-use-kind"])
+
+    def test_falls_back_to_review_evidence_body(self):
+        edges = [{"hx/type": "memory/assert",
+                  "hx/props": {"state": "current",
+                               "review": {"evidence-id": "e-apm-promotion-review-2"}}}]
+        fetched = []
+        def fetch(eid):
+            fetched.append(eid)
+            return "{:evidence/body {:review/verdict :approve :memory-use/kind :substitutive}}"
+        self.assertEqual("substitutive", AUDIT.review_kind_from_edges(edges, fetch))
+        self.assertEqual(["e-apm-promotion-review-2"], fetched)
+
+    def test_pre_typed_review_edge_stays_unknown(self):
+        # f53-era edge: review map with no kind anywhere, evidence body without it.
+        edges = [{"hx/type": "memory/assert",
+                  "hx/props": {"state": "current",
+                               "review": {"evidence-id": "e-apm-promotion-review-3",
+                                          "verdict": "approve"}}}]
+        self.assertIsNone(AUDIT.review_kind_from_edges(
+            edges, lambda eid: "{:evidence/body {:review/verdict :approve}}"))
+        self.assertIsNone(AUDIT.memory_metadata("{:evidence/author \"f53-guide\"}", None)["memory-use-kind"])
+        self.assertEqual("unwitnessed", AUDIT.artifact_verdict(None, 0, [], [], []))
+
+
 if __name__ == "__main__":
     unittest.main()

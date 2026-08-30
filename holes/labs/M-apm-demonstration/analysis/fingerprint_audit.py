@@ -44,7 +44,7 @@ Reads only: campaign frame records on disk + the substrate evidence endpoint.
 
 Usage: python3 fingerprint_audit.py [--campaign ID] [--write PATH] [--json]
 """
-import argparse, json, math, os, re, subprocess, sys, urllib.request
+import argparse, json, math, os, re, subprocess, sys, urllib.parse, urllib.request
 from collections import Counter
 
 SUBSTRATE = os.environ.get("FUTON1B_BASE", "http://127.0.0.1:7073")
@@ -71,6 +71,7 @@ EVIDENCE_AUTHOR = re.compile(r':evidence/author\s+"([^"]+)"')
 EVIDENCE_SUBJECT = re.compile(
     r':evidence/subject\s+\{[^{}]*:ref/id\s+"([^"]+)"[^{}]*\}')
 EVIDENCE_KIND = re.compile(r':kind\s+:([A-Za-z0-9_-]+)')
+REVIEW_EVIDENCE_USE_KIND = re.compile(r':memory-use/kind\s+:(substitutive|regulative)')
 REVIEW_MEMORY_USE_KIND = re.compile(
     r':review\s+\{[^{}]*:memory-use/kind\s+:(substitutive|regulative)[^{}]*\}',
     re.DOTALL)
@@ -138,8 +139,15 @@ def durable_delivery_route(receipt, memory_id):
     return "unknown"
 
 
-def memory_metadata(raw):
-    """Read provenance fields that the evidence record actually carries."""
+def memory_metadata(raw, reviewed_use_kind=None):
+    """Read provenance fields that the evidence record actually carries.
+
+    ``reviewed_use_kind`` is the proctor's :memory-use/kind read off the
+    memory's current ``memory/assert`` hyperedge (see review_kind_from_edges);
+    the evidence record itself carries only :evidence/* keys on the live
+    substrate, so the in-text regex below is a fallback for fixtures that
+    inline the edge props, never a live source.  Nothing is inferred from prose.
+    """
     author = EVIDENCE_AUTHOR.search(raw or "")
     subject = EVIDENCE_SUBJECT.search(raw or "")
     kind = EVIDENCE_KIND.search(body_text(raw))
@@ -147,7 +155,66 @@ def memory_metadata(raw):
     return {"origin-author": author.group(1) if author else None,
             "origin-problem": subject.group(1) if subject else None,
             "memory-kind": kind.group(1) if kind else None,
-            "memory-use-kind": use_kind.group(1) if use_kind else None}
+            "memory-use-kind": (reviewed_use_kind
+                                or (use_kind.group(1) if use_kind else None))}
+
+
+USE_KINDS = ("substitutive", "regulative")
+
+
+def _kind_value(value):
+    if isinstance(value, str):
+        value = value.lstrip(":")
+        return value if value in USE_KINDS else None
+    return None
+
+
+def review_kind_from_edges(edges, fetch_evidence=None):
+    """The reviewed :memory-use/kind for one memory, from its hyperedges.
+
+    ``edges`` is the JSON list returned by /api/alpha/hyperedges?end=<id>.
+    Only the CURRENT ``memory/assert`` edge is consulted, in this order:
+    ``hx/props.memory-use/kind``, ``hx/props.review.memory-use/kind``, and
+    finally the review evidence record named by ``review.evidence-id`` (its
+    body carries :memory-use/kind, promotion_review_store.clj), fetched
+    through ``fetch_evidence`` when given.  Absent everywhere -> None; the
+    audit then reports the row as unknown rather than guessing.
+    """
+    for edge in edges or []:
+        if not isinstance(edge, dict):
+            continue
+        if str(edge.get("hx/type", "")).lstrip(":") != "memory/assert":
+            continue
+        props = edge.get("hx/props") or {}
+        if str(props.get("state", "")).lstrip(":") != "current":
+            continue
+        review = props.get("review") or {}
+        kind = _kind_value(props.get("memory-use/kind")) or \
+            _kind_value(review.get("memory-use/kind"))
+        if kind:
+            return kind
+        evidence_id = review.get("evidence-id")
+        if evidence_id and fetch_evidence:
+            m = REVIEW_EVIDENCE_USE_KIND.search(fetch_evidence(evidence_id) or "")
+            if m:
+                return m.group(1)
+    return None
+
+
+def fetch_review_kind(mid, cache={}):
+    """Live wrapper for review_kind_from_edges; cached per memory id."""
+    if mid not in cache:
+        try:
+            req = urllib.request.Request(
+                SUBSTRATE + "/api/alpha/hyperedges?end=" + urllib.parse.quote(mid, safe=""),
+                headers={"Accept": "application/json"})
+            payload = json.loads(urllib.request.urlopen(req, timeout=60).read().decode("utf-8", "replace"))
+            edges = payload.get("hyperedges", payload) if isinstance(payload, dict) else payload
+            cache[mid] = review_kind_from_edges(edges, fetch_memory)
+        except Exception as e:
+            cache[mid] = None
+            print(f"  ! hyperedge fetch failed {mid}: {e}", file=sys.stderr)
+    return cache[mid]
 
 
 def transfer_stratum(frame, problem, metadata):
@@ -423,7 +490,7 @@ def audit_campaign(cdir, campaign):
             summary["excluded-use-events"] += len(ids)
             for mid in ids:
                 raw = fetch_memory(mid)
-                metadata = memory_metadata(raw)
+                metadata = memory_metadata(raw, fetch_review_kind(mid))
                 stratum, origin_frame = transfer_stratum(frame, pid, metadata)
                 rows.append({"frame": frame, "attempt": n, "problem": pid,
                              "memory": mid, "source": (os.path.basename(src)
@@ -458,7 +525,7 @@ def audit_campaign(cdir, campaign):
             raw = fetch_memory(mid)
             body = body_text(raw)
             toks = tokens_of(body)
-            metadata = memory_metadata(raw)
+            metadata = memory_metadata(raw, fetch_review_kind(mid))
             stratum, origin_frame = transfer_stratum(frame, pid, metadata)
             row = {"frame": frame, "attempt": n, "problem": pid, "memory": mid,
                    "source": os.path.basename(src) if src else None,
