@@ -22,6 +22,20 @@
 (def ^:private default-memory-cascade-cap 100)
 (def ^:dynamic *cascade-request-timeout-ms* 60000)
 (def ^:dynamic *cascade-connect-timeout-ms* 5000)
+(def ^:dynamic *cascade-read-parallelism* 8)
+
+(defn- bounded-parallel-map
+  "Apply F concurrently in small batches while retaining input order.
+
+   Cascade endpoints are independent, but unbounded `pmap` can overload the
+   substrate.  Batch boundaries provide a fixed concurrency ceiling and force
+   every future before starting the next batch."
+  [f xs]
+  (->> xs
+       (partition-all *cascade-read-parallelism*)
+       (mapcat (fn [batch]
+                 (let [pending (mapv #(future (f %)) batch)]
+                   (mapv deref pending))))))
 
 (defn- default-close-hook
   [{:keys [agency-base analyst-seat caller prompt]}]
@@ -374,7 +388,8 @@
   [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap routes
                            exclude]
                     :or {cap default-memory-cascade-cap}}]
-  (let [routes-enabled (or routes #{:why-hop :co-incidence})
+  (let [attachments-fn (memoize attachments-fn)
+        routes-enabled (or routes #{:why-hop :co-incidence})
         seed-memory-ids (vec (distinct seed-memory-ids))
         seed-memory-set (set seed-memory-ids)
         ;; `:exclude` — memory ids that must not be offered by ANY route,
@@ -384,7 +399,8 @@
         ;; prereg amendment 8) would otherwise come straight back as a
         ;; sibling: it is attached to the very patterns the seeds sit on.
         excluded (set exclude)
-        seed-edges (mapcat attachments-fn seed-memory-ids)
+        seed-edges (mapcat identity
+                           (bounded-parallel-map attachments-fn seed-memory-ids))
         seed-patterns (vec (distinct (mapcat attachment-patterns seed-edges)))
         ;; Authored why edges form a directed graph. Record the shortest
         ;; distance from any seed pattern.
@@ -405,19 +421,28 @@
         why-patterns (apply dissoc why-patterns seed-patterns)
         ;; Co-incidence is exactly pattern -> problem -> pattern. Only the
         ;; original seed patterns initiate it; it does not recursively flood.
-        seed-pattern-edges (mapcat attachments-fn seed-patterns)
+        seed-pattern-edges
+        (mapcat identity (bounded-parallel-map attachments-fn seed-patterns))
         seed-problems (vec (distinct (mapcat attachment-problems
                                              seed-pattern-edges)))
         coincident-patterns
         (if (contains? routes-enabled :co-incidence)
           (->> seed-problems
-               (mapcat attachments-fn)
+               (bounded-parallel-map attachments-fn)
+               (mapcat identity)
                (mapcat attachment-patterns)
                (remove (set seed-patterns))
                distinct
                (map #(vector % 2))
                (into {}))
           {})
+        ;; Warm every independent attachment endpoint with bounded concurrency.
+        ;; `live-cascade-readers` memoizes these calls for the comprehensions
+        ;; below, so result ordering and cheapest-route selection stay exact.
+        _ (dorun (bounded-parallel-map attachments-fn
+                                       (distinct (concat seed-patterns
+                                                         (keys why-patterns)
+                                                         (keys coincident-patterns)))))
         route-rank {:sibling 0 :why-hop 1 :co-incidence 2}
         route-key (fn [{:keys [route hops pattern]}]
                     [hops (get route-rank route 3) (str pattern)])

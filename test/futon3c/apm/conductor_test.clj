@@ -96,6 +96,22 @@
     (is (= 1 (:patterns-per-problem result)))
     (is (false? (:truncated? result)))))
 
+(deftest cascade-reader-parallelism-is-bounded-and-order-preserving
+  (let [active (atom 0)
+        maximum (atom 0)
+        result (binding [conductor/*cascade-read-parallelism* 2]
+                 (#'conductor/bounded-parallel-map
+                  (fn [n]
+                    (let [now (swap! active inc)]
+                      (swap! maximum max now)
+                      (Thread/sleep 20)
+                      (swap! active dec)
+                      (* n n)))
+                  (range 6)))]
+    (is (= [0 1 4 9 16 25] (vec result)))
+    (is (= 2 @maximum))
+    (is (zero? @active))))
+
 (deftest minimum-cascade-sibling-route-finds-other-seed-pattern-attachments
   (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
         sibling (cascade-edge "memory/sibling" "pattern/seed" "a02A02")

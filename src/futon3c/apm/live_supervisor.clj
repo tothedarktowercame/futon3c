@@ -6,8 +6,9 @@
   "Perform one deterministic supervisor tick.
 
    Dependencies are explicit so tests can prove ordering. A certified phase is
-   advanced and projected before the next tick is parked. An awaiting job parks
-   on that exact canonical job id."
+   advanced before the next tick is parked, but the successor is not projected
+   until that tick has driven it and created its durable phase state. An
+   awaiting job parks on that exact canonical job id."
   [{:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
            recover-claim-fn park-fn continuation-payload]}]
   (if-not (every? fn? [launch-audit-fn inspect-fn drive-phase-fn advance-fn
@@ -95,18 +96,14 @@
                                            (:certificate driven))]
                   (if-not (:ok advanced)
                     advanced
-                    (let [projected (project-fn)]
-                      (if-not (:ok projected)
-                        {:ok false :error/code :live-supervisor-projection-failed
-                         :finding projected}
-                        (let [parked (park-fn {:awaiting []
-                                              :payload continuation-payload})]
-                          (if (:ok parked)
-                            {:ok true :status :phase-advanced
-                             :phase (:phase action) :advance advanced
-                             :projection projected :park parked}
-                            {:ok false :error/code :live-supervisor-park-failed
-                             :finding parked}))))))
+                    (let [parked (park-fn {:awaiting []
+                                          :payload continuation-payload})]
+                      (if (:ok parked)
+                        {:ok true :status :phase-advanced
+                         :phase (:phase action) :advance advanced :park parked
+                         :projection/deferred? true}
+                        {:ok false :error/code :live-supervisor-park-failed
+                         :finding parked}))))
 
                 (= :terminal-evidence-collected status-class)
                 (let [projected (project-fn)

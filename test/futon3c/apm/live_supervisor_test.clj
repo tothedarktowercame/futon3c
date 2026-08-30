@@ -57,13 +57,15 @@
     (is (= [] (get-in (last @calls) [1 :awaiting])))
     (is (nil? (get-in (last @calls) [1 :retry/not-before-ms])))))
 
-(deftest certified-phase-advances-projects-then-parks-for-next-tick
+(deftest certified-phase-defers-successor-projection-until-it-is-driven
   (let [calls (atom [])
         result (sut/tick! (base calls {:ok true :status :certified
                                       :certificate {:receipt/id "r1"}}))]
     (is (= :phase-advanced (:status result)))
-    (is (= [:audit :inspect :drive :advance :project]
-           (take 5 @calls)))
+    (is (= [:audit :inspect :drive :advance]
+           (take 4 @calls)))
+    (is (:projection/deferred? result))
+    (is (not-any? #{:project} @calls))
     (is (= [] (get-in (last @calls) [1 :awaiting])))))
 
 (deftest terminal-collection-is-persisted-progress-not-an-invalid-phase-status
@@ -165,8 +167,9 @@
       (is (= [:audit] @calls))))
   (testing "projection"
     (let [calls (atom [])
-          result (sut/tick! (assoc (base calls {:ok true :status :certified
-                                                :certificate {}})
+          result (sut/tick! (assoc (base calls {:ok true
+                                                :status :awaiting-terminal
+                                                :job-id "job-19"})
                                    :project-fn #(do (swap! calls conj :project)
                                                     {:ok false})))]
       (is (= :live-supervisor-projection-failed (:error/code result)))
