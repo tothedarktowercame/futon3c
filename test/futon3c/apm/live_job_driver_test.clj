@@ -200,6 +200,43 @@
     (is (= "job-2" (get-in repairing [:state :ticket :job-id])))
     (is (some #(= :live-job-dispatched (:state/type %)) @persisted))))
 
+(deftest provider-request-timeout-enters-durable-terminal-repair
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "student-attempt-1"
+                              :state :failed :terminal-code :invoke-exception
+                              :terminal-message "request timed out"}
+                    "job-2" {:job-id "job-2" :agent-id "student-attempt-1"
+                              :state :running}})
+        base (assoc (effects calls (atom nil))
+                    :job-fn (fn [id] (get @jobs id))
+                    :persist-fn (constantly {:ok true})
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn (fn [_] {:ok true :job-id "job-2"})
+                    :terminal-validator
+                    (fn [& _]
+                      (throw (ex-info "missing submission must be classified first" {})))
+                    :terminal-repair-request-fn
+                    (fn [r _ticket job failure]
+                      {:ok true
+                       :request (assoc r :dispatch/id "repair-dispatch"
+                                         :repair/of-job-id (:job-id job)
+                                         :repair/findings (:findings failure))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true}
+        collected (sut/drive! (assoc base :state dispatched))
+        repairing (sut/drive! (assoc base :state (:state collected)))
+        archived (first (get-in repairing [:state :superseded-terminals]))]
+    (is (= {:condition/type :provider-request-timeout}
+           (sut/expected-role-terminal-condition (get @jobs "job-1"))))
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (= "request timed out" (get-in archived [:job :terminal-message])))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))))
+
 (deftest unrecognized-terminal-failure-remains-fatal-with-submission-provider
   (let [calls (atom [])
         job (atom {:job-id "job-1" :agent-id "student-attempt-2"

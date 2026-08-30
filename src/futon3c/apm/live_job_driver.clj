@@ -42,15 +42,34 @@
                (dissoc signature :pattern)))
            (concat provider-usage-limit-signatures additional-signatures)))))
 
-(defn wall-clock-budget-exhausted?
-  "True only for Agency's expected role wall-clock exhaustion terminal.
+(def expected-role-terminal-conditions
+  "Agency terminals which mean that a role attempt ended without completing,
+  rather than that the role or campaign machinery failed. Exact triples keep
+  the general terminal-failure branch closed to unfamiliar failures."
+  [{:condition/type :wall-clock-budget-exhausted
+    :state :failed
+    :terminal-code :invoke-error
+    :terminal-message "wall-clock-budget"}
+   {:condition/type :provider-request-timeout
+    :state :failed
+    :terminal-code :invoke-exception
+    :terminal-message "request timed out"}])
 
-  This classification is deliberately narrower than terminal failure: other
-  invoke errors still stop the driver for inspection."
+(defn expected-role-terminal-condition
+  "Return the named expected condition for an exact Agency terminal, if any."
   [job]
-  (and (= :failed (:state job))
-       (= :invoke-error (:terminal-code job))
-       (= "wall-clock-budget" (:terminal-message job))))
+  (some (fn [{:keys [state terminal-code terminal-message] :as condition}]
+          (when (and (= state (:state job))
+                     (= terminal-code (:terminal-code job))
+                     (= terminal-message (:terminal-message job)))
+            (select-keys condition [:condition/type])))
+        expected-role-terminal-conditions))
+
+(defn wall-clock-budget-exhausted?
+  "Compatibility predicate for the first expected role terminal."
+  [job]
+  (= :wall-clock-budget-exhausted
+     (:condition/type (expected-role-terminal-condition job))))
 
 (defn- successor-observation [job terminal-collection findings]
   (campaign-trace/validate-authoritative-observation
@@ -468,7 +487,7 @@
         {:ok true :status :awaiting-terminal :state state}
 
         (and (not= :done (:state job))
-             (not (and (wall-clock-budget-exhausted? job)
+             (not (and (expected-role-terminal-condition job)
                        (fn? terminal-submission-provider))))
         {:ok false :error/code :live-job-terminal-failure
          :finding (select-keys job [:job-id :agent-id :state :terminal-code
