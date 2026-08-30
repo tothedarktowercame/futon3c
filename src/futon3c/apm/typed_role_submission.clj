@@ -105,7 +105,7 @@
    :guide-intervention-2
    {:channel-audit {:direct-student-contact? nil}}
    :scribe-reduce {:lanes nil :dispositions nil :promotion-reviews nil}
-   :close-frame {:trace-id nil :result nil}
+   :close-frame {:trace-id nil :result nil :memory-use-audit nil}
    :analyst {:analysis nil}})
 
 (def evidence-required-by-phase

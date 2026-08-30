@@ -380,18 +380,44 @@
 
 (deftest close-result-is-canonicalized-at-the-json-wire-boundary
   (let [request {:dispatch/type :close-frame :agent-id "f25-guide"
-                 :frame-id "f25" :problem-id "m94A02"}
+                 :frame-id "f25" :problem-id "m94A02"
+                 :memory-use-audit []}
         job (fn [result]
               {:job-id "j" :agent-id "f25-guide" :state :done
                :report {:command-own-exit 0 :frame-id "f25"
                         :problem-id "m94A02" :trace-id "trace"
-                        :result result}})]
+                        :result result :memory-use-audit []}})]
     (is (:ok (sut/validate-terminal request {:job-id "j"} (job "closed"))))
     (is (:ok (sut/validate-terminal request {:job-id "j"} (job :closed))))
     (is (:ok (sut/validate-terminal request {:job-id "j"} (job "partial"))))
     (is (some #{:close-evidence-invalid}
               (:findings (sut/validate-terminal request {:job-id "j"}
                                                        (job "void")))))))
+
+(deftest close-frame-preserves-arbitrary-memory-ids-as-structured-evidence
+  (let [memory-id "e-codexpilot-upgrade-diskwise-L1-convergence/v2"
+        student (fn [ordinal]
+                  {:receipt/type :student-attempt
+                   :receipt/attempt-ordinal ordinal
+                   :receipt/memory-use {:used-ids [memory-id]}})
+        audit (sut/memory-use-audit
+               {:student-attempt-1 (student 1)
+                :student-attempt-2 (student 2)})]
+    (is (= [{:memory-id memory-id :attempt-ordinals [1 2]}] audit))
+    (let [request {:dispatch/type :close-frame :agent-id "f19-guide"
+                   :frame-id "f19" :problem-id "a01J05"
+                   :memory-use-audit audit}
+          job {:job-id "close-job" :agent-id "f19-guide" :state :done
+               :report {:command-own-exit 0 :frame-id "f19"
+                        :problem-id "a01J05" :trace-id "trace"
+                        :result :closed
+                        :memory-use-audit audit}}]
+      (is (:ok (sut/validate-terminal request {:job-id "close-job"} job)))
+      (is (some #{:close-evidence-invalid}
+                (:findings
+                 (sut/validate-terminal
+                  request {:job-id "close-job"}
+                  (assoc-in job [:report :memory-use-audit] []))))))))
 
 (deftest promoted-solver-snapshot-is-controller-bound-into-student-use
   (let [promotion {:receipt/id "promotion-receipt"

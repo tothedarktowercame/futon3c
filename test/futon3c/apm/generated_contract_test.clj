@@ -168,6 +168,11 @@
                   [:submission-schemas :student-memory-use
                    :role-authored-fields]
                   ["used-ids" "surfaced-ids"])
+        close-audit-mutant
+        (assoc-in contract
+                  [:submission-schemas :close-frame-memory-use-audit
+                   :controller-derived-source]
+                  "role-prose")
         receipt-mutant
         (update-in contract [:receipt-schemas :student-attempt :required]
                    pop)
@@ -175,6 +180,8 @@
         (update-in contract [:phases :student-attempt-2 :requires] pop)]
     (is (some #{:generated-contract-submission-schemas-invalid}
               (:findings (sut/validate submission-mutant))))
+    (is (some #{:generated-contract-submission-schemas-invalid}
+              (:findings (sut/validate close-audit-mutant))))
     (is (some #{:generated-contract-receipt-schemas-invalid}
               (:findings (sut/validate receipt-mutant))))
     (is (some #{:generated-contract-phase-io-invalid}

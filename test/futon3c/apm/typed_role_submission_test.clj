@@ -30,7 +30,9 @@
       (doseq [[phase expected]
               [[:guide-intervention-1
                 {:channel-audit {:direct-student-contact? nil}}]
-               [:student-attempt-1 {:memory-use {:used-ids nil}}]]]
+               [:student-attempt-1 {:memory-use {:used-ids nil}}]
+               [:close-frame {:trace-id nil :result nil
+                              :memory-use-audit nil}]]]
         (let [auth (authority phase)
               _ (sut/register! auth {:job-id (:job-id auth)})
               schema (sut/schema (:job-id auth) "secret")]

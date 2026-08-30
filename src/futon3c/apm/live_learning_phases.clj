@@ -101,6 +101,8 @@
         {:error (or (.getMessage t) (.getName (class t)))
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)}))))
 
+(declare memory-use-audit)
+
 (defn build-request
   [{:keys [contract action ledger unit role-card seat seat-role workspace receipts
            snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets
@@ -301,7 +303,9 @@
                                        receipts (inc phase-ordinal))]
                             (some-> (handlers/snapshot-binding prior)
                                     (assoc :snapshot-path
-                                           (:receipt/snapshot-path prior))))))]
+                                           (:receipt/snapshot-path prior)))))
+                   (= :close-frame kind)
+                   (assoc :memory-use-audit (memory-use-audit receipts)))]
         {:ok true :request (submission/prepare-request
                             (assoc body :dispatch/id
                                    (machine/ledger-digest [body])))}))))
@@ -311,6 +315,40 @@
     (keyword? result) result
     (string? result) (keyword result)
     :else nil))
+
+(defn memory-use-audit
+  "Canonical per-memory close evidence derived from durable Student receipts.
+   Memory ids are opaque nonblank strings; no UUID shape is imposed."
+  [receipts]
+  (->> receipts
+       vals
+       (filter #(contains? #{:student-attempt
+                             :student-observation-missing
+                             :student-observation-recovered}
+                           (:receipt/type %)))
+       (mapcat (fn [receipt]
+                 (map (fn [memory-id]
+                        {:memory-id memory-id
+                         :attempt-ordinal (:receipt/attempt-ordinal receipt)})
+                      (get-in receipt [:receipt/memory-use :used-ids]))))
+       (group-by :memory-id)
+       (map (fn [[memory-id uses]]
+              {:memory-id memory-id
+               :attempt-ordinals (->> uses (map :attempt-ordinal)
+                                      distinct sort vec)}))
+       (sort-by :memory-id)
+       vec))
+
+(defn- valid-memory-use-audit? [audit]
+  (and (vector? audit)
+       (every? (fn [entry]
+                 (and (= #{:memory-id :attempt-ordinals} (set (keys entry)))
+                      (string? (:memory-id entry))
+                      (not (str/blank? (:memory-id entry)))
+                      (vector? (:attempt-ordinals entry))
+                      (seq (:attempt-ordinals entry))
+                      (every? pos-int? (:attempt-ordinals entry))))
+               audit)))
 
 (defn- controller-memory-use
   [request ticket used-ids]
@@ -442,7 +480,10 @@
                (not (and (string? (:trace-id report))
                          (contains? #{:closed :partial}
                                     (canonical-close-result
-                                     (:result report))))))
+                                     (:result report)))
+                         (valid-memory-use-audit? (:memory-use-audit report))
+                         (= (:memory-use-audit request)
+                            (:memory-use-audit report)))))
           (conj :close-evidence-invalid))]
     (if (seq findings)
       (cond-> {:ok false :error/code :live-learning-terminal-invalid
@@ -461,7 +502,13 @@
                     (not (string? (:trace-id report))) (conj :trace-id)
                     (not (contains? #{:closed :partial}
                                     (canonical-close-result (:result report))))
-                    (conj :result))))
+                    (conj :result)
+                    (not (valid-memory-use-audit? (:memory-use-audit report)))
+                    (conj :memory-use-audit-shape)
+                    (and (valid-memory-use-audit? (:memory-use-audit report))
+                         (not= (:memory-use-audit request)
+                               (:memory-use-audit report)))
+                    (conj :memory-use-audit-mismatch))))
       {:ok true :report (cond-> report
                           (= :guide-intervention kind)
                           (assoc :channel-audit channel-audit)
@@ -568,6 +615,7 @@
                    {:receipt/type :frame-close
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/trace-id (:trace-id report)
+                  :receipt/memory-use-audit (:memory-use-audit report)
                   :receipt/result (if observation-missing?
                                     :partial
                                     (canonical-close-result (:result report)))

@@ -277,6 +277,9 @@
     :controller-derived-fields
     ["receipt-id" "snapshot-id" "snapshot-digest" "accessible-memory-ids"
      "surfaced-ids" "queries"]}
+   :close-frame-memory-use-audit
+   {:role-authored-fields ["memory-id" "attempt-ordinals"]
+    :controller-derived-source "student-attempt-receipts"}
    :self-reported-controller-identifiers-are-evidence false})
 
 (def required-phase-io
@@ -362,7 +365,7 @@
    :frame-close
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/input-receipt-ids" "receipt/trace-id" "receipt/result"
-    "receipt/learning-outcome"]})
+    "receipt/learning-outcome" "receipt/memory-use-audit"]})
 
 (defn read-contract [path]
   (try
