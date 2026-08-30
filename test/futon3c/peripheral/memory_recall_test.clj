@@ -218,7 +218,7 @@
                 "&include-total=false")
            @seen-url))))
 
-(deftest substrate-client-default-hyperedge-limit-is-server-valid
+(deftest substrate-client-default-first-page-is-live-budgeted
   (let [seen-urls (atom [])
         get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
     (with-redefs-fn
@@ -229,7 +229,9 @@
       #(do (is (= [] (substrate/hyperedges-by-end "memory/one")))
            (is (= [] (substrate/hyperedges-by-type :memory/assert)))))
     (is (= 2 (count @seen-urls)))
-    (is (every? #(re-find #"[?&]limit=5000(?:&|$)" %) @seen-urls))))
+    ;; The server accepts at most 1,000 rows, but the production client pages
+    ;; at 100 so a hydrated page stays inside short live-view deadlines.
+    (is (every? #(re-find #"[?&]limit=100(?:&|$)" %) @seen-urls))))
 
 (deftest batch-recall-projects-several-endpoints-with-one-substrate-call
   (let [{math :mathematics} (fixtures)
