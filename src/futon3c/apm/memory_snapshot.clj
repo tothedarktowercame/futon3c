@@ -279,7 +279,11 @@
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
   (let [evidence-visible? (when (fn? evidence-visible?)
-                            (memoize evidence-visible?))
+                            (memoize
+                             (fn [candidate]
+                               (try
+                                 (boolean (evidence-visible? candidate))
+                                 (catch Throwable _ false)))))
         args (assoc args :evidence-visible? evidence-visible?)
         origin-valid?
         (fn [candidate]

@@ -289,6 +289,25 @@
       (finally (deliver release true)))
     (is (:ok @run))))
 
+(deftest cumulative-publication-classifies-visibility-read-failures
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-failure"
+                                       (make-array FileAttribute 0))
+        stale (assoc candidate :memory-id "prior-timeout" :depositor "f28-guide"
+                     :provenance {:campaign-id "c1"
+                                  :frame-id "f28" :problem-id "p28"})
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [stale] :own-candidates []
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible?
+                 (fn [_] (throw (ex-info "bounded timeout" {})))})]
+    (is (:ok result))
+    (is (= [{:memory-id "prior-timeout"
+             :provenance {:campaign-id "c1"
+                          :frame-id "f28" :problem-id "p28"}
+             :finding :snapshot-review-not-visible}]
+           (:prior-dropped result)))))
+
 (deftest cumulative-dedup-preserves-earliest-depositor-origin
   (let [dir (Files/createTempDirectory "apm-provenance-dedup"
                                        (make-array FileAttribute 0))
