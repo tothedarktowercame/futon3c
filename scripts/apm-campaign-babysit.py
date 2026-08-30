@@ -455,13 +455,21 @@ while True:
                 f"stopped driving this queue with problems still "
                 f"outstanding.")
         elif c['status'] != 'running':
-            maybe_bell(
-                "regulator-not-running", "JIT regulator not running",
-                f"Campaign {CAMPAIGN_ID}: coordinator.edn reports "
-                f":regulator/status :{c['status']} (expected :running) at tick "
-                f"{c['ticks']}. Please investigate and restart/repair the "
-                f"regulator so the campaign can keep advancing through frames "
-                f"overnight.")
+            if q.get('active_frame') is not None:
+                # The frame watchdog carries the actionable phase/job/result
+                # evidence.  Sending this generic coordinator alarm as well
+                # produced a second bell for the same incident.
+                out(f"REGULATOR NOT RUNNING WITH ACTIVE FRAME "
+                    f"[{q.get('active_frame')}]: deferring notification to "
+                    "the frame watchdog")
+            else:
+                maybe_bell(
+                    "regulator-not-running", "JIT regulator not running",
+                    f"Campaign {CAMPAIGN_ID}: coordinator.edn reports "
+                    f":regulator/status :{c['status']} (expected :running) at tick "
+                    f"{c['ticks']}. Please investigate and restart/repair the "
+                    f"regulator so the campaign can keep advancing through frames "
+                    f"overnight.")
         else:
             clear_bell("regulator-not-running")
 
@@ -596,10 +604,13 @@ while True:
                 else:
                     pending_frame_alert = reason
                     pending_frame_alert_count = 1
-                if pending_frame_alert_count >= 2 and reason != last_frame_alert:
+                # Finding sets evolve while one fault is unresolved (heartbeat
+                # stale, then terminal stale, then coordinator stopped, etc.).
+                # That is one frame incident, not a fresh incident per reason.
+                if pending_frame_alert_count >= 2 and last_frame_alert is None:
                     out(f"FRAME ALERT [{current_frame}]: {line}")
                     maybe_bell(
-                        f"frame-{current_frame}-{reason}",
+                        f"frame-{current_frame}-watchdog-alert",
                         f"frame {current_frame} watchdog alert: {reason}",
                         f"Campaign {CAMPAIGN_ID}, frame {current_frame}: "
                         f"scripts/apm-watch-projection.sh reported an alert:\n\n"
@@ -617,7 +628,7 @@ while True:
                 if last_frame_alert is not None:
                     out(f"FRAME RECOVERED [{current_frame}]: healthy again "
                         f"after {last_frame_alert}")
-                    clear_bell(f"frame-{current_frame}-{last_frame_alert}")
+                    clear_bell(f"frame-{current_frame}-watchdog-alert")
                     last_frame_alert = None
             elif ':problem-projection-transition' in line:
                 pm = re.search(r':phase :([A-Za-z0-9?*+!_-]+)', line)
