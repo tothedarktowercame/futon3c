@@ -25,6 +25,12 @@ A memory whose body appears verbatim is a paste -- the f29/f30 failure mode
 that `codex-scribe-v1` was written to stop -- and should not be counted as
 the same kind of result.
 
+Reviewed ``:regulative`` uses are reported as ``not-adjudicable-by-token``.
+Their intended effect is a process or strategy change, for which absence of a
+Lean identifier is not negative evidence.  ``:substitutive`` uses retain the
+artifact-token standard.  Historical uses without a recorded kind retain the
+legacy verdict; the audit never guesses a kind from prose.
+
 BOTH ARE MEASURED AGAINST THE BASE FILE THE STUDENT WAS HANDED, not against
 the empty string. An identifier already present in the base problem file is
 not evidence that a memory put it there -- the Student would have read it in
@@ -49,6 +55,12 @@ ID_STR = re.compile(r'"(e-[^"]+)"')
 PROBLEM_ID = re.compile(r':problem-id\s*"([^"]+)"')
 BASE_REV = re.compile(r':base-revision\s*"([0-9a-f]{7,})"')
 PROBLEM_PATH = re.compile(r':problem-path\s*"([^"]+)"')
+MEMORY_USE_KINDS = re.compile(r":memory-use/kinds\s*\{([^}]*)\}", re.DOTALL)
+MEMORY_USE_KIND_PAIR = re.compile(
+    r'"(e-[^"]+)"\s+:(substitutive|regulative)')
+MEMORY_USE_REASON_KIND = re.compile(
+    r':memory-id\s+"(e-[^"]+)"(?:(?!:memory-id).){0,1000}?'
+    r':memory-use/kind\s+:(substitutive|regulative)', re.DOTALL)
 
 # A Lean-ish identifier: letters/digits/underscore/dot/prime, at least one
 # underscore or interior dot, no hyphen or slash (those are Clojure/EDN keys).
@@ -66,6 +78,37 @@ STOPWORDS = {
 # rare bare lemma names while demoting ubiquitous bare tactics without a
 # hand-maintained tactic list.
 MAX_WITNESS_DOC_FRACTION = 0.05
+
+
+def recorded_use_kinds(receipt):
+    """Return reviewed use kinds carried by a dispatch/attempt receipt.
+
+    New receipts carry the compact ``:memory-use/kinds`` map.  The inclusion
+    reason representation is accepted too, because it is the auditable source
+    from which that map is derived.  Missing classification deliberately stays
+    missing: historical rows retain the old token verdict instead of being
+    guessed from prose.
+    """
+    pairs = []
+    for block in MEMORY_USE_KINDS.findall(receipt):
+        pairs.extend(MEMORY_USE_KIND_PAIR.findall(block))
+    pairs.extend(MEMORY_USE_REASON_KIND.findall(receipt))
+    return {mid: kind for mid, kind in pairs}
+
+
+def artifact_verdict(use_kind, best, witnessing, novel, hits):
+    """Classify one use without treating regulative help as token failure."""
+    if use_kind == "regulative":
+        return "not-adjudicable-by-token"
+    if best >= 3:
+        return "paste"
+    if witnessing:
+        return "fingerprinted"
+    if novel:
+        return "weak-fingerprint"
+    if hits:
+        return "already-in-base"
+    return "unwitnessed"
 
 
 def get_text(path, timeout=60):
@@ -193,7 +236,7 @@ def paste_run(body, novel_lines):
 
 
 def attempts(campaign_dir):
-    """(frame, attempt-n, problem, used-ids, source-path) for every attempt."""
+    """Attempt records, including any reviewed per-memory use classification."""
     out = []
     for frame_dir in sorted(os.listdir(campaign_dir)):
         live = os.path.join(campaign_dir, frame_dir, "live")
@@ -213,13 +256,14 @@ def attempts(campaign_dir):
             pid = PROBLEM_ID.search(t)
             rev = BASE_REV.search(t)
             ppath = PROBLEM_PATH.search(t)
+            use_kinds = recorded_use_kinds(t)
             srcdir = os.path.join(live, f"student-attempt-{n}-source")
             src = None
             if os.path.isdir(srcdir):
                 files = [f for f in os.listdir(srcdir) if f.endswith(".lean")]
                 if files:
                     src = os.path.join(srcdir, files[0])
-            out.append((frame, n, pid.group(1) if pid else "?", ids, src,
+            out.append((frame, n, pid.group(1) if pid else "?", ids, use_kinds, src,
                         rev.group(1) if rev else None,
                         ppath.group(1) if ppath else None))
     return out
@@ -236,10 +280,11 @@ def main():
     rows, summary = [], {"attempts": 0, "attempts-with-used": 0, "use-events": 0,
                          "fingerprinted": 0, "paste": 0, "already-in-base": 0,
                          "weak-fingerprint": 0, "unwitnessed": 0,
+                         "not-adjudicable-by-token": 0,
                          "no-source": 0, "no-base": 0,
                          "unfetchable": 0}
 
-    for frame, n, pid, ids, src, rev, ppath in attempts(cdir):
+    for frame, n, pid, ids, use_kinds, src, rev, ppath in attempts(cdir):
         summary["attempts"] += 1
         if ids:
             summary["attempts-with-used"] += 1
@@ -257,7 +302,8 @@ def main():
             toks = tokens_of(body)
             row = {"frame": frame, "attempt": n, "problem": pid, "memory": mid,
                    "source": os.path.basename(src) if src else None,
-                   "tokens-named": len(toks)}
+                   "tokens-named": len(toks),
+                   "memory-use-kind": use_kinds.get(mid)}
             if not raw:
                 row["verdict"] = "unfetchable"
                 summary["unfetchable"] += 1
@@ -281,21 +327,9 @@ def main():
                             "novel-token-assessments": assessments,
                             "in-base-already": len(hits) - len(novel),
                             "paste-longest-run": best, "paste-lines-hit": nhit})
-                if best >= 3:
-                    row["verdict"] = "paste"
-                    summary["paste"] += 1
-                elif witnessing:
-                    row["verdict"] = "fingerprinted"
-                    summary["fingerprinted"] += 1
-                elif novel:
-                    row["verdict"] = "weak-fingerprint"
-                    summary["weak-fingerprint"] += 1
-                elif hits:
-                    row["verdict"] = "already-in-base"
-                    summary["already-in-base"] += 1
-                else:
-                    row["verdict"] = "unwitnessed"
-                    summary["unwitnessed"] += 1
+                row["verdict"] = artifact_verdict(
+                    use_kinds.get(mid), best, witnessing, novel, hits)
+                summary[row["verdict"]] += 1
             rows.append(row)
 
     out = {"campaign": a.campaign, "substrate": SUBSTRATE,
@@ -314,6 +348,7 @@ def main():
     else:
         for r in rows:
             print(f"{r['frame']:>4} a{r['attempt']} {r.get('verdict','?'):>15} "
+                  f"kind={r.get('memory-use-kind') or '-':<12} "
                   f"novel={r.get('tokens-novel','-')}/{r['tokens-named']:<4} "
                   f"inbase={r.get('in-base-already','-'):<3} "
                   f"run={r.get('paste-longest-run','-'):<3} {r['memory'][:52]}")
