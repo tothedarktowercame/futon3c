@@ -118,6 +118,37 @@
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
 
+(deftest every-durable-terminal-result-retires-the-last-projected-role-job
+  (doseq [frame-result [:closed :partial :void]]
+    (let [dir (java.nio.file.Files/createTempDirectory
+               "projection-watchdog-terminal-"
+               (make-array java.nio.file.attribute.FileAttribute 0))
+          frame-dir (.resolve dir "frame")
+          terminal-dir (.resolve frame-dir "terminal")
+          publication-dir (.resolve frame-dir "publications")
+          live-dir (.resolve frame-dir "live")
+          transition-log (.resolve frame-dir "problem-transitions.edn")
+          coordinator-path (.resolve dir "coordinator.edn")]
+      (doseq [path [frame-dir terminal-dir publication-dir live-dir]]
+        (java.nio.file.Files/createDirectories
+         path (make-array java.nio.file.attribute.FileAttribute 0)))
+      (spit (str transition-log) (str (pr-str (:transition healthy)) "\n"))
+      (spit (str coordinator-path) (pr-str (:coordinator healthy)))
+      (spit (str (.resolve terminal-dir "frame-terminal.edn"))
+            (pr-str {:frame/id "f" :frame/result frame-result}))
+      (spit (str (.resolve publication-dir "latest.edn"))
+            (pr-str (:publication healthy)))
+      (spit (str (.resolve live-dir "student-attempt-1.edn"))
+            (pr-str {:state/type :live-job-certified}))
+      (let [observation (watchdog/observe
+                         {:transition-log (str transition-log)
+                          :coordinator-state (str coordinator-path)
+                          :agency-base "http://127.0.0.1:1"
+                          :max-heartbeat-age-seconds 120})]
+        (is (true? (:frame-closed? observation)) (name frame-result))
+        (is (= {:ok true} (:job observation)) (name frame-result))
+        (is (= {:ok true} (:agent observation)) (name frame-result))))))
+
 (deftest bounded-solver-round-envelope-exposes-its-active-job
   (let [solver (assoc healthy :phase-state
                       {:state/type :solver-rounds

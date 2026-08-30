@@ -3,7 +3,8 @@
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.apm.queued-frame-terminal :as queued-terminal])
   (:import [java.net URI]
            [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
            [java.nio.file Files Path]
@@ -183,7 +184,8 @@
                                      (make-array java.nio.file.LinkOption 0))
                    (read-edn terminal-path))
         frame-closed? (and (= (:frame-id transition) (:frame/id terminal))
-                           (= :closed (:frame/result terminal)))
+                           (contains? queued-terminal/frame-results
+                                      (:frame/result terminal)))
         publication (read-edn (.resolve frame-dir "publications/latest.edn"))
         phase-state (read-edn (phase-state-path frame-dir transition))
         agent-id (get-in transition [:operation :agent-id])
