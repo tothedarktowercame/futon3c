@@ -1,0 +1,50 @@
+{:evidence/type :apm-retrospective-candidate-revalidation
+ :evidence/version 1
+ :recorded-at "2026-08-30T00:00:00Z"
+ :scope {:campaign "jit-all-open-nontopology-v1"
+         :bug-fix "2d9e08a8"
+         :historical-receipts-mutated? false
+         :substrate-mutated? false
+         :campaign-restarted? false}
+ :method
+ {:content-test
+  "Use the independent promotion-proctor reasons preserved in the certified frame records. Each candidate was found new relative to the frozen base, actionable for a named residual, obstacle-findable, and coherent with its proposed attachment; the recorded cannot-judge verdict was solely the keywordized new-pattern-rationales lookup defect."
+  :accounting-test
+  "Replay the corrected validate-pattern-accounting behavior: keyword keys are normalized to strings before proposed/discovered comparison, as fixed by 2d9e08a8 and covered by role_memory_search_test."
+  :sources
+  ["data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f33/live/guide-intervention-1.edn"
+   "data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f33/live/guide-intervention-1-review.edn"
+   "data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f35/live/promote-solver.edn"
+   "holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f35-a95J04.md"]}
+ :results
+ [{:frame "f33" :phase :guide-intervention-1
+   :problem "a94A07" :candidate-count 3 :approved-count 3
+   :disposition :retrospectively-approved
+   :memory-ids
+   ["e-cfb5c7dc-6e74-4297-bc09-a0a1e669cc2b"
+    "e-a2e79f73-5f25-469e-a050-019d8070c0bd"
+    "e-1f0af380-5090-4afb-a083-8de6f3ec8713"]
+   :proposed-pattern-ids
+   ["math-formalization-CV/entire-and-singularity-api"
+    "math-formalization-CV/entire-affine-by-divided-difference"
+    "math-formalization/tactic-algebra-interference"
+    "math-formalization/binder-expression-mismatch"]
+   :historical-blocker :keywordized-pattern-rationale-key}
+  {:frame "f35" :phase :promote-solver
+   :problem "a95J04" :candidate-count 5 :approved-count 5
+   :disposition :retrospectively-approved
+   :memory-ids
+   ["e-622879cf-5712-4586-8a64-5e6112c03778"
+    "e-07f83183-c3ec-4f69-84fe-0cc44932218d"
+    "e-74e4a981-1a1c-4067-a7d0-26d19933eb84"
+    "e-71a3375d-cbe9-43cf-8ae3-206793b16c86"
+    "e-3557a341-6ec3-405d-9a6b-4e939f7f46b5"]
+   :proposed-pattern-ids
+   ["math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness"
+    "math-formalization/compact-thickening-upgrades-pointwise-analyticity"
+    "math-formalization/normalize-meromorphic-point-values-before-continuation"
+    "math-formalization/additive-principal-parts-from-order-germs"]
+   :historical-blocker :keywordized-pattern-rationale-key}]
+ :totals {:candidate-count 8 :approved-count 8 :rejected-count 0}
+ :interpretation
+ "The eight historical cannot-judge outcomes are apparatus-invalid, not content rejections. This record corrects the evidential disposition only; it deliberately does not rewrite content-addressed receipts, retroactively alter snapshots, or publish memories."}
