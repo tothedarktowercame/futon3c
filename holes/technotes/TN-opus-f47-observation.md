@@ -607,3 +607,59 @@ contributed nothing the base file did not already contain.
 Campaign tally at this point: 33 rows — 14 `fingerprinted`, 3 `weak-fingerprint`,
 10 `already-in-base`, 5 `unwitnessed`, 1 `no-source`. Every one of the 14 fingerprinted
 uses is a within-frame deposit.
+
+## The instrument cannot witness the kind of memory students actually reach for
+
+One memory has now been claimed three times, by three different students, on three
+different problems, across five days:
+
+    e-63b7c7c1-1906-412c-ae18-b4644762fbea
+      author f34-guide, subject a95J03, deposited 2026-08-25
+      name: bank-cheap-sorries-first-root-bound-final-assembly-sphere-nonvanishing-library-theorem
+
+    f50/a1  a98A07   weak-fingerprint   novel-hits ["norm_num"]
+    f58/a1  aunk04   already-in-base    0 novel, 5 hits all pre-existing
+    f62/a1  b01J01   pending archive
+
+Out of 110 shelved memories, this is the one that keeps getting selected. Earlier in this
+note I recorded that as a pathology — "a memory that reads as relevant, gets selected, gets
+reported as used, and changes nothing". Reading its body corrects that:
+
+    "Two 30-minute Student attempts on the same file: attempt 1 closed bridge_2 and the
+     final theorem and left bridge_1; attempt 2 (fresh session, with the route memories on
+     the shelf) opened bridge_1 first, spent the budget..."
+
+It is a **strategic** memory — about how to allocate a fixed attempt budget across a proof
+with several holes. Bank the cheap sorries first. It names no Mathlib lemma, no import, no
+tactic beyond the incidental.
+
+`fingerprint_audit.py` witnesses a use by finding the memory's tokens in the artifact and
+asking whether they were already in the base. That works for content transfer: a lemma
+name, an import, a specific rewrite. It cannot work for strategic transfer, because a
+student who follows "bank the cheap sorries first" writes a proof whose TOKENS are entirely
+its own. The influence is in the ORDER of the work, not its vocabulary.
+
+So the three non-witnesses are not evidence that this memory did nothing. They are evidence
+that the instrument cannot see what it does.
+
+**This qualifies the central finding of this note, and the qualification is real.** The
+claim "no attempt has used a shelved memory predating its own frame" rests on `:used-ids`
+and on fingerprints. `:used-ids` is a student's self-report and the students keep reporting
+this one. The fingerprint is the check that overrides the self-report — and it is
+structurally blind to exactly the category being reported.
+
+What survives unchanged: for CONTENT transfer, the shelf contributes nothing measurable.
+All 14 fingerprinted uses in the corpus are within-frame deposits, and the five
+first-attempt solves (a99J01, a99J05, a99J06, b00J02, b01A02) used no shelved memory at
+all — those are solves, so a strategic memory that shaped them would have to have done so
+without being reported, which the students' own logs do not suggest.
+
+What is now open: whether strategic memories transfer, and by what instrument that could be
+established. Token overlap cannot do it. Candidate approaches worth someone's thought —
+attempt-ordering compared against the memory's prescribed order; time-to-first-close;
+whether a student's stated plan echoes a shelved plan. None of these are cheap, and none
+are in place.
+
+Until then the honest statement is narrower than what this note said before: **the shelf
+shows no witnessed CONTENT transfer, and the campaign has no instrument that could witness
+strategic transfer either way.**
