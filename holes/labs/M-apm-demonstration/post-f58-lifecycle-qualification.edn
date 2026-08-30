@@ -1,0 +1,31 @@
+{:qualification/version 1
+ :qualification/id :post-f58-apparatus-lifecycle
+ :reference/fixture :f59-post-f58-stop-boundary
+ :execution/mode :hermetic-temp-directories
+ :live-campaign-touched? false
+ :serving-jvm-touched? false
+ :invariants
+ [{:id :typed-apparatus-invalidated-void
+   :test "typed-apparatus-void-retains-diagnostic-certificate"
+   :expected :certificate-retains-classification-failure-and-source}
+  {:id :diagnostic-retention
+   :test "voided-active-frame-stays-paused-until-explicit-resume"
+   :expected :void-retained-without-experimental-completion}
+  {:id :experimental-tally-exclusion
+   :test "VoidedFramePopulationTest.test_void_receipts_remain_diagnostic_but_leave_experiment_tallies"
+   :expected :diagnostic-row-present-and-experimental-count-zero}
+  {:id :durable-stop-preserves-active-frame
+   :test "durable-stop-preserves-frame-and-recovery-refuses-dispatch"
+   :expected :quiescence-witness-and-identical-active-frame}
+  {:id :disabled-recovery-refuses-dispatch
+   :test "durable-stop-preserves-frame-and-recovery-refuses-dispatch"
+   :expected :disabled-with-zero-decide-or-reconcile-calls}
+  {:id :queue-reuse-requires-explicit-resume
+   :test "voided-active-frame-stays-paused-until-explicit-resume"
+   :expected :no-mint-before-resume-followed-by-one-successor-mint}]
+ :gates
+ ["clojure -M:test -n futon3c.apm.post-f58-lifecycle-qualification-test"
+  "python3 -m unittest holes/labs/M-apm-demonstration/analysis/test_fingerprint_audit.py"
+  "clj-kondo --lint test/futon3c/apm/post_f58_lifecycle_qualification_test.clj"
+  "emacs --batch -Q -l /home/joe/code/futon4/dev/check-parens.el test/futon3c/apm/post_f58_lifecycle_qualification_test.clj holes/labs/M-apm-demonstration/post-f58-lifecycle-qualification.edn"
+  "git diff --check"]}
