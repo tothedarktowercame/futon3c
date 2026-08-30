@@ -250,8 +250,12 @@
 
 (deftest claimed-defect-stops-for-review-without-classifying-problem
   (let [persisted (atom nil)
+        announcements (atom [])
         result (sut/drive!
                 (assoc (effects persisted)
+                       :announce-fn (fn [request]
+                                      (swap! announcements conj request)
+                                      {:ok true :job-id "must-not-dispatch"})
                        :job-fn (fn [_]
                                  {:job-id "job-1" :agent-id "f19-solver"
                                   :session-id "solver-session" :state :done
@@ -259,6 +263,12 @@
                                            :residual "Hypotheses contradict conclusion at z=0."}})))]
     (is (= :solver-defect-review-required (:error/code result)))
     (is (= :claimed-defect (get-in result [:state :rounds 0 :outcome])))
+    (is (= :solver-defect-review-required
+           (get-in result [:state :state/type])))
+    (is (= (:state result) @persisted))
+    (is (empty? @announcements)
+        "a claimed defect must park before announcing another solver round")
+    (is (nil? (get-in result [:state :active])))
     (is (nil? (get-in result [:state :problem/classification])))))
 
 (deftest legacy-agent-nested-progress-fields-are-lifted-into-round-record

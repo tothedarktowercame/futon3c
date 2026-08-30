@@ -695,6 +695,44 @@
                             [:registration :coordinator/enabled?]))))
       (finally (sut/cancel-scheduler! "c:stop")))))
 
+(deftest durable-stop-preserves-active-frame-and-prevents-new-work
+  (let [{:keys [registry state-a]} (temp-paths)
+        decisions (atom 0)
+        active-frame {:frame/id "f58" :problem/id "a99J12"
+                      :phase :student-attempt-1}]
+    (sut/register-adapter!
+     :test/stopped-active-frame
+     (fn [_]
+       {:decide-fn (fn [_]
+                     (swap! decisions inc)
+                     {:ok true :status :must-not-run})
+        :reconcile-fn (fn [_ _]
+                        (throw (ex-info "must not reconcile" {})))}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:stopped-active-frame"
+                             :adapter :test/stopped-active-frame :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a
+          (str (pr-str (assoc (regulator/initial-state
+                               "c:stopped-active-frame")
+                              :active/frame active-frame))
+               "\n"))
+    (with-redefs [regulator/cancel-scheduler!
+                  (fn [_] {:ok true :status :stopped})]
+      (let [stopped (sut/stop! registry "c:stopped-active-frame")
+            durable (edn/read-string (slurp state-a))
+            recovered (sut/recover-all! registry)]
+        (is (= :stopped (:status stopped)))
+        (is (false? (get-in (sut/read-registry registry)
+                            [:entries "c:stopped-active-frame"
+                             :coordinator/enabled?])))
+        (is (= active-frame (:active/frame durable)))
+        (is (= :stopped (:regulator/status durable)))
+        (is (= :disabled
+               (get-in recovered [:results "c:stopped-active-frame" :status])))
+        (is (zero? @decisions)
+            "neither durable stop nor recovery may mint new work")))))
+
 (deftest stop-exposes-draining-claim-before-durable-quiescence
   (let [{:keys [registry state-a]} (temp-paths)
         coordinator-id "c:drain-observer"
