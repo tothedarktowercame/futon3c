@@ -810,4 +810,15 @@
      with a structured per-id memory-use/audit field, populate it from the
      already durable student receipts in the close-frame packet/handler, and
      test non-UUID ids end to end. This amendment records the seam but does not
-     change the live contract."}}]}
+     change the live contract."}}
+
+  {:amendment 11
+   :at "2026-08-30T12:15Z"
+   :by "codex-17"
+   :kind :memory-use-audit-regime-boundary
+   :conditions ["C-11" "C-12"]
+   :note
+   "C-11 records the controller-derived close-frame audit and typed-admission
+    gates live from f60. C-12 records, from f61, reviewed-edge kind authority,
+    the unified :substitutive/:regulative vocabulary, and role cards that state
+    both model-output contracts. Historical missing kinds remain unknown."}]}

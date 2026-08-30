@@ -27,6 +27,15 @@
   (is (= "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.4.md"
          (:guide sut/default-artifacts))))
 
+(deftest f61-memory-audit-conditions-are-registered
+  (let [conditions (read-string
+                    (slurp "data/apm-campaigns/jit-all-open-v2/conditions.edn"))
+        indexed (into {} (map (juxt :id identity)) conditions)]
+    (is (= "f60" (get-in indexed ["C-11" :since-frame])))
+    (is (= "f61" (get-in indexed ["C-12" :since-frame])))
+    (is (true? (get-in indexed ["C-11" :loaded?])))
+    (is (true? (get-in indexed ["C-12" :loaded?])))))
+
 (deftest failed-seat-mint-surfaces-source-error-and-findings
   (with-redefs [live-preparation/prepare!
                 (fn [{:keys [mint-fn]}]
