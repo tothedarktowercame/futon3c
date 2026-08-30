@@ -4,10 +4,32 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-learning-phases :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]))
+
+(def guide-submission-regressions
+  (edn/read-string
+   (slurp "test/resources/apm-regressions/guide-submissions-2026-08-30.edn")))
+
+(deftest real-guide-submission-payloads-retain-their-exact-verdicts
+  (doseq [{:keys [id authority request payload expected-findings]}
+          (:submissions guide-submission-regressions)]
+    (let [job-id (str (name id) "-job")
+          report (driver/typed-submission-report
+                  request {:authority authority :payload payload})
+          result (sut/validate-terminal
+                  request {:job-id job-id}
+                  {:job-id job-id :agent-id (:agent-id request)
+                   :state :done :report report})]
+      (is (= expected-findings (:findings result)) (name id))
+      (when (= :f61-guide-repair id)
+        (is (= :store-mode (submission/wire-keyword (:mode report))))
+        (is (not-any? #{:guide-mode-authority-mismatch
+                        :guide-candidates-outside-store-mode}
+                      (:findings result)))))))
 
 (deftest terminal-report-parser-accepts-one-prose-wrapped-edn-map-only
   (is (= {:command-own-exit 0 :frame-id "f21"}

@@ -39,6 +39,25 @@
              {:payload normalized-payload-mode
               :channel-audit normalized-audit-mode}))))
 
+(defn typed-submission-report
+  "Reconstruct the report view consumed by phase validators from a typed
+  submission. This is the single JSON/EDN reading boundary; it does not fill
+  absent evidence or change validator acceptance criteria."
+  [active-request submission]
+  (let [payload (:payload submission)
+        report (merge (:authority submission)
+                      (:evidence payload)
+                      (select-keys payload
+                                   [:command-own-exit
+                                    :outcome
+                                    :failure-account
+                                    ;; Some JSON clients emit the Student's
+                                    ;; query ledger beside :evidence.
+                                    :queries]))]
+    (if (= :guide-intervention (:dispatch/type active-request))
+      (lift-guide-mode report payload)
+      report)))
+
 (def provider-usage-limit-signatures
   "Declared substrate signatures. Callers may append provider-specific entries
   through `:provider-usage-limit-signatures`; the generic entries deliberately
@@ -540,27 +559,8 @@
               configured (terminal-budget terminal-budget-config)
               max-repairs (:repair-attempts configured)
               job (if submission
-                    (let [payload (:payload submission)
-                          report
-                          (merge (:authority submission)
-                                 (:evidence payload)
-                                 (select-keys payload
-                                              [:command-own-exit
-                                               :outcome
-                                               :failure-account
-                                               ;; Some JSON clients emit the
-                                               ;; Student's query ledger
-                                               ;; beside :evidence.
-                                               :queries]))
-                            ;; Guide mode is declared in the typed payload, with
-                            ;; channel-audit retained as a compatibility
-                            ;; fallback. Contradictory declarations remain
-                            ;; visible so validation can refuse them.
-                          report
-                          (if (= :guide-intervention
-                                 (:dispatch/type active-request))
-                            (lift-guide-mode report payload)
-                            report)]
+                    (let [report (typed-submission-report active-request
+                                                          submission)]
                       (assoc job :report report
                              :typed-submission submission))
                     job)
