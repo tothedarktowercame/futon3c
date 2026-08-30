@@ -19,6 +19,8 @@
 (defn- reviewed? [x]
   (= "reviewed" (some-> x name)))
 
+(def ^:private visibility-read-bound-ms 5000)
+
 (def ^:private lean-token
   #"[A-Za-z][A-Za-z0-9_'.]{5,}")
 
@@ -231,10 +233,20 @@
         ;; snapshot. Preserve fail-closed membership and deterministic order.
         visibility (when (fn? evidence-visible?)
                      (doall (pmap evidence-visible? candidates)))
+        visibility-failure
+        (some (fn [[candidate observation]]
+                (when (and (map? observation)
+                           (= :not-obtained (:transport/evidence observation)))
+                  (assoc observation :memory-id (:memory-id candidate))))
+              (map vector candidates visibility))
         invisible (when visibility
                     (->> (map vector candidates visibility)
-                         (keep (fn [[candidate visible?]]
-                                 (when-not visible? (:memory-id candidate))))
+                         (keep (fn [[candidate observation]]
+                                 (let [visible? (if (map? observation)
+                                                  (:visible? observation)
+                                                  observation)]
+                                   (when (false? visible?)
+                                     (:memory-id candidate)))))
                          vec))
         body (snapshot-body frame-id problem-id candidates
                             {:base-text base-text
@@ -252,6 +264,15 @@
       (some (complement :ok) validations)
       {:ok false :error/code :memory-snapshot-candidate-invalid
        :findings (mapv :finding (remove :ok validations))}
+      visibility-failure
+      (merge {:ok false :error/code :memory-snapshot-visibility-not-obtained
+              :error/component :transport
+              :visibility/candidate-count (count candidates)
+              :visibility/execution :parallel
+              :visibility/per-read-bound-ms visibility-read-bound-ms
+              :visibility/aggregate-bound-ms
+              (* (count candidates) visibility-read-bound-ms)}
+             visibility-failure)
       (seq invisible)
       {:ok false :error/code :memory-snapshot-review-not-visible
        :memory-ids invisible}
@@ -285,17 +306,26 @@
   reviews are dropped with an explicit account. Own candidates remain subject
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
-  (let [visibility-failures (atom [])
-        evidence-visible? (when (fn? evidence-visible?)
+  (let [evidence-visible? (when (fn? evidence-visible?)
                             (memoize
                              (fn [candidate]
                                (try
-                                 (boolean (evidence-visible? candidate))
+                                 {:visible? (boolean (evidence-visible? candidate))
+                                  :transport/acquired-outcome :success
+                                  :transport/classified-outcome :success
+                                  :transport/evidence :obtained}
                                  (catch Throwable t
-                                   (swap! visibility-failures conj
-                                          {:memory-id (:memory-id candidate)
-                                           :error/message (.getMessage t)})
-                                   false)))))
+                                   (let [message (or (.getMessage t) "")
+                                         outcome (or (:transport/acquired-outcome
+                                                      (ex-data t))
+                                                     (if (re-find #"(?i)timeout"
+                                                                  message)
+                                                       :timeout :unavailable))]
+                                     {:visible? nil
+                                      :transport/acquired-outcome outcome
+                                      :transport/classified-outcome outcome
+                                      :transport/evidence :not-obtained
+                                      :error/message message}))))))
         args (assoc args :evidence-visible? evidence-visible?)
         origin-valid?
         (fn [candidate]
@@ -329,9 +359,12 @@
         inspected
         (mapv (fn [candidate]
                 (let [shape (validate-candidate candidate)
+                      observation (when (and (:ok shape)
+                                             (fn? evidence-visible?))
+                                    (evidence-visible? candidate))
                       visible? (and (:ok shape)
-                                    (or (not (fn? evidence-visible?))
-                                        (evidence-visible? candidate)))]
+                                    (or (nil? observation)
+                                        (true? (:visible? observation))))]
                   (cond
                     (not (:ok shape))
                     {:candidate candidate :finding (:finding shape)}
@@ -352,20 +385,43 @@
                            (conj ordered candidate)))
                        retained own-candidates)
         invalid-origins (mapv :memory-id (remove origin-valid? merged))
-        published (when (empty? invalid-origins)
+        visibility-candidates
+        (reduce (fn [ordered candidate]
+                  (if (some #(= (:memory-id candidate) (:memory-id %)) ordered)
+                    ordered (conj ordered candidate)))
+                prior own-candidates)
+        visibility-failure
+        (some (fn [candidate]
+                (let [observation (when (fn? evidence-visible?)
+                                    (evidence-visible? candidate))]
+                  (when (= :not-obtained (:transport/evidence observation))
+                    (assoc observation :memory-id (:memory-id candidate)))))
+              visibility-candidates)
+        published (when (and (empty? invalid-origins)
+                             (nil? visibility-failure))
                     (publish! (assoc args :candidates merged)))]
     (if (seq invalid-origins)
       {:ok false :error/code :memory-snapshot-provenance-invalid
        :memory-ids invalid-origins}
-      (cond-> published
-        (:ok published) (assoc :prior-dropped dropped)
-        (and (= :memory-snapshot-review-not-visible (:error/code published))
-             (seq @visibility-failures))
-        (assoc :transport/operation :post-publication-verification
-               :transport/acquired-outcome :visibility-lag
-               :transport/classified-outcome :authoritative-absence
-               :transport/evidence :not-obtained
-               :transport/visibility-failures @visibility-failures)))))
+      (if visibility-failure
+        (merge {:ok false :error/code :memory-snapshot-visibility-not-obtained
+                :error/component :transport
+                :transport/operation :post-publication-verification
+                :visibility/candidate-count (count visibility-candidates)
+                :visibility/execution :parallel
+                :visibility/per-read-bound-ms visibility-read-bound-ms
+                :visibility/aggregate-bound-ms
+                (* (count visibility-candidates) visibility-read-bound-ms)}
+               visibility-failure)
+        (cond-> published
+          (:ok published) (assoc :prior-dropped dropped
+                                 :visibility/candidate-count (count merged)
+                                 :visibility/execution :parallel
+                                 :visibility/per-read-bound-ms
+                                 visibility-read-bound-ms
+                                 :visibility/aggregate-bound-ms
+                                 (* (count merged)
+                                    visibility-read-bound-ms)))))))
 
 (defn verify-student-access
   [{:keys [path expected frame-id problem-id accessible-memory-ids]}]

@@ -90,9 +90,13 @@
 (deftest scheduled-promotion-transport-retry-retires-projected-terminal
   (let [retrying (-> healthy
                      (assoc :phase-state
-                            {:state/type :promotion
+                             {:state/type :promotion
                              :stage :awaiting-transport-retry
-                             :transport-retry/not-before-ms 9999999999999})
+                             :transport-retry/not-before-ms 9999999999999
+                             :transport-retry/attempt 1
+                             :transport-retry/max-attempts 3
+                             :transport-retry/last-error-code
+                             :memory-snapshot-visibility-not-obtained})
                      (assoc-in [:publication :transition/event-id] "prior")
                      (assoc-in [:transition :event/observed-at]
                                "2026-08-23T21:00:00Z")
@@ -101,8 +105,12 @@
                                   {:state "done"
                                    :finished-at "2026-08-23T21:00:00Z"}}))
         result (watchdog/evaluate retrying)]
-    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
-    (is (empty? (:watch/findings result)))))
+    (is (= :waiting (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))
+    (is (= {:wake-at-ms 9999999999999
+            :attempt 1 :max-attempts 3
+            :last-failure :memory-snapshot-visibility-not-obtained}
+           (:transport-retry result)))))
 
 (deftest durable-frame-closure-retires-the-last-projected-role-job
   (let [closed (-> healthy

@@ -558,6 +558,9 @@
                           unresolved-review? :unresolved-review
                           :else :promotion-pass))
         transport? (transport-failure? checked)
+        transport-finding
+        (some #(when (and (map? %) (= :transport (:error/component %))) %)
+              (tree-seq coll? seq checked))
         now-ms (long (now-ms-fn))
         transport-attempt (or (:transport-retry/attempt state) 0)
         transport-max (or (:transport-retry-max-attempts promotion-policy)
@@ -567,10 +570,20 @@
         transport-history
         (cond-> (vec (:transport-retry/history state))
           transport?
-          (conj {:attempt transport-attempt
-                 :failed-at-ms now-ms
-                 :error/component :transport
-                 :error/code (:error/code checked)}))
+          (conj (cond-> {:attempt transport-attempt
+                         :failed-at-ms now-ms
+                         :error/component :transport
+                         :error/code (or (:error/code transport-finding)
+                                         (:error/code checked))}
+                  (:transport/operation transport-finding)
+                  (assoc :transport/operation
+                         (:transport/operation transport-finding))
+                  (:transport/acquired-outcome transport-finding)
+                  (assoc :transport/acquired-outcome
+                         (:transport/acquired-outcome transport-finding))
+                  (:transport/evidence transport-finding)
+                  (assoc :transport/evidence
+                         (:transport/evidence transport-finding)))))
         retryable-transport? (and transport? (< transport-attempt transport-max))
         hold {:state/type :promotion
               :stage :awaiting-apparatus-repair
@@ -605,7 +618,9 @@
                (cond-> hold
                  transport?
                  (assoc :error/code :promotion-substrate-retry-exhausted
-                        :transport-retry/last-error-code (:error/code checked)
+                        :transport-retry/last-error-code
+                        (or (:error/code transport-finding)
+                            (:error/code checked))
                         :transport-retry/escalation escalation
                         :transport-retry/attempt transport-attempt
                         :transport-retry/max-attempts transport-max
@@ -658,15 +673,34 @@
                                         {:attempt (:transport-retry/attempt state)
                                          :succeeded-at-ms (long (now-ms-fn))}))
                            done)]
-                (persist-fn done)
                 {:ok true :status :certified :state done
                  :certificate (:receipt published)}))
             emitted-at-ms (long (now-ms-fn))
             certificate (publication-certificate state published result
                                                  promotion-policy)
+            conformance (transport/validate-certificate certificate)
             emission (when certificate-emitter-fn
-                       (certificate-emitter-fn certificate emitted-at-ms))]
-        (cond-> result emission (assoc :transport-certificate emission))))))
+                       (certificate-emitter-fn certificate emitted-at-ms))
+            emission-ok? (or (nil? emission) (not= false (:ok emission)))
+            advance? (= :certified (:status result))]
+        (if (and advance? (or (not (:ok conformance)) (not emission-ok?)))
+          (let [hold {:state/type :promotion
+                      :stage :awaiting-apparatus-repair
+                      :last-valid-state state
+                      :error/code :transport-certificate-nonconformant
+                      :findings (vec (concat (:findings conformance)
+                                             (when-not emission-ok?
+                                               [{:error/code
+                                                 :transport-certificate-persistence-failed
+                                                 :emission emission}])))
+                      :transport-certificate certificate}]
+            (persist-fn hold)
+            {:ok true :status :awaiting-apparatus-repair :state hold
+             :findings (:findings hold)
+             :transport-certificate emission})
+          (do
+            (when advance? (persist-fn (:state result)))
+            (cond-> result emission (assoc :transport-certificate emission))))))))
 
 (defn- drive-step!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn certificate-emitter-fn

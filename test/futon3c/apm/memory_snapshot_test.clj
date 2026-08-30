@@ -323,12 +323,15 @@
                  :path (.resolve dir "union.edn") :lineage ["c1"]
                  :evidence-visible?
                  (fn [_] (throw (ex-info "bounded timeout" {})))})]
-    (is (:ok result))
-    (is (= [{:memory-id "prior-timeout"
-             :provenance {:campaign-id "c1"
-                          :frame-id "f28" :problem-id "p28"}
-             :finding :snapshot-review-not-visible}]
-           (:prior-dropped result)))))
+    (is (false? (:ok result)))
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))
+    (is (= 1 (:visibility/candidate-count result)))
+    (is (= :parallel (:visibility/execution result)))
+    (is (= 5000 (:visibility/per-read-bound-ms result)))
+    (is (= 5000 (:visibility/aggregate-bound-ms result)))))
 
 (deftest own-visibility-exception-retains-acquired-outcome
   (let [dir (Files/createTempDirectory "apm-own-visible-failure"
@@ -342,11 +345,26 @@
                  :path (.resolve dir "union.edn") :lineage ["c1"]
                  :evidence-visible?
                  (fn [_] (throw (ex-info "visibility timeout" {})))})]
-    (is (= :memory-snapshot-review-not-visible (:error/code result)))
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
     (is (= :post-publication-verification (:transport/operation result)))
-    (is (= :visibility-lag (:transport/acquired-outcome result)))
-    (is (= :authoritative-absence (:transport/classified-outcome result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :timeout (:transport/classified-outcome result)))
     (is (= :not-obtained (:transport/evidence result)))))
+
+(deftest obtained-negative-visibility-remains-authoritative-absence
+  (let [dir (Files/createTempDirectory "apm-own-visible-negative"
+                                       (make-array FileAttribute 0))
+        own (assoc candidate :depositor "f63-guide"
+                   :provenance {:campaign-id "c1"
+                                :frame-id "f63" :problem-id "p63"})
+        result (sut/publish-cumulative!
+                {:frame-id "f63" :problem-id "p63"
+                 :prior-candidates [] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible? (constantly false)})]
+    (is (= :memory-snapshot-review-not-visible (:error/code result)))
+    (is (nil? (:error/component result)))
+    (is (nil? (:transport/evidence result)))))
 
 (deftest cumulative-dedup-preserves-earliest-depositor-origin
   (let [dir (Files/createTempDirectory "apm-provenance-dedup"

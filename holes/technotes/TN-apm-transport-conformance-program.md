@@ -29,6 +29,30 @@ validated and atomically appended under the promotion state's sibling
 its retry sequence offline. P5 remains responsible for correcting the f63
 visibility-lag classification and the f64 regression policy.
 
+## P5 repair evidence
+
+Implemented 2026-08-30. Memory-snapshot visibility now returns an obtained
+Boolean separately from a typed failure to obtain that Boolean. Callback
+timeouts and unavailability retain their operation, acquired outcome, evidence
+validity, candidate count, and parallel-execution fact; an obtained `false`
+continues to produce `:memory-snapshot-review-not-visible` and is never retried
+as transport.
+
+Promotion publication carries typed observation failures into the existing
+bounded delayed retry state without replacing the last valid state. History
+retains the concrete snapshot failure and observation classification. Before a
+certified state is persisted, its transition certificate is validated against
+the source/loaded identity and decision model. Invalid certificates remain
+diagnostic artifacts but produce `:transport-certificate-nonconformant` and an
+apparatus hold instead of advancement.
+
+The projection watchdog reports a quiescent delayed retry as `:waiting`, with
+wake, attempt/maximum, and last failure. It suppresses pre-wake liveness noise
+but no longer labels that state healthy-running. The f63 exception/later-visible
+and f64 timeout/retry/success shapes are pinned by the focused suites and the
+append-only certificate replay fixtures. P6 still owns the stopped-machine
+canary, namespace reload, loaded-resource confirmation, and campaign restart.
+
 ## P1 recovered semantics
 
 ### Existing intended path

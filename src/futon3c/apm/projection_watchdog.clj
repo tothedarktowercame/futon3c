@@ -134,7 +134,9 @@
           (conj (finding :coordinator-last-result-successful
                          :coordinator-last-result-failed
                          {:result (:regulator/last-result coordinator)})))]
-    {:watch/status (if (seq findings) :alert :healthy)
+    {:watch/status (cond (seq findings) :alert
+                         transport-retry? :waiting
+                         :else :healthy)
      :watch/checked obligation-ids
      :watch/findings findings
      :frame-id (:frame-id transition)
@@ -142,7 +144,15 @@
      :phase (:phase transition)
      :operation operation
      :coordinator/ticks (:regulator/ticks coordinator)
-     :job/age-seconds job-age}))
+     :job/age-seconds job-age
+     :transport-retry
+     (when transport-retry?
+       {:wake-at-ms (:transport-retry/not-before-ms phase-state)
+        :attempt (:transport-retry/attempt phase-state)
+        :max-attempts (:transport-retry/max-attempts phase-state)
+        :last-failure (or (:transport-retry/last-error-code phase-state)
+                          (some-> (:transport-retry/history phase-state)
+                                  last :error/code))})}))
 
 (defn- read-edn [path] (edn/read-string (slurp (io/file (str path)))))
 

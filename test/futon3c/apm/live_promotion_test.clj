@@ -761,7 +761,7 @@
     (is (= 601000 (get-in result [:state :transport-retry/not-before-ms])))
     (is (= [{:attempt 0 :failed-at-ms 1000
              :error/component :transport
-             :error/code :promotion-review-projection-failed}]
+             :error/code :hyperedge-unreachable}]
            (get-in result [:state :transport-retry/history])))))
 
 (deftest transport-retry-waits-without-io-then-reuses-terminal-review
@@ -809,6 +809,90 @@
                               :succeeded-at-ms])))
     (is (= 1 (count @emitted)))
     (is (:ok (transport/validate-certificate (ffirst @emitted))))))
+
+(deftest visibility-observation-failure-schedules-transport-retry
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        persisted (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true
+                             :transport-retry-delay-ms 600000
+                             :transport-retry-max-attempts 3}
+          :now-ms-fn (constantly 1000)
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn
+          (fn [_]
+            {:ok false :error/code :memory-snapshot-visibility-not-obtained
+             :error/component :transport
+             :transport/operation :post-publication-verification
+             :transport/acquired-outcome :timeout
+             :transport/classified-outcome :timeout
+             :transport/evidence :not-obtained})
+          :persist-fn #(reset! persisted %)})]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :awaiting-transport-retry (:stage @persisted)))
+    (is (= :memory-snapshot-visibility-not-obtained
+           (get-in @persisted [:transport-retry/history 0 :error/code])))
+    (is (= :timeout
+           (get-in @persisted
+                   [:transport-retry/history 0 :transport/acquired-outcome])))
+    (is (= :not-obtained
+           (get-in @persisted
+                   [:transport-retry/history 0 :transport/evidence])))))
+
+(deftest nonconformant-certificate-blocks-certified-state
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        persisted (atom [])
+        emitted (atom nil)
+        run (fn []
+              (sut/drive!
+               {:state {:state/type :promotion :stage :independent-review
+                       :deposit {:depositor "scribe" :candidates [candidate]}
+                       :candidates [candidate] :job "review-job"}
+               :promotion-policy {:completed-pass-required true}
+               :now-ms-fn (constantly 1000)
+               :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                     :reviews [review]})
+               :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+               :publish-fn (fn [_] {:ok true
+                                    :receipt {:receipt/id "published"}})
+               :certificate-emitter-fn
+               (fn [certificate _]
+                 (reset! emitted certificate)
+                 {:ok true :certificate-valid? false})
+                :persist-fn (fn [state] (swap! persisted conj state))}))
+        result (with-redefs-fn
+                 {(ns-resolve 'futon3c.apm.live-promotion
+                              'transport-implementation-identity)
+                  (fn [] {:spec-id "spec" :source-id "source"
+                          :loaded-runtime-id "stale"})}
+                 run)]
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :transport-certificate-nonconformant
+           (get-in result [:state :error/code])))
+    (is (some #(= :transport-conformance-runtime-identity-mismatch
+                  (:error/code %))
+              (:findings result)))
+    (is (= :awaiting-apparatus-repair (:stage (last @persisted))))
+    (is (not-any? #(= :promotion-certified (:state/type %)) @persisted))
+    (is (= "stale" (get-in @emitted [:identity :loaded-runtime-id])))))
 
 (deftest same-contract-projection-repair-reuses-terminal-review-job
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
@@ -1049,7 +1133,7 @@
                      [:transport-retry/escalation :attempts])))
     (is (= [{:attempt 99 :failed-at-ms 1000
              :error/component :transport
-             :error/code :promotion-candidate-edge-write-failed}]
+             :error/code :hyperedge-unreachable}]
            (get-in @persisted
                    [:transport-retry/escalation :history])))))
 
