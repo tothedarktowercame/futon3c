@@ -7,6 +7,32 @@
  :fixture/finding :frame-minted-after-intended-f58-stop-boundary
  :fixture/counts-as-experimental-evidence? false
  :fixture/preserve-receipts? true
+ :fixture/frozen-artifacts
+ [{:path "live/student-attempt-1.edn"
+   :sha256
+   "12ed8d186ddf247cc55b863f7e0a5cd0cacf32e83d5ed2004ed7114ec8596c4a"
+   :used-ids []}
+  {:path "ledger.edn"
+   :sha256
+   "98fef581d88ea03bf97847e3dbb2d816fb142cd53ee0142c04ae45a405a16a6e"}]
+ :fixture/fingerprint-audit-replay
+ {:campaign "jit-all-open-v2"
+  :summary {:use-events 2
+            :fingerprinted 1
+            :not-adjudicable-by-token 1}
+  :rows
+  [{:frame "f59"
+    :attempt 1
+    :memory "e-01c38dee-a698-41e3-af98-d6700d3dd55c"
+    :use-kind "substitutive"
+    :verdict "fingerprinted"
+    :novel-hits ["f59SyntheticWitness"]}
+   {:frame "f59"
+    :attempt 1
+    :memory "e-apm-promotion-named-memory-id"
+    :use-kind "regulative"
+    :verdict "not-adjudicable-by-token"
+    :novel-hits []}]}
  :fixture/ledger-path
  "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f59/ledger.edn"
  :void/classification :apparatus-invalidated
