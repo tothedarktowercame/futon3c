@@ -44,6 +44,11 @@
                      (<= (:elapsed-ms %) maximum-endpoint-ms))
                accepted-endpoint-latencies)))
 
+(defn- commit-sha?
+  [value]
+  (and (string? value)
+       (boolean (re-matches #"[0-9a-f]{7,40}" value))))
+
 (defn- port-7070-delivery-gate?
   [{:keys [required? endpoint]}]
   (and (true? required?)
@@ -53,6 +58,50 @@
            (and (= 7070 (.getPort uri))
                 (= delivery-qa-path (.getPath uri))))
          (catch Exception _ false))))
+
+(defn delivery-note-status
+  "Classify the QA-notes addendum the click runner must write.  A missing or
+   rejected note is a delivery-gate failure; a written note must name what
+   changed or progressed plus evidence ids and commit SHAs."
+  [delivery-qa]
+  (let [note (:note delivery-qa)]
+    (cond
+      (= :rejected (:note-status delivery-qa))
+      :delivery-qa-note-rejected
+
+      (not= :written (:note-status delivery-qa))
+      :delivery-qa-note-missing
+
+      (not (map? note))
+      :delivery-qa-note-incomplete
+
+      (not (nonblank-string? (:changed-or-progressed note)))
+      :delivery-qa-note-incomplete
+
+      (not (seq (:evidence-ids note)))
+      :delivery-qa-note-incomplete
+
+      (not (every? nonblank-string? (:evidence-ids note)))
+      :delivery-qa-note-incomplete
+
+      (not (seq (:commit-shas note)))
+      :delivery-qa-note-incomplete
+
+      (not (every? commit-sha? (:commit-shas note)))
+      :delivery-qa-note-incomplete
+
+      :else :delivery-qa-note-valid)))
+
+(defn delivery-note-failure
+  "Typed reason for a failing note, or nil when the note passes."
+  [delivery-qa]
+  (let [status (delivery-note-status delivery-qa)]
+    (when (not= :delivery-qa-note-valid status)
+      {:reason (case status
+                 :delivery-qa-note-rejected :delivery-qa-note-rejected
+                 :delivery-qa-note-missing :delivery-qa-note-missing
+                 :delivery-qa-note-incomplete)
+       :note-status (get delivery-qa :note-status :absent)})))
 
 (defn bounded-autonomy
   "Authorize the frozen strategic recommendation under machine gates.
@@ -145,7 +194,11 @@
       (fallback :delivery-qa-gate-invalid {:delivery-qa delivery-qa})
 
       :else
-      {:status :bounded-autonomy-authorized
+      (if-let [note-failure (delivery-note-failure delivery-qa)]
+        (fallback (:reason note-failure)
+                  {:delivery-qa delivery-qa
+                   :note-status (:note-status note-failure)})
+        {:status :bounded-autonomy-authorized
        :algorithm algorithm
        :effective-rung :bounded-autonomy
        :operator-decision-evidence-id
@@ -184,7 +237,7 @@
         :operator-confirmation-required? false}
        :selected-mission (first (:mission-ids recommendation))
        :selected-mission-ids (:mission-ids recommendation)
-       :live-ordering-changed? true})))
+       :live-ordering-changed? true}))))
 
 (defn advice-only
   "Compatibility entry point.  Operator gating has been retired; evaluate the

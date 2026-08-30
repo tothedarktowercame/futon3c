@@ -1,4 +1,4 @@
-{:fixture-version 2
+{:fixture-version 3
  :status :frozen-phase8-bounded-autonomy
  :freeze-id "phase8-bounded-autonomy-v2-20260724"
  :frozen-at "2026-07-23T13:16:42Z"
@@ -24,7 +24,13 @@
  :rollback-boundary "e74c7e7"
  :delivery-qa
  {:required? true
-  :endpoint "http://127.0.0.1:7070/api/alpha/morning-brief/addendum"}
+  :endpoint "http://127.0.0.1:7070/api/alpha/morning-brief/addendum"
+  :note-status :written
+  :note
+  {:changed-or-progressed
+   "Phase-8 bounded-autonomy fixture frozen; delivery-QA note contract proven"
+   :evidence-ids ["6e6f56a1-b9d7-4f83-928f-3a211ef890a0"]
+   :commit-shas ["e74c7e7"]}}
  :calibration
  {:sample-count 13
   :minimum 20

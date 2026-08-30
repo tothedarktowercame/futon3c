@@ -89,6 +89,28 @@
              (reason
               (assoc-in fixture [:delivery-qa :endpoint]
                         "http://127.0.0.1:7073/api/alpha/morning-brief/addendum")))))
+    (testing "a missing, rejected, or incomplete QA note is a delivery-gate failure"
+      (is (= :delivery-qa-note-missing
+             (reason (assoc-in fixture [:delivery-qa :note-status] :absent))))
+      (is (= :delivery-qa-note-missing
+             (reason (update fixture :delivery-qa dissoc :note-status))))
+      (is (= :delivery-qa-note-rejected
+             (reason (assoc-in fixture [:delivery-qa :note-status] :rejected))))
+      (is (= :delivery-qa-note-incomplete
+             (reason (update-in fixture [:delivery-qa :note]
+                                dissoc :changed-or-progressed))))
+      (is (= :delivery-qa-note-incomplete
+             (reason (assoc-in fixture [:delivery-qa :note :evidence-ids] []))))
+      (is (= :delivery-qa-note-incomplete
+             (reason (assoc-in fixture [:delivery-qa :note :commit-shas] []))))
+      (is (= :delivery-qa-note-incomplete
+             (reason (assoc-in fixture [:delivery-qa :note :commit-shas]
+                               ["not-a-sha"]))))
+      (let [result (canary/bounded-autonomy
+                    shadow-result
+                    (update fixture :delivery-qa dissoc :note))]
+        (is (false? (get-in result [:enactment :authorized?])))
+        (is (= :current-additive (:fallback-controller result)))))
     (testing "additive behavior exists only behind the named rollback"
       (let [result
             (canary/bounded-autonomy
