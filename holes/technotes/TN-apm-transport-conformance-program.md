@@ -147,3 +147,14 @@ Campaign restart is authorized only from this state.  The restart receipt,
 post-restart tick/frame transition, watcher projection, and any newly emitted
 certificate replay are operational evidence and must be reported separately;
 a real error requires another durable stop.
+
+The authorized restart used `durable-coordinator/resume!` for
+`jit-queue:jit-all-open-v2` and returned `:started` at epoch 103 with its
+semantic-progress watchdog already running.  Durable enablement then read
+`enabled`; ticks advanced from 20005 through 20016, and f65 advanced from
+`:solve` to `:verify` with its executable sorry count reaching zero.  The
+watcher, pointed at the configured `problem-transitions.edn`, reported
+`:healthy`, no findings, and the current proctor job.  No new transport
+certificate was present during this observation window because the frame had
+not reached promotion; live certificate replay therefore remains an
+observable future gate rather than evidence claimed by this restart.
