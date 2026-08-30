@@ -837,6 +837,42 @@
 
     (= :awaiting-apparatus-repair (:stage state))
     (cond
+      (and (= :promotion-pass (:repair/kind state))
+           (< (:repair/attempts state) (:repair/max-attempts state)))
+      (let [prior (:last-valid-state state)
+            successor-attempt (inc (or (:review-successor-attempt prior) 0))
+            predecessor {:job {:job-id (:job prior)
+                               :state :done
+                               :report (:persisted-review-result state)}
+                         :ticket (:ticket prior)
+                         :terminal-collection (:terminal-collection prior)
+                         :findings (vec (:findings state))
+                         :trace/successor-observation
+                         (successor-observation (:job prior)
+                                                (:terminal-collection prior)
+                                                (:findings state))}
+            archived-prior (update prior :superseded-terminals
+                                   (fnil conj []) predecessor)
+            archived (persist-fn archived-prior)]
+        (if-not (:ok archived)
+          {:ok false :error/code :promotion-review-archive-persistence-failed
+           :state state}
+          (let [successor (review-fn (:candidates prior) (:job prior)
+                                     successor-attempt)]
+            (if-not (:ok successor)
+              successor
+              (let [next-state (-> archived-prior
+                                   (bind-last-successor (:job successor))
+                                   (assoc :job (:job successor)
+                                          :ticket {:job-id (:job successor)}
+                                          :predecessor-job-id (:job prior)
+                                          :review-successor-attempt successor-attempt
+                                          :projection-repair-attempt
+                                          (inc (:repair/attempts state))))]
+                (persist-fn next-state)
+                {:ok true :status :awaiting-terminal
+                 :job-id (:job successor) :state next-state})))))
+
       (and (= :unresolved-review (:repair/kind state))
            (string? contract-digest)
            (not= contract-digest (:contract-digest state)))

@@ -913,6 +913,33 @@
              (mapv #(get-in % [:job :job-id])
                    (get-in second [:state :superseded-terminals])))))))
 
+(deftest incomplete-promotion-pass-dispatches-bounded-review-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p"]}]
+                    :job "review-with-missing-patterns"
+                    :ticket {:job-id "review-with-missing-patterns"}}
+        saved (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :repair/kind :promotion-pass :repair/attempts 0
+                  :repair/max-attempts 1 :contract-digest "contract"
+                  :findings [:review-patterns-invalid]
+                  :last-valid-state last-valid}
+          :contract-digest "contract"
+          :review-fn
+          (fn [candidates predecessor attempt]
+            (is (= (:candidates last-valid) candidates))
+            (is (= "review-with-missing-patterns" predecessor))
+            (is (= 1 attempt))
+            {:ok true :job "corrected-review"})
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrected-review" (:job-id result)))
+    (is (= 1 (:projection-repair-attempt @saved)))
+    (is (= "review-with-missing-patterns"
+           (get-in @saved [:superseded-terminals 0 :job :job-id])))))
+
 (deftest unresolved-review-archive-failure-blocks-successor
   (let [called (atom 0)
         last-valid {:state/type :promotion :stage :independent-review
