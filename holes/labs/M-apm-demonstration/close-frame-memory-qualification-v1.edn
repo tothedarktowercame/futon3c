@@ -1,0 +1,31 @@
+{:qualification/version 1
+ :qualification/id :synthetic-close-frame-memory-pipeline
+ :qualification/scope :hermetic
+ :campaign/jvm-required? false
+ :live-data-mutated? false
+ :production-functions
+ [futon3c.apm.live-preflight-runtime/atomic-persist!
+  futon3c.apm.live-preflight-runtime/read-state
+  futon3c.apm.live-learning-phases/memory-use-audit
+  futon3c.apm.typed-role-submission/prepare-request
+  futon3c.apm.typed-role-submission/evidence-required
+  futon3c.apm.live-learning-phases/validate-terminal
+  futon3c.apm.countdown-control/record-close-observations!
+  futon3c.apm.frame-fingerprint-audit/audit!]
+ :injected-boundaries
+ [:external-fingerprint-analyzer-runner :analyst-wake]
+ :claims
+ [{:id :durable-student-receipts
+   :evidence [:uuid-like-memory-id :opaque-memory-id :atomic-edn-persistence]}
+  {:id :exact-close-submission-schema
+   :required #{:trace-id :result :memory-use-audit}}
+  {:id :successful-audit-publication
+   :artifacts ["analysis/fingerprint-audit.json"
+               "analysis/fingerprint-audit-status.edn"]}
+  {:id :failed-analyzer-preserves-durable-close
+   :failure-code :fingerprint-audit-command-failed
+   :preserves ["live/close-frame.edn"
+               "analysis/fingerprint-audit.json"]}]
+ :test/namespace futon3c.apm.close-frame-memory-qualification-test
+ :test/command
+ "clojure -M:test -n futon3c.apm.close-frame-memory-qualification-test"}
