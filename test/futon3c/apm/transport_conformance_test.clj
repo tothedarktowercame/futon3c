@@ -1,6 +1,8 @@
 (ns futon3c.apm.transport-conformance-test
   (:require [clojure.test :refer [deftest is testing]]
-            [futon3c.apm.transport-conformance :as sut]))
+            [futon3c.apm.transport-conformance :as sut])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
 
 (deftest lean-fixtures-have-the-same-conformance
   (testing "f63 visibility lag cannot be classified as authoritative absence"
@@ -120,3 +122,47 @@
                        {:error/code :some-new-failure}))))
   (is (= :transport-conformance-legacy-finding-malformed
          (:error/code (sut/adapt-legacy-finding :timeout)))))
+
+(defn- correlation [attempt]
+  {:frame-id "f64" :problem-id "b01J03"
+   :phase :promotion-review :attempt attempt})
+
+(deftest persisted-retry-then-success-replays-and-is-append-only
+  (let [dir (Files/createTempDirectory "transport-certificates-"
+                                       (make-array FileAttribute 0))
+        a (sut/persist-certificate! dir (correlation 0)
+                                    sut/f64-transport-failure 1000)
+        b (sut/persist-certificate! dir (correlation 1)
+                                    sut/f64-successful-visibility 2000)]
+    (is (:ok a))
+    (is (:ok b))
+    (is (not= (:path a) (:path b)))
+    (is (= 2 (with-open [stream (Files/list dir)] (count (.toList stream)))))
+    (is (= {:ok true :records 2} (sut/replay-directory dir)))))
+
+(deftest invalid-certificates-remain-durable-and-replay-fails-closed
+  (doseq [[certificate expected]
+          [[sut/f63-historical-certificate
+            :transport-conformance-outcome-mismatch]
+           [(assoc-in sut/f64-transport-failure [:identity :loaded-runtime-id]
+                      "different")
+            :transport-conformance-runtime-identity-mismatch]
+           [(assoc-in sut/f64-transport-failure [:identity :loaded-runtime-id]
+                      "unavailable")
+            :transport-conformance-loaded-runtime-id-unavailable]]]
+    (let [dir (Files/createTempDirectory "transport-certificates-invalid-"
+                                         (make-array FileAttribute 0))
+          persisted (sut/persist-certificate! dir (correlation 0)
+                                               certificate 1000)
+          replayed (sut/replay-directory dir)]
+      (is (:ok persisted))
+      (is (false? (:certificate-valid? persisted)))
+      (is (false? (:ok replayed)))
+      (is (some #(or (= expected (:error/code %))
+                     (some (fn [nested] (= expected (:error/code nested)))
+                           (:findings %)))
+                (:findings replayed))))))
+
+(deftest malformed-persisted-record-fails-closed
+  (is (= :transport-certificate-replay-failed
+         (:error/code (sut/replay-records [{:malformed true}])))))

@@ -330,6 +330,24 @@
              :finding :snapshot-review-not-visible}]
            (:prior-dropped result)))))
 
+(deftest own-visibility-exception-retains-acquired-outcome
+  (let [dir (Files/createTempDirectory "apm-own-visible-failure"
+                                       (make-array FileAttribute 0))
+        own (assoc candidate :depositor "f63-guide"
+                   :provenance {:campaign-id "c1"
+                                :frame-id "f63" :problem-id "p63"})
+        result (sut/publish-cumulative!
+                {:frame-id "f63" :problem-id "p63"
+                 :prior-candidates [] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1"]
+                 :evidence-visible?
+                 (fn [_] (throw (ex-info "visibility timeout" {})))})]
+    (is (= :memory-snapshot-review-not-visible (:error/code result)))
+    (is (= :post-publication-verification (:transport/operation result)))
+    (is (= :visibility-lag (:transport/acquired-outcome result)))
+    (is (= :authoritative-absence (:transport/classified-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))))
+
 (deftest cumulative-dedup-preserves-earliest-depositor-origin
   (let [dir (Files/createTempDirectory "apm-provenance-dedup"
                                        (make-array FileAttribute 0))

@@ -10,7 +10,9 @@
             [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-review-store :as review-store]
-            [futon3c.apm.typed-role-submission :as submission]))
+            [futon3c.apm.typed-role-submission :as submission]
+            [futon3c.apm.transport-conformance :as transport])
+  (:import [java.nio.file Path]))
 
 (defn resolved-role-card-path [control-root request]
   (let [resolved (authority-port/resolve-path
@@ -23,6 +25,59 @@
 (def ^:private max-deposit-attempts 3)
 (def ^:private default-transport-retry-delay-ms (* 10 60 1000))
 (def ^:private default-transport-retry-max-attempts 3)
+(declare transport-failure?)
+
+(def ^:private implementation-resource "futon3c/apm/live_promotion.clj")
+(defonce ^:private loaded-runtime-id
+  (transport/source-resource-id implementation-resource))
+
+(defn transport-implementation-identity []
+  (transport/implementation-identity
+   (transport/source-resource-id implementation-resource)
+   loaded-runtime-id))
+
+(defn- certificate-history [state]
+  (mapv (fn [entry]
+          {:attempt (:attempt entry)
+           :operation (or (:transport/operation entry) :write)
+           :acquired-outcome (or (:transport/acquired-outcome entry) :timeout)
+           :evidence (or (:transport/evidence entry) :not-obtained)})
+        (:transport-retry/history state)))
+
+(defn- publication-certificate [state published result promotion-policy]
+  (let [attempt (or (:transport-retry/attempt state) 0)
+        max-attempts (or (:transport-retry-max-attempts promotion-policy)
+                         default-transport-retry-max-attempts)
+        acquired (or (:transport/acquired-outcome published)
+                     (when (:ok published) :success)
+                     (when (transport-failure? published) :timeout)
+                     :authoritative-absence)
+        classified (or (:transport/classified-outcome published)
+                       (when (:ok published) :success)
+                       (when (transport-failure? published) :timeout)
+                       :authoritative-absence)
+        evidence (or (:transport/evidence published)
+                     (if (:ok published) :obtained
+                         (if (contains? #{:timeout :unavailable :visibility-lag}
+                                        acquired)
+                           :not-obtained :obtained)))
+        wake-at-ms (or (get-in result [:state :transport-retry/not-before-ms]) 0)
+        decision (case (:status result)
+                   :certified [:advance]
+                   :transport-retry-scheduled [:retry wake-at-ms]
+                   (if (= :authoritative-absence classified)
+                     [:park :authoritative-absence]
+                     [:park :invalid-evidence]))]
+    {:identity (transport-implementation-identity)
+     :operation (or (:transport/operation published)
+                    (if (:ok published) :post-publication-verification
+                        :publication))
+     :acquired-outcome acquired :classified-outcome classified
+     :evidence evidence :attempt attempt :max-attempts max-attempts
+     :wake-at-ms wake-at-ms :history (certificate-history state)
+     :last-valid-state (pr-str (select-keys state [:state/type :stage :job]))
+     :last-valid-evidence (pr-str (select-keys state [:reviews :candidates]))
+     :decision decision}))
 
 (defn- successor-observation [job-id terminal-collection findings]
   (campaign-trace/validate-authoritative-observation
@@ -387,6 +442,22 @@
               :persist-reviews-fn review-store/persist!
               :candidate-visible-fn candidate-store/visible?
               :publish-fn publish-fn
+              :certificate-emitter-fn
+              (fn [certificate emitted-at-ms]
+                (let [state-file (.toAbsolutePath
+                                  (if (instance? Path state-path)
+                                    state-path
+                                    (Path/of (str state-path)
+                                             (make-array String 0))))
+                      directory (.resolve (.getParent state-file)
+                                          "transport-certificates")]
+                  (transport/persist-certificate!
+                   directory
+                   {:frame-id (or (:frame-id deposit-request) "unavailable")
+                    :problem-id (or (:problem-id deposit-request) "unavailable")
+                    :phase (or (:phase deposit-request) :promotion-review)
+                    :attempt (:attempt certificate)}
+                   certificate emitted-at-ms)))
               :promotion-policy promotion-policy
               :contract-digest contract-digest
               :persist-fn persist-fn})
@@ -548,7 +619,8 @@
      :transport-retry/escalation escalation}))
 
 (defn- publish-completed-pass!
-  [state action promotion-policy contract-digest publish-fn persist-fn now-ms-fn]
+  [state action promotion-policy contract-digest publish-fn persist-fn
+   certificate-emitter-fn now-ms-fn]
   (let [checked (if (:completed-pass-required promotion-policy)
                   (pipeline/validate-complete-dispositions
                    (:dispatched-candidates action) (:reviews action))
@@ -567,30 +639,37 @@
               (assoc :job-id consumed-job-id)
               (:completed-pass-required promotion-policy)
               (assoc :dispositions (:dispositions checked)))
-            published (publish-fn published-action)]
-        (if-not (:ok published)
-          (hold-incomplete-pass!
-           state
-           {:ok false :error/code :promotion-publication-failed
-            :repair/kind :promotion-publication
-            :review-job (:job state)
-            :reviews (:reviews action)
-            :findings [published]}
-           promotion-policy contract-digest persist-fn now-ms-fn)
-          (let [done {:state/type :promotion-certified
-                      :receipt (:receipt published)}
-                done (if (pos? (or (:transport-retry/attempt state) 0))
-                       (assoc done :transport-retry/history
-                              (conj (vec (:transport-retry/history state))
-                                    {:attempt (:transport-retry/attempt state)
-                                     :succeeded-at-ms (long (now-ms-fn))}))
-                       done)]
-            (persist-fn done)
-            {:ok true :status :certified :state done
-             :certificate (:receipt published)}))))))
+            published (publish-fn published-action)
+            result
+            (if-not (:ok published)
+              (hold-incomplete-pass!
+               state
+               {:ok false :error/code :promotion-publication-failed
+                :repair/kind :promotion-publication
+                :review-job (:job state)
+                :reviews (:reviews action)
+                :findings [published]}
+               promotion-policy contract-digest persist-fn now-ms-fn)
+              (let [done {:state/type :promotion-certified
+                          :receipt (:receipt published)}
+                    done (if (pos? (or (:transport-retry/attempt state) 0))
+                           (assoc done :transport-retry/history
+                                  (conj (vec (:transport-retry/history state))
+                                        {:attempt (:transport-retry/attempt state)
+                                         :succeeded-at-ms (long (now-ms-fn))}))
+                           done)]
+                (persist-fn done)
+                {:ok true :status :certified :state done
+                 :certificate (:receipt published)}))
+            emitted-at-ms (long (now-ms-fn))
+            certificate (publication-certificate state published result
+                                                 promotion-policy)
+            emission (when certificate-emitter-fn
+                       (certificate-emitter-fn certificate emitted-at-ms))]
+        (cond-> result emission (assoc :transport-certificate emission))))))
 
 (defn- drive-step!
-  [{:keys [state deposit-fn review-fn publish-fn persist-fn
+  [{:keys [state deposit-fn review-fn publish-fn persist-fn certificate-emitter-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
            persist-reviews-fn deposit-request reviewer-request
            promotion-policy contract-digest now-ms-fn]
@@ -690,12 +769,13 @@
                                   :dispatched-candidates
                                   (filterv
                                    (set (map :memory-id mechanical))
-                                   (:candidates deposit))
-                                  :deposit deposit
-                                  :reviewer pipeline/mechanical-reviewer
+                                  (:candidates deposit))
+                                 :deposit deposit
+                                 :reviewer pipeline/mechanical-reviewer
                                   :reviews (:reviews persisted-mechanical)}
                                  promotion-policy contract-digest publish-fn
-                                 persist-fn now-ms-fn)))))))))))))))
+                                 persist-fn certificate-emitter-fn
+                                 now-ms-fn)))))))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
@@ -738,7 +818,8 @@
                   :reviewer pipeline/mechanical-reviewer
                   :reviews (:reviews persisted-mechanical)}
                  promotion-policy contract-digest
-                 publish-fn persist-fn now-ms-fn)))))))))
+                 publish-fn persist-fn certificate-emitter-fn
+                 now-ms-fn)))))))))
 
     (= :independent-review (:stage state))
     (let [invisible (filterv (complement candidate-visible-fn)
@@ -831,7 +912,8 @@
                               (into (vec (:reviews persisted-mechanical))
                                     (:reviews persisted))}
                              promotion-policy contract-digest publish-fn
-                             persist-fn now-ms-fn)))))))))))))
+                             persist-fn certificate-emitter-fn
+                             now-ms-fn)))))))))))))
 
     (= :awaiting-transport-retry (:stage state))
     (if (< (long (now-ms-fn)) (:transport-retry/not-before-ms state))

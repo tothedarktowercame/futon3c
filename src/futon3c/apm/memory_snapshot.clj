@@ -285,12 +285,17 @@
   reviews are dropped with an explicit account. Own candidates remain subject
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
-  (let [evidence-visible? (when (fn? evidence-visible?)
+  (let [visibility-failures (atom [])
+        evidence-visible? (when (fn? evidence-visible?)
                             (memoize
                              (fn [candidate]
                                (try
                                  (boolean (evidence-visible? candidate))
-                                 (catch Throwable _ false)))))
+                                 (catch Throwable t
+                                   (swap! visibility-failures conj
+                                          {:memory-id (:memory-id candidate)
+                                           :error/message (.getMessage t)})
+                                   false)))))
         args (assoc args :evidence-visible? evidence-visible?)
         origin-valid?
         (fn [candidate]
@@ -353,7 +358,14 @@
       {:ok false :error/code :memory-snapshot-provenance-invalid
        :memory-ids invalid-origins}
       (cond-> published
-        (:ok published) (assoc :prior-dropped dropped)))))
+        (:ok published) (assoc :prior-dropped dropped)
+        (and (= :memory-snapshot-review-not-visible (:error/code published))
+             (seq @visibility-failures))
+        (assoc :transport/operation :post-publication-verification
+               :transport/acquired-outcome :visibility-lag
+               :transport/classified-outcome :authoritative-absence
+               :transport/evidence :not-obtained
+               :transport/visibility-failures @visibility-failures)))))
 
 (defn verify-student-access
   [{:keys [path expected frame-id problem-id accessible-memory-ids]}]

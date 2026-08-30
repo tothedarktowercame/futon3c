@@ -4,6 +4,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-promotion :as sut]
             [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.apm.transport-conformance :as transport]
             [futon3c.apm.typed-role-submission :as submission]))
 
 (defn materialization [id digest]
@@ -782,6 +783,7 @@
                      :transport-retry/history
                      [{:attempt 0 :failed-at-ms 1000}]}
         calls (atom [])
+        emitted (atom [])
         inputs {:state retry-state
                 :promotion-policy {:completed-pass-required true}
                 :review-fn (fn [job _]
@@ -789,6 +791,10 @@
                              {:ok true :reviewer "proctor" :reviews [review]})
                 :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
                 :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+                :certificate-emitter-fn
+                (fn [certificate emitted-at-ms]
+                  (swap! emitted conj [certificate emitted-at-ms])
+                  {:ok true})
                 :persist-fn (fn [_] {:ok true})}
         waiting (sut/drive! (assoc inputs :now-ms-fn (constantly 600999)))
         calls-while-waiting @calls
@@ -800,7 +806,9 @@
     (is (= 1 (get-in completed [:state :transport-retry/history 1 :attempt])))
     (is (= 601000
            (get-in completed [:state :transport-retry/history 1
-                              :succeeded-at-ms])))))
+                              :succeeded-at-ms])))
+    (is (= 1 (count @emitted)))
+    (is (:ok (transport/validate-certificate (ffirst @emitted))))))
 
 (deftest same-contract-projection-repair-reuses-terminal-review-job
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]

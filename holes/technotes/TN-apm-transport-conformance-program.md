@@ -22,6 +22,13 @@ validator must describe the same transition system.
 No later park begins before the prior exit evidence exists.  The campaign stays
 stopped through P1--P5 and is restarted only at P6.
 
+P4 is implemented at the promotion publication boundary. Each attempt is
+validated and atomically appended under the promotion state's sibling
+`transport-certificates/` directory; invalid records remain durable evidence.
+`scripts/apm-replay-transport-certificates.clj` revalidates the directory and
+its retry sequence offline. P5 remains responsible for correcting the f63
+visibility-lag classification and the f64 regression policy.
+
 ## P1 recovered semantics
 
 ### Existing intended path
