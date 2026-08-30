@@ -123,6 +123,39 @@ optional:
    exactly the event that would trip it — sequence this pass between
    frames, not during one.
 
+## Population A proof-text disposition (verified 2026-08-30)
+
+The urgent six-item proof-text slice named above was independently reviewed
+and retired on 2026-08-25 under session
+`retire-pre-guard-proof-text-2026-08-25`.  A fresh substrate read on
+2026-08-30 verified every review evidence entry and its current
+`memory/assert` projection.  No new store mutation was required.
+
+| memory | depositor | measured body / proof blocks | review evidence | disposition |
+|---|---|---:|---|---|
+| `e-83ece32c-9e01-42aa-86d8-0a5a6e6265f5` | `f29-guide` | 23,383 B / 38 | `e-review-retire-proof-text-83ece32c` | reject |
+| `e-021bf80a-b18a-4f0b-9dc5-e158108521cf` | `f29-guide` | 25,878 B / 41 | `e-review-retire-proof-text-021bf80a` | reject |
+| `e-c86a7d45-02e7-494b-b929-d8eddeef074f` | `f29-guide` | 26,226 B / 57 | `e-review-retire-proof-text-c86a7d45` | reject |
+| `e-f6b4c56b-67f9-4cef-b094-1de22bad9588` | `f29-guide` | 19,524 B / 40 | `e-review-retire-proof-text-f6b4c56b` | reject |
+| `e-f0db6e27-c64d-4576-bc23-22bd42a97481` | `f30-guide` | 22,450 B / 42 | `e-review-retire-proof-text-f0db6e27` | reject |
+| `e-20851bde-ba9a-4883-8b4e-0c2f0f741fe9` | `f30-guide` | 5,907 B / 11 | `e-review-retire-proof-text-20851bde` | reject |
+
+Each receipt records `:review/verdict :reject`,
+`:review/finding-codes [:proof-text-not-memory]`, and the mechanical-guard
+thresholds of 4,096 body bytes and three proof blocks.  Reviewer `codex-10`
+is distinct from depositors `f29-guide` and `f30-guide`.
+
+The projection convention for rejection is intentionally
+`:attachment-status :proposed` plus the persisted reject review.  Production
+`memory-snapshot/candidate-visible?` requires both the candidate and current
+edge to be `:reviewed`; a direct check returned false for all six.  Therefore
+these items cannot enter a newly published campaign-prior snapshot.  Existing
+immutable historical snapshots remain historical evidence and are not
+rewritten.
+
+This closes only the six-item proof-text slice, not the full Population A
+review described above.
+
 ## What this does not do
 
 It does not make the memories *findable* from another problem by itself —
