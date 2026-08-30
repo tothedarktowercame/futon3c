@@ -514,8 +514,37 @@ novel Mathlib tokens from its guide, f53/a3 with a guide deposit and two scribe 
 Running tally since the depositor-truth holdout was repaired — ten clean attempt
 observations across f49, f50, f52, f53:
 
-**No attempt has used a shelved memory that predates its own frame.** The shelf grew
-76 -> 102 across them.
+**No attempt left a fingerprint from a shelved memory that predates its own frame.**
+The shelf grew 76 -> 102 across them. Two f50 attempts did select prior-frame shelf
+memories, so the earlier wording ("no attempt has used") was false:
+
+| attempt | memory | provenance | route | fingerprint verdict |
+|---|---|---|---|---|
+| f50/a1 | `e-63b7c7c1-1906-412c-ae18-b4644762fbea` | f34-guide / a95J03 | shelf | weak (`norm_num` only) |
+| f50/a3 | `e-apm-promotion-0af2ca3ab1d3461da7f90822a1c7c028` | f44-scribe / a98A02 | shelf | unwitnessed |
+
+The f44-scribe memory had already appeared in f47/a3, also cross-problem through the
+shelf and unwitnessed. These two appearances are one selected memory, not two witnessed
+transfers:
+
+| attempt | problem | memory provenance | route | fingerprint verdict |
+|---|---|---|---|---|
+| f47/a3 | a97A01 | f44-scribe / a98A02 | shelf | unwitnessed |
+| f50/a3 | a98A07 | f44-scribe / a98A02 | shelf | unwitnessed |
+
+The corrected claim is therefore about artifact evidence, not selection: across these
+ten observations, prior-frame shelf memories were selected, but none left a qualifying
+fingerprint.
+
+### Instrument boundary at f53
+
+The guide and analyst seats moved to zai `glm-5.3` at f53 (`12cf8b48`). The
+within-frame fingerprint result up through f52 rests on six Claude-guide frames; f53 is
+the first glm-guide instance and did preserve the result (a3 closed using a guide deposit
+and two scribe deposits). This is one observation, not evidence that the guide-model
+change is immaterial. f54 and f55 do not extend the stratum because apparatus gates
+prevented their guides from depositing. Report the pre-f53 and f53+ strata separately
+until the latter has more than one usable point.
 
 ### A second line of evidence: the shelf accumulates restatement
 

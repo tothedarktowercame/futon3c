@@ -754,4 +754,60 @@
    :not-done
    "Persisting :cost/model into the attempt receipt, which would make the
     casting claim checkable per turn instead of via a billing panel. Joe
-    declined to spend time on the model question now; recorded as open."}]}
+    declined to spend time on the model question now; recorded as open."}
+
+  {:amendment 10
+   :at "2026-08-30T10:52:05Z"
+   :by "codex-17"
+   :kind :analysis-record-and-instrument-boundary
+   :authority
+   "Joe, 2026-08-30: review and apply the memory-system recommendations in
+    TN-fable-F36-F57-review before restarting the campaign."
+   :condition-3/frame-record
+   {:frame "f42"
+    :attempt 1
+    :problem "a97J07"
+    :memory-id "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69"
+    :memory-origin {:frame "f29" :role :guide :problem "a01J05"}
+    :route [:shelf :search]
+    :artifact-verdict :fingerprinted
+    :novel-hits ["isBounded_ball" "frontier_ball" "mem_ball_self"
+                 "one_ne_zero" "one_pos"]
+    :reading
+    "This meets condition 3 under the preregistered artifact rule: a named,
+     cross-problem, cross-frame shelf memory has novel identifiers in a
+     compiling artifact. It does not establish the stronger causal reading
+     that the memory selected or changed the proof route."
+    :caveats
+    ["The base file already named Complex.norm_le_of_forall_mem_frontier_norm_le; the route was not selected by the memory."
+     "The memory's headline canonical-factor and constancy argument is absent; the transferred material is the max-modulus API recipe and its side conditions."
+     "The novel hits are necessary side conditions for the already-signposted route and are rare partly because most corpus problems are not max-modulus problems."]}
+   :condition-3/counting-rule
+   "Keep two counts explicit. The preregistered artifact-letter count includes
+    f42/a1. A stronger route-changing causal count does not. Never silently
+    substitute one reading for the other."
+   :casting-boundary
+   {:frame "f53"
+    :change "Guide and analyst seats moved to zai glm-5.3 (commit 12cf8b48)."
+    :consequence
+    "Within-frame fingerprinted transfer before f53 has six Claude-guide
+     frames; f53 is the first and, at this boundary, only glm-guide instance.
+     Report those strata separately until the latter has more observations."
+    :evidence
+    "f53/a3 closed using one f53-guide and two f53-scribe deposits; the guide
+     deposit has specific localized Mathlib fingerprints. f54/f55 do not add
+     guide observations because apparatus gates prevented deposits."}
+   :close-frame-used-ids-boundary
+   {:status :open
+    :finding
+    "Student receipts already preserve arbitrary string-valued :used-ids in
+     :receipt/memory-use. The remaining defect is the close-frame role's
+     summary contract: :close-frame accepts only {:trace-id :result}, so the
+     human :result prose collapses use to an integer and cannot preserve the
+     non-UUID ids."
+    :exact-seam
+    "Extend typed_role_submission's :close-frame schema and generated contract
+     with a structured per-id memory-use/audit field, populate it from the
+     already durable student receipts in the close-frame packet/handler, and
+     test non-UUID ids end to end. This amendment records the seam but does not
+     change the live contract."}}]}
