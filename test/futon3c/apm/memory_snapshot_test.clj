@@ -257,6 +257,38 @@
     (is (:ok result))
     (is (= {"prior-once" 1 "own-once" 1} @calls))))
 
+(deftest cumulative-publication-starts-independent-visibility-checks-concurrently
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-parallel"
+                                       (make-array FileAttribute 0))
+        release (promise)
+        started (atom #{})
+        candidates (mapv (fn [n]
+                           (assoc candidate
+                                  :memory-id (str "parallel-" n)
+                                  :depositor "f31-guide"
+                                  :provenance {:campaign-id "c2"
+                                               :frame-id "f31"
+                                               :problem-id "p31"}))
+                         (range 4))
+        run (future
+              (sut/publish-cumulative!
+               {:frame-id "f31" :problem-id "p31"
+                :prior-candidates [] :own-candidates candidates
+                :path (.resolve dir "union.edn") :lineage ["c2"]
+                :evidence-visible?
+                (fn [candidate]
+                  (swap! started conj (:memory-id candidate))
+                  @release
+                  true)}))]
+    (try
+      (is (= 4 (deref (future
+                        (loop []
+                          (if (= 4 (count @started)) 4
+                              (do (Thread/sleep 5) (recur)))))
+                      1000 :timed-out)))
+      (finally (deliver release true)))
+    (is (:ok @run))))
+
 (deftest cumulative-dedup-preserves-earliest-depositor-origin
   (let [dir (Files/createTempDirectory "apm-provenance-dedup"
                                        (make-array FileAttribute 0))

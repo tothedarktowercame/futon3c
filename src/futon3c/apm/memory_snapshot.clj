@@ -298,6 +298,18 @@
                           ordered
                           (conj ordered candidate)))
                       [] prior-candidates)
+        ;; Visibility is independent per immutable candidate. Realize these
+        ;; bounded reads concurrently, then let both the prior filter and the
+        ;; final fail-closed publication consume the same memoized answers.
+        _ (when evidence-visible?
+            (dorun (pmap evidence-visible?
+                         (reduce (fn [ordered candidate]
+                                   (if (some #(= (:memory-id candidate)
+                                                (:memory-id %))
+                                             ordered)
+                                     ordered
+                                     (conj ordered candidate)))
+                                 prior own-candidates))))
         inspected
         (mapv (fn [candidate]
                 (let [shape (validate-candidate candidate)
