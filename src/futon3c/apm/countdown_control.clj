@@ -1582,6 +1582,7 @@
        :job-id (get-in phase-job-state [:ticket :job-id])})
 
     (and (= :promotion (:state/type phase-job-state))
+         (contains? #{:deposit :independent-review} (:stage phase-job-state))
          (string? (:job phase-job-state)))
     (let [role (case (:stage phase-job-state)
                  :deposit (if (= :scribe-reduce active-phase)

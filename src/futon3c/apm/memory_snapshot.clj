@@ -20,6 +20,32 @@
   (= "reviewed" (some-> x name)))
 
 (def ^:private visibility-read-bound-ms 5000)
+(def visibility-concurrency-bound 8)
+(def ^:private visibility-reads-per-candidate-bound 4)
+
+(defn- bounded-visibility-mapv
+  "Run visibility reads in deterministic waves.  The fixed wave size prevents
+  a large inherited snapshot from turning into one substrate request per
+  candidate at once, while retaining parallel latency within each wave."
+  [f candidates]
+  (->> candidates
+       (partition-all visibility-concurrency-bound)
+       (mapcat (fn [batch]
+                 (let [work (mapv #(future (f %)) batch)]
+                   (mapv deref work))))
+       vec))
+
+(defn- visibility-bounds [candidate-count]
+  {:visibility/candidate-count candidate-count
+   :visibility/execution :bounded-parallel
+   :visibility/concurrency-bound visibility-concurrency-bound
+   :visibility/per-read-bound-ms visibility-read-bound-ms
+   :visibility/reads-per-candidate-bound visibility-reads-per-candidate-bound
+   :visibility/aggregate-bound-ms
+   (* (quot (+ candidate-count (dec visibility-concurrency-bound))
+            visibility-concurrency-bound)
+      visibility-reads-per-candidate-bound
+      visibility-read-bound-ms)})
 
 (def ^:private lean-token
   #"[A-Za-z][A-Za-z0-9_'.]{5,}")
@@ -195,7 +221,8 @@
      (candidate-visible? candidate
                          #(substrate/hyperedges-by-end
                            % {:limit 10 :timeout-ms 5000 :request-budget 2})
-                         #(estore/get-entry* backend %))))
+                         #(f1b/get-entry-bounded
+                           backend % visibility-read-bound-ms))))
   ([{:keys [memory-id depositor reviewer review-evidence-id
             attachment-status pattern-ids]}
     fetch-hyperedges fetch-entry]
@@ -232,7 +259,7 @@
         ;; the slowest candidate rather than by the size of an inherited
         ;; snapshot. Preserve fail-closed membership and deterministic order.
         visibility (when (fn? evidence-visible?)
-                     (doall (pmap evidence-visible? candidates)))
+                     (bounded-visibility-mapv evidence-visible? candidates))
         visibility-failure
         (some (fn [[candidate observation]]
                 (when (and (map? observation)
@@ -266,12 +293,8 @@
        :findings (mapv :finding (remove :ok validations))}
       visibility-failure
       (merge {:ok false :error/code :memory-snapshot-visibility-not-obtained
-              :error/component :transport
-              :visibility/candidate-count (count candidates)
-              :visibility/execution :parallel
-              :visibility/per-read-bound-ms visibility-read-bound-ms
-              :visibility/aggregate-bound-ms
-              (* (count candidates) visibility-read-bound-ms)}
+              :error/component :transport}
+             (visibility-bounds (count candidates))
              visibility-failure)
       (seq invisible)
       {:ok false :error/code :memory-snapshot-review-not-visible
@@ -348,14 +371,15 @@
         ;; bounded reads concurrently, then let both the prior filter and the
         ;; final fail-closed publication consume the same memoized answers.
         _ (when evidence-visible?
-            (dorun (pmap evidence-visible?
-                         (reduce (fn [ordered candidate]
+            (bounded-visibility-mapv
+             evidence-visible?
+             (reduce (fn [ordered candidate]
                                    (if (some #(= (:memory-id candidate)
                                                 (:memory-id %))
                                              ordered)
                                      ordered
                                      (conj ordered candidate)))
-                                 prior own-candidates))))
+                     prior own-candidates)))
         inspected
         (mapv (fn [candidate]
                 (let [shape (validate-candidate candidate)
@@ -406,22 +430,12 @@
       (if visibility-failure
         (merge {:ok false :error/code :memory-snapshot-visibility-not-obtained
                 :error/component :transport
-                :transport/operation :post-publication-verification
-                :visibility/candidate-count (count visibility-candidates)
-                :visibility/execution :parallel
-                :visibility/per-read-bound-ms visibility-read-bound-ms
-                :visibility/aggregate-bound-ms
-                (* (count visibility-candidates) visibility-read-bound-ms)}
+                :transport/operation :post-publication-verification}
+               (visibility-bounds (count visibility-candidates))
                visibility-failure)
         (cond-> published
-          (:ok published) (assoc :prior-dropped dropped
-                                 :visibility/candidate-count (count merged)
-                                 :visibility/execution :parallel
-                                 :visibility/per-read-bound-ms
-                                 visibility-read-bound-ms
-                                 :visibility/aggregate-bound-ms
-                                 (* (count merged)
-                                    visibility-read-bound-ms)))))))
+          (:ok published) (merge {:prior-dropped dropped}
+                                 (visibility-bounds (count merged))))))))
 
 (defn verify-student-access
   [{:keys [path expected frame-id problem-id accessible-memory-ids]}]

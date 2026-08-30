@@ -65,15 +65,20 @@
         decision (case (:status result)
                    :certified [:advance]
                    :transport-retry-scheduled [:retry wake-at-ms]
-                   (if (= :authoritative-absence classified)
+                   (if (= :promotion-substrate-retry-exhausted
+                          (get-in result [:state :error/code]))
+                     [:park :retry-exhausted]
+                     (if (= :authoritative-absence classified)
                      [:park :authoritative-absence]
-                     [:park :invalid-evidence]))]
+                     [:park :invalid-evidence])))]
     {:identity (transport-implementation-identity)
      :operation (or (:transport/operation published)
                     (if (:ok published) :post-publication-verification
                         :publication))
      :acquired-outcome acquired :classified-outcome classified
      :evidence evidence :attempt attempt :max-attempts max-attempts
+     ;; Certificate history records completed predecessor attempts.  The
+     ;; durable terminal state additionally records this final attempt.
      :wake-at-ms wake-at-ms :history (certificate-history state)
      :last-valid-state (pr-str (select-keys state [:state/type :stage :job]))
      :last-valid-evidence (pr-str (select-keys state [:reviews :candidates]))
@@ -584,7 +589,8 @@
                   (:transport/evidence transport-finding)
                   (assoc :transport/evidence
                          (:transport/evidence transport-finding)))))
-        retryable-transport? (and transport? (< transport-attempt transport-max))
+        retryable-transport? (and transport?
+                                  (< (inc transport-attempt) transport-max))
         hold {:state/type :promotion
               :stage :awaiting-apparatus-repair
               :last-valid-state state
@@ -618,6 +624,8 @@
                (cond-> hold
                  transport?
                  (assoc :error/code :promotion-substrate-retry-exhausted
+                        :transport-retry/terminal? true
+                        :transport/decision [:park :retry-exhausted]
                         :transport-retry/last-error-code
                         (or (:error/code transport-finding)
                             (:error/code checked))
@@ -698,8 +706,14 @@
             {:ok true :status :awaiting-apparatus-repair :state hold
              :findings (:findings hold)
              :transport-certificate emission})
-          (do
-            (when advance? (persist-fn (:state result)))
+          (let [terminal? (= :promotion-substrate-retry-exhausted
+                             (get-in result [:state :error/code]))
+                terminal-state (cond-> (:state result)
+                                 terminal?
+                                 (assoc :transport-certificate certificate
+                                        :transport-certificate-emission emission))
+                result (if terminal? (assoc result :state terminal-state) result)]
+            (when (or advance? terminal?) (persist-fn (:state result)))
             (cond-> result emission (assoc :transport-certificate emission))))))))
 
 (defn- drive-step!
@@ -716,6 +730,14 @@
          candidate-visible-fn (constantly true)
          persist-reviews-fn pass-reviews}}]
   (cond
+    (and (= :awaiting-apparatus-repair (:stage state))
+         (:transport-retry/terminal? state))
+    (cond-> {:ok true :status :awaiting-apparatus-repair
+             :state state :findings (:findings state)
+             :transport-retry/escalation (:transport-retry/escalation state)}
+      (:transport-certificate-emission state)
+      (assoc :transport-certificate (:transport-certificate-emission state)))
+
     (nil? state)
     (let [r (deposit-fn)]
       (if-not (:ok r) r

@@ -329,9 +329,46 @@
     (is (= :timeout (:transport/acquired-outcome result)))
     (is (= :not-obtained (:transport/evidence result)))
     (is (= 1 (:visibility/candidate-count result)))
-    (is (= :parallel (:visibility/execution result)))
+    (is (= :bounded-parallel (:visibility/execution result)))
+    (is (= 8 (:visibility/concurrency-bound result)))
     (is (= 5000 (:visibility/per-read-bound-ms result)))
-    (is (= 5000 (:visibility/aggregate-bound-ms result)))))
+    (is (= 4 (:visibility/reads-per-candidate-bound result)))
+    (is (= 20000 (:visibility/aggregate-bound-ms result)))))
+
+(deftest large-visibility-set-has-a-deterministic-concurrency-bound
+  (let [dir (Files/createTempDirectory "apm-visible-130"
+                                       (make-array FileAttribute 0))
+        active (atom 0)
+        peak (atom 0)
+        candidates (mapv (fn [n]
+                           (assoc candidate
+                                  :memory-id (str "f65-memory-" n)
+                                  :depositor "f65-guide"
+                                  :provenance {:campaign-id "jit-all-open-v2"
+                                               :frame-id "f65"
+                                               :problem-id "b01J04"}))
+                         (range 130))
+        result (sut/publish-cumulative!
+                {:frame-id "f65" :problem-id "b01J04"
+                 :prior-candidates [] :own-candidates candidates
+                 :path (.resolve dir "union.edn") :lineage ["f65"]
+                 :evidence-visible?
+                 (fn [_]
+                   (let [n (swap! active inc)]
+                     (swap! peak max n)
+                     (Thread/sleep 2)
+                     (swap! active dec)
+                     (throw (ex-info "typed timeout"
+                                     {:transport/acquired-outcome :timeout}))))})]
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))
+    (is (= 130 (:visibility/candidate-count result)))
+    (is (= 8 (:visibility/concurrency-bound result)))
+    (is (<= @peak 8))
+    (is (> @peak 1))
+    (is (= 340000 (:visibility/aggregate-bound-ms result)))))
 
 (deftest own-visibility-exception-retains-acquired-outcome
   (let [dir (Files/createTempDirectory "apm-own-visible-failure"

@@ -595,6 +595,14 @@
                  {:state/type :promotion :stage :independent-review
                   :job "review-job"})))))
 
+(deftest terminal-promotion-transport-park-retires-the-projected-reviewer
+  (is (nil? (#'sut/projection-operation
+             "f65" :promote-solver
+             {:state/type :promotion :stage :awaiting-apparatus-repair
+              :job "already-done-promotion-proctor"
+              :transport-retry/terminal? true
+              :error/code :promotion-substrate-retry-exhausted}))))
+
 (deftest end-reduction-projection-observes-the-zai-scribe-job
   (is (= {:status :waiting-for-terminal-result
           :role :zai-scribe

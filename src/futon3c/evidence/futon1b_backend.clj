@@ -392,6 +392,19 @@
           (finally
             (swap! !query-locks dissoc key)))))))
 
+(defn get-entry-bounded
+  "Read one evidence entry with CALLER-BOUND-MS as the complete HTTP bound.
+
+  Snapshot publication uses this narrower operational bound instead of the
+  store's general analytical-read timeout, so a visibility wave has an honest
+  calculable deadline."
+  [backend evidence-id caller-bound-ms]
+  (let [{:keys [status body]}
+        (get-edn (str (api-url (:base-url backend) "/api/alpha/evidence/")
+                      (enc evidence-id))
+                 caller-bound-ms)]
+    (when (= 200 status) body)))
+
 (defrecord Futon1bBackend [base-url]
   backend/EvidenceBackend
 

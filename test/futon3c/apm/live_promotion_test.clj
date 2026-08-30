@@ -851,6 +851,97 @@
            (get-in @persisted
                    [:transport-retry/history 0 :transport/evidence])))))
 
+(deftest f65-terminal-transport-attempt-parks-once-with-conformant-certificate
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "checked" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        history [{:attempt 0 :failed-at-ms 1000 :error/component :transport
+                  :error/code :memory-snapshot-visibility-not-obtained}
+                 {:attempt 1 :failed-at-ms 2000 :error/component :transport
+                  :error/code :memory-snapshot-visibility-not-obtained}]
+        persisted (atom [])
+        emitted (atom [])
+        io-calls (atom 0)
+        inputs {:state {:state/type :promotion :stage :independent-review
+                        :deposit {:depositor "scribe" :candidates [candidate]}
+                        :candidates [candidate] :job "f65-promotion-proctor"
+                        :transport-retry/attempt 2
+                        :transport-retry/history history}
+                :promotion-policy {:completed-pass-required true
+                                   :transport-retry-delay-ms 600000
+                                   :transport-retry-max-attempts 3}
+                :now-ms-fn (constantly 3000)
+                :review-fn (fn [_ _]
+                             (swap! io-calls inc)
+                             {:ok true :reviewer "proctor" :reviews [review]})
+                :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+                :publish-fn
+                (fn [_]
+                  (swap! io-calls inc)
+                  {:ok false :error/code :memory-snapshot-visibility-not-obtained
+                   :error/component :transport
+                   :transport/operation :post-publication-verification
+                   :transport/acquired-outcome :unavailable
+                   :transport/classified-outcome :unavailable
+                   :transport/evidence :not-obtained})
+                :certificate-emitter-fn
+                (fn [certificate _]
+                  (swap! emitted conj certificate)
+                  {:ok true :certificate certificate})
+                :persist-fn (fn [state]
+                              (swap! persisted conj state)
+                              {:ok true})}
+        terminal (sut/drive! inputs)
+        calls-after-terminal @io-calls
+        persisted-after-terminal (count @persisted)
+        repeated (sut/drive!
+                  (assoc inputs :state (:state terminal)
+                         :review-fn #(throw (ex-info "redispatched" {}))
+                         :publish-fn #(throw (ex-info "republished" {}))))
+        certificate (first @emitted)]
+    (is (= :awaiting-apparatus-repair (:status terminal)))
+    (is (= :promotion-substrate-retry-exhausted
+           (get-in terminal [:state :error/code])))
+    (is (= [:park :retry-exhausted] (:decision certificate)))
+    (is (= [0 1] (mapv :attempt (:history certificate))))
+    (is (= [0 1 2]
+           (mapv :attempt (get-in terminal [:state :transport-retry/history]))))
+    (is (:ok (transport/validate-certificate certificate)))
+    (is (= 1 (count @emitted)))
+    (is (= calls-after-terminal @io-calls))
+    (is (= persisted-after-terminal (count @persisted)))
+    (is (= terminal repeated))))
+
+(deftest transport-publication-retry-boundary-matches-zero-based-decision-rule
+  (doseq [[attempt expected-status expected-stage]
+          [[0 :transport-retry-scheduled :awaiting-transport-retry]
+           [1 :transport-retry-scheduled :awaiting-transport-retry]
+           [2 :awaiting-apparatus-repair :awaiting-apparatus-repair]]]
+    (let [saved (atom nil)
+          result (#'sut/hold-incomplete-pass!
+                  {:state/type :promotion :stage :independent-review
+                   :transport-retry/attempt attempt
+                   :transport-retry/history
+                   (mapv (fn [n] {:attempt n :failed-at-ms n})
+                         (range attempt))}
+                  {:ok false :error/code :promotion-publication-failed
+                   :findings [{:error/component :transport
+                               :error/code :memory-snapshot-visibility-not-obtained
+                               :transport/acquired-outcome :unavailable
+                               :transport/evidence :not-obtained}]}
+                  {:transport-retry-max-attempts 3
+                   :transport-retry-delay-ms 10}
+                  "contract" #(do (reset! saved %) {:ok true})
+                  (constantly 100))]
+      (is (= expected-status (:status result)))
+      (is (= expected-stage (:stage @saved)))
+      (is (= (range (inc attempt))
+             (map :attempt (:transport-retry/history @saved)))))))
+
 (deftest nonconformant-certificate-blocks-certified-state
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
                    :source-attempts [1]

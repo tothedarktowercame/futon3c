@@ -112,6 +112,19 @@
             :last-failure :memory-snapshot-visibility-not-obtained}
            (:transport-retry result)))))
 
+(deftest terminal-promotion-transport-park-is-coherent-with-retired-job
+  (let [parked (-> healthy
+                   (assoc :phase-state
+                          {:state/type :promotion
+                           :stage :awaiting-apparatus-repair
+                           :transport-retry/terminal? true
+                           :error/code :promotion-substrate-retry-exhausted})
+                   (assoc-in [:transition :operation] nil)
+                   (assoc :agent {:ok false} :job {:ok true}))
+        result (watchdog/evaluate parked)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
 (deftest durable-frame-closure-retires-the-last-projected-role-job
   (let [closed (-> healthy
                    (assoc :frame-closed? true
