@@ -176,8 +176,14 @@ def parse_coordinator(text):
     d = {}
     m = re.search(r':regulator/status :(\S+?)[,}]', text)
     d['status'] = m.group(1) if m else None
-    m = re.search(r':regulator/ticks (\d+)', text)
-    d['ticks'] = int(m.group(1)) if m else None
+    # coordinator.edn retains quiescence history containing many historical
+    # :regulator/ticks values before the current top-level value.  Taking the
+    # first regex match made a live epoch-83 coordinator look stuck at the
+    # epoch-1 tick (3980).  Tick ordinals are monotone, so the maximum is the
+    # authoritative current ordinal even with retained history present.
+    ticks = [int(value) for value in
+             re.findall(r':regulator/ticks (\d+)', text)]
+    d['ticks'] = max(ticks) if ticks else None
     m = re.search(r':regulator/updated-at "([^"]+)"', text)
     d['updated_at'] = m.group(1) if m else None
     fails = re.findall(r':failed-at "([^"]+)".*?:repair/reason "([^"]*)"', text)
