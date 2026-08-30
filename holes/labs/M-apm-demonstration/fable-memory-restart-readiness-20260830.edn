@@ -1,0 +1,80 @@
+{:audit/version 1
+ :audit/id :fable-memory-restart-readiness-20260830
+ :audit/scope
+ {:futon3c/base "8aa26d7c"
+  :futon3c/head "cd9c11cc33d3a60388809aa8892ba4e9542b8909"
+  :apm-lean/contract-revision "9d2a1db5"
+  :apm-lean/observed-head "54fe611541f8568e78ad222d84318f76892023dc"}
+ :audit/verdict :blocked
+ :audit/restart-authorized? false
+ :checks
+ [{:check :contract-emitter-parity
+   :status :pass
+   :evidence "Lean emitter at 9d2a1db5 is byte-identical to generated/apm-cycle-contract-v4.json (cmp exit 0)."}
+  {:check :required-memory-test-namespaces
+   :status :pass
+   :evidence {:tests 242 :assertions 1133 :failures 0 :errors 0}}
+  {:check :fingerprint-audit-python-tests
+   :status :pass
+   :evidence {:tests 11 :failures 0 :errors 0}}
+  {:check :f59-void-certificate-and-fixture
+   :status :pass
+   :evidence
+   {:fixture "holes/labs/M-apm-demonstration/f59-post-f58-boundary-fixture.edn"
+    :certificate/id "177adafac5cd07ccc29860ff721274c9e25d7c463c00d78e633de505f50eaa1e"
+    :student-receipt/sha256 "12ed8d186ddf247cc55b863f7e0a5cd0cacf32e83d5ed2004ed7114ec8596c4a"
+    :ledger/sha256 "98fef581d88ea03bf97847e3dbb2d816fb142cd53ee0142c04ae45a405a16a6e"}}
+  {:check :coordinator-disabled-and-quiescent
+   :status :pass
+   :evidence
+   {:coordinator/enabled? false
+    :regulator/status :stopped
+    :regulator/epoch 74
+    :regulator/ticks 11719
+    :tick-claim nil
+    :pending-intent nil
+    :witnessed-at "2026-08-30T10:51:25.067581651Z"}}
+  {:check :typed-durable-admission
+   :status :pass
+   :evidence {:commits ["894c3c19"]
+              :tests ["futon3c.apm.promotion-pipeline-test"
+                      "futon3c.apm.promotion-candidate-store-test"
+                      "futon3c.apm.promotion-review-store-test"]}}
+  {:check :typed-retrieval-observed-only-default
+   :status :pass
+   :evidence {:commits ["43230cf9" "894c3c19" "ae461ce5" "cd9c11cc"]
+              :tests ["futon3c.apm.memory-snapshot-test"
+                      "futon3c.peripheral.memory-recall-test"
+                      "futon3c.memory-use-kind-recording-test"]}}
+  {:check :transfer-strata
+   :status :pass
+   :evidence {:commit "202e475d"
+              :strata [:same-attempt :same-frame :cross-problem :unknown]}}
+  {:check :dirty-work-separation
+   :status :fail
+   :evidence
+   {:futon3c/dirty
+    ["emacs/agent-repl-park.el"
+     "holes/excursions/E-R8-red-ring-fill.md"
+     "holes/labs/M-apm-demonstration/apm-qualification-v1.edn"
+     "src/futon3c/apm/countdown_control.clj"
+     "src/futon3c/apm/live_learning_phases.clj"
+     "src/futon3c/apm/live_promotion.clj"
+     "holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f59-b00J01.md"]
+    :reason "Three dirty production namespaces overlap the tested APM path. The focused test run therefore cannot certify that committed HEAD alone is the serving candidate. Preserve these changes, but resolve and independently retest them before restart."}}]
+ :required-before-restart
+ [{:order 1
+   :action :resolve-dirty-production-overlap
+   :paths ["src/futon3c/apm/countdown_control.clj"
+           "src/futon3c/apm/live_learning_phases.clj"
+           "src/futon3c/apm/live_promotion.clj"]}
+  {:order 2
+   :action :run-required-gates-from-clean-committed-checkout}
+  {:order 3
+   :action :record-serving-image-pin-and-contract-digests}
+  {:order 4
+   :action :operator-explicit-restart-decision}]
+ :safety
+ {:campaign/restarted? false
+  :live-state/mutated? false
+  :fail-closed? true}}
