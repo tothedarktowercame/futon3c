@@ -1358,6 +1358,12 @@
                      [memory-id
                       "reviewed attachment surfaced by terrain-conditioned dispatch recall"])
                    memory-ids))
+        memory-use-kinds
+        (into {}
+              (keep (fn [memory]
+                      (when-let [kind (:memory-use/kind memory)]
+                        [(:memory/id memory) kind])))
+              memories)
         receipt
         (assoc
          (memory-contract/use-receipt
@@ -1367,6 +1373,7 @@
            :surfaced-memory-ids memory-ids
            :used-memory-ids []
            :inclusion-reasons inclusion-reasons
+           :memory-use-kinds memory-use-kinds
            :cascade-id (or (:trace-id recall-result)
                            (str "dispatch-recall-empty-" (UUID/randomUUID)))
            :surfaced-at surfaced-at
@@ -1376,15 +1383,11 @@
                  {:memory-id (:memory/id memory)
                   :via (:via memory)})
                (:memories recall-result))
-         ;; B4: the contract fn drops unknown keys, so kinds ride the same
-         ;; post-assoc as surfacing-via (found when frame-0's receipt
-         ;; persisted without them despite the dry-run rendering kinds).
+         ;; Retain the compact compatibility map consumed by historical audit
+         ;; tooling.  The shared contract also records these classifications
+         ;; canonically on the per-memory inclusion rows above.
          :memory-use/kinds
-         (into {}
-               (keep (fn [memory]
-                       (when-let [kind (:memory-use/kind memory)]
-                         [(:memory/id memory) kind])))
-               (:memories recall-result))
+         memory-use-kinds
          :memory-use/withheld-ids withheld-ids)]
     {:subject {:ref/type :problem
                :ref/id problem}

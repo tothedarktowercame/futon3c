@@ -24,4 +24,8 @@
             :reason
             "reviewed attachment surfaced by terrain-conditioned dispatch recall"}
            (second reasons)))
-    (is (not (contains? (second reasons) :memory-use/kind)))))
+    (is (not (contains? (second reasons) :memory-use/kind)))
+    ;; Preserve the compact pre-contract instrumentation consumed by the
+    ;; historical fingerprint audit while making the receipt rows canonical.
+    (is (= {"e-regulative" :regulative}
+           (get-in entry [:body :memory-use :memory-use/kinds])))))
