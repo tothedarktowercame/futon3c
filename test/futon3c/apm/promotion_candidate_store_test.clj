@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-candidate-store :as sut]))
 
 (def candidate
@@ -47,11 +48,15 @@
     (is (not= "llm-invented-id" (:memory-id persisted)))
     (is (= "llm-invented-id" (:reported-memory-id persisted)))
     (is (= :memory (:kind persisted)))
+    (is (= pipeline/durable-memory-admission-schema
+           (:admission/schema persisted)))
     (is (nil? (:reported-kind persisted)))
     (is (= ["solver-job"] (:source-attempts persisted)))
     (is (= [1] (:reported-source-attempts persisted)))
     (is (= "scribe" (get-in result [:deposit :depositor])))
     (is (= "scribe" (get-in result [:deposit :reported-depositor])))
+    (is (= pipeline/durable-memory-admission-schema
+           (get-in entry [:evidence/body :admission/schema])))
     (is (= (machine/ledger-digest [(:evidence/body entry)])
            (:content-digest persisted)))
     (is (= {:artifact-id (:memory-id persisted)

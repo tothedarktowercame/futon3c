@@ -21,6 +21,23 @@
 (def lane-statuses #{:ran :ran-empty :not-run})
 (def review-verdicts #{:approve :reassign :reject :cannot-judge})
 (def mechanical-reviewer "promotion-mechanical-guard")
+(def durable-memory-admission-schema :typed-memory-use-v1)
+(def memory-use-kinds #{:substitutive :regulative})
+
+(defn typed-memory-use-candidate?
+  "True only for candidates minted after explicit memory-use classification
+  became an admission requirement.  Absence denotes a historical candidate;
+  it is never inferred from candidate prose or legacy `:kind` metadata."
+  [candidate]
+  (= durable-memory-admission-schema (:admission/schema candidate)))
+
+(defn- memory-use-kind-finding [candidate review]
+  (when (and (typed-memory-use-candidate? candidate)
+             (contains? #{:approve :reassign} (:verdict review)))
+    (let [kind (:memory-use/kind review)]
+      (cond
+        (nil? kind) :memory-use-kind-required
+        (not (contains? memory-use-kinds kind)) :memory-use-kind-invalid))))
 
 (defn- occurrence-count [s needle]
   (loop [from 0 n 0]
@@ -141,6 +158,7 @@
   boundary."
   [candidates depositor reviewer reviews]
   (let [candidate-ids (set (map :memory-id candidates))
+        by-id (into {} (map (juxt :memory-id identity)) candidates)
         findings (cond-> []
                    (not (string? reviewer)) (conj :reviewer-missing)
                    (= depositor reviewer) (conj :reviewer-is-depositor)
@@ -165,7 +183,10 @@
                                                               pattern-id))))
                                                  (:pattern-ids %)))))
                          reviews)
-                   (conj :review-patterns-invalid))]
+                   (conj :review-patterns-invalid)
+                   (some #(memory-use-kind-finding
+                           (by-id (:memory-id %)) %) reviews)
+                   (conj :review-memory-use-kind-invalid))]
     (if (seq findings)
       {:ok false :findings findings}
       {:ok true :reviews reviews})))
@@ -200,6 +221,10 @@
       :review-evidence-not-materialized
       (not (seq (:pattern-ids review)))
       :review-patterns-missing
+      (memory-use-kind-finding candidate review)
+      (memory-use-kind-finding candidate review)
+      (and (publishing-review? review) (= :proof-text (:kind candidate)))
+      :proof-text-candidate-publishing-forbidden
       projection-invalid?
       :promotion-review-projection-failed
       (= :cannot-judge verdict) :promotion-pass-unresolved
@@ -247,13 +272,16 @@
        :dispositions
        (mapv (fn [candidate]
                (let [review (by-id (:memory-id candidate))]
-                 {:memory-id (:memory-id candidate)
-                  :verdict (:verdict review)
-                  :candidate-materialization (:materialization candidate)
-                  :review-materialization (:review-materialization review)
-                  :attachment-status (:attachment-status review)
-                  :pattern-ids (:pattern-ids review)
-                  :publishing? (publishing-review? review)}))
+                 (cond->
+                     {:memory-id (:memory-id candidate)
+                      :verdict (:verdict review)
+                      :candidate-materialization (:materialization candidate)
+                      :review-materialization (:review-materialization review)
+                      :attachment-status (:attachment-status review)
+                      :pattern-ids (:pattern-ids review)
+                      :publishing? (publishing-review? review)}
+                   (:memory-use/kind review)
+                   (assoc :memory-use/kind (:memory-use/kind review)))))
              candidates)})))
 
 (defn validate-certified-promotion-pass
@@ -318,7 +346,10 @@
                                (not (and (string? (:review-evidence-id %))
                                          (= :reviewed (:attachment-status %))
                                          (seq (:pattern-ids %))))) reviews)
-                   (conj :approved-review-evidence-invalid))]
+                   (conj :approved-review-evidence-invalid)
+                   (some #(memory-use-kind-finding
+                           (by-id (:memory-id %)) %) reviews)
+                   (conj :review-memory-use-kind-invalid))]
     (if (seq findings) {:ok false :findings findings}
         {:ok true
          :candidates
@@ -326,7 +357,8 @@
                  (merge (by-id (:memory-id review))
                         {:depositor depositor}
                         (select-keys review [:reviewer :review-evidence-id
-                                             :attachment-status :pattern-ids])))
+                                             :attachment-status :pattern-ids
+                                             :memory-use/kind])))
                approved)})))
 
 (defn validate-publication-accounting

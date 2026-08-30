@@ -32,6 +32,7 @@
                 :depositor "reported-wrong" :reviewer "reported-wrong"
                 :verdict :reassign
                 :attachment-status :reviewed :pattern-ids [new-pattern]
+                :memory-use/kind :regulative
                 :reason "returned reason" :residual "returned residual"}
         result
         (sut/persist!
@@ -64,6 +65,10 @@
            (get-in evidence [:evidence/body :review/reason])))
     (is (= "returned residual"
            (get-in evidence [:evidence/body :review/residual])))
+    (is (= :regulative
+           (get-in evidence [:evidence/body :memory-use/kind])))
+    (is (= :regulative
+           (get-in edge [:hx/props :review :memory-use/kind])))
     (is (= [:memory :memory/attachment-review :apm/promotion-review]
            (:evidence/tags evidence)))
     (is (= canonical-review-id

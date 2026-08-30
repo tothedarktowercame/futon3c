@@ -107,6 +107,52 @@
     (is (some #{:approved-review-evidence-invalid}
               (:findings prematurely-persisted)))))
 
+(deftest newly-minted-durable-memory-requires-an-explicit-supported-use-kind
+  (let [typed (assoc candidate :admission/schema
+                     sut/durable-memory-admission-schema)
+        base-review {:memory-id "m1" :reviewer "f60-promotion-proctor"
+                     :verdict :approve :pattern-ids ["p1"]
+                     :reason "reusable theorem interface"
+                     :residual "apply the named interface"}
+        missing (sut/validate-returned-review*
+                 [typed] "f60-scribe" "f60-promotion-proctor" [base-review])
+        invalid (sut/validate-returned-review*
+                 [typed] "f60-scribe" "f60-promotion-proctor"
+                 [(assoc base-review :memory-use/kind :proof-text)])
+        valid (sut/validate-returned-review*
+               [typed] "f60-scribe" "f60-promotion-proctor"
+               [(assoc base-review :memory-use/kind :substitutive)])
+        rejected (sut/validate-returned-review*
+                  [typed] "f60-scribe" "f60-promotion-proctor"
+                  [(assoc base-review :verdict :reject)])]
+    (is (some #{:review-memory-use-kind-invalid} (:findings missing)))
+    (is (some #{:review-memory-use-kind-invalid} (:findings invalid)))
+    (is (:ok valid) valid)
+    (is (:ok rejected) "rejections do not become durable reviewed memories")))
+
+(deftest historical-candidates-retain-explicit-legacy-compatibility
+  (let [legacy-review {:memory-id "m1" :reviewer "legacy-proctor"
+                       :verdict :approve :pattern-ids ["p1"]
+                       :reason "historical reviewed memory"
+                       :residual "legacy replay"}]
+    (is (not (sut/typed-memory-use-candidate? candidate)))
+    (is (:ok (sut/validate-returned-review*
+              [candidate] "legacy-scribe" "legacy-proctor" [legacy-review])))))
+
+(deftest proof-text-cannot-enter-a-published-disposition
+  (let [typed-proof (assoc candidate
+                           :kind :proof-text
+                           :admission/schema sut/durable-memory-admission-schema
+                           :materialization (materialization "m1" "d1"))
+        review {:memory-id "m1" :verdict :approve
+                :attachment-status :reviewed :pattern-ids ["p1"]
+                :memory-use/kind :substitutive
+                :review-materialization (materialization "r1" "rd1")}
+        result (sut/validate-complete-dispositions [typed-proof] [review])]
+    (is (= :promotion-pass-incomplete (:error/code result)))
+    (is (= :proof-text-candidate-publishing-forbidden
+           (get-in result [:findings 0 :finding])))))
+
 (deftest deposit-requires-all-four-typed-lanes
   (is (:ok (sut/validate-deposit {:depositor "scribe" :candidates [candidate]
                                   :lanes lanes})))

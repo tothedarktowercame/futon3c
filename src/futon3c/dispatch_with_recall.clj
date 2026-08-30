@@ -95,15 +95,21 @@
 
 (defn- with-use-kind
   [memory]
-  (let [k (get-in memory [:memory/body :kind])
+  (let [explicit (:memory-use/kind memory)
+        typed-admission? (= :typed-memory-use-v1
+                            (get-in memory [:memory/body :admission/schema]))
+        k (get-in memory [:memory/body :kind])
         k (cond (keyword? k) k (string? k) (keyword k) :else nil)]
     ;; The contract vocabulary is CLOSED (#{:substitutive :regulative});
     ;; "absence means not yet adjudicated". Emitting a placeholder kind
     ;; would fail receipt validation the first time an unmapped-kind
     ;; memory surfaces — leave the slot off instead.
-    (if-let [use-kind (get memory-kind->use-kind k)]
-      (assoc memory :memory-use/kind use-kind)
-      memory)))
+    (cond
+      (contains? #{:substitutive :regulative} explicit) memory
+      typed-admission? memory
+      :else (if-let [use-kind (get memory-kind->use-kind k)]
+              (assoc memory :memory-use/kind use-kind)
+              memory))))
 (def default-receipt-alpha 0.5)
 (def default-receipt-query-limit 200)
 (def default-receipt-stats-timeout-ms 5000)

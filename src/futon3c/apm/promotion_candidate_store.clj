@@ -17,7 +17,8 @@
   (and (string? value) (not (str/blank? value))))
 
 (defn- evidence-body [candidate]
-  (select-keys candidate [:name :hook :kind :body :why :how-to-apply]))
+  (select-keys candidate [:name :hook :kind :body :why :how-to-apply
+                          :admission/schema]))
 
 (defn controller-source-attempts
   "Return the source receipts/jobs named by the controller-owned request."
@@ -44,6 +45,8 @@
                          :reported-kind reported-kind
                          :reported-source-attempts reported-source-attempts
                          :kind kind
+                         :admission/schema
+                         pipeline/durable-memory-admission-schema
                          :source-attempts
                          (controller-source-attempts deposit-request))
         body (evidence-body candidate)
@@ -97,6 +100,7 @@
                                      (:dispatch/id deposit-request))
                         :patterns patterns}
                 :kind (:kind candidate)
+                :admission/schema (:admission/schema candidate)
                 :name (:name candidate)
                 :hook (:hook candidate)
                 :volatile? false

@@ -74,10 +74,15 @@
                          :state state
                          :valid-time (get-in edge [:hx/props :valid-time])
                          :system-time (get-in edge [:hx/props :system-time])})
+                       reviewed-use-kind
+                       (or (get-in edge [:hx/props :memory-use/kind])
+                           (get-in edge [:hx/props :review :memory-use/kind]))
                        projected
                        (cond-> (assoc compact
                                       :memory/attachment-status
                                       attachment-status)
+                         reviewed-use-kind
+                         (assoc :memory-use/kind reviewed-use-kind)
                          include-bodies?
                          (assoc :memory/body (:evidence/body entry)))]
                    (update acc :memories conj projected))

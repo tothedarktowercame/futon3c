@@ -310,7 +310,10 @@
                                  "\nFollow the pinned promotion Proctor card and return exactly one EDN map. "
                                  "Persist each approval's evidence body with nonblank "
                                  ":review/reason and :review/residual fields; return the "
-                                 "same nonblank :reason and :residual on every review.")]
+                                 "same nonblank :reason and :residual on every review. "
+                                 "Every :approve or :reassign review MUST explicitly "
+                                 "state :memory-use/kind as exactly :substitutive or "
+                                 ":regulative; do not infer it from prose or legacy :kind.")]
                  ((agency-stage agency-base request prompt))))))
           ([job-id candidates]
            (let [digest (machine/ledger-digest [candidates])
@@ -322,7 +325,10 @@
                              (pr-str request)
                              "\nRead and follow the frozen role card at "
                              (resolved-role-card-path control-root request)
-                             " (blob " (:role-card-blob request) ").")
+                             " (blob " (:role-card-blob request) "). "
+                             "Every :approve or :reassign review MUST explicitly "
+                             "state :memory-use/kind as exactly :substitutive or "
+                             ":regulative; do not infer it from prose or legacy :kind.")
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
                  (let [normalized (normalize-review-report
@@ -355,7 +361,10 @@
                                  "exactly one EDN map. Persist each approval's evidence "
                                  "body with nonblank :review/reason and :review/residual "
                                  "fields; return the same nonblank :reason and :residual "
-                                 "on every review.")]
+                                 "on every review. Every :approve or :reassign review "
+                                 "MUST explicitly state :memory-use/kind as exactly "
+                                 ":substitutive or :regulative; do not infer it from "
+                                 "prose or legacy :kind.")]
                  ((agency-stage agency-base request prompt)))))))]
     ;; Upgrade legacy promotion envelopes before observing their terminal job.
     ;; This is a lossless durability migration: the job identity is unchanged.

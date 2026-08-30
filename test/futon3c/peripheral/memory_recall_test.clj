@@ -119,6 +119,17 @@
     (is (empty? (:memories result)))
     (is (= 1 (get-in result [:audit :proposed-excluded])))))
 
+(deftest reviewed-use-kind-is-projected-from-independent-review
+  (let [{math :mathematics} (fixtures)
+        edge (-> (:edge math)
+                 (assoc-in [:hx/props :domain] :mathematics)
+                 (assoc-in [:hx/props :review :memory-use/kind] :regulative))
+        result (recall-fixture :mathematics
+                               "lean/field-simp-denominator"
+                               edge (:entry math) [])]
+    (is (= :regulative
+           (get-in result [:memories 0 :memory-use/kind])))))
+
 (deftest full-body-recall-is-explicit-and-fails-closed-on-partial-entry
   (let [{math :mathematics} (fixtures)
         edge (assoc-in (:edge math) [:hx/props :domain] :mathematics)
