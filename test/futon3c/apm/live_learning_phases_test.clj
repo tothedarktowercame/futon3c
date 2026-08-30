@@ -305,6 +305,31 @@
                 :expansion-ms (get-in request [:memory-cascade :expansion-ms])}
                (get-in result [:certificate :receipt/memory-cascade])))))))
 
+(deftest cascade-transport-failure-refuses-student-dispatch
+  (let [result
+        (sut/build-request
+         (merge base
+                {:unit (assoc unit :memory-cascade
+                              {:enabled? true :routes [:sibling] :cap 10})
+                 :action cascade-action
+                 :seat {:agent-id "f19-student" :invoke-ready? true}
+                 :snapshot-access {:ok true
+                                   :snapshot {:snapshot/digest "snapshot-digest"
+                                              :snapshot/memories []}
+                                   :accessible-memory-ids #{}}
+                 :cascade-fn
+                 (fn [& _]
+                   (throw
+                    (ex-info "cascade timed out"
+                             {:error/component :transport
+                              :error/code :memory-cascade-unreachable
+                              :timeout-ms 100})))
+                 :cascade-readers {}}))]
+    (is (false? (:ok result)))
+    (is (= :transport (:error/component result)))
+    (is (= :memory-cascade-unreachable (:error/code result)))
+    (is (nil? (:request result)))))
+
 (deftest typed-terminal-repair-preserves-authority-and-carries-findings
   (let [repair (sut/terminal-repair-request
                 {:dispatch/id "original" :frame-id "f25"

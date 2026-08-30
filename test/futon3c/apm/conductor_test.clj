@@ -10,7 +10,9 @@
             [futon3c.peripheral.tools :as tools]
             [futon3c.transport.http :as http])
   (:import [java.nio.file Files]
-           [java.nio.file.attribute FileAttribute FileTime]))
+           [java.nio.file.attribute FileAttribute FileTime]
+           [java.util.concurrent CountDownLatch]
+           [com.sun.net.httpserver HttpHandler HttpServer]))
 
 (def ^:private registration-path
   "holes/labs/M-apm-demonstration/round1-registration.edn")
@@ -30,6 +32,34 @@
 (defn- cascade-readers [attachments why]
   {:attachments-fn #(get attachments % [])
    :why-targets-fn #(get why % [])})
+
+(deftest cascade-body-read-has-an-effective-wall-clock-timeout
+  (let [release (CountDownLatch. 1)
+        server (HttpServer/create (java.net.InetSocketAddress. 0) 0)]
+    (.createContext
+     server "/stalled"
+     (reify HttpHandler
+       (handle [_ exchange]
+         (.sendResponseHeaders exchange 200 0)
+         (.await release)
+         (.close exchange))))
+    (.start server)
+    (try
+      (let [base (str "http://127.0.0.1:" (.getPort (.getAddress server)))
+            started (System/nanoTime)
+            error (binding [conductor/*cascade-request-timeout-ms* 100]
+                    (try
+                      (#'conductor/cascade-get base "/stalled" {})
+                      nil
+                      (catch clojure.lang.ExceptionInfo e e)))
+            elapsed-ms (quot (- (System/nanoTime) started) 1000000)]
+        (is (some? error))
+        (is (= :transport (:error/component (ex-data error))))
+        (is (= :memory-cascade-unreachable (:error/code (ex-data error))))
+        (is (< elapsed-ms 2000) (str "elapsed=" elapsed-ms "ms")))
+      (finally
+        (.countDown release)
+        (.stop server 0)))))
 
 (deftest minimum-cascade-leaf-only
   (let [edge (cascade-edge "memory/leaf" "pattern/seed" "a01A01")

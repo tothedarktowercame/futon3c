@@ -15,9 +15,13 @@
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.substrate.client :as substrate]))
+            [futon3c.substrate.client :as substrate])
+  (:import [java.util.concurrent CompletableFuture CompletionException
+            TimeUnit]))
 
 (def ^:private default-memory-cascade-cap 100)
+(def ^:dynamic *cascade-request-timeout-ms* 60000)
+(def ^:dynamic *cascade-connect-timeout-ms* 5000)
 
 (defn- default-close-hook
   [{:keys [agency-base analyst-seat caller prompt]}]
@@ -193,20 +197,48 @@
                     (assoc context :status (:status response)
                            :body (:body response))))))
 
+(defn- bounded-cascade-get
+  "GET and decode the complete response body inside one wall-clock bound.
+
+   babashka.http-client 0.4.23 maps :timeout to HttpRequest.timeout, but uses
+   BodyHandlers/ofInputStream and decodes that stream afterwards. The JDK
+   timeout ends once response headers arrive, so a stalled body can otherwise
+   block forever. The outer CompletableFuture deadline covers interception and
+   body decoding as well."
+  [url options context]
+  (let [timeout-ms *cascade-request-timeout-ms*
+        client (http-client/client
+                {:connect-timeout *cascade-connect-timeout-ms*})
+        future ^CompletableFuture
+        (http-client/get url (assoc options :client client :async true
+                                    :timeout timeout-ms))]
+    (try
+      (.join (.orTimeout future timeout-ms TimeUnit/MILLISECONDS))
+      (catch CompletionException error
+        (let [cause (or (.getCause error) error)]
+          (throw (ex-info "memory cascade substrate transport failed"
+                          (assoc context
+                                 :error/component :transport
+                                 :error/code :memory-cascade-unreachable
+                                 :timeout-ms timeout-ms
+                                 :error/message (.getMessage cause))
+                          cause)))))))
+
 (defn- cascade-get [base path query-params]
   (response-edn
-   (http-client/get (str (str/replace base #"/+$" "") path)
-                    {:query-params query-params
-                     :throw false :timeout 60000})
+   (bounded-cascade-get (str (str/replace base #"/+$" "") path)
+                        {:query-params query-params :throw false}
+                        {:path path :query-params query-params})
    {:path path :query-params query-params}))
 
 (defn- cascade-pattern [base pattern-id]
   (let [path (str "/api/alpha/entity/"
                   (java.net.URLEncoder/encode (str pattern-id) "UTF-8"))]
     (response-edn
-     (http-client/get (str (str/replace base #"/+$" "") path)
-                      {:headers {"Accept" "application/edn"}
-                       :throw false :timeout 60000})
+     (bounded-cascade-get (str (str/replace base #"/+$" "") path)
+                          {:headers {"Accept" "application/edn"}
+                           :throw false}
+                          {:path path :pattern-id pattern-id})
      {:path path :pattern-id pattern-id})))
 
 (defn- qualified-name [x]
@@ -293,7 +325,10 @@
        ;; the named pattern offer or break an otherwise valid memory cascade.
        (try
          (cascade-pattern base pattern-id)
-         (catch Throwable _ nil)))}))
+         (catch clojure.lang.ExceptionInfo error
+           (if (= :transport (:error/component (ex-data error)))
+             (throw error)
+             nil))))}))
 
 (defn domain-general-pattern-id?
   "True when PATTERN-ID's pre-slash family has no uppercase subject suffix."

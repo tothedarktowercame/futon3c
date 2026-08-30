@@ -98,8 +98,10 @@
          :holdout-excluded (or (:excluded-offers expanded) 0)
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
       (catch Throwable t
-        {:error (or (.getMessage t) (.getName (class t)))
-         :expansion-ms (quot (- (System/nanoTime) started) 1000000)}))))
+        (merge {:error (or (.getMessage t) (.getName (class t)))
+                :expansion-ms (quot (- (System/nanoTime) started) 1000000)}
+               (select-keys (ex-data t)
+                            [:error/component :error/code :timeout-ms]))))))
 
 (declare memory-use-audit)
 
@@ -306,9 +308,14 @@
                                            (:receipt/snapshot-path prior)))))
                    (= :close-frame kind)
                    (assoc :memory-use-audit (memory-use-audit receipts)))]
-        {:ok true :request (submission/prepare-request
-                            (assoc body :dispatch/id
-                                   (machine/ledger-digest [body])))}))))
+        (if (= :transport (:error/component cascade))
+          {:ok false
+           :error/component :transport
+           :error/code (:error/code cascade)
+           :memory-cascade cascade}
+          {:ok true :request (submission/prepare-request
+                              (assoc body :dispatch/id
+                                     (machine/ledger-digest [body])))})))))
 
 (defn- canonical-close-result [result]
   (cond
