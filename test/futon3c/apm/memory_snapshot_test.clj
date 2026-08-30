@@ -149,6 +149,28 @@
                            :path "/tmp/not-written-invisible-review.edn"
                            :evidence-visible? (constantly false)}))))))
 
+(deftest publication-checks-independent-visibility-concurrently
+  (let [dir (Files/createTempDirectory "apm-parallel-visibility-test"
+                                       (make-array FileAttribute 0))
+        second-candidate (assoc candidate
+                                :memory-id "e-solver-2"
+                                :review-evidence-id "e-review-2")
+        entered (atom 0)
+        both-entered (promise)
+        visible? (fn [_]
+                   (when (= 2 (swap! entered inc))
+                     (deliver both-entered true))
+                   (true? (deref both-entered 1000 false)))
+        result (sut/publish!
+                {:frame-id "f21" :problem-id "p1"
+                 :candidates [candidate second-candidate]
+                 :path (.resolve dir "parallel.edn")
+                 :evidence-visible? visible?})]
+    (is (:ok result))
+    (is (= 2 @entered))
+    (is (= ["e-solver-1" "e-solver-2"]
+           (mapv :memory-id (get-in result [:snapshot :snapshot/memories]))))))
+
 (deftest unanimous-rejection-publishes-an-empty-certified-snapshot
   (let [dir (Files/createTempDirectory "apm-empty-snapshot-test"
                                        (make-array FileAttribute 0))

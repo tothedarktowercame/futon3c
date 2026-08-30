@@ -225,10 +225,17 @@
   [{:keys [frame-id problem-id candidates path evidence-visible?
            base-text base-file-blob text-fn lineage kind-stratification]}]
   (let [validations (mapv validate-candidate candidates)
-        invisible (when (fn? evidence-visible?)
-                    (->> candidates
-                         (remove evidence-visible?)
-                         (mapv :memory-id)))
+        ;; Every visibility check is an independent, bounded substrate read.
+        ;; Realize them concurrently so the publication latency is bounded by
+        ;; the slowest candidate rather than by the size of an inherited
+        ;; snapshot. Preserve fail-closed membership and deterministic order.
+        visibility (when (fn? evidence-visible?)
+                     (doall (pmap evidence-visible? candidates)))
+        invisible (when visibility
+                    (->> (map vector candidates visibility)
+                         (keep (fn [[candidate visible?]]
+                                 (when-not visible? (:memory-id candidate))))
+                         vec))
         body (snapshot-body frame-id problem-id candidates
                             {:base-text base-text
                              :base-file-blob base-file-blob
