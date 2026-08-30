@@ -38,6 +38,28 @@
           (is (= (set (keys expected))
                  (set (:evidence-required schema)))))))))
 
+(deftest validator-inspected-structures-are-declared-required-or-optional
+  (doseq [phase (keys sut/validator-evidence-fields-by-phase)]
+    (is (empty? (sut/validator-schema-findings (authority phase)))
+        (name phase)))
+  (testing "removing an inspected optional field fails the completeness check"
+    (with-redefs [sut/evidence-optional-shape-by-phase
+                  (dissoc sut/evidence-optional-shape-by-phase
+                          :guide-intervention-1)]
+      (is (= [:candidates]
+             (sut/validator-schema-findings
+              (authority :guide-intervention-1)))))))
+
+(deftest guide-schema-declares-optional-candidate-leaf-shape
+  (let [shape (sut/evidence-optional-shape
+               (authority :guide-intervention-1))]
+    (is (= [{:memory-id nil :content-digest nil
+             :pattern-ids nil :source-attempts nil}]
+           (:candidates shape)))
+    (is (not (contains? (sut/evidence-required
+                         (authority :guide-intervention-1))
+                        :candidates)))))
+
 (deftest solver-checkpoint-schema-requires-structured-strategy-evidence
   (let [ordinary (authority :solve)
         checkpoint (assoc ordinary :solver/round 10

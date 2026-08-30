@@ -11,12 +11,34 @@ import urllib.request
 
 
 def submission_template(schema: dict) -> dict:
-    """Materialize the server-declared evidence shape; nulls are leaves."""
+    """Materialize required evidence and separately marked optional examples."""
     evidence = schema.get("evidence-shape")
     if evidence is None:
         raise ValueError("submission schema omitted evidence-shape")
-    return {"command-own-exit": None, "outcome": None,
-            "failure-account": [], "evidence": evidence}
+    template = {"command-own-exit": None, "outcome": None,
+                "failure-account": [], "evidence": evidence}
+    optional = schema.get("evidence-optional-shape", {})
+    if optional:
+        template["optional-evidence"] = optional
+    return template
+
+
+def prepare_payload(template: dict) -> dict:
+    """Move filled optional examples into evidence; omit untouched examples."""
+    payload = dict(template)
+    optional = payload.pop("optional-evidence", {})
+    for key, value in optional.items():
+        if value is not None and any_leaf_filled(value):
+            payload.setdefault("evidence", {})[key] = value
+    return payload
+
+
+def any_leaf_filled(value) -> bool:
+    if isinstance(value, dict):
+        return any(any_leaf_filled(item) for item in value.values())
+    if isinstance(value, list):
+        return any(any_leaf_filled(item) for item in value)
+    return value is not None
 
 
 def main() -> int:
@@ -36,10 +58,12 @@ def main() -> int:
         template = submission_template(schema)
         args.payload.write_text(json.dumps(template, indent=2, sort_keys=True) + "\n",
                                 encoding="utf-8")
-        print(f"Wrote {args.payload}; fill every null value before submitting.")
+        print(f"Wrote {args.payload}; fill every required null. "
+              "For each optional-evidence entry, either leave it wholly "
+              "untouched or fill every null leaf before submitting.")
         return 0
 
-    payload = json.loads(args.payload.read_text(encoding="utf-8"))
+    payload = prepare_payload(json.loads(args.payload.read_text(encoding="utf-8")))
     body = json.dumps({"token": args.token, "payload": payload}).encode()
     request = urllib.request.Request(
         endpoint,

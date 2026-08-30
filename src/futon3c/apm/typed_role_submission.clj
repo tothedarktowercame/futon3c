@@ -111,6 +111,38 @@
 (def evidence-required-by-phase
   (update-vals evidence-shape-by-phase #(set (keys %))))
 
+(def evidence-optional-shape-by-phase
+  "Typed evidence which validators inspect when supplied, but which is not
+   required for every successful completion of the phase."
+  {:promote-solver
+   {:memory-candidates [{:memory-id nil
+                         :content-digest nil
+                         :pattern-ids nil}]}
+   :guide-intervention-1
+   {:candidates [{:memory-id nil
+                  :content-digest nil
+                  :pattern-ids nil
+                  :source-attempts nil}]}
+   :guide-intervention-2
+   {:candidates [{:memory-id nil
+                  :content-digest nil
+                  :pattern-ids nil
+                  :source-attempts nil}]}})
+
+(def validator-evidence-fields-by-phase
+  "Report structures inspected by typed phase validators. This explicit seam
+   covers student attempts, Guide interventions, scribe reduction, Solver
+   promotion, and frame close; roles whose validation is wholly generic are
+   intentionally absent."
+  {:student-attempt-1 #{:memory-use}
+   :student-attempt-2 #{:memory-use}
+   :student-attempt-3 #{:memory-use}
+   :guide-intervention-1 #{:channel-audit :candidates}
+   :guide-intervention-2 #{:channel-audit :candidates}
+   :scribe-reduce #{:lanes :dispositions :promotion-reviews}
+   :promote-solver #{:memory-candidates}
+   :close-frame #{:trace-id :result}})
+
 (defn evidence-shape [auth]
   (cond-> (get evidence-shape-by-phase (:phase auth))
     (and (= :scribe-reduce (:phase auth))
@@ -122,6 +154,18 @@
     (and (= :solve (:phase auth))
          (true? (:solver/strategy-checkpoint? auth)))
     (assoc :solver/strategy nil)))
+
+(defn evidence-optional-shape [auth]
+  (get evidence-optional-shape-by-phase (:phase auth) {}))
+
+(defn validator-schema-findings
+  "Return fields inspected by a typed phase validator but absent from both its
+   required and optional evidence declarations."
+  [auth]
+  (let [declared (into (set (keys (evidence-shape auth)))
+                       (keys (evidence-optional-shape auth)))
+        inspected (get validator-evidence-fields-by-phase (:phase auth) #{})]
+    (vec (sort (set/difference inspected declared)))))
 
 (defn evidence-required
   "Return the evidence schema owned by immutable dispatch authority.
@@ -297,6 +341,7 @@
       :else {:ok true :phase (:phase auth)
              :required (vec (sort common-required))
              :evidence-shape (evidence-shape auth)
+             :evidence-optional-shape (evidence-optional-shape auth)
              :evidence-required
              (vec (sort (evidence-required auth)))})))
 
