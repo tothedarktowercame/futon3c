@@ -116,3 +116,34 @@ The model must not use one flat `transport?` Boolean.  At minimum it records:
 
 P2 will formalize these recovered distinctions without adding behavior not
 witnessed by the implementation or an explicitly registered repair decision.
+
+## P6 qualification and reload evidence
+
+Qualified 2026-08-30 against futon3c `d3081d3f` and Lean `ff163d78` while
+`jit-all-open-v2` was durably disabled.  Its on-disk regulator status remained
+the historical `:running`, but the durable enablement authority returned
+`disabled` and the tick ordinal stayed at 20005 across the quiescence probe.
+
+The P3--P5 Clojure files passed clj-kondo (zero errors/warnings) and the Emacs
+parenthesis checker.  The focused transport-conformance, memory-snapshot,
+live-promotion, projection-watchdog, countdown-control, conductor,
+jit-queue-coordinator, and durable-coordinator suites passed 188 tests / 979
+assertions.  The stopped-machine canary cases in those suites exercised a
+typed timeout and concrete delayed retry, the watchdog's detailed `:waiting`
+projection, successful certificate emission and replay, authoritative obtained
+absence, and stale-runtime refusal.  Offline and live replay reject f63 with
+`:transport-conformance-outcome-mismatch` and accept both f64 attempts.
+
+The Lean target compiled directly and by focused build (8240 jobs); its
+headline axiom audit contained only standard `propext`, `Classical.choice`,
+and `Quot.sound` dependencies.  The shared JVM was not restarted.  Ordered
+`:reload` from the canonical checkout loaded transport-conformance,
+memory-snapshot, live-promotion, projection-watchdog, and countdown-control in
+215 ms.  The live promotion identity then reported equal source and loaded IDs
+`dad449004344e23e52126dcd25f04e2295e4b4b66b656e69f75aab115e9af3d1`, and
+the publication, replay, watchdog, promotion, and controller vars all resolved.
+
+Campaign restart is authorized only from this state.  The restart receipt,
+post-restart tick/frame transition, watcher projection, and any newly emitted
+certificate replay are operational evidence and must be reported separately;
+a real error requires another durable stop.
