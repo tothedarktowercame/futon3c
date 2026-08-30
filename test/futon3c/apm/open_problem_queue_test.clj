@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 118 = 475 corpus - 272 not-open - 79 topology - 4 defective - 2
+    ;; 116 = 475 corpus - 274 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -17,8 +17,10 @@
     ;; and swept to origin/master, so their sorry counts are now 0 and they
     ;; classify :not-open. The corpus did not shrink -- the 475 total below is
     ;; unchanged -- three problems moved from open to solved, which is the
-    ;; queue noticing that work got banked.
-    (is (= 118 (count problems)))
+    ;; queue noticing that work got banked. It fell from 118 to 116 when the
+    ;; independently verified f52/a99J01 and f53/a99J03 solver heads were
+    ;; swept to origin/master (f992b7b0/66a497f0 and 545ea324/69395657).
+    (is (= 116 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
