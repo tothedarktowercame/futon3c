@@ -1,6 +1,8 @@
 (ns futon3c.apm.memory-snapshot-test
   (:require [clojure.test :refer [deftest is testing]]
-            [futon3c.apm.memory-snapshot :as sut])
+            [futon3c.apm.memory-snapshot :as sut]
+            [futon3c.evidence.store :as estore]
+            [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -178,6 +180,18 @@
                  (assoc candidate :reviewer "solver")
                  (constantly [edge]) entries)))))
 
+(deftest default-visibility-check-bounds-substrate-edge-reads
+  (let [observed (atom nil)]
+    (with-redefs [substrate/hyperedges-by-end
+                  (fn [memory-id options]
+                    (reset! observed [memory-id options])
+                    [])
+                  estore/get-entry* (fn [_ _] nil)]
+      (is (not (sut/candidate-visible? candidate)))
+      (is (= ["e-solver-1"
+              {:limit 10 :timeout-ms 5000 :request-budget 2}]
+             @observed)))))
+
 (deftest cumulative-publication-drops-stale-priors-but-fails-closed-on-own
   (let [dir (Files/createTempDirectory "apm-cumulative-snapshot-test"
                                        (make-array FileAttribute 0))
@@ -221,6 +235,27 @@
               :own-candidates [(assoc own :review-evidence-id "missing-review")]
               :path (.resolve dir "own-stale.edn")
               :evidence-visible? visible?}))))))
+
+(deftest cumulative-publication-checks-each-retained-memory-once
+  (let [dir (Files/createTempDirectory "apm-cumulative-visible-once"
+                                       (make-array FileAttribute 0))
+        calls (atom {})
+        prior (assoc candidate :memory-id "prior-once" :depositor "f28-guide"
+                     :provenance {:campaign-id "c1"
+                                  :frame-id "f28" :problem-id "p28"})
+        own (assoc candidate :memory-id "own-once" :depositor "f31-guide"
+                   :provenance {:campaign-id "c2"
+                                :frame-id "f31" :problem-id "p31"})
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [prior] :own-candidates [own]
+                 :path (.resolve dir "union.edn") :lineage ["c1" "c2"]
+                 :evidence-visible?
+                 (fn [candidate]
+                   (swap! calls update (:memory-id candidate) (fnil inc 0))
+                   true)})]
+    (is (:ok result))
+    (is (= {"prior-once" 1 "own-once" 1} @calls))))
 
 (deftest cumulative-dedup-preserves-earliest-depositor-origin
   (let [dir (Files/createTempDirectory "apm-provenance-dedup"

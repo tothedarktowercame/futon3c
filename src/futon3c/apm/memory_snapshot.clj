@@ -190,7 +190,9 @@
   its independently authored persisted review evidence."
   ([candidate]
    (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
-     (candidate-visible? candidate substrate/hyperedges-by-end
+     (candidate-visible? candidate
+                         #(substrate/hyperedges-by-end
+                           % {:limit 10 :timeout-ms 5000 :request-budget 2})
                          #(estore/get-entry* backend %))))
   ([{:keys [memory-id depositor reviewer review-evidence-id
             attachment-status pattern-ids]}
@@ -276,7 +278,10 @@
   reviews are dropped with an explicit account. Own candidates remain subject
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
-  (let [origin-valid?
+  (let [evidence-visible? (when (fn? evidence-visible?)
+                            (memoize evidence-visible?))
+        args (assoc args :evidence-visible? evidence-visible?)
+        origin-valid?
         (fn [candidate]
           (let [provenance (:provenance candidate)
                 depositor-frame
