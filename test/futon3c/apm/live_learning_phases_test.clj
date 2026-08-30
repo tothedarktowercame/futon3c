@@ -430,6 +430,14 @@
       (is (re-find (re-pattern (name detail))
                    (str detail " " message))))))
 
+(deftest close-prompt-explicitly-requires-verbatim-controller-audit
+  (let [message (sut/prompt {:frame-id "f60" :phase :close-frame
+                             :dispatch/type :close-frame
+                             :role-card-path "guide.md"
+                             :role-card-blob "blob"
+                             :memory-use-audit []})]
+    (is (re-find #"Copy :memory-use-audit verbatim from the request" message))))
+
 (deftest close-frame-preserves-arbitrary-memory-ids-as-structured-evidence
   (let [memory-id "e-codexpilot-upgrade-diskwise-L1-convergence/v2"
         student (fn [ordinal]

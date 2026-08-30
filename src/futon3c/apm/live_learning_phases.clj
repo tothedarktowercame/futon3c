@@ -944,7 +944,9 @@
                           (str "Mine the Student's turns into arc-lane rewrite rules "
                                "and trajectory/challenge memories; return :lanes, "
                                ":dispositions, :promotion-reviews and :memory-candidates."))
-         :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
+         :close-frame
+         (str "Audit the complete receipt graph and return a content-addressable trace result. "
+              "Copy :memory-use-audit verbatim from the request into the typed submission."))
        (if-let [job-id (:submission/job-id request)]
          (str " Completion is accepted only through the typed submission tool; "
               "follow the shared completion contract "
