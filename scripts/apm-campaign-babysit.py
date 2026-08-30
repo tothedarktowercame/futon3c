@@ -42,6 +42,7 @@ PARK_DECISION_TO_ID = os.environ.get(
 PARK_DECISIONS = os.environ.get(
     "APM_BABYSIT_PARK_DECISIONS",
     f"{REPO}/holes/labs/M-apm-demonstration/frame-park-decisions.edn")
+TARGET_COORDINATOR_ID = os.environ.get("APM_BABYSIT_COORDINATOR_ID")
 POLL_S = int(os.environ.get("APM_BABYSIT_POLL_S", "20"))
 DISCOVERY_LOG_EVERY_S = int(
     os.environ.get("APM_BABYSIT_DISCOVERY_LOG_S", "300"))
@@ -132,6 +133,8 @@ def discover_queue(known_campaign_dir):
         return None
     candidates = []
     for cid, chunk in split_registry_entries(text):
+        if TARGET_COORDINATOR_ID and cid != TARGET_COORDINATOR_ID:
+            continue
         if ':coordinator/adapter :apm/jit-problem-queue' not in chunk:
             continue
         m = re.search(r':coordinator/enabled\? (\S+?)[,}]', chunk)
