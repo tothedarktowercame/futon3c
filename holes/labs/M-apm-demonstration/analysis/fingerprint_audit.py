@@ -71,6 +71,9 @@ EVIDENCE_AUTHOR = re.compile(r':evidence/author\s+"([^"]+)"')
 EVIDENCE_SUBJECT = re.compile(
     r':evidence/subject\s+\{[^{}]*:ref/id\s+"([^"]+)"[^{}]*\}')
 EVIDENCE_KIND = re.compile(r':kind\s+:([A-Za-z0-9_-]+)')
+REVIEW_MEMORY_USE_KIND = re.compile(
+    r':review\s+\{[^{}]*:memory-use/kind\s+:(substitutive|regulative)[^{}]*\}',
+    re.DOTALL)
 MANIFEST_REVISION = re.compile(
     r':apparatus\s+\{[^{}]*:revision\s+"([0-9a-f]+)"', re.DOTALL)
 MANIFEST_PIN = re.compile(r':pin/id\s+"([0-9a-f]+)"')
@@ -140,9 +143,11 @@ def memory_metadata(raw):
     author = EVIDENCE_AUTHOR.search(raw or "")
     subject = EVIDENCE_SUBJECT.search(raw or "")
     kind = EVIDENCE_KIND.search(body_text(raw))
+    use_kind = REVIEW_MEMORY_USE_KIND.search(raw or "")
     return {"origin-author": author.group(1) if author else None,
             "origin-problem": subject.group(1) if subject else None,
-            "memory-kind": kind.group(1) if kind else None}
+            "memory-kind": kind.group(1) if kind else None,
+            "memory-use-kind": use_kind.group(1) if use_kind else None}
 
 
 def transfer_stratum(frame, problem, metadata):
@@ -380,14 +385,13 @@ def attempts(campaign_dir):
             pid = PROBLEM_ID.search(t)
             rev = BASE_REV.search(t)
             ppath = PROBLEM_PATH.search(t)
-            use_kinds = recorded_use_kinds(t)
             srcdir = os.path.join(live, f"student-attempt-{n}-source")
             src = None
             if os.path.isdir(srcdir):
                 files = [f for f in os.listdir(srcdir) if f.endswith(".lean")]
                 if files:
                     src = os.path.join(srcdir, files[0])
-            out.append((frame, n, pid.group(1) if pid else "?", ids, use_kinds,
+            out.append((frame, n, pid.group(1) if pid else "?", ids,
                         t, instrument, src,
                         rev.group(1) if rev else None,
                         ppath.group(1) if ppath else None, exclusion))
@@ -406,7 +410,7 @@ def audit_campaign(cdir, campaign):
                "excluded-use-events": 0}
 
     excluded_seen = set()
-    for (frame, n, pid, ids, use_kinds, receipt, instrument, src, rev, ppath,
+    for (frame, n, pid, ids, receipt, instrument, src, rev, ppath,
          exclusion) in attempts(cdir):
         if exclusion:
             if frame not in excluded_seen:
@@ -424,7 +428,7 @@ def audit_campaign(cdir, campaign):
                 rows.append({"frame": frame, "attempt": n, "problem": pid,
                              "memory": mid, "source": (os.path.basename(src)
                                                         if src else None),
-                             "memory-use-kind": use_kinds.get(mid),
+                             "memory-use-kind": metadata["memory-use-kind"],
                              **metadata,
                              "origin-frame": origin_frame,
                              "transfer-stratum": stratum,
@@ -459,7 +463,6 @@ def audit_campaign(cdir, campaign):
             row = {"frame": frame, "attempt": n, "problem": pid, "memory": mid,
                    "source": os.path.basename(src) if src else None,
                    "tokens-named": len(toks),
-                   "memory-use-kind": use_kinds.get(mid),
                    **metadata,
                    "origin-frame": origin_frame,
                    "transfer-stratum": stratum,
@@ -490,7 +493,7 @@ def audit_campaign(cdir, campaign):
                             "in-base-already": len(hits) - len(novel),
                             "paste-longest-run": best, "paste-lines-hit": nhit})
                 row["verdict"] = artifact_verdict(
-                    use_kinds.get(mid), best, witnessing, novel, hits)
+                    metadata["memory-use-kind"], best, witnessing, novel, hits)
                 summary[row["verdict"]] += 1
             rows.append(row)
 

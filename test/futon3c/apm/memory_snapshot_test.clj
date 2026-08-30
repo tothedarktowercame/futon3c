@@ -46,11 +46,11 @@
            (:ordering result)))))
 
 (deftest typed-supply-is-observable-without-changing-default-rank
-  (let [candidates [{:memory-id "reg" :memory/kind :regulative/process
+  (let [candidates [{:memory-id "reg" :memory-use/kind :regulative
                      :body "sharedAlpha sharedBeta"}
-                    {:memory-id "legacy" :memory/kind :legacy-advice
+                    {:memory-id "legacy" :memory-use/kind :legacy-advice
                      :body "sharedAlpha"}
-                    {:memory-id "sub" :memory/kind :substitutive-content
+                    {:memory-id "sub" :memory-use/kind :substitutive
                      :body "unrelatedIdentifier"}]
         options {:problem-id "p1"
                  :base-text "sharedAlpha sharedBeta unrelatedIdentifier"}
@@ -63,7 +63,7 @@
         "observability alone does not alter the established relevance order")
     (is (= ["sub" "legacy" "reg"]
            (mapv :memory-id (:ordered stratified))))
-    (is (= {:regulative/process 1 :substitutive-content 1 :unknown 1}
+    (is (= {:regulative 1 :substitutive 1 :unknown 1}
            (get-in stratified [:ordering :kind-counts])))
     (is (= :observed-only
            (get-in observed [:ordering :kind-stratification])))
@@ -74,10 +74,10 @@
 
 (deftest typed-supply-preserves-stable-order-and-unknown-bucket
   (let [candidates [{:memory-id "u1"}
-                    {:memory-id "r" :memory/kind :regulative/process}
-                    {:memory-id "u2" :memory/kind :unrecognized}
-                    {:memory-id "s1" :memory/kind :substitutive-content}
-                    {:memory-id "s2" :memory/kind :substitutive-content}]
+                    {:memory-id "r" :memory-use/kind :regulative}
+                    {:memory-id "u2" :memory-use/kind :unrecognized}
+                    {:memory-id "s1" :memory-use/kind :substitutive}
+                    {:memory-id "s2" :memory-use/kind :substitutive}]
         supply (sut/stratify-candidates candidates)]
     (is (= ["s1" "s2" "u1" "u2" "r"]
            (mapv :memory-id (:ordered supply))))

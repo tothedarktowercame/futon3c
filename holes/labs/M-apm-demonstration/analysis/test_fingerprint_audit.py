@@ -114,10 +114,23 @@ class TransferReportTest(unittest.TestCase):
                   :evidence/author "f53-scribe"}'''
         self.assertEqual(
             {"origin-author": "f53-scribe", "origin-problem": "a99J03",
-             "memory-kind": "memory"}, AUDIT.memory_metadata(raw))
+             "memory-kind": "memory", "memory-use-kind": None},
+            AUDIT.memory_metadata(raw))
         self.assertEqual(
-            {"origin-author": None, "origin-problem": None, "memory-kind": None},
+            {"origin-author": None, "origin-problem": None, "memory-kind": None,
+             "memory-use-kind": None},
             AUDIT.memory_metadata(""))
+
+    def test_review_edge_is_authoritative_for_regulative_verdict(self):
+        raw = '''{:evidence/body {:kind :memory :body "process guidance"}
+                  :hx/props {:review {:reviewer "f60-promotion-proctor"
+                                      :verdict :approve
+                                      :memory-use/kind :regulative}}}'''
+        metadata = AUDIT.memory_metadata(raw)
+        self.assertEqual("regulative", metadata["memory-use-kind"])
+        self.assertEqual(
+            "not-adjudicable-by-token",
+            AUDIT.artifact_verdict(metadata["memory-use-kind"], 0, [], [], []))
 
 
 class VoidedFramePopulationTest(unittest.TestCase):

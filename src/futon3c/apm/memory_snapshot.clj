@@ -49,7 +49,7 @@
   (set (re-seq lean-token (or text ""))))
 
 (def ^:private typed-memory-kinds
-  #{:substitutive-content :regulative/process})
+  #{:substitutive :regulative})
 
 (defn candidate-kind
   "Return CANDIDATE's explicit APM memory kind, or :unknown.
@@ -57,7 +57,7 @@
    Unknown includes absent and legacy values deliberately: this boundary does
    not infer utility from prose or silently reinterpret historical records."
   [candidate]
-  (let [kind (:memory/kind candidate)]
+  (let [kind (:memory-use/kind candidate)]
     (if (contains? typed-memory-kinds kind) kind :unknown)))
 
 (defn stratify-candidates
@@ -68,7 +68,7 @@
    process memories. Callers must opt into this order; snapshots retain their
    historical relevance order unless `:kind-stratification` requests it."
   [candidates]
-  (let [rank {:substitutive-content 0 :unknown 1 :regulative/process 2}
+  (let [rank {:substitutive 0 :unknown 1 :regulative 2}
         indexed (map-indexed vector candidates)
         ordered (->> indexed
                      (sort-by (fn [[index candidate]]
@@ -79,8 +79,7 @@
     {:ordered ordered
      :counts counts
      :buckets (into (sorted-map)
-                    (for [kind [:substitutive-content :unknown
-                                :regulative/process]]
+                    (for [kind [:substitutive :unknown :regulative]]
                       [kind (filterv #(= kind (candidate-kind %)) candidates)]))}))
 
 (defn order-candidates
