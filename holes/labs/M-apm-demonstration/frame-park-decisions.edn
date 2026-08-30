@@ -494,4 +494,35 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No Guide receipt, independent "
         "review, or snapshot publication was invented; f61 remains partial "
-        "with its valid Student receipt authoritative.")}]}
+        "with its valid Student receipt authoritative.")}
+  {:decision/disposition :retry
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f63"
+   :problem/id "b01J02"
+   :last-valid-receipt/id
+   "1e2b9aec71411e46b994f421c3ec22e65ad31e2fa0ffbf3d27383fb4ed3c30df"
+   :decision/at "2026-08-30T18:55:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :promotion-review-visibility-lag
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "Both reviewed memories were successfully published and are now "
+        "visible in the authoritative substrate with substantive content. "
+        "The preserved :memory-snapshot-review-not-visible result therefore "
+        "records a transient visibility lag during publication review, not a "
+        "failed deposit or invalid review. The fail-closed visibility check "
+        "remains correct; exhausting the one-attempt publication-repair budget "
+        "on a transient substrate read is the apparatus gap.")
+   :decision/recommended-route
+   (str "Retry only the promotion publication review against the already "
+        "persisted review result and memory identifiers. Do not relax the "
+        "visibility check, manufacture review evidence, or void the frame. "
+        "Consider adding the delayed retry-and-wake treatment already used by "
+        "the deposit path to this publication-review path.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. Its last valid receipt, two "
+        "approved reviews, exact visibility residual, and requested retry "
+        "remain preserved in authoritative queue state.")}]}
