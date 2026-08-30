@@ -8,7 +8,8 @@
             [clojure.java.io :as io]
             [clojure.set :as set]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.generated-contract :as generated-contract])
+            [futon3c.apm.generated-contract :as generated-contract]
+            [futon3c.apm.promotion-pipeline :as pipeline])
   (:import (java.nio.file Files StandardCopyOption)
            (java.util UUID)))
 
@@ -119,29 +120,30 @@
                          :content-digest nil
                          :pattern-ids nil}]}
    :guide-intervention-1
-   {:candidates [{:memory-id nil
-                  :content-digest nil
-                  :pattern-ids nil
-                  :source-attempts nil}]}
+   {:candidates [pipeline/guide-candidate-agent-shape]}
    :guide-intervention-2
-   {:candidates [{:memory-id nil
-                  :content-digest nil
-                  :pattern-ids nil
-                  :source-attempts nil}]}})
+   {:candidates [pipeline/guide-candidate-agent-shape]}})
+
+(def validator-evidence-shape-by-phase
+  "Evidence shapes inspected by typed phase validators. A nil leaf means the
+  validator requires only that top-level structure; nested maps/vectors name
+  leaves whose presence is part of the validator contract."
+  {:student-attempt-1 {:memory-use {:used-ids nil}}
+   :student-attempt-2 {:memory-use {:used-ids nil}}
+   :student-attempt-3 {:memory-use {:used-ids nil}}
+   :guide-intervention-1
+   {:channel-audit {:direct-student-contact? nil}
+    :candidates [pipeline/guide-candidate-agent-shape]}
+   :guide-intervention-2
+   {:channel-audit {:direct-student-contact? nil}
+    :candidates [pipeline/guide-candidate-agent-shape]}
+   :scribe-reduce {:lanes nil :dispositions nil :promotion-reviews nil}
+   :promote-solver {:memory-candidates nil}
+   :close-frame {:trace-id nil :result nil}})
 
 (def validator-evidence-fields-by-phase
-  "Report structures inspected by typed phase validators. This explicit seam
-   covers student attempts, Guide interventions, scribe reduction, Solver
-   promotion, and frame close; roles whose validation is wholly generic are
-   intentionally absent."
-  {:student-attempt-1 #{:memory-use}
-   :student-attempt-2 #{:memory-use}
-   :student-attempt-3 #{:memory-use}
-   :guide-intervention-1 #{:channel-audit :candidates}
-   :guide-intervention-2 #{:channel-audit :candidates}
-   :scribe-reduce #{:lanes :dispositions :promotion-reviews}
-   :promote-solver #{:memory-candidates}
-   :close-frame #{:trace-id :result}})
+  "Top-level compatibility view of `validator-evidence-shape-by-phase`."
+  (update-vals validator-evidence-shape-by-phase #(set (keys %))))
 
 (defn evidence-shape [auth]
   (cond-> (get evidence-shape-by-phase (:phase auth))
@@ -158,14 +160,38 @@
 (defn evidence-optional-shape [auth]
   (get evidence-optional-shape-by-phase (:phase auth) {}))
 
+(defn- missing-shape-paths
+  [required declared path]
+  (cond
+    (map? required)
+    (if-not (map? declared)
+      [path]
+      (mapcat (fn [[key required-value]]
+                (let [next-path (conj path key)]
+                  (if (contains? declared key)
+                    (missing-shape-paths required-value
+                                         (get declared key) next-path)
+                    [next-path])))
+              required))
+
+    (vector? required)
+    (if (and (vector? declared) (seq declared))
+      (missing-shape-paths (first required) (first declared) (conj path 0))
+      [path])
+
+    :else []))
+
 (defn validator-schema-findings
-  "Return fields inspected by a typed phase validator but absent from both its
-   required and optional evidence declarations."
+  "Return validator-inspected structures or leaves absent from both required
+  and optional evidence declarations. Top-level findings remain keywords;
+  nested findings are paths such as `[:candidates 0 :body]`."
   [auth]
-  (let [declared (into (set (keys (evidence-shape auth)))
-                       (keys (evidence-optional-shape auth)))
-        inspected (get validator-evidence-fields-by-phase (:phase auth) #{})]
-    (vec (sort (set/difference inspected declared)))))
+  (let [declared (merge (evidence-shape auth) (evidence-optional-shape auth))
+        required (get validator-evidence-shape-by-phase (:phase auth) {})]
+    (->> (missing-shape-paths required declared [])
+         (map #(if (= 1 (count %)) (first %) %))
+         (sort-by pr-str)
+         vec)))
 
 (defn evidence-required
   "Return the evidence schema owned by immutable dispatch authority.

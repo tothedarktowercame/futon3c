@@ -50,13 +50,20 @@
                           :guide-intervention-1)]
       (is (= [:candidates]
              (sut/validator-schema-findings
+              (authority :guide-intervention-1))))))
+  (testing "removing an inspected candidate leaf fails the completeness check"
+    (with-redefs [sut/evidence-optional-shape-by-phase
+                  (update-in sut/evidence-optional-shape-by-phase
+                             [:guide-intervention-1 :candidates 0]
+                             dissoc :body)]
+      (is (= [[:candidates 0 :body]]
+             (sut/validator-schema-findings
               (authority :guide-intervention-1)))))))
 
 (deftest guide-schema-declares-optional-candidate-leaf-shape
   (let [shape (sut/evidence-optional-shape
                (authority :guide-intervention-1))]
-    (is (= [{:memory-id nil :content-digest nil
-             :pattern-ids nil :source-attempts nil}]
+    (is (= [{:name nil :hook nil :body nil :pattern-ids nil}]
            (:candidates shape)))
     (is (not (contains? (sut/evidence-required
                          (authority :guide-intervention-1))

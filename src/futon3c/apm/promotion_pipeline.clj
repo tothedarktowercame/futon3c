@@ -24,6 +24,34 @@
 (def durable-memory-admission-schema :typed-memory-use-v1)
 (def memory-use-kinds #{:substitutive :regulative})
 
+(def guide-candidate-agent-contract
+  "Ordered leaf contract for a Guide-authored store-mode candidate. Identity,
+  content digest, kind, and source attempts are controller-derived."
+  [[:name :candidate-name-missing
+    #(and (string? %) (not (str/blank? %)))]
+   [:hook :candidate-hook-missing
+    #(and (string? %) (not (str/blank? %)))]
+   [:body :candidate-body-missing
+    #(and (string? %) (not (str/blank? %)))]
+   [:pattern-ids :candidate-patterns-missing
+    #(and (vector? %) (seq %)
+          (every? (fn [pattern-id]
+                    (and (string? pattern-id) (not (str/blank? pattern-id))))
+                  %))]])
+
+(def guide-candidate-agent-shape
+  "Null-leaf schema derived from the validator's ordered agent contract."
+  (into {} (map (fn [[field _ _]] [field nil]))
+        guide-candidate-agent-contract))
+
+(defn guide-candidate-errors
+  "Return missing/invalid fields authored by a Guide candidate."
+  [candidate]
+  (into []
+        (keep (fn [[field finding valid?]]
+                (when-not (valid? (get candidate field)) finding)))
+        guide-candidate-agent-contract))
+
 (defn typed-memory-use-candidate?
   "True only for candidates minted after explicit memory-use classification
   became an admission requirement.  Absence denotes a historical candidate;
@@ -140,18 +168,7 @@
                    (not (string? depositor)) (conj :depositor-missing)
                    (not (and (vector? candidates) (seq candidates)))
                    (conj :candidates-missing)
-                   (some #(not (and (string? (:name %))
-                                    (not (str/blank? (:name %)))
-                                    (string? (:hook %))
-                                    (not (str/blank? (:hook %)))
-                                    (string? (:body %))
-                                    (not (str/blank? (:body %)))
-                                    (vector? (:pattern-ids %))
-                                    (seq (:pattern-ids %))
-                                    (every? (fn [pattern-id]
-                                              (and (string? pattern-id)
-                                                   (not (str/blank? pattern-id))))
-                                            (:pattern-ids %)))) candidates)
+                   (some #(seq (guide-candidate-errors %)) candidates)
                    (conj :candidate-shape-invalid))]
     (if (seq findings) {:ok false :findings findings}
         (assoc (apply-mechanical-reviews candidates context) :ok true)))))
