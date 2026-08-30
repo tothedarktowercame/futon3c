@@ -940,6 +940,34 @@
     (is (= "review-with-missing-patterns"
            (get-in @saved [:superseded-terminals 0 :job :job-id])))))
 
+(deftest pattern-contract-migration-allows-one-explicit-corrective-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p"]}]
+                    :job "first-correction" :review-successor-attempt 1}
+        saved (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion
+                         :stage :awaiting-apparatus-repair
+                         :repair/kind :promotion-pass
+                         :repair/attempts 1 :repair/max-attempts 1
+                         :findings [:review-patterns-invalid]
+                         :last-valid-state last-valid}
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "first-correction" predecessor))
+                              (is (= 2 attempt))
+                              {:ok true :job "contract-correction"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "contract-correction" (:job-id result)))
+    (is (true? (:pattern-contract-repair-attempted? @saved)))
+    (let [held {:state/type :promotion :stage :awaiting-apparatus-repair
+                :repair/kind :promotion-pass
+                :repair/attempts 2 :repair/max-attempts 1
+                :findings [:review-patterns-invalid]
+                :last-valid-state @saved}]
+      (is (= :awaiting-apparatus-repair
+             (:status (sut/drive! {:state held})))))))
+
 (deftest unresolved-review-archive-failure-blocks-successor
   (let [called (atom 0)
         last-valid {:state/type :promotion :stage :independent-review

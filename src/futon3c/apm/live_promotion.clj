@@ -311,6 +311,9 @@
                                  "Persist each approval's evidence body with nonblank "
                                  ":review/reason and :review/residual fields; return the "
                                  "same nonblank :reason and :residual on every review. "
+                                 "Every review MUST state :pattern-ids as a non-empty "
+                                 "vector copied from or explicitly reassigned against "
+                                 "the candidate's reviewed pattern set. "
                                  "Every :approve or :reassign review MUST explicitly "
                                  "state :memory-use/kind as exactly :substitutive or "
                                  ":regulative; do not infer it from prose or legacy :kind.")]
@@ -326,6 +329,9 @@
                              "\nRead and follow the frozen role card at "
                              (resolved-role-card-path control-root request)
                              " (blob " (:role-card-blob request) "). "
+                             "Every review MUST state :pattern-ids as a non-empty "
+                             "vector copied from or explicitly reassigned against "
+                             "the candidate's reviewed pattern set. "
                              "Every :approve or :reassign review MUST explicitly "
                              "state :memory-use/kind as exactly :substitutive or "
                              ":regulative; do not infer it from prose or legacy :kind.")
@@ -361,7 +367,10 @@
                                  "exactly one EDN map. Persist each approval's evidence "
                                  "body with nonblank :review/reason and :review/residual "
                                  "fields; return the same nonblank :reason and :residual "
-                                 "on every review. Every :approve or :reassign review "
+                                 "on every review. Every review MUST state :pattern-ids "
+                                 "as a non-empty vector copied from or explicitly "
+                                 "reassigned against the candidate's reviewed pattern "
+                                 "set. Every :approve or :reassign review "
                                  "MUST explicitly state :memory-use/kind as exactly "
                                  ":substitutive or :regulative; do not infer it from "
                                  "prose or legacy :kind.")]
@@ -838,7 +847,10 @@
     (= :awaiting-apparatus-repair (:stage state))
     (cond
       (and (= :promotion-pass (:repair/kind state))
-           (< (:repair/attempts state) (:repair/max-attempts state)))
+           (or (< (:repair/attempts state) (:repair/max-attempts state))
+               (and (= [:review-patterns-invalid] (vec (:findings state)))
+                    (not (:pattern-contract-repair-attempted?
+                          (:last-valid-state state))))))
       (let [prior (:last-valid-state state)
             successor-attempt (inc (or (:review-successor-attempt prior) 0))
             predecessor {:job {:job-id (:job prior)
@@ -867,6 +879,7 @@
                                           :ticket {:job-id (:job successor)}
                                           :predecessor-job-id (:job prior)
                                           :review-successor-attempt successor-attempt
+                                          :pattern-contract-repair-attempted? true
                                           :projection-repair-attempt
                                           (inc (:repair/attempts state))))]
                 (persist-fn next-state)
