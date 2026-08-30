@@ -310,37 +310,42 @@
     rows))
 
 (defn- live-cascade-readers [config]
-  (let [base (or (:evidence-store-url config) (substrate/configured-url))]
+  (let [base (or (:evidence-store-url config) (substrate/configured-url))
+        attachments
+        (memoize
+         (fn [endpoint]
+           (-> (:hyperedges
+                (cascade-get base "/api/alpha/hyperedges"
+                             {:end endpoint :type "memory/assert"
+                              :limit cascade-hyperedge-page-limit}))
+               (complete-page cascade-hyperedge-page-limit {:endpoint endpoint})
+               (->> (filter reviewed-attachment?) vec))))
+        why-targets
+        (memoize
+         (fn [pattern-id]
+           (->> (:relations
+                 (cascade-get base "/api/alpha/relations"
+                              {:from pattern-id :limit 100}))
+                (keep (fn [relation]
+                        (when (= "pattern/has-semantic-why"
+                                 (qualified-name (:relation/type relation)))
+                          (or (:relation/to relation) (:relation/dst relation)))))
+                distinct vec)))
+        pattern
+        (memoize
+         (fn [pattern-id]
+           (try
+             (cascade-pattern base pattern-id)
+             (catch clojure.lang.ExceptionInfo error
+               (if (= :transport (:error/component (ex-data error)))
+                 (throw error)
+                 nil)))))]
     {:attachments-fn
-     (fn [endpoint]
-       (-> (:hyperedges
-            (cascade-get base "/api/alpha/hyperedges"
-                         {:end endpoint :type "memory/assert"
-                          :limit cascade-hyperedge-page-limit}))
-           (complete-page cascade-hyperedge-page-limit {:endpoint endpoint})
-           (->> (filter reviewed-attachment?)
-                vec)))
-     :why-targets-fn
-     (fn [pattern-id]
-       (->> (:relations
-             (cascade-get base "/api/alpha/relations"
-                          {:from pattern-id :limit 100}))
-            (keep (fn [relation]
-                    (when (= "pattern/has-semantic-why"
-                             (qualified-name (:relation/type relation)))
-                      (or (:relation/to relation) (:relation/dst relation)))))
-            distinct
-            vec))
-     :pattern-fn
-     (fn [pattern-id]
-       ;; Pattern content is additive. A missing legacy entity must not hide
-       ;; the named pattern offer or break an otherwise valid memory cascade.
-       (try
-         (cascade-pattern base pattern-id)
-         (catch clojure.lang.ExceptionInfo error
-           (if (= :transport (:error/component (ex-data error)))
-             (throw error)
-             nil))))}))
+     attachments
+     :why-targets-fn why-targets
+     ;; Pattern content is additive. A missing legacy entity must not hide
+     ;; the named pattern offer or break an otherwise valid memory cascade.
+     :pattern-fn pattern}))
 
 (defn domain-general-pattern-id?
   "True when PATTERN-ID's pre-slash family has no uppercase subject suffix."

@@ -33,6 +33,27 @@
   {:attachments-fn #(get attachments % [])
    :why-targets-fn #(get why % [])})
 
+(deftest live-cascade-readers-fetch-each-endpoint-once-per-expansion
+  (let [calls (atom [])]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.apm.conductor 'cascade-get)
+       (fn [_base path query]
+         (swap! calls conj [path query])
+         (if (= path "/api/alpha/hyperedges")
+           {:hyperedges [(cascade-edge "memory" "pattern" "p01") ]}
+           {:relations []}))
+       (ns-resolve 'futon3c.apm.conductor 'cascade-pattern)
+       (fn [_base pattern-id]
+         (swap! calls conj [:pattern pattern-id])
+         {:entity/id pattern-id})}
+      #(let [{:keys [attachments-fn why-targets-fn pattern-fn]}
+             (#'conductor/live-cascade-readers
+              {:evidence-store-url "http://substrate.test"})]
+         (is (= (attachments-fn "memory") (attachments-fn "memory")))
+         (is (= (why-targets-fn "pattern") (why-targets-fn "pattern")))
+         (is (= (pattern-fn "pattern") (pattern-fn "pattern")))
+         (is (= 3 (count @calls)))))))
+
 (deftest cascade-body-read-has-an-effective-wall-clock-timeout
   (let [release (CountDownLatch. 1)
         server (HttpServer/create (java.net.InetSocketAddress. 0) 0)]
