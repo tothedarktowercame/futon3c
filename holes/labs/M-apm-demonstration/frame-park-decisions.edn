@@ -460,4 +460,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No Guide receipt, review, or memory "
         "publication was invented; the successful Student receipt remains the "
-        "authoritative mathematical result.")}]}
+        "authoritative mathematical result.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f61"
+   :problem/id "b01A02"
+   :last-valid-receipt/id
+   "b03c31fb8fccb4911facc12de95fb7fa2ec42d742169959c1e449f4d7ff5a6aa"
+   :decision/at "2026-08-30T16:08:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-candidate-contract-ordering-apparatus-mismatch
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved Student receipt is valid and records the successful "
+        "b01A02 attempt. The pinned Guide card requires agent-authored "
+        "{:name :hook :body :pattern-ids} candidates and says controller "
+        "persistence derives identity and digest fields. The live repair "
+        "instead demanded :memory-id, :content-digest, and :source-attempts. "
+        "The Guide supplied those identity fields for an already persisted "
+        "substantive memory, after which the production candidate gate rejected "
+        "the same record for missing :name, :hook, and :body. This is an "
+        "apparatus contract-ordering fault, not a mathematical failure.")
+   :decision/recommended-route
+   (str "Preserve the Student artifact, the persisted Guide memory "
+        "e-a17ceaa9-875a-4f6a-b5a3-830006da28ba, and the exact residual. "
+        "Do not redispatch the exhausted historical phase after queue advance. "
+        "Repair Guide candidate handling so agent-authored semantic fields are "
+        "materialized first and controller-derived identity fields are validated "
+        "only after persistence; cover this f61 payload as a regression fixture.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No Guide receipt, independent "
+        "review, or snapshot publication was invented; f61 remains partial "
+        "with its valid Student receipt authoritative.")}]}
