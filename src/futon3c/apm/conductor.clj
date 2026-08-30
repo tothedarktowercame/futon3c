@@ -16,8 +16,8 @@
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.substrate.client :as substrate])
-  (:import [java.util.concurrent CompletableFuture CompletionException
-            TimeUnit]))
+  (:import [java.util.concurrent CompletableFuture ExecutionException
+            TimeUnit TimeoutException]))
 
 (def ^:private default-memory-cascade-cap 100)
 (def ^:dynamic *cascade-request-timeout-ms* 60000)
@@ -213,8 +213,20 @@
         (http-client/get url (assoc options :client client :async true
                                     :timeout timeout-ms))]
     (try
-      (.join (.orTimeout future timeout-ms TimeUnit/MILLISECONDS))
-      (catch CompletionException error
+      ;; Enforce the deadline in the coordinator thread itself. Relying on
+      ;; CompletableFuture.orTimeout delegates expiry to the JVM-global
+      ;; Delayer, which can be starved while the serving JVM is under load.
+      (.get future timeout-ms TimeUnit/MILLISECONDS)
+      (catch TimeoutException error
+        (.cancel future true)
+        (throw (ex-info "memory cascade substrate transport timed out"
+                        (assoc context
+                               :error/component :transport
+                               :error/code :memory-cascade-unreachable
+                               :timeout-ms timeout-ms
+                               :error/message (.getMessage error))
+                        error)))
+      (catch ExecutionException error
         (let [cause (or (.getCause error) error)]
           (throw (ex-info "memory cascade substrate transport failed"
                           (assoc context
