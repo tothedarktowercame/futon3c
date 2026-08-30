@@ -10,6 +10,7 @@
 (def boundary-status-classes
   {:phase-driver
    {:awaiting-terminal :waiting-terminal
+    :awaiting-apparatus-repair :waiting-apparatus-repair
     :awaiting-substrate :waiting-substrate
     :transport-retry-scheduled :waiting-transport-retry
     :terminal-collected :terminal-evidence-collected
@@ -68,6 +69,7 @@
   [{:producer :phase-driver
     :consumer :live-supervisor-frame
     :mapping {:awaiting-terminal :parked
+              :awaiting-apparatus-repair :parked
               :awaiting-substrate :awaiting-substrate
               :transport-retry-scheduled :transport-retry-scheduled
               :terminal-collected :terminal-collected

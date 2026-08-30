@@ -44,6 +44,19 @@
     (is (= :live-supervisor-job-id-missing (:error/code result)))
     (is (not-any? #(and (vector? %) (= :park (first %))) @calls))))
 
+(deftest awaiting-apparatus-repair-projects-and-parks-for-immediate-retry
+  (let [calls (atom [])
+        finding {:findings [:review-patterns-invalid]}
+        result (sut/tick!
+                (base calls {:ok true :status :awaiting-apparatus-repair
+                             :finding finding}))]
+    (is (= :parked (:status result)))
+    (is (= finding (:apparatus-repair result)))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (not-any? #{:advance} @calls))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))
+    (is (nil? (get-in (last @calls) [1 :retry/not-before-ms])))))
+
 (deftest certified-phase-advances-projects-then-parks-for-next-tick
   (let [calls (atom [])
         result (sut/tick! (base calls {:ok true :status :certified
@@ -92,7 +105,7 @@
            (get-in (last @calls) [1 :retry/not-before-ms])))))
 
 (deftest phase-status-vocabulary-is-closed-and-unknowns-name-the-gap
-  (is (= #{:awaiting-terminal :awaiting-substrate
+  (is (= #{:awaiting-terminal :awaiting-apparatus-repair :awaiting-substrate
            :transport-retry-scheduled :terminal-collected :certified}
          (phase-status/known-statuses :phase-driver)))
   (is (= :waiting-substrate
