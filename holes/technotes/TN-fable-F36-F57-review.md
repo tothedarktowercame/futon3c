@@ -352,3 +352,97 @@ qualification gate; the Agency job records (aged out — `model` is not
 recoverable from them, so per-frame seat models before the `seat-cast.edn`
 pin are inferred from `frame_seats.clj` history, not observed); the ~390
 commits in the window beyond those named here.
+
+## Addendum, 2026-08-30 ~12:50Z — Codex's follow-through, checked before f60's first learning phase
+
+Joe asked Codex (codex-17) to apply the §7 recommendations and restarted the
+campaign; f60 (b00J02) was minted 12:11Z and is at `:solve` as I write. The
+window is 21 commits, `8aa26d7c..5c3faacf`. In between: f58 (aunk04) ran to
+guide-1 and was the intended stop boundary — its a1 solved with one memory,
+`e-63b7c7c1` (f34-guide, a95J03), on the shelf, verdict `already-in-base`,
+which Opus recorded as the strongest negative so far; f59 (b00J01) was minted
+past that boundary, voided `:apparatus-invalidated`, and frozen as a fixture
+(`f59-post-f58-boundary-fixture.edn`, explicitly not experimental evidence).
+
+### Recommendation by recommendation
+
+| § 7 | what landed | coherent with the intent? |
+|---|---|---|
+| 1 f42/a1 in prereg | amendment 10: frame record with the three caveats verbatim, and a two-count rule (artifact-letter count includes it; route-changing count does not) | yes |
+| 2 Opus tally | f53 sentence rewritten to the fingerprint form; f47/a3 and f50/a3 rows added; new "Instrument boundary at f53" section | yes |
+| 3 fingerprint at close | `frame-fingerprint-audit/audit!` runs from `countdown-control/record-close-observations!` after the close is durable, publishes `<campaign>/analysis/fingerprint-audit.json` + a status EDN atomically; analyzer failure is recorded, never retracts the close. The frame-close receipt now carries a controller-derived `:receipt/memory-use-audit` (per memory id, attempt ordinals) that the close-frame role must echo; contract v4 regenerated | yes — and it also discharges rec. 8 (the audit is id-agnostic; test covers an opaque id) |
+| 4 process-memory verdict | `not-adjudicable-by-token` added to the script, gated on a `:memory-use/kind` recorded on the attempt receipt; never inferred from prose | **half — see below** |
+| 5 f53 guide boundary | amendment 10 `:casting-boundary` + Opus section | yes |
+| 6 f33/f35 re-validation | `revalidation-f33-f35-pattern-accounting-20260830.edn`: 8/8 retrospectively approved by re-reading the proctors' preserved reasons and replaying `2d9e08a8`; receipts and substrate untouched | yes, as an evidential record; they stay unpublished |
+| 7 population A | the six proof-text ids were already rejected on 08-25 (`codex-10`, `:proof-text-not-memory`); verified `candidate-visible?` false; I confirmed none of the six is in f53's or f58's accessible list; new gate `:proof-text-candidate-publishing-forbidden`. The note says plainly this closes the slice, not population A | yes for the slice |
+| 8 non-UUID close count | subsumed by 3 | yes |
+| 9 `:claimed-defect` parks the frame | nothing in the window touches it | **still open** |
+
+### What I verified
+
+clj-kondo on every changed `src/`/`test/` file: 0 errors, 0 warnings.
+`clojure -M:test` on the seven changed/new namespaces: 125 tests, 551
+assertions, 0 failures. `python3 -m unittest …/test_fingerprint_audit.py`:
+11 OK. Lean emitter parity: `cmp <(lake env lean --run
+DarkTower/APMCycleContractEmitter.lean) generated/apm-cycle-contract-v4.json`
+→ identical (apm-lean `9d2a1db5`). Serving JVM (:6768) resolves the new
+vars — `live-learning-phases/memory-use-audit`,
+`countdown-control/record-close-observations!`,
+`promotion-pipeline/typed-memory-use-candidate?`,
+`memory-snapshot/stratify-candidates` — so f60 runs the code on disk (A11
+not repeated). Re-ran the audit on v2: 33 use events after excluding the four
+void frames (f48, f49, f51, f59), f58/a1 `already-in-base`,
+`transfer-stratum` and `delivery-route` columns present.
+
+### Two things f60 is exposed to
+
+**(a) Two new hard requirements on model output, neither in a pinned role
+card.** The promotion proctor must now put `:memory-use/kind` (`:substitutive`
+| `:regulative`) on every `:approve`/`:reassign` of a candidate minted under
+`:admission/schema :typed-memory-use-v1` — which is every candidate from
+now on. The instruction lives only in the dispatch-prompt suffix
+(`live_promotion.clj:313-368`); `promotion-proctor-v3.md` does not mention
+it. Omission fails `validate-certified-promotion-pass` with
+`:review-memory-use-kind-invalid`, and that pass is held
+`:awaiting-apparatus-repair` — a park, not a halt, and not data loss. The
+close-frame role must echo the controller's `:memory-use-audit` exactly; the
+`--init` template renders the null and the request in the packet carries the
+value, but the repair text for `:close-evidence-invalid` still says only
+"trace id and result" (the specific keyword rides in `:finding/details`).
+This is the shape that parked f39 (scribe asked for `:hook`/`:body` its card
+never named) and f54 (guide asked for `:content-digest`). Cards pin by blob,
+so do not edit mid-f60; a `promotion-proctor-v4` and one guide-card line
+before f61 is the cheap fix.
+
+**(b) The kind classification does not reach the verdict.** Three places now
+speak about memory kind and none joins to the APM Student path:
+
+- the proctor's `:memory-use/kind` is stored on the review edge
+  (`promotion_review_store.clj`) and projected by `peripheral/memory_recall`;
+- the audit script reads `:memory-use/kind(s)` from the *attempt receipt*
+  (`recorded_use_kinds`), and only `dispatch_with_recall` writes that field —
+  APM Student receipts carry none (f58's has none);
+- `memory-snapshot/stratify-candidates` reads `:memory/kind` in a third
+  vocabulary, `#{:substitutive-content :regulative/process}`, which nothing
+  writes; its default is `:observed-only`, so no behaviour changes, but
+  `:kind-counts` will read `{:unknown N}` indefinitely.
+
+Net effect on campaign data: every row is `memory-use-kind: unknown` (33/33
+in today's rerun), `not-adjudicable-by-token` cannot fire, and the two
+regulative rows in §2 still read `unwitnessed`. Not wrong — the script
+refuses to guess, which is the right default — but the field the proctor is
+now required to produce is the one the audit never looks at. One join closes
+it: `memory_metadata` reading `:memory-use/kind` off the evidence/review
+edge, or the controller copying it into the Student receipt's accessible
+list at dispatch.
+
+**(c) No conditions-registry entry.** v2 `conditions.edn` still ends at
+C-10, so f60's manifest does not record that the close-frame audit, the
+typed-admission gate and the audit-echo contract are live from f60.
+Amendment 10 records analysis and the f53 boundary; the instrument change
+itself needs a C-11 with `:since-frame "f60"`.
+
+Overall: the changes do what §7 asked, with the tests and parity to show it.
+The gaps are one unfinished join (b), one operational hazard that will show
+up as a park rather than a bad measurement (a), and one missing registry
+line (c).
