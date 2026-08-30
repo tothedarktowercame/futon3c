@@ -168,6 +168,20 @@
       (is (= :store-unreachable
              (:error/code (backend/-append store entry)))))))
 
+(deftest evidence-get-bounds-the-response-promise-by-wall-clock
+  (let [get-edn (ns-resolve 'futon3c.evidence.futon1b-backend 'get-edn)
+        never (promise)
+        started (System/nanoTime)]
+    (with-redefs [http/get (fn [_ _] never)]
+      (let [error (try
+                    (get-edn "http://stalled-store.test/evidence/e-1" 20)
+                    nil
+                    (catch clojure.lang.ExceptionInfo e e))
+            elapsed-ms (quot (- (System/nanoTime) started) 1000000)]
+        (is (= :futon1b-read-timeout (:error/code (ex-data error))))
+        (is (= 20 (:timeout-ms (ex-data error))))
+        (is (< elapsed-ms 1000) (str "elapsed=" elapsed-ms "ms"))))))
+
 (deftest append-retries-connection-refusal-then-succeeds
   (let [attempts (atom 0)
         entry {:evidence/id "e-retry-success"

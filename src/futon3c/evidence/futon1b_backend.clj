@@ -221,11 +221,22 @@
    Throws on transport-level failure (connection refused etc.)."
   ([url] (get-edn url timeout-ms))
   ([url request-timeout-ms]
-   (let [{:keys [status body error]}
-         @(http/get url {:timeout request-timeout-ms :as :text})]
-    (when error
-      (throw (ex-info "futon1b unreachable" {:url url} error)))
-    {:status status :body (read-edn body)})))
+   ;; http-kit's :timeout can expire after headers while its response promise
+   ;; remains blocked on a stalled body.  Bound the promise dereference itself
+   ;; so evidence reads cannot monopolize a regulator tick indefinitely.
+   (let [pending (future @(http/get url {:timeout request-timeout-ms :as :text}))
+         timed-out (Object.)
+         response (deref pending request-timeout-ms timed-out)]
+     (when (identical? timed-out response)
+       (future-cancel pending)
+       (throw (ex-info "futon1b read timed out"
+                       {:url url :timeout-ms request-timeout-ms
+                        :error/component :transport
+                        :error/code :futon1b-read-timeout})))
+     (let [{:keys [status body error]} response]
+       (when error
+         (throw (ex-info "futon1b unreachable" {:url url} error)))
+       {:status status :body (read-edn body)}))))
 
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
