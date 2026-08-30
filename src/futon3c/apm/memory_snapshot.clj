@@ -48,12 +48,47 @@
 (defn- identifiers [text]
   (set (re-seq lean-token (or text ""))))
 
+(def ^:private typed-memory-kinds
+  #{:substitutive-content :regulative/process})
+
+(defn candidate-kind
+  "Return CANDIDATE's explicit APM memory kind, or :unknown.
+
+   Unknown includes absent and legacy values deliberately: this boundary does
+   not infer utility from prose or silently reinterpret historical records."
+  [candidate]
+  (let [kind (:memory/kind candidate)]
+    (if (contains? typed-memory-kinds kind) kind :unknown)))
+
+(defn stratify-candidates
+  "Deterministically group CANDIDATES without dropping or duplicating them.
+
+   The result is an observable supply interface. `:ordered` puts explicit
+   substitutive content first, then unknown legacy records, then regulative
+   process memories. Callers must opt into this order; snapshots retain their
+   historical relevance order unless `:kind-stratification` requests it."
+  [candidates]
+  (let [rank {:substitutive-content 0 :unknown 1 :regulative/process 2}
+        indexed (map-indexed vector candidates)
+        ordered (->> indexed
+                     (sort-by (fn [[index candidate]]
+                                [(get rank (candidate-kind candidate)) index]))
+                     (mapv second))
+        counts (->> candidates (map candidate-kind) frequencies
+                    (into (sorted-map)))]
+    {:ordered ordered
+     :counts counts
+     :buckets (into (sorted-map)
+                    (for [kind [:substitutive-content :unknown
+                                :regulative/process]]
+                      [kind (filterv #(= kind (candidate-kind %)) candidates)]))}))
+
 (defn order-candidates
   "Order CANDIDATES by promotion provenance, overlap with BASE-TEXT, then id.
   TEXT-FN is called with a memory id only when the snapshot candidate carries
   none of :name/:hook/:body. Fetch failures score zero and remain observable in
   the returned ordering record."
-  [candidates {:keys [problem-id base-text text-fn]}]
+  [candidates {:keys [problem-id base-text text-fn kind-stratification]}]
   (let [base-identifiers (identifiers base-text)
         measured
         (mapv (fn [candidate]
@@ -83,13 +118,21 @@
                         {:candidate candidate :memory-id memory-id
                          :promoted? promoted? :score 0 :fetch-failed? true})))))
               candidates)
-        ordered (sort-by (juxt (complement :promoted?)
-                               (comp - :score)
-                               :memory-id)
-                         measured)]
-    {:ordered (mapv :candidate ordered)
+        relevance-ordered (sort-by (juxt (complement :promoted?)
+                                         (comp - :score)
+                                         :memory-id)
+                                   measured)
+        relevance-candidates (mapv :candidate relevance-ordered)
+        supply (stratify-candidates relevance-candidates)
+        stratified? (= :substitutive-first kind-stratification)]
+    {:ordered (if stratified? (:ordered supply) relevance-candidates)
      :ordering
-     {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+     {:signal (cond-> []
+                stratified? (conj :memory-kind)
+                true (into [:promoted-this-frame :identifier-overlap
+                            :memory-id]))
+      :kind-stratification (if stratified? :substitutive-first :observed-only)
+      :kind-counts (:counts supply)
       ;; A missing base text silently zeroes every overlap score; say so.
       :base-text-present? (boolean (seq base-identifiers))
       :scores (into (sorted-map) (map (juxt :memory-id :score)) measured)
@@ -179,7 +222,7 @@
   verify it by a fresh read. Existing identical content is an idempotent replay;
   existing different content fails closed."
   [{:keys [frame-id problem-id candidates path evidence-visible?
-           base-text base-file-blob text-fn lineage]}]
+           base-text base-file-blob text-fn lineage kind-stratification]}]
   (let [validations (mapv validate-candidate candidates)
         invisible (when (fn? evidence-visible?)
                     (->> candidates
@@ -189,6 +232,7 @@
                             {:base-text base-text
                              :base-file-blob base-file-blob
                              :lineage lineage
+                             :kind-stratification kind-stratification
                              :text-fn (or text-fn (evidence-text-fn))})
         digest (machine/ledger-digest [body])
         snapshot (assoc body :snapshot/id digest :snapshot/digest digest)

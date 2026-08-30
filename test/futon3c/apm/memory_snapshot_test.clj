@@ -35,6 +35,8 @@
            (mapv :memory-id (:ordered result))))
     (is (= ["b-fetched" "c-failed"] @fetched))
     (is (= {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+            :kind-stratification :observed-only
+            :kind-counts {:unknown 4}
             :base-text-present? true
             :scores {"a-inline" 1 "b-fetched" 2 "c-failed" 0
                      "z-promoted" 0}
@@ -42,6 +44,51 @@
             :textless-fetched 1
             :fetch-failed ["c-failed"]}
            (:ordering result)))))
+
+(deftest typed-supply-is-observable-without-changing-default-rank
+  (let [candidates [{:memory-id "reg" :memory/kind :regulative/process
+                     :body "sharedAlpha sharedBeta"}
+                    {:memory-id "legacy" :memory/kind :legacy-advice
+                     :body "sharedAlpha"}
+                    {:memory-id "sub" :memory/kind :substitutive-content
+                     :body "unrelatedIdentifier"}]
+        options {:problem-id "p1"
+                 :base-text "sharedAlpha sharedBeta unrelatedIdentifier"}
+        observed (sut/order-candidates candidates options)
+        stratified (sut/order-candidates
+                    candidates
+                    (assoc options :kind-stratification :substitutive-first))]
+    (is (= ["reg" "legacy" "sub"]
+           (mapv :memory-id (:ordered observed)))
+        "observability alone does not alter the established relevance order")
+    (is (= ["sub" "legacy" "reg"]
+           (mapv :memory-id (:ordered stratified))))
+    (is (= {:regulative/process 1 :substitutive-content 1 :unknown 1}
+           (get-in stratified [:ordering :kind-counts])))
+    (is (= :observed-only
+           (get-in observed [:ordering :kind-stratification])))
+    (is (= :substitutive-first
+           (get-in stratified [:ordering :kind-stratification])))
+    (is (= [:memory-kind :promoted-this-frame :identifier-overlap :memory-id]
+           (get-in stratified [:ordering :signal])))))
+
+(deftest typed-supply-preserves-stable-order-and-unknown-bucket
+  (let [candidates [{:memory-id "u1"}
+                    {:memory-id "r" :memory/kind :regulative/process}
+                    {:memory-id "u2" :memory/kind :unrecognized}
+                    {:memory-id "s1" :memory/kind :substitutive-content}
+                    {:memory-id "s2" :memory/kind :substitutive-content}]
+        supply (sut/stratify-candidates candidates)]
+    (is (= ["s1" "s2" "u1" "u2" "r"]
+           (mapv :memory-id (:ordered supply))))
+    (is (= ["u1" "u2"]
+           (mapv :memory-id (get-in supply [:buckets :unknown]))))
+    (is (= (mapv :memory-id candidates)
+           (->> (:buckets supply) vals (mapcat identity)
+                (sort-by #(get {"u1" 0 "r" 1 "u2" 2 "s1" 3 "s2" 4}
+                               (:memory-id %)))
+                (mapv :memory-id)))
+        "stratification changes neither membership nor counts")))
 
 (deftest missing-base-text-is-recorded-not-hidden
   (let [result (sut/order-candidates
@@ -65,6 +112,8 @@
     (is (= 2 (get-in first-result [:snapshot :snapshot/version])))
     (is (= [:promoted-this-frame :identifier-overlap :memory-id]
            (get-in first-result [:snapshot :snapshot/ordering :signal])))
+    (is (= {:unknown 1}
+           (get-in first-result [:snapshot :snapshot/ordering :kind-counts])))
     (is (= "1111111111111111111111111111111111111111"
            (get-in first-result
                    [:snapshot :snapshot/ordering :base-file-blob])))
