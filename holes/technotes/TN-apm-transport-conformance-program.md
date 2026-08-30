@@ -1,6 +1,6 @@
 # APM transport conformance programme
 
-Status: active; campaign quiesced before Park 1.
+Status: complete; Parks 1--6 qualified and campaign resumed at epoch 103.
 
 This programme recovers the transport/publication specification from the
 mostly-working Clojure apparatus and its durable traces.  It is not a greenfield
