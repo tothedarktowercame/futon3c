@@ -1080,7 +1080,7 @@
 
 (defn- publish-promotion!
   [{:keys [contract action receipts request] :as phase-inputs}
-   {:keys [candidates deposit reviewer reviews dispositions]}]
+   {:keys [candidates deposit reviewer reviews dispositions job-id]}]
   (let [prior (campaign-prior-memories)
         queue-campaign-id
         (some-> (Path/of
@@ -1127,6 +1127,7 @@
             body (cond-> {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
+                  :receipt/job-id job-id
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) (:lanes-run deposit) [])
                   :receipt/dispositions (or dispositions
@@ -1157,7 +1158,7 @@
   "Independently review the Student-mined candidates, publish their exact
   snapshot, and certify the ordinary end-of-frame scribe receipt."
   [{:keys [contract action receipts request] :as phase-inputs}
-   {:keys [candidates deposit reviewer reviews dispositions]}]
+   {:keys [candidates deposit reviewer reviews dispositions job-id]}]
   (let [prior (frame-cycle-handlers/latest-snapshot-receipt receipts 4)
         prior-path (:receipt/snapshot-path prior)
         prior-memories (if (string? prior-path)
@@ -1203,6 +1204,7 @@
             body (cond-> {:receipt/type :scribe-reduce
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
+                  :receipt/job-id job-id
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) [])
                   :receipt/dispositions (or dispositions

@@ -591,6 +591,7 @@
                  :scribe-reduce
                  (if (= :promote-solver (:phase action))
                    {:receipt/type :solver-promotion
+                    :receipt/job-id (:job-id ticket)
                     :receipt/input-receipt-ids (:input-receipt-ids request)
                     :receipt/lanes (:lanes report)
                     :receipt/dispositions (:dispositions report)
@@ -604,6 +605,7 @@
                     (get-in report [:memory-snapshot :reviewed-memory-ids])
                     :receipt/independent-review? true}
                    {:receipt/type :scribe-reduce
+                    :receipt/job-id (:job-id ticket)
                     :receipt/input-receipt-ids (:input-receipt-ids request)
                     :receipt/lanes (:lanes report)
                     :receipt/dispositions (:dispositions report)

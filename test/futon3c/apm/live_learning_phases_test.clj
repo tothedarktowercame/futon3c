@@ -2,6 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-learning-phases :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
@@ -35,6 +36,31 @@
                      :snapshot {:snapshot/digest "snapshot-digest"
                                 :snapshot/memories []}
                      :accessible-memory-ids #{}}})
+
+(deftest learning-receipts-preserve-the-terminal-job-lineage
+  (let [job-id "agency-terminal-job"
+        request {:frame-id "f19" :problem-id "a01J05"
+                 :input-receipt-ids #{}
+                 :dispatch/type :scribe-reduce}
+        report {:lanes [] :dispositions [] :promotion-reviews []
+                :memory-snapshot {:snapshot-id "snapshot"
+                                  :snapshot-digest "digest"
+                                  :snapshot-path "/tmp/snapshot.edn"
+                                  :reviewed-memory-ids []}}
+        cert (fn [phase]
+               (with-redefs [handlers/validate-completion
+                             (fn [_ _ receipt _]
+                               {:ok true :receipt receipt})]
+                 (sut/receipt
+                  contract
+                  {:kind :scribe-reduce :phase phase :role :scribe
+                   :frame-id "f19" :problem-id "a01J05"}
+                  {} (assoc request :phase phase) {:job-id job-id}
+                  {:job-id job-id} {:ok true :report report})))]
+    (is (= job-id (get-in (cert :promote-solver)
+                           [:receipt :receipt/job-id])))
+    (is (= job-id (get-in (cert :scribe-reduce)
+                           [:receipt :receipt/job-id])))))
 
 (deftest student-dispatch-refuses-without-a-promotion-bound-memory-snapshot
   (let [result (sut/build-request

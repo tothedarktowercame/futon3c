@@ -549,8 +549,13 @@
        state
        (assoc checked :review-job (:job state) :reviews (:reviews action))
        promotion-policy contract-digest persist-fn now-ms-fn)
-      (let [published-action
+      (let [consumed-job-id (or (:job state)
+                                (:deposit-job state)
+                                (get-in state [:deposit :job-id]))
+            published-action
             (cond-> action
+              (string? consumed-job-id)
+              (assoc :job-id consumed-job-id)
               (:completed-pass-required promotion-policy)
               (assoc :dispositions (:dispositions checked)))
             published (publish-fn published-action)]

@@ -92,6 +92,7 @@
                             (is (= "scribe" (get-in publication
                                                      [:deposit :depositor])))
                             (is (= "proctor" (:reviewer publication)))
+                            (is (= "proctor" (:job-id publication)))
                             (swap! calls conj :publish)
                             {:ok true :receipt {:receipt/id "promotion"}})}
         r1 (sut/drive! (merge base {:state nil
@@ -550,6 +551,7 @@
                  :publish-fn #(do (reset! published %) {:ok true :receipt :done})
                  :persist-fn #(do (reset! saved %) {:ok true})})]
     (is (= :certified (:status result)))
+    (is (= "unbound-candidates" (:job-id @published)))
     (is (= [] (:candidates @published)))
     (is (= [:no-parent-pattern]
            (get-in @published [:reviews 0 :finding-codes])))
@@ -617,6 +619,7 @@
                                {:ok true :receipt {:receipt/id "gp"}})
                  :persist-fn (fn [_] {:ok true})})]
     (is (= :certified (:status result)))
+    (is (= "review-1" (:job-id @published)))
     (is (= "f27-guide" (get-in @published [:candidates 0 :depositor])))
     (is (= "f27-promotion-proctor" (:reviewer @published)))))
 
