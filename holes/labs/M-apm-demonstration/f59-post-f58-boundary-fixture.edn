@@ -1,0 +1,28 @@
+{:fixture/version 1
+ :fixture/id :f59-post-f58-stop-boundary
+ :campaign/id "jit-all-open-v2"
+ :frame/id "f59"
+ :problem/id "b00J01"
+ :fixture/purpose :memory-system-upgrade-failing-case
+ :fixture/finding :frame-minted-after-intended-f58-stop-boundary
+ :fixture/counts-as-experimental-evidence? false
+ :fixture/preserve-receipts? true
+ :fixture/ledger-path
+ "/home/joe/code/futon3c/data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f59/ledger.edn"
+ :void/classification :apparatus-invalidated
+ :void/failed-invariants [:post-f58-stop-boundary-violated]
+ :void/certificate-id
+ "177adafac5cd07ccc29860ff721274c9e25d7c463c00d78e633de505f50eaa1e"
+ :void/source-version 15
+ :void/source-ledger-digest
+ "ea936728e5bbaa926bdff4c88723222e84a5d45b82c1831841383c11733bc1d4"
+ :void/final-version 17
+ :void/final-ledger-digest
+ "85bfdc4453f3a5803f61a067f332ed3e6b88baa68fcefe5e314affe556ec0453"
+ :fixture/next-phase-gates
+ [:replay-close-frame-fingerprint-audit
+  :verify-regulative-vs-substitutive-verdicts
+  :verify-voided-frame-excluded-from-experimental-tallies
+  :verify-no-work-dispatch-while-coordinator-disabled]
+ :recorded-by "joe/codex-17"
+ :recorded-at "2026-08-30T11:00:08Z"}
