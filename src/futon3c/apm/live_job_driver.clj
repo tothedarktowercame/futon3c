@@ -496,32 +496,32 @@
               configured (terminal-budget terminal-budget-config)
               max-repairs (:repair-attempts configured)
               job (if submission
-                    (let [payload (:payload submission)]
-                      (let [report
-                            (merge (:authority submission)
-                                   (:evidence payload)
-                                   (select-keys payload
-                                                [:command-own-exit
-                                                 :outcome
-                                                 :failure-account
-                                                 ;; Some JSON clients emit the
-                                                 ;; Student's query ledger
-                                                 ;; beside :evidence.
-                                                 :queries]))
-                            ;; Guide clients have historically placed the
-                            ;; authorized mode and deposit candidates inside
-                            ;; channel-audit. Accept that documented evidence
-                            ;; shape while retaining explicit top-level values
-                            ;; when both are supplied.
-                            report
-                            (if (= :guide-intervention
-                                   (:dispatch/type active-request))
-                              (merge (select-keys (:channel-audit report)
-                                                  [:mode :candidates])
-                                     report)
-                              report)]
-                        (assoc job :report report
-                               :typed-submission submission)))
+                    (let [payload (:payload submission)
+                          report
+                          (merge (:authority submission)
+                                 (:evidence payload)
+                                 (select-keys payload
+                                              [:command-own-exit
+                                               :outcome
+                                               :failure-account
+                                               ;; Some JSON clients emit the
+                                               ;; Student's query ledger
+                                               ;; beside :evidence.
+                                               :queries]))
+                            ;; Guide mode and candidates are declared inside
+                            ;; the typed channel-audit evidence object. Lift
+                            ;; that object into the legacy report view consumed
+                            ;; by validate-terminal; it is authoritative over
+                            ;; any undeclared top-level payload duplicates.
+                          report
+                          (if (= :guide-intervention
+                                 (:dispatch/type active-request))
+                            (merge report
+                                   (select-keys (:channel-audit report)
+                                                [:mode :candidates]))
+                            report)]
+                      (assoc job :report report
+                             :typed-submission submission))
                     job)
               validated (or (:posthoc-rejection state)
                             (if (and (fn? terminal-submission-provider)

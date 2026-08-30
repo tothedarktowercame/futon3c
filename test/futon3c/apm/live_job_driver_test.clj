@@ -674,6 +674,41 @@
     (is (= ["dyadic shell summability"] (:queries @seen)))
     (is (not= "forged" (:frame-id @seen)))))
 
+(deftest guide-report-lifts-mode-from-authoritative-channel-audit
+  (let [calls (atom [])
+        seen (atom nil)
+        job (atom {:job-id "guide-job" :agent-id "f57-guide" :state :done})
+        guide-request (assoc request :dispatch/type :guide-intervention
+                             :agent-id "f57-guide" :mode :store-mode)
+        dispatched (:state
+                    (sut/drive! (assoc (effects calls (atom {:state :running}))
+                                       :request guide-request)))
+        base (assoc (effects calls job)
+                    :request guide-request
+                    :state dispatched
+                    :terminal-submission-provider
+                    (fn [_ _ _]
+                      {:authority {:frame-id "f57" :problem-id "a99J08"}
+                       :submission/id "guide-submission"
+                       :payload {:command-own-exit 0
+                                 :outcome "complete"
+                                 :mode "harness-mode"
+                                 :failure-account []
+                                 :evidence
+                                 {:channel-audit
+                                  {:mode "store-mode"
+                                   :direct-student-contact? false}}}})
+                    :terminal-validator
+                    (fn [_ _ terminal]
+                      (reset! seen (:report terminal))
+                      {:ok true}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :certified (:status result)))
+    (is (= "store-mode" (:mode @seen)))
+    (is (= false (get-in @seen [:channel-audit
+                                :direct-student-contact?])))))
+
 (deftest missing-typed-submission-never-validates-conversation
   (let [calls (atom [])
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
