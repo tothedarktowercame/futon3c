@@ -132,17 +132,26 @@
 
 (defn validate-guide-deposit
   "Gate a Guide's store-mode candidates. The Guide is not a mining seat, so
-  there is no lane report; every candidate must still name a bound pattern."
+  there is no lane report.  The Guide authors reusable semantic content;
+  persistence derives memory identity, digest, and source-attempt provenance."
   ([deposit] (validate-guide-deposit deposit {}))
   ([{:keys [depositor candidates]} context]
   (let [findings (cond-> []
                    (not (string? depositor)) (conj :depositor-missing)
                    (not (and (vector? candidates) (seq candidates)))
                    (conj :candidates-missing)
-                   (some #(not (and (string? (:memory-id %))
-                                    (string? (:content-digest %))
+                   (some #(not (and (string? (:name %))
+                                    (not (str/blank? (:name %)))
+                                    (string? (:hook %))
+                                    (not (str/blank? (:hook %)))
+                                    (string? (:body %))
+                                    (not (str/blank? (:body %)))
                                     (vector? (:pattern-ids %))
-                                    (vector? (:source-attempts %)))) candidates)
+                                    (seq (:pattern-ids %))
+                                    (every? (fn [pattern-id]
+                                              (and (string? pattern-id)
+                                                   (not (str/blank? pattern-id))))
+                                            (:pattern-ids %)))) candidates)
                    (conj :candidate-shape-invalid))]
     (if (seq findings) {:ok false :findings findings}
         (assoc (apply-mechanical-reviews candidates context) :ok true)))))

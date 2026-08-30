@@ -5,6 +5,11 @@
 
 (def candidate {:memory-id "m1" :content-digest "d1" :pattern-ids ["p1"]
                 :source-attempts [1]})
+(def guide-candidate
+  {:name "explicit witness"
+   :hook "when an abstract existence route is too expensive"
+   :body "Construct the reusable witness directly and prove its defining property."
+   :pattern-ids ["math-informal/construct-an-explicit-witness"]})
 (def lanes [{:lane :solve :status :ran}
             {:lane :arc :status :ran-empty :reason "no errors"}
             {:lane :trajectory :status :ran}
@@ -200,18 +205,20 @@
 
 (deftest guide-deposit-is-gated-without-a-lane-report
   (let [ok (sut/validate-guide-deposit {:depositor "f27-guide"
-                                        :candidates [candidate]})]
+                                        :candidates [guide-candidate]})]
     (is (:ok ok))
-    (is (= [candidate] (:candidates ok))))
-  (is (= [:no-parent-pattern]
-         (get-in (sut/validate-guide-deposit
-                  {:depositor "f27-guide"
-                   :candidates [(assoc candidate :pattern-ids [])]})
-                 [:mechanical-reviews 0 :finding-codes])))
+    (is (= [guide-candidate]
+           (mapv #(dissoc % :source-attempts) (:candidates ok)))))
   (is (some #{:candidate-shape-invalid}
             (:findings (sut/validate-guide-deposit
                         {:depositor "f27-guide"
-                         :candidates [(dissoc candidate :source-attempts)]}))))
+                         :candidates [(dissoc guide-candidate :body)]}))))
+  ;; The f61 repair shape carried only controller-owned identity fields.  It
+  ;; is not silently accepted as authored content.
+  (is (some #{:candidate-shape-invalid}
+            (:findings (sut/validate-guide-deposit
+                        {:depositor "f61-guide"
+                         :candidates [candidate]}))))
   (is (some #{:candidates-missing}
             (:findings (sut/validate-guide-deposit {:depositor "g" :candidates []})))))
 
@@ -219,8 +226,8 @@
   (let [proof-body (get-in (edn/read-string
                             (slurp "test/fixtures/apm/f30-guide-proof-text-memory.edn"))
                            [:evidence/body :body])
-        proof (assoc candidate :body proof-body)
-        prose (assoc candidate :body (apply str (repeat 40 "reusable prose move ")))
+        proof (assoc guide-candidate :body proof-body)
+        prose (assoc guide-candidate :body (apply str (repeat 40 "reusable prose move ")))
         rejected (sut/validate-guide-deposit
                   {:depositor "f30-guide" :candidates [proof]}
                   {:problem-id "a01J06"})
@@ -231,7 +238,8 @@
               (get-in rejected [:mechanical-reviews 0 :finding-codes])))
     (is (empty? (:candidates rejected)))
     (is (:ok accepted))
-    (is (= [prose] (:candidates accepted)))
+    (is (= [prose]
+           (mapv #(dissoc % :source-attempts) (:candidates accepted))))
     (is (empty? (:mechanical-reviews accepted)))))
 
 (deftest review-core-matches-the-deposit-entry-point

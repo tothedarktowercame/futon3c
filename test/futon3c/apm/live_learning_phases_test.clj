@@ -1223,8 +1223,10 @@
                          (dissoc request :problem-path) "/tmp/x.edn" (fn [_] nil)))))))
 
 (def guide-candidate
-  {:memory-id "e-guide-1" :content-digest "d1" :pattern-ids ["math-informal/x"]
-   :source-attempts [1]})
+  {:name "explicit witness"
+   :hook "when an abstract existence route is too expensive"
+   :body "Construct the reusable witness directly and prove its defining property."
+   :pattern-ids ["math-informal/x"]})
 
 (deftest f30-fixture-builds-exact-three-attempt-zai-scribe-request
   (let [root "data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f30/live"
@@ -1279,9 +1281,9 @@
                                       :report r})))]
     (is (nil? (findings (assoc report :candidates [guide-candidate]))))
     (is (nil? (findings report)) "no candidates is a valid store-mode turn")
-    (is (nil? (findings (assoc report :candidates
-                               [(assoc guide-candidate :pattern-ids [])])))
-        "well-shaped but unbound memories are recorded as mechanical rejects")
+    (is (some #{:guide-candidates-invalid}
+              (findings (assoc report :candidates
+                               [(assoc guide-candidate :pattern-ids [])]))))
     (is (some #{:guide-candidates-outside-store-mode}
               (findings (assoc report :mode "harness-mode"
                                :candidates [guide-candidate]))))))
@@ -1371,25 +1373,31 @@
                     request {:job-id "j"}
                     {:job-id "j" :agent-id (:agent-id request) :state :done
                      :report (assoc report :candidates candidates)}))
+        semantic-candidate {:name "explicit witness"
+                            :hook "when an abstract route is too expensive"
+                            :body "Construct the witness and verify it directly."
+                            :pattern-ids ["math-informal/construct-an-explicit-witness"]}
+        semantic-success (validate base-request [semantic-candidate])
         shape-failure (validate base-request
-                                [{:memory-id "m" :pattern-ids []
-                                  :source-attempts []}])
+                                [{:memory-id "m" :content-digest "d"
+                                  :pattern-ids ["p"] :source-attempts []}])
         depositor-failure (validate (assoc base-request :agent-id nil)
-                                    [{:memory-id "m" :content-digest "d"
-                                      :pattern-ids [] :source-attempts []}])
+                                    [semantic-candidate])
         packet (fn [failure]
                  (-> (sut/terminal-repair-request
                       base-request {:ticket/id "t"} {:job-id "j"} failure)
                      :request sut/prompt))
         shape-packet (packet shape-failure)
         depositor-packet (packet depositor-failure)]
+    (is (:ok semantic-success))
     (is (= [:candidate-shape-invalid]
            (get-in shape-failure
                    [:finding/details :guide-candidates-invalid])))
     (is (= [:depositor-missing]
            (get-in depositor-failure
                    [:finding/details :guide-candidates-invalid])))
-    (is (re-find #":content-digest" shape-packet))
+    (is (re-find #":name" shape-packet))
+    (is (re-find #"controller-derived" shape-packet))
     (is (re-find #":depositor" depositor-packet))
     (is (not= shape-packet depositor-packet))))
 
@@ -1473,17 +1481,17 @@
     (is (= :certified (:status (sut/guide-promotion-step! driver request report)))
         "certified review is idempotent and runs nothing")
     (is (= 2 @runs))
-    (let [mechanical-path (.resolve dir "other.edn")]
-      (sut/guide-promotion-step!
-       {:state-path mechanical-path
-        :persist-candidates-fn
-        (fn [deposit _] {:ok true :deposit deposit
-                         :candidates (:candidates deposit)})
-        :run-fn (fn [] {:ok true :status :certified})}
-       request {:candidates [(assoc guide-candidate :pattern-ids [])]})
-      (is (= [:no-parent-pattern]
-             (get-in (runtime/read-state mechanical-path)
-                     [:mechanical-reviews 0 :finding-codes]))))))
+    (let [invalid-path (.resolve dir "other.edn")
+          invalid (sut/guide-promotion-step!
+                   {:state-path invalid-path
+                    :persist-candidates-fn
+                    (fn [deposit _] {:ok true :deposit deposit
+                                     :candidates (:candidates deposit)})
+                    :run-fn (fn [] {:ok true :status :certified})}
+                   request {:candidates [(assoc guide-candidate :pattern-ids [])]})]
+      (is (= :guide-candidates-invalid (:error/code invalid)))
+      (is (some #{:candidate-shape-invalid} (:findings invalid)))
+      (is (nil? (runtime/read-state invalid-path))))))
 
 (deftest student-attempt-two-binds-to-a-guide-union-snapshot
   (let [addressed (fn [body] (assoc body :receipt/id (machine/ledger-digest [body])))

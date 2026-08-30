@@ -867,8 +867,10 @@
    :candidates-missing
    "The deposit's :candidates must be a non-empty vector."
    :candidate-shape-invalid
-   (str "Every candidate must contain string :memory-id and :content-digest, "
-        "plus vector :pattern-ids and :source-attempts.")
+   (str "Every Guide candidate must contain nonblank string :name, :hook, "
+        "and :body, plus a non-empty vector of nonblank :pattern-ids. "
+        "Do not author controller-derived :memory-id, :content-digest, or "
+        ":source-attempts fields.")
    :memory-use-audit-shape
    ":memory-use-audit must be a vector in the exact controller-derived request shape."
    :memory-use-audit-mismatch
