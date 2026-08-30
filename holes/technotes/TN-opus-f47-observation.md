@@ -663,3 +663,46 @@ are in place.
 Until then the honest statement is narrower than what this note said before: **the shelf
 shows no witnessed CONTENT transfer, and the campaign has no instrument that could witness
 strategic transfer either way.**
+
+## f62: the guide loop resumes, and the frame is its own control
+
+f62 (b01J01) is the first frame since f53 to get a guide intervention certified
+(`guide-intervention-1 :live-job-certified`, review `:promotion-certified`), after six
+consecutive frames parked on the mode barrier. It then did something the campaign has been
+missing: it ran both kinds of memory use in the same frame, under the same conditions, with
+the same instrument.
+
+**a1** — 1 of 110 used, `outcome=open`. The memory was
+`e-63b7c7c1...` (f34-guide / a95J03), the strategic "bank cheap sorries first" memory
+described in the previous section. Fingerprint verdict: **`unwitnessed`, 0 novel tokens**.
+
+**a2** — 4 of 114 used, **`outcome=solved`**. All four were f62's own within-frame
+deposits: two from `f62-guide`, two from `f62-scribe`, all on b01J01. Fingerprint verdicts:
+
+    fingerprinted  6 novel  [CommGroup.equiv_prod_multiplicative_zmod_of_finite
+                             Subgroup.index_comap_of_surjective ZMod.castHom_surjective
+                             Subgroup.index_ker Pi.evalMonoidHom ZMod.castHom]
+    fingerprinted  8 novel  [... plus MonoidHom.range_eq_top, M.index]
+    fingerprinted  1 novel  [Subgroup.map]
+    already-in-base 0 novel
+
+`CommGroup.equiv_prod_multiplicative_zmod_of_finite` appearing in a proof that did not have
+it is not a coincidence of vocabulary.
+
+**Why this frame settles more than the others.** Everything is held constant — same
+problem, same student role, same shelf, same audit, hours apart. The difference between a1
+and a2 is which KIND of memory was used. The content memories from the frame's own guide
+are witnessed, six and eight novel tokens deep, and the attempt closed. The strategic memory
+from four days earlier is unwitnessed, as the previous section predicted it must be.
+
+So the two findings in this note are not in tension; they are about different things:
+
+- **Content transfer is real, witnessed, and within-frame.** All 17 fingerprinted uses in
+  the campaign are deposits made by a role in the same frame as the attempt that used them.
+  The guide-to-student loop works, and f62/a2 is its third demonstration (after f52/a2 and
+  f53/a3) and the strongest, because the guide phase had just been repaired.
+- **The shelf's older content contributes nothing measurable**, and for STRATEGIC memories
+  the instrument cannot tell us either way.
+
+Campaign tally after f62: 38 rows — 17 `fingerprinted`, 3 `weak-fingerprint`,
+12 `already-in-base`, 6 `unwitnessed`.
