@@ -11,6 +11,7 @@
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
@@ -282,6 +283,32 @@
         (is (:ok result))
         (is (= :promote-solver (get-in result [:request :phase])))
         (is (= "f22-scribe" (get-in result [:request :agent-id])))))))
+
+(deftest dispatched-phase-reuses-durable-request-without-rebuilding-cascade
+  (let [request {:frame-id "f62" :problem-id "b01J01"
+                 :phase :student-attempt-1 :role :student}
+        action {:kind :student-attempt :phase :student-attempt-1
+                :frame-id "f62" :problem-id "b01J01"}]
+    (with-redefs [sut/frame-context
+                  (constantly {:ok true
+                               :manifest {:apparatus {:artifacts
+                                                      {:student {:path "card" :blob "blob"}}}}
+                               :contract {} :unit {:frame/id "f62"
+                                                   :problem/id "b01J01"}
+                               :preparation {}})
+                  runtime/read-state (constantly {:state/type :live-job-dispatched
+                                                  :request request})
+                  runtime/http-json (constantly {:agent-id "f62-student"
+                                                 :agent {:metadata {}}})
+                  ledger/read-ledger (constantly {:projection {}})
+                  sut/certified-receipts (constantly {})
+                  sut/dispatch-card (constantly {:ok true :card "student"})
+                  live-learning-phases/build-request
+                  (fn [_] (throw (ex-info "must not rebuild" {})))]
+      (let [result (sut/live-learning-phase-inputs action)]
+        (is (:ok result))
+        (is (= request (:request result)))
+        (is (= request (:fresh-request result)))))))
 
 (deftest m-five-v2-entrypoint-is-fresh-f25-and-self-continuing
   (let [captured (atom nil)

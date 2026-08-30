@@ -804,8 +804,9 @@
             :frame-id (:frame/id unit) :problem-id (:problem/id unit)
             :accessible-memory-ids (:receipt/reviewed-memory-ids promotion)}))
         card (dispatch-card (get-in manifest [:apparatus :artifacts role]))
-        built (live-learning-phases/build-request
-               {:contract contract :action action
+        built (when-not (and existing (map? (:request existing)))
+                (live-learning-phases/build-request
+                 {:contract contract :action action
                 :ledger {:digest (:ledger/digest projection)} :unit unit
                 :role-card (:card card)
                 ;; This live campaign publishes independently reviewed Guide
@@ -833,7 +834,7 @@
                 :cascade-fn conductor/expand-memory-cascade
                 :cascade-readers-fn
                 #(#'conductor/live-cascade-readers {})
-                :turn-timeout-ms (role-turn-timeout-ms contract role)})]
+                  :turn-timeout-ms (role-turn-timeout-ms contract role)}))]
     (cond
       (not (:ok card)) card
       (and existing (map? (:request existing)))
@@ -844,10 +845,9 @@
        ;; This campaign's authority fixes Guide dispatches to store-mode
        ;; above, so retain that authority even if rebuilding the whole packet
        ;; is unavailable after the role has become terminal.
-       :fresh-request (or (:request built)
-                          (cond-> (:request existing)
-                            (= :guide-intervention kind)
-                            (assoc :mode :store-mode)))
+       :fresh-request (cond-> (:request existing)
+                        (= :guide-intervention kind)
+                        (assoc :mode :store-mode))
        :state-path state-path}
       (:ok built)
       {:ok true :contract contract :action action :receipts receipts
