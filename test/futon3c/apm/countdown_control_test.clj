@@ -325,6 +325,23 @@
             (sut/record-analyst-wake!
              "f20" {:receipt/type :frame-close :receipt/result :closed}))))))
 
+(deftest durable-close-records-fingerprint-audit-without-gating-on-its-verdict
+  (let [audit-call (atom nil)
+        audit-result {:ok false :error/code :fingerprint-audit-command-failed}]
+    (with-redefs [sut/record-analyst-wake!
+                  (fn [frame receipt]
+                    {:ok true :frame frame :receipt receipt})]
+      (let [result (sut/record-close-observations!
+                    {:ok true :effect :closed} "f58" {:receipt/id "close-58"}
+                    (fn [request]
+                      (reset! audit-call request)
+                      audit-result))]
+        (is (= {:ok true :effect :closed}
+               (select-keys result [:ok :effect])))
+        (is (= audit-result (:fingerprint-audit result)))
+        (is (= "f58" (get-in result [:analyst-wake :frame])))
+        (is (string? (:state-directory @audit-call)))))))
+
 (deftest set-alight-drives-live-supervisor-with-exact-continuation
   (let [calls (atom [])
         result

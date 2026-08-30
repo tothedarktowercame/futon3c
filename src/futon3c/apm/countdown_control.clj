@@ -30,6 +30,7 @@
             [futon3c.apm.promotion-pipeline :as promotion-pipeline]
             [futon3c.apm.promotion-candidate-store :as promotion-candidate-store]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
+            [futon3c.apm.frame-fingerprint-audit :as frame-fingerprint-audit]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.bank-audit :as bank-audit]
             [futon3c.apm.problem-projection :as problem-projection]
@@ -1389,6 +1390,18 @@
               (assoc wake :durable? true :state-path (str path))
               {:ok false :error/code :analyst-wake-persistence-failed})))))))
 
+(defn record-close-observations!
+  "After the frame close is durable, persist the Analyst wake and the
+  per-memory artifact fingerprint audit. Audit failure is explicit evidence,
+  not a reason to retract the close."
+  [advanced frame-id close-receipt audit-fn]
+  (let [audit ((or audit-fn frame-fingerprint-audit/audit!)
+               {:state-directory (str (control-path state-directory))})
+        wake (record-analyst-wake! frame-id close-receipt)]
+    (if (:ok wake)
+      (assoc advanced :analyst-wake wake :fingerprint-audit audit)
+      wake)))
+
 (defn qualification-audit []
   (let [contract (:contract (inputs))]
     (if-not (= :apm-complete-frame-cycle-v2 (:contract/id contract))
@@ -1672,7 +1685,7 @@
   ([{:keys [agent session surface agency-base control-root target-frame
             batch-authority regulator-id regulator-capability campaign-config]}
     {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn booted project-fn
-            park-fn now-ms-fn continuation-payload]
+            park-fn now-ms-fn continuation-payload fingerprint-audit-fn]
      :or {now-ms-fn #(System/currentTimeMillis)}}]
    (with-campaign campaign-config
     (binding [*control-root* (Path/of (str (or control-root *control-root*))
@@ -1726,11 +1739,9 @@
                        (fn [kind certificate]
                          (let [advanced (advance! kind batch-authority booted)]
                            (if (and (:ok advanced) (= :close-frame kind))
-                             (let [wake (record-analyst-wake! target-frame
-                                                              certificate)]
-                               (if (:ok wake)
-                                 (assoc advanced :analyst-wake wake)
-                                 wake))
+                             (record-close-observations!
+                              advanced target-frame certificate
+                              fingerprint-audit-fn)
                              advanced))))
        :project-fn (or project-fn #(project-current! target-frame))
        :park-fn (or park-fn park-default)
