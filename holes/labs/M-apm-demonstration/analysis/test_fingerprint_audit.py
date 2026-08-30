@@ -51,6 +51,75 @@ class ArtifactVerdictTest(unittest.TestCase):
             None, 3, [], [], []))
 
 
+class TransferReportTest(unittest.TestCase):
+    def test_transfer_distance_comes_from_evidence_provenance(self):
+        within = {"origin-author": "f53-scribe", "origin-problem": "a99J03"}
+        same = {"origin-author": "f50-guide", "origin-problem": "a99J03"}
+        cross = {"origin-author": "f34-guide", "origin-problem": "a95J03"}
+        self.assertEqual(("within-frame", "f53"),
+                         AUDIT.transfer_stratum("f53", "a99J03", within))
+        self.assertEqual(("prior-frame-same-problem", "f50"),
+                         AUDIT.transfer_stratum("f53", "a99J03", same))
+        self.assertEqual(("cross-problem", "f34"),
+                         AUDIT.transfer_stratum("f58", "aunk04", cross))
+        self.assertEqual(("unknown", None),
+                         AUDIT.transfer_stratum("f58", "aunk04", {}))
+
+    def test_routes_require_id_bearing_receipt_evidence(self):
+        receipt = '''
+          :accessible-memory-ids ["e-shelf" "e-both"]
+          :receipt/memory-cascade {:used-via-cascade ["e-cascade" "e-both"]}
+          :queries ["prose says e-search but carries no result receipt"]
+        '''
+        self.assertEqual("shelf", AUDIT.durable_delivery_route(receipt, "e-shelf"))
+        self.assertEqual("cascade", AUDIT.durable_delivery_route(receipt, "e-cascade"))
+        self.assertEqual("cascade", AUDIT.durable_delivery_route(receipt, "e-both"))
+        self.assertEqual("unknown", AUDIT.durable_delivery_route(receipt, "e-search"))
+
+    def test_f42_f50_f53_f58_receipts_pin_expected_strata_inputs(self):
+        root = pathlib.Path(AUDIT.CAMPAIGNS)
+        cases = [
+            (root / "jit-all-open-nontopology-v1" /
+             "jit-all-open-nontopology-v1-f42/live/student-attempt-1.edn",
+             "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69", "shelf"),
+            (root / "jit-all-open-v2/jit-all-open-v2-f50/live/student-attempt-1.edn",
+             "e-63b7c7c1-1906-412c-ae18-b4644762fbea", "shelf"),
+            (root / "jit-all-open-v2/jit-all-open-v2-f53/live/student-attempt-2.edn",
+             "e-apm-promotion-de30b5ae3706422a549cc710ce4e7841", "shelf"),
+            (root / "jit-all-open-v2/jit-all-open-v2-f58/live/student-attempt-1.edn",
+             "e-63b7c7c1-1906-412c-ae18-b4644762fbea", "shelf"),
+        ]
+        for path, memory_id, route in cases:
+            with self.subTest(path=path):
+                receipt = path.read_text(encoding="utf-8", errors="replace")
+                self.assertIn(memory_id, AUDIT.ID_STR.findall(
+                    AUDIT.USED_IDS.search(receipt).group(1)))
+                self.assertEqual(route,
+                                 AUDIT.durable_delivery_route(receipt, memory_id))
+
+    def test_counts_preserve_excluded_rows_without_polluting_experiment(self):
+        rows = [
+            {"transfer-stratum": "cross-problem", "experimental-evidence": True},
+            {"transfer-stratum": "cross-problem", "experimental-evidence": False},
+            {"transfer-stratum": "within-frame", "experimental-evidence": True},
+        ]
+        self.assertEqual(
+            {"experimental": {"cross-problem": 1, "within-frame": 1},
+             "diagnostic-all-rows": {"cross-problem": 2, "within-frame": 1}},
+            AUDIT.stratified_counts(rows, "transfer-stratum"))
+
+    def test_memory_metadata_does_not_infer_missing_fields(self):
+        raw = '''{:evidence/body {:kind :memory :body "x"}
+                  :evidence/subject {:ref/type :problem :ref/id "a99J03"}
+                  :evidence/author "f53-scribe"}'''
+        self.assertEqual(
+            {"origin-author": "f53-scribe", "origin-problem": "a99J03",
+             "memory-kind": "memory"}, AUDIT.memory_metadata(raw))
+        self.assertEqual(
+            {"origin-author": None, "origin-problem": None, "memory-kind": None},
+            AUDIT.memory_metadata(""))
+
+
 class VoidedFramePopulationTest(unittest.TestCase):
     def write_attempt(self, frame_dir, used_ids):
         live = frame_dir / "live"

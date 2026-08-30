@@ -45,6 +45,7 @@ Reads only: campaign frame records on disk + the substrate evidence endpoint.
 Usage: python3 fingerprint_audit.py [--campaign ID] [--write PATH] [--json]
 """
 import argparse, json, math, os, re, subprocess, sys, urllib.request
+from collections import Counter
 
 SUBSTRATE = os.environ.get("FUTON1B_BASE", "http://127.0.0.1:7073")
 CAMPAIGNS = os.environ.get("APM_CAMPAIGNS", os.path.expanduser("~/code/futon3c/data/apm-campaigns"))
@@ -64,6 +65,18 @@ MEMORY_USE_REASON_KIND = re.compile(
 FRAME_VOID_EVENT = re.compile(r":event/type\s+:frame/stopped")
 FRAME_VOID_CERTIFICATE = re.compile(r":certificate/type\s+:frame-void")
 VOID_CLASSIFICATION = re.compile(r":classification\s+:([A-Za-z0-9_-]+)")
+ACCESSIBLE_IDS = re.compile(r":accessible-memory-ids\s*\[([^\]]*)\]", re.DOTALL)
+CASCADE_USED_IDS = re.compile(r":used-via-cascade\s*\[([^\]]*)\]", re.DOTALL)
+EVIDENCE_AUTHOR = re.compile(r':evidence/author\s+"([^"]+)"')
+EVIDENCE_SUBJECT = re.compile(
+    r':evidence/subject\s+\{[^{}]*:ref/id\s+"([^"]+)"[^{}]*\}')
+EVIDENCE_KIND = re.compile(r':kind\s+:([A-Za-z0-9_-]+)')
+MANIFEST_REVISION = re.compile(
+    r':apparatus\s+\{[^{}]*:revision\s+"([0-9a-f]+)"', re.DOTALL)
+MANIFEST_PIN = re.compile(r':pin/id\s+"([0-9a-f]+)"')
+MANIFEST_GUIDE_CARD = re.compile(
+    r':guide\s+\{:path\s+"([^"]+)"\s*,?\s*:blob\s+"([0-9a-f]+)"\}')
+FRAME_AUTHOR = re.compile(r"^f(\d+)-(?:guide|scribe)$")
 
 # A Lean-ish identifier: letters/digits/underscore/dot/prime, at least one
 # underscore or interior dot, no hyphen or slash (those are Clojure/EDN keys).
@@ -97,6 +110,87 @@ def recorded_use_kinds(receipt):
         pairs.extend(MEMORY_USE_KIND_PAIR.findall(block))
     pairs.extend(MEMORY_USE_REASON_KIND.findall(receipt))
     return {mid: kind for mid, kind in pairs}
+
+
+def ids_in_block(pattern, receipt):
+    """Return unique evidence ids from every durable vector named by pattern."""
+    out = []
+    for block in pattern.findall(receipt):
+        for mid in ID_STR.findall(block):
+            if mid not in out:
+                out.append(mid)
+    return out
+
+
+def durable_delivery_route(receipt, memory_id):
+    """Classify only delivery routes carried by the attempt receipt.
+
+    Cascade is more specific than shelf.  Search prose is deliberately ignored:
+    unless a search-result receipt names the id, the report says ``unknown``.
+    """
+    if memory_id in ids_in_block(CASCADE_USED_IDS, receipt):
+        return "cascade"
+    if memory_id in ids_in_block(ACCESSIBLE_IDS, receipt):
+        return "shelf"
+    return "unknown"
+
+
+def memory_metadata(raw):
+    """Read provenance fields that the evidence record actually carries."""
+    author = EVIDENCE_AUTHOR.search(raw or "")
+    subject = EVIDENCE_SUBJECT.search(raw or "")
+    kind = EVIDENCE_KIND.search(body_text(raw))
+    return {"origin-author": author.group(1) if author else None,
+            "origin-problem": subject.group(1) if subject else None,
+            "memory-kind": kind.group(1) if kind else None}
+
+
+def transfer_stratum(frame, problem, metadata):
+    """Describe provenance distance without claiming that a memory caused work."""
+    author = metadata.get("origin-author")
+    origin_problem = metadata.get("origin-problem")
+    author_frame = FRAME_AUTHOR.match(author or "")
+    origin_frame = f"f{author_frame.group(1)}" if author_frame else None
+    if origin_frame == frame:
+        return "within-frame", origin_frame
+    if origin_problem and origin_problem == problem:
+        return "prior-frame-same-problem", origin_frame
+    if origin_problem and origin_problem != problem:
+        return "cross-problem", origin_frame
+    return "unknown", origin_frame
+
+
+def frame_instrument(frame_path):
+    """Return pinned apparatus identifiers; do not infer a serving model."""
+    manifest = os.path.join(frame_path, "manifest.edn")
+    try:
+        text = open(manifest, encoding="utf-8", errors="replace").read()
+    except OSError:
+        return {"apparatus-revision": None, "apparatus-pin": None,
+                "guide-card-path": None, "guide-card-blob": None,
+                "guide-model": None}
+    rev = MANIFEST_REVISION.search(text)
+    pin = MANIFEST_PIN.search(text)
+    card = MANIFEST_GUIDE_CARD.search(text)
+    return {"apparatus-revision": rev.group(1) if rev else None,
+            "apparatus-pin": pin.group(1) if pin else None,
+            "guide-card-path": card.group(1) if card else None,
+            "guide-card-blob": card.group(2) if card else None,
+            # Manifests pin code/cards but not the historical effective cast.
+            "guide-model": None}
+
+
+def stratified_counts(rows, field):
+    """Count diagnostic and experimental rows separately for one dimension."""
+    experimental = Counter()
+    diagnostic = Counter()
+    for row in rows:
+        value = row.get(field) or "unknown"
+        diagnostic[value] += 1
+        if row.get("experimental-evidence"):
+            experimental[value] += 1
+    return {"experimental": dict(sorted(experimental.items())),
+            "diagnostic-all-rows": dict(sorted(diagnostic.items()))}
 
 
 def artifact_verdict(use_kind, best, witnessing, novel, hits):
@@ -271,6 +365,7 @@ def attempts(campaign_dir):
             continue
         frame = frame_dir.rsplit("-", 1)[-1]
         exclusion = frame_exclusion(frame_path)
+        instrument = frame_instrument(frame_path)
         for n in (1, 2, 3):
             rec = os.path.join(live, f"student-attempt-{n}.edn")
             if not os.path.exists(rec):
@@ -292,7 +387,8 @@ def attempts(campaign_dir):
                 files = [f for f in os.listdir(srcdir) if f.endswith(".lean")]
                 if files:
                     src = os.path.join(srcdir, files[0])
-            out.append((frame, n, pid.group(1) if pid else "?", ids, use_kinds, src,
+            out.append((frame, n, pid.group(1) if pid else "?", ids, use_kinds,
+                        t, instrument, src,
                         rev.group(1) if rev else None,
                         ppath.group(1) if ppath else None, exclusion))
     return out
@@ -310,7 +406,8 @@ def audit_campaign(cdir, campaign):
                "excluded-use-events": 0}
 
     excluded_seen = set()
-    for frame, n, pid, ids, use_kinds, src, rev, ppath, exclusion in attempts(cdir):
+    for (frame, n, pid, ids, use_kinds, receipt, instrument, src, rev, ppath,
+         exclusion) in attempts(cdir):
         if exclusion:
             if frame not in excluded_seen:
                 excluded_seen.add(frame)
@@ -321,10 +418,18 @@ def audit_campaign(cdir, campaign):
             summary["excluded-attempts"] += 1
             summary["excluded-use-events"] += len(ids)
             for mid in ids:
+                raw = fetch_memory(mid)
+                metadata = memory_metadata(raw)
+                stratum, origin_frame = transfer_stratum(frame, pid, metadata)
                 rows.append({"frame": frame, "attempt": n, "problem": pid,
                              "memory": mid, "source": (os.path.basename(src)
                                                         if src else None),
                              "memory-use-kind": use_kinds.get(mid),
+                             **metadata,
+                             "origin-frame": origin_frame,
+                             "transfer-stratum": stratum,
+                             "delivery-route": durable_delivery_route(receipt, mid),
+                             "instrument": instrument,
                              "verdict": "excluded-void-frame",
                              "experimental-evidence": False,
                              "exclusion-classification": exclusion["classification"]})
@@ -349,10 +454,17 @@ def audit_campaign(cdir, campaign):
             raw = fetch_memory(mid)
             body = body_text(raw)
             toks = tokens_of(body)
+            metadata = memory_metadata(raw)
+            stratum, origin_frame = transfer_stratum(frame, pid, metadata)
             row = {"frame": frame, "attempt": n, "problem": pid, "memory": mid,
                    "source": os.path.basename(src) if src else None,
                    "tokens-named": len(toks),
                    "memory-use-kind": use_kinds.get(mid),
+                   **metadata,
+                   "origin-frame": origin_frame,
+                   "transfer-stratum": stratum,
+                   "delivery-route": durable_delivery_route(receipt, mid),
+                   "instrument": instrument,
                    "experimental-evidence": True}
             if not raw:
                 row["verdict"] = "unfetchable"
@@ -382,9 +494,24 @@ def audit_campaign(cdir, campaign):
                 summary[row["verdict"]] += 1
             rows.append(row)
 
+    strata = {field: stratified_counts(rows, field)
+              for field in ("transfer-stratum", "delivery-route",
+                            "memory-use-kind", "memory-kind")}
+    apparatus = stratified_counts(
+        [{**row,
+          "instrument-boundary": (row.get("instrument") or {}).get(
+              "apparatus-revision")}
+         for row in rows], "instrument-boundary")
     return {"campaign": campaign, "substrate": SUBSTRATE,
             "standard": "retrieval-whitepaper-v3 3.1 (artifact carries the memory's fingerprint)",
+            "causal-claim": "none; rows report selection and artifact association only",
             "experimental-population": "non-void frames only; void frames remain diagnostic",
+            "stratified-use-events": {**strata, "apparatus-revision": apparatus},
+            "unavailable-fields": {
+                "guide-model": ("not pinned in historical frame manifests; do not infer "
+                                "from current seat-cast or agent names"),
+                "search-route": ("reported only when a durable id-bearing search receipt "
+                                 "exists; prose search claims are not parsed")},
             "excluded-frames": excluded_frames,
             "token-witness-rule": {
                 "measure": "origin/master problem-file document frequency",
