@@ -420,6 +420,16 @@
               (:findings (sut/validate-terminal request {:job-id "j"}
                                                        (job "void")))))))
 
+(deftest close-repair-names-controller-memory-audit-for-both-failures
+  (doseq [detail [:memory-use-audit-shape :memory-use-audit-mismatch]]
+    (let [message (sut/repair-instructions
+                   {:repair/findings [:close-evidence-invalid]
+                    :repair/validation-output
+                    {:finding/details {:close-evidence-invalid [detail]}}})]
+      (is (re-find #":memory-use-audit" message))
+      (is (re-find (re-pattern (name detail))
+                   (str detail " " message))))))
+
 (deftest close-frame-preserves-arbitrary-memory-ids-as-structured-evidence
   (let [memory-id "e-codexpilot-upgrade-diskwise-L1-convergence/v2"
         student (fn [ordinal]

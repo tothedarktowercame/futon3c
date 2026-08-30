@@ -21,6 +21,12 @@
    "zai-scribe" {:model "glm-5.3"}
    "analyst" {:model "glm-5.3"}})
 
+(deftest future-frame-defaults-pin-explicit-memory-contract-cards
+  (is (= "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v4.md"
+         (:promotion-proctor sut/default-artifacts)))
+  (is (= "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.4.md"
+         (:guide sut/default-artifacts))))
+
 (deftest failed-seat-mint-surfaces-source-error-and-findings
   (with-redefs [live-preparation/prepare!
                 (fn [{:keys [mint-fn]}]

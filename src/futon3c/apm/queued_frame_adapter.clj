@@ -181,12 +181,12 @@
    :solver-restrategize
    "holes/labs/M-apm-demonstration/role-cards/solver-restrategize-v1.md"
    :student "holes/labs/M-apm-demonstration/role-cards/zai-student-v2.md"
-   :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.3.md"
+   :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.4.md"
    :scribe "holes/labs/M-apm-demonstration/role-cards/codex-scribe-v2.md"
    :zai-scribe "holes/labs/M-apm-demonstration/role-cards/zai-scribe-v2.md"
    :proctor "holes/labs/M-apm-demonstration/role-cards/proctor.md"
    :promotion-proctor
-   "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v2.md"
+   "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v4.md"
    :analyst "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"})
 
 (defn- git-out [repository & args]

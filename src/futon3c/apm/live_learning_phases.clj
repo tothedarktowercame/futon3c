@@ -847,8 +847,9 @@
    ["Your Solver promotion supplied no valid memory candidates." "Promotion requires a non-empty vector of typed candidates."
     "Add at least one schema-valid candidate derived from the verified trace, then submit below."]
    :close-evidence-invalid
-   ["Your close-frame evidence was rejected." "A trace id and canonical closed-or-partial result were not both present."
-    "Supply the checker-bound trace id and a closed or partial result, then submit below."]})
+   ["Your close-frame evidence was rejected."
+    "The trace id, canonical closed-or-partial result, and controller-derived :memory-use-audit must all match the request contract."
+    "Supply the checker-bound trace id and result, and copy :memory-use-audit from the request verbatim, then submit below."]})
 
 (def specific-finding-instructions
   {:depositor-missing
@@ -857,7 +858,11 @@
    "The deposit's :candidates must be a non-empty vector."
    :candidate-shape-invalid
    (str "Every candidate must contain string :memory-id and :content-digest, "
-        "plus vector :pattern-ids and :source-attempts.")})
+        "plus vector :pattern-ids and :source-attempts.")
+   :memory-use-audit-shape
+   ":memory-use-audit must be a vector in the exact controller-derived request shape."
+   :memory-use-audit-mismatch
+   ":memory-use-audit must be returned verbatim from the close-frame request."})
 
 (defn- rendered-finding-detail [request finding]
   (let [detail (get-in request [:repair/validation-output
@@ -873,8 +878,9 @@
            (str/join ", " (map name detail)) ".")
 
       (and (= :close-evidence-invalid finding) (seq detail))
-      (str "Missing or invalid close fields: "
-           (str/join ", " (map name detail)) ".")
+      (str/join " " (map #(or (specific-finding-instructions %)
+                                (str "Missing or invalid close field " (name %) "."))
+                             detail))
 
       :else nil)))
 
