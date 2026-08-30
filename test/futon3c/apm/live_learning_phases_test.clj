@@ -1321,6 +1321,20 @@
     (is (some #{:guide-mode-authority-mismatch}
               (findings :store-mode nil)))))
 
+(deftest guide-mode-declaration-conflict-is-distinctly-refused
+  (let [result
+        (sut/validate-terminal
+         {:dispatch/type :guide-intervention :agent-id "f60-guide"
+          :frame-id "f60" :problem-id "b00J02" :mode :store-mode}
+         {:job-id "j"}
+         {:job-id "j" :agent-id "f60-guide" :state :done
+          :report {:command-own-exit 0 :frame-id "f60" :problem-id "b00J02"
+                   :mode "store-mode"
+                   :guide-mode-declaration-conflict
+                   {:payload :store-mode :channel-audit :harness-mode}
+                   :channel-audit {:direct-student-contact? false}}})]
+    (is (some #{:guide-mode-declaration-conflict} (:findings result)))))
+
 (deftest guide-channel-audit-normalizes-only-the-json-predicate-alias
   (let [validate (fn [audit]
                    (sut/validate-terminal

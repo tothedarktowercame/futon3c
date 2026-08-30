@@ -711,7 +711,7 @@
     (is (= ["dyadic shell summability"] (:queries @seen)))
     (is (not= "forged" (:frame-id @seen)))))
 
-(deftest guide-report-lifts-mode-from-authoritative-channel-audit
+(deftest guide-report-reconciles-payload-and-channel-audit-mode
   (let [calls (atom [])
         seen (atom nil)
         job (atom {:job-id "guide-job" :agent-id "f57-guide" :state :done})
@@ -729,7 +729,7 @@
                        :submission/id "guide-submission"
                        :payload {:command-own-exit 0
                                  :outcome "complete"
-                                 :mode "harness-mode"
+                                 :mode "store-mode"
                                  :failure-account []
                                  :evidence
                                  {:channel-audit
@@ -745,6 +745,56 @@
     (is (= "store-mode" (:mode @seen)))
     (is (= false (get-in @seen [:channel-audit
                                 :direct-student-contact?])))))
+
+(deftest guide-report-mode-supports-either-location-and-marks-conflicts
+  (let [report-for
+        (fn [payload]
+          (let [calls (atom [])
+                seen (atom nil)
+                job (atom {:job-id "guide-job" :agent-id "f60-guide"
+                           :state :done})
+                guide-request (assoc request :dispatch/type :guide-intervention
+                                     :agent-id "f60-guide" :mode :store-mode)
+                dispatched (:state
+                            (sut/drive!
+                             (assoc (effects calls (atom {:state :running}))
+                                    :request guide-request)))
+                base (assoc (effects calls job)
+                            :request guide-request
+                            :state dispatched
+                            :terminal-submission-provider
+                            (fn [_ _ _]
+                              {:authority {:frame-id "f60"
+                                           :problem-id "b00J02"}
+                               :submission/id "guide-submission"
+                               :payload (merge {:command-own-exit 0
+                                                :outcome "complete"
+                                                :failure-account []}
+                                               payload)})
+                            :terminal-validator
+                            (fn [_ _ terminal]
+                              (reset! seen (:report terminal))
+                              {:ok true}))
+                collected (sut/drive! base)]
+            (sut/drive! (assoc base :state (:state collected)))
+            @seen))
+        payload-only (report-for {:mode "store-mode"
+                                  :evidence {:channel-audit
+                                             {:direct-student-contact? false}}})
+        audit-only (report-for {:evidence {:channel-audit
+                                           {:mode "store-mode"
+                                            :direct-student-contact? false}}})
+        absent (report-for {:evidence {:channel-audit
+                                       {:direct-student-contact? false}}})
+        conflict (report-for {:mode "store-mode"
+                              :evidence {:channel-audit
+                                         {:mode "harness-mode"
+                                          :direct-student-contact? false}}})]
+    (is (= "store-mode" (:mode payload-only)))
+    (is (= "store-mode" (:mode audit-only)))
+    (is (nil? (:mode absent)))
+    (is (= {:payload :store-mode :channel-audit :harness-mode}
+           (:guide-mode-declaration-conflict conflict)))))
 
 (deftest missing-typed-submission-never-validates-conversation
   (let [calls (atom [])

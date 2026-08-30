@@ -463,6 +463,9 @@
           (and (= :guide-intervention kind)
                (not= (:mode request) submitted-mode))
           (conj :guide-mode-authority-mismatch)
+          (and (= :guide-intervention kind)
+               (some? (:guide-mode-declaration-conflict report)))
+          (conj :guide-mode-declaration-conflict)
           ;; Store-mode candidates are the Guide's channel to the Student's
           ;; shelf; they must be gate-shaped here so the reviewer never sees
           ;; an unbound candidate, and harness-mode may not carry any.

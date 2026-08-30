@@ -14,6 +14,31 @@
 (def default-apparatus-repair-attempts 1)
 (def default-provider-usage-limit-window-ms (* 5 60 60 1000))
 
+(defn- lift-guide-mode
+  "Lift the Guide's wire-level mode declarations into the legacy report view.
+
+  Typed payload `:mode` is primary because it is part of the role's completion
+  payload. Older submissions may declare the same value in `:channel-audit`,
+  so that location remains a fallback. When both are present, retain a
+  conflict marker instead of silently choosing between contradictory claims."
+  [report payload]
+  (let [payload-mode (:mode payload)
+        audit-mode (get-in report [:channel-audit :mode])
+        normalized-payload-mode (submission/wire-keyword payload-mode)
+        normalized-audit-mode (submission/wire-keyword audit-mode)
+        conflict? (and (some? payload-mode)
+                       (some? audit-mode)
+                       (not= normalized-payload-mode normalized-audit-mode))]
+    (cond-> (merge report
+                   (select-keys (:channel-audit report) [:candidates]))
+      (some? (or payload-mode audit-mode))
+      (assoc :mode (or payload-mode audit-mode))
+
+      conflict?
+      (assoc :guide-mode-declaration-conflict
+             {:payload normalized-payload-mode
+              :channel-audit normalized-audit-mode}))))
+
 (def provider-usage-limit-signatures
   "Declared substrate signatures. Callers may append provider-specific entries
   through `:provider-usage-limit-signatures`; the generic entries deliberately
@@ -527,17 +552,14 @@
                                                ;; Student's query ledger
                                                ;; beside :evidence.
                                                :queries]))
-                            ;; Guide mode and candidates are declared inside
-                            ;; the typed channel-audit evidence object. Lift
-                            ;; that object into the legacy report view consumed
-                            ;; by validate-terminal; it is authoritative over
-                            ;; any undeclared top-level payload duplicates.
+                            ;; Guide mode is declared in the typed payload, with
+                            ;; channel-audit retained as a compatibility
+                            ;; fallback. Contradictory declarations remain
+                            ;; visible so validation can refuse them.
                           report
                           (if (= :guide-intervention
                                  (:dispatch/type active-request))
-                            (merge report
-                                   (select-keys (:channel-audit report)
-                                                [:mode :candidates]))
+                            (lift-guide-mode report payload)
                             report)]
                       (assoc job :report report
                              :typed-submission submission))
