@@ -364,4 +364,34 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No Guide receipt, promotion "
         "review, or memory publication was invented; the preserved residual "
-        "remains authoritative.")}]}
+        "remains authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f57"
+   :problem/id "a99J10"
+   :last-valid-receipt/id
+   "5c5a05d90b4d93236f15639f782d7a48a32152bc52fe6c58f54383af7177531f"
+   :decision/at "2026-08-30T14:29:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-terminal-payload-normalization-apparatus-mismatch
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved Student receipt is valid and records a clean compiling "
+        "partial candidate that proves the singular-weight integrability lemma. "
+        "The Guide and its repair completed with substantive evidence, but the "
+        "terminal encoded the authorized mode as the string :store-mode and "
+        "placed channel evidence in its nested audit payload. The older terminal "
+        "validator rejected only :guide-mode-authority-mismatch. This is the "
+        "Guide payload-normalization apparatus fault repaired for later frames, "
+        "not a mathematical failure.")
+   :decision/recommended-route
+   (str "Keep f57 partial with its valid Student receipt and exact residual. "
+        "Do not redispatch the exhausted Guide phase after the queue advance. "
+        "Preserve the proved integrability lemma and resume the remaining "
+        "dominated-Cauchy boundary assembly in a later solver pass.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No Guide receipt or promotion "
+        "review was invented; the residual remains authoritative.")}]}
