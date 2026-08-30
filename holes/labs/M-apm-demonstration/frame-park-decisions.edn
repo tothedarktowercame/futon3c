@@ -427,4 +427,37 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No Guide receipt, candidate "
         "deposit, or promotion review was invented; the successful Student "
-        "receipt remains preserved as the mathematical result.")}]}
+        "receipt remains preserved as the mathematical result.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f60"
+   :problem/id "b00J02"
+   :last-valid-receipt/id
+   "77f83e7e22871b1723b29ec961bce57df8a67b7b40098ed023137a7b9a8c24b8"
+   :decision/at "2026-08-30T15:31:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-terminal-top-level-mode-normalization-apparatus-mismatch
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved Student receipt is valid and records a clean, zero-sorry "
+        "solution of b00J02. The Guide request and repair packet both authorized "
+        ":store-mode, and the repaired Guide deposited two substantive candidates "
+        "with nonempty pattern identifiers. Its typed terminal placed the mode in "
+        "the textual outcome rather than the required top-level :mode field, so "
+        "validation reported :guide-mode-authority-mismatch and consequently "
+        ":guide-candidates-outside-store-mode. This is the historical Guide JSON "
+        "normalization seam repaired for later frames, not a mathematical or "
+        "memory-content failure.")
+   :decision/recommended-route
+   (str "Preserve the solved Student artifact, the two attempted Guide deposits, "
+        "and the exact residual. Do not redispatch the exhausted historical Guide "
+        "after the queue advance. Apply the repaired top-level Guide normalization "
+        "to subsequent frames and treat F60 as partial only because its promotion "
+        "path was not validly completed.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No Guide receipt, review, or memory "
+        "publication was invented; the successful Student receipt remains the "
+        "authoritative mathematical result.")}]}
