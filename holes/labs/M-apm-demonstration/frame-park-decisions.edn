@@ -394,4 +394,37 @@
         "dominated-Cauchy boundary assembly in a later solver pass.")
    :decision/not-done
    (str "The frame is not voided or forgotten. No Guide receipt or promotion "
-        "review was invented; the residual remains authoritative.")}]}
+        "review was invented; the residual remains authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f58"
+   :problem/id "aunk04"
+   :last-valid-receipt/id
+   "873e4f598f0fb6d954e0960acfd472256024880ac99a20330f1740c2e709a7ca"
+   :decision/at "2026-08-30T14:32:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-empty-deposit-contract-apparatus-mismatch
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved Student receipt is valid and records a clean, zero-sorry "
+        "solution of aunk04. The first Guide correctly returned no candidates: "
+        "the Student had closed the problem, the relevant same-problem memories "
+        "were withheld as designed, and the pinned Guide card permits silence "
+        "when nothing passes the different-problem test. The controller instead "
+        "required a nonempty candidate vector. Its repair prompt thereby forced "
+        "candidate production and the repaired terminal then failed mode and "
+        "candidate normalization. These findings invalidate the Guide observation, "
+        "not the Student proof.")
+   :decision/recommended-route
+   (str "Preserve the solved Student artifact and classify the experimental frame "
+        "as apparatus-invalidated/partial. Repair the Guide/controller contract so "
+        "a successful no-deposit report is accepted when the documented "
+        "different-problem test yields no candidates; do not manufacture memories "
+        "or redispatch this exhausted historical Guide phase.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No Guide receipt, candidate "
+        "deposit, or promotion review was invented; the successful Student "
+        "receipt remains preserved as the mathematical result.")}]}
