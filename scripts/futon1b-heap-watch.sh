@@ -6,7 +6,7 @@
 # substrate reads timed out. A slow leak is invisible until it is an outage,
 # so watch the trend rather than waiting to meet it during a failure.
 set -u
-prev=0; peak=0
+prev=0; peak=0; floor=0
 while true; do
   h=$(timeout 20 curl -s localhost:7073/health 2>/dev/null)
   if [ -z "$h" ]; then
@@ -26,10 +26,19 @@ while true; do
     echo "== futon1b heap ${used}/${max}MB (${pct}%) $(date -u +%H:%M:%SZ) -- crossed 55%"
   fi
   [ "$pct" -gt "$peak" ] && peak=$pct
-  # A large drop means a real old-gen collection or a restart: the leak
-  # hypothesis is wrong or the node bounced. Either is worth knowing.
+  # A large drop is a collection. The FIRST one falsified the leak reading and
+  # was worth saying; the next three said the same thing at 1099, 1157, 1098 MB.
+  # What matters is not that it collects but where it collects TO: a stable
+  # floor is a healthy sawtooth, a rising floor is the leak. So track the floor
+  # and speak only when it climbs.
   if [ "$prev" -gt 0 ] && [ $(( prev - used )) -gt 400 ]; then
-    echo "== futon1b heap DROPPED ${prev} -> ${used}MB $(date -u +%H:%M:%SZ) -- collection or restart; growth was not a pure leak"
+    if [ "$floor" -eq 0 ]; then
+      echo "== futon1b heap collects: ${prev} -> ${used}MB $(date -u +%H:%M:%SZ); floor noted, silent unless it rises"
+      floor=$used
+    elif [ $(( used - floor )) -gt 500 ]; then
+      echo "!! futon1b heap FLOOR ROSE ${floor} -> ${used}MB $(date -u +%H:%M:%SZ) -- collections no longer reclaiming; this is what a leak looks like"
+      floor=$used
+    fi
     peak=$pct
   fi
   prev=$used
