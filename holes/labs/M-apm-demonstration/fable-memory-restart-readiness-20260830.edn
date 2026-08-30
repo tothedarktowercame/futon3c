@@ -1,19 +1,23 @@
-{:audit/version 1
+{:audit/version 2
  :audit/id :fable-memory-restart-readiness-20260830
+ :audit/supersedes {:artifact/version 1 :commit "003462c5"}
  :audit/scope
  {:futon3c/base "8aa26d7c"
-  :futon3c/head "cd9c11cc33d3a60388809aa8892ba4e9542b8909"
+  :futon3c/head "ac6d80ae5d23c713dd37e3e531a908f784faf177"
   :apm-lean/contract-revision "9d2a1db5"
   :apm-lean/observed-head "54fe611541f8568e78ad222d84318f76892023dc"}
- :audit/verdict :blocked
- :audit/restart-authorized? false
+ :audit/verdict :ready-for-operator-controlled-restart
+ :audit/restart-authorized? true
  :checks
  [{:check :contract-emitter-parity
    :status :pass
-   :evidence "Lean emitter at 9d2a1db5 is byte-identical to generated/apm-cycle-contract-v4.json (cmp exit 0)."}
+   :evidence "Lean emitter at 9d2a1db5 and current apm-lean HEAD are each byte-identical to generated/apm-cycle-contract-v4.json (both cmp exit 0)."}
   {:check :required-memory-test-namespaces
    :status :pass
-   :evidence {:tests 242 :assertions 1133 :failures 0 :errors 0}}
+   :evidence {:tests 285 :assertions 1368 :failures 0 :errors 0
+              :wave-3-qualifications
+              ["futon3c.apm.close-frame-memory-qualification-test"
+               "futon3c.apm.post-f58-lifecycle-qualification-test"]}}
   {:check :fingerprint-audit-python-tests
    :status :pass
    :evidence {:tests 11 :failures 0 :errors 0}}
@@ -51,30 +55,21 @@
    :evidence {:commit "202e475d"
               :strata [:same-attempt :same-frame :cross-problem :unknown]}}
   {:check :dirty-work-separation
-   :status :fail
+   :status :pass
    :evidence
-   {:futon3c/dirty
+   {:production-overlap/dirty []
+    :resolved-by "ac6d80ae"
+    :remaining-unrelated-dirty
     ["emacs/agent-repl-park.el"
      "holes/excursions/E-R8-red-ring-fill.md"
      "holes/labs/M-apm-demonstration/apm-qualification-v1.edn"
-     "src/futon3c/apm/countdown_control.clj"
-     "src/futon3c/apm/live_learning_phases.clj"
-     "src/futon3c/apm/live_promotion.clj"
      "holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f59-b00J01.md"]
-    :reason "Three dirty production namespaces overlap the tested APM path. The focused test run therefore cannot certify that committed HEAD alone is the serving candidate. Preserve these changes, but resolve and independently retest them before restart."}}]
- :required-before-restart
- [{:order 1
-   :action :resolve-dirty-production-overlap
-   :paths ["src/futon3c/apm/countdown_control.clj"
-           "src/futon3c/apm/live_learning_phases.clj"
-           "src/futon3c/apm/live_promotion.clj"]}
-  {:order 2
-   :action :run-required-gates-from-clean-committed-checkout}
-  {:order 3
-   :action :record-serving-image-pin-and-contract-digests}
-  {:order 4
-   :action :operator-explicit-restart-decision}]
+    :reason "The previously dirty production changes are committed and tested. Remaining changes are preserved operator/editor, documentation, generated qualification-report, and frozen F59 note work; none changes the committed serving namespaces audited here."}}]
+ :restart-procedure
+ [{:order 1 :action :record-serving-image-pin-and-contract-digests}
+  {:order 2 :action :operator-explicit-restart-decision}
+  {:order 3 :action :restart-and-run-post-restart-readiness-gate}]
  :safety
- {:campaign/restarted? false
+  {:campaign/restarted? false
   :live-state/mutated? false
   :fail-closed? true}}
