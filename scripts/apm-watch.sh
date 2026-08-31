@@ -111,7 +111,18 @@ while true; do
   # the newest phase file under the active frame's live/ directory. Solver
   # rounds and student attempts legitimately take tens of minutes, so only
   # speak after 90 minutes of no phase write while the coordinator is enabled.
-  afr=$(grep -o ':frame/id "[^"]*"' "$C/queue-state.edn" 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/')
+  # Take the ACTIVE frame, not the first :frame/id in the file. head -1 read a
+  # completed frame and reported f46 as stalled for 5909 minutes, four days
+  # after it closed and banked. queue-state.edn holds :active, :parked and
+  # :completed, and their order is not guaranteed.
+  afr=$(python3 -c "
+import re,sys
+try: t=open('$C/queue-state.edn').read()
+except OSError: sys.exit()
+i=t.find(':active')
+if i<0: sys.exit()
+m=re.search(r':frame/id \"([^\"]+)\"', t[i:])
+print(m.group(1) if m else '')" 2>/dev/null)
   if [ -n "$afr" ] && [ "$en" = "enabled" ]; then
     newest=$(ls -t "$C"/*"$afr"/live/*.edn 2>/dev/null | head -1)
     if [ -n "$newest" ]; then
