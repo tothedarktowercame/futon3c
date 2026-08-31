@@ -1040,3 +1040,34 @@ So the retrieval picture from this morning needs widening: it is not one memory 
 surfaces. It is a strategy hook that surfaces for anything, plus — at least once — a
 content memory that surfaced for a topically matched problem. Whether the second kind helps
 is still unmeasured; here it did not close the problem.
+
+## Reviewer mistakes strand solved problems (2026-08-31, four instances)
+
+f68 solved b90A03 — all three student attempts closed it, and attempt 1 builds with
+`[propext, Classical.choice, Quot.sound]` against a statement byte-identical to master —
+and then parked at scribe-reduce with residual `[:review-set-mismatch]` and
+`:decision/bell-required true`. Promotion to a banked solve fires at frame close, the frame
+never closed, so the solve was stranded. I pinned it by hand at
+`refs/apm/rescued-solves/b90A03/b37514004b130b2dd92b6c306fca4634ea36b300`.
+
+That is the fourth: a99J05 (f54), a99J06 (f55), aunk04 (f58), b90A03 (f68). Every one is a
+problem the machine SOLVED, verified here against the axiom gate and the unchanged
+statement, sitting off master because its frame parked rather than closed.
+
+The common cause is narrower than "the guide-mode barrier" I attributed the first three to.
+It is that **the repair vocabulary does not cover reviewer mistakes**. Checked against the
+live table:
+
+    :review-set-mismatch          in repair-finding-instructions -> false
+    :reviewer-missing             in repair-finding-instructions -> false
+    keys matching #"review"                                      -> []
+
+None. A reviewer who reviews four of five candidates, or attributes a review to the wrong
+seat, produces a finding the machine detects exactly and cannot ask anyone to correct. The
+`:attachment-projection` case fixed in `69109f33` was one member of this family; f68 was
+another, an hour later, and it parked the frame instead of failing the regulator — gentler
+disposition, same stranded solve.
+
+So the sequence that loses a solved problem needs no exotic failure at all: a role reviews
+the wrong number of things, the finding has no instruction, the frame parks, and the pin
+never fires. The mathematics was never in question in any of the four.
