@@ -36,6 +36,16 @@
    (transport/source-resource-id implementation-resource)
    loaded-runtime-id))
 
+(defn- repaired-runtime-identity? [state]
+  (let [{:keys [source-id loaded-runtime-id]}
+        (transport-implementation-identity)]
+    (and (seq (:findings state))
+         (every? #(= :transport-conformance-runtime-identity-mismatch
+                     (:error/code %))
+                 (:findings state))
+         (string? source-id)
+         (= source-id loaded-runtime-id))))
+
 (defn- certificate-history [state]
   (mapv (fn [entry]
           {:attempt (:attempt entry)
@@ -1003,6 +1013,14 @@
 
     (= :awaiting-apparatus-repair (:stage state))
     (cond
+      ;; A certificate deliberately refuses advancement when the namespace
+      ;; loaded in the shared JVM differs from its source.  Once an operator
+      ;; has reloaded that exact source, replay the last valid state through
+      ;; the normal idempotent publication path.  Restrict this recovery to
+      ;; the precise identity finding: no other apparatus failure is erased.
+      (repaired-runtime-identity? state)
+      (drive-step! (assoc inputs :state (:last-valid-state state)))
+
       (and (= :promotion-pass (:repair/kind state))
            (or (< (:repair/attempts state) (:repair/max-attempts state))
                (and (= [:review-patterns-invalid] (vec (:findings state)))

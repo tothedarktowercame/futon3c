@@ -1033,6 +1033,44 @@
     (is (= :certified (:status result)))
     (is (= ["terminal-review"] @calls))))
 
+(deftest runtime-identity-repair-replays-only-the-last-valid-state
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        run #(sut/drive!
+              {:state {:state/type :promotion
+                       :stage :awaiting-apparatus-repair
+                       :error/code :transport-certificate-nonconformant
+                       :findings
+                       [{:error/code
+                         :transport-conformance-runtime-identity-mismatch}]
+                       :last-valid-state last-valid}
+               :promotion-policy {:completed-pass-required true}
+               :review-fn (fn [job _]
+                            (is (= "terminal-review" job))
+                            {:ok true :reviewer "proctor" :reviews [review]})
+               :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+               :publish-fn (fn [_] {:ok true
+                                    :receipt {:receipt/id "done"}})
+               :certificate-emitter-fn
+               (fn [_ _] {:ok true :certificate-valid? true})
+               :persist-fn (fn [_] {:ok true})})
+        result (with-redefs-fn
+                 {(ns-resolve 'futon3c.apm.live-promotion
+                              'transport-implementation-identity)
+                  (fn [] {:spec-id "spec" :source-id "current"
+                          :loaded-runtime-id "current"})}
+                 run)]
+    (is (= :certified (:status result)))
+    (is (= "done" (get-in result [:certificate :receipt/id])))))
+
 (deftest exhausted-projection-repair-does-not-advance-promotion
   (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
                :contract-digest "contract-v1"
