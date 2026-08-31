@@ -10,7 +10,7 @@
   (:import [java.security MessageDigest]
            [java.time Instant]))
 
-(def futon2-root "/home/joe/code/futon2")
+(def ^:dynamic *futon2-root* "/home/joe/code/futon2")
 (def production-runner "src/futon2/aif/full_loop_runner.clj")
 (def schema-version 1)
 
@@ -35,10 +35,10 @@
   "Observe one canonical Futon2 source before/after a targeted reload."
   [path]
   (let [file (.getCanonicalFile (io/file path))
-        relative (relative-to futon2-root file)
-        head (git futon2-root "rev-parse" "HEAD")
-        tree (git futon2-root "rev-parse" "HEAD^{tree}")
-        status (git futon2-root "status" "--porcelain")]
+        relative (relative-to *futon2-root* file)
+        head (git *futon2-root* "rev-parse" "HEAD")
+        tree (git *futon2-root* "rev-parse" "HEAD^{tree}")
+        status (git *futon2-root* "status" "--porcelain")]
     (if-not (and relative (.isFile file))
       {:readable? false :path (.getPath file) :reason :outside-canonical-futon2-source}
       {:readable? (and (:ok? head) (:ok? tree) (:ok? status))
@@ -56,6 +56,8 @@
   (let [before (measure-file path)]
     (when-not (:readable? before)
       (throw (ex-info "reload source is not a readable canonical Futon2 file" before)))
+    (when (:dirty? before)
+      (throw (ex-info "refusing to reload Futon2 from a dirty repository" before)))
     (let [value (load-file path)
           after (measure-file path)
           stable? (= before after)
