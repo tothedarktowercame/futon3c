@@ -2,6 +2,7 @@
 """Run one test command and make cgroup resource failures part of its verdict."""
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import subprocess
@@ -10,6 +11,25 @@ import sys
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def repository_basis(cwd):
+    """Observe the exact Git basis available to the command, without asserting it."""
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=cwd, text=False,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    head = git("rev-parse", "HEAD")
+    tree = git("rev-parse", "HEAD^{tree}")
+    tracked = git("diff", "HEAD", "--")
+    status = git("status", "--porcelain")
+    readable = all(p.returncode == 0 for p in (head, tree, tracked, status))
+    return {"readable": readable,
+            "head": head.stdout.decode().strip() if head.returncode == 0 else None,
+            "tree-sha": tree.stdout.decode().strip() if tree.returncode == 0 else None,
+            "tracked-diff-sha256": (hashlib.sha256(tracked.stdout).hexdigest()
+                                     if tracked.returncode == 0 else None),
+            "dirty": bool(status.stdout.strip()) if status.returncode == 0 else None,
+            "tracked-dirty": bool(tracked.stdout) if tracked.returncode == 0 else None}
 
 
 def cgroup_dir():
@@ -101,6 +121,7 @@ def main():
     before = event_max(root)
     peak = read_int(os.path.join(root, "pids.peak"), 0)
     started = now()
+    basis_started = repository_basis(args.cwd)
     with open(args.output, "a", buffering=1) as log:
         proc = subprocess.Popen(["bash", "-lc", args.command], cwd=args.cwd,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -116,6 +137,7 @@ def main():
         inner = proc.wait()
     peak = max(peak, read_int(os.path.join(root, "pids.peak"), 0))
     after = event_max(root)
+    basis_finished = repository_basis(args.cwd)
     max_delta = None if before is None or after is None else after - before
     reason = None
     if inner != 0:
@@ -129,6 +151,9 @@ def main():
                "pids-peak": peak, "pids-events-max-before": before,
                "pids-events-max-after": after, "pids-events-max-delta": max_delta,
                "native-thread-markers": markers}
+    receipt["repository-basis-start"] = basis_started
+    receipt["repository-basis-finish"] = basis_finished
+    receipt["repository-basis-stable"] = (basis_started == basis_finished)
     receipt["resource-status"] = resource_status(receipt)
     receipt["failure-resource-correlation"] = failure_resource_correlation(receipt)
     receipt["receipt-path"] = args.receipt
