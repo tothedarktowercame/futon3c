@@ -30,6 +30,7 @@ import subprocess
 import datetime
 import hashlib
 import time
+import fcntl
 
 DRAWBRIDGE = os.environ.get("FUTON3C_DRAWBRIDGE_URL", "http://127.0.0.1:6768/eval")
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -38,6 +39,7 @@ BOUNDED_DIR = "/tmp/futon-bounded-tests"
 BOUNDED_RECORDS = os.path.join(BOUNDED_DIR, "jobs.json")
 BOUNDED_TASKS_MAX = 1280
 BOUNDED_ADMISSION_MAX = 2
+BOUNDED_LOCK = os.path.join(BOUNDED_DIR, "admission.lock")
 
 
 def _token():
@@ -138,12 +140,17 @@ def _bounded_public(record):
 
 
 def _launch_bounded(shell_cmd, opts):
+    os.makedirs(BOUNDED_DIR, exist_ok=True)
+    lock = open(BOUNDED_LOCK, "a+")
+    fcntl.flock(lock, fcntl.LOCK_EX)
     records = _load_bounded()
     active = [r for r in records.values()
               if _unit_props(r["unit"]).get("ActiveState") in ("active", "activating")]
     if len(active) >= BOUNDED_ADMISSION_MAX:
-        return {"ok": False, "reason": "admission-cap", "active": len(active)}
-    os.makedirs(BOUNDED_DIR, exist_ok=True)
+        lock.close()
+        return {"ok": False, "reason": "admission-cap",
+                "state": "queued", "active": len(active),
+                "admission-max": BOUNDED_ADMISSION_MAX}
     stamp = int(time.time() * 1000)
     safe = "".join(c if c.isalnum() else "-" for c in opts.get("label", "job"))[:32]
     job_id = "bounded-%s-%s" % (stamp, safe or "job")
@@ -182,6 +189,7 @@ def _launch_bounded(shell_cmd, opts):
     record["agency-pids-events-max-before"] = agency_max
     records[job_id] = record
     _save_bounded(records)
+    lock.close()
     return {"ok": True, "value": _bounded_public(record)}
 
 
