@@ -866,7 +866,7 @@ names, which looks like a strong transfer signal until you open master's file an
 five names already there. Structure shared between two attempts on the same problem is
 evidence about the problem, not about the shelf.
 
-## f66 banked, and a stop that was a race (2026-08-31)
+## f66 banked, and a stop I twice explained wrongly (2026-08-31)
 
 b03J01 is on master sorry-free (`c6fc4972`, `6646c504`), the twelfth problem the
 campaign has closed. Open count 111.
@@ -877,7 +877,8 @@ deposit withheld, a2 with that deposit and nothing else, a3 with two within-fram
 deposits. On b03J01 the shelf made no difference to whether the problem closed, which
 argues the problem was tractable rather than that the memories were inert.
 
-**The stop between the close and the bank was a race, and it read exactly like a defect.**
+**The stop between the close and the bank was not a race. I said it was, twice, and it
+was not.**
 At 12:51:36 the campaign stepper assembled f66's combined operational trace, Lean rejected
 it, and the stepper turned that rejection into `:stepper/status :stop` — halting the whole
 coordinator with a certified close-frame job already in hand. Evaluating Lean's predicates
@@ -888,16 +889,39 @@ successor has been announced and activated. f64 and f65 supersede through the
 guide-mode-authority-mismatch and typed-submission-missing paths and carry real ids; f66
 superseded three times through the review-repair path and carried none.
 
-That contrast is what made me confident, and it was the wrong conclusion. The trace was
-reassembled at 12:57:59 with the same three dispositions and the ids present —
-`a17637869..`, `fcff1e9bb..` — and the checker accepted it. The review-repair path does
-record collection evidence; at 12:51:36 it had not finished doing so. The trace can be
-assembled inside that window, and a rejection caused by reading too early is treated as a
-hard stop rather than something to retry.
+The trace was reassembled at 12:57:59 with the same three dispositions and ids now present
+— `a17637869..`, `fcff1e9bb..` — and the checker accepted it. I read that as the evidence
+having arrived late, told Joe the stop was a race, and sent codex-2 a correction re-scoping
+its work to an ordering-and-retry question.
 
-I had already dispatched the wrong diagnosis to codex-2 — "make the path carry the real
-id" — and sent a correction re-scoping it to the ordering question once the retry
-disproved me. Worth recording because the reasoning felt strong: three observations, one
-field, and a clean contrast against two frames that work. What it could not see is that
-both the working frames and the failing one were sampled at different points in the same
-asynchronous sequence.
+codex-2 refused both premises and was right. At 12:55:40, between the rejection and the
+acceptance, commit `55ce42a4` ("Bind promotion repairs to collection evidence") added a
+fallback to `successor-observation`: when `[:evidence :collection/id]` is absent, compute
+`ledger-digest` over `{:collection/type :promotion-repair-terminal, :job-id, :findings}`
+and use that as the collection witness. The durable predecessors still carry
+`:terminal-collection nil`. Nothing arrived.
+
+I checked the claim rather than take it:
+
+    ledger-digest [{:collection/type :promotion-repair-terminal
+                    :job-id "apm-role-2118fffe94a2eca0…"
+                    :findings [:reviewer-missing :review-set-mismatch]}]
+    => a17637869f1791c8482d8d7cf40ed7d4d9b5f479c184b1c5eb261ebd54f2ef0b
+
+which is byte-identical to that observation's `collectionEvidenceId` in the accepted trace.
+
+**The consequence is that Lean's successor check can no longer fail on this path.** The
+digest is a pure function of the job id and the findings, and both of those already sit in
+the same observation as `predecessorId` and `disposition`. It adds no information about
+whether a collection was ever recorded, which is the only thing
+`predecessorRecordComplete` exists to certify. A gate that cannot fail is worse than an
+absent one, because the trace still reads as certified.
+
+What this does NOT touch: b03J01's proof. That was verified on its own terms — axioms
+`[propext, Classical.choice, Quot.sound]`, statement unchanged, sorry-free — and the bank
+stands. What is hollow is the frame's operational-trace certification, not the mathematics.
+
+Two wrong explanations in one hour, both confidently argued from real evidence. The first
+(the path never carries the id) was half-right and pointed at the correct file. The second
+(it arrives late) was produced by watching the symptom disappear and assuming the cause had
+resolved, when what had actually changed was the measuring instrument.
