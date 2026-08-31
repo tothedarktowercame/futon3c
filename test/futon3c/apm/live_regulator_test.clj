@@ -286,3 +286,27 @@
       (finally
         (sut/cancel-scheduler! "countdown-regulator:campaign-a")
         (sut/cancel-scheduler! "countdown-regulator:campaign-b")))))
+
+(deftest thrown-tick-retains-ex-data
+  ;; A thrown tick stops the coordinator, so its record is the only account of
+  ;; why. Recording class and message alone discarded the ex-info payload --
+  ;; on 2026-08-31 a "Countdown manifest failed executable validation" stop
+  ;; could not be attributed afterwards because the per-pin findings were gone.
+  (let [state (sut/initial-state "r")
+        result (sut/tick!
+                {:state state
+                 :tick-fn (fn [] (throw (ex-info "manifest invalid"
+                                                 {:valid? false
+                                                  :findings [:pin-invalid]})))
+                 :persist-fn (constantly {:ok true})})
+        last-result (get-in result [:state :regulator/last-result])]
+    (is (= :live-regulator-tick-threw (:error/code last-result)))
+    (is (= {:valid? false :findings [:pin-invalid]}
+           (:exception/data last-result))))
+  ;; a throwable with no ex-data records no :exception/data key
+  (let [result (sut/tick!
+                {:state (sut/initial-state "r")
+                 :tick-fn (fn [] (throw (RuntimeException. "plain")))
+                 :persist-fn (constantly {:ok true})})]
+    (is (not (contains? (get-in result [:state :regulator/last-result])
+                        :exception/data)))))

@@ -105,9 +105,20 @@
                             (tick-state-fn claimed-state)
                             (tick-fn))
                       (catch Throwable t
-                        {:ok false :error/code :live-regulator-tick-threw
-                         :exception/class (.getName (class t))
-                         :exception/message (.getMessage t)}))
+                        ;; Keep ex-data. A thrown tick stops the coordinator,
+                        ;; and for an ExceptionInfo the payload is the only
+                        ;; record of WHY: "Countdown manifest failed executable
+                        ;; validation" carries the per-pin :findings and
+                        ;; observed blobs, and recording class and message
+                        ;; alone threw them away. On 2026-08-31 that left a
+                        ;; 14:16:59Z stop unattributable -- the manifest
+                        ;; validated cleanly by the time anyone looked.
+                        (cond-> {:ok false
+                                 :error/code :live-regulator-tick-threw
+                                 :exception/class (.getName (class t))
+                                 :exception/message (.getMessage t)}
+                          (instance? clojure.lang.IExceptionInfo t)
+                          (assoc :exception/data (ex-data t)))))
           status (cond
                    (and (:ok result) (= :frame-complete (:status result))) :complete
                    (:ok result) :running
