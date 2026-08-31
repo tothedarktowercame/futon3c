@@ -122,12 +122,39 @@ Retirement means returning `bg.py` test submission to its prior path while
 retaining receipts for diagnosis; it does not mean declaring the failed runs
 green.
 
-As of C100 the 30-run window contains **3 non-control suite jobs**: two passes
-(the 1,024-limit futon2 and futon3 demand measurements), one containment
-failure (the original real futon2 run at 256), and zero test failures.  Synthetic
-pressure fixtures, durability sleeps, admission sleepers, and cancellation
-probes are excluded.  The retirement comparison does not activate until 30
-non-control jobs; controls can never seed or pad that denominator.
+The initial C100 tally of three non-control jobs was configuration-blind and is
+superseded by C103.  Every new job records a SHA-256 configuration identity over
+`tasks-max`, slice `TasksMax`, and admission maximum, plus a purpose of
+`production`, `measurement`, `control`, or `unclassified`.
+
+The retirement window contains only terminal `production` jobs whose full
+configuration hash equals the current configuration.  It does not count
+controls, demand measurements, unclassified jobs, or production jobs from a
+superseded configuration.  Historical entries and receipts remain present.
+
+Before C103's gate runs, the current 1,280/2,560/two-job window contained **0
+runs**.  The real
+futon2 containment failure at 256 is retained as `superseded-production`; the
+two green 1,024-limit runs are retained as `measurement`.  The executable
+report is:
+
+```sh
+python3 scripts/bg.py test-health
+```
+
+It reports current-configuration passes, containment failures, test failures,
+eligibility, and retirement decision, as well as superseded production IDs and
+excluded counts.  Retirement becomes eligible at 30 current-configuration
+production runs and fires only when their containment failures exceed their
+test failures.  A configuration change starts a new comparison cohort without
+deleting or reclassifying the old evidence.
+
+C103 then submitted both suites explicitly as `production` under configuration
+`9331cca1818f5e185e85163f6e7f790f727e7254976b236aec1ce417cbc8d35e`.
+The current window is therefore **2 runs: 2 passes, 0 containment failures, 0
+test failures**.  Futon2 passed 1,029 tests / 6,174 assertions at peak 986;
+futon3 passed 248 tests / 1,518 assertions at peak 1,015.  Both recorded zero
+Agency pressure and zero job resource events.
 
 ## C100 budget falsifier at the production default
 

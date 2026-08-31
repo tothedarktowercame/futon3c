@@ -10,8 +10,10 @@ Usage:
   scripts/bg.py launch "<shell command>" [--agent <id>] [--label <l>] [--dir <d>]
   scripts/bg.py launch-test "<shell command>" [--agent <id>] [--label <l>]
                        [--dir <d>] [--tasks-max <n>]
+                       [--window production|measurement|control]
   scripts/bg.py test-status <id>
   scripts/bg.py test-list
+  scripts/bg.py test-health
   scripts/bg.py test-kill <id>
   scripts/bg.py status <id>
   scripts/bg.py tail   <id> [n]
@@ -26,6 +28,7 @@ import os
 import json
 import subprocess
 import datetime
+import hashlib
 import time
 
 DRAWBRIDGE = os.environ.get("FUTON3C_DRAWBRIDGE_URL", "http://127.0.0.1:6768/eval")
@@ -86,6 +89,20 @@ def _service_counter(service, filename, key):
         return None
 
 
+def _unit_scalar(unit, prop):
+    p = subprocess.run(["systemctl", "--user", "show", unit,
+                        "--property=" + prop, "--value"],
+                       capture_output=True, text=True)
+    return p.stdout.strip() if p.returncode == 0 else None
+
+
+def _configuration(tasks_max, slice_tasks_max, admission_max):
+    basis = {"tasks-max": int(tasks_max), "slice-tasks-max": int(slice_tasks_max),
+             "admission-max": int(admission_max)}
+    encoded = json.dumps(basis, sort_keys=True, separators=(",", ":")).encode()
+    return dict(basis, **{"configuration-hash": hashlib.sha256(encoded).hexdigest()})
+
+
 def _unit_props(unit):
     keys = ["ActiveState", "SubState", "Result", "ExecMainCode", "ExecMainStatus",
             "ControlGroup", "ExecMainStartTimestampMonotonic"]
@@ -135,6 +152,11 @@ def _launch_bounded(shell_cmd, opts):
     receipt = os.path.join(BOUNDED_DIR, job_id + ".receipt.json")
     runner = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bounded_test_job.py")
     tasks_max = int(opts.get("tasks-max", BOUNDED_TASKS_MAX))
+    window_kind = opts.get("window-kind", "unclassified")
+    if window_kind not in ("production", "measurement", "control", "unclassified"):
+        return {"ok": False, "reason": "invalid-window-kind", "value": window_kind}
+    config = _configuration(tasks_max, _unit_scalar("futon-testing.slice", "TasksMax"),
+                            BOUNDED_ADMISSION_MAX)
     cmd = ["systemd-run", "--user", "--unit=" + unit,
            "--slice=futon-testing.slice", "--property=TasksMax=%d" % tasks_max,
            "--property=RuntimeMaxSec=45min", "--property=KillMode=control-group",
@@ -150,12 +172,43 @@ def _launch_bounded(shell_cmd, opts):
     record = {"id": job_id, "unit": unit, "cmd": shell_cmd,
               "agent-id": opts.get("agent-id"), "label": opts.get("label"),
               "dir": opts.get("dir"), "tasks-max": tasks_max,
+              "window-kind": window_kind, "configuration": config,
               "submitted-at": submitted, "output-file": output,
               "receipt-file": receipt, "submission-to-start-ms": None}
     record["agency-pids-events-max-before"] = agency_max
     records[job_id] = record
     _save_bounded(records)
     return {"ok": True, "value": _bounded_public(record)}
+
+
+def _health():
+    records = [_bounded_public(r) for r in _load_bounded().values()]
+    current = _configuration(BOUNDED_TASKS_MAX,
+                             _unit_scalar("futon-testing.slice", "TasksMax"),
+                             BOUNDED_ADMISSION_MAX)
+    terminal = [r for r in records if r.get("receipt")]
+    production = [r for r in terminal if r.get("window-kind") == "production"]
+    scoped = [r for r in production
+              if r.get("configuration", {}).get("configuration-hash") ==
+              current["configuration-hash"]]
+    def counts(xs):
+        return {"runs": len(xs),
+                "passes": sum(r["receipt"]["outer-exit"] == 0 for r in xs),
+                "containment-failures": sum(r["receipt"].get("reason") ==
+                                            "resource-limit-failure" for r in xs),
+                "test-failures": sum(r["receipt"].get("reason") ==
+                                     "test-failure" for r in xs)}
+    result = counts(scoped)
+    result.update({"minimum-window": 30, "eligible": len(scoped) >= 30,
+                   "retire": (len(scoped) >= 30 and
+                              result["containment-failures"] > result["test-failures"])})
+    return {"current-configuration": current, "current-window": result,
+            "superseded-production": [r["id"] for r in production if r not in scoped],
+            "excluded-controls": sum(r.get("window-kind") == "control" for r in terminal),
+            "excluded-measurements": sum(r.get("window-kind") == "measurement"
+                                         for r in terminal),
+            "unclassified-terminal": sum(r.get("window-kind") in (None, "unclassified")
+                                         for r in terminal)}
 
 
 def main(argv):
@@ -188,6 +241,7 @@ def main(argv):
             elif argv[i] == "--label": opts["label"] = argv[i + 1]; i += 2
             elif argv[i] == "--dir": opts["dir"] = argv[i + 1]; i += 2
             elif argv[i] == "--tasks-max": opts["tasks-max"] = int(argv[i + 1]); i += 2
+            elif argv[i] == "--window": opts["window-kind"] = argv[i + 1]; i += 2
             else: i += 1
         print(json.dumps(_launch_bounded(argv[1], opts), indent=2, sort_keys=True))
         return 0
@@ -198,6 +252,9 @@ def main(argv):
     elif cmd == "test-list":
         print(json.dumps([_bounded_public(r) for r in _load_bounded().values()],
                          indent=2, sort_keys=True))
+        return 0
+    elif cmd == "test-health":
+        print(json.dumps(_health(), indent=2, sort_keys=True))
         return 0
     elif cmd == "test-kill":
         record = _load_bounded().get(argv[1])
