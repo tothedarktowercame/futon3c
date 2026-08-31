@@ -47,11 +47,13 @@
                        "wm-chain-rehearsal-"
                        (make-array java.nio.file.attribute.FileAttribute 0)))
         source (io/file root identity/production-runner)
-        body (str "(ns futon2.aif.full-loop-runner)\n"
+        body (str "(ns futon2.aif.full-loop-runner (:require [clojure.edn :as edn]))\n"
                   "(defn config [x] x)\n"
                   "(defn run-opportunity! [_]\n"
-                  "  (spit " (pr-str run-out) " (slurp " (pr-str fixture-run) "))\n"
-                  "  {:attempt-id \"rehearsal-attempt\" :outcome :rehearsed})\n")]
+                  "  (let [run (edn/read-string (slurp " (pr-str fixture-run) "))]\n"
+                  "    (spit " (pr-str run-out) " (pr-str run))\n"
+                  "    {:attempt-id \"rehearsal-attempt\" :outcome :rehearsed\n"
+                  "     :run/id (:run/id run)}))\n")]
     (io/make-parents source)
     (spit source body)
     (git! (.getPath root) "init" "-q")
@@ -87,6 +89,7 @@
         bad-cert-out (.getPath (io/file out-root "certificate-mismatch.edn"))
         good-resource (.getPath (io/file out-root "resource.edn"))
         bad-resource (.getPath (io/file out-root "resource-mismatch.edn"))
+        binding-dir (.getPath (io/file out-root "bindings"))
         {:keys [root source]} (fixture-repo run-out)]
     (identity/reset-for-test!)
     (reset! service/!status service/initial-status)
@@ -99,7 +102,8 @@
       (is (= head (:git-head loaded)))
       (is (false? (:dirty? loaded)))
       (is (true? (:stable? loaded))))
-    (binding [service/*resolve-var* resolver]
+    (binding [service/*resolve-var* resolver
+              service/*click-run-binding-dir* binding-dir]
       (let [response ((handler) {:request-method :post
                                  :uri "/api/alpha/wm/click"
                                  :body (json/generate-string
@@ -108,10 +112,18 @@
         (is (wait-until #(false? (:running? (service/status)))))))
     (is (.isFile (io/file run-out)))
     (is (= :rehearsed (get-in (service/status) [:last-result :outcome])))
+    (is (= :present (get-in (service/status) [:last-result :run-id-status])))
     (load-file certificate-source)
     (let [run (edn/read-string (slurp run-out))
-          run-id (:run/id run)
+          run-id (get-in (service/status) [:last-result :run/id])
+          binding-record (edn/read-string
+                          (slurp (get-in (service/status)
+                                         [:last-result :run-binding])))
           certificate-main (resolve 'checks.wm-operational-certificate/main)]
+      ;; The join now crosses the production service port. The fixture record
+      ;; and durable binding must independently resolve the same run id.
+      (is (= run-id (:run/id run) (:run/id binding-record)))
+      (is (= (:click/id binding-record) (:click-id (service/status))))
       (spit good-resource (str (pr-str (resource run-id)) "\n"))
       (is (= 0 (certificate-main ["--run" run-out "--resource" good-resource
                                   "--certificate" cert-out])))

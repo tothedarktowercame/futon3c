@@ -5,9 +5,11 @@
    serving-JVM lifecycle, direct apparatus visibility, and the HTTP-facing
    status projection."
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg])
   (:import [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.nio.file Files StandardCopyOption]))
 
 (def war-machine-agent-id "war-machine")
 
@@ -28,6 +30,9 @@
   ;; Tests and callers may reset or sample !status while the worker is still
   ;; unwinding; that must not erase the only join handle for the actual thread.
   (atom nil))
+
+(def ^:dynamic *click-run-binding-dir*
+  "/home/joe/code/futon3c/data/wm-click-run-bindings")
 
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
@@ -154,15 +159,51 @@
     {:ok true
      :selection (select request)}))
 
+(defn- safe-id [x]
+  (str/replace (str x) #"[^A-Za-z0-9._-]" "_"))
+
+(defn- persist-click-run-binding!
+  [click-id result]
+  (let [run-id (:run/id result)
+        record (cond-> {:schema :wm-click-run-binding-v1
+                        :click/id click-id
+                        :attempt/id (:attempt-id result)
+                        :recorded-at (str (Instant/now))}
+                 (and (string? run-id) (not (str/blank? run-id)))
+                 (assoc :run/id run-id :run-id-status :present)
+
+                 (or (not (string? run-id)) (str/blank? (str run-id)))
+                 (assoc :run-id-status :absent
+                        :reason :runner-did-not-return-run-id))
+        dir (io/file *click-run-binding-dir*)
+        target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
+        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))]
+    (io/make-parents target)
+    (spit tmp (str (pr-str record) "\n"))
+    (Files/move (.toPath tmp) (.toPath target)
+                (into-array StandardCopyOption
+                            [StandardCopyOption/ATOMIC_MOVE
+                             StandardCopyOption/REPLACE_EXISTING]))
+    (assoc record :path (.getAbsolutePath target))))
+
 (defn- result-summary
-  [result fallback-attempt-id]
-  {:attempt-id (or (:attempt-id result) fallback-attempt-id)
-   :outcome (or (:outcome result) :unknown)})
+  [click-id result fallback-attempt-id]
+  (let [binding (persist-click-run-binding! click-id result)]
+    (cond-> {:click-id click-id
+             :attempt-id (or (:attempt-id result) fallback-attempt-id)
+             :outcome (or (:outcome result) :unknown)
+             :run-id-status (:run-id-status binding)
+             :run-binding (:path binding)}
+      (= :present (:run-id-status binding))
+      (assoc :run/id (:run/id binding))
+
+      (= :absent (:run-id-status binding))
+      (assoc :run-id-absence (:reason binding)))))
 
 (defn- close-click!
   [agent-id click-id result]
   (let [fallback-attempt-id (:attempt-id @!status)
-        summary (result-summary result fallback-attempt-id)]
+        summary (result-summary click-id result fallback-attempt-id)]
     (swap! !status
            (fn [current]
              (if (= click-id (:click-id current))

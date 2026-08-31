@@ -1,5 +1,6 @@
 (ns futon3c.wm.runner-service-test
   (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
@@ -35,10 +36,16 @@
     :invoke-fn nil
     :capabilities []
     :metadata {:apparatus? true}})
-  (try
-    (f)
-    (finally
-      (await-active-click!))))
+  (let [binding-dir (.getPath
+                     (.toFile
+                      (java.nio.file.Files/createTempDirectory
+                       "wm-click-bindings-test-"
+                       (make-array java.nio.file.attribute.FileAttribute 0))))]
+    (binding [service/*click-run-binding-dir* binding-dir]
+      (try
+        (f)
+        (finally
+          (await-active-click!))))))
 
 (use-fixtures :each reset-service!)
 
@@ -154,8 +161,12 @@
           (is (not (.isBefore ^Instant (:agent/last-active idle-agent)
                               ^Instant active-at)))
           (is (= {:attempt-id "attempt-test"
-                  :outcome :grounded-change}
-                 (:last-result closed))))))))
+                  :outcome :grounded-change
+                  :run-id-status :absent
+                  :run-id-absence :runner-did-not-return-run-id}
+                 (select-keys (:last-result closed)
+                              [:attempt-id :outcome :run-id-status
+                               :run-id-absence]))))))))
 
 (deftest service-source-has-no-process-spawn-surface
   (let [source (slurp
@@ -228,8 +239,12 @@
           (is (= true (deref close-entered 1000 false)))
           (is (false? (:running? (service/status))))
           (is (= {:attempt-id "attempt-close-order"
-                  :outcome :grounded-change}
-                 (:last-result (service/status))))
+                  :outcome :grounded-change
+                  :run-id-status :absent
+                  :run-id-absence :runner-did-not-return-run-id}
+                 (select-keys (:last-result (service/status))
+                              [:attempt-id :outcome :run-id-status
+                               :run-id-absence])))
           (is (= {:status :pending :stage :close}
                  (:registry-publication (service/status))))
           ;; Publication remains synchronous and observable; only the
@@ -239,6 +254,22 @@
           (is (= :completed (:status (service/await-click! click-id))))
           (is (= :published
                  (get-in (service/status) [:registry-publication :status]))))))))
+
+(deftest terminal-result-persists-exact-click-run-binding
+  (let [run-id "run-exact-binding"
+        run! (fn [_] {:attempt-id "attempt-exact-binding"
+                      :outcome :grounded-change
+                      :run/id run-id})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (let [last-result (:last-result (service/status))
+              record (edn/read-string (slurp (:run-binding last-result)))]
+          (is (= {:click-id click-id :run/id run-id :run-id-status :present}
+                 (select-keys last-result [:click-id :run/id :run-id-status])))
+          (is (= {:click/id click-id :run/id run-id :run-id-status :present}
+                 (select-keys record [:click/id :run/id :run-id-status]))))))))
 
 (deftest registry-publication-failure-does-not-rewrite-terminal-result
   (let [run! (fn [_]
