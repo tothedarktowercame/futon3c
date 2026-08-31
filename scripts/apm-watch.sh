@@ -11,6 +11,7 @@ cd /home/joe/code/futon3c
 
 prev=""; lasttk=""; lastrs=""; lasten=""; lastcampaign=""; stall=0
 
+lastfrozen=""
 while true; do
   # Watch the most recently touched campaign that the coordinator registry
   # actually knows about. Plain "most recently touched" follows fixture and
@@ -48,7 +49,7 @@ while true; do
   # nothing had been re-enabled -- the watch had simply changed subject.
   if [ "$campaign" != "$lastcampaign" ]; then
     [ -n "$lastcampaign" ] && echo "== WATCHING $campaign $(date -u +%H:%M:%SZ) (was $lastcampaign)"
-    prev=""; lasttk=""; lastrs=""; lasten=""; stall=0
+    prev=""; lasttk=""; lastrs=""; lasten=""; stall=0; lastfrozen=""
     lastcampaign="$campaign"
   fi
 
@@ -103,6 +104,29 @@ while true; do
 
   # An ABSENT tick counter is not a frozen one: "" = "" compares equal and
   # would report a stall forever against a directory that never ticks.
+  # Ticks advancing is not progress. On 2026-08-30/31 f65 sat at promote-solver
+  # for NINE HOURS through two transport repairs while the regulator ticked
+  # ~10000 times with no error, and this watch called that healthy because it
+  # only ever asked whether the tick counter moved. Watch the FRAME instead:
+  # the newest phase file under the active frame's live/ directory. Solver
+  # rounds and student attempts legitimately take tens of minutes, so only
+  # speak after 90 minutes of no phase write while the coordinator is enabled.
+  afr=$(grep -o ':frame/id "[^"]*"' "$C/queue-state.edn" 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/')
+  if [ -n "$afr" ] && [ "$en" = "enabled" ]; then
+    newest=$(ls -t "$C"/*"$afr"/live/*.edn 2>/dev/null | head -1)
+    if [ -n "$newest" ]; then
+      age=$(( $(date +%s) - $(stat -c %Y "$newest" 2>/dev/null || echo 0) ))
+      if [ "$age" -ge 5400 ]; then
+        if [ "$lastfrozen" != "$afr" ]; then
+          echo "!! FRAME $afr HAS NOT ADVANCED in $(( age / 60 ))min $(date -u +%H:%M:%SZ) -- newest phase $(basename "$newest" .edn); ticks may still be moving"
+          lastfrozen="$afr"
+        fi
+      else
+        lastfrozen=""
+      fi
+    fi
+  fi
+
   if [ -n "$tk" ] && [ "$qs" != ":paused" ] && [ "$qs" != ":pause-after-active" ] \
      && [ "$rs" != ":failed" ] && [ "$en" != "disabled" ]; then
     if [ "$tk" = "$lasttk" ]; then
