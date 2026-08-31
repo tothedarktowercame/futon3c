@@ -324,6 +324,29 @@
                                             :evidence/body {:hook "only"}})
                                "http://substrate"))))))
 
+(deftest review-input-timeout-is-a-typed-retryable-transport-outcome
+  (let [candidate {:memory-id "m" :content-digest "digest"}
+        timeout (java.net.http.HttpTimeoutException. "request timed out")
+        result (sut/review-inputs
+                [candidate]
+                (fn [_]
+                  (throw (java.util.concurrent.ExecutionException. timeout)))
+                "http://substrate")]
+    (is (= :promotion-review-candidate-evidence-timeout
+           (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))
+    (is (#'live-promotion/transport-failure? result))))
+
+(deftest review-input-nontransport-exception-still-escapes
+  (is (thrown-with-msg?
+       IllegalStateException #"programmer fault"
+       (sut/review-inputs [{:memory-id "m" :content-digest "digest"}]
+                          (fn [_] (throw (IllegalStateException.
+                                         "programmer fault")))
+                          "http://substrate"))))
+
 ;; A pair written before the atomic route existed can be half-present: the
 ;; evidence committed and the edge did not. The atomic route refuses that
 ;; evidence id with 409, so the pair write cannot supply the missing edge --

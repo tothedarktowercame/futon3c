@@ -16,6 +16,25 @@
 (defn- nonblank? [value]
   (and (string? value) (not (str/blank? value))))
 
+(defn- timeout-throwable [error]
+  (some #(when (instance? java.net.http.HttpTimeoutException %) %)
+        (take-while some? (iterate #(.getCause ^Throwable %) error))))
+
+(defn- fetch-review-entry [fetch-entry memory-id]
+  (try
+    {:ok true :entry (fetch-entry memory-id)}
+    (catch Throwable error
+      (if-let [timeout (timeout-throwable error)]
+        {:ok false
+         :error/code :promotion-review-candidate-evidence-timeout
+         :error/component :transport
+         :transport/acquired-outcome :timeout
+         :transport/evidence :not-obtained
+         :memory-id memory-id
+         :exception/class (.getName (class timeout))
+         :exception/message (.getMessage timeout)}
+        (throw error)))))
+
 (defn- evidence-body [candidate]
   (select-keys candidate [:name :hook :kind :body :why :how-to-apply
                           :admission/schema]))
@@ -286,9 +305,13 @@
           inputs []]
      (if-let [candidate (first remaining)]
        (let [memory-id (:memory-id candidate)
-             entry (fetch-entry memory-id)
+             fetched (fetch-review-entry fetch-entry memory-id)
+             entry (:entry fetched)
              body (:evidence/body entry)]
          (cond
+           (not (:ok fetched))
+           fetched
+
            (nil? entry)
            {:ok false
             :error/code :promotion-review-candidate-evidence-unfetchable
