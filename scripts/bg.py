@@ -140,6 +140,21 @@ def _bounded_public(record):
 
 
 def _launch_bounded(shell_cmd, opts):
+    # A bounded test receipt is evidence about code only when the submitted
+    # working directory identifies a Git repository.  systemd's default cwd
+    # is not a safe inference from an arbitrary shell command.
+    requested_dir = opts.get("dir")
+    if not requested_dir:
+        return {"ok": False, "reason": "repository-basis-required",
+                "state": "refused",
+                "remediation": "pass --dir pointing at the repository under test"}
+    basis_probe = subprocess.run(
+        ["git", "-C", requested_dir, "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True)
+    if basis_probe.returncode:
+        return {"ok": False, "reason": "repository-basis-unreadable",
+                "state": "refused", "dir": requested_dir,
+                "detail": basis_probe.stderr.strip()}
     os.makedirs(BOUNDED_DIR, exist_ok=True)
     lock = open(BOUNDED_LOCK, "a+")
     fcntl.flock(lock, fcntl.LOCK_EX)
@@ -255,8 +270,9 @@ def main(argv):
             elif argv[i] == "--tasks-max": opts["tasks-max"] = int(argv[i + 1]); i += 2
             elif argv[i] == "--window": opts["window-kind"] = argv[i + 1]; i += 2
             else: i += 1
-        print(json.dumps(_launch_bounded(argv[1], opts), indent=2, sort_keys=True))
-        return 0
+        result = _launch_bounded(argv[1], opts)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0 if result.get("ok") else 1
     elif cmd == "test-status":
         record = _load_bounded().get(argv[1])
         print(json.dumps(_bounded_public(record) if record else None, indent=2, sort_keys=True))

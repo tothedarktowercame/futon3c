@@ -144,6 +144,14 @@ def main():
         reason = "test-failure"
     if (max_delta or 0) > 0 or markers:
         reason = "resource-limit-failure"
+    basis_stable = basis_started == basis_finished
+    # Defensive backstop for direct/legacy invocation of this runner.  bg.py
+    # refuses such launches before submission, but an unattributable green
+    # command must never become a healthy-looking receipt.
+    if not basis_started.get("readable") or not basis_finished.get("readable"):
+        reason = "repository-basis-unavailable"
+    elif not basis_stable:
+        reason = "repository-basis-changed"
     receipt = {"schema": "futon-bounded-test-v1", "started-at": started,
                "finished-at": now(), "command": args.command,
                "inner-exit": inner, "outer-exit": 0 if reason is None else 125,
@@ -153,7 +161,7 @@ def main():
                "native-thread-markers": markers}
     receipt["repository-basis-start"] = basis_started
     receipt["repository-basis-finish"] = basis_finished
-    receipt["repository-basis-stable"] = (basis_started == basis_finished)
+    receipt["repository-basis-stable"] = basis_stable
     receipt["resource-status"] = resource_status(receipt)
     receipt["failure-resource-correlation"] = failure_resource_correlation(receipt)
     receipt["receipt-path"] = args.receipt
