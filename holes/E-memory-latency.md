@@ -168,6 +168,33 @@ same measurements when the WM domain is admitted or corpus size changes
 materially. The remaining obvious latency target is FTS, not endpoint
 membership.
 
+### First fixed-query monitoring series, 2026-08-31
+
+`scripts/memory_latency_monitor.clj` runs the fixed probe series required
+above and writes a machine-readable EDN record with cold/warm classification,
+explicit limits, per-observation clocks, failure separation, and percentiles
+reported only at a stated sample size (threshold 20 warm observations).
+Self-check asserts the percentile and reporting-threshold logic. Bounded
+reads: one five-endpoint projection POST (limit 9) and one text-search GET
+(limit 5) per repetition; no writes, no admission pressure.
+
+The recorded series `holes/labs/M-typed-memories/latency-monitor-20260831.edn`
+(25 repetitions, single caller, futon1b projection revision 109, 50/50
+requests status 200, 0 failures):
+
+- projection (one populated endpoint + four misses): cold 98.7 ms; warm
+  min 3.30 / p50 3.68 / p95 5.45 / max 6.83 ms;
+- fixed text-search (`normalize a denominator before using field_simp`,
+  limit 5): cold 668.8 ms; warm min 683.9 / p50 872.8 / p95 1046.5 /
+  max 1126.6 ms.
+
+This confirms the earlier narrow conclusion with a stated sample size: the
+bounded shared projection is single-digit milliseconds at p95, and FTS — not
+endpoint membership — remains the dominant latency term. These are
+single-caller probes without deliberate concurrency; not a general p95 or
+admission claim. Rerun the same script when the corpus or load changes.
+
+
 ## The observed cases
 
 All three probes used:
