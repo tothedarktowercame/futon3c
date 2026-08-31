@@ -85,16 +85,26 @@
      :decision decision}))
 
 (defn- successor-observation [job-id terminal-collection findings]
-  (campaign-trace/validate-authoritative-observation
-   :successor
+  (let [collection-id
+        (or (get-in terminal-collection [:evidence :collection/id])
+            ;; Promotion's apparatus-repair path can begin after the role
+            ;; terminal was durably observed but before a live-job-driver
+            ;; collection envelope was retained.  Bind that collection to the
+            ;; exact persisted predecessor/finding tuple; an announced
+            ;; successor must never carry an empty collection witness.
+            (machine/ledger-digest
+             [{:collection/type :promotion-repair-terminal
+               :job-id (str job-id)
+               :findings (vec findings)}]))]
+    (campaign-trace/validate-authoritative-observation
+     :successor
   {:predecessor-id (str job-id)
    :terminal-evidence-id (str job-id)
-   :collection-evidence-id (str (or (get-in terminal-collection
-                                            [:evidence :collection/id]) ""))
+   :collection-evidence-id (str collection-id)
    :disposition (pr-str (vec findings))
    :predecessor-persisted? true
    :successor-announced-id ""
-   :successor-activated-id ""}))
+   :successor-activated-id ""})))
 
 (defn- bind-last-successor [state successor-id]
   (let [index (dec (count (:superseded-terminals state)))]

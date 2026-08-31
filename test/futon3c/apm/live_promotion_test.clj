@@ -180,6 +180,15 @@
            (:error/code result)))
     (is (zero? @successors))))
 
+(deftest promotion-repair-successor-always-has-collection-evidence
+  (let [observation (#'sut/successor-observation
+                     "terminal-job" nil [:reviewer-missing])]
+    (is (string? (:collection-evidence-id observation)))
+    (is (not-empty (:collection-evidence-id observation)))
+    (is (= observation
+           (#'sut/successor-observation
+            "terminal-job" nil [:reviewer-missing])))))
+
 (deftest invisible-candidate-redispatches-scribe-before-observing-review
   (let [saved (atom nil)
         reviewed? (atom false)
