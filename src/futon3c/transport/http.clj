@@ -246,6 +246,36 @@
         :else nil))))
 
 (defonce ^:private !invoke-jobs-ledger (atom nil))
+(defonce ^:private !active-invoke-job-index
+  ;; Derived, process-local projection. The durable ledger remains the sole
+  ;; authority; this index is rebuilt from it on load and is never persisted.
+  (atom nil))
+
+(def ^:private active-invoke-job-states
+  #{"queued" "activating" "running" "overrun" "delivered"})
+
+(defn- active-invoke-job?
+  [job]
+  (and (some-> (:agent-id job) str str/trim not-empty)
+       (contains? active-invoke-job-states (some-> (:state job) str))))
+
+(defn- rebuild-active-invoke-job-index!
+  [ledger]
+  (let [index {:ledger ledger
+               :job-ids (into #{}
+                              (keep (fn [[job-id job]]
+                                      (when (active-invoke-job? job) job-id)))
+                              (:jobs ledger))}]
+    (reset! !active-invoke-job-index index)
+    index))
+
+(defn- active-invoke-jobs
+  [ledger]
+  (let [cached @!active-invoke-job-index
+        index (if (identical? ledger (:ledger cached))
+                cached
+                (rebuild-active-invoke-job-index! ledger))]
+    (keep #(get-in ledger [:jobs %]) (:job-ids index))))
 
 (declare invoke-execution-evidence)
 (declare record-invoke-job-delivery!)
@@ -266,7 +296,8 @@
 (defn reset-invoke-jobs!
   "Test/dev helper: clear in-memory invoke-job ledger so next access reloads from disk."
   []
-  (reset! !invoke-jobs-ledger nil))
+  (reset! !invoke-jobs-ledger nil)
+  (reset! !active-invoke-job-index nil))
 
 (defn- invoke-jobs-store-path
   []
@@ -343,13 +374,18 @@
   (when (nil? @!invoke-jobs-ledger)
     (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
       (reset! !invoke-jobs-ledger loaded)
+      (rebuild-active-invoke-job-index! loaded)
       (persist-invoke-jobs-ledger! loaded)))
+  (when-not (identical? @!invoke-jobs-ledger
+                        (:ledger @!active-invoke-job-index))
+    (rebuild-active-invoke-job-index! @!invoke-jobs-ledger))
   @!invoke-jobs-ledger)
 
 (defn- update-invoke-jobs-ledger!
   [f]
   (ensure-invoke-jobs-ledger!)
   (let [updated (swap! !invoke-jobs-ledger f)]
+    (rebuild-active-invoke-job-index! updated)
     (persist-invoke-jobs-ledger! updated)))
 
 (defn- update-invoke-jobs-ledger-vals!
@@ -363,6 +399,7 @@
   [f]
   (ensure-invoke-jobs-ledger!)
   (let [[before after] (swap-vals! !invoke-jobs-ledger f)]
+    (rebuild-active-invoke-job-index! after)
     (persist-invoke-jobs-ledger! after)
     [before after]))
 
@@ -431,7 +468,9 @@
   [job-id event]
   (when-let [{:keys [event-type payload]} (trim-stream-event event)]
     (ensure-invoke-jobs-ledger!)
-    (swap! !invoke-jobs-ledger
+    (let [[before after]
+          (swap-vals!
+           !invoke-jobs-ledger
            (fn [ledger]
              (if-let [job (get-in ledger [:jobs job-id])]
                (assoc-in ledger [:jobs job-id]
@@ -447,6 +486,12 @@
                                job))
                            (append-job-event job event-type payload)))
                ledger)))
+          cached @!active-invoke-job-index]
+      ;; Stream events cannot change lifecycle state. Carry the active ids to
+      ;; the new immutable ledger value without rescanning job history.
+      (if (identical? before (:ledger cached))
+        (reset! !active-invoke-job-index (assoc cached :ledger after))
+        (rebuild-active-invoke-job-index! after)))
     ;; WS doorbell (2026-07-05): tell connected observers an event landed so
     ;; follow-mode can poll NOW instead of on its fallback interval. Tiny
     ;; frame — ids only, no payload; the poll fetches content (and repairs
@@ -1139,13 +1184,10 @@
     (or (some-> addressed reg/get-agent :agent/id :id/value str)
         addressed)))
 
-(defn active-invoke-job-counts
-  "Return canonical non-terminal counts and inbox age keyed by agent-id.
-   Example:
-   {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
-  []
-  (ensure-invoke-jobs-ledger!)
-  (let [now-ms (System/currentTimeMillis)]
+(defn- summarize-active-invoke-jobs
+  ([jobs]
+   (summarize-active-invoke-jobs jobs (System/currentTimeMillis)))
+  ([jobs now-ms]
     (reduce
    (fn [acc job]
      (let [aid (canonical-job-agent-id (:agent-id job))
@@ -1156,7 +1198,7 @@
                           (.toEpochMilli (Instant/parse (str (:created-at job))))
                           (catch Throwable _ now-ms)))
            age-ms (when created-ms (max 0 (- now-ms created-ms)))]
-       (if-not (and aid (#{"queued" "activating" "running" "overrun" "delivered"} state))
+       (if-not (and aid (contains? active-invoke-job-states state))
          acc
          (cond-> (-> acc
                      (update-in [aid :queued-jobs] (fnil + 0)
@@ -1169,7 +1211,39 @@
                (update-in [aid :oldest-unconsumed-age-ms]
                           (fn [oldest] (max (long (or oldest 0)) age-ms))))))))
    {}
-   (vals (get @!invoke-jobs-ledger :jobs {})))))
+     jobs)))
+
+(defn active-invoke-job-counts-full-scan
+  "Control implementation: derive active counts by scanning authoritative
+   job history. Kept as an executable falsifier for the indexed read path."
+  []
+  (let [ledger (ensure-invoke-jobs-ledger!)]
+    (summarize-active-invoke-jobs (vals (:jobs ledger)))))
+
+(defn active-invoke-job-counts
+  "Return canonical non-terminal counts and inbox age keyed by agent-id.
+   After initialization, cost is proportional to active jobs, not history.
+   Example:
+   {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
+  []
+  (let [ledger (ensure-invoke-jobs-ledger!)]
+    (summarize-active-invoke-jobs (active-invoke-jobs ledger))))
+
+(defn active-invoke-job-counts-consistency
+  "Compare indexed and authoritative full-scan counts at one observation time.
+   This is the index's executable falsifier; differing wall clocks would make
+   delivered-job age fields differ even when both populations are correct."
+  []
+  (let [ledger (ensure-invoke-jobs-ledger!)
+        now-ms (System/currentTimeMillis)
+        indexed (summarize-active-invoke-jobs
+                 (active-invoke-jobs ledger) now-ms)
+        full-scan (summarize-active-invoke-jobs (vals (:jobs ledger)) now-ms)]
+    {:pass? (= indexed full-scan)
+     :indexed indexed
+     :full-scan full-scan
+     :indexed-jobs (count (:job-ids @!active-invoke-job-index))
+     :history-jobs (count (:jobs ledger))}))
 
 (defn- inbox-health-summary
   [job-counts]
