@@ -796,3 +796,49 @@ everything else on the shelf goes unread. Whether that is the retriever finding 
 genuinely general item, or a ranking artefact that keeps returning the same row, is a
 question about the retriever, and it is answerable by looking at what the shelf offers and
 in what order — which is a different measurement from the ones in this note.
+
+## Three verified solves the bank never saw (2026-08-31)
+
+Frames whose FIRST attempt closed the problem mostly did not close the frame. f54, f55,
+f58, f60 and f61 each ran one student attempt, one guide intervention, and no
+`close-frame`: they are the frames parked behind the guide-mode barrier. Promotion to a
+banked solve fires at frame close, so each of their proofs stopped where the frame did.
+
+Five sorry-free attempt sources, none of them on master. Sorry-free is not the gate,
+though, so I built each one against apm-lean's pinned Mathlib and printed its axioms:
+
+    f60  b00J02  compiles, closes apm_b00j02, axioms include
+                 apm_b00j02._native.native_decide.ax_1_2   -> REFUSED, correctly
+    f61  b01A02  five native_decide calls                  -> refused on the same ground
+    f54  a99J05  [propext, Classical.choice, Quot.sound]    -> passes
+    f55  a99J06  [propext, Classical.choice, Quot.sound]    -> passes
+    f58  aunk04  [propext, Classical.choice, Quot.sound]    -> passes
+
+f60 is the useful case for calibrating what a student's own report is worth. Its attempt
+recorded "closed: apm_b00j02 proved with 0 sorries ... exit 0", and every word of that is
+true — the file compiles and the theorem is closed. It closes on `native_decide`, which
+trusts the compiler's evaluation rather than the kernel, and the axiom print is the only
+thing in the record that says so. The gate refusing it is the gate working.
+
+The other three do pass, on all three counts: clean axioms, and a theorem statement
+byte-identical to master's after whitespace normalisation. Their commits already existed —
+`refs/apm/student-candidates/<frame>/<problem>/attempt-1/<sha>` — holding exactly the file
+I built. So the work was preserved; what never happened was the promotion from preserved
+candidate to banked solve.
+
+    a99J05  f5916ac9  (f54/attempt-1)   master has 2 sorries
+    a99J06  d3b1ea91  (f55/attempt-1)   master has 1 sorry
+    aunk04  7ead4b45  (f58/attempt-1)   master has 3 sorries
+
+I pinned all three under `refs/apm/rescued-solves/<problem>/<sha>` and stopped there. They
+are NOT swept. Every problem banked so far carried a pin the machine made through
+`verify-and-pin!`; these carry a pin I made from my own build, and substituting my
+verification for the machine's gate is a different act from running the sweep the machine
+had already authorised. The sweep is Joe's call.
+
+a99J05 also shows the stall is not new: it already had a rescued-solves pin from
+2026-08-29 (`f653f3dc`, a different and independently sorry-free proof), and master still
+has its two sorries two days later. Rescuing the work is happening. Banking it is not.
+`bank-audit/unbanked-solved` reads solves out of the campaign's frame records, so a frame
+that never closed contributes nothing for it to find — which is why today's sweep saw only
+f65/b01J04 and f51/a98J03, and none of these.
