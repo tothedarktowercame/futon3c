@@ -246,3 +246,55 @@
            (:evidence-counting refinement)))
     (is (nil? (:selected-mission result)))
     (is (false? (:live-ordering-changed? result)))))
+
+(deftest disconnected-carrier-patterns-become-typed-holes
+  (testing "a shown pattern with no descent edge and no declaration is an explicit hole"
+    (let [fixture-cascade (:cascade @phase5-fixture)
+          result (golden-result
+                  {:cascade (update-in fixture-cascade
+                                       [:semilattice :descent]
+                                       #(vec (drop 1 %)))})
+          holes (filter #(= :unrelated-carrier-pattern (:hole/type %))
+                        (:holes result))]
+      ;; dropping the R9->R6 edge leaves p4ng/R9-independent-witness
+      ;; carried but related to nothing.
+      (is (= ["p4ng/R9-independent-witness"]
+             (mapv :control-pattern-id holes)))
+      (is (every? #(seq (:why %)) holes))
+      (is (nil? (:selected-mission result))))))
+
+(deftest typed-unrelated-declaration-suppresses-the-hole
+  (testing "a declared unrelated pattern carries a typed reason instead of a hole"
+    (let [base (update-in (:cascade @phase5-fixture)
+                          [:semilattice :descent]
+                          #(vec (drop 1 %)))
+          declared (assoc-in base
+                             [:semilattice :unrelated]
+                             [{:pattern-id "p4ng/R9-independent-witness"
+                               :reason "R9 states the witness invariant itself; it has nothing above it to stand on"}])
+          result (golden-result {:cascade declared})]
+      (is (empty? (filter #(= :unrelated-carrier-pattern (:hole/type %))
+                          (:holes result))))
+      (is (= [{:pattern-id "p4ng/R9-independent-witness"
+               :reason "R9 states the witness invariant itself; it has nothing above it to stand on"}]
+             (get-in result [:cascade :semilattice/unrelated]))))))
+
+(deftest malformed-unrelated-declaration-fails-closed
+  (testing "blank reason or out-of-carrier pattern rejects the whole cascade"
+    (let [base (update-in (:cascade @phase5-fixture)
+                          [:semilattice :descent]
+                          #(vec (drop 1 %)))]
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"invalid unrelated-pattern declaration"
+           (golden-result
+            {:cascade (assoc-in base
+                                [:semilattice :unrelated]
+                                [{:pattern-id "p4ng/R9-independent-witness"
+                                  :reason ""}])})))
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"invalid unrelated-pattern declaration"
+           (golden-result
+            {:cascade (assoc-in base
+                                [:semilattice :unrelated]
+                                [{:pattern-id "p4ng/not-in-carrier"
+                                  :reason "not in the carrier"}])}))))))

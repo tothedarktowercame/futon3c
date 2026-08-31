@@ -16,6 +16,13 @@
   [value]
   (and (string? value) (not (str/blank? value))))
 
+(defn- valid-unrelated-declaration?
+  [entry shown-set]
+  (and (map? entry)
+       (nonblank-string? (:pattern-id entry))
+       (contains? shown-set (:pattern-id entry))
+       (nonblank-string? (:reason entry))))
+
 (defn- validate-cascade
   [{:keys [shown semilattice policy-holes] :as cascade}]
   (let [descent (or (:descent semilattice) [])
@@ -34,7 +41,19 @@
           (vector? (or policy-holes [])))
       (throw (ex-info "invalid outer control-pattern cascade"
                       {:cascade cascade})))
-    (assoc cascade :policy-holes (vec (or policy-holes [])))))
+    ;; A pattern may be *deliberately* unrelated to the rest of the carrier,
+    ;; but only with a typed reason (T-strategic-cascade-emits-disconnected-
+    ;; patterns, repair option 2).  An untyped absence of relation is not
+    ;; accepted here: a declaration without a nonblank reason, or naming a
+    ;; pattern outside the carrier, is malformed.
+    (let [unrelated (vec (or (:unrelated semilattice) []))]
+      (when-not (every? #(valid-unrelated-declaration? % shown-set) unrelated)
+        (throw (ex-info "invalid unrelated-pattern declaration"
+                        {:semilattice/unrelated unrelated
+                         :shown shown})))
+      (assoc cascade
+             :policy-holes (vec (or policy-holes []))
+             :semilattice/unrelated unrelated))))
 
 (defn- validate-dependency
   [{:keys [mission-id depends-on status provenance] :as dependency}]
@@ -248,16 +267,29 @@
                  :control-pattern-id pattern-id
                  :why "Pattern step was outside the explicit query budget"})
               skipped-patterns)
+        connected-ids
+        (into (set (mapcat identity (get-in cascade [:semilattice :descent])))
+              (map :pattern-id (:semilattice/unrelated cascade)))
+        unrelated-holes
+        (->> (:shown cascade)
+             (remove connected-ids)
+             (mapv (fn [pattern-id]
+                     {:hole/type :unrelated-carrier-pattern
+                      :control-pattern-id pattern-id
+                      :why "Pattern is carried by the cascade with no descent edge and no typed unrelated declaration"}))
+             vec)
         holes (vec (concat (:policy-holes cascade)
                            no-result-holes
                            transition-holes
                            dependency-holes
-                           budget-holes))
+                           budget-holes
+                           unrelated-holes))
         mint-proposals (mint-proposals holes)]
     {:status :dark
      :algorithm algorithm
      :cascade
-     (select-keys cascade [:shown :semilattice :policy-holes])
+     (select-keys cascade [:shown :semilattice :policy-holes
+                           :semilattice/unrelated])
      :budget {:initial budget
               :spent (count executed-patterns)
               :remaining (- budget (count executed-patterns))

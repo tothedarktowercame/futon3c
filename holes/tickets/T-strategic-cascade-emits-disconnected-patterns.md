@@ -7,7 +7,25 @@ broken cascades is **data** — if we had a working eat-the-tail we would be abl
 propagate it forward into a well-working cascade system."*
 
 **Status:** open. Diagnosis complete and reduced; the repair and its acceptance
-corpus are stated below.
+corpus are stated below. The futon3c consumer side is implemented
+(2026-08-31, see below); the futon2 producer-side census pin still moves in a
+futon2 commit.
+
+### futon3c consumer side, 2026-08-31
+
+`futon3c.peripheral.strategic-cascade` now enforces the repair's option 2 at
+the consumption boundary. `validate-cascade` accepts an optional
+`:semilattice :unrelated` carrier of
+`{:pattern-id <shown-member> :reason <nonblank>}` declarations; a declaration
+without a typed reason, or naming a pattern outside the `:shown` carrier,
+throws `invalid unrelated-pattern declaration` (fail closed). `outer-frontier`
+emits an `:unrelated-carrier-pattern` hole for every carried pattern that has
+no `:descent` edge and no typed declaration, and echoes accepted declarations
+in the result `:cascade` so a reviewer can distinguish deliberate
+unrelatedness from an untyped absence. Golden Phase-5 fixtures are unaffected
+(all their carrier members are connected). The census pin in
+futon2 `cascade_order_check_test.clj` is deliberately untouched: it belongs to
+the futon2 producer and moves in a futon2 commit per this ticket's own header.
 
 ## The reduction: 23 records, one defect
 
