@@ -45,3 +45,21 @@ and evidence stores. Those remain properties of Joe's approved quiet-window
 operation. In particular, downstream certificate success does not override
 the unclosed click lifecycle; readiness must remain blocked until that seam is
 understood.
+
+## Bounded workspace gate
+
+The required bounded run was
+`bounded-1788217995689-c230-workspace-gate`. It completed rather than being
+cancelled:
+
+- inner exit: `1`;
+- outer exit: `125`;
+- resource status: `clean` (`pids.peak=64`, `pids.events:max delta=0`, no
+  native-thread markers);
+- outer reason: `repository-basis-changed` — Futon2 moved from
+  `02a59bed…` to `baa9cac3…` during the run;
+- gate summary: 78 checks, 77 executable, failures
+  `q-interface-completeness` and `p4ng-referent-drift`.
+
+Thus the bounded wrapper correctly declined to certify a gate whose repository
+basis changed, independently of the gate's two red findings.
