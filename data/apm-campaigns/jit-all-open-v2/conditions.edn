@@ -118,32 +118,51 @@
  :by "claude-19",
  :loaded? false,
  :sha "0385f29d"}
-{:id "C-11",
- :at "2026-08-30T12:15Z",
- :by "codex-17",
- :kind :code,
- :since-frame "f60",
- :namespaces
+{:namespaces
  ["futon3c.apm.live-learning-phases"
   "futon3c.apm.live-promotion"
   "futon3c.apm.promotion-review-store"],
+ :since-frame "f60",
  :note
  "Close-frame fingerprint audit, controller-derived :receipt/memory-use-audit, and typed admission/review gate are live from f60. Constituent shas: 3a5761be, 33cc67ff, 894c3c19, db4aba12, ac6d80ae.",
  :head "ac6d80ae",
- :sha "ac6d80ae",
- :loaded? true}
-{:id "C-12",
+ :id "C-11",
+ :kind :code,
  :at "2026-08-30T12:15Z",
  :by "codex-17",
- :kind :code,
- :since-frame "f61",
- :namespaces
+ :loaded? true,
+ :sha "ac6d80ae"}
+{:namespaces
  ["futon3c.apm.memory-snapshot"
   "futon3c.apm.live-learning-phases"
   "futon3c.apm.queued-frame-adapter"],
+ :since-frame "f61",
  :note
  "Reviewed :memory-use/kind is the audit authority with one :substitutive/:regulative vocabulary; new promotion-proctor v4 and Guide v2.4 make the typed-kind and verbatim close-audit contracts explicit. Commits 30deb92e and 4a390c49.",
  :head "4a390c49",
- :sha "4a390c49",
+ :id "C-12",
+ :kind :code,
+ :at "2026-08-30T12:15Z",
+ :by "codex-17",
+ :loaded? true,
+ :sha "4a390c49"}
+{:id "C-13",
+ :at "2026-08-31T18:58Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "terminate exhausted promotion-pass repairs including f68 review-set mismatch",
+ :head "0a0a87e3",
+ :namespaces ["futon3c.apm.live-promotion"],
+ :loaded? true}
+{:id "C-14",
+ :at "2026-08-31T18:59Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "activate exhausted promotion-pass termination through guide/scribe orchestration",
+ :head "0a0a87e3",
+ :namespaces
+ ["futon3c.apm.live-learning-phases" "futon3c.apm.countdown-control"],
  :loaded? true}
 ]
