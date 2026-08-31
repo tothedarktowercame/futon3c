@@ -525,4 +525,36 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. Its last valid receipt, two "
         "approved reviews, exact visibility residual, and requested retry "
-        "remain preserved in authoritative queue state.")}]}
+        "remain preserved in authoritative queue state.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f68"
+   :problem/id "b90A03"
+   :last-valid-receipt/id
+   "aeb3d00df77b0006117f29326464a73edbd6f9e9ec9b814acaf637057c10a5cf"
+   :decision/at "2026-08-31T19:02:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :promotion-review-terminal-schema-failure
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The last valid scribe receipt materialized four candidates, and the "
+        "candidate and deposit sets contain the same four memory identifiers. "
+        "The independent promotion-proctor terminal nevertheless persisted an "
+        "empty review result after its single repair attempt, producing the "
+        "exact :review-set-mismatch residual. This is a terminal-report/schema "
+        "failure, not evidence approving or rejecting any candidate. The live "
+        "state-machine repair 0a0a87e3 separately prevents this exhausted hold "
+        "from waiting forever; it does not manufacture the missing reviews.")
+   :decision/recommended-route
+   (str "Preserve the last valid scribe receipt, all four materialized candidate "
+        "identifiers, and the empty persisted review result. Treat f68 as partial "
+        "after queue advance. Repair the promotion-proctor terminal contract so "
+        "an empty or missing review vector is rejected with an actionable typed "
+        "schema finding before consuming the sole apparatus-repair attempt.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No independent review verdict, "
+        "candidate publication, or promotion certificate was invented; the "
+        "four candidates remain preserved but unreviewed.")}]}
