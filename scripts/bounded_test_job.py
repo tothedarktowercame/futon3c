@@ -34,9 +34,33 @@ def event_max(root):
         return None
 
 
+def edn_string(value):
+    return json.dumps(value, ensure_ascii=False)
+
+
+def write_certificate_resource(path, receipt):
+    """Emit the certificate's EDN resource port from this measured receipt."""
+    status = ":clean" if receipt["outer-exit"] == 0 else ":dirty"
+    reason = "nil" if receipt["reason"] is None else ":" + receipt["reason"]
+    form = ("{:schema 1 :source-schema :futon-bounded-test-v1 "
+            ":status %s :reason %s :command-exit %d :wrapper-exit %d "
+            ":pids-events-max-delta %s :native-thread-exhaustion %s "
+            ":tasks-peak %d :source-receipt %s}\n" %
+            (status, reason, receipt["inner-exit"], receipt["outer-exit"],
+             "nil" if receipt["pids-events-max-delta"] is None
+             else receipt["pids-events-max-delta"],
+             "true" if receipt["native-thread-markers"] else "false",
+             receipt["pids-peak"], edn_string(receipt["receipt-path"])))
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(form)
+    os.replace(tmp, path)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--receipt", required=True)
+    p.add_argument("--certificate-resource")
     p.add_argument("--output", required=True)
     p.add_argument("--cwd")
     p.add_argument("command")
@@ -73,11 +97,14 @@ def main():
                "pids-peak": peak, "pids-events-max-before": before,
                "pids-events-max-after": after, "pids-events-max-delta": max_delta,
                "native-thread-markers": markers}
+    receipt["receipt-path"] = args.receipt
     tmp = args.receipt + ".tmp"
     with open(tmp, "w") as f:
         json.dump(receipt, f, indent=2, sort_keys=True)
         f.write("\n")
     os.replace(tmp, args.receipt)
+    if args.certificate_resource:
+        write_certificate_resource(args.certificate_resource, receipt)
     return receipt["outer-exit"]
 
 

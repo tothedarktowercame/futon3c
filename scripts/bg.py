@@ -150,6 +150,7 @@ def _launch_bounded(shell_cmd, opts):
     unit = "futon-test-%s.service" % job_id
     output = os.path.join(BOUNDED_DIR, job_id + ".log")
     receipt = os.path.join(BOUNDED_DIR, job_id + ".receipt.json")
+    certificate_resource = os.path.join(BOUNDED_DIR, job_id + ".resource.edn")
     runner = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bounded_test_job.py")
     tasks_max = int(opts.get("tasks-max", BOUNDED_TASKS_MAX))
     window_kind = opts.get("window-kind", "unclassified")
@@ -160,7 +161,8 @@ def _launch_bounded(shell_cmd, opts):
     cmd = ["systemd-run", "--user", "--unit=" + unit,
            "--slice=futon-testing.slice", "--property=TasksMax=%d" % tasks_max,
            "--property=RuntimeMaxSec=45min", "--property=KillMode=control-group",
-           sys.executable, runner, "--receipt", receipt, "--output", output]
+           sys.executable, runner, "--receipt", receipt,
+           "--certificate-resource", certificate_resource, "--output", output]
     if opts.get("dir"):
         cmd += ["--cwd", opts["dir"]]
     cmd += [shell_cmd]
@@ -174,7 +176,9 @@ def _launch_bounded(shell_cmd, opts):
               "dir": opts.get("dir"), "tasks-max": tasks_max,
               "window-kind": window_kind, "configuration": config,
               "submitted-at": submitted, "output-file": output,
-              "receipt-file": receipt, "submission-to-start-ms": None}
+              "receipt-file": receipt,
+              "certificate-resource-file": certificate_resource,
+              "submission-to-start-ms": None}
     record["agency-pids-events-max-before"] = agency_max
     records[job_id] = record
     _save_bounded(records)
