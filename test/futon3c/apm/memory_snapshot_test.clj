@@ -279,7 +279,7 @@
     (is (:ok result))
     (is (= {"prior-once" 1 "own-once" 1} @calls))))
 
-(deftest cumulative-publication-starts-independent-visibility-checks-concurrently
+(deftest cumulative-publication-starts-one-two-permit-visibility-wave
   (let [dir (Files/createTempDirectory "apm-cumulative-visible-parallel"
                                        (make-array FileAttribute 0))
         release (promise)
@@ -303,9 +303,9 @@
                   @release
                   true)}))]
     (try
-      (is (= 4 (deref (future
+      (is (= 2 (deref (future
                         (loop []
-                          (if (= 4 (count @started)) 4
+                          (if (= 2 (count @started)) 2
                               (do (Thread/sleep 5) (recur)))))
                       1000 :timed-out)))
       (finally (deliver release true)))
@@ -330,12 +330,12 @@
     (is (= :not-obtained (:transport/evidence result)))
     (is (= 1 (:visibility/candidate-count result)))
     (is (= :bounded-parallel (:visibility/execution result)))
-    (is (= 8 (:visibility/concurrency-bound result)))
+    (is (= 2 (:visibility/concurrency-bound result)))
     (is (= 5000 (:visibility/per-read-bound-ms result)))
     (is (= 4 (:visibility/reads-per-candidate-bound result)))
     (is (= 20000 (:visibility/aggregate-bound-ms result)))))
 
-(deftest large-visibility-set-has-a-deterministic-concurrency-bound
+(deftest large-visibility-set-respects-two-permit-substrate-capacity
   (let [dir (Files/createTempDirectory "apm-visible-130"
                                        (make-array FileAttribute 0))
         active (atom 0)
@@ -355,20 +355,20 @@
                  :evidence-visible?
                  (fn [_]
                    (let [n (swap! active inc)]
-                     (swap! peak max n)
-                     (Thread/sleep 2)
-                     (swap! active dec)
-                     (throw (ex-info "typed timeout"
-                                     {:transport/acquired-outcome :timeout}))))})]
-    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
-    (is (= :transport (:error/component result)))
-    (is (= :timeout (:transport/acquired-outcome result)))
-    (is (= :not-obtained (:transport/evidence result)))
+                     (try
+                       (swap! peak max n)
+                       (when (> n 2)
+                         (throw (ex-info "downstream permit queue overflow"
+                                         {:transport/acquired-outcome :timeout})))
+                       (Thread/sleep 2)
+                       true
+                       (finally (swap! active dec)))))})]
+    (is (:ok result) result)
     (is (= 130 (:visibility/candidate-count result)))
-    (is (= 8 (:visibility/concurrency-bound result)))
-    (is (<= @peak 8))
+    (is (= 2 (:visibility/concurrency-bound result)))
+    (is (<= @peak 2))
     (is (> @peak 1))
-    (is (= 340000 (:visibility/aggregate-bound-ms result)))))
+    (is (= 1300000 (:visibility/aggregate-bound-ms result)))))
 
 (deftest own-visibility-exception-retains-acquired-outcome
   (let [dir (Files/createTempDirectory "apm-own-visible-failure"

@@ -20,13 +20,14 @@
   (= "reviewed" (some-> x name)))
 
 (def ^:private visibility-read-bound-ms 5000)
-(def visibility-concurrency-bound 8)
+(def visibility-concurrency-bound 2)
 (def ^:private visibility-reads-per-candidate-bound 4)
 
 (defn- bounded-visibility-mapv
   "Run visibility reads in deterministic waves.  The fixed wave size prevents
   a large inherited snapshot from turning into one substrate request per
-  candidate at once, while retaining parallel latency within each wave."
+  candidate at once.  The bound matches futon1b's two admitted request permits,
+  so visibility requests do not expire while queued behind the node itself."
   [f candidates]
   (->> candidates
        (partition-all visibility-concurrency-bound)
