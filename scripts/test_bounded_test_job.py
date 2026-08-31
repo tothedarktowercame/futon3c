@@ -38,6 +38,27 @@ class CertificateResourceTest(unittest.TestCase):
             self.assertIn(":reason :test-failure", text)
             self.assertIn(":command-exit 7", text)
 
+    def test_failed_test_is_correlated_with_clean_run_resources(self):
+        receipt = self.receipt(**{"outer-exit": 125, "inner-exit": 7,
+                                  "reason": "test-failure"})
+        correlation = MODULE.failure_resource_correlation(receipt)
+        self.assertEqual("clean", correlation["resource-status"])
+        self.assertEqual("whole-run-not-per-test", correlation["scope"])
+        self.assertIn("cannot identify which test", correlation["limitation"])
+        self.assertIn("resource-status=:clean",
+                      MODULE.correlation_line(correlation))
+
+    def test_tiny_budget_resource_failure_is_correlated_as_dirty(self):
+        # C91's tiny-budget fixture shape: green inner suite, cgroup max events.
+        receipt = self.receipt(**{"outer-exit": 125, "inner-exit": 0,
+                                  "reason": "resource-limit-failure",
+                                  "pids-events-max-delta": 2})
+        correlation = MODULE.failure_resource_correlation(receipt)
+        self.assertEqual("dirty", correlation["resource-status"])
+        self.assertEqual(2, correlation["pids-events-max-delta"])
+        self.assertIn("resource-status=:dirty",
+                      MODULE.correlation_line(correlation))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,6 +38,38 @@ def edn_string(value):
     return json.dumps(value, ensure_ascii=False)
 
 
+def resource_status(receipt):
+    """Classify run-level resource evidence independently of the test verdict."""
+    delta = receipt.get("pids-events-max-delta")
+    if delta is None:
+        return "unavailable"
+    if delta > 0 or receipt.get("native-thread-markers"):
+        return "dirty"
+    return "clean"
+
+
+def failure_resource_correlation(receipt):
+    """Join an outer failure to the resource evidence for the same run."""
+    if receipt.get("outer-exit") == 0:
+        return None
+    return {"scope": "whole-run-not-per-test",
+            "resource-status": resource_status(receipt),
+            "command-exit": receipt.get("inner-exit"),
+            "pids-events-max-delta": receipt.get("pids-events-max-delta"),
+            "native-thread-exhaustion": bool(receipt.get("native-thread-markers")),
+            "limitation": ("run-level correlation cannot identify which test "
+                           "caused resource pressure")}
+
+
+def correlation_line(correlation):
+    return ("bounded-test failure/resource correlation: "
+            "command-exit=%s resource-status=:%s pids.events:max-delta=%s "
+            "scope=:%s; %s\n" %
+            (correlation["command-exit"], correlation["resource-status"],
+             correlation["pids-events-max-delta"], correlation["scope"],
+             correlation["limitation"]))
+
+
 def write_certificate_resource(path, receipt):
     """Emit the certificate's EDN resource port from this measured receipt."""
     status = ":clean" if receipt["outer-exit"] == 0 else ":dirty"
@@ -97,6 +129,8 @@ def main():
                "pids-peak": peak, "pids-events-max-before": before,
                "pids-events-max-after": after, "pids-events-max-delta": max_delta,
                "native-thread-markers": markers}
+    receipt["resource-status"] = resource_status(receipt)
+    receipt["failure-resource-correlation"] = failure_resource_correlation(receipt)
     receipt["receipt-path"] = args.receipt
     tmp = args.receipt + ".tmp"
     with open(tmp, "w") as f:
@@ -105,6 +139,11 @@ def main():
     os.replace(tmp, args.receipt)
     if args.certificate_resource:
         write_certificate_resource(args.certificate_resource, receipt)
+    if receipt["failure-resource-correlation"]:
+        line = correlation_line(receipt["failure-resource-correlation"])
+        with open(args.output, "a") as log:
+            log.write(line)
+        sys.stdout.write(line)
     return receipt["outer-exit"]
 
 
