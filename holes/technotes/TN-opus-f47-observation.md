@@ -965,3 +965,43 @@ looked like a distinct defect, and roughly an hour of my reading them as one.
 carrying the per-pin findings was discarded by the tick's catch, so by the time anyone
 looked the manifest validated cleanly and the cause was unrecoverable. `bdf494aa` keeps
 `ex-data` for an `IExceptionInfo`; the next such stop will say which requirement failed.
+
+## A finding the machine could detect but never repair (2026-08-31)
+
+At 16:17:09Z the regulator went `:failed` on `:live-job-terminal-repair-request-invalid`,
+under which sat `:terminal-repair-instruction-missing` for this finding:
+
+    {:operation :attachment-projection
+     :failure   :promotion-review-projection-failed
+     :finding   {:edge-patterns   ["math-formalization/coercion-bridge"
+                                   "math-formalization/notation-semantics-traps"]
+                 :review-patterns ["math-formalization/notation-semantics-traps"]}}
+
+A promotion candidate was attached to two patterns and the reviewer reviewed one.
+
+`repair-finding-instructions` is a map keyed by finding KEYWORD, and the missing-instruction
+check was `(remove repair-finding-instructions findings)` — looking each finding up in that
+table. `promotion_review_store` emits MAP-shaped findings, and a map looked up in a map of
+keywords yields nil, so every attachment-projection finding was classified "no actionable
+instruction". The repair request was refused and the regulator died.
+
+The shape of the defect is worth naming: this is a mismatch the machine detects precisely
+and cannot ask anyone to fix. The whole point of the repair path is to turn a rejected
+role terminal into a correctable one, and a finding with no instruction inverts that —
+detection becomes fatal instead of corrective. Under-covering a review is an ordinary
+reviewer mistake, not a reason to stop a campaign.
+
+Fixed in `69109f33` (codex-2, reviewed here): a narrow renderer matching only the exact
+`:attachment-projection` / `:promotion-review-projection-failed` shape with a non-empty
+edge-minus-review difference, naming the uncovered patterns in the instruction. The
+projection check itself is untouched — an under-covering review is still rejected, it is
+now repairable. Verified after reload: f67's exact finding renders "patterns absent from
+the review: math-formalization/coercion-bridge", an unknown map still throws
+`:terminal-repair-instruction-missing`, and so does a projection finding with full
+coverage. Gates re-run here: 55/236 and 7/51 assertions, clj-kondo clean.
+
+**Residual.** The finding is built from `(ex-data e)` of whatever threw inside the
+projection, so its shape varies. Only this one shape has an instruction; the next
+differently-shaped projection failure will stop the regulator the same way. That is
+deliberate — a finding with genuinely no instruction should stay loud rather than be
+silently tolerated — but it means the fix is one shape deep, not general.
