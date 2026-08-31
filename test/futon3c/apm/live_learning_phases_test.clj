@@ -404,6 +404,41 @@
     (is (= :terminal-repair-instruction-missing (:error/code repair)))
     (is (= [:new-unrendered-finding] (:findings repair)))))
 
+(deftest projection-finding-repair-names-uncovered-patterns
+  (let [finding {:memory-id "memory-1"
+                 :review-evidence-id "review-1"
+                 :operation :attachment-projection
+                 :failure :promotion-review-projection-failed
+                 :finding {:memory-id "memory-1"
+                           :edge-patterns
+                           ["math-formalization/coercion-bridge"
+                            "math-formalization/notation-semantics-traps"]
+                           :review-patterns
+                           ["math-formalization/notation-semantics-traps"]}}
+        repair (sut/terminal-repair-request
+                {:dispatch/id "original" :dispatch/type :guide-intervention
+                 :frame-id "f67" :phase :guide-intervention-1
+                 :problem-id "b03J02" :agent-id "f67-guide"
+                 :mode :store-mode
+                 :role-card-path "guide.md" :role-card-blob "blob"}
+                {:ticket/id "ticket-1"} {:job-id "job-1"}
+                {:error/code :promotion-review-projection-failed
+                 :findings [finding]})
+        packet (sut/prompt (:request repair))]
+    (is (:ok repair))
+    (is (re-find #"did not cover every attached pattern" packet))
+    (is (re-find #"math-formalization/coercion-bridge" packet))))
+
+(deftest unknown-map-shaped-repair-finding-remains-loud
+  (let [finding {:operation :unknown-projection
+                 :failure :promotion-review-projection-failed}
+        repair (sut/terminal-repair-request
+                {:dispatch/id "original" :frame-id "f67"}
+                {:ticket/id "ticket-1"} {:job-id "job-1"}
+                {:findings [finding]})]
+    (is (= :terminal-repair-instruction-missing (:error/code repair)))
+    (is (= [finding] (:findings repair)))))
+
 (deftest posthoc-guide-repair-rebuilds-current-authority-and-records-fault-origin
   (let [base-request {:dispatch/id "old" :dispatch/type :guide-intervention
                       :frame-id "f55" :problem-id "a99J06"

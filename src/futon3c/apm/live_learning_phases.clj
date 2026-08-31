@@ -876,6 +876,25 @@
    :memory-use-audit-mismatch
    ":memory-use-audit must be returned verbatim from the close-frame request."})
 
+(defn- projection-finding-instruction [finding]
+  (when (and (map? finding)
+             (= :attachment-projection (:operation finding))
+             (= :promotion-review-projection-failed (:failure finding)))
+    (let [edge-patterns (set (get-in finding [:finding :edge-patterns]))
+          review-patterns (set (get-in finding [:finding :review-patterns]))
+          uncovered (sort (set/difference edge-patterns review-patterns))]
+      (when (seq uncovered)
+        ["Your promotion review was rejected because it did not cover every attached pattern."
+         (str "The candidate's memory edges include patterns absent from the review: "
+              (str/join ", " uncovered) ".")
+         (str "Review the candidate against every attached edge pattern, including "
+              (str/join ", " uncovered)
+              ", and return the complete reviewed pattern set.")]))))
+
+(defn- finding-instruction [finding]
+  (or (get repair-finding-instructions finding)
+      (projection-finding-instruction finding)))
+
 (defn- rendered-finding-detail [request finding]
   (let [detail (get-in request [:repair/validation-output
                                 :finding/details finding])]
@@ -898,7 +917,7 @@
 
 (defn repair-instructions [request]
   (when-let [findings (seq (:repair/findings request))]
-    (let [missing (remove repair-finding-instructions findings)]
+    (let [missing (remove finding-instruction findings)]
       (when (seq missing)
         (throw (ex-info "Terminal repair finding has no actionable instruction"
                         {:error/code :terminal-repair-instruction-missing
@@ -909,7 +928,7 @@
             (map-indexed
              (fn [index finding]
                (let [[rejected why action]
-                     (get repair-finding-instructions finding)
+                     (finding-instruction finding)
                      detail (rendered-finding-detail request finding)]
                  (str (inc index) ". " rejected "\nWHY: " why
                       (when detail (str "\nDETAIL: " detail))
@@ -980,7 +999,7 @@
                            [(:dispatch/id request) (:ticket/id ticket)
                             (:job-id job) submission/completion-contract]))
         findings (vec (:findings failure))
-        missing-instructions (vec (remove repair-finding-instructions findings))
+        missing-instructions (vec (remove finding-instruction findings))
         body (-> request
                  (dissoc :dispatch/id)
                  (assoc :fresh-session? contract-migration?
