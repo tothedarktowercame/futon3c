@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 112 = 475 corpus - 278 not-open - 79 topology - 4 defective - 2
+    ;; 111 = 475 corpus - 279 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -23,8 +23,9 @@
     ;; fell from 116 to 112 on 2026-08-31 when four more campaign solves were
     ;; swept: f59/b00J01, f62/b01J01, f64/b01J03 and f65/b01J04. Each was
     ;; pinned only after `#print axioms` reported exactly
-    ;; [propext, Classical.choice, Quot.sound] with no sorryAx.
-    (is (= 112 (count problems)))
+    ;; [propext, Classical.choice, Quot.sound] with no sorryAx. f66/b03J01
+    ;; followed the same afternoon, taking it to 111.
+    (is (= 111 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision

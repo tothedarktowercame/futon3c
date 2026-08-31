@@ -865,3 +865,39 @@ Worth naming because it would have been easy to misread: a1 and a2 share all fiv
 names, which looks like a strong transfer signal until you open master's file and find the
 five names already there. Structure shared between two attempts on the same problem is
 evidence about the problem, not about the shelf.
+
+## f66 banked, and a stop that was a race (2026-08-31)
+
+b03J01 is on master sorry-free (`c6fc4972`, `6646c504`), the twelfth problem the
+campaign has closed. Open count 111.
+
+All three of f66's attempts closed the problem independently, under three different
+memory conditions — a1 with one cross-problem route memory and the frame's own scribe
+deposit withheld, a2 with that deposit and nothing else, a3 with two within-frame
+deposits. On b03J01 the shelf made no difference to whether the problem closed, which
+argues the problem was tractable rather than that the memories were inert.
+
+**The stop between the close and the bank was a race, and it read exactly like a defect.**
+At 12:51:36 the campaign stepper assembled f66's combined operational trace, Lean rejected
+it, and the stepper turned that rejection into `:stepper/status :stop` — halting the whole
+coordinator with a certified close-frame job already in hand. Evaluating Lean's predicates
+by hand against the rejected trace gave a clean answer: progress 1/1 and delivery 17/17
+passed, all three successor observations failed, and they failed on one field —
+`collectionEvidenceId: ""`, where `predecessorRecordComplete` requires it non-empty once a
+successor has been announced and activated. f64 and f65 supersede through the
+guide-mode-authority-mismatch and typed-submission-missing paths and carry real ids; f66
+superseded three times through the review-repair path and carried none.
+
+That contrast is what made me confident, and it was the wrong conclusion. The trace was
+reassembled at 12:57:59 with the same three dispositions and the ids present —
+`a17637869..`, `fcff1e9bb..` — and the checker accepted it. The review-repair path does
+record collection evidence; at 12:51:36 it had not finished doing so. The trace can be
+assembled inside that window, and a rejection caused by reading too early is treated as a
+hard stop rather than something to retry.
+
+I had already dispatched the wrong diagnosis to codex-2 — "make the path carry the real
+id" — and sent a correction re-scoping it to the ordering question once the retry
+disproved me. Worth recording because the reasoning felt strong: three observations, one
+field, and a clean contrast against two frames that work. What it could not see is that
+both the working frames and the failing one were sampled at different points in the same
+asynchronous sequence.
