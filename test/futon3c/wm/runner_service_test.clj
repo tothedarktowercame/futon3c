@@ -11,8 +11,22 @@
 
 (def scratch-agent-id "war-machine")
 
+(defn- await-active-click! []
+  (when-let [click-id (:click-id (service/status))]
+    ;; The bounded test service owns the suite-level deadline. Locally, drain
+    ;; the exact worker before mutating shared state; a short local deadline
+    ;; was the mechanism that allowed a late worker into the next fixture.
+    (let [completion (service/await-click! click-id)]
+      (is (= :completed (:status completion))
+          (str "runner fixture did not join actual worker completion: "
+               (pr-str completion))))))
+
 (defn- reset-service!
   [f]
+  ;; A projected :running? false is not a thread join. The old fixture reset
+  ;; !status immediately and let the prior worker's report-idle! mutate the
+  ;; next test's freshly reset registry. Join the real worker on both sides.
+  (await-active-click!)
   (reg/reset-registry!)
   (reset! service/!status service/initial-status)
   (reg/register-agent!
@@ -21,7 +35,10 @@
     :invoke-fn nil
     :capabilities []
     :metadata {:apparatus? true}})
-  (f))
+  (try
+    (f)
+    (finally
+      (await-active-click!))))
 
 (use-fixtures :each reset-service!)
 
@@ -161,3 +178,22 @@
              (get-in (service/status) [:last-result :outcome])))
       (is (= :idle
              (:agent/status (reg/get-agent scratch-agent-id)))))))
+
+(deftest completion-signal-survives-a-status-projection-reset
+  (let [release (promise)
+        entered (promise)
+        run! (fn [_]
+               (deliver entered true)
+               @release
+               {:attempt-id "attempt-race-control" :outcome :grounded-change})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= true (deref entered 1000 false)))
+        ;; This is the pre-fix ordering: the next fixture erased the status
+        ;; projection while the prior worker was still alive.
+        (reset! service/!status service/initial-status)
+        (is (= :timed-out (:status (service/await-click! click-id 1))))
+        (deliver release true)
+        (is (= {:status :completed :click-id click-id}
+               (service/await-click! click-id)))))))

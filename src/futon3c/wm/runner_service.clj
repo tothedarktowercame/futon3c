@@ -22,6 +22,12 @@
 (defonce !status
   (atom initial-status))
 
+(defonce ^:private !completion
+  ;; Completion is deliberately separate from the HTTP status projection.
+  ;; Tests and callers may reset or sample !status while the worker is still
+  ;; unwinding; that must not erase the only join handle for the actual thread.
+  (atom nil))
+
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
   requiring-resolve)
@@ -148,7 +154,7 @@
     (flush)))
 
 (defn- run-click!
-  [click-id opts]
+  [click-id opts completion]
   (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
     (try
       (let [configured (configured-runner-opts opts)
@@ -163,7 +169,27 @@
                        in-process-selection))]
         (close-click! agent-id click-id (run! runner-opts)))
       (catch Throwable throwable
-        (fail-click! agent-id click-id throwable)))))
+        (fail-click! agent-id click-id throwable))
+      (finally
+        (deliver completion {:status :completed :click-id click-id})))))
+
+(defn await-click!
+  "Wait for the worker identified by `click-id`, independently of the mutable
+   HTTP status projection. Returns a typed result; it never guesses completion
+   from `:running? false`."
+  ([click-id]
+   (let [{tracked-id :click-id completion :completion} @!completion]
+     (if (and completion (= click-id tracked-id))
+       @completion
+       {:status :not-tracked :click-id click-id})))
+  ([click-id timeout-ms]
+   (let [{tracked-id :click-id completion :completion thread :thread} @!completion]
+     (if (and completion (= click-id tracked-id))
+       (deref completion timeout-ms
+              {:status :timed-out :click-id click-id :timeout-ms timeout-ms
+               :thread-state (some-> ^Thread thread .getState str)
+               :thread-at (some-> ^Thread thread .getStackTrace first str)})
+       {:status :not-tracked :click-id click-id}))))
 
 (defn click!
   "Start one in-process duration click.
@@ -187,8 +213,12 @@
                                  :started-at started-at)]
           (if-not (compare-and-set! !status current next-status)
             (recur)
-            (let [runnable (bound-fn [] (run-click! click-id opts))
+            (let [completion (promise)
+                  _ (reset! !completion {:click-id click-id
+                                         :completion completion})
+                  runnable (bound-fn [] (run-click! click-id opts completion))
                   thread (Thread. ^Runnable runnable "wm-runner-click")]
+              (swap! !completion assoc :thread thread)
               (.setDaemon thread true)
               (try
                 (.start thread)
