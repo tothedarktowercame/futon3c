@@ -75,7 +75,13 @@ while true; do
   echo "$cur" | grep -q spinning && echo "!! SOLVER MAY BE SPINNING $(date -u +%H:%M:%SZ)"
 
   qs=$(grep -o ':status :[a-z-]*' "$C/queue-state.edn" 2>/dev/null | head -1 | awk '{print $2}')
-  tk=$(grep -o ':regulator/ticks [0-9]*' "$C/coordinator.edn" 2>/dev/null | grep -o '[0-9]*')
+  # ONE number, not every match. :regulator/quiescence-history carries a
+  # :regulator/ticks for each past witness, so an unfiltered grep returned 87
+  # values and printed "TICKS FROZEN at 3980\n4551\n..." as one alarm. Ticks
+  # are monotonic and the history holds only past values, so the current count
+  # is the maximum.
+  tk=$(grep -o ':regulator/ticks [0-9]*' "$C/coordinator.edn" 2>/dev/null \
+       | grep -o '[0-9]*' | sort -n | tail -1)
   rs=$(grep -o ':regulator/status :[a-z-]*' "$C/coordinator.edn" 2>/dev/null | head -1 | awk '{print $2}')
   en=$(python3 scripts/apm-coordinator-enabled.py "$campaign" 2>/dev/null)
 
@@ -115,13 +121,25 @@ while true; do
   # completed frame and reported f46 as stalled for 5909 minutes, four days
   # after it closed and banked. queue-state.edn holds :active, :parked and
   # :completed, and their order is not guaranteed.
+  # Anchoring to :active is not enough. BETWEEN frames :active is nil, so a
+  # forward search runs past it into :completed and returns its first entry --
+  # which is f46, reported as stalled for 6311 minutes at 17:37 while f67 was
+  # closing and f68 minting. Only accept a :frame/id inside the active MAP.
   afr=$(python3 -c "
 import re,sys
 try: t=open('$C/queue-state.edn').read()
 except OSError: sys.exit()
 i=t.find(':active')
 if i<0: sys.exit()
-m=re.search(r':frame/id \"([^\"]+)\"', t[i:])
+rest=t[i+len(':active'):].lstrip()
+if not rest.startswith('{'): sys.exit()   # :active nil -- no active frame
+depth=0
+for j,ch in enumerate(rest):
+    if ch=='{': depth+=1
+    elif ch=='}':
+        depth-=1
+        if depth==0: break
+m=re.search(r':frame/id \"([^\"]+)\"', rest[:j+1])
 print(m.group(1) if m else '')" 2>/dev/null)
   if [ -n "$afr" ] && [ "$en" = "enabled" ]; then
     newest=$(ls -t "$C"/*"$afr"/live/*.edn 2>/dev/null | head -1)
