@@ -405,6 +405,25 @@
     (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
     (is (= [:frame-mismatch] (:findings exhausted)))))
 
+(deftest repaired-apparatus-can-reopen-exact-posthoc-rejection
+  (let [rejection {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :findings [:preserved]}
+        state {:state/type :live-job-dispatched
+               :terminal-collection {:evidence {:collection/id "c"}}
+               :posthoc-rejection rejection}
+        result (sut/reopen-posthoc-rejection
+                state :promotion-apparatus-repair-exhausted
+                "approve-pattern contract repaired")]
+    (is (:ok result))
+    (is (nil? (get-in result [:state :posthoc-rejection])))
+    (is (= (:terminal-collection state)
+           (get-in result [:state :terminal-collection])))
+    (is (= rejection
+           (get-in result [:state :posthoc-reconciliations 0 :rejection])))
+    (is (false? (:ok (sut/reopen-posthoc-rejection
+                      state :different-error "wrong target"))))))
+
 (deftest apparatus-repair-does-not-consume-the-agent-repair-turn
   (let [announcements (atom 0)
         repairs (atom [])

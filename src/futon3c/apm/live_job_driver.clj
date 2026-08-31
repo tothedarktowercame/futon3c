@@ -12,6 +12,31 @@
 (def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 (def default-apparatus-repair-attempts 1)
+
+(defn reopen-posthoc-rejection
+  "Reopen an exact cached provider rejection after its apparatus was repaired.
+
+  The terminal submission and collection remain immutable.  Callers must name
+  the observed error and supply an operator-visible reason; the displaced
+  rejection is retained in append-only reconciliation history."
+  [state expected-error-code reason]
+  (let [rejection (:posthoc-rejection state)]
+    (cond
+      (not= :live-job-dispatched (:state/type state))
+      {:ok false :error/code :live-job-posthoc-reopen-state-invalid}
+      (not= expected-error-code (:error/code rejection))
+      {:ok false :error/code :live-job-posthoc-reopen-error-mismatch
+       :expected expected-error-code :observed (:error/code rejection)}
+      (not (and (string? reason) (not-empty reason)))
+      {:ok false :error/code :live-job-posthoc-reopen-reason-invalid}
+      :else
+      {:ok true :state
+       (-> state
+           (update :posthoc-reconciliations (fnil conj [])
+                   {:error/code expected-error-code
+                    :repair/reason reason
+                    :rejection rejection})
+           (dissoc :posthoc-rejection))})))
 (def default-provider-usage-limit-window-ms (* 5 60 60 1000))
 
 (defn- lift-guide-mode
