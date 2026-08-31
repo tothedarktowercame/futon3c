@@ -17,7 +17,8 @@
    :phase nil
    :attempt-id nil
    :started-at nil
-   :last-result nil})
+   :last-result nil
+   :registry-publication nil})
 
 (defonce !status
   (atom initial-status))
@@ -52,21 +53,62 @@
        " "
        (or (:attempt-id event) click-id)))
 
+(defn- publication-result!
+  [click-id stage result]
+  (swap! !status
+         (fn [current]
+           (if (= click-id (:click-id current))
+             (assoc current :registry-publication
+                    (assoc result :stage stage))
+             current))))
+
+(defn- publish-registry!
+  "Publish the secondary registry projection after the authoritative service
+   transition. Publication failure is loud and recorded, but cannot roll the
+   in-process lifecycle backward or replace its terminal result."
+  [click-id stage publish!]
+  (try
+    (publish!)
+    (publication-result! click-id stage {:status :published})
+    true
+    (catch Throwable throwable
+      (let [failure {:status :failed
+                     :error-class (.getName (class throwable))
+                     :cause (or (ex-message throwable)
+                                (.getName (class throwable)))}]
+        (publication-result! click-id stage failure)
+        (binding [*out* *err*]
+          (println "[wm-click] registry publication failed"
+                   (pr-str (assoc failure
+                                  :click-id click-id
+                                  :stage stage))))
+        false))))
+
 (defn- report-phase!
   [agent-id click-id event]
-  (ensure-apparatus! agent-id)
+  ;; The service projection is the lifecycle authority. Cross that boundary
+  ;; before attempting the slower, fallible registry publication.
+  (swap! !status
+         (fn [current]
+           (if (= click-id (:click-id current))
+             (cond-> (assoc current
+                            :phase (:phase event)
+                            :registry-publication
+                            {:status :pending :stage :phase})
+               (:attempt-id event) (assoc :attempt-id (:attempt-id event)))
+             current)))
   (let [activity (phase-activity event click-id)]
-    (reg/update-agent!
-     agent-id
-     :agent/status :invoking
-     :agent/invoke-activity activity
-     :agent/invoke-started-at
-     (or (:agent/invoke-started-at (reg/get-agent agent-id))
-         (Instant/now)))
-    (swap! !status
-           (fn [current]
-             (cond-> (assoc current :phase (:phase event))
-               (:attempt-id event) (assoc :attempt-id (:attempt-id event)))))))
+    (publish-registry!
+     click-id :phase
+     (fn []
+       (ensure-apparatus! agent-id)
+       (reg/update-agent!
+        agent-id
+        :agent/status :invoking
+        :agent/invoke-activity activity
+        :agent/invoke-started-at
+        (or (:agent/invoke-started-at (reg/get-agent agent-id))
+            (Instant/now)))))))
 
 (defn- report-idle!
   [agent-id]
@@ -121,7 +163,6 @@
   [agent-id click-id result]
   (let [fallback-attempt-id (:attempt-id @!status)
         summary (result-summary result fallback-attempt-id)]
-    (report-idle! agent-id)
     (swap! !status
            (fn [current]
              (if (= click-id (:click-id current))
@@ -129,8 +170,10 @@
                       :running? false
                       :phase nil
                       :attempt-id (:attempt-id summary)
-                      :last-result summary)
+                      :last-result summary
+                      :registry-publication {:status :pending :stage :close})
                current)))
+    (publish-registry! click-id :close #(report-idle! agent-id))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
     (flush)))
 
@@ -141,15 +184,16 @@
                  :outcome :service-failed
                  :error (or (.getMessage ^Throwable throwable)
                             (.getName (class throwable)))}]
-    (report-idle! agent-id)
     (swap! !status
            (fn [current]
              (if (= click-id (:click-id current))
                (assoc current
                       :running? false
                       :phase nil
-                      :last-result summary)
+                      :last-result summary
+                      :registry-publication {:status :pending :stage :failure})
                current)))
+    (publish-registry! click-id :failure #(report-idle! agent-id))
     (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
     (flush)))
 
@@ -210,7 +254,8 @@
                                  :click-id click-id
                                  :phase :starting
                                  :attempt-id nil
-                                 :started-at started-at)]
+                                 :started-at started-at
+                                 :registry-publication nil)]
           (if-not (compare-and-set! !status current next-status)
             (recur)
             (let [completion (promise)

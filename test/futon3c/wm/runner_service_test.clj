@@ -197,3 +197,81 @@
         (deliver release true)
         (is (= {:status :completed :click-id click-id}
                (service/await-click! click-id)))))))
+
+(deftest lifecycle-state-precedes-slow-registry-publication
+  (let [phase-entered (promise)
+        release-phase (promise)
+        close-entered (promise)
+        release-close (promise)
+        run! (fn [opts]
+               ((:phase-log-fn opts)
+                {:phase :author-wait
+                 :attempt-id "attempt-close-order"})
+               {:attempt-id "attempt-close-order"
+                :outcome :grounded-change})]
+    (with-redefs [reg/update-agent!
+                  (fn [& _]
+                    (deliver phase-entered true)
+                    @release-phase)
+                  reg/mark-agent-idle!
+                  (fn [& _]
+                    (deliver close-entered true)
+                    @release-close)]
+      (binding [service/*resolve-var*
+                (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+        (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+          (is (= true (deref phase-entered 1000 false)))
+          (is (= :author-wait (:phase (service/status))))
+          (is (= {:status :pending :stage :phase}
+                 (:registry-publication (service/status))))
+          (deliver release-phase true)
+          (is (= true (deref close-entered 1000 false)))
+          (is (false? (:running? (service/status))))
+          (is (= {:attempt-id "attempt-close-order"
+                  :outcome :grounded-change}
+                 (:last-result (service/status))))
+          (is (= {:status :pending :stage :close}
+                 (:registry-publication (service/status))))
+          ;; Publication remains synchronous and observable; only the
+          ;; authoritative service close no longer waits behind it.
+          (is (= :timed-out (:status (service/await-click! click-id 1))))
+          (deliver release-close true)
+          (is (= :completed (:status (service/await-click! click-id))))
+          (is (= :published
+                 (get-in (service/status) [:registry-publication :status]))))))))
+
+(deftest registry-publication-failure-does-not-rewrite-terminal-result
+  (let [run! (fn [_]
+               {:attempt-id "attempt-publication-failure"
+                :outcome :grounded-change})]
+    (with-redefs [reg/mark-agent-idle!
+                  (fn [& _]
+                    (throw (ex-info "registry unavailable" {:control true})))]
+      (binding [service/*resolve-var*
+                (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+        (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+          (is (= :completed (:status (service/await-click! click-id))))
+          (is (= :grounded-change
+                 (get-in (service/status) [:last-result :outcome])))
+          (is (= {:status :failed
+                  :stage :close
+                  :error-class "clojure.lang.ExceptionInfo"
+                  :cause "registry unavailable"}
+                 (:registry-publication (service/status)))))))))
+
+(deftest failed-click-state-precedes-failed-idle-publication
+  (with-redefs [reg/mark-agent-idle!
+                (fn [& _]
+                  (throw (ex-info "registry unavailable" {:control true})))]
+    (binding [service/*resolve-var*
+              (resolver (fn [_] (throw (ex-info "runner failed" {})))
+                        (fn [_] {:selected-policy-id "unused"}))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (false? (:running? (service/status))))
+        (is (= :service-failed
+               (get-in (service/status) [:last-result :outcome])))
+        (is (= :failure
+               (get-in (service/status) [:registry-publication :stage])))
+        (is (= :failed
+               (get-in (service/status) [:registry-publication :status])))))))
