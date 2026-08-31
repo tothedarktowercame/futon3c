@@ -576,6 +576,35 @@ architectural rollback because direct endpoint recall is already operational.
 retrieval, lifecycle-aware lexical proposal, and the Phase 5 cascade already
 support the critical path. No acceptance claim depends on an embedding.
 
+**Informative run, 2026-08-30:** run as a bounded pure experiment in
+`futon3c.peripheral.strategic-embedding-experiment` with the frozen fixture
+`holes/labs/M-typed-memories/phase6b-embedding-experiment.edn`
+(`phase6b-embedding-experiment-v1-20260830`, 6 train / 5 held-out edges drawn
+from the reviewed Phase 4 corpus pattern/mission pairs). Three deterministic
+proposers are scored on the held-out edges: lexical/structural baseline,
+generic hashed-vector cosine, and a dedicated mission-plus-control-pattern
+vector with double-weighted identity/hook tokens. On the frozen fixture all
+three tie (recall@10 = 0.2, precision@10 = 0.1; recall@5 = 0.0), so the
+non-vector baseline does not lose and no architectural change is warranted.
+Invariant 4 is enforced structurally: `as-review-proposal` stamps every
+proposal `:witness-status :proposed`, `:attachment-status :proposed`,
+`:promotable? false`, `:supporting-typed-edge nil`, and
+`proposal-substitutes-witness?` is constantly false; tests cover determinism,
+hand-checked recall/precision, the bypass guard, fail-closed fixture
+validation, and frozen-fixture determinism.
+
+Run:
+
+```bash
+clojure -M scripts/run_phase6b_embedding_experiment.clj
+```
+
+Completion packet: 1 new pure namespace, 1 new fixture, 1 new demo script,
+1 new test namespace (6 tests / 34 assertions, green). clj-kondo clean,
+check-parens clean, fixture parses as EDN. No stored-data migration, no
+live-store query, no serving-namespace reload, no JVM restart, no live
+effect. Rollback is removal of the four new files and this note.
+
 ## Phase 7 — Strategic policies and `E_S`, shadow first
 
 ### Build

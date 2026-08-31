@@ -1,0 +1,60 @@
+{:fixture-version 1
+ :freeze-id "phase6b-embedding-experiment-v1-20260830"
+ :status :informative-only
+ :source-corpus "holes/labs/M-typed-memories/phase4-wm-corpus.edn"
+ :note "Held-out pattern->mission edges for the Phase 6b optional embedding
+  experiment.  Informative only; losing to the non-vector baseline causes no
+  architectural rollback.  No vector proposal may bypass witness/review
+  status."
+
+ :patterns
+ [{:p4ng/id "p4ng/R5-policy-evaluation"
+   :title "Policy evaluation over policy-conditioned transitions"
+   :description "Evaluate EIG over the policy-conditioned transition, not the bare state."}
+  {:p4ng/id "p4ng/R6-candidate-pattern-action-space"
+   :title "Candidate pattern action space"
+   :description "Reviewed pattern endpoints recover corrected candidate-pattern episodes."}
+  {:p4ng/id "p4ng/R9-independent-witness"
+   :title "Independent witness"
+   :description "A controller-authored success claim requires an independent witness."}
+  {:p4ng/id "p4ng/R10-liveness"
+   :title "Liveness tripwire"
+   :description "The independent health listener must remain responsive under saturation."}
+  {:p4ng/id "p4ng/R15-memory-control-seam"
+   :title "Memory control seam"
+   :description "Shared memory and control records use one typed endpoint seam."}
+  {:p4ng/id "p4ng/R17-hole-mint-lane"
+   :title "Repeated hole mint lane"
+   :description "Repeated witnessed holes may propose a new control pattern at an unearned prior."}]
+
+ :missions
+ [{:mission/id "M-aif-policy-conditioned-eig"
+   :title "AIF policy-conditioned EIG"
+   :objective "Condition expected information gain on the selected policy."}
+  {:mission/id "M-wm-aif-policy-grain-compliance"
+   :title "WM AIF policy grain compliance"
+   :objective "Keep strategic policy grain separate from tactical cascades."}
+  {:mission/id "M-shared-memory-control-build-test"
+   :title "Shared memory control build test"
+   :objective "One typed shared memory and control build-test regime."}
+  {:mission/id "M-wm-tripwires"
+   :title "WM tripwires"
+   :objective "Thirteen liveness and sanity tripwires on the War Machine."}
+  {:mission/id "M-wm-strategic-mission-selection"
+   :title "WM strategic mission selection"
+   :objective "Select strategic missions with reason-bearing typed support."}]
+
+ :train-edges
+ [["p4ng/R5-policy-evaluation" "M-aif-policy-conditioned-eig"]
+  ["p4ng/R6-candidate-pattern-action-space" "M-shared-memory-control-build-test"]
+  ["p4ng/R9-independent-witness" "M-wm-aif-policy-grain-compliance"]
+  ["p4ng/R10-liveness" "M-wm-tripwires"]
+  ["p4ng/R15-memory-control-seam" "M-shared-memory-control-build-test"]
+  ["p4ng/R17-hole-mint-lane" "M-wm-strategic-mission-selection"]]
+
+ :held-out-edges
+ [["p4ng/R5-policy-evaluation" "M-wm-strategic-mission-selection"]
+  ["p4ng/R9-independent-witness" "M-shared-memory-control-build-test"]
+  ["p4ng/R10-liveness" "M-wm-strategic-mission-selection"]
+  ["p4ng/R15-memory-control-seam" "M-wm-aif-policy-grain-compliance"]
+  ["p4ng/R17-hole-mint-lane" "M-shared-memory-control-build-test"]]}
