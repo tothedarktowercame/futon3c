@@ -4,8 +4,10 @@ Date: 2026-08-31
 
 Implementation status: opt-in.  One transient service is created per
 `bg.py launch-test` job under `futon-testing.slice`.  The slice has
-`TasksMax=1024`, each ordinary job has `TasksMax=256`, and a fifth concurrent
-submission is refused loudly.  Logs, receipts, and the small durable registry
+`TasksMax=2560`, each ordinary job has `TasksMax=1280`, and a third concurrent
+submission is refused loudly.  C100 replaced the initial 256/1024/four-job
+guess after measuring real peaks of 986 (futon2) and 1,014 (futon3).  Logs,
+receipts, and the small durable registry
 live in `/tmp/futon-bounded-tests`; `test-kill` records cancellation separately
 from the test/resource verdict.  This is boot-scoped retention by design.
 
@@ -82,10 +84,16 @@ Too-tight condition: p95 approaches 256 or any production job fails because of
 the task budget.  Over-provisioned condition: after at least 30 production runs,
 the observed maximum remains below half the limit.
 
-Current observation: **256 is measured too tight**, because the first real CI
+Initial observation: **256 was measured too tight**, because the first real CI
 hit 256 and failed for resource reasons despite green tests.  Do not promote
-the opt-in path to a default until a second trial limit is approved and
-measured.  The clipped observation does not establish the required new limit.
+the opt-in path from its provisional status on this first measurement window.
+
+C100 then ran each suite alone with a deliberately generous 1,024-job limit.
+Futon2 peaked at 986 tasks and futon3 peaked at 1,014; both inner and outer
+verdicts passed with zero resource events.  The production default is therefore
+1,280 tasks, 26% above the larger measured peak.  The slice aggregate is 2,560
+and admission is two jobs: four jobs would require 5,120 tasks, while retaining
+the old 1,024 aggregate would admit no measured suite with headroom.
 
 ### 5. Admission does not stall
 
@@ -98,7 +106,9 @@ Failing condition: start wait exceeds that job's eventual run duration.  This
 implementation refuses at four rather than silently queueing, so refusal rate
 must also be reported; it must never spill work into the Agency cgroup.
 
-Current observation: no queued stall; one intentional fifth-job refusal.
+Current observation: no queued stall; the original four-job control produced
+one intentional fifth-job refusal.  Under C100 the enforceable policy is two
+jobs and immediate refusal of a third.
 
 ## Retirement criterion
 
@@ -111,3 +121,19 @@ nonzero or containment pressure increments the Agency's `pids.events:max`.
 Retirement means returning `bg.py` test submission to its prior path while
 retaining receipts for diagnosis; it does not mean declaring the failed runs
 green.
+
+As of C100 the 30-run window contains **3 non-control suite jobs**: two passes
+(the 1,024-limit futon2 and futon3 demand measurements), one containment
+failure (the original real futon2 run at 256), and zero test failures.  Synthetic
+pressure fixtures, durability sleeps, admission sleepers, and cancellation
+probes are excluded.  The retirement comparison does not activate until 30
+non-control jobs; controls can never seed or pad that denominator.
+
+## C100 budget falsifier at the production default
+
+After changing the default to 1,280, the false-green pressure fixture reached
+exactly 1,280 tasks and incremented `pids.events:max` by 2.  It printed
+`0 failures, 0 errors` and exited zero internally; the outer verdict remained
+`:resource-limit-failure`, exit 125.  Agency `pids.events:max` remained
+unchanged.  Two sleepers were admitted under the revised policy and a third
+was refused immediately as `admission-cap`.

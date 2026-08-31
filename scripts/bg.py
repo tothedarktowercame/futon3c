@@ -33,6 +33,8 @@ TOKEN_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
                           ".admintoken")
 BOUNDED_DIR = "/tmp/futon-bounded-tests"
 BOUNDED_RECORDS = os.path.join(BOUNDED_DIR, "jobs.json")
+BOUNDED_TASKS_MAX = 1280
+BOUNDED_ADMISSION_MAX = 2
 
 
 def _token():
@@ -122,7 +124,7 @@ def _launch_bounded(shell_cmd, opts):
     records = _load_bounded()
     active = [r for r in records.values()
               if _unit_props(r["unit"]).get("ActiveState") in ("active", "activating")]
-    if len(active) >= 4:
+    if len(active) >= BOUNDED_ADMISSION_MAX:
         return {"ok": False, "reason": "admission-cap", "active": len(active)}
     os.makedirs(BOUNDED_DIR, exist_ok=True)
     stamp = int(time.time() * 1000)
@@ -132,7 +134,7 @@ def _launch_bounded(shell_cmd, opts):
     output = os.path.join(BOUNDED_DIR, job_id + ".log")
     receipt = os.path.join(BOUNDED_DIR, job_id + ".receipt.json")
     runner = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bounded_test_job.py")
-    tasks_max = int(opts.get("tasks-max", 256))
+    tasks_max = int(opts.get("tasks-max", BOUNDED_TASKS_MAX))
     cmd = ["systemd-run", "--user", "--unit=" + unit,
            "--slice=futon-testing.slice", "--property=TasksMax=%d" % tasks_max,
            "--property=RuntimeMaxSec=45min", "--property=KillMode=control-group",
