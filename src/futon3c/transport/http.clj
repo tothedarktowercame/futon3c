@@ -111,8 +111,11 @@
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
+           [java.io PushbackReader]
            [java.net Socket InetSocketAddress]
-           [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException]
+           [java.nio ByteBuffer]
+           [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException FileChannel]
+           [java.nio.file Files Path StandardCopyOption StandardOpenOption]
            [java.util UUID]
            [java.util.concurrent Executors ExecutorService RejectedExecutionException]
            [org.httpkit.logger ContextLogger]))
@@ -246,6 +249,12 @@
         :else nil))))
 
 (defonce ^:private !invoke-jobs-ledger (atom nil))
+(defonce ^:private invoke-jobs-writer-lock (Object.))
+
+(def ^:dynamic *invoke-jobs-persist-stage-hook*
+  "Test/fault-injection seam called after the temporary snapshot is forced and
+   before it is renamed. Production leaves this nil."
+  nil)
 (defonce ^:private !active-invoke-job-index
   ;; Derived, process-local projection. The durable ledger remains the sole
   ;; authority; this index is rebuilt from it on load and is never persisted.
@@ -314,26 +323,68 @@
 
 (defn- persist-invoke-jobs-ledger!
   [ledger]
-  (try
-    (spit (invoke-jobs-store-path) (pr-str ledger))
-    (catch Throwable t
-      (println (str "[invoke-jobs] persist failed: " (.getMessage t)))
-      (flush)))
-  ledger)
+  (locking invoke-jobs-writer-lock
+    (let [target (-> (Path/of (invoke-jobs-store-path) (make-array String 0))
+                     .toAbsolutePath)
+          parent (.getParent target)
+          _ (Files/createDirectories parent (make-array java.nio.file.attribute.FileAttribute 0))
+          tmp (Files/createTempFile parent ".invoke-jobs-" ".tmp"
+                                    (make-array java.nio.file.attribute.FileAttribute 0))]
+      (try
+        (let [bytes (.getBytes (pr-str ledger) "UTF-8")]
+          (with-open [channel (FileChannel/open
+                               tmp
+                               (into-array StandardOpenOption
+                                           [StandardOpenOption/WRITE
+                                            StandardOpenOption/TRUNCATE_EXISTING]))]
+            (let [buffer (ByteBuffer/wrap bytes)]
+              (while (.hasRemaining buffer)
+                (.write channel buffer)))
+            (.force channel true)))
+        (when *invoke-jobs-persist-stage-hook*
+          (*invoke-jobs-persist-stage-hook* :temp-forced
+                                            {:target target :temp tmp}))
+        (Files/move tmp target
+                    (into-array StandardCopyOption
+                                [StandardCopyOption/ATOMIC_MOVE
+                                 StandardCopyOption/REPLACE_EXISTING]))
+        ;; Persist the directory entry as well as the file contents. Without
+        ;; this force, a power loss may forget the rename after acknowledgement.
+        (with-open [directory (FileChannel/open
+                               parent
+                               (into-array StandardOpenOption
+                                           [StandardOpenOption/READ]))]
+          (.force directory true))
+        ledger
+        (catch Throwable t
+          (throw (ex-info "invoke-jobs ledger persistence failed"
+                          {:path (str target)
+                           :temporary-path (str tmp)}
+                          t)))
+        (finally
+          (Files/deleteIfExists tmp))))))
 
 (defn- load-invoke-jobs-ledger
   []
   (let [f (io/file (invoke-jobs-store-path))]
     (if (.exists f)
       (try
-        (let [parsed (edn/read-string (slurp f))]
-          (if (map? parsed)
-            (merge (default-invoke-jobs-ledger) parsed)
-            (default-invoke-jobs-ledger)))
+        (with-open [reader (PushbackReader. (io/reader f))]
+          (let [eof (Object.)
+                parsed (edn/read {:eof eof} reader)
+                trailing (edn/read {:eof eof} reader)]
+            (when (identical? parsed eof)
+              (throw (ex-info "invoke-jobs ledger is empty" {})))
+            (when-not (identical? trailing eof)
+              (throw (ex-info "invoke-jobs ledger contains trailing forms" {})))
+            (when-not (map? parsed)
+              (throw (ex-info "invoke-jobs ledger root is not a map"
+                              {:root-type (some-> parsed class .getName)})))
+            (merge (default-invoke-jobs-ledger) parsed)))
         (catch Throwable t
-          (println (str "[invoke-jobs] load failed: " (.getMessage t)))
-          (flush)
-          (default-invoke-jobs-ledger)))
+          (throw (ex-info "invoke-jobs ledger is unreadable; refusing empty fallback"
+                          {:path (.getAbsolutePath f)}
+                          t))))
       (default-invoke-jobs-ledger))))
 
 (defn- append-job-event
@@ -371,11 +422,17 @@
 
 (defn- ensure-invoke-jobs-ledger!
   []
-  (when (nil? @!invoke-jobs-ledger)
-    (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
-      (reset! !invoke-jobs-ledger loaded)
-      (rebuild-active-invoke-job-index! loaded)
-      (persist-invoke-jobs-ledger! loaded)))
+  (locking invoke-jobs-writer-lock
+    (when (nil? @!invoke-jobs-ledger)
+      (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
+        (try
+          (persist-invoke-jobs-ledger! loaded)
+          (reset! !invoke-jobs-ledger loaded)
+          (rebuild-active-invoke-job-index! loaded)
+          (catch Throwable t
+            (reset! !invoke-jobs-ledger nil)
+            (reset! !active-invoke-job-index nil)
+            (throw t))))))
   (when-not (identical? @!invoke-jobs-ledger
                         (:ledger @!active-invoke-job-index))
     (rebuild-active-invoke-job-index! @!invoke-jobs-ledger))
@@ -383,10 +440,16 @@
 
 (defn- update-invoke-jobs-ledger!
   [f]
-  (ensure-invoke-jobs-ledger!)
-  (let [updated (swap! !invoke-jobs-ledger f)]
-    (rebuild-active-invoke-job-index! updated)
-    (persist-invoke-jobs-ledger! updated)))
+  (locking invoke-jobs-writer-lock
+    (ensure-invoke-jobs-ledger!)
+    (let [[before updated] (swap-vals! !invoke-jobs-ledger f)]
+      (try
+        (persist-invoke-jobs-ledger! updated)
+        (rebuild-active-invoke-job-index! updated)
+        (catch Throwable t
+          (reset! !invoke-jobs-ledger before)
+          (rebuild-active-invoke-job-index! before)
+          (throw t))))))
 
 (defn- update-invoke-jobs-ledger-vals!
   "Like update-invoke-jobs-ledger!, but returns [ledger-before ledger-after].
@@ -397,11 +460,17 @@
    side effects of an attempt that is then discarded have already happened, so
    a losing thread comes away holding the winner's flag."
   [f]
-  (ensure-invoke-jobs-ledger!)
-  (let [[before after] (swap-vals! !invoke-jobs-ledger f)]
-    (rebuild-active-invoke-job-index! after)
-    (persist-invoke-jobs-ledger! after)
-    [before after]))
+  (locking invoke-jobs-writer-lock
+    (ensure-invoke-jobs-ledger!)
+    (let [[before after] (swap-vals! !invoke-jobs-ledger f)]
+      (try
+        (persist-invoke-jobs-ledger! after)
+        (rebuild-active-invoke-job-index! after)
+        [before after]
+        (catch Throwable t
+          (reset! !invoke-jobs-ledger before)
+          (rebuild-active-invoke-job-index! before)
+          (throw t))))))
 
 (defn- trim-stream-event
   "Compact a live invoke event for the durable job ledger. Text is
@@ -467,31 +536,32 @@
    live observability feed, acceptable to lose on restart."
   [job-id event]
   (when-let [{:keys [event-type payload]} (trim-stream-event event)]
-    (ensure-invoke-jobs-ledger!)
-    (let [[before after]
-          (swap-vals!
-           !invoke-jobs-ledger
-           (fn [ledger]
-             (if-let [job (get-in ledger [:jobs job-id])]
-               (assoc-in ledger [:jobs job-id]
-                         (if (= "tool_result" event-type)
-                           (let [events (:events job)
-                                 idx (last (keep-indexed
-                                            (fn [i e]
-                                              (when (= "tool_use" (:type e)) i))
-                                            events))]
-                             (if (some? idx)
-                               (assoc-in job [:events idx :output]
-                                         (:outputs payload))
-                               job))
-                           (append-job-event job event-type payload)))
-               ledger)))
-          cached @!active-invoke-job-index]
-      ;; Stream events cannot change lifecycle state. Carry the active ids to
-      ;; the new immutable ledger value without rescanning job history.
-      (if (identical? before (:ledger cached))
-        (reset! !active-invoke-job-index (assoc cached :ledger after))
-        (rebuild-active-invoke-job-index! after)))
+    (locking invoke-jobs-writer-lock
+      (ensure-invoke-jobs-ledger!)
+      (let [[before after]
+            (swap-vals!
+             !invoke-jobs-ledger
+             (fn [ledger]
+               (if-let [job (get-in ledger [:jobs job-id])]
+                 (assoc-in ledger [:jobs job-id]
+                           (if (= "tool_result" event-type)
+                             (let [events (:events job)
+                                   idx (last (keep-indexed
+                                              (fn [i e]
+                                                (when (= "tool_use" (:type e)) i))
+                                              events))]
+                               (if (some? idx)
+                                 (assoc-in job [:events idx :output]
+                                           (:outputs payload))
+                                 job))
+                             (append-job-event job event-type payload)))
+                 ledger)))
+            cached @!active-invoke-job-index]
+        ;; Stream events cannot change lifecycle state. Carry the active ids
+        ;; to the new immutable ledger value without rescanning job history.
+        (if (identical? before (:ledger cached))
+          (reset! !active-invoke-job-index (assoc cached :ledger after))
+          (rebuild-active-invoke-job-index! after))))
     ;; WS doorbell (2026-07-05): tell connected observers an event landed so
     ;; follow-mode can poll NOW instead of on its fallback interval. Tiny
     ;; frame — ids only, no payload; the poll fetches content (and repairs
