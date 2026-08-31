@@ -175,6 +175,10 @@
 
 (declare validate-review*)
 
+(defn- exact-patterns? [expected actual]
+  (and (= (count expected) (count actual))
+       (= (set expected) (set actual))))
+
 (defn validate-returned-review*
   "Validate the Promotion Proctor's judgement before controller persistence.
 
@@ -210,6 +214,12 @@
                                                  (:pattern-ids %)))))
                          reviews)
                    (conj :review-patterns-invalid)
+                   (some #(and (= :approve (:verdict %))
+                               (not (exact-patterns?
+                                     (:pattern-ids (by-id (:memory-id %)))
+                                     (:pattern-ids %))))
+                         reviews)
+                   (conj :review-patterns-invalid)
                    (some #(memory-use-kind-finding
                            (by-id (:memory-id %)) %) reviews)
                    (conj :review-memory-use-kind-invalid))]
@@ -231,10 +241,6 @@
                       :persistence-receipt-id) artifact))
        (= (:content-digest artifact) (:persisted-content-digest artifact)
           (:read-back-content-digest artifact))))
-
-(defn- exact-patterns? [expected actual]
-  (and (= (count expected) (count actual))
-       (= (set expected) (set actual))))
 
 (defn- disposition-finding [candidate review]
   (let [projection-invalid? (= false (:projection/valid? review))

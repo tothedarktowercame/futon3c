@@ -1208,6 +1208,34 @@
       (is (= :awaiting-apparatus-repair
              (:status (sut/drive! {:state held})))))))
 
+(deftest legacy-approved-pattern-projection-hold-dispatches-correction
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :candidates [{:memory-id "m" :pattern-ids ["p" "q"]}]
+                    :job "bad-review" :ticket {:job-id "bad-review"}}
+        saved (atom nil)
+        state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :repair/kind :review-projection
+               :repair/attempts 1 :repair/max-attempts 1
+               :last-valid-state last-valid
+               :persisted-review-result
+               {:reviews [{:memory-id "m" :verdict :approve
+                            :pattern-ids ["q"]}]}
+               :findings
+               [{:memory-id "m"
+                 :failure :promotion-review-projection-failed
+                 :finding {:edge-patterns ["p" "q"]
+                           :review-patterns ["q"]}}]}
+        result (sut/drive!
+                {:state state
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "bad-review" predecessor))
+                              (is (= 1 attempt))
+                              {:ok true :job "corrected-review"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "corrected-review" (:job-id result)))
+    (is (true? (:pattern-contract-repair-attempted? @saved)))))
+
 (deftest unresolved-review-archive-failure-blocks-successor
   (let [called (atom 0)
         last-valid {:state/type :promotion :stage :independent-review

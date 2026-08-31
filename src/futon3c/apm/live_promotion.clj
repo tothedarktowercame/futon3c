@@ -46,6 +46,23 @@
          (string? source-id)
          (= source-id loaded-runtime-id))))
 
+(defn- legacy-approved-pattern-projection-failure? [state]
+  (let [reviews (get-in state [:persisted-review-result :reviews])
+        by-id (into {} (map (juxt :memory-id identity)) reviews)]
+    (and (= :review-projection (:repair/kind state))
+         (not (:pattern-contract-repair-attempted?
+               (:last-valid-state state)))
+         (some
+          (fn [{:keys [memory-id failure finding]}]
+            (let [review (by-id memory-id)]
+              (and (= :promotion-review-projection-failed failure)
+                   (= :approve (:verdict review))
+                   (= (set (:review-patterns finding))
+                      (set (:pattern-ids review)))
+                   (not= (set (:edge-patterns finding))
+                         (set (:review-patterns finding))))))
+          (:findings state)))))
+
 (defn- certificate-history [state]
   (mapv (fn [entry]
           {:attempt (:attempt entry)
@@ -1021,8 +1038,10 @@
       (repaired-runtime-identity? state)
       (drive-step! (assoc inputs :state (:last-valid-state state)))
 
-      (and (= :promotion-pass (:repair/kind state))
+      (and (or (= :promotion-pass (:repair/kind state))
+               (legacy-approved-pattern-projection-failure? state))
            (or (< (:repair/attempts state) (:repair/max-attempts state))
+               (legacy-approved-pattern-projection-failure? state)
                (and (= [:review-patterns-invalid] (vec (:findings state)))
                     (not (:pattern-contract-repair-attempted?
                           (:last-valid-state state))))))

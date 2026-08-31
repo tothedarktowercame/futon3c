@@ -112,6 +112,18 @@
     (is (some #{:approved-review-evidence-invalid}
               (:findings prematurely-persisted)))))
 
+(deftest returned-approve-preserves-patterns-before-persistence
+  (let [two-patterns (assoc candidate :pattern-ids ["p1" "p2"])
+        base {:memory-id "m1" :reviewer "proctor" :verdict :approve
+              :pattern-ids ["p2"] :reason "narrower fit" :residual "none"}
+        approved (sut/validate-returned-review*
+                  [two-patterns] "scribe" "proctor" [base])
+        reassigned (sut/validate-returned-review*
+                    [two-patterns] "scribe" "proctor"
+                    [(assoc base :verdict :reassign)])]
+    (is (some #{:review-patterns-invalid} (:findings approved)))
+    (is (:ok reassigned) "reassign is the explicit pattern-changing verdict")))
+
 (deftest newly-minted-durable-memory-requires-an-explicit-supported-use-kind
   (let [typed (assoc candidate :admission/schema
                      sut/durable-memory-admission-schema)
