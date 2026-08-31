@@ -717,8 +717,7 @@ unchanged, and the solve is now on `origin/master` (`1b625d3c`, `9b014793`) at
 `sorry_count_total: 0`.
 
 That makes four frames whose SOLVING attempt used a within-frame guide deposit: f52/a2,
-f53/a3, f62/a2, f65/a3. It also extends to twenty-three the run of attempts that used
-nothing from a prior frame's shelf. Both facts have held through every frame measured.
+f53/a3, f62/a2, f65/a3.
 
 **Banking is not part of the frame cycle.** Nothing under `src/` calls
 `bank-sweep/sweep-to-master!`. A frame can certify its close, pin a sorry-free head under
@@ -747,3 +746,53 @@ Lean sorry" against `origin/master`. The JIT queue rederives from master each ti
 b01J02 stays in the open set and will be offered again on its own. The retry needs no
 executor — but that is a property of how the queue is derived, not of the decision record,
 and the record should not be read as having caused it.
+
+### Correction: prior-frame reads are not zero, and never were (2026-08-31)
+
+Through f63, f64 and f65 I reported each first attempt as "0 of N used, no leak, clean" and
+described the run as attempts that used nothing from a prior frame's shelf. Those individual
+counts were right and the streak I built out of them was not. Resolving the depositor of
+every memory used in every attempt of the campaign gives 48 uses, of which 9 are
+cross-frame:
+
+    f47/a1  <- f39-guide    a97A01              cross-frame, SAME problem
+    f47/a2  <- ams-codex-1  a97J02              cross-problem
+    f47/a3  <- f44-scribe   a98A02              cross-problem
+    f50/a1  <- f34-guide    a95J03              cross-problem
+    f50/a2  <- codex-5      M-codex-sorry-loop  cross-problem
+    f50/a3  <- f44-scribe   a98A02              cross-problem
+    f58/a1  <- f34-guide    a95J03              cross-problem
+    f62/a1  <- f34-guide    a95J03              cross-problem
+    f66/a1  <- f34-guide    a95J03              cross-problem
+
+The other 39 are within-frame guide and scribe deposits. What is true, and is what the
+sections above actually establish, is narrower: every use that the fingerprint audit
+WITNESSES — where the proof carries Mathlib tokens the memory introduced — is within-frame.
+The cross-frame reads are real reads; they are just unwitnessed by that instrument. I
+collapsed "no witnessed transfer" into "no reads", which is the fourth way to overstate
+listed at the top of this note, run in reverse.
+
+**One memory is doing all of the recent cross-frame work.**
+`e-63b7c7c1-1906-412c-ae18-b4644762fbea`, deposited by `f34-guide` about a95J03, is a
+`:kind :reference` route memory: how to sequence a time-boxed Lean session — bank the cheap
+closes and commit first, do not open the hardest bridge first. Since f52 it is the ONLY
+memory any attempt has read from a prior frame, and it has been selected by the FIRST
+attempt of four frames on four unrelated problems:
+
+    f50/a1  a98A07   partial
+    f58/a1  aunk04   success
+    f62/a1  b01J01   open
+    f66/a1  b03J01   proved
+
+Two of the four closed. That is not evidence the memory caused them: f66/a1's proof is 180
+lines, sorry-free, and shares zero Mathlib tokens with the memory — no
+`Multiset.card_le_card`, no `Polynomial.card_roots'`, no `image_circleMap_Ioc`, nothing.
+First-attempt closure is also common here on its own (7 of 21 frames: f52, f54, f55, f58,
+f60, f61, f66), so a1 closing is not by itself a signal.
+
+What the pattern does establish is retrieval, not benefit. A single strategic memory about
+ordering is being pulled out of a 129-item shelf by unrelated problems, repeatedly, while
+everything else on the shelf goes unread. Whether that is the retriever finding the one
+genuinely general item, or a ranking artefact that keeps returning the same row, is a
+question about the retriever, and it is answerable by looking at what the shelf offers and
+in what order — which is a different measurement from the ones in this note.
