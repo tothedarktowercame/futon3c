@@ -170,9 +170,33 @@ misrouted frame costs one poll interval of latency, never the resume."
 
 ;;;; Poll path (primary — works without the WS) -------------------------------
 
+(defcustom agent-repl-park-poll-stale-seconds 30
+  "Seconds after which an outstanding poll latch is treated as abandoned.
+
+The latch is cleared by `url-retrieve''s callback, so a request whose callback
+never runs — a hung connection, a server restart mid-flight — leaves it set for
+good and that buffer silently stops polling forever.  On 2026-08-29 exactly one
+buffer was wedged this way: five completed handoffs sat correctly queued in the
+ready-inbox under the right agent and session, and were never delivered, with no
+error anywhere.  A latch that expires turns that permanent failure into one
+missed tick."
+  :type 'number :group 'agent-repl-park)
+
+;; Holds the time the poll STARTED, not a boolean: a bare flag cannot distinguish
+;; "in flight" from "abandoned", which is the whole bug above.
 (defvar-local agent-repl-park--poll-inflight nil
-  "Non-nil while an async ready-inbox poll is outstanding for this buffer.")
-(defvar-local agent-repl-followup--poll-inflight nil)
+  "Time an async ready-inbox poll started for this buffer, or nil.")
+(defvar-local agent-repl-followup--poll-inflight nil
+  "Time an async followup poll started for this buffer, or nil.")
+
+(defun agent-repl-park--latch-held-p (started)
+  "Non-nil when STARTED marks a poll still plausibly in flight.
+
+Anything that is not a readable time counts as expired, not as held.  That
+covers the `t' left behind by the old boolean latch, so a buffer already wedged
+when this loads heals on its next tick instead of staying stuck for good."
+  (let ((age (and started (ignore-errors (float-time (time-since started))))))
+    (and age (< age agent-repl-park-poll-stale-seconds))))
 
 (defun agent-repl-followup--ack (id api-url)
   (ignore-errors
@@ -186,7 +210,7 @@ misrouted frame costs one poll interval of latency, never the resume."
 (defun agent-repl-followup--poll-buffer-async (buf)
   "Poll and deliver one typed external followup to BUF."
   (with-current-buffer buf
-    (unless agent-repl-followup--poll-inflight
+    (unless (agent-repl-park--latch-held-p agent-repl-followup--poll-inflight)
       (let* ((agent (or (bound-and-true-p agent-chat--agent-id)
                         (bound-and-true-p claude-repl-agent-id)))
              (session agent-chat--session-id)
@@ -196,7 +220,7 @@ misrouted frame costs one poll interval of latency, never the resume."
                           (string-remove-suffix "/" api-url)
                           (url-hexify-string (or agent ""))
                           (url-hexify-string (or session "")))))
-        (setq agent-repl-followup--poll-inflight t)
+        (setq agent-repl-followup--poll-inflight (current-time))
         (url-retrieve
          url
          (lambda (status)
@@ -233,7 +257,7 @@ misrouted frame costs one poll interval of latency, never the resume."
 Uses `url-retrieve' so a slow/hung server can NEVER freeze the UI (the old
 synchronous GET is what made you reach for C-g)."
   (with-current-buffer buf
-    (unless agent-repl-park--poll-inflight
+    (unless (agent-repl-park--latch-held-p agent-repl-park--poll-inflight)
       (let* ((agent (or (bound-and-true-p agent-chat--agent-id)
                         (bound-and-true-p claude-repl-agent-id)))
              (session agent-chat--session-id)
@@ -244,7 +268,7 @@ synchronous GET is what made you reach for C-g)."
                           (url-hexify-string (or agent ""))
                           (url-hexify-string (or session ""))))
              (url-request-method "GET"))
-        (setq agent-repl-park--poll-inflight t)
+        (setq agent-repl-park--poll-inflight (current-time))
         (url-retrieve
          url
          (lambda (status)
