@@ -229,6 +229,12 @@
        "read endpoint. A hyperedge-neighborhood projection intentionally "
        "embeds only an envelope-grade hook and is not a body read."))
 
+(defn- review-output-instruction []
+  (str " The complete report MUST include :candidate-set-digest and "
+       ":base-problem-blob copied exactly from Authority, plus "
+       ":open-residuals as a vector of {:line INT :summary STRING} maps "
+       "(use [] when there are none); strings are not valid residual entries."))
+
 (defn- agency-stage [agency-base request prompt]
   (let [request (submission/prepare-request request)]
    (fn
@@ -376,7 +382,8 @@
                                  "the candidate's reviewed pattern set. "
                                  "Every :approve or :reassign review MUST explicitly "
                                  "state :memory-use/kind as exactly :substitutive or "
-                                 ":regulative; do not infer it from prose or legacy :kind.")]
+                                 ":regulative; do not infer it from prose or legacy :kind."
+                                 (review-output-instruction))]
                  ((agency-stage agency-base request prompt))))))
           ([job-id candidates]
            (let [digest (machine/ledger-digest [candidates])
@@ -394,7 +401,8 @@
                              "the candidate's reviewed pattern set. "
                              "Every :approve or :reassign review MUST explicitly "
                              "state :memory-use/kind as exactly :substitutive or "
-                             ":regulative; do not infer it from prose or legacy :kind.")
+                             ":regulative; do not infer it from prose or legacy :kind."
+                             (review-output-instruction))
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
                  (let [normalized (normalize-review-report
@@ -433,7 +441,8 @@
                                  "set. Every :approve or :reassign review "
                                  "MUST explicitly state :memory-use/kind as exactly "
                                  ":substitutive or :regulative; do not infer it from "
-                                 "prose or legacy :kind.")]
+                                 "prose or legacy :kind."
+                                 (review-output-instruction))]
                  ((agency-stage agency-base request prompt)))))))]
     ;; Upgrade legacy promotion envelopes before observing their terminal job.
     ;; This is a lossless durability migration: the job identity is unchanged.

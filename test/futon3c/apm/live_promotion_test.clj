@@ -1,5 +1,6 @@
 (ns futon3c.apm.live-promotion-test
   (:require [clojure.edn :as edn]
+            [clojure.string :as string]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-promotion :as sut]
@@ -512,6 +513,15 @@
       (is (= "proctor" (get-in reported-other [:reviews 0 :reviewer])))
       (is (= "other"
              (get-in reported-other [:reviews 0 :reported-reviewer]))))))
+
+(deftest promotion-review-prompt-states-controller-residual-shape
+  (let [instruction (#'sut/review-output-instruction)]
+    (is (string/includes? instruction ":candidate-set-digest"))
+    (is (string/includes? instruction ":base-problem-blob"))
+    (is (string/includes? instruction
+                          ":open-residuals as a vector of {:line INT :summary STRING} maps"))
+    (is (string/includes? instruction "use [] when there are none"))
+    (is (string/includes? instruction "strings are not valid residual entries"))))
 
 (deftest reviewer-authority-carries-full-persisted-evidence
   (let [candidate {:memory-id "m" :content-digest "digest"}
