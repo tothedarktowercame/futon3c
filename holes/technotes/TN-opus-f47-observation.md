@@ -925,3 +925,43 @@ Two wrong explanations in one hour, both confidently argued from real evidence. 
 (the path never carries the id) was half-right and pointed at the correct file. The second
 (it arrives late) was produced by watching the symptom disappear and assuming the cause had
 resolved, when what had actually changed was the measuring instrument.
+
+## A Mathlib cache refresh stops the campaign (2026-08-31)
+
+Three stops in fourteen minutes — 14:16:59 as a thrown tick, 14:28:00 as a blocked gate —
+traced to one environmental cause, and this chain is worth stating because every link is
+working as designed:
+
+    lake exe cache get / leantar -x --delete-corrupted   (running on apm-lean)
+      -> Mathlib.olean transiently absent from
+         .lake/packages/mathlib/.lake/build/lib/lean
+      -> every `lake env lean` fails: "unknown module prefix 'Mathlib'"
+      -> qualify-unit's build gives {:exit 1 :errors 1} against an
+         :eligibility/baseline of {:exit 0 :warnings 3 :sorry-warnings 3 :errors 0}
+      -> :countdown-manifest-eligibility-observation-invalid
+      -> manifest-valid? false
+      -> stepper :blocked / tick throws
+      -> coordinator stops
+
+`countdown-manifest/validate` calls `qualify-unit`, which runs a **full Lean build** in a
+revision-addressed checkout on every validation. So the campaign's ability to keep running
+is coupled to the Lean toolchain being continuously available, and an ordinary cache
+refresh — not a fault, a maintenance operation someone or something runs — halts the queue.
+
+The gate cannot tell the two apart. `{:exit 1 :errors 1}` means "this unit does not
+qualify" when the toolchain is healthy and "I could not build anything just now" when it is
+not, and both produce
+`:countdown-manifest-eligibility-observation-invalid`. A build failure whose error is
+`unknown module prefix 'Mathlib'` is a statement about the environment, not about b90A01.
+
+It resolved itself: the fetch completed, the same build returned exit 0 with the three
+expected sorry warnings, and the coordinator re-enabled at 14:30:00 with no intervention.
+That is the machine self-healing as it should. What it cost was three stops that each
+looked like a distinct defect, and roughly an hour of my reading them as one.
+
+**Recorded diagnostic gap, now fixed:** the 14:16:59 stop arrived as
+`:live-regulator-tick-threw` with only `:exception/class` and `:exception/message` —
+`"Countdown manifest failed executable validation"` and nothing else. The `ex-info` payload
+carrying the per-pin findings was discarded by the tick's catch, so by the time anyone
+looked the manifest validated cleanly and the cause was unrecoverable. `bdf494aa` keeps
+`ex-data` for an `IExceptionInfo`; the next such stop will say which requirement failed.
