@@ -1156,6 +1156,15 @@
        :repair/attempts (:repair/attempts state)
        :findings (:findings state)}
 
+      (and (= :promotion-pass (:repair/kind state))
+           (>= (:repair/attempts state) (:repair/max-attempts state)))
+      {:ok false
+       :error/code :promotion-apparatus-repair-exhausted
+       :state state
+       :repair/kind (:repair/kind state)
+       :repair/attempts (:repair/attempts state)
+       :findings (:findings state)}
+
       :else
       {:ok true :status :awaiting-apparatus-repair
        :state state :findings (:findings state)})

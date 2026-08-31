@@ -1082,6 +1082,19 @@
     (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
     (is (= state (:state result)))))
 
+(deftest exhausted-promotion-pass-review-set-mismatch-terminates
+  (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :contract-digest "contract-v1"
+               :last-valid-state {:stage :independent-review}
+               :repair/kind :promotion-pass :repair/attempts 1
+               :repair/max-attempts 1 :findings [:review-set-mismatch]}
+        result (sut/drive! {:state state :contract-digest "contract-v1"})]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= :promotion-pass (:repair/kind result)))
+    (is (= [:review-set-mismatch] (:findings result)))
+    (is (= state (:state result)))))
+
 (deftest apparatus-hold-revalidates-persisted-review-after-contract-change
   (let [materialization
         (fn [id digest]
