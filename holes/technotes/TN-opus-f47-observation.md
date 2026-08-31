@@ -1091,3 +1091,16 @@ receipt, and did not pin. All four stranded solves — a99J05 (f54), a99J06 (f55
 (f58), b90A03 (f68) — are from parked frames, not from partial ones.
 
 Banked as of this evening: 14 problems, open queue 109.
+
+**Closed (2026-08-31, `15eaf71d`).** The review findings now have instructions:
+`:reviewer-missing`, `:review-set-mismatch`, `:review-attribution-mismatch`,
+`:review-verdict-invalid`, `:review-reasoning-missing`. The change is purely additive —
+five entries in `repair-finding-instructions`, no validation touched, no catch-all.
+Verified after reload: f68's exact `:review-set-mismatch` renders "Return exactly one
+review for every assigned candidate, with no omitted or additional memory ids", and an
+invented finding still throws `:terminal-repair-instruction-missing`. Gates re-run here:
+56/246 and 17/53 assertions, clj-kondo clean.
+
+So a reviewer who misses candidates is now told to redo the review instead of parking the
+frame. The four already-stranded solves are unaffected — they stay pinned under
+`refs/apm/rescued-solves` until someone decides to sweep them.
