@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 116 = 475 corpus - 274 not-open - 79 topology - 4 defective - 2
+    ;; 112 = 475 corpus - 278 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -19,8 +19,12 @@
     ;; unchanged -- three problems moved from open to solved, which is the
     ;; queue noticing that work got banked. It fell from 118 to 116 when the
     ;; independently verified f52/a99J01 and f53/a99J03 solver heads were
-    ;; swept to origin/master (f992b7b0/66a497f0 and 545ea324/69395657).
-    (is (= 116 (count problems)))
+    ;; swept to origin/master (f992b7b0/66a497f0 and 545ea324/69395657). It
+    ;; fell from 116 to 112 on 2026-08-31 when four more campaign solves were
+    ;; swept: f59/b00J01, f62/b01J01, f64/b01J03 and f65/b01J04. Each was
+    ;; pinned only after `#print axioms` reported exactly
+    ;; [propext, Classical.choice, Quot.sound] with no sorryAx.
+    (is (= 112 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
