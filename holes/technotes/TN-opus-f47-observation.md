@@ -842,3 +842,26 @@ has its two sorries two days later. Rescuing the work is happening. Banking it i
 `bank-audit/unbanked-solved` reads solves out of the campaign's frame records, so a frame
 that never closed contributes nothing for it to find — which is why today's sweep saw only
 f65/b01J04 and f51/a98J03, and none of these.
+
+### f66: the holdout finally produces an interpretable answer, and it is negative
+
+b03J01's file on master already declares all five lemmas —
+`apm_b03J01_twinPrime_squarefree`, `..._isZGroup_of_twinPrime_card`,
+`..._sylow_normal_of_not_dvd_card`, `..._bridge_sylow_subsingleton_of_twinPrime_card`,
+`apm_b03j01` — with sorries at lines 59 and 113. Both attempts were filling two holes in a
+skeleton the problem handed them.
+
+    a1  withheld: e-apm-promotion-4fb8…  used: f34-guide/a95J03 (cross-problem route memory)
+        -> proved, 180 lines, 0 sorries
+    a2  withheld: none                   used: e-apm-promotion-4fb8… (f66-scribe/b03J01)
+        -> solved, 191 lines, 0 sorries
+
+The withheld item was released to a2, and a2 used it. That is the depositor-truth holdout
+working exactly as designed, and the answer it gives is that on this problem the
+within-frame scribe deposit was **not necessary**: a1 closed the same two sorries without
+it, by a different route, eleven lines shorter.
+
+Worth naming because it would have been easy to misread: a1 and a2 share all five lemma
+names, which looks like a strong transfer signal until you open master's file and find the
+five names already there. Structure shared between two attempts on the same problem is
+evidence about the problem, not about the shelf.
