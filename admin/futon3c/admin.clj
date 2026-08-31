@@ -26,6 +26,11 @@
                     #"/$" "")
        "/admin/eval"))
 
+(defn- canonical-futon2-source? [path]
+  (let [file (.getCanonicalFile (io/file path))
+        root (.getCanonicalFile (io/file "../futon2"))]
+    (.startsWith (.toPath file) (.toPath root))))
+
 (defn- read-form [[command & args]]
   (case command
     "eval" (let [code (str/join " " args)]
@@ -39,7 +44,16 @@
     "load-file" (let [path (first args)]
                   (when (str/blank? path)
                     (throw (ex-info "load-file requires a source path" {})))
-                  (pr-str (list 'load-file path)))
+                  (if (canonical-futon2-source? path)
+                    ;; The serving JVM, not this transient client, records the
+                    ;; exact source/commit/dirty state it loaded. The wrapper
+                    ;; refuses worktree paths and a source that changes during
+                    ;; the load. Futon3c's own reload path remains unchanged.
+                    (pr-str
+                     (list (list 'requiring-resolve
+                                 (list 'quote 'futon3c.wm.code-identity/load-file-recorded!))
+                           path))
+                    (pr-str (list 'load-file path))))
     "status" "{:profile :dev-admin :pid (-> (java.lang.management.ManagementFactory/getRuntimeMXBean) .getPid) :registry (futon3c.agency.registry/registry-status)}"
     (throw (ex-info
             (str "Usage:\n"
