@@ -39,7 +39,10 @@ while true; do
       echo "!! futon1b heap FLOOR ROSE ${floor} -> ${used}MB $(date -u +%H:%M:%SZ) -- collections no longer reclaiming; this is what a leak looks like"
       floor=$used
     fi
-    peak=$pct
+    # Do NOT reset peak here. Resetting it re-arms the bands, so every
+    # collection in a normal sawtooth re-announces a threshold already
+    # reported — which is the noise this watcher was tuned to stop making.
+    # Bands are once-per-run; the floor is the signal that repeats.
   fi
   prev=$used
   sleep 600
