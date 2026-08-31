@@ -156,8 +156,24 @@ print(m.group(1) if m else '')" 2>/dev/null)
     fi
   fi
 
+  # A regulator awaiting dispatched work does not tick, and that is correct.
+  # coordinator.edn carries :coordinator/pending-intent with an absolute
+  # :deadline-ms (permitted duration is 30 min), so flat ticks inside that
+  # window are "waiting", not "stuck" -- the same distinction the machine's own
+  # watchdog draws with :valid-external-wait?. Without this the alarm fired ten
+  # minutes into every solve: at 22:46 it called ticks frozen at 48587 while an
+  # intent persisted at 22:36 was live until 23:06.
+  waiting=$(python3 -c "
+import re,sys,time
+try: t=open('$C/coordinator.edn').read()
+except OSError: sys.exit()
+i=t.find(':coordinator/pending-intent')
+if i<0: sys.exit()
+m=re.search(r':deadline-ms (\d+)', t[i:i+900])
+if m and int(m.group(1))/1000 > time.time(): print('yes')" 2>/dev/null)
+
   if [ -n "$tk" ] && [ "$qs" != ":paused" ] && [ "$qs" != ":pause-after-active" ] \
-     && [ "$rs" != ":failed" ] && [ "$en" != "disabled" ]; then
+     && [ "$rs" != ":failed" ] && [ "$en" != "disabled" ] && [ -z "$waiting" ]; then
     if [ "$tk" = "$lasttk" ]; then
       stall=$((stall+1))
       if [ $stall -eq 10 ]; then
