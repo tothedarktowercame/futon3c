@@ -856,6 +856,26 @@
    :solver-promotion-candidates-invalid
    ["Your Solver promotion supplied no valid memory candidates." "Promotion requires a non-empty vector of typed candidates."
     "Add at least one schema-valid candidate derived from the verified trace, then submit below."]
+   :reviewer-missing
+   ["Your promotion review did not identify its acting reviewer."
+    "The independent-review envelope requires a string reviewer identity."
+    "Return the acting reviewer identity and attribute every review in this candidate set to it."]
+   :review-set-mismatch
+   ["Your promotion review did not cover the complete candidate set."
+    "The reviewed memory ids differed from the exact candidate ids assigned to this turn."
+    "Return exactly one review for every assigned candidate, with no omitted or additional memory ids."]
+   :review-attribution-mismatch
+   ["Your promotion reviews carried inconsistent reviewer attribution."
+    "At least one review's reviewer field differed from the acting reviewer."
+    "Attribute every review to the same acting reviewer named by the review envelope."]
+   :review-verdict-invalid
+   ["Your promotion review used an invalid verdict."
+    "At least one review verdict was outside the promotion contract's allowed verdicts."
+    "Replace each invalid verdict with the contract-defined decision that truthfully records the review."]
+   :review-reasoning-missing
+   ["Your promotion review omitted its reasoning or residual limitation."
+    "Every review requires nonblank reason and residual strings."
+    "For every candidate, supply a concrete review reason and a nonblank residual stating what remains limited or unresolved."]
    :close-evidence-invalid
    ["Your close-frame evidence was rejected."
     "The trace id, canonical closed-or-partial result, and controller-derived :memory-use-audit must all match the request contract."

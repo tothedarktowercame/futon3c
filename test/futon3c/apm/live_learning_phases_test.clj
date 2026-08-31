@@ -439,6 +439,26 @@
     (is (= :terminal-repair-instruction-missing (:error/code repair)))
     (is (= [finding] (:findings repair)))))
 
+(deftest review-validation-findings-have-specific-repair-instructions
+  (doseq [[finding expected]
+          {:reviewer-missing "acting reviewer identity"
+           :review-set-mismatch "exactly one review for every assigned candidate"
+           :review-attribution-mismatch "same acting reviewer"
+           :review-verdict-invalid "invalid verdict"
+           :review-reasoning-missing "nonblank reason and residual"}]
+    (testing (name finding)
+      (let [repair (sut/terminal-repair-request
+                    {:dispatch/id "original" :dispatch/type :scribe-reduce
+                     :frame-id "f68" :phase :scribe-reduce
+                     :problem-id "b90A03" :agent-id "f68-scribe"
+                     :role-card-path "scribe.md" :role-card-blob "blob"}
+                    {:ticket/id "ticket-1"} {:job-id "job-1"}
+                    {:error/code :promotion-review-invalid
+                     :findings [finding]})
+            packet (sut/prompt (:request repair))]
+        (is (:ok repair))
+        (is (re-find (re-pattern expected) packet))))))
+
 (deftest posthoc-guide-repair-rebuilds-current-authority-and-records-fault-origin
   (let [base-request {:dispatch/id "old" :dispatch/type :guide-intervention
                       :frame-id "f55" :problem-id "a99J06"
