@@ -415,8 +415,9 @@
                                  ":review/reason and :review/residual fields; return the "
                                  "same nonblank :reason and :residual on every review. "
                                  "Every review MUST state :pattern-ids as a non-empty "
-                                 "vector copied from or explicitly reassigned against "
-                                 "the candidate's reviewed pattern set. "
+                                 "vector. An :approve verdict MUST copy the candidate's "
+                                 "complete :pattern-ids exactly; only a :reassign verdict "
+                                 "may replace that set. "
                                  "Every :approve or :reassign review MUST explicitly "
                                  "state :memory-use/kind as exactly :substitutive or "
                                  ":regulative; do not infer it from prose or legacy :kind."
@@ -434,8 +435,9 @@
                              (resolved-role-card-path control-root request)
                              " (blob " (:role-card-blob request) "). "
                              "Every review MUST state :pattern-ids as a non-empty "
-                             "vector copied from or explicitly reassigned against "
-                             "the candidate's reviewed pattern set. "
+                             "vector. An :approve verdict MUST copy the candidate's "
+                             "complete :pattern-ids exactly; only a :reassign verdict "
+                             "may replace that set. "
                              "Every :approve or :reassign review MUST explicitly "
                              "state :memory-use/kind as exactly :substitutive or "
                              ":regulative; do not infer it from prose or legacy :kind."
@@ -473,9 +475,10 @@
                                  "body with nonblank :review/reason and :review/residual "
                                  "fields; return the same nonblank :reason and :residual "
                                  "on every review. Every review MUST state :pattern-ids "
-                                 "as a non-empty vector copied from or explicitly "
-                                 "reassigned against the candidate's reviewed pattern "
-                                 "set. Every :approve or :reassign review "
+                                 "as a non-empty vector. An :approve verdict MUST copy "
+                                 "the candidate's complete :pattern-ids exactly; only a "
+                                 ":reassign verdict may replace that set. Every :approve "
+                                 "or :reassign review "
                                  "MUST explicitly state :memory-use/kind as exactly "
                                  ":substitutive or :regulative; do not infer it from "
                                  "prose or legacy :kind."
@@ -1043,8 +1046,10 @@
            (or (< (:repair/attempts state) (:repair/max-attempts state))
                (legacy-approved-pattern-projection-failure? state)
                (and (= [:review-patterns-invalid] (vec (:findings state)))
-                    (not (:pattern-contract-repair-attempted?
-                          (:last-valid-state state))))))
+                    (or (not (:pattern-contract-repair-attempted?
+                              (:last-valid-state state)))
+                        (not (:approve-pattern-semantics-repair-attempted?
+                              (:last-valid-state state)))))))
       (let [prior (:last-valid-state state)
             successor-attempt (inc (or (:review-successor-attempt prior) 0))
             predecessor {:job {:job-id (:job prior)
@@ -1074,6 +1079,7 @@
                                           :predecessor-job-id (:job prior)
                                           :review-successor-attempt successor-attempt
                                           :pattern-contract-repair-attempted? true
+                                          :approve-pattern-semantics-repair-attempted? true
                                           :projection-repair-attempt
                                           (inc (:repair/attempts state))))]
                 (persist-fn next-state)
@@ -1132,6 +1138,17 @@
 
       (contains? #{:review-projection :promotion-publication}
                  (:repair/kind state))
+      {:ok false
+       :error/code :promotion-apparatus-repair-exhausted
+       :state state
+       :repair/kind (:repair/kind state)
+       :repair/attempts (:repair/attempts state)
+       :findings (:findings state)}
+
+      (and (= :promotion-pass (:repair/kind state))
+           (= [:review-patterns-invalid] (vec (:findings state)))
+           (:approve-pattern-semantics-repair-attempted?
+            (:last-valid-state state)))
       {:ok false
        :error/code :promotion-apparatus-repair-exhausted
        :state state

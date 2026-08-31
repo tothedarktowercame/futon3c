@@ -1200,13 +1200,37 @@
     (is (= :awaiting-terminal (:status result)))
     (is (= "contract-correction" (:job-id result)))
     (is (true? (:pattern-contract-repair-attempted? @saved)))
+    (is (true? (:approve-pattern-semantics-repair-attempted? @saved)))
     (let [held {:state/type :promotion :stage :awaiting-apparatus-repair
                 :repair/kind :promotion-pass
                 :repair/attempts 2 :repair/max-attempts 1
                 :findings [:review-patterns-invalid]
                 :last-valid-state @saved}]
-      (is (= :awaiting-apparatus-repair
-             (:status (sut/drive! {:state held})))))))
+      (is (= :promotion-apparatus-repair-exhausted
+             (:error/code (sut/drive! {:state held})))))))
+
+(deftest explicit-approve-pattern-semantics-allows-one-legacy-migration-successor
+  (let [saved (atom nil)
+        prior {:state/type :promotion :stage :independent-review
+               :candidates [{:memory-id "m" :pattern-ids ["p" "q"]}]
+               :job "ambiguous-prompt-correction"
+               :review-successor-attempt 2
+               :pattern-contract-repair-attempted? true}
+        result (sut/drive!
+                {:state {:state/type :promotion
+                         :stage :awaiting-apparatus-repair
+                         :repair/kind :promotion-pass
+                         :repair/attempts 2 :repair/max-attempts 1
+                         :findings [:review-patterns-invalid]
+                         :last-valid-state prior}
+                 :review-fn (fn [_ predecessor attempt]
+                              (is (= "ambiguous-prompt-correction" predecessor))
+                              (is (= 3 attempt))
+                              {:ok true :job "explicit-semantics-correction"})
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "explicit-semantics-correction" (:job-id result)))
+    (is (true? (:approve-pattern-semantics-repair-attempted? @saved)))))
 
 (deftest legacy-approved-pattern-projection-hold-dispatches-correction
   (let [last-valid {:state/type :promotion :stage :independent-review
