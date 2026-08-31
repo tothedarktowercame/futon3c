@@ -224,7 +224,11 @@
                 (.start thread)
                 {:click-id click-id :started-at started-at}
                 (catch Throwable throwable
-                  (fail-click! (or (:wm-agent-id opts)
-                                   war-machine-agent-id)
-                               click-id throwable)
+                  (try
+                    (fail-click! (or (:wm-agent-id opts)
+                                     war-machine-agent-id)
+                                 click-id throwable)
+                    (finally
+                      (deliver completion {:status :start-failed
+                                           :click-id click-id})))
                   (throw throwable))))))))))
