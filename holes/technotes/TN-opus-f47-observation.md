@@ -706,3 +706,44 @@ So the two findings in this note are not in tension; they are about different th
 
 Campaign tally after f62: 38 rows — 17 `fingerprinted`, 3 `weak-fingerprint`,
 12 `already-in-base`, 6 `unwitnessed`.
+
+## f65: the fourth guide→student solve, and two apparatus notes (2026-08-31)
+
+**f65/b01J04 closed and is banked.** a1 used 0 of 123 (1 withheld, no leak). a2 used 2 of
+126, both within-frame (`f65-guide`, `f65-scribe`). a3 used exactly one memory — an
+`f65-guide` deposit on b01J04 — and returned `outcome=success`. `#print axioms apm_b01j04`
+gave `[propext, Classical.choice, Quot.sound]` with no `sorryAx`, the statement was
+unchanged, and the solve is now on `origin/master` (`1b625d3c`, `9b014793`) at
+`sorry_count_total: 0`.
+
+That makes four frames whose SOLVING attempt used a within-frame guide deposit: f52/a2,
+f53/a3, f62/a2, f65/a3. It also extends to twenty-three the run of attempts that used
+nothing from a prior frame's shelf. Both facts have held through every frame measured.
+
+**Banking is not part of the frame cycle.** Nothing under `src/` calls
+`bank-sweep/sweep-to-master!`. A frame can certify its close, pin a sorry-free head under
+`refs/apm/banked-solves/<frame>/<problem>/<head>`, and stop there: the pin is in the
+corpus repo, master is untouched, and the problem still reads as open. b01J04 sat in that
+state between its close at 10:41Z and the sweep at 11:00Z, and b01J03 had spent the
+previous night the same way. The campaign's idea of what is solved and master's idea of
+what is solved drift apart by exactly the solves nobody has swept yet, and the only thing
+that closes the gap is a person or agent deciding to run the sweep.
+
+The sweep's own gate held: it banked f65/b01J04 and refused f51/a98J03 as `:not-pinned`.
+f51's head is a 1-sorry improvement on master's 2, not a solve, and its frame stopped at
+`guide-intervention-1` without ever closing — so the pin gate was refusing the right thing
+for the right reason.
+
+**A park disposition the machine cannot execute.** All eight parked frames now carry
+supervisor decisions: seven `:partial` and, since last night, f63 `:retry`.
+`reconcile-park-decisions` documents its own limit — "the decision's disposition is
+recorded but never executed here" — and nothing else reads the field; there is no
+validated vocabulary for it at all, only whatever a supervisor writes. So `:retry` reads to
+a human as a pending action while no code will ever act on it.
+
+It happens to be satisfied anyway, by a different route. f63's problem is b01J02, which
+still has 1 sorry on master, and `derive-queue` defines open as "at least one remaining
+Lean sorry" against `origin/master`. The JIT queue rederives from master each time, so
+b01J02 stays in the open set and will be offered again on its own. The retry needs no
+executor — but that is a property of how the queue is derived, not of the decision record,
+and the record should not be read as having caused it.
