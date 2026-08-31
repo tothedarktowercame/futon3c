@@ -43,6 +43,12 @@ enacting path, and it writes to `data/wm-trace/`.
     07-08  d36086f  A5 grounded feed added (flag-gated, dark)
     07-08  b624242  all built-dark flags armed default ON
     07-09           first run after the switch — 0 realized outcomes
+    [CORRECTED 2026-08-29, claude-15: the last :realized-outcome is
+     2026-07-06T12:04Z (record 12 of wm-trace-2026-07-06.edn); from 13:04Z
+     no record carries :enactment at all. The loop stopped ENACTING two days
+     BEFORE d36086f/b624242. Cause open — see README-census-v1.md, final
+     section. The 88 above is correct; "07-09" and "first run after the
+     switch" are not.]
     …               0 in every trace since, through 07-21 (the last)
 
 The migration was a **correctness improvement** — `realized-outcome-grounded`
