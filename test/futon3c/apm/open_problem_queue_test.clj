@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 111 = 475 corpus - 279 not-open - 79 topology - 4 defective - 2
+    ;; 109 = 475 corpus - 281 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -24,8 +24,13 @@
     ;; swept: f59/b00J01, f62/b01J01, f64/b01J03 and f65/b01J04. Each was
     ;; pinned only after `#print axioms` reported exactly
     ;; [propext, Classical.choice, Quot.sound] with no sorryAx. f66/b03J01
-    ;; followed the same afternoon, taking it to 111.
-    (is (= 111 (count problems)))
+    ;; followed the same afternoon, taking it to 111, and f67/b90A01 with
+    ;; f69/b93A01 that evening took it to 109. b90A01 is the instructive one:
+    ;; all three of f67's STUDENT attempts were partial and the frame result is
+    ;; :partial, but the SOLVER closed it, so the pin fired and it banked. A
+    ;; :partial frame result is about the learning protocol, not about whether
+    ;; the problem was solved.
+    (is (= 109 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision

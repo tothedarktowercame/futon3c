@@ -1071,3 +1071,23 @@ disposition, same stranded solve.
 So the sequence that loses a solved problem needs no exotic failure at all: a role reviews
 the wrong number of things, the finding has no instruction, the frame parks, and the pin
 never fires. The mathematics was never in question in any of the four.
+
+### Correction: what strands a solve is PARKING, not a partial result (2026-08-31)
+
+I wrote above that promotion "fires at frame close", and reported after f67 that b90A01 was
+still open because all three of its student attempts were partial. Both are wrong in the
+same way.
+
+f67's frame result IS `:partial`, and b90A01 banked anyway: the SOLVER closed it — after
+eight rounds, a provider capacity outage and a `:solver-remediation-required` halt — and
+that proof was pinned and swept (`0b1b0383`, `94778c7c`). A `:partial` frame result
+describes the learning protocol, not whether the problem was solved. The student attempts
+and the banked proof are different artifacts, and I had been reading the students' outcomes
+as the frame's.
+
+The condition that actually strands a solve is the frame never COMPLETING. f67 completed
+with a terminal receipt and a partial result, and pinned. f68 is parked, has no terminal
+receipt, and did not pin. All four stranded solves — a99J05 (f54), a99J06 (f55), aunk04
+(f58), b90A03 (f68) — are from parked frames, not from partial ones.
+
+Banked as of this evening: 14 problems, open queue 109.
