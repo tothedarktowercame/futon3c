@@ -1005,3 +1005,38 @@ projection, so its shape varies. Only this one shape has an instruction; the nex
 differently-shaped projection failure will stop the regulator the same way. That is
 deliberate — a finding with genuinely no instruction should stay loud rather than be
 silently tolerated — but it means the fix is one shape deep, not general.
+
+### f67 / b90A01: use rises with difficulty, not with success
+
+Three attempts, none closed:
+
+    a1   0 of 134 used  (3 withheld)                         partial
+    a2   2 of 140 used  (both f67-guide, within-frame)       partial
+    a3   5 of 142 used  (3 f67-guide, 1 f67-scribe,
+                         1 f64-guide / b01J03 CROSS-FRAME)   partial
+
+This is the first frame where the guide-to-student channel was used and did NOT produce a
+solve. The four earlier guide-deposit solves — f52/a2, f53/a3, f62/a2, f65/a3 — were all
+on problems that closed, which made "the student used the guide's deposit" and "the
+attempt closed" look like one fact. b90A01 separates them: both guide deposits used at a2,
+five memories at a3, still partial. Memory use climbed as the problem resisted, which is
+what you would expect from a student reaching for more help, and says nothing about whether
+the help worked.
+
+b90A01 is also the hardest problem the campaign has taken on: the solver spent eight rounds
+on it (four lost to a provider capacity outage) and ended in
+`:solver-remediation-required`.
+
+**The cross-frame read is no longer a single sticky memory.** Since f52 every cross-frame
+use had been `e-63b7c7c1`, f34-guide's route memory about sequencing a time-boxed session.
+a3 used a different one: f64-guide's `count-prime-order-elements-by-sylow-sigma-partition`,
+deposited on b01J03. That one is `:kind :memory` rather than `:reference` — actual
+mathematical content, a bijection from a sigma type over Sylow p-subgroups to the elements
+of order p — and b90A01 is about simple subgroups of alternating groups and groups of order
+120. Sylow content retrieved for a Sylow problem is a defensible retrieval on its face,
+which the f34 hook never was.
+
+So the retrieval picture from this morning needs widening: it is not one memory that always
+surfaces. It is a strategy hook that surfaces for anything, plus — at least once — a
+content memory that surfaced for a topically matched problem. Whether the second kind helps
+is still unmeasured; here it did not close the problem.
