@@ -1156,3 +1156,32 @@ Frames f67, f70 and f71 show the converse and make the point sharply: all three 
 student attempt return partial, all three completed with `:frame/result :partial`, and all
 three pinned and banked. Partial students do not block the pin. Only parking does — and
 parking is a statement about the learning protocol, not about the mathematics.
+
+## The cascade discards ~150 seconds of work rather than wait one (2026-09-01)
+
+Every student attempt in f74 (b94J01) and f75 (b94J03) has run with a failed memory
+cascade. The record is identical apart from the query:
+
+    :memory-cascade {:outcome :failed
+                     :expansion-ms 146932   (f74)  /  149522  (f75)
+                     :error "... :path \"/api/alpha/hyperedges\" :status 503
+                             :body {:ok false :error :expensive-read-busy
+                                    :retry-after-seconds 1}"}
+
+futon1b's admission control rejects an expensive read when busy and states the remedy:
+retry after one second. `conductor.clj:289` `response-edn` throws on any non-200, so the
+cascade throws away about 150 seconds of expansion rather than waiting one. This is not a
+missing concept in the codebase — `substrate/client.clj`, `futon1b_backend.clj` and
+`mission_scope_ingest.clj` all retry this exact condition with bounded exponential backoff.
+The APM cascade is the one caller that does not.
+
+**The measurement consequence is worse than the lost work.** The attempt's outcome is
+`:failed`, which reads exactly like a student who could not do the problem. I recorded
+f74's three attempts as students failing on a hard problem, and said so, before opening the
+request field. Six attempts across two frames are now in the campaign's record as student
+failures when the students never received their shelf. Any uptake statistic computed over
+this window is measuring the substrate's admission control.
+
+futon1b was not saturated when I looked — 2/2 permits free, no waiters — but its `rejected`
+counter moved 34 -> 46 across these frames. The rejections are intermittent, and the
+cascade's ~150-second expansion gives it a wide window to land in one.
