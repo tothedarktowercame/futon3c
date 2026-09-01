@@ -1397,8 +1397,15 @@
   per-memory artifact fingerprint audit. Audit failure is explicit evidence,
   not a reason to retract the close."
   [advanced frame-id close-receipt audit-fn]
-  (let [audit ((or audit-fn frame-fingerprint-audit/audit!)
-               {:state-directory (str (control-path state-directory))})
+  (let [frame-directory (control-path state-directory)
+        campaign-directory (.getParent frame-directory)
+        expected-rows (reduce + 0
+                              (map (comp count :attempt-ordinals)
+                                   (:receipt/memory-use-audit close-receipt)))
+        audit ((or audit-fn frame-fingerprint-audit/audit!)
+               {:campaign-directory (str campaign-directory)
+                :expected-frame-id frame-id
+                :expected-minimum-rows expected-rows})
         wake (record-analyst-wake! frame-id close-receipt)]
     (if (:ok wake)
       (assoc advanced :analyst-wake wake :fingerprint-audit audit)

@@ -353,21 +353,35 @@
              "f20" {:receipt/type :frame-close :receipt/result :closed}))))))
 
 (deftest durable-close-records-fingerprint-audit-without-gating-on-its-verdict
-  (let [audit-call (atom nil)
+  (let [root (java.nio.file.Files/createTempDirectory
+              "fingerprint-close-layout-"
+              (make-array java.nio.file.attribute.FileAttribute 0))
+        campaign (.resolve root "jit-campaign")
+        frame-directory (.resolve campaign "jit-campaign-f58")
+        _ (java.nio.file.Files/createDirectories
+           frame-directory
+           (make-array java.nio.file.attribute.FileAttribute 0))
+        audit-call (atom nil)
         audit-result {:ok false :error/code :fingerprint-audit-command-failed}]
     (with-redefs [sut/record-analyst-wake!
                   (fn [frame receipt]
                     {:ok true :frame frame :receipt receipt})]
-      (let [result (sut/record-close-observations!
-                    {:ok true :effect :closed} "f58" {:receipt/id "close-58"}
-                    (fn [request]
-                      (reset! audit-call request)
-                      audit-result))]
+      (let [result (binding [sut/state-directory (str frame-directory)]
+                     (sut/record-close-observations!
+                      {:ok true :effect :closed} "f58"
+                      {:receipt/id "close-58"
+                       :receipt/memory-use-audit
+                       [{:memory-id "e-one" :attempt-ordinals [1 2]}]}
+                      (fn [request]
+                        (reset! audit-call request)
+                        audit-result)))]
         (is (= {:ok true :effect :closed}
                (select-keys result [:ok :effect])))
         (is (= audit-result (:fingerprint-audit result)))
         (is (= "f58" (get-in result [:analyst-wake :frame])))
-        (is (string? (:state-directory @audit-call)))))))
+        (is (= (str campaign) (:campaign-directory @audit-call)))
+        (is (= "f58" (:expected-frame-id @audit-call)))
+        (is (= 2 (:expected-minimum-rows @audit-call)))))))
 
 (deftest set-alight-drives-live-supervisor-with-exact-continuation
   (let [calls (atom [])

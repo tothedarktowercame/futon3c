@@ -43,22 +43,29 @@
        (string? (:verdict row))))
 
 (defn- valid-audit?
-  [audit]
+  [audit campaign expected-frame-id expected-minimum-rows]
   (and (map? audit)
-       (string? (:campaign audit))
+       (= campaign (:campaign audit))
        (map? (:summary audit))
        (vector? (:rows audit))
+       (<= expected-minimum-rows
+           (count (filter #(= expected-frame-id (:frame %)) (:rows audit))))
        (every? valid-row? (:rows audit))))
 
 (defn audit!
   "Run the existing campaign fingerprint analyzer and atomically publish its
   JSON. A failed analyzer is made visible in a status EDN file but does not
-  retract the already-durable frame close. `run-command-fn` is injectable for
-  tests and receives `[campaigns-root campaign]`."
-  [{:keys [state-directory run-command-fn now-fn]
+  retract the already-durable frame close. `campaign-directory` is the parent
+  containing the campaign's frame directories, never an individual frame
+  directory. `expected-frame-id` and `expected-minimum-rows` bind successful
+  output to the durable close receipt's recorded memory uses. `run-command-fn`
+  is injectable for tests and receives `[campaigns-root campaign]`."
+  [{:keys [campaign-directory expected-frame-id expected-minimum-rows
+           run-command-fn now-fn]
     :or {run-command-fn default-run-command
-         now-fn #(str (Instant/now))}}]
-  (let [campaign-path (Path/of (str state-directory) (make-array String 0))
+         now-fn #(str (Instant/now))
+         expected-minimum-rows 0}}]
+  (let [campaign-path (Path/of (str campaign-directory) (make-array String 0))
         campaign (.toString (.getFileName campaign-path))
         campaigns-root (str (.getParent campaign-path))
         analysis-dir (.resolve campaign-path "analysis")
@@ -73,7 +80,8 @@
                  (try
                    (json/parse-string (:out result) true)
                    (catch Throwable _ nil)))
-        ok? (valid-audit? parsed)
+        ok? (valid-audit? parsed campaign expected-frame-id
+                          expected-minimum-rows)
         status (cond-> {:ok ok?
                         :audit/at (now-fn)
                         :audit/campaign campaign
@@ -85,6 +93,8 @@
                  (assoc :error/code (if (zero? (long (or (:exit result) -1)))
                                       :fingerprint-audit-invalid-output
                                       :fingerprint-audit-command-failed)
+                        :audit/expected-minimum-rows expected-minimum-rows
+                        :audit/expected-frame-id expected-frame-id
                         :command/exit (:exit result)
                         :command/stderr (subs (str (:err result))
                                              0 (min 1000 (count (str (:err result)))))))]

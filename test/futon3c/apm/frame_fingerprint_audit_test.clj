@@ -32,7 +32,8 @@
                  :rows [{:frame "f1" :attempt 2 :memory "e-memory-1"
                          :verdict "fingerprinted" :novel-hits ["foo_bar"]}]}
         result (sut/audit!
-                {:state-directory campaign
+                {:campaign-directory campaign
+                 :expected-frame-id "f1"
                  :now-fn (constantly "2026-08-30T00:00:00Z")
                  :run-command-fn
                  (fn [root name]
@@ -57,7 +58,7 @@
             :fingerprint-audit-invalid-output]]]
     (testing label
       (let [campaign (temp-campaign)
-            result (sut/audit! {:state-directory campaign
+            result (sut/audit! {:campaign-directory campaign
                               :now-fn (constantly "now")
                               :run-command-fn command})]
         (is (false? (:ok result)))
@@ -68,6 +69,24 @@
                (edn/read-string
                 (slurp (str campaign
                             "/analysis/fingerprint-audit-status.edn")))))))))
+
+(deftest zero-row-output-fails-closed-when-the-close-recorded-a-use
+  (let [campaign (temp-campaign)
+        payload {:campaign "campaign-1" :summary {:use-events 0} :rows []}
+        result (sut/audit!
+                {:campaign-directory campaign
+                 :expected-frame-id "f1"
+                 :expected-minimum-rows 1
+                 :now-fn (constantly "now")
+                 :run-command-fn
+                 (constantly {:exit 0
+                              :out (json/generate-string payload)
+                              :err ""})})]
+    (is (false? (:ok result)))
+    (is (= :fingerprint-audit-invalid-output (:error/code result)))
+    (is (= 1 (:audit/expected-minimum-rows result)))
+    (is (= "f1" (:audit/expected-frame-id result)))
+    (is (not (.exists (io/file campaign "analysis/fingerprint-audit.json"))))))
 
 (deftest f59-replay-is-deterministic-and-never-mutates-receipts
   (let [fixture (read-f59-fixture)
@@ -80,7 +99,7 @@
         _ (.mkdirs (io/file campaign "live"))
         _ (spit receipt-path receipt-bytes)
         run! (fn [command]
-               (sut/audit! {:state-directory campaign
+               (sut/audit! {:campaign-directory campaign
                             :now-fn (constantly "2026-08-30T11:30:00Z")
                             :run-command-fn command}))
         success (run! (constantly {:exit 0

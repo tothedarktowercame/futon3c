@@ -82,7 +82,7 @@
         run-audit (fn [runner at]
                     (fn [_]
                       (fingerprint/audit!
-                       {:state-directory campaign
+                       {:campaign-directory campaign
                         :now-fn (constantly at)
                         :run-command-fn runner})))
         success-runner (constantly {:exit 0
