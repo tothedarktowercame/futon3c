@@ -1104,3 +1104,25 @@ invented finding still throws `:terminal-repair-instruction-missing`. Gates re-r
 So a reviewer who misses candidates is now told to redo the review instead of parking the
 frame. The four already-stranded solves are unaffected — they stay pinned under
 `refs/apm/rescued-solves` until someone decides to sweep them.
+
+### The cross-frame picture changed over one day (2026-08-31 → 09-01)
+
+This morning I wrote that a single memory carried every cross-frame read since f52 —
+`e-63b7c7c1`, f34-guide's route hook — and that the shelf's older content contributed
+nothing measurable. By the end of the day that was no longer true, and the change was
+fast enough to be worth dating:
+
+    f66/a1   f34-guide  a95J03    route hook, cross-problem
+    f67/a3   f64-guide  b01J03    Sylow counting pattern, cross-problem
+    f69/a3   f62-guide  b01J01    cross-problem
+    f70/a2   f67-scribe b90A01    cross-problem  } both, and NOTHING within-frame
+             f67-guide  b90A01    cross-problem  }
+
+Four distinct source frames in five frames, where the previous fourteen frames had one.
+f70/a2 is the first attempt whose entire memory use was cross-frame — no deposit from its
+own guide or scribe at all.
+
+None of these four closed their problem, so this says nothing yet about whether the older
+shelf helps. What it does say is that the retriever's behaviour is not static, and a claim
+about it made on one day's frames does not survive the next. I stated the "one sticky
+memory" finding with more confidence than five frames of subsequent data supported.
