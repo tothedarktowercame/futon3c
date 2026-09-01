@@ -163,9 +163,10 @@
           (is (= {:attempt-id "attempt-test"
                   :outcome :grounded-change
                   :run-id-status :absent
+                  :run-record-status :absent
                   :run-id-absence :runner-did-not-return-run-id}
                  (select-keys (:last-result closed)
-                              [:attempt-id :outcome :run-id-status
+                              [:attempt-id :outcome :run-id-status :run-record-status
                                :run-id-absence]))))))))
 
 (deftest service-source-has-no-process-spawn-surface
@@ -241,9 +242,10 @@
           (is (= {:attempt-id "attempt-close-order"
                   :outcome :grounded-change
                   :run-id-status :absent
+                  :run-record-status :absent
                   :run-id-absence :runner-did-not-return-run-id}
                  (select-keys (:last-result (service/status))
-                              [:attempt-id :outcome :run-id-status
+                              [:attempt-id :outcome :run-id-status :run-record-status
                                :run-id-absence])))
           (is (= {:status :pending :stage :close}
                  (:registry-publication (service/status))))
@@ -270,6 +272,29 @@
                  (select-keys last-result [:click-id :run/id :run-id-status])))
           (is (= {:click/id click-id :run/id run-id :run-id-status :present}
                  (select-keys record [:click/id :run/id :run-id-status]))))))))
+
+(deftest mismatched-run-record-is-typed-and-rejected
+  (let [record-path (str (io/file service/*click-run-binding-dir* "wrong-run.edn"))
+        run! (fn [opts]
+               (io/make-parents record-path)
+               (spit record-path
+                     (pr-str {:run/id "different-run"
+                              :click/id (:click-id opts)
+                              :startedAt "2026-08-31T00:00:00Z"
+                              :route [{:fromNode "R1" :toNode "R2"
+                                       :via "control" :at_ "2026-08-31T00:00:01Z"}]}))
+               {:attempt-id "attempt-record-mismatch"
+                :outcome :grounded-change
+                :run/id "expected-run"
+                :run-record record-path})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (= :identity-mismatch
+               (get-in (service/status) [:last-result :run-record-status])))
+        (is (= :run-record-identity-mismatch
+               (get-in (service/status) [:last-result :run-record-absence])))))))
 
 (deftest registry-publication-failure-does-not-rewrite-terminal-result
   (let [run! (fn [_]

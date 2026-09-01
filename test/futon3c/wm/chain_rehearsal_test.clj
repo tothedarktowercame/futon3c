@@ -50,10 +50,12 @@
         body (str "(ns futon2.aif.full-loop-runner (:require [clojure.edn :as edn]))\n"
                   "(defn config [x] x)\n"
                   "(defn run-opportunity! [_]\n"
-                  "  (let [run (edn/read-string (slurp " (pr-str fixture-run) "))]\n"
+                  "  (let [run (assoc (edn/read-string (slurp " (pr-str fixture-run) "))\n"
+                  "                   :click/id (:click-id _))]\n"
                   "    (spit " (pr-str run-out) " (pr-str run))\n"
                   "    {:attempt-id \"rehearsal-attempt\" :outcome :rehearsed\n"
-                  "     :run/id (:run/id run)}))\n")]
+                  "     :run/id (:run/id run) :run-record-status :present\n"
+                  "     :run-record " (pr-str run-out) "}))\n")]
     (io/make-parents source)
     (spit source body)
     (git! (.getPath root) "init" "-q")
@@ -113,6 +115,7 @@
     (is (.isFile (io/file run-out)))
     (is (= :rehearsed (get-in (service/status) [:last-result :outcome])))
     (is (= :present (get-in (service/status) [:last-result :run-id-status])))
+    (is (= :present (get-in (service/status) [:last-result :run-record-status])))
     (load-file certificate-source)
     (let [run (edn/read-string (slurp run-out))
           run-id (get-in (service/status) [:last-result :run/id])
@@ -124,6 +127,7 @@
       ;; and durable binding must independently resolve the same run id.
       (is (= run-id (:run/id run) (:run/id binding-record)))
       (is (= (:click/id binding-record) (:click-id (service/status))))
+      (is (= (:click/id run) (:click/id binding-record)))
       (spit good-resource (str (pr-str (resource run-id)) "\n"))
       (is (= 0 (certificate-main ["--run" run-out "--resource" good-resource
                                   "--certificate" cert-out])))

@@ -5,6 +5,7 @@
    serving-JVM lifecycle, direct apparatus visibility, and the HTTP-facing
    status projection."
   (:require [clojure.java.io :as io]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.agency.registry :as reg])
   (:import [java.time Instant]
@@ -165,10 +166,33 @@
 (defn- persist-click-run-binding!
   [click-id result]
   (let [run-id (:run/id result)
+        run-record-path (:run-record result)
+        run-record (when run-record-path
+                     (try (edn/read-string (slurp run-record-path))
+                          (catch Throwable _ nil)))
+        run-record-status
+        (cond
+          (nil? run-record-path) :absent
+          (nil? run-record) :unavailable
+          (not= run-id (:run/id run-record)) :identity-mismatch
+          (not= click-id (:click/id run-record)) :identity-mismatch
+          :else :present)
         record (cond-> {:schema :wm-click-run-binding-v1
                         :click/id click-id
                         :attempt/id (:attempt-id result)
+                        :run-record-status run-record-status
                         :recorded-at (str (Instant/now))}
+                 run-record-path
+                 (assoc :run-record run-record-path)
+
+                 (not= :present run-record-status)
+                 (assoc :run-record-absence
+                        (case run-record-status
+                          :absent (or (:run-record-absence result)
+                                      :runner-did-not-return-run-record)
+                          :unavailable :run-record-unreadable
+                          :identity-mismatch :run-record-identity-mismatch))
+
                  (and (string? run-id) (not (str/blank? run-id)))
                  (assoc :run/id run-id :run-id-status :present)
 
@@ -193,7 +217,14 @@
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
              :run-id-status (:run-id-status binding)
+             :run-record-status (:run-record-status binding)
              :run-binding (:path binding)}
+      (:run-record binding)
+      (assoc :run-record (:run-record binding))
+
+      (:run-record-absence binding)
+      (assoc :run-record-absence (:run-record-absence binding))
+
       (= :present (:run-id-status binding))
       (assoc :run/id (:run/id binding))
 
@@ -248,7 +279,8 @@
             runner-opts
             (-> configured
                 (dissoc :wm-agent-id)
-                (assoc :phase-log-fn
+                (assoc :click-id click-id
+                       :phase-log-fn
                        (phase-sink agent-id click-id configured)
                        :strategic-selection-invoke-fn
                        in-process-selection))]
