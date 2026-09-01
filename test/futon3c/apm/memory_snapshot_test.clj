@@ -335,6 +335,26 @@
     (is (= 4 (:visibility/reads-per-candidate-bound result)))
     (is (= 20000 (:visibility/aggregate-bound-ms result)))))
 
+(deftest direct-publication-classifies-execution-timeout
+  (let [dir (Files/createTempDirectory "apm-direct-visible-failure"
+                                       (make-array FileAttribute 0))
+        result (sut/publish!
+                {:frame-id "f77" :problem-id "b95J04"
+                 :candidates [candidate]
+                 :path (.resolve dir "snapshot.edn")
+                 :evidence-visible?
+                 (fn [_]
+                   (throw
+                    (java.util.concurrent.ExecutionException.
+                     (java.net.http.HttpTimeoutException.
+                      "request timed out"))))})]
+    (is (false? (:ok result)))
+    (is (= :memory-snapshot-visibility-not-obtained (:error/code result)))
+    (is (= :transport (:error/component result)))
+    (is (= :timeout (:transport/acquired-outcome result)))
+    (is (= :timeout (:transport/classified-outcome result)))
+    (is (= :not-obtained (:transport/evidence result)))))
+
 (deftest large-visibility-set-respects-two-permit-substrate-capacity
   (let [dir (Files/createTempDirectory "apm-visible-130"
                                        (make-array FileAttribute 0))

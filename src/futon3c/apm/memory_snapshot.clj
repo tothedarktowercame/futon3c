@@ -48,6 +48,30 @@
       visibility-reads-per-candidate-bound
       visibility-read-bound-ms)})
 
+(defn- observe-visibility
+  "Convert a visibility callback into the typed transport observation consumed
+  by both direct and cumulative snapshot publication."
+  [evidence-visible? candidate]
+  (try
+    (let [observation (evidence-visible? candidate)]
+      (if (and (map? observation)
+               (contains? observation :transport/evidence))
+        observation
+        {:visible? (boolean observation)
+         :transport/acquired-outcome :success
+         :transport/classified-outcome :success
+         :transport/evidence :obtained}))
+    (catch Throwable t
+      (let [message (or (.getMessage t) "")
+            outcome (or (:transport/acquired-outcome (ex-data t))
+                        (if (re-find #"(?i)timeout" message)
+                          :timeout :unavailable))]
+        {:visible? nil
+         :transport/acquired-outcome outcome
+         :transport/classified-outcome outcome
+         :transport/evidence :not-obtained
+         :error/message message}))))
+
 (def ^:private lean-token
   #"[A-Za-z][A-Za-z0-9_'.]{5,}")
 
@@ -254,7 +278,9 @@
   existing different content fails closed."
   [{:keys [frame-id problem-id candidates path evidence-visible?
            base-text base-file-blob text-fn lineage kind-stratification]}]
-  (let [validations (mapv validate-candidate candidates)
+  (let [evidence-visible? (when (fn? evidence-visible?)
+                            #(observe-visibility evidence-visible? %))
+        validations (mapv validate-candidate candidates)
         ;; Every visibility check is an independent, bounded substrate read.
         ;; Realize them concurrently so the publication latency is bounded by
         ;; the slowest candidate rather than by the size of an inherited
@@ -331,25 +357,7 @@
   to publish!'s fail-closed validation and visibility boundary."
   [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
   (let [evidence-visible? (when (fn? evidence-visible?)
-                            (memoize
-                             (fn [candidate]
-                               (try
-                                 {:visible? (boolean (evidence-visible? candidate))
-                                  :transport/acquired-outcome :success
-                                  :transport/classified-outcome :success
-                                  :transport/evidence :obtained}
-                                 (catch Throwable t
-                                   (let [message (or (.getMessage t) "")
-                                         outcome (or (:transport/acquired-outcome
-                                                      (ex-data t))
-                                                     (if (re-find #"(?i)timeout"
-                                                                  message)
-                                                       :timeout :unavailable))]
-                                     {:visible? nil
-                                      :transport/acquired-outcome outcome
-                                      :transport/classified-outcome outcome
-                                      :transport/evidence :not-obtained
-                                      :error/message message}))))))
+                            (memoize #(observe-visibility evidence-visible? %)))
         args (assoc args :evidence-visible? evidence-visible?)
         origin-valid?
         (fn [candidate]
