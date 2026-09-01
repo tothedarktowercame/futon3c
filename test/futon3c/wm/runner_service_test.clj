@@ -162,12 +162,13 @@
                               ^Instant active-at)))
           (is (= {:attempt-id "attempt-test"
                   :outcome :grounded-change
-                  :run-id-status :absent
-                  :run-record-status :absent
-                  :run-id-absence :runner-did-not-return-run-id}
+                  :binding-status :absent
+                  :run-id-observation
+                  {:status :absent :reason :runner-did-not-return-run-id}
+                  :run-record-status :absent}
                  (select-keys (:last-result closed)
-                              [:attempt-id :outcome :run-id-status :run-record-status
-                               :run-id-absence]))))))))
+                              [:attempt-id :outcome :binding-status
+                               :run-id-observation :run-record-status]))))))))
 
 (deftest service-source-has-no-process-spawn-surface
   (let [source (slurp
@@ -241,12 +242,13 @@
           (is (false? (:running? (service/status))))
           (is (= {:attempt-id "attempt-close-order"
                   :outcome :grounded-change
-                  :run-id-status :absent
-                  :run-record-status :absent
-                  :run-id-absence :runner-did-not-return-run-id}
+                  :binding-status :absent
+                  :run-id-observation
+                  {:status :absent :reason :runner-did-not-return-run-id}
+                  :run-record-status :absent}
                  (select-keys (:last-result (service/status))
-                              [:attempt-id :outcome :run-id-status :run-record-status
-                               :run-id-absence])))
+                              [:attempt-id :outcome :binding-status
+                               :run-id-observation :run-record-status])))
           (is (= {:status :pending :stage :close}
                  (:registry-publication (service/status))))
           ;; Publication remains synchronous and observable; only the
@@ -257,7 +259,7 @@
           (is (= :published
                  (get-in (service/status) [:registry-publication :status]))))))))
 
-(deftest terminal-result-persists-exact-click-run-binding
+(deftest returned-run-id-without-record-is-observed-but-unavailable
   (let [run-id "run-exact-binding"
         run! (fn [_] {:attempt-id "attempt-exact-binding"
                       :outcome :grounded-change
@@ -268,10 +270,20 @@
         (is (= :completed (:status (service/await-click! click-id))))
         (let [last-result (:last-result (service/status))
               record (edn/read-string (slurp (:run-binding last-result)))]
-          (is (= {:click-id click-id :run/id run-id :run-id-status :present}
-                 (select-keys last-result [:click-id :run/id :run-id-status])))
-          (is (= {:click/id click-id :run/id run-id :run-id-status :present}
-                 (select-keys record [:click/id :run/id :run-id-status]))))))))
+          (is (= {:click-id click-id
+                  :binding-status :unavailable
+                  :run-id-observation
+                  {:status :present :source :runner-return :value run-id}}
+                 (select-keys last-result
+                              [:click-id :binding-status :run-id-observation])))
+          (is (= {:click/id click-id
+                  :binding-status :unavailable
+                  :run-id-observation
+                  {:status :present :source :runner-return :value run-id}}
+                 (select-keys record
+                              [:click/id :binding-status :run-id-observation])))
+          (is (not (contains? last-result :run/id)))
+          (is (not (contains? record :run-id-status))))))))
 
 (deftest pre-rename-binding-failure-is-absent-and-service-failed
   (let [run! (fn [_] {:attempt-id "attempt-binding-not-committed"
@@ -308,7 +320,9 @@
               record (edn/read-string (slurp (:run-binding last-result)))]
           (is (false? (:running? (service/status))))
           (is (= :grounded-change (:outcome last-result) (:outcome record)))
-          (is (= run-id (:run/id last-result) (:run/id record)))
+          (is (= run-id
+                 (get-in last-result [:run-id-observation :value])
+                 (get-in record [:run-id-observation :value])))
           (is (= :unconfirmed (:binding-durability last-result)))
           (is (= "directory force failure"
                  (get-in last-result [:binding-durability-warning :cause]))))))))
@@ -333,8 +347,54 @@
         (is (= :completed (:status (service/await-click! click-id))))
         (is (= :identity-mismatch
                (get-in (service/status) [:last-result :run-record-status])))
+        (is (= :identity-mismatch
+               (get-in (service/status) [:last-result :binding-status])))
+        (is (not (contains? (:last-result (service/status)) :run/id)))
         (is (= :run-record-identity-mismatch
                (get-in (service/status) [:last-result :run-record-absence])))))))
+
+(deftest matching-run-record-is-authoritatively-verified
+  (let [run-id "run-verified"
+        run! (fn [opts]
+               (let [record-path (str (io/file service/*click-run-binding-dir*
+                                               "verified-run.edn"))]
+                 (spit record-path
+                       (pr-str {:run/id run-id :click/id (:click-id opts)}))
+                 {:attempt-id "attempt-verified"
+                  :outcome :grounded-change
+                  :run/id run-id
+                  :run-record record-path}))]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (= :verified
+               (get-in (service/status) [:last-result :binding-status])))
+        (is (= run-id
+               (get-in (service/status)
+                       [:last-result :run-id-observation :value])))))))
+
+(deftest repeated-returned-id-is-authoritatively-duplicate
+  (let [run-id "run-duplicate"
+        run! (fn [_] {:attempt-id "attempt-duplicate"
+                      :outcome :grounded-change
+                      :run/id run-id})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))]
+      (let [{first-click :click-id} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! first-click))))
+        (is (= :unavailable
+               (get-in (service/status) [:last-result :binding-status])))
+        (let [{second-click :click-id} (service/click! {:wm-agent-id scratch-agent-id})]
+          (is (= :completed (:status (service/await-click! second-click))))
+          (is (= :duplicate
+                 (get-in (service/status) [:last-result :binding-status])))
+          (is (= [first-click]
+                 (get-in (service/status)
+                         [:last-result :duplicate-of-clicks])))
+          (is (= run-id
+                 (get-in (service/status)
+                         [:last-result :run-id-observation :value]))))))))
 
 (deftest registry-publication-failure-does-not-rewrite-terminal-result
   (let [run! (fn [_]

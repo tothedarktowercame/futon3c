@@ -117,11 +117,12 @@
     (is (.isFile (io/file run-out)))
     (is (= :grounded-no-change
            (get-in (service/status) [:last-result :outcome])))
-    (is (= :present (get-in (service/status) [:last-result :run-id-status])))
+    (is (= :verified (get-in (service/status) [:last-result :binding-status])))
     (is (= :present (get-in (service/status) [:last-result :run-record-status])))
     (load-file certificate-source)
     (let [run (edn/read-string (slurp run-out))
-          run-id (get-in (service/status) [:last-result :run/id])
+          run-id (get-in (service/status)
+                         [:last-result :run-id-observation :value])
           binding-record (edn/read-string
                           (slurp (get-in (service/status)
                                          [:last-result :run-binding])))
@@ -129,7 +130,9 @@
           normalize (resolve 'checks.wm-click-resource-observer/certificate-resource)]
       ;; The join now crosses the production service port. The fixture record
       ;; and durable binding must independently resolve the same run id.
-      (is (= run-id (:run/id run) (:run/id binding-record)))
+      (is (= run-id
+             (:run/id run)
+             (get-in binding-record [:run-id-observation :value])))
       (is (= (:click/id binding-record) (:click-id (service/status))))
       (is (= (:click/id run) (:click/id binding-record)))
       (spit good-resource

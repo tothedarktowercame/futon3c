@@ -179,6 +179,34 @@
 (defn- safe-id [x]
   (str/replace (str x) #"[^A-Za-z0-9._-]" "_"))
 
+(defn- existing-run-id-clicks
+  "Return prior click ids that observed `run-id`. Legacy v1 bindings used
+   top-level :run/id; current records keep the raw value under the explicitly
+   observational :run-id-observation carrier. Unreadable binding evidence is
+   loud because silently skipping it could falsely certify uniqueness."
+  [dir click-id run-id]
+  (if (and (string? run-id) (not (str/blank? run-id)) (.exists dir))
+    (->> (.listFiles dir)
+         (filter #(and (.isFile %)
+                       (str/starts-with? (.getName %) "click-run-binding-")
+                       (str/ends-with? (.getName %) ".edn")))
+         (map (fn [file]
+                (try
+                  (edn/read-string (slurp file))
+                  (catch Throwable throwable
+                    (throw (ex-info "click-run binding history is unreadable"
+                                    {:path (.getAbsolutePath file)}
+                                    throwable))))))
+         (keep (fn [binding]
+                 (let [observed (or (get-in binding
+                                            [:run-id-observation :value])
+                                    (:run/id binding))]
+                   (when (and (= run-id observed)
+                              (not= click-id (:click/id binding)))
+                     (:click/id binding)))))
+         vec)
+    []))
+
 (defn- persist-click-run-binding!
   [click-id result]
   (let [run-id (:run/id result)
@@ -193,10 +221,27 @@
           (not= run-id (:run/id run-record)) :identity-mismatch
           (not= click-id (:click/id run-record)) :identity-mismatch
           :else :present)
+        dir (io/file *click-run-binding-dir*)
+        duplicate-clicks (existing-run-id-clicks dir click-id run-id)
+        binding-status
+        (cond
+          (or (not (string? run-id)) (str/blank? (str run-id))) :absent
+          (= :identity-mismatch run-record-status) :identity-mismatch
+          (seq duplicate-clicks) :duplicate
+          (= :present run-record-status) :verified
+          :else :unavailable)
         record (cond-> {:schema :wm-click-run-binding-v1
                         :click/id click-id
                         :attempt/id (:attempt-id result)
                         :outcome (or (:outcome result) :unknown)
+                        :binding-status binding-status
+                        :run-id-observation
+                        (if (= :absent binding-status)
+                          {:status :absent
+                           :reason :runner-did-not-return-run-id}
+                          {:status :present
+                           :source :runner-return
+                           :value run-id})
                         :run-record-status run-record-status
                         :recorded-at (str (Instant/now))}
                  run-record-path
@@ -210,13 +255,8 @@
                           :unavailable :run-record-unreadable
                           :identity-mismatch :run-record-identity-mismatch))
 
-                 (and (string? run-id) (not (str/blank? run-id)))
-                 (assoc :run/id run-id :run-id-status :present)
-
-                 (or (not (string? run-id)) (str/blank? (str run-id)))
-                 (assoc :run-id-status :absent
-                        :reason :runner-did-not-return-run-id))
-        dir (io/file *click-run-binding-dir*)
+                 (seq duplicate-clicks)
+                 (assoc :duplicate-of-clicks duplicate-clicks))
         target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
         tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
         renamed? (volatile! false)]
@@ -280,7 +320,8 @@
     (cond-> {:click-id click-id
              :attempt-id (or (:attempt-id result) fallback-attempt-id)
              :outcome (or (:outcome result) :unknown)
-             :run-id-status (:run-id-status binding)
+             :binding-status (:binding-status binding)
+             :run-id-observation (:run-id-observation binding)
              :run-record-status (:run-record-status binding)
              :run-binding (:path binding)
              :binding-durability (:durability binding)}
@@ -292,11 +333,8 @@
       (:run-record-absence binding)
       (assoc :run-record-absence (:run-record-absence binding))
 
-      (= :present (:run-id-status binding))
-      (assoc :run/id (:run/id binding))
-
-      (= :absent (:run-id-status binding))
-      (assoc :run-id-absence (:reason binding)))))
+      (:duplicate-of-clicks binding)
+      (assoc :duplicate-of-clicks (:duplicate-of-clicks binding)))))
 
 (defn- close-click!
   [agent-id click-id result]
