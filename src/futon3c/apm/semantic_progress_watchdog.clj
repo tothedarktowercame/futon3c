@@ -44,7 +44,15 @@
     (:invalid-state? observation)
     {:code :invalid-state :finding (:invalid-state observation)}
 
-    (:failed-launch-audit? observation)
+    ;; After an explicit repair resume, the durable last-result still names
+    ;; the prior launch-audit failure while the newly claimed reconciliation
+    ;; tick re-runs that audit. Halting on that historical result races the
+    ;; repair tick: the watchdog disables the coordinator ten seconds after
+    ;; resume even though the claim has a valid external deadline. Once the
+    ;; claim settles, a repeated launch-audit failure is current again and
+    ;; must halt immediately.
+    (and (:failed-launch-audit? observation)
+         (nil? (:tick-claim observation)))
     {:code :failed-launch-audit :finding (:launch-audit observation)}
 
     (:impossible-transition? observation)

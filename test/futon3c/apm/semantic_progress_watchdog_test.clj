@@ -143,6 +143,18 @@
           (run-check nil (observation observation-key true) 0)]
       (is (= reason (get-in result [:reason :code]))))))
 
+(deftest reconciliation-claim-supersedes-historical-launch-audit-failure
+  (let [[result stops _]
+        (run-check nil
+                   (observation
+                    :failed-launch-audit? true
+                    :tick-claim {:claimed-at 1000}
+                    :awaiting-job {:job-id "jit-repair-tick"
+                                   :deadline 600000})
+                   2000)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))))
+
 (deftest watchdog-executor-is-independent-of-dead-watched-executor
   (let [^ScheduledExecutorService watched
         (Executors/newSingleThreadScheduledExecutor)
