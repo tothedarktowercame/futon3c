@@ -29,9 +29,9 @@
  {:ticket "T-kangaroo-v1-pouch.md" :status :done-in-fact :triaged-by "codex-6 invoke-1788294334077-7140-8e9f37aa, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-lean-authority-alias-27082026.md" :status :unknown :status-line ""}
  {:ticket "T-matrix-federation-proof.md" :status :parked :status-line "DEFERRED / parked 2026-06-10.** Standalone follow-on \u2014 **NOT** part of"}
- {:ticket "T-mesh-edge-coverage.md" :status :unknown :status-line ""}
- {:ticket "T-mesh-qa-misrouting.md" :status :unknown :status-line ""}
- {:ticket "T-mq7-unaddressable-caller.md" :status :unknown :status-line ""}
+ {:ticket "T-mesh-edge-coverage.md" :status :done-in-fact :triaged-by "codex-8 invoke-1788294726212-7156-3b8f5929, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-mesh-qa-misrouting.md" :status :done-in-fact :triaged-by "codex-8 invoke-1788294726212-7156-3b8f5929, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-mq7-unaddressable-caller.md" :status :partial :triaged-by "codex-8 invoke-1788294726212-7156-3b8f5929, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-strategic-cascade-emits-disconnected-patterns.md" :status :open :status-line "open. Diagnosis complete and reduced; the repair and its acceptance"}
  {:ticket "T-typed-bell-arse-write-async.md" :status :watch :status-line "WATCH \u2014 not a defect, no action while `FUTON3C_TYPED_BELLS` is OFF.**"}
  {:ticket "T-watu-replay-layer.md" :status :scoped :status-line "SCOPED, NOT STARTED.**"}

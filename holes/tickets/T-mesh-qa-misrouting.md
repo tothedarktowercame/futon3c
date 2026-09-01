@@ -1,5 +1,7 @@
 # T-mesh-qa-misrouting — unified mesh + misrouting QA
 
+**Status (triaged 2026-09-01): DONE-IN-FACT, with declared limits.** Unified reader + MQ checks + GET /api/alpha/coordination/qa exist; the checkability registry itself records MQ-2 as a capture gap and MQ-3/MQ-4 as partial. Close the implementation; the limits are recorded, not hidden.
+
 Parent mission: `holes/missions/M-agency-hardening.md` (invariant #2 explicit
 identity, #3 typed evidence, W3 audit). Dispatched by claude-6 (in-flight
 mechanic), 2026-06-10. Reviewer: claude-6.
