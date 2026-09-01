@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 104 = 475 corpus - 286 not-open - 79 topology - 4 defective - 2
+    ;; 103 = 475 corpus - 287 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -40,8 +40,9 @@
     ;; only a park does. f75/b94J03 followed at 105 -- three sorries closed,
     ;; and the first frame to run end to end with the cascade retry live.
     ;; f76/b95J02 took it to 104 and closed outright rather than partial --
-    ;; the first :closed frame result since f66.
-    (is (= 104 (count problems)))
+    ;; the first :closed frame result since f66. f77/b95J04 took it to 103,
+    ;; the twentieth banked and the second three-sorry problem closed.
+    (is (= 103 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
