@@ -3,6 +3,7 @@
             [clojure.string :as string]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-job-driver :as job-driver]
             [futon3c.apm.live-promotion :as sut]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.transport-conformance :as transport]
@@ -180,14 +181,36 @@
            (:error/code result)))
     (is (zero? @successors))))
 
-(deftest promotion-repair-successor-always-has-collection-evidence
-  (let [observation (#'sut/successor-observation
-                     "terminal-job" nil [:reviewer-missing])]
-    (is (string? (:collection-evidence-id observation)))
-    (is (not-empty (:collection-evidence-id observation)))
-    (is (= observation
-           (#'sut/successor-observation
-            "terminal-job" nil [:reviewer-missing])))))
+(deftest promotion-repair-successor-requires-authoritative-collection
+  (let [collection (job-driver/terminal-collection-record
+                    {:dispatch/id "dispatch" :role :promotion-proctor}
+                    {:job-id "terminal-job"}
+                    {:state "done" :terminal-code 0}
+                    {:submission/id "submission"} 1)
+        valid {:evidence collection}
+        mismatched {:evidence (assoc collection :collection/id "fabricated")}
+        stale-collection (job-driver/terminal-collection-record
+                          {:dispatch/id "dispatch" :role :promotion-proctor}
+                          {:job-id "old-job"}
+                          {:state "done" :terminal-code 0}
+                          {:submission/id "submission"} 1)
+        stale {:evidence stale-collection}
+        observe #(#'sut/successor-observation
+                   "terminal-job" % [:reviewer-missing])]
+    (is (= (:collection/id collection)
+           (:collection-evidence-id (observe valid))))
+    (is (= "" (:collection-evidence-id (observe nil))))
+    (is (= "" (:collection-evidence-id (observe mismatched))))
+    (is (= "" (:collection-evidence-id (observe stale))))
+    (is (= :terminal-collection-authority-missing
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" nil))))
+    (is (= :terminal-collection-authority-digest-mismatch
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" mismatched))))
+    (is (= :terminal-collection-authority-stale
+           (:error/code (job-driver/terminal-collection-authority
+                         "terminal-job" stale))))))
 
 (deftest invisible-candidate-redispatches-scribe-before-observing-review
   (let [saved (atom nil)

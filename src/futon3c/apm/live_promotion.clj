@@ -7,6 +7,7 @@
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-job-driver :as job-driver]
             [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-review-store :as review-store]
@@ -112,22 +113,15 @@
      :decision decision}))
 
 (defn- successor-observation [job-id terminal-collection findings]
-  (let [collection-id
-        (or (get-in terminal-collection [:evidence :collection/id])
-            ;; Promotion's apparatus-repair path can begin after the role
-            ;; terminal was durably observed but before a live-job-driver
-            ;; collection envelope was retained.  Bind that collection to the
-            ;; exact persisted predecessor/finding tuple; an announced
-            ;; successor must never carry an empty collection witness.
-            (machine/ledger-digest
-             [{:collection/type :promotion-repair-terminal
-               :job-id (str job-id)
-               :findings (vec findings)}]))]
+  (let [authority (job-driver/terminal-collection-authority
+                   job-id terminal-collection)]
     (campaign-trace/validate-authoritative-observation
      :successor
   {:predecessor-id (str job-id)
    :terminal-evidence-id (str job-id)
-   :collection-evidence-id (str collection-id)
+   ;; An invalid authority is deliberately projected as an empty witness, so
+   ;; Lean's predecessorRecordComplete remains a real, failing closure gate.
+   :collection-evidence-id (str (or (:collection/id authority) ""))
    :disposition (pr-str (vec findings))
    :predecessor-persisted? true
    :successor-announced-id ""

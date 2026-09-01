@@ -153,6 +153,30 @@
   (= :wall-clock-budget-exhausted
      (:condition/type (expected-role-terminal-condition job))))
 
+(defn terminal-collection-authority
+  "Verify that a persisted collection is the content-addressed collection for
+  EXPECTED-JOB-ID.  A nearby terminal observation is not collection authority."
+  [expected-job-id terminal-collection]
+  (let [collection (:evidence terminal-collection)
+        collection-id (:collection/id collection)
+        expected-id (when (map? collection)
+                      (machine/ledger-digest
+                       [(dissoc collection :collection/id)]))]
+    (cond
+      (not (and (map? collection) (seq collection-id)))
+      {:ok false :error/code :terminal-collection-authority-missing}
+
+      (not= collection-id expected-id)
+      {:ok false :error/code :terminal-collection-authority-digest-mismatch
+       :observed collection-id :expected expected-id}
+
+      (not= (str expected-job-id) (str (:job-id collection)))
+      {:ok false :error/code :terminal-collection-authority-stale
+       :observed-job-id (:job-id collection)
+       :expected-job-id expected-job-id}
+
+      :else {:ok true :collection/id collection-id})))
+
 (defn- successor-observation [job terminal-collection findings]
   (campaign-trace/validate-authoritative-observation
    :successor
