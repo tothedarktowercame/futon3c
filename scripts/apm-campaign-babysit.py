@@ -140,8 +140,7 @@ def discover_queue(known_campaign_dir):
         if ':coordinator/adapter :apm/jit-problem-queue' not in chunk:
             continue
         m = re.search(r':coordinator/enabled\? (\S+?)[,}]', chunk)
-        if not m or m.group(1) != 'true':
-            continue
+        enabled = bool(m and m.group(1) == 'true')
         problem_count = len(re.findall(r':problem/id "', chunk))
         if problem_count <= 1:
             continue  # single-problem retry queue, not what we're waiting for
@@ -162,6 +161,13 @@ def discover_queue(known_campaign_dir):
         queue_status = queue.get('queue_status')
         active = queue.get('active_frame') is not None
         nonterminal = queue_status not in ('paused', 'complete')
+        # A pinned watcher owns the named campaign's failure visibility. A
+        # stopped coordinator is commonly disabled by the durable lifecycle;
+        # refusing to attach then makes a service restart erase the incident.
+        # Discovery remains strict for unpinned watchers and terminal queues.
+        pinned_active = bool(TARGET_COORDINATOR_ID and active and nonterminal)
+        if not enabled and not pinned_active:
+            continue
         running = coordinator.get('status') in ('running', 'failed', 'stopped')
         candidates.append({
             'coordinator_id': cid, 'queue_name': qm.group(1),
