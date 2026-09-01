@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 109 = 475 corpus - 281 not-open - 79 topology - 4 defective - 2
+    ;; 108 = 475 corpus - 282 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -29,8 +29,10 @@
     ;; all three of f67's STUDENT attempts were partial and the frame result is
     ;; :partial, but the SOLVER closed it, so the pin fired and it banked. A
     ;; :partial frame result is about the learning protocol, not about whether
-    ;; the problem was solved.
-    (is (= 109 (count problems)))
+    ;; the problem was solved. f70/b93J01 followed the same way overnight,
+    ;; taking it to 108: three partial student attempts, a solver proof, a
+    ;; :partial frame result, and a pin that fired anyway.
+    (is (= 108 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
