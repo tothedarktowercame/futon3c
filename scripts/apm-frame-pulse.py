@@ -249,10 +249,21 @@ def main():
         # :receipt/memory-cascade {:outcome :failed ...} and nothing surfaced
         # it, so the sibling-link channel was dead from f64 to f74 while the
         # pulse kept printing ZERO UPTAKE as if memory had been declined.
+        # Three different facts have been printing as one "ZERO UPTAKE":
+        #   the cascade was refused (503, heap pressure) -- not measurable;
+        #   it ran and had nothing sibling-linked to offer -- a fact about the
+        #     corpus, not about the student;
+        #   it offered and the student declined -- the only one that is
+        #     evidence about uptake.
         cascade_failed = "memory cascade substrate read failed" in t
-        flag = "   <-- ZERO UPTAKE" if (na and not nu and not cascade_failed) else ""
+        casc = re.search(r":receipt/memory-cascade \{(.{0,400})", t, re.S)
+        offered = bool(casc and re.search(r":offers \[\s*\{", casc.group(1)))
+        flag = ""
         if cascade_failed:
             flag = "   <-- CASCADE READ FAILED (uptake not measurable)"
+        elif na and not nu:
+            flag = ("   <-- ZERO UPTAKE (cascade offered, declined)" if offered
+                    else "   <-- ZERO UPTAKE (cascade had nothing to offer)")
         print(f"    a{n}: memory {nu}/{na} used   "
               f"{'sorries='+sor.group(1) if sor else ''} "
               f"{'outcome='+out.group(1) if out else ''}{flag}")
