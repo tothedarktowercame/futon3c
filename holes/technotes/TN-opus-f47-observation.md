@@ -1246,3 +1246,31 @@ already refused, tagged with the same `:memory-cascade-unreachable` code; only t
 case fell through and ran degraded. The change makes them consistent, and f69/a2's proof
 under a failed cascade was exploiting that inconsistency rather than demonstrating
 something worth keeping. The neighbouring test said so and I escalated before reading it.
+
+## f76: the first uptake measurement worth the name (2026-09-01)
+
+With the cascade retry live, f76 (b95J02) produced three attempts under three different
+enrichment conditions, all reporting `outcome ok`:
+
+    a1   cascade succeeded,  0 offers    used 0 of 185
+    a2   cascade succeeded,  0 offers    used 2 of 188  (f76-scribe; f69-zai-scribe/b93A01)
+    a3   cascade succeeded, 33 offers    used 0 of 188
+
+a3 is the observation this note has been missing since f64. Thirty-three sibling-route
+memories, one hop out through shared patterns — `math-formalization-CA/measure-integration-api`
+several times over, `complex-arg-of-cpow-root`, others — retrieved by exactly the mechanism
+the design intends, offered to the student, and every one declined.
+
+Every earlier "ZERO UPTAKE" in this note was a student declining a base shelf whose sibling
+expansion had silently failed. This one is a student declining the enrichment itself. The
+two look identical in the used-count and are not the same fact.
+
+a2 separates the routes further: it took two memories while the cascade offered nothing, so
+both came through the base shelf — including `f69-zai-scribe/b93A01`, cross-frame. The
+sibling cascade and the shelf are independent paths to a memory, and a use through one says
+nothing about the other. (`f69-zai-scribe` is also a depositor variant absent from every
+prior measurement here; the scribe seat has more than one flavour, which I had not noticed.)
+
+So the honest state of the transfer question, after a day of measuring the wrong thing
+without knowing it: uptake of the sibling expansion is now measurable, and the first
+measurement is zero out of thirty-three.
