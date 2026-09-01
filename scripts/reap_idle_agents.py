@@ -19,6 +19,7 @@ Usage:
   reap_idle_agents.py --self-test     # run deterministic decision tests
 """
 import argparse
+import collections
 import datetime
 import json
 import os
@@ -100,6 +101,14 @@ def decision_summary(roster, decisions):
         "invoking": sum(agent.get("status") == "invoking"
                         for agent in roster.values()),
         "self": sum(row["reason"] == "self" for row in decisions),
+        # The counts above are roster PROPERTIES and overlap: every restored
+        # entry on this box is also a federation proxy, so reporting them side
+        # by side reads as a partition and overstates what was protected. The
+        # two below come from the decisions themselves, where each agent is
+        # counted once under the first reason that matched.
+        "skipped": sum(row["decision"] == "skip" for row in decisions),
+        "skipped_by_reason": dict(collections.Counter(
+            row["reason"] for row in decisions if row["decision"] == "skip")),
     }
 
 
@@ -117,9 +126,13 @@ def human_report(roster, decisions, threshold, reap):
     mode = "REAPING" if reap else "DRY-RUN (pass --reap to execute)"
     lines = [
         f"{mode} — threshold {threshold}h, {summary['reap']} candidate(s):",
-        (f"Skipped protections: {summary['proxies']} proxies, "
-         f"{summary['restored']} restored, {summary['invoking']} invoking, "
-         f"{summary['self']} self."),
+        (f"Skipped {summary['skipped']} protected: "
+         + ", ".join(f"{reason} {n}" for reason, n
+                     in sorted(summary["skipped_by_reason"].items()))
+         + " (first matching reason)."),
+        (f"Roster properties: {summary['proxies']} proxy, "
+         f"{summary['restored']} restored, {summary['invoking']} invoking "
+         f"— these overlap and do not sum."),
         "",
     ]
     by_id = {row["id"]: row for row in decisions}
