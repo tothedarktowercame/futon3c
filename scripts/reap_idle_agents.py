@@ -7,15 +7,19 @@ An agent's live footprint is in two places:
     `*invoke: <id>*` buffer) — killed via emacsclient
 
 This finds agents idle for >= THRESHOLD hours and cleans up both. Agents currently
-`invoking`, and this session itself (--self), are never reaped.
+`invoking`, federation proxies, restored entries, and this session itself
+(--self), are never reaped.
 
 Usage:
   reap_idle_agents.py                 # dry-run: list what WOULD be reaped
   reap_idle_agents.py --reap          # actually reap
-  reap_idle_agents.py --hours 24      # different idle threshold (default 15)
+  reap_idle_agents.py --hours 48      # different idle threshold (default 24)
   reap_idle_agents.py --self claude-9 # protect a specific id (defaults to $FUTON_AGENT_ID)
+  reap_idle_agents.py --json          # emit the same decisions as JSON
+  reap_idle_agents.py --self-test     # run deterministic decision tests
 """
 import argparse
+import collections
 import datetime
 import json
 import os
@@ -45,6 +49,149 @@ def idle_hours(agent, ref):
 
 def emacs_socket(agent):
     return (agent.get("metadata") or {}).get("emacs-socket")
+
+
+def is_proxy(agent):
+    """Return true only for Agency's explicit federation-proxy marker."""
+    return (agent.get("metadata") or {}).get("proxy?") is True
+
+
+def classify_agents(roster, ref, threshold, self_id=None):
+    """Return one decision record per roster entry.
+
+    Protection checks precede the idle threshold.  The summary counts proxy and
+    restored properties independently, so an entry carrying both is visible in
+    both census counts even though its per-entry reason is the first applicable
+    protection.
+    """
+    decisions = []
+    for aid, agent in roster.items():
+        hrs = idle_hours(agent, ref)
+        status = agent.get("status")
+        if aid == self_id:
+            decision, reason = "skip", "self"
+        elif is_proxy(agent):
+            decision, reason = "skip", "proxy"
+        elif status == "restored":
+            decision, reason = "skip", "restored"
+        elif status == "invoking":
+            decision, reason = "skip", "invoking"
+        elif hrs is None:
+            decision, reason = "keep", "last-active-unavailable"
+        elif hrs >= threshold:
+            decision, reason = "reap", "idle-threshold"
+        else:
+            decision, reason = "keep", "below-threshold"
+        decisions.append({
+            "id": aid,
+            "idle_hours": None if hrs is None else round(hrs, 6),
+            "decision": decision,
+            "reason": reason,
+        })
+    return sorted(decisions, key=lambda row: row["id"])
+
+
+def decision_summary(roster, decisions):
+    return {
+        "agents": len(decisions),
+        "reap": sum(row["decision"] == "reap" for row in decisions),
+        "proxies": sum(is_proxy(agent) for agent in roster.values()),
+        "restored": sum(agent.get("status") == "restored"
+                        for agent in roster.values()),
+        "invoking": sum(agent.get("status") == "invoking"
+                        for agent in roster.values()),
+        "self": sum(row["reason"] == "self" for row in decisions),
+        # The counts above are roster PROPERTIES and overlap: every restored
+        # entry on this box is also a federation proxy, so reporting them side
+        # by side reads as a partition and overstates what was protected. The
+        # two below come from the decisions themselves, where each agent is
+        # counted once under the first reason that matched.
+        "skipped": sum(row["decision"] == "skip" for row in decisions),
+        "skipped_by_reason": dict(collections.Counter(
+            row["reason"] for row in decisions if row["decision"] == "skip")),
+    }
+
+
+def json_report(roster, decisions, threshold, reap):
+    return json.dumps({
+        "mode": "reap" if reap else "dry-run",
+        "threshold_hours": threshold,
+        "summary": decision_summary(roster, decisions),
+        "decisions": decisions,
+    }, sort_keys=True)
+
+
+def human_report(roster, decisions, threshold, reap):
+    summary = decision_summary(roster, decisions)
+    mode = "REAPING" if reap else "DRY-RUN (pass --reap to execute)"
+    lines = [
+        f"{mode} — threshold {threshold}h, {summary['reap']} candidate(s):",
+        (f"Skipped {summary['skipped']} protected: "
+         + ", ".join(f"{reason} {n}" for reason, n
+                     in sorted(summary["skipped_by_reason"].items()))
+         + " (first matching reason)."),
+        (f"Roster properties: {summary['proxies']} proxy, "
+         f"{summary['restored']} restored, {summary['invoking']} invoking "
+         f"— these overlap and do not sum."),
+        "",
+    ]
+    by_id = {row["id"]: row for row in decisions}
+    candidates = []
+    for aid, agent in roster.items():
+        row = by_id[aid]
+        if row["decision"] == "reap":
+            candidates.append((row["idle_hours"], aid, agent))
+    candidates.sort(reverse=True)
+    for hrs, aid, agent in candidates:
+        socket = emacs_socket(agent)
+        agent_type = agent.get("type") or "claude"
+        lines.append(
+            f"  {aid:14} idle {hrs:5.1f}h  type={agent_type}  "
+            f"emacs={socket or '-'}  decision=reap reason=idle-threshold")
+    if not candidates:
+        lines.append("No agents meet the reap threshold.")
+    return "\n".join(lines)
+
+
+def self_test():
+    ref = datetime.datetime(2026, 9, 1, tzinfo=datetime.timezone.utc)
+
+    def agent(hours, status="idle", proxy=False):
+        return {
+            "last-active": (ref - datetime.timedelta(hours=hours)).isoformat(),
+            "status": status,
+            "metadata": {"proxy?": proxy},
+        }
+
+    roster = {
+        "proxy-old": agent(300, proxy=True),
+        "restored-old": agent(300, status="restored"),
+        "invoking-old": agent(300, status="invoking"),
+        "local-old": agent(25),
+        "local-recent": agent(23),
+        "self-old": agent(300),
+    }
+    decisions = classify_agents(roster, ref, 24.0, "self-old")
+    by_id = {row["id"]: row for row in decisions}
+    expected = {
+        "proxy-old": ("skip", "proxy"),
+        "restored-old": ("skip", "restored"),
+        "invoking-old": ("skip", "invoking"),
+        "local-old": ("reap", "idle-threshold"),
+        "local-recent": ("keep", "below-threshold"),
+        "self-old": ("skip", "self"),
+    }
+    for aid, pair in expected.items():
+        actual = (by_id[aid]["decision"], by_id[aid]["reason"])
+        assert actual == pair, (aid, actual, pair)
+    encoded = json_report(roster, decisions, 24.0, False)
+    decoded = json.loads(encoded)
+    assert decoded["decisions"] == decisions
+    human = human_report(roster, decisions, 24.0, False)
+    for row in decisions:
+        if row["decision"] == "reap":
+            assert row["id"] in human
+    print("self-test: PASS (proxy, restored, invoking, threshold, self, JSON)")
 
 
 def kill_emacs_buffers(agent_id, socket, agent_type):
@@ -106,41 +253,42 @@ def deregister(agent_id):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--hours", type=float, default=15.0,
-                    help="idle threshold in hours (default 15)")
+    ap.add_argument("--hours", type=float, default=24.0,
+                    help="idle threshold in hours (default 24)")
     ap.add_argument("--reap", action="store_true",
                     help="actually reap (default is dry-run)")
     ap.add_argument("--self", default=os.environ.get("FUTON_AGENT_ID"),
                     help="agent id to protect from reaping (this session)")
+    ap.add_argument("--json", action="store_true",
+                    help="emit all decisions as machine-readable JSON")
+    ap.add_argument("--self-test", action="store_true",
+                    help="run deterministic decision tests without Agency")
     args = ap.parse_args()
+
+    if args.self_test:
+        self_test()
+        return
 
     ref = now_utc()
     roster = fetch_roster()
-    candidates = []
-    for aid, a in roster.items():
-        hrs = idle_hours(a, ref)
-        status = a.get("status")
-        if aid == args.self:
-            continue
-        if status == "invoking":
-            continue
-        if hrs is not None and hrs >= args.hours:
-            candidates.append((hrs, aid, a))
-    candidates.sort(reverse=True)
+    decisions = classify_agents(roster, ref, args.hours, args.self)
+    if args.json:
+        print(json_report(roster, decisions, args.hours, args.reap))
+    else:
+        print(human_report(roster, decisions, args.hours, args.reap))
 
-    if not candidates:
-        print(f"No agents idle >= {args.hours}h. Nothing to reap.")
+    if not args.reap:
         return
 
-    mode = "REAPING" if args.reap else "DRY-RUN (pass --reap to execute)"
-    print(f"{mode} — threshold {args.hours}h, {len(candidates)} candidate(s):\n")
+    by_id = {row["id"]: row for row in decisions}
+    candidates = [(row["idle_hours"], aid, agent)
+                  for aid, agent in roster.items()
+                  if (row := by_id[aid])["decision"] == "reap"]
+    candidates.sort(reverse=True)
     for hrs, aid, a in candidates:
         sock = emacs_socket(a)
         atype = a.get("type") or "claude"
         line = f"  {aid:14} idle {hrs:5.1f}h  type={atype}  emacs={sock or '-'}"
-        if not args.reap:
-            print(line)
-            continue
         results = []
         if sock:
             results.extend(kill_emacs_buffers(aid, sock, atype))
