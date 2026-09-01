@@ -67,6 +67,7 @@
     (resolve 'futon2.aif.full-loop-runner/config)
     futon2.aif.full-loop-runner/run-opportunity!
     (resolve 'futon2.aif.full-loop-runner/run-opportunity!)
+    futon3c.wm.code-identity/status identity/status
     futon3c.peripheral.live-wm-selection/validated-selection
     (fn [_] {:selected-policy-id "rehearsal-policy"})
     futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
@@ -127,7 +128,19 @@
                           (slurp (get-in (service/status)
                                          [:last-result :run-binding])))
           certificate-main (resolve 'checks.wm-operational-certificate/main)
-          normalize (resolve 'checks.wm-click-resource-observer/certificate-resource)]
+          normalize (resolve 'checks.wm-click-resource-observer/certificate-resource)
+          fixture-head (get-in @observed-receipt
+                               [:serving-runner-code :identity :git-head])
+          normalized (assoc (normalize run-id "rehearsal-observer"
+                                       @observed-receipt)
+                            ;; The rehearsal's committed throwaway repository
+                            ;; is exercised by this test rather than by the
+                            ;; production bounded-job producer. Keep that
+                            ;; fixture scope explicit; production certification
+                            ;; still requires a producer-bound tested job.
+                            :tested-commit fixture-head
+                            :tested-job-id "chain-rehearsal-fixture"
+                            :tested-attempt "throwaway-jvm")]
       ;; The join now crosses the production service port. The fixture record
       ;; and durable binding must independently resolve the same run id.
       (is (= run-id
@@ -136,16 +149,17 @@
       (is (= (:click/id binding-record) (:click-id (service/status))))
       (is (= (:click/id run) (:click/id binding-record)))
       (spit good-resource
-            (str (pr-str (normalize run-id "rehearsal-observer"
-                                    @observed-receipt)) "\n"))
+            (str (pr-str normalized) "\n"))
       (is (= 0 (certificate-main ["--run" run-out "--resource" good-resource
                                   "--certificate" cert-out])))
-      (is (= :pass (:verdict (edn/read-string (slurp cert-out)))))
+      (let [certificate (edn/read-string (slurp cert-out))]
+        (is (= :pass (:verdict certificate)))
+        (is (= :match (get-in certificate [:program-identity-status :status])))
+        (is (= fixture-head
+               (get-in certificate [:program-identity-status :tested-commit]))))
       ;; Broken seam: a resource receipt for a different run cannot certify.
       (spit bad-resource
-            (str (pr-str (assoc (normalize run-id "rehearsal-observer"
-                                           @observed-receipt)
-                                :run/id "different-run")) "\n"))
+            (str (pr-str (assoc normalized :run/id "different-run")) "\n"))
       (is (= 1 (certificate-main ["--run" run-out "--resource" bad-resource
                                   "--certificate" bad-cert-out])))
       (is (= :fail (:verdict (edn/read-string (slurp bad-cert-out))))))))
