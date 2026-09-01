@@ -417,7 +417,9 @@
                    (some? (:candidates report)))
           (pipeline/validate-guide-deposit
            {:depositor (:agent-id request)
-            :candidates (:candidates report)}))
+            :candidates (:candidates report)}
+           {:problem-id (:problem-id request)
+            :solver-certified-source (:solver-certified-source request)}))
         submitted-mode (submission/wire-keyword (:mode report))
         channel-audit-normalization
         (if (= :guide-intervention kind)
@@ -476,6 +478,11 @@
           (conj :guide-candidates-invalid)
           (and (= :guide-intervention kind)
                (seq (:candidates report))
+               (:ok guide-deposit-validation)
+               (empty? (:candidates guide-deposit-validation)))
+          (conj :guide-candidates-mechanically-rejected)
+          (and (= :guide-intervention kind)
+               (seq (:candidates report))
                (not= :store-mode submitted-mode))
           (conj :guide-candidates-outside-store-mode)
           (and (= :scribe-reduce kind)
@@ -502,6 +509,9 @@
              (seq (:findings guide-deposit-validation)))
         (assoc-in [:finding/details :guide-candidates-invalid]
                   (:findings guide-deposit-validation))
+        (some #{:guide-candidates-mechanically-rejected} findings)
+        (assoc-in [:finding/details :guide-candidates-mechanically-rejected]
+                  (:mechanical-reviews guide-deposit-validation))
         (some #{:scribe-reduction-evidence-missing} findings)
         (assoc-in [:finding/details :scribe-reduction-evidence-missing]
                   (->> [:lanes :dispositions :promotion-reviews]
@@ -843,6 +853,10 @@
    :guide-candidates-invalid
    ["Your Guide candidates were rejected." "The candidates did not satisfy the typed guide-deposit contract."
     "Correct every candidate to the generated schema and submit a non-empty candidate vector using the command below."]
+   :guide-candidates-mechanically-rejected
+   ["Every submitted Guide candidate was rejected by the mechanical memory guard."
+    "The rejection codes are included in the finding details."
+    "Revise the candidate into reusable prose without problem-local identifiers or proof blocks, then resubmit it."]
    :guide-candidates-outside-store-mode
    ["Your Guide completion proposed candidates outside store mode." "Non-empty candidates require mode store-mode."
     "Set mode to store-mode for genuine deposits, otherwise remove the candidates, then submit below."]
@@ -1243,6 +1257,9 @@
         (if-not (:ok gated)
           {:ok false :error/code :guide-candidates-invalid
            :findings (:findings gated)}
+          (if-not (seq (:candidates gated))
+            {:ok false :error/code :guide-candidates-mechanically-rejected
+             :mechanical-reviews (:mechanical-reviews gated)}
           (if-not (fn? persist-candidates-fn)
             {:ok false :error/code :guide-candidate-persistence-missing}
             (let [deposit {:depositor (:agent-id request)
@@ -1259,7 +1276,7 @@
                       persisted (runtime/atomic-persist! state-path seeded)]
                   (if-not (:ok persisted)
                     {:ok false :error/code :guide-promotion-persistence-failed}
-                    (run-fn))))))))
+                    (run-fn)))))))))
 
       (= :promotion-certified (:state/type state))
       (let [published (:receipt state)]

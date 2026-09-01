@@ -1375,6 +1375,18 @@
     (is (some #{:guide-candidates-invalid}
               (findings (assoc report :candidates
                                [(assoc guide-candidate :pattern-ids [])]))))
+    (let [rejected (sut/validate-terminal
+                    request {:job-id "j"}
+                    {:job-id "j" :agent-id "f27-guide" :state :done
+                     :report (assoc report :candidates
+                                    [(assoc guide-candidate :body
+                                            "Mined from m94A03.")])})]
+      (is (some #{:guide-candidates-mechanically-rejected}
+                (:findings rejected)))
+      (is (= [:problem-identifier-in-body]
+             (get-in rejected
+                     [:finding/details :guide-candidates-mechanically-rejected
+                      0 :finding-codes]))))
     (is (some #{:guide-candidates-outside-store-mode}
               (findings (assoc report :mode "harness-mode"
                                :candidates [guide-candidate]))))))
@@ -1583,6 +1595,26 @@
       (is (= :guide-candidates-invalid (:error/code invalid)))
       (is (some #{:candidate-shape-invalid} (:findings invalid)))
       (is (nil? (runtime/read-state invalid-path))))))
+
+(deftest guide-mechanical-rejection-never-degrades-to-candidates-missing
+  (let [dir (java.nio.file.Files/createTempDirectory
+             "guide-rejected-" (make-array java.nio.file.attribute.FileAttribute 0))
+        writes (atom 0)
+        result (sut/guide-promotion-step!
+                {:state-path (.resolve dir "review.edn")
+                 :persist-candidates-fn
+                 (fn [_ _] (swap! writes inc) {:ok true})
+                 :run-fn (fn [] {:ok true})}
+                {:dispatch/type :guide-intervention
+                 :agent-id "f72-guide" :problem-id "b93J04"}
+                {:candidates
+                 [(assoc guide-candidate :body
+                         "Reusable move mined from b93J04.")]})]
+    (is (= :guide-candidates-mechanically-rejected (:error/code result)))
+    (is (= [:problem-identifier-in-body]
+           (get-in result [:mechanical-reviews 0 :finding-codes])))
+    (is (zero? @writes)
+        "an empty mechanically accepted set must not reach persistence")))
 
 (deftest student-attempt-two-binds-to-a-guide-union-snapshot
   (let [addressed (fn [body] (assoc body :receipt/id (machine/ledger-digest [body])))

@@ -557,4 +557,35 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No independent review verdict, "
         "candidate publication, or promotion certificate was invented; the "
-        "four candidates remain preserved but unreviewed.")}]}
+        "four candidates remain preserved but unreviewed.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f72"
+   :problem/id "b93J04"
+   :last-valid-receipt/id
+   "a9f2d1f02c9a79eea0452c40efc1a34935e528eae673691e03a7378bce3b1bd7"
+   :decision/at "2026-09-01T05:11:07Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :guide-candidate-mechanical-rejection-obscured
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The repaired typed Guide submission contains one complete semantic "
+        "candidate under :payload/:evidence/:candidates. Its body names the "
+        "local problem b93J04, so the reusable-memory mechanical guard correctly "
+        "rejected it with :problem-identifier-in-body. The apparatus then passed "
+        "the empty accepted set to candidate persistence, obscuring that exact "
+        "cause as :candidates-missing after the sole terminal repair had already "
+        "been consumed by the earlier mode-envelope correction.")
+   :decision/recommended-route
+   (str "Preserve the last valid Student receipt, both Guide typed submissions, "
+        "and the exact reciprocal-quartic candidate. Advance f72 as partial. "
+        "Repair the terminal boundary so an all-mechanically-rejected Guide set "
+        "is returned with its rejection codes before persistence and can receive "
+        "an actionable repair instruction.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No candidate persistence, "
+        "independent review, union snapshot, or Guide receipt was invented; the "
+        "candidate remains preserved but was not admitted as reusable memory.")}]}
