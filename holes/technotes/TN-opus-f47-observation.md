@@ -1126,3 +1126,33 @@ None of these four closed their problem, so this says nothing yet about whether 
 shelf helps. What it does say is that the retriever's behaviour is not static, and a claim
 about it made on one day's frames does not survive the next. I stated the "one sticky
 memory" finding with more confidence than five frames of subsequent data supported.
+
+## The pin is coupled to the student protocol, and that is the real defect (2026-09-01)
+
+f73 parked at student-attempt-3 with `[:student-memory-used-without-surfacing]`. That
+finding HAS a repair instruction, `:repair/attempts 1` shows the repair was issued, and the
+budget was exhausted — the student was told exactly what to fix, retried once, and got it
+wrong again. The park is correct. Nothing in the repair machinery failed.
+
+f73's solver had proved b94A01. Its `verify.edn` records axioms
+`[propext, Classical.choice, Quot.sound]`, exit 0, sorry-warnings 0, statement unchanged,
+and I rebuilt the solver head `2ceb4918` here: 439 lines, zero `sorry`, no `native_decide`,
+statement byte-identical to master, axioms exactly the permitted three. Pinned at
+`refs/apm/rescued-solves/b94A01/2ceb4918`. Sixth stranded solve.
+
+**This is the case the instruction fixes cannot reach.** The three landed overnight —
+`69109f33`, `15eaf71d`, and the five detail-only findings now with codex-2 — each convert a
+park into a repair request, so they reduce how OFTEN a frame parks. None of them change
+what a park costs. A legitimate park costs exactly as much as a spurious one: the frame
+never completes, the pin never fires, and a verified proof stays off master.
+
+The two artifacts have nothing to do with each other. The solver's proof is complete,
+independently verified, and finished before the first student attempt begins. The student
+protocol is a learning experiment run afterwards on the same problem. Binding the proof's
+promotion to the experiment's completion means a student's failure to surface a memory use
+can withhold a correct proof from the corpus, and it has now done so six times.
+
+Frames f67, f70 and f71 show the converse and make the point sharply: all three had every
+student attempt return partial, all three completed with `:frame/result :partial`, and all
+three pinned and banked. Partial students do not block the pin. Only parking does — and
+parking is a statement about the learning protocol, not about the mathematics.
