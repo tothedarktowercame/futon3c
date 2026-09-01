@@ -11,7 +11,9 @@
 
 (def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
-(def default-apparatus-repair-attempts 1)
+;; Keep one additional apparatus turn available when a repaired terminal reaches
+;; a later transport boundary.  The agent repair budget remains independent.
+(def default-apparatus-repair-attempts 2)
 
 (defn- transport-failure?
   "True when THIS failure's own error envelope is a transport fault.

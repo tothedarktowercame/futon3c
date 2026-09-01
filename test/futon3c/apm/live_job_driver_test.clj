@@ -567,11 +567,11 @@
                     (zero? remaining))
               result
               (recur (:state result) (dec remaining)))))]
-    (is (= 1 @repairs))
+    (is (= 2 @repairs))
     (is (= :live-job-apparatus-repair-exhausted (:error/code exhausted)))
     (is (= :apparatus (:repair/fault-origin exhausted)))
-    (is (= 1 (:repair/attempts exhausted)))
-    (is (= 1 (count (:repair/history exhausted))))))
+    (is (= 2 (:repair/attempts exhausted)))
+    (is (= 2 (count (:repair/history exhausted))))))
 
 (deftest repair-archive-failure-blocks-successor-announcement
   (let [calls (atom [])
