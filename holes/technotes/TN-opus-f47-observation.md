@@ -1213,3 +1213,36 @@ expansion contributes. Whether that materially changed any outcome is unknown, a
 uptake numbers in this note were taken under that condition without my knowing it. That
 does not invalidate the per-attempt counts, which are what they are; it means the
 condition under which they were collected was not constant and I did not check.
+
+### The retry lands: first working cascade since f64 (2026-09-01, 11:26Z)
+
+`6dacd087` (codex-2, reviewed and shipped here) retries a busy cascade read: bounded at 3
+attempts, only on 503 `:expensive-read-busy`, honouring the server's
+`:retry-after-seconds` and falling back to exponential backoff, with an injectable sleep
+for tests. An exhausted read is tagged `:error/component :transport :error/code
+:memory-cascade-unreachable`, which the fault-origin classifier fixed earlier the same
+night charges to the apparatus budget rather than the student's repair attempts. Two
+independent fixes composing.
+
+f75/a3 at 11:26Z is the first attempt with a succeeding cascade since f64:
+
+    :memory-cascade {:offers [{:memory-id "e-14c2c205-…" :route :sibling :hops 1
+                               :pattern "math-formalization-CA/complex-arg-of-cpow-root"}
+                              {:memory-id "e-23a2940f-…" …}]}
+
+Sibling-route offers, one hop through a shared pattern — the enrichment the design intends
+and that eleven frames had been running without. a1 and a2 on the same problem returned
+`failed`; a3 returned `ok`.
+
+**What this costs the earlier measurements.** Every uptake figure in this note from f64
+onward was collected with the sibling expansion missing. The counts are accurate as counts,
+but "0 of 175 used" meant a student declining a base shelf stripped of its sibling offers,
+not declining the shelf the design builds. Comparisons that straddle f64, and any
+conclusion about whether the shelf is being ignored, are not clean across that boundary.
+
+One correction to my own framing while shipping this: I escalated "refuse the attempt when
+retries are exhausted" to Joe as a policy question. It was not one. A cascade TIMEOUT
+already refused, tagged with the same `:memory-cascade-unreachable` code; only the 503-busy
+case fell through and ran degraded. The change makes them consistent, and f69/a2's proof
+under a failed cascade was exploiting that inconsistency rather than demonstrating
+something worth keeping. The neighbouring test said so and I escalated before reading it.
