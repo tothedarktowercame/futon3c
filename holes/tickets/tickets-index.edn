@@ -1,0 +1,38 @@
+;; T-series triage index -- generated 2026-09-01 by claude-1 from the tickets' own Status lines.
+;; :unknown rows await a discovery read (does the problem reproduce at HEAD?). Not a worklist yet.
+[
+ {:ticket "T-agency-desktop-save.md" :status :unknown :status-line ""}
+ {:ticket "T-car3-phase2-impl.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-car3-queue-routing-design-note.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line "model-only proposal for ratification. No implementation is included in"}
+ {:ticket "T-car3-queue-routing.md" :status :superseded :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-codex-auto-bellback.md" :status :unknown :status-line ""}
+ {:ticket "T-cx-new-blocks-emacs.md" :status :unknown :status-line ""}
+ {:ticket "T-devmap-forward-model-calibration.md" :status :scoped :status-line "DESIGNED, NOT STARTED.** Joe's call: ticket it rather than deep-dive"}
+ {:ticket "T-dispatch-clock-excursion-prefix.md" :status :unknown :status-line ""}
+ {:ticket "T-durable-queue-rename-and-tidies.md" :status :unknown :status-line ""}
+ {:ticket "T-evidence-pinned-to-mutable-prose-26082026.md" :status :unknown :status-line ""}
+ {:ticket "T-exogenous-evidence-update-rule.md" :status :blocked :status-line "DESIGN CONSTRAINT. Blocked on a prior question \u2014 see Blocker.**"}
+ {:ticket "T-fail-activation-authority-unavailable.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-agent-not-found.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-invoke-error.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-invoke-interrupted.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-no-execution-evidence.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-operator-cancelled.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-worker-lost-on-restart.md" :status :unknown :status-line ""}
+ {:ticket "T-fixture-becomes-registry-26082026.md" :status :unknown :status-line ""}
+ {:ticket "T-forward-model-vs-active-work.md" :status :watch :status-line "FINDING, not a defect. Do not hotfix.** Joe's call, and the reason is"}
+ {:ticket "T-jvm-provenance-before-multi-jvm.md" :status :open :status-line "open. The resource premise of the one-JVM rule is void; the"}
+ {:ticket "T-kangaroo-caching-and-compaction.md" :status :unknown :status-line ""}
+ {:ticket "T-kangaroo-v1-pouch.md" :status :unknown :status-line ""}
+ {:ticket "T-lean-authority-alias-27082026.md" :status :unknown :status-line ""}
+ {:ticket "T-matrix-federation-proof.md" :status :parked :status-line "DEFERRED / parked 2026-06-10.** Standalone follow-on \u2014 **NOT** part of"}
+ {:ticket "T-mesh-edge-coverage.md" :status :unknown :status-line ""}
+ {:ticket "T-mesh-qa-misrouting.md" :status :unknown :status-line ""}
+ {:ticket "T-mq7-unaddressable-caller.md" :status :unknown :status-line ""}
+ {:ticket "T-strategic-cascade-emits-disconnected-patterns.md" :status :open :status-line "open. Diagnosis complete and reduced; the repair and its acceptance"}
+ {:ticket "T-typed-bell-arse-write-async.md" :status :watch :status-line "WATCH \u2014 not a defect, no action while `FUTON3C_TYPED_BELLS` is OFF.**"}
+ {:ticket "T-watu-replay-layer.md" :status :scoped :status-line "SCOPED, NOT STARTED.**"}
+ {:ticket "T-wm-turns-are-not-operator-turns.md" :status :open :status-line "open. **Diagnosis substantially corrected 2026-08-27 \u2014 see"}
+ {:ticket "T-wm-wrong-corpus-26082026.md" :status :unknown :status-line ""}
+ {:ticket "T-zai-chat-transient-timeout.md" :status :unknown :status-line ""}
+]

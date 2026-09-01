@@ -1,5 +1,7 @@
 # T-car3-queue-routing — durable queue, ordered drain, per-surface reply routing
 
+**Status (triaged 2026-09-01): SUPERSEDED.** The Phase-1 stop-for-ratification state no longer describes HEAD: the implementation shipped (turn_queue.clj accept!/drain/reply-route; invoke wiring dev.clj:4083). Triage codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1; verdicts in tickets-index.edn.
+
 Parent: `M-agency-hardening.md` (W2 execution guarantees, invariant #5/#6).
 Field-validated by `M-agency-hardening-datapoints.md` (5 live symptoms).
 Dispatched by claude-6 (in-flight mechanic), 2026-06-10. Reviewer: claude-6.
