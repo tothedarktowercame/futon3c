@@ -79,6 +79,16 @@
            (:evidence/missing
             (sut/validate-payload checkpoint (payload :solve)))))))
 
+(deftest solver-shelf-is-controller-authority-and-requires-an-observation
+  (let [shelf {:canary/id "c1" :assignment :control :shelf/entries []}
+        auth (assoc (authority :solve) :solver-shelf-canary shelf)
+        required (sut/evidence-required auth)]
+    (is (= shelf (:solver-shelf-canary
+                  (sut/authority auth {:job-id (:job-id auth)}))))
+    (is (contains? required :solver/shelf-observation))
+    (is (= #{:solver/shelf-observation}
+           (:evidence/missing (sut/validate-payload auth (payload :solve)))))))
+
 (deftest authority-is-controller-owned-and-submission-is-content-addressed
   (let [root (.toString (java.nio.file.Files/createTempDirectory
                          "apm-submissions" (make-array java.nio.file.attribute.FileAttribute 0)))]

@@ -222,6 +222,25 @@
     (is (sut/valid-mint? frame))
     (is (string? (:manifest/id manifest)))))
 
+(deftest solver-shelf-canary-applies-only-to-its-exact-minted-frame
+  (let [canary {:schema/version 1 :canary/id "c1" :eligible/frame-id "f30"
+                :assignment :control :matched/size 4 :shelf/entries []
+                :shelf/digest "digest"}
+        eligible (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                    :frame-number-base 30
+                                    :solver-shelf-canary canary}))
+        later (:frame (sut/mint {:problem problem :ordinal 1 :queue/id "queue"
+                                 :frame-number-base 30
+                                 :solver-shelf-canary canary}))
+        manifest (sut/one-off-manifest
+                  {:frame eligible :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (= canary (:solver-shelf-canary eligible)))
+    (is (= canary (get-in manifest [:units 0 :solver-shelf-canary])))
+    (is (not (contains? later :solver-shelf-canary)))
+    (is (sut/valid-mint? eligible))
+    (is (sut/valid-mint? later))))
+
 (deftest registered-conditions-are-pinned-from-minted-frame-into-manifest
   (let [conditions [{:id "C-1" :at "2026-08-26T18:40Z" :by "claude-19"
                      :kind :reload :head "0bc2b81f"

@@ -2249,10 +2249,24 @@
             :note (str "conditions.edn unreadable: " (.getMessage t))}]))
       [])))
 
+(defn solver-shelf-canary-arm
+  "Read a dormant-by-default, exact-frame Solver shelf assignment. Invalid
+   authority is retained so request construction fails closed; it is never
+   silently treated as no exposure."
+  [explicit campaign-root]
+  (or explicit
+      (let [path (java.io.File. (str campaign-root) "solver-shelf-canary.edn")]
+        (when (.isFile path)
+          (try
+            (edn/read-string (slurp path))
+            (catch Throwable t
+              {:schema/version 0
+               :authority/read-error (.getMessage t)}))))))
+
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
   [{:keys [problems authority queue-name frame-number-base agency-base autonomous?
-           memory-cascade]
+           memory-cascade solver-shelf-canary]
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
@@ -2288,6 +2302,7 @@
                             :promotion-proctor
                             :scribe :zai-scribe :analyst]))
         memory-cascade (memory-cascade-arm memory-cascade campaign-root)
+        solver-shelf-canary (solver-shelf-canary-arm solver-shelf-canary campaign-root)
         declared-priors
         (or (:campaign/priors authority)
             (declared-campaign-priors
@@ -2315,6 +2330,7 @@
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
+         :solver-shelf-canary solver-shelf-canary
          :conditions conditions
          :campaign-root campaign-root
          :campaign-priors (vec (or declared-priors []))

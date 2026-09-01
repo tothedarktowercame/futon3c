@@ -74,7 +74,10 @@
     ;; The holdout travels with the job authority so every channel that
     ;; serves memories can enforce it. Without this the shelf and the
     ;; cascade withhold an id while the search channel still returns it.
-    :shelf/holdout :shelf/withheld-ids})
+    :shelf/holdout :shelf/withheld-ids
+    ;; Preregistered Solver exposure is immutable dispatch authority. The
+    ;; later observation may say which authorized ids were used, never add ids.
+    :solver-shelf-canary})
 
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
@@ -155,7 +158,10 @@
     (assoc :receipt nil)
     (and (= :solve (:phase auth))
          (true? (:solver/strategy-checkpoint? auth)))
-    (assoc :solver/strategy nil)))
+    (assoc :solver/strategy nil)
+    (and (= :solve (:phase auth))
+         (map? (:solver-shelf-canary auth)))
+    (assoc :solver/shelf-observation {:surfaced-ids nil :used-ids nil})))
 
 (defn evidence-optional-shape [auth]
   (get evidence-optional-shape-by-phase (:phase auth) {}))

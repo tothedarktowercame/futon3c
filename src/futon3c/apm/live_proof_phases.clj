@@ -9,6 +9,7 @@
             [futon3c.apm.live-preflight :as preflight]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-solver-rounds :as solver-rounds]
+            [futon3c.apm.solver-shelf-canary :as solver-shelf]
             [futon3c.apm.typed-role-submission :as submission]))
 
 (def permitted-axioms '#{propext Classical.choice Quot.sound})
@@ -99,6 +100,9 @@
                    :turn-timeout-ms (get-in action [:timeouts :turn-ms])}})
                 :request #(submission/prepare-request (assoc % :role :proctor)))))
     (let [problem (:problem unit)
+          shelf (:solver-shelf-canary unit)
+          shelf-check (when (and (= :solve kind) shelf)
+                        (solver-shelf/validate-assignment shelf (:frame/id unit)))
           expected-role (if (= :solve kind) :solver :proctor)
           expected-agent (or expected-agent-id
                              (str (:frame/id unit) "-" (name expected-role)))
@@ -119,7 +123,9 @@
                                     (string? (:blob checkpoint-role-card)))))
                      (conj :solver-restrategize-role-card-pin-missing)
                      (and (= :verify kind) (not (string? (:receipt/id solve-receipt))))
-                     (conj :solve-receipt-missing))]
+                     (conj :solve-receipt-missing)
+                     (and shelf-check (not (:ok shelf-check)))
+                     (into (:findings shelf-check)))]
       (if (seq findings)
         {:ok false :error/code :live-proof-request-invalid :findings findings}
         {:ok true
@@ -143,13 +149,17 @@
                    :solver/regular-role-card-blob (:blob role-card)
                    :solver/restrategize-role-card-path (:path checkpoint-role-card)
                    :solver/restrategize-role-card-blob (:blob checkpoint-role-card))
+            (and (= :solve kind) shelf)
+            (assoc :solver-shelf-canary shelf)
             (= :verify kind) (assoc :solve-receipt-id (:receipt/id solve-receipt)
                                     :certified-final-head
                                     (:receipt/final-head solve-receipt)))))}))))
 
 (defn validate-terminal [kind request ticket job]
   (let [report (normalize-proof-report (:report job))
-        missing (set/difference proof-report-fields (set (keys report)))
+        shelf (:solver-shelf-canary request)
+        required-fields (cond-> proof-report-fields shelf (conj :solver/shelf-observation))
+        missing (set/difference required-fields (set (keys report)))
         lean (:lean report)
         findings
         (cond-> []
@@ -179,7 +189,9 @@
           (not (true? (:clean-before? report))) (conj :workspace-not-clean-before)
           (not (true? (:clean-after? report))) (conj :workspace-not-clean-after)
           (not (set/subset? (set (:mutations report)) #{(:problem-path request)}))
-          (conj :mutation-outside-problem-file))]
+          (conj :mutation-outside-problem-file)
+          shelf (into (solver-shelf/observation-findings
+                       shelf (:solver/shelf-observation report))))]
     (if (seq findings)
       {:ok false :error/code :live-proof-terminal-invalid
        :findings findings :missing missing}
@@ -203,6 +215,14 @@
                         :receipt/solve-receipt-id (:solve-receipt-id request)
                         :receipt/final-head (:final-head report)
                         :receipt/mathematical-sound? true})
+        body (cond-> body
+               (and (= :solve kind) (:solver-shelf-canary request))
+               (assoc :receipt/solver-shelf
+                      (select-keys (:solver-shelf-canary request)
+                                   [:canary/id :assignment :eligible/frame-id
+                                    :matched/size :shelf/digest])
+                      :receipt/solver-shelf-observation
+                      (:solver/shelf-observation report)))
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))
         checked (cycle/validate-receipt contract kind addressed)]
     (if (:ok checked) {:ok true :certificate addressed} checked)))
@@ -252,12 +272,20 @@
                  "results yourself. "))
           (str "Commit the completed proof if reached. If unfinished, commit salvageable "
                "artifacts and report :solver/outcome :progress, an exact :residual, and "
-               ":artifact-commits; friction is not a defect."))
+               ":artifact-commits; friction is not a defect."
+               (when-let [shelf (:solver-shelf-canary request)]
+                 (str " This is preregistered Solver shelf canary " (:canary/id shelf)
+                      " assignment " (name (:assignment shelf)) ". The exact exposure "
+                      "was persisted before dispatch: " (pr-str (:shelf/entries shelf))
+                      ". Report :solver/shelf-observation {:surfaced-ids [...] "
+                      ":used-ids [...]} exactly; observation cannot change exposure."))))
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "
        (pr-str (if (= :preflight (:phase request))
-                 preflight/required-report-fields proof-report-fields)) "."
+                 preflight/required-report-fields
+                 (cond-> proof-report-fields (:solver-shelf-canary request)
+                   (conj :solver/shelf-observation)))) "."
        (when (contains? #{:solve :verify} (:phase request))
          (str " The nested :lean map must contain integer :exit, :warnings, "
               ":sorry-warnings, and :errors counts. :axioms must be a vector "

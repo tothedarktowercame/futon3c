@@ -3,7 +3,8 @@
             [clojure.test :refer [deftest is]]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-proof-phases :as sut]
-            [futon3c.apm.live-solver-rounds :as solver-rounds]))
+            [futon3c.apm.live-solver-rounds :as solver-rounds]
+            [futon3c.apm.solver-shelf-canary :as solver-shelf]))
 
 (def contract (edn/read-string
                (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))
@@ -108,6 +109,47 @@
     (is (= "solver-blob" (:solver/regular-role-card-blob req)))
     (is (= "restrategize.md" (:solver/restrategize-role-card-path req)))
     (is (= "restrategize-blob" (:solver/restrategize-role-card-blob req)))))
+
+(deftest solver-shelf-canary-is-bound-before-dispatch-and-copied-to-receipt
+  (let [entries [{:memory-id "e-one" :hook "lemma" :body "proof route"}]
+        shelf {:schema/version 1 :canary/id "C-solver-1"
+               :eligible/frame-id "f19" :assignment :shelf :matched/size 1
+               :shelf/entries entries
+               :shelf/digest
+               (solver-shelf/shelf-digest entries)}
+        opts {:kind :solve :action action
+              :ledger {:digest (apply str (repeat 64 "a"))}
+              :unit (assoc unit :solver-shelf-canary shelf)
+              :role-card role-card
+              :checkpoint-role-card {:path "restrategize.md" :blob "restrategize-blob"}
+              :seat seat :workspace workspace}
+        req (:request (sut/build-request opts))
+        terminal-job (assoc-in (job :solve req) [:report :solver/shelf-observation]
+                               {:surfaced-ids ["e-one"] :used-ids ["e-one"]})
+        checked (sut/validate-terminal :solve req {:job-id "job-1"} terminal-job)
+        receipt (:certificate (sut/receipt contract :solve req {:job-id "job-1"}
+                                           terminal-job checked))]
+    (is (= shelf (:solver-shelf-canary req)))
+    (is (:ok checked))
+    (is (= "C-solver-1" (get-in receipt [:receipt/solver-shelf :canary/id])))
+    (is (= ["e-one"]
+           (get-in receipt [:receipt/solver-shelf-observation :used-ids])))))
+
+(deftest solver-shelf-canary-refuses-wrong-frame-and-invented-observation
+  (let [entries [{:memory-id "e-one" :hook "lemma" :body "proof route"}]
+        shelf {:schema/version 1 :canary/id "C-solver-1"
+               :eligible/frame-id "f20" :assignment :shelf :matched/size 1
+               :shelf/entries entries
+               :shelf/digest
+               (solver-shelf/shelf-digest entries)}
+        result (sut/build-request
+                {:kind :solve :action action :ledger {:digest "x"}
+                 :unit (assoc unit :solver-shelf-canary shelf)
+                 :role-card role-card
+                 :checkpoint-role-card {:path "restrategize.md" :blob "restrategize-blob"}
+                 :seat seat :workspace workspace})]
+    (is (= :live-proof-request-invalid (:error/code result)))
+    (is (some #{:frame-not-eligible} (:findings result)))))
 
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)

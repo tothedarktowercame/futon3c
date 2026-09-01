@@ -221,7 +221,9 @@
                         :revision (:revision problem) :path (:path problem)
                         :blob (:blob problem)}}
                (contains? frame :memory-cascade)
-               (assoc :memory-cascade (:memory-cascade frame)))
+               (assoc :memory-cascade (:memory-cascade frame))
+               (contains? frame :solver-shelf-canary)
+               (assoc :solver-shelf-canary (:solver-shelf-canary frame)))
         ;; Registered operational conditions (countdown-control/campaign-conditions):
         ;; what held at mint beyond the git revision. Pinned here so the
         ;; manifest, not a reader's memory of the day, says which reloads,
@@ -576,7 +578,7 @@
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
   explicit to avoid a namespace cycle; all resource effects below use the
   production lifecycle/Agency adapters."
-  [{:keys [frame-number-base campaign-prefix memory-cascade conditions
+  [{:keys [frame-number-base campaign-prefix memory-cascade solver-shelf-canary conditions
            campaign-root
            generated-contract-path
            qualification-report-path manifest-fn ledger-fn contract
@@ -619,6 +621,7 @@
    #(mint (assoc % :frame-number-base frame-number-base
                  :campaign-prefix campaign-prefix
                  :memory-cascade memory-cascade
+                 :solver-shelf-canary solver-shelf-canary
                  :conditions conditions))
    :qualify-frame-fn
    (fn [frame]
@@ -731,7 +734,7 @@
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix
-           memory-cascade conditions]}]
+           memory-cascade solver-shelf-canary conditions]}]
   (let [frame-id (str "f" (+ (or frame-number-base 1) ordinal))
         campaign-id (str (or campaign-prefix "apm-queued") "-" frame-id)
         body (cond-> {:frame/id frame-id :problem/id (:problem/id problem)
@@ -739,6 +742,10 @@
                       :ordinal ordinal}
                (some? memory-cascade)
                (assoc :memory-cascade memory-cascade)
+               (and (some? solver-shelf-canary)
+                    (or (not (string? (:eligible/frame-id solver-shelf-canary)))
+                        (= frame-id (:eligible/frame-id solver-shelf-canary))))
+               (assoc :solver-shelf-canary solver-shelf-canary)
                (seq conditions)
                (assoc :conditions (vec conditions)))]
     {:ok true :frame (assoc body :frame/mint-id
