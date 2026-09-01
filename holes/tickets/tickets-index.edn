@@ -1,6 +1,9 @@
 ;; T-series triage index -- generated 2026-09-01 by claude-1 from the tickets' own Status lines.
 ;; :unknown rows await a discovery read (does the problem reproduce at HEAD?). Not a worklist yet.
 [
+ ;; cross-cutting (zai-3 triage, verified): failure-census.py:58 filters state in (failed,cancelled),
+ ;; so terminal codes on the 179 `delivering` jobs are invisible -- it hides 2 of the 7 ticketed classes.
+ ;; Fix-or-close pass should include delivering-state terminal codes or drain the stuck deliveries.
  {:ticket "T-agency-desktop-save.md" :status :unknown :status-line ""}
  {:ticket "T-car3-phase2-impl.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-car3-queue-routing-design-note.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line "model-only proposal for ratification. No implementation is included in"}
@@ -12,13 +15,13 @@
  {:ticket "T-durable-queue-rename-and-tidies.md" :status :unknown :status-line ""}
  {:ticket "T-evidence-pinned-to-mutable-prose-26082026.md" :status :unknown :status-line ""}
  {:ticket "T-exogenous-evidence-update-rule.md" :status :blocked :status-line "DESIGN CONSTRAINT. Blocked on a prior question \u2014 see Blocker.**"}
- {:ticket "T-fail-activation-authority-unavailable.md" :status :unknown :status-line ""}
- {:ticket "T-fail-agent-not-found.md" :status :unknown :status-line ""}
- {:ticket "T-fail-invoke-error.md" :status :unknown :status-line ""}
- {:ticket "T-fail-invoke-interrupted.md" :status :unknown :status-line ""}
- {:ticket "T-fail-no-execution-evidence.md" :status :unknown :status-line ""}
- {:ticket "T-fail-operator-cancelled.md" :status :unknown :status-line ""}
- {:ticket "T-fail-worker-lost-on-restart.md" :status :unknown :status-line ""}
+ {:ticket "T-fail-activation-authority-unavailable.md" :status :still-open :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-agent-not-found.md" :status :still-open :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-invoke-error.md" :status :still-open :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-invoke-interrupted.md" :status :still-open :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-no-execution-evidence.md" :status :partial :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-operator-cancelled.md" :status :still-open :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
+ {:ticket "T-fail-worker-lost-on-restart.md" :status :partial :triaged-by "zai-3 invoke-1788294339195-7141-0c2761c5, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-fixture-becomes-registry-26082026.md" :status :unknown :status-line ""}
  {:ticket "T-forward-model-vs-active-work.md" :status :watch :status-line "FINDING, not a defect. Do not hotfix.** Joe's call, and the reason is"}
  {:ticket "T-jvm-provenance-before-multi-jvm.md" :status :open :status-line "open. The resource premise of the one-JVM rule is void; the"}

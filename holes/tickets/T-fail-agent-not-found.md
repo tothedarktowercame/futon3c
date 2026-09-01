@@ -1,5 +1,7 @@
 # T-fail-agent-not-found -- agent-not-found (72x)
 
+**Status (triaged 2026-09-01): STILL-OPEN, worsening.** 72 at ticketing -> 145 at review (latest 09-01T17:23); mitigation is process-only (roster-check rule). Candidate fixes: auto-register pull-only seats (E-bell-clink-adapter) or fail-fast at send with a roster hint.
+
 <!-- census:begin -->
 - **class**: `agent-not-found`
 - **multiplicity**: 72

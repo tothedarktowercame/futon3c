@@ -1,5 +1,7 @@
 # T-fail-worker-lost-on-restart -- worker-lost-on-restart (3x)
 
+**Status (triaged 2026-09-01): PARTIAL, quiescent.** Exactly the ticketed 3 (last 08-23), all stuck in `delivering`. Close as non-reproducing after a delivery-retry cap for restart-orphaned jobs.
+
 <!-- census:begin -->
 - **class**: `worker-lost-on-restart`
 - **multiplicity**: 3

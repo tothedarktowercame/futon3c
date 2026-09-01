@@ -1,5 +1,7 @@
 # T-fail-invoke-error -- invoke-error (2x)
 
+**Status (triaged 2026-09-01): STILL-OPEN.** 2 -> 111 at review (latest 09-01T03:06); now the second-heaviest class. Needs exception-payload triage before a close criterion can be stated.
+
 <!-- census:begin -->
 - **class**: `invoke-error`
 - **multiplicity**: 2

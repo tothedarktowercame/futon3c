@@ -1,5 +1,7 @@
 # T-fail-no-execution-evidence -- no-execution-evidence (1x)
 
+**Status (triaged 2026-09-01): PARTIAL -- merge with defect C3.** 22 occurrences; TN-apm-defect-register C3 records a job can be functionally successful yet state:failed under this code. The state semantics need the C3 decision; census alone cannot close it.
+
 <!-- census:begin -->
 - **class**: `no-execution-evidence`
 - **multiplicity**: 1

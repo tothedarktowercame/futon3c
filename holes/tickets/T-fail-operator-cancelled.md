@@ -1,5 +1,7 @@
 # T-fail-operator-cancelled -- operator-cancelled (4x)
 
+**Status (triaged 2026-09-01): RECLASSIFY CANDIDATE.** 19 at review, mostly deliberate watchdog cancels. Propose census-exempting operator cancellation as expected behaviour rather than fixing anything.
+
 <!-- census:begin -->
 - **class**: `operator-cancelled`
 - **multiplicity**: 4

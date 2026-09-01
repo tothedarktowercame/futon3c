@@ -1,5 +1,7 @@
 # T-fail-activation-authority-unavailable -- activation-authority-unavailable (1x)
 
+**Status (triaged 2026-09-01): STILL-OPEN, quiescent.** 1 occurrence ever (08-22), none since; the job is stuck in state `delivering`, so the real residue is delivery-retry terminal handling. Close as non-reproducing, reopen on second occurrence.
+
 <!-- census:begin -->
 - **class**: `activation-authority-unavailable`
 - **multiplicity**: 1

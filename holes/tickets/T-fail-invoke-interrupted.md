@@ -1,5 +1,7 @@
 # T-fail-invoke-interrupted -- invoke-interrupted (1x)
 
+**Status (triaged 2026-09-01): STILL-OPEN, rare.** 4 occurrences, latest 08-31. Decide whether interruption is a defect or an expected terminal class.
+
 <!-- census:begin -->
 - **class**: `invoke-interrupted`
 - **multiplicity**: 1
