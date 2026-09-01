@@ -464,6 +464,77 @@
     (is (= [:apparatus :agent]
            (mapv :fault-origin (:repair-attempt-history final-state))))))
 
+(deftest cached-posthoc-origin-is-reclassified-by-current-policy
+  (let [state {:state/type :live-job-dispatched
+               :active-request {:dispatch/id "original"}
+               :ticket {:job-id "job-1"}
+               :activation/accepted? true
+               :terminal-repair-attempts 1
+               :apparatus-repair-attempts 0
+               :posthoc-rejection
+               {:ok false :error/code :edge-write-failed
+                :repair/fault-origin :agent
+                :finding {:error {:error/component :transport}}}}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom nil))
+                       :state state
+                       :job-fn (constantly {:job-id "job-1" :state :done})
+                       :posthoc-fault-origin-fn (constantly :apparatus)
+                       :terminal-repair-request-fn
+                       (fn [request _ _ failure]
+                         {:ok true :request
+                          (assoc request :dispatch/id "apparatus-repair"
+                                 :repair/fault-origin
+                                 (:repair/fault-origin failure))})
+                       :announce-fn (constantly {:ok true :job-id "job-2"})))]
+    (is (:repair? result))
+    (is (= :apparatus
+           (get-in result [:state :terminal-repair/fault-origin])))
+    (is (= 1 (get-in result [:state :terminal-repair-attempts])))
+    (is (= 1 (get-in result [:state :apparatus-repair-attempts])))))
+
+(deftest nested-transport-failure-uses-apparatus-repair-budget
+  (let [run (fn [component code]
+              (let [announcements (atom 0)
+                    base (assoc
+                          (effects (atom []) (atom nil))
+                          :job-fn (fn [job-id]
+                                    {:job-id job-id :agent-id "f71-guide"
+                                     :state (if (= "job-2" job-id)
+                                              :running :done)})
+                          :terminal-validator
+                          (fn [& _]
+                            {:ok false
+                             :error {:error/component component
+                                     :error/code code}})
+                          :terminal-repair-request-fn
+                          (fn [request _ticket _job failure]
+                            {:ok true
+                             :request (assoc request
+                                             :dispatch/id "repair-1"
+                                             :repair/findings
+                                             (:findings failure))})
+                          :announce-fn
+                          (fn [_]
+                            {:ok true :job-id
+                             (str "job-" (swap! announcements inc))}))]
+                (loop [state nil remaining 8]
+                  (let [result (sut/drive! (cond-> base state
+                                             (assoc :state state)))]
+                    (if (or (some? (get-in result
+                                           [:state :terminal-repair/fault-origin]))
+                            (zero? remaining))
+                      (:state result)
+                      (recur (:state result) (dec remaining)))))))
+        transport-state (run :transport :memory-assert-unreachable)
+        store-state (run :E-store :memory-assert-rejected)]
+    (is (= 1 (:apparatus-repair-attempts transport-state)))
+    (is (zero? (:terminal-repair-attempts transport-state)))
+    (is (= :apparatus (:terminal-repair/fault-origin transport-state)))
+    (is (= 1 (:terminal-repair-attempts store-state)))
+    (is (zero? (:apparatus-repair-attempts store-state)))
+    (is (= :agent (:terminal-repair/fault-origin store-state)))))
+
 (deftest apparatus-origin-repairs-have-an-independent-bound
   (let [announcements (atom 0)
         repairs (atom 0)

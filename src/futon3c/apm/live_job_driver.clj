@@ -13,6 +13,11 @@
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 (def default-apparatus-repair-attempts 1)
 
+(defn- transport-failure? [value]
+  (boolean
+   (some #(and (map? %) (= :transport (:error/component %)))
+         (tree-seq coll? seq value))))
+
 (defn reopen-posthoc-rejection
   "Reopen an exact cached provider rejection after its apparatus was repaired.
 
@@ -596,14 +601,11 @@
                                :findings [:typed-submission-missing]}
                               (terminal-validator active-request
                                                   (:ticket state) job)))
-              ;; Rejections persisted before fault-origin classification was
-              ;; introduced must receive the same apparatus/agent decision
-              ;; as newly produced post-hoc rejections. Otherwise resuming a
-              ;; preserved apparatus failure incorrectly consumes the already
-              ;; exhausted agent repair budget.
+              ;; Reclassify cached rejections through the current policy. This
+              ;; covers both records predating fault-origin and records whose
+              ;; producer used an older, underspecified classifier.
               validated (cond-> validated
                           (and (:posthoc-rejection state)
-                               (nil? (:repair/fault-origin validated))
                                (fn? posthoc-fault-origin-fn))
                           (assoc :repair/fault-origin
                                  (posthoc-fault-origin-fn active-request
@@ -673,7 +675,9 @@
                 :persist-fn persist-fn})
 
               :else
-              (let [repair-origin (or (:repair/fault-origin validated) :agent)
+              (let [repair-origin (if (transport-failure? validated)
+                                    :apparatus
+                                    (or (:repair/fault-origin validated) :agent))
                     agent-repairs (or (:terminal-repair-attempts state) 0)
                     apparatus-repairs (or (:apparatus-repair-attempts state) 0)
                     exhausted? (and (not typed-contract-migration?)
