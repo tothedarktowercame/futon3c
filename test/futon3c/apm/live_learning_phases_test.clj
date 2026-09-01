@@ -432,6 +432,30 @@
     (is (= :terminal-repair-instruction-missing (:error/code repair)))
     (is (= [:new-unrendered-finding] (:findings repair)))))
 
+(deftest transport-finding-bypasses-role-instructions-as-apparatus-fault
+  (let [finding {:ok false
+                 :error/code :memory-snapshot-visibility-not-obtained
+                 :error/component :transport
+                 :error/message "request timed out"
+                 :transport/evidence :not-obtained}
+        repair (sut/terminal-repair-request
+                {:dispatch/id "original" :dispatch/type :student-attempt
+                 :frame-id "f78" :phase :student-attempt-1
+                 :problem-id "b95A01" :agent-id "f78-student"
+                 :role-card-path "student.md" :role-card-blob "blob"}
+                {:ticket/id "ticket-1"} {:job-id "job-1"}
+                {:error/code :live-learning-terminal-invalid
+                 :finding finding
+                 :findings [finding]})
+        request (:request repair)]
+    (is (:ok repair))
+    (is (= :apparatus (:repair/fault-origin request)))
+    (is (empty? (:repair/findings request)))
+    (is (= [finding] (:repair/apparatus-findings request)))
+    (is (= [finding]
+           (get-in request [:repair/validation-output :findings])))
+    (is (not (re-find #"REVISE AND RESUBMIT" (sut/prompt request))))))
+
 (deftest projection-finding-repair-names-uncovered-patterns
   (let [finding {:memory-id "memory-1"
                  :review-evidence-id "review-1"

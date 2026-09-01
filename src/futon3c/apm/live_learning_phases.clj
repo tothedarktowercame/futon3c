@@ -1063,12 +1063,18 @@
   [request ticket job failure]
   (let [contract-migration?
         (= :typed-submission-contract-migration (:repair/kind failure))
+        transport-failure?
+        (= :transport (or (:error/component failure)
+                          (get-in failure [:error :error/component])
+                          (get-in failure [:finding :error/component])
+                          (get-in failure [:finding :error :error/component])))
         migration-nonce (when contract-migration?
                           (machine/ledger-digest
                            [(:dispatch/id request) (:ticket/id ticket)
                             (:job-id job) submission/completion-contract]))
         findings (vec (:findings failure))
-        missing-instructions (vec (remove finding-instruction findings))
+        role-findings (if transport-failure? [] findings)
+        missing-instructions (vec (remove finding-instruction role-findings))
         body (-> request
                  (dissoc :dispatch/id)
                  (assoc :fresh-session? contract-migration?
@@ -1077,14 +1083,18 @@
                                           (:repair/next-attempt failure 1))
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
-                        :repair/findings findings
+                        :repair/findings role-findings
                         :repair/fault-origin
-                        (or (:repair/fault-origin failure) :agent)
+                        (if transport-failure?
+                          :apparatus
+                          (or (:repair/fault-origin failure) :agent))
                         :repair/validation-output
                         {:error/code (:error/code failure)
                          :findings findings
                          :finding/details (:finding/details failure)
                          :report/error (:report/error job)})
+                 (cond-> transport-failure?
+                   (assoc :repair/apparatus-findings findings))
                  (cond-> contract-migration?
                    (assoc :fresh-session-nonce migration-nonce
                           :repair/kind :typed-submission-contract-migration)))]

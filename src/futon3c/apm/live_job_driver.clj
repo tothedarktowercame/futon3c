@@ -741,7 +741,8 @@
                                       (fn? terminal-repair-request-fn))
                              (terminal-repair-request-fn
                               active-request (:ticket state) job
-                              (cond-> validated
+                              (cond-> (assoc validated
+                                             :repair/fault-origin repair-origin)
                                 typed-contract-migration?
                                 (assoc :repair/kind
                                        :typed-submission-contract-migration)
