@@ -1315,3 +1315,40 @@ window in which the measurement was possible at all. And an offer is not the sam
 prompt: I have not established what the student is shown of these 100, or whether the
 offers reach the prompt in a form distinguishable from the shelf. Both are answerable and
 neither is answered here.
+
+## Why the 400 offers were declined: the hook is stripped (2026-09-01)
+
+The machine records this itself. `:used-via-cascade` is `[]` on every attempt that
+received offers — f75/a3, f76/a3, f77/a2, f77/a3 — which is the same result I had computed
+by hand, from the authoritative field I should have looked for first.
+
+The reason is in what an offer carries. As it reaches the student packet:
+
+    {:memory-id "e-14c2c205-…" :route :sibling :hops 1
+     :pattern "math-formalization-CA/measure-integration-api"
+     :pattern-hook nil}
+
+against a shelf memory the same student used:
+
+    {:name "prime-radical-descent-via-root-of-unity-ratio"
+     :hook "A prime-binomial irreducibility criterion asks for absence of a base-field
+            p-th root, but the hypothesis only says that a selected extension root is
+            outside the algebra-map range."
+     :body "…"}
+
+`:pattern-hook` is nil on all 100. `conductor.clj:488` reads the hook from the pattern's
+props (`:hook` / `:pattern/hook`); the library patterns have neither. What they do have,
+one level up at the entity, is a `:source` line that is exactly what a hook should say —
+"Find the Library's Measure-Theoretic Statement Before Rebuilding It", "Evaluate a Series
+Through Ordered Partial Sums and a Tail Bound", "Assemble Disk Theorems From the Library's
+Interface". The code looks one level too deep and finds nothing.
+
+So the zero uptake is not students ignoring the enrichment. They are handed a hundred
+opaque identifiers and a pattern name, and have no basis to prefer any of them. Fix
+dispatched.
+
+**A second fault, separate and unfixed.** Three of the seven patterns routed in f77/a2 do
+not exist as entities at all — `complex-arg-of-cpow-root`,
+`schwarz-disk-automorphism-formula`, `surj-via-oriented-root-preimage` all return "Entity
+not found" — and the cascade routes offers through them anyway. That is a dangling
+reference in the library or the routing, and it is its own piece of work.
