@@ -1779,6 +1779,52 @@
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
 
+(deftest bell-rejects-unregistered-recipients-before-creating-jobs
+  (let [handler (make-handler)
+        bell (fn [agent-id]
+               (post handler "/api/alpha/bell"
+                     (json/generate-string {"agent-id" agent-id
+                                            "prompt" "registration probe"})))
+        job-count (fn []
+                    (count (get-in @(var-get #'http/!invoke-jobs-ledger)
+                                   [:jobs])))]
+    (testing "an unknown name is rejected without a ledger entry"
+      (let [before (job-count)
+            response (bell "unregistered-bell-recipient")
+            parsed (parse-body response)]
+        (is (= 404 (:status response)))
+        (is (= {:ok false
+                :error "agent-not-found"
+                :message "Agent not registered: unregistered-bell-recipient"}
+               parsed))
+        (is (= before (job-count)))))
+
+    (testing "a normally registered id is still accepted"
+      (register-mock-agent! "bell-bare-target" :codex)
+      (is (= 202 (:status (bell "bell-bare-target")))))
+
+    (testing "this site's area-code alias is accepted"
+      (register-mock-agent! "bell-area-target" :codex)
+      (binding [reg/*resolve-site-prefix* (constantly (constantly "testsite"))]
+        (is (= 202 (:status (bell "testsite-bell-area-target"))))))
+
+    (testing "a persona with a registered target is accepted"
+      (register-mock-agent! "bell-persona-target" :codex)
+      (with-redefs [reg/agent-personas
+                    (constantly {"countdown-control" "bell-persona-target"})]
+        (is (= 202 (:status (bell "countdown-control"))))))
+
+    (testing "a persona with an unregistered target is rejected without a job"
+      (with-redefs [reg/agent-personas
+                    (constantly {"wm-full-loop" "absent-persona-target"})]
+        (let [before (job-count)
+              response (bell "wm-full-loop")
+              parsed (parse-body response)]
+          (is (= 404 (:status response)))
+          (is (false? (:ok parsed)))
+          (is (= "agent-not-found" (:error parsed)))
+          (is (= before (job-count))))))))
+
 (deftest bell-explicit-work-mode-overrides-keyword-fallback
   (testing "an explicit client mode is stored even when the prompt has no work keywords"
     (register-mock-agent! "codex-bell-mode-work" :codex)

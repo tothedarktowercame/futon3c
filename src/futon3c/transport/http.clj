@@ -4749,6 +4749,11 @@
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
 
+          (not (reg/agent-registered? (str agent-id)))
+          (json-response 404 {:ok false
+                              :error "agent-not-found"
+                              :message (str "Agent not registered: " agent-id)})
+
           (and (some? raw-mode) (nil? mode))
           (json-response 400 {:ok false :err "invalid-invoke-mode"
                               :message "mode must be work or brief"})
