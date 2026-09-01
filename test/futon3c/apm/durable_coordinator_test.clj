@@ -143,6 +143,38 @@
                (mapv :watchdog-id @armed)))
         (is (fn? (:watch-fn (first @armed))))))))
 
+(deftest armed-watchdog-is-fenced-to-its-registry-generation
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        checks (atom 0)
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-fence
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:fenced"
+                             :adapter :test/watchdog-fence :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    watchdog/check! (fn [_]
+                                      (swap! checks inc)
+                                      {:ok true :status :watching})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:fenced"))))
+        (is (= :watching (:status ((:watch-fn @armed)))))
+        (is (= 1 @checks))
+        (is (:ok (#'sut/set-enabled! registry "c:fenced" false
+                                            :test :test-generation-change)))
+        (is (= :superseded (:status ((:watch-fn @armed)))))
+        (is (= 1 @checks))))))
+
 (deftest durable-stop-disarms-watchdog
   (let [{:keys [registry state-a]} (temp-paths)
         stopped (atom [])]

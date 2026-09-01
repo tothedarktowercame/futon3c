@@ -455,19 +455,41 @@
 
 (defn- arm-watchdog! [registry-path entry]
   (let [id (watchdog-id (:coordinator/id entry))
+        coordinator-id (:coordinator/id entry)
+        authority-digest (:coordinator/entry-digest entry)
         state-path (Path/of (:coordinator/state-path entry)
                             (make-array String 0))
         watch-path (watchdog-state-path entry)
-        watch-fn #(watchdog/check!
-                   {:watch-state (persistence/read-state watch-path)
-                    :observation (watchdog-observation
-                                  entry (persistence/read-state state-path))
-                    :now-ms (*watchdog-now-fn*)
-                    :registry-path registry-path
-                    :coordinator-id (:coordinator/id entry)
-                    :persist-fn (fn [state]
-                                  (persistence/atomic-persist! watch-path
-                                                               state))})]
+        current-authority?
+        #(let [current (get-in (read-registry registry-path)
+                               [:entries coordinator-id])]
+           (and (:coordinator/enabled? current)
+                (= authority-digest (:coordinator/entry-digest current))))
+        watch-fn
+        #(if-not (current-authority?)
+           {:ok true :status :superseded :watchdog-id id}
+           (watchdog/check!
+            {:watch-state (persistence/read-state watch-path)
+             :observation (watchdog-observation
+                           entry (persistence/read-state state-path))
+             :now-ms (*watchdog-now-fn*)
+             :registry-path registry-path
+             :coordinator-id coordinator-id
+             ;; Namespace reloads have historically left an old scheduled
+             ;; observer alive after a newer lifecycle generation was armed.
+             ;; Fence the destructive stop itself, not only observation, so a
+             ;; stale observer cannot disable or stop the current generation
+             ;; in the gap between evaluation and action.
+             :stop-fn (fn [path coordinator]
+                        (if (current-authority?)
+                          (stop! path coordinator)
+                          {:ok false
+                           :error/code
+                           :durable-coordinator-watchdog-authority-superseded
+                           :coordinator/id coordinator
+                           :watchdog/authority-digest authority-digest}))
+             :persist-fn (fn [state]
+                           (persistence/atomic-persist! watch-path state))}))]
     (*watchdog-start-fn* {:watchdog-id id :watch-fn watch-fn})))
 
 (defn- claim-watchdog-rearm! [entry]
