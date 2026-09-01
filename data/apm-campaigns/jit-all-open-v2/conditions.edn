@@ -165,4 +165,24 @@
  :namespaces
  ["futon3c.apm.live-learning-phases" "futon3c.apm.countdown-control"],
  :loaded? true}
+{:id "C-15",
+ :at "2026-09-01T06:34Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "Qualified Fable audit repair chain 973881e6 1d47bb82 b5fecb72 5c9a60fb with dormant shelf b498ad57; shelf arm remains absent",
+ :head "076d35aa",
+ :namespaces
+ ["futon3c.apm.frame-fingerprint-audit"
+  "futon3c.apm.conductor"
+  "futon3c.apm.solver-shelf-canary"
+  "futon3c.apm.typed-role-submission"
+  "futon3c.apm.live-job-driver"
+  "futon3c.apm.live-promotion"
+  "futon3c.apm.live-proof-phases"
+  "futon3c.apm.queued-frame-adapter"
+  "futon3c.apm.live-learning-phases"
+  "futon3c.apm.projection-watchdog"
+  "futon3c.apm.countdown-control"],
+ :loaded? true}
 ]
