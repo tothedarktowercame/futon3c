@@ -831,7 +831,27 @@
                 (when (= :scribe-reduce phase)
                   (student-attempt-inputs contract (:frame/id unit)))
                 :terminal-budgets (generated-terminal-budgets contract)
-                :cascade-fn conductor/expand-memory-cascade
+                :cascade-fn
+                (fn [seed-ids options]
+                  (let [operation-path
+                        (.resolve (.getParent state-path)
+                                  "memory-cascade-operation.edn")]
+                    (conductor/run-observed-memory-cascade
+                     seed-ids options
+                     {:persist-fn
+                      #(live-preflight-runtime/atomic-persist!
+                        operation-path %)
+                      :budget-ms
+                      (or (get-in unit
+                                  [:memory-cascade :operation-budget-ms])
+                          conductor/default-memory-cascade-operation-budget-ms)
+                      :authority
+                      {:frame-id (:frame/id unit)
+                       :problem-id (:problem/id unit)
+                       :phase phase
+                       :attempt (or (:ordinal action)
+                                    (get-in contract [:phases phase :ordinal])
+                                    1)}})))
                 :cascade-readers-fn
                 #(#'conductor/live-cascade-readers {})
                   :turn-timeout-ms (role-turn-timeout-ms contract role)}))]

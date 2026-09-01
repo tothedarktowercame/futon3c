@@ -33,6 +33,47 @@
   {:attachments-fn #(get attachments % [])
    :why-targets-fn #(get why % [])})
 
+(deftest observed-cascade-persists-running-and-success
+  (let [records (atom [])
+        times (atom [1000 1250])
+        result (conductor/run-observed-memory-cascade
+                ["m1"] {:cap 2}
+                {:persist-fn #(do (swap! records conj %) {:ok true})
+                 :now-ms-fn #(let [x (first @times)] (swap! times rest) x)
+                 :now-fn (constantly "2026-09-01T00:00:00Z")
+                 :budget-ms 500
+                 :authority {:frame-id "f" :problem-id "p"
+                             :phase :student-attempt-2 :attempt 2}
+                 :expand-fn (fn [_ _] {:expanded-count 1
+                                       :expanded-available 1
+                                       :truncated? false})})]
+    (is (= 1 (:expanded-count result)))
+    (is (= [:running :succeeded] (mapv :status @records)))
+    (is (= 1500 (:deadline-at-ms (first @records))))
+    (is (= {:outcome :ok :elapsed-ms 250 :expanded-count 1
+            :expanded-available 1 :truncated? false}
+           (:result (second @records))))))
+
+(deftest observed-cascade-persists-typed-503-failure
+  (let [records (atom [])
+        times (atom [1000 1100])]
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (conductor/run-observed-memory-cascade
+                  ["m1"] {}
+                  {:persist-fn #(do (swap! records conj %) {:ok true})
+                   :now-ms-fn #(let [x (first @times)] (swap! times rest) x)
+                   :now-fn (constantly "2026-09-01T00:00:00Z")
+                   :authority {:frame-id "f" :problem-id "p"
+                               :phase :student-attempt-1 :attempt 1}
+                   :expand-fn
+                   (fn [_ _]
+                     (throw (ex-info "busy" {:status 503
+                                               :error/code :expensive-read-busy})))})))
+    (is (= [:running :failed] (mapv :status @records)))
+    (is (= {:outcome :failed-503 :elapsed-ms 100
+            :error/code :expensive-read-busy :http/status 503}
+           (:result (second @records))))))
+
 (deftest live-cascade-readers-fetch-each-endpoint-once-per-expansion
   (let [calls (atom [])]
     (with-redefs-fn

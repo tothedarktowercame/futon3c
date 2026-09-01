@@ -87,7 +87,8 @@
                           :prompt-assembly authority (:allowed gated))
             offers (mapv #(dissoc % :depositor :provenance)
                          (:allowed prompt-gated))]
-        {:routes-enabled (:routes-enabled expanded)
+        {:outcome :ok
+         :routes-enabled (:routes-enabled expanded)
          :cap (:cap expanded)
          :truncated? (:truncated? expanded)
          :expanded-available (:expanded-available expanded)
@@ -98,7 +99,10 @@
          :holdout-excluded (or (:excluded-offers expanded) 0)
          :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
       (catch Throwable t
-        (merge {:error (or (.getMessage t) (.getName (class t)))
+        (merge {:outcome (if (= 503 (:status (ex-data t)))
+                           :failed-503
+                           :failed)
+                :error (or (.getMessage t) (.getName (class t)))
                 :expansion-ms (quot (- (System/nanoTime) started) 1000000)}
                (select-keys (ex-data t)
                             [:error/component :error/code :timeout-ms]))))))

@@ -18,7 +18,8 @@
    :projected-job-matches-durable-state :agency-agent-reachable
    :agency-job-running :terminal-job-collection-current
    :job-within-declared-timeout
-   :terminal-budgets-valid :coordinator-last-result-successful])
+   :terminal-budgets-valid :cascade-operation-conformant
+   :coordinator-last-result-successful])
 
 (def projection-catchup-grace-seconds 10)
 
@@ -32,8 +33,42 @@
 (defn evaluate
   "Pure watchdog evaluation. INPUTS must contain parsed durable observations."
   [{:keys [now coordinator coordinator-age-seconds transition publication
-           phase-state agent job frame-closed? max-heartbeat-age-seconds]}]
+           phase-state agent job frame-closed? max-heartbeat-age-seconds
+           cascade-operation]}]
   (let [operation (:operation transition)
+        now-ms (.toEpochMilli ^Instant now)
+        cascade-present? (some? cascade-operation)
+        cascade-running? (= :running (:status cascade-operation))
+        cascade-shaped?
+        (and (= :memory-cascade-operation (:state/type cascade-operation))
+             (= :memory-cascade-expansion (:operation cascade-operation))
+             (string? (:operation/id cascade-operation))
+             (not (str/blank? (:operation/id cascade-operation)))
+             (string? (:frame-id cascade-operation))
+             (string? (:problem-id cascade-operation))
+             (keyword? (:phase cascade-operation))
+             (pos-int? (:attempt cascade-operation))
+             (contains? #{:running :succeeded :failed}
+                        (:status cascade-operation))
+             (nat-int? (:started-at-ms cascade-operation))
+             (pos-int? (:budget-ms cascade-operation))
+             (= (+ (:started-at-ms cascade-operation)
+                   (:budget-ms cascade-operation))
+                (:deadline-at-ms cascade-operation))
+             (or cascade-running?
+                 (and (nat-int? (:finished-at-ms cascade-operation))
+                      (map? (:result cascade-operation))
+                      (contains? #{:ok :failed :failed-503}
+                                 (get-in cascade-operation
+                                         [:result :outcome])))))
+        cascade-expired? (and cascade-running? cascade-shaped?
+                              (> now-ms (:deadline-at-ms cascade-operation)))
+        cascade-within-bound? (and cascade-running? cascade-shaped?
+                                   (not cascade-expired?)
+                                   (= (:frame-id transition)
+                                      (:frame-id cascade-operation))
+                                   (= (:problem-id transition)
+                                      (:problem-id cascade-operation)))
         transport-retry? (= :awaiting-transport-retry (:stage phase-state))
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
@@ -68,7 +103,8 @@
           (not (or (= :running (:regulator/status coordinator)) complete?))
           (conj (finding :coordinator-running :coordinator-not-running
                          {:observed (:regulator/status coordinator)}))
-          (> coordinator-age-seconds max-heartbeat-age-seconds)
+          (and (> coordinator-age-seconds max-heartbeat-age-seconds)
+               (not cascade-within-bound?))
           (conj (finding :coordinator-heartbeat-current
                          :coordinator-heartbeat-stale
                          {:age-seconds coordinator-age-seconds
@@ -115,6 +151,7 @@
                          {:status (get-in agent [:agent :status])
                           :running-jobs (get-in agent [:agent :running-jobs])}))
           (and waiting? terminal-job? terminal-age
+               (not cascade-within-bound?)
                (> terminal-age max-heartbeat-age-seconds))
           (conj (finding :terminal-job-collection-current
                          :terminal-job-collection-stale
@@ -130,12 +167,23 @@
                          (pos-int? (:repair-attempts budget)))))
           (conj (finding :terminal-budgets-valid :terminal-budget-invalid
                          {:observed budget}))
+          (and cascade-present? (not cascade-shaped?))
+          (conj (finding :cascade-operation-conformant
+                         :cascade-operation-malformed
+                         {:observed cascade-operation}))
+          cascade-expired?
+          (conj (finding :cascade-operation-conformant
+                         :cascade-operation-deadline-exceeded
+                         {:deadline-at-ms (:deadline-at-ms cascade-operation)
+                          :observed-at-ms now-ms
+                          :budget-ms (:budget-ms cascade-operation)}))
           (false? (get-in coordinator [:regulator/last-result :ok]))
           (conj (finding :coordinator-last-result-successful
                          :coordinator-last-result-failed
                          {:result (:regulator/last-result coordinator)})))]
     {:watch/status (cond (seq findings) :alert
                          transport-retry? :waiting
+                         cascade-within-bound? :waiting
                          :else :healthy)
      :watch/checked obligation-ids
      :watch/findings findings
@@ -152,7 +200,8 @@
         :max-attempts (:transport-retry/max-attempts phase-state)
         :last-failure (or (:transport-retry/last-error-code phase-state)
                           (some-> (:transport-retry/history phase-state)
-                                  last :error/code))})}))
+                                  last :error/code))})
+     :cascade-operation cascade-operation}))
 
 (defn- read-edn [path] (edn/read-string (slurp (io/file (str path)))))
 
@@ -197,6 +246,11 @@
                            (contains? queued-terminal/frame-results
                                       (:frame/result terminal)))
         publication (read-edn (.resolve frame-dir "publications/latest.edn"))
+        cascade-path (.resolve frame-dir "live/memory-cascade-operation.edn")
+        cascade-operation
+        (when (Files/exists cascade-path
+                            (make-array java.nio.file.LinkOption 0))
+          (read-edn cascade-path))
         phase-state (read-edn (phase-state-path frame-dir transition))
         agent-id (get-in transition [:operation :agent-id])
         job-id (get-in transition [:operation :job-id])]
@@ -210,6 +264,7 @@
                 (make-array java.nio.file.LinkOption 0)))) 1000)
      :max-heartbeat-age-seconds max-heartbeat-age-seconds
      :frame-closed? frame-closed?
+     :cascade-operation cascade-operation
      :transition transition :publication publication :phase-state phase-state
      :job (if (and job-id (not frame-closed?))
             (http-json (str agency-base "/api/alpha/invoke/jobs/" job-id))

@@ -30,6 +30,54 @@
 
 (defn codes [x] (set (map :error/code (:watch/findings x))))
 
+(def running-cascade
+  {:state/type :memory-cascade-operation
+   :operation/id "cascade-1"
+   :operation :memory-cascade-expansion
+   :frame-id "f" :problem-id "x" :phase :student-attempt-2 :attempt 2
+   :status :running :started-at "2026-08-23T21:58:00Z"
+   :started-at-ms 1787522280000 :budget-ms 300000
+   :deadline-at-ms 1787522580000
+   :progress {:stage :expanding :seed-count 10}})
+
+(deftest conformant-cascade-suppresses-only-generic-staleness-within-bound
+  (let [stale (-> healthy
+                  (assoc :coordinator-age-seconds 180
+                         :cascade-operation running-cascade
+                         :job {:ok true :job
+                               {:state "done"
+                                :finished-at "2026-08-23T21:57:00Z"}}))
+        result (watchdog/evaluate stale)]
+    (is (= :waiting (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (not (contains? (codes result) :coordinator-heartbeat-stale)))
+    (is (not (contains? (codes result) :terminal-job-collection-stale)))))
+
+(deftest expired-and-malformed-cascade-operations-fail-closed
+  (let [expired (watchdog/evaluate
+                 (assoc healthy :coordinator-age-seconds 180
+                        :cascade-operation
+                        (assoc running-cascade :deadline-at-ms 1787522399000
+                               :budget-ms 119000)))
+        malformed (watchdog/evaluate
+                   (assoc healthy :cascade-operation
+                          (dissoc running-cascade :deadline-at-ms)))]
+    (is (contains? (codes expired) :cascade-operation-deadline-exceeded))
+    (is (contains? (codes expired) :coordinator-heartbeat-stale))
+    (is (contains? (codes malformed) :cascade-operation-malformed))))
+
+(deftest terminal-cascade-success-and-failure-are-conformant-observations
+  (doseq [terminal [(assoc running-cascade :status :succeeded
+                           :finished-at-ms 1787522300000
+                           :result {:outcome :ok :elapsed-ms 20000})
+                    (assoc running-cascade :status :failed
+                           :finished-at-ms 1787522300000
+                           :result {:outcome :failed-503 :elapsed-ms 20000
+                                    :http/status 503})]]
+    (let [result (watchdog/evaluate
+                  (assoc healthy :cascade-operation terminal))]
+      (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+      (is (empty? (:watch/findings result))))))
+
 (deftest all-modeled-failure-classes-alert
   (is (= :healthy (:watch/status (watchdog/evaluate healthy))))
   (is (= watchdog/obligation-ids (:watch/checked (watchdog/evaluate healthy))))

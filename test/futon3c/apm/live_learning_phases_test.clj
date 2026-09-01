@@ -323,7 +323,8 @@
                                 (assoc validated :candidate
                                        (certified-candidate "f19" "a01J05" 1)))]
         (is (:ok validated))
-        (is (= {:error "substrate unavailable"
+        (is (= {:outcome :failed
+                :error "substrate unavailable"
                 :expansion-ms (get-in request [:memory-cascade :expansion-ms])}
                (get-in result [:certificate :receipt/memory-cascade])))))))
 

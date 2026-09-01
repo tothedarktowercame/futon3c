@@ -24,6 +24,88 @@
 (def ^:dynamic *cascade-connect-timeout-ms* 5000)
 (def ^:dynamic *cascade-read-parallelism* 8)
 
+(def default-memory-cascade-operation-budget-ms (* 30 60 1000))
+
+(declare expand-memory-cascade)
+
+(defn run-observed-memory-cascade
+  "Run one cascade expansion while durably publishing its bounded operation.
+
+   PERSIST-FN is called before substrate work and once at termination. A
+   persistence refusal fails closed: an unobservable long-running expansion
+   must not be mistaken for a conformant one by the projection watchdog."
+  [seed-memory-ids options
+   {:keys [persist-fn now-ms-fn now-fn budget-ms authority expand-fn]
+    :or {now-ms-fn #(System/currentTimeMillis)
+         now-fn #(str (java.time.Instant/now))
+         budget-ms default-memory-cascade-operation-budget-ms
+         expand-fn expand-memory-cascade}}]
+  (when-not (and (fn? persist-fn) (pos-int? budget-ms))
+    (throw (ex-info "memory cascade operation authority invalid"
+                    {:error/component :apparatus
+                     :error/code :memory-cascade-operation-authority-invalid
+                     :budget-ms budget-ms})))
+  (let [started-ms (long (now-ms-fn))
+        operation-id (str (java.util.UUID/randomUUID))
+        base (merge {:state/type :memory-cascade-operation
+                     :operation/id operation-id
+                     :operation :memory-cascade-expansion
+                     :status :running
+                     :started-at (now-fn)
+                     :started-at-ms started-ms
+                     :budget-ms budget-ms
+                     :deadline-at-ms (+ started-ms budget-ms)
+                     :attempt 1
+                     :progress {:stage :expanding
+                                :seed-count (count seed-memory-ids)}}
+                    authority)
+        persisted (persist-fn base)]
+    (when-not (:ok persisted)
+      (throw (ex-info "memory cascade operation authority persistence failed"
+                      {:error/component :apparatus
+                       :error/code :memory-cascade-operation-persistence-failed
+                       :finding persisted})))
+    (try
+      (let [result (expand-fn seed-memory-ids options)
+            finished-ms (long (now-ms-fn))
+            terminal (assoc base
+                            :status :succeeded
+                            :finished-at (now-fn)
+                            :finished-at-ms finished-ms
+                            :result {:outcome :ok
+                                     :elapsed-ms (- finished-ms started-ms)
+                                     :expanded-count (:expanded-count result)
+                                     :expanded-available
+                                     (:expanded-available result)
+                                     :truncated? (:truncated? result)})
+            saved (persist-fn terminal)]
+        (when-not (:ok saved)
+          (throw (ex-info "memory cascade terminal authority persistence failed"
+                          {:error/component :apparatus
+                           :error/code
+                           :memory-cascade-operation-persistence-failed
+                           :finding saved})))
+        result)
+      (catch Throwable t
+        (let [data (ex-data t)
+              status (:status data)
+              finished-ms (long (now-ms-fn))
+              outcome (if (= 503 status) :failed-503 :failed)
+              terminal (assoc base
+                              :status :failed
+                              :finished-at (now-fn)
+                              :finished-at-ms finished-ms
+                              :result (cond->
+                                      {:outcome outcome
+                                       :elapsed-ms (- finished-ms started-ms)
+                                       :error/code (or (:error/code data)
+                                                       :memory-cascade-failed)}
+                                status (assoc :http/status status)))]
+          ;; Preserve the original failure. If the terminal write also fails,
+          ;; its absence remains fail-closed to the watchdog at the deadline.
+          (try (persist-fn terminal) (catch Throwable _ nil))
+          (throw t))))))
+
 (defn- bounded-parallel-map
   "Apply F concurrently in small batches while retaining input order.
 
