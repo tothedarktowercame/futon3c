@@ -244,7 +244,15 @@ def main():
         if ":used-ids" not in t:
             print(f"    a{n}: IN FLIGHT, {na} accessible, no result yet")
             continue
-        flag = "   <-- ZERO UPTAKE" if (na and not nu) else ""
+        # A failed cascade read is not low uptake, it is a channel that was
+        # not there. The receipt records it honestly as
+        # :receipt/memory-cascade {:outcome :failed ...} and nothing surfaced
+        # it, so the sibling-link channel was dead from f64 to f74 while the
+        # pulse kept printing ZERO UPTAKE as if memory had been declined.
+        cascade_failed = "memory cascade substrate read failed" in t
+        flag = "   <-- ZERO UPTAKE" if (na and not nu and not cascade_failed) else ""
+        if cascade_failed:
+            flag = "   <-- CASCADE READ FAILED (uptake not measurable)"
         print(f"    a{n}: memory {nu}/{na} used   "
               f"{'sorries='+sor.group(1) if sor else ''} "
               f"{'outcome='+out.group(1) if out else ''}{flag}")
