@@ -95,6 +95,19 @@
                   [:regulator/last-result :retry/not-before-ms]))
         substrate-wait? (and (nat-int? substrate-resume-at-ms)
                              (< now-ms substrate-resume-at-ms))
+        coordinator-intent (:coordinator/pending-intent coordinator)
+        coordinator-intent-deadline-ms
+        (get-in coordinator-intent [:dispatch/parameters :deadline-ms])
+        coordinator-intent-shaped?
+        (every? #(some? (get coordinator-intent %))
+                [:intent/digest :dispatch/id :dispatch/action :job-id
+                 :pre-state/digest :pre-state/version
+                 :expected/postcondition])
+        coordinator-intent-wait?
+        (and (= :durable-coordinator-intent (:state/type coordinator-intent))
+             coordinator-intent-shaped?
+             (nat-int? coordinator-intent-deadline-ms)
+             (< now-ms coordinator-intent-deadline-ms))
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
         ;; identity, timeout, or terminal-budget check.
@@ -130,17 +143,14 @@
                          {:observed (:regulator/status coordinator)}))
           (and (not transport-retry-wait?)
                (not substrate-wait?)
+               (not coordinator-intent-wait?)
                (> coordinator-age-seconds max-heartbeat-age-seconds)
                (not cascade-within-bound?))
           (conj (finding :coordinator-heartbeat-current
                          :coordinator-heartbeat-stale
                          {:age-seconds coordinator-age-seconds
                           :limit-seconds max-heartbeat-age-seconds}))
-          (and (:coordinator/pending-intent coordinator)
-               (not-every? #(some? (get (:coordinator/pending-intent coordinator) %))
-                           [:intent/digest :dispatch/id :dispatch/action :job-id
-                            :pre-state/digest :pre-state/version
-                            :expected/postcondition]))
+          (and coordinator-intent (not coordinator-intent-shaped?))
           (conj (finding :pending-intent-shaped :pending-intent-incomplete {}))
           (and (not transport-retry?)
                (not= (:event/id transition) (:transition/event-id publication)))
@@ -148,7 +158,8 @@
                          :projection-publication-diverged
                          {:transition (:event/id transition)
                           :publication-transition (:transition/event-id publication)}))
-          (and (not transport-retry-wait?) (not substrate-wait?) (not waiting?)
+          (and (not transport-retry-wait?) (not substrate-wait?)
+               (not coordinator-intent-wait?) (not waiting?)
                (not frame-closed?) transition-age
                (> transition-age max-heartbeat-age-seconds)
                (not= :complete (:regulator/status coordinator)))
@@ -178,6 +189,7 @@
                          {:status (get-in agent [:agent :status])
                           :running-jobs (get-in agent [:agent :running-jobs])}))
           (and waiting? terminal-job? terminal-age
+               (not coordinator-intent-wait?)
                (not cascade-within-bound?)
                (> terminal-age max-heartbeat-age-seconds))
           (conj (finding :terminal-job-collection-current
@@ -211,6 +223,7 @@
     {:watch/status (cond (seq findings) :alert
                          transport-retry-wait? :waiting
                          substrate-wait? :waiting
+                         coordinator-intent-wait? :waiting
                          cascade-within-bound? :waiting
                          :else :healthy)
      :watch/checked obligation-ids
@@ -232,6 +245,10 @@
      :substrate-wait
      (when substrate-wait?
        {:wake-at-ms substrate-resume-at-ms})
+     :coordinator-intent-wait
+     (when coordinator-intent-wait?
+       {:job-id (:job-id coordinator-intent)
+        :deadline-ms coordinator-intent-deadline-ms})
      :cascade-operation cascade-operation}))
 
 (defn- read-edn [path] (edn/read-string (slurp (io/file (str path)))))

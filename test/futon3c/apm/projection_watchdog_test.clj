@@ -113,6 +113,44 @@
     (is (not (contains? (codes result) :coordinator-heartbeat-stale)))
     (is (not (contains? (codes result) :unattended-transition-stale)))))
 
+(deftest bounded-coordinator-intent-owns-terminal-collection-wait
+  (let [intent {:state/type :durable-coordinator-intent
+                :intent/digest "intent"
+                :dispatch/id "dispatch"
+                :dispatch/action :tick
+                :job-id "tick"
+                :pre-state/digest "pre"
+                :pre-state/version 1
+                :expected/postcondition {:status :done}
+                :dispatch/parameters {:deadline-ms 1787523000000}}
+        terminal {:ok true :job {:state "done"
+                                 :finished-at "2026-08-23T21:57:00Z"}}
+        result (watchdog/evaluate
+                (-> healthy
+                    (assoc :coordinator-age-seconds 180 :job terminal)
+                    (assoc-in [:coordinator :coordinator/pending-intent] intent)))]
+    (is (= :waiting (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))
+    (is (= {:job-id "tick" :deadline-ms 1787523000000}
+           (:coordinator-intent-wait result)))))
+
+(deftest expired-coordinator-intent-does-not-hide-staleness
+  (let [intent {:state/type :durable-coordinator-intent
+                :intent/digest "intent"
+                :dispatch/id "dispatch"
+                :dispatch/action :tick
+                :job-id "tick"
+                :pre-state/digest "pre"
+                :pre-state/version 1
+                :expected/postcondition {:status :done}
+                :dispatch/parameters {:deadline-ms 1787522399000}}
+        result (watchdog/evaluate
+                (-> healthy
+                    (assoc :coordinator-age-seconds 180)
+                    (assoc-in [:coordinator :coordinator/pending-intent] intent)))]
+    (is (= :alert (:watch/status result)))
+    (is (contains? (codes result) :coordinator-heartbeat-stale))))
+
 (deftest expired-transport-retry-no-longer-suppresses-staleness
   (let [result
         (watchdog/evaluate
