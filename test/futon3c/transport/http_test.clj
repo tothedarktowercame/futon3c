@@ -27,11 +27,35 @@
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
 
 ;; =============================================================================
 ;; Fixtures
 ;; =============================================================================
+
+(defn- delete-temp-tree!
+  [root]
+  (doseq [file (reverse (file-seq (.toFile root)))]
+    (io/delete-file file true)))
+
+(defn- with-isolated-invoke-jobs-ledger
+  [f]
+  (let [root (Files/createTempDirectory
+              "futon3c-http-test-invoke-jobs-"
+              (make-array FileAttribute 0))
+        ledger-path (str (.resolve root "invoke-jobs.edn"))]
+    (try
+      (with-redefs-fn
+        {#'futon3c.transport.http/invoke-jobs-store-path
+         (constantly ledger-path)}
+        f)
+      (finally
+        (http/reset-invoke-jobs!)
+        (delete-temp-tree! root)))))
+
+(use-fixtures :once with-isolated-invoke-jobs-ledger)
 
 (deftest invoke-stream-stamps-every-event-with-one-turn-id
   (let [stamp #'http/stamp-turn-event
@@ -398,14 +422,15 @@
                   "every pushed event retains the request's stream identity"))))))))
 
 (defn- wait-for-job-state
-  "Poll /api/alpha/invoke/jobs/:id until state is no longer queued/running or timeout."
+  "Poll /api/alpha/invoke/jobs/:id until state is terminal or timeout."
   [handler job-id timeout-ms]
   (let [deadline (+ (System/currentTimeMillis) timeout-ms)]
     (loop []
       (let [resp (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
             parsed (parse-body resp)
             state (get-in parsed [:job :state])]
-        (if (or (not (#{"queued" "running"} state))
+        (if (or (not (#{"queued" "activating" "running" "overrun" "delivering"}
+                       state))
                 (>= (System/currentTimeMillis) deadline))
           {:response resp :parsed parsed}
           (do
