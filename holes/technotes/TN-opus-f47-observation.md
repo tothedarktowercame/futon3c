@@ -1185,3 +1185,31 @@ this window is measuring the substrate's admission control.
 futon1b was not saturated when I looked — 2/2 permits free, no waiters — but its `rejected`
 counter moved 34 -> 46 across these frames. The rejections are intermittent, and the
 cascade's ~150-second expansion gives it a wide window to land in one.
+
+### Correction, same day: the cascade is an enrichment, not the shelf
+
+I wrote above that "the students never received their shelf" and that six attempts were
+recorded as failures when they had no memory access. That overstates it, and a scan of
+every frame shows the failure is both older and less total than I said.
+
+Cascade failures go back to f64, not f74:
+
+    f64 2/3 attempts had a working cascade    f70 0/3
+    f65 1/3                                   f71 1/3
+    f66 1/3                                   f72 0/1
+    f67 0/3                                   f73 0/3
+    f68 1/3                                   f74 0/3
+    f69 0/3                                   f75 0/1
+
+But an attempt with a failed cascade still has its shelf. f75/a1 carries
+`:shelf/holdout`, `:shelf/withheld-count 2` and `:shelf/withheld-ids`, reports 175
+accessible, and used a memory. f69/a2 used four. The `:memory-cascade` is the sibling-route
+expansion (`{:enabled? true :routes [:sibling] :cap 100}` in queue-state), an enrichment
+layered on the accessible shelf, not the shelf itself.
+
+So the honest statement is: from f64 onward most attempts ran with a DEGRADED shelf — the
+base shelf present, the sibling expansion missing — and I have not measured what the
+expansion contributes. Whether that materially changed any outcome is unknown, and the
+uptake numbers in this note were taken under that condition without my knowing it. That
+does not invalidate the per-attempt counts, which are what they are; it means the
+condition under which they were collected was not constant and I did not check.
