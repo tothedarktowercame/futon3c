@@ -118,4 +118,52 @@
  :by "claude-19",
  :loaded? false,
  :sha "0385f29d"}
+{:id "C-11",
+ :at "2026-09-01T02:26Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "f71: classify nested memory assertion transport timeout as apparatus-origin; preserve Guide terminal and agent repair budget (5f4ea0e2)",
+ :head "5f4ea0e2",
+ :namespaces ["futon3c.apm.live-learning-phases"],
+ :loaded? true}
+{:id "C-12",
+ :at "2026-09-01T02:29Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "f71 cached transport rejection migration; current classifier overrides stale agent origin (e5f1d94c,a8968a47)",
+ :head "a8968a47",
+ :namespaces
+ ["futon3c.apm.live-job-driver" "futon3c.apm.live-learning-phases"],
+ :loaded? true}
+{:id "C-13",
+ :at "2026-09-01T05:11Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "surface all-mechanically-rejected Guide candidates before persistence; preserve exact rejection codes",
+ :head "d8fbd5a4",
+ :namespaces ["futon3c.apm.live-learning-phases"],
+ :loaded? true}
+{:id "C-14",
+ :at "2026-09-01T06:33Z",
+ :by "codex-17",
+ :kind :reload,
+ :note
+ "Qualified Fable audit repair chain 973881e6 1d47bb82 b5fecb72 5c9a60fb with dormant shelf b498ad57; shelf arm remains absent",
+ :head "eeebbdab",
+ :namespaces
+ ["futon3c.apm.frame-fingerprint-audit"
+  "futon3c.apm.conductor"
+  "futon3c.apm.solver-shelf-canary"
+  "futon3c.apm.typed-role-submission"
+  "futon3c.apm.live-job-driver"
+  "futon3c.apm.live-promotion"
+  "futon3c.apm.live-proof-phases"
+  "futon3c.apm.queued-frame-adapter"
+  "futon3c.apm.live-learning-phases"
+  "futon3c.apm.projection-watchdog"
+  "futon3c.apm.countdown-control"],
+ :loaded? true}
 ]
