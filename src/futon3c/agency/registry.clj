@@ -17,7 +17,9 @@
    Design: single registry atom with one entry per agent-id value.
    The triple-store problem from futon3 (registry + local-handlers +
    connected-agents) is eliminated by having one authoritative store."
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.blackboard :as bb]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
@@ -416,6 +418,48 @@
                    (> (count s) (count prefix)))
           (subs s (count prefix)))))))
 
+(def ^:private agent-personas-resource "agent-personas.edn")
+
+(defonce ^:private !agent-personas (atom {}))
+
+(defn- read-agent-personas
+  []
+  (let [resource (io/resource agent-personas-resource)]
+    (when-not resource
+      (throw (ex-info "Agent persona resource not found"
+                      {:resource agent-personas-resource})))
+    (let [personas (edn/read-string (slurp resource))]
+      (when-not (and (map? personas)
+                     (every? string? (keys personas))
+                     (every? string? (vals personas)))
+        (throw (ex-info "Agent persona resource must map names to agent ids"
+                        {:resource agent-personas-resource})))
+      personas)))
+
+(defn reload-agent-personas!
+  "Reload persona-to-agent bindings from resources/agent-personas.edn.
+
+   Reloading changes lookup aliases only. It never adds registry keys or agent
+   records. A persona may name an agent that is not currently registered; that
+   binding remains configured and simply resolves to nil until the target is
+   registered."
+  []
+  (reset! !agent-personas (read-agent-personas)))
+
+(defn agent-personas
+  "Return the currently loaded persona-to-agent-id bindings."
+  []
+  @!agent-personas)
+
+(reload-agent-personas!)
+
+(defn- persona-agent
+  [reg id]
+  (when-let [target-id (get (agent-personas) (str id))]
+    (let [record (get reg target-id)]
+      (when-not (get-in record [:agent/metadata :proxy?])
+        record))))
+
 (defn get-agent
   "Get agent record by typed ID, or nil if not registered.
 
@@ -427,17 +471,21 @@
    already carries a `lon-claude-1` ghost with a null session-id beside the real
    `claude-1`, which is what dual registration looks like when it goes wrong.
 
-   The alias is a FALLBACK: a registered bare id is returned before it is ever
-   consulted, so no existing resolution changes behaviour."
+   Aliases are FALLBACKS: a registered bare id wins, then this site's area-code
+   alias is consulted, then a configured orchestrator persona. Persona aliases
+   resolve only to currently registered, non-proxy agents."
   [typed-id]
-  (let [id (agent-id-value typed-id)]
-    (or (get @!registry id)
+  (let [id (agent-id-value typed-id)
+        reg @!registry]
+    (or (get reg id)
         (when-let [bare (local-site-alias->bare id)]
-          (get @!registry bare)))))
+          (get reg bare))
+        (persona-agent reg id))))
 
 (defn addressable-names
-  "Every name get-agent will resolve: the registered ids, plus this site's area
-   code for each LOCAL agent.
+  "Every name get-agent will resolve: registered ids, this site's area code for
+   each LOCAL agent, and configured personas whose targets are registered local
+   agents.
 
    'Registered' and 'addressable' were the same set until aliases existed, and
    code that conflates them now reports a caller as unreachable while the router
@@ -452,14 +500,20 @@
   []
   (let [reg @!registry
         ids (map str (keys reg))
-        site (when-let [f (*resolve-site-prefix*)] (f))]
-    (cond-> (set ids)
-      site (into (keep (fn [id]
-                         (let [record (get reg id)]
-                           (when (and (not (get-in record [:agent/metadata :proxy?]))
+        site (when-let [f (*resolve-site-prefix*)] (f))
+        area-names (when site
+                     (keep (fn [id]
+                             (let [record (get reg id)]
+                               (when (and
+                                      (not (get-in record [:agent/metadata :proxy?]))
                                       (nil? (local-site-alias->bare id)))
-                             (str site "-" id))))
-                       ids)))))
+                                 (str site "-" id))))
+                           ids))
+        persona-names (keep (fn [persona]
+                              (when (persona-agent reg persona)
+                                persona))
+                            (keys (agent-personas)))]
+    (into (set ids) (concat area-names persona-names))))
 
 (defn agent-registered?
   "Check if an agent is registered, by any of its names (see get-agent).
