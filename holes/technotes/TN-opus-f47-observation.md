@@ -1289,10 +1289,15 @@ attempt since the retry fix made the cascade work:
     f76/a3      100     0         0           0
     f77/a1        0     0         0           0
     f77/a2      100     3         0           3
-    f77/a3      100     0         0           0
+    f77/a3      100     2         0           2
 
-**Four hundred offers, zero taken.** All six memories that were used came through the base
-shelf, including the cross-frame ones.
+**Four hundred offers, zero taken.** All eight memories that were used came through the
+base shelf, including the cross-frame ones.
+
+(The f77/a3 row first read `used 0`. I measured it on the watcher's in-flight-to-result
+edge, when the attempt file already exists and parses but its outcome is not yet written.
+The same mistake produced a wrong reading of f73/a2 earlier the same day. The fix is
+cheap — require the outcome field before measuring — and I was not making it.)
 
 Two corrections to my own numbers earlier today. I reported f76/a3 as offering 33 and
 f77/a2 as offering 43 then 66; all three figures were artifacts of truncating my search
