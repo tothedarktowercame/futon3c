@@ -588,17 +588,82 @@
           (recur (inc n)))
         n))))
 
+(defn- compact-status-event? [event]
+  (and (= "system" (:type event))
+       (= "status" (:subtype event))
+       (contains? event :compact_result)))
+
+(defn- read-compact*
+  "Read the reply to a `/compact` control line.
+
+   Measured against the claude CLI (2026-09-01, /tmp/compact-probe/probe.py):
+   system/status (compaction started) -> ... -> system/status with
+   :compact_result -> system/init -> system/compact_boundary -> result with
+   num_turns 0. So the compaction's own `result` always FOLLOWS a status that
+   carries :compact_result.
+
+   A `result` seen before any such status therefore belongs to a turn that was
+   already in flight when the control was written — an agent-initiated turn
+   (task notification) that drain-pending! could not tell from stale output
+   (claude-1, 2026-09-01 18:24: the drain dropped 142 lines of a report, and
+   read-turn* returned that turn's result as the compaction's, so Emacs showed
+   a bare `[compact] error` while the CLI compacted for two more minutes and
+   the next user turn was fed into the compaction). Consume it, count it, and
+   keep reading; the count is reported so the caller can say so."
+  [pouch on-event]
+  (let [sid (atom (:session-id pouch))
+        status (atom nil)
+        orphans (atom 0)]
+    (loop []
+      (let [line (.readLine ^BufferedReader (:reader pouch))]
+        (when (nil? line)
+          (throw (ex-info "pouch process closed stdout before compact result"
+                          {:agent-id (:agent-id pouch)})))
+        (if (str/blank? line)
+          (recur)
+          (let [event (json/parse-string line true)]
+            (when on-event
+              (try (on-event event) (catch Throwable _)))
+            (when (compact-status-event? event)
+              (reset! status event))
+            (case (:type event)
+              "result"
+              (do
+                (when-let [event-sid (:session_id event)]
+                  (reset! sid event-sid))
+                (if @status
+                  {:result ""
+                   :session-id @sid
+                   :pouch/warm? true
+                   :pouch/agent-id (:agent-id pouch)
+                   :compact/status @status
+                   :compact/orphaned-turns @orphans}
+                  (do
+                    (swap! orphans inc)
+                    (println (str "[pouch] " (:agent-id pouch)
+                                  " consumed the result of an unsolicited turn"
+                                  " while awaiting /compact (" @orphans ")"))
+                    (flush)
+                    (recur))))
+
+              "error"
+              (throw (ex-info "pouch stream emitted an error event"
+                              {:agent-id (:agent-id pouch) :event event}))
+
+              (recur))))))))
+
 (defn- read-turn-with-timeout
   "Read one turn, optionally bounded. TIMEOUT-MS nil or non-positive reads
-   until the result event arrives.
+   until the result event arrives. READ-FN (default read-turn*) is the
+   reader; compact-pouch! passes read-compact*.
 
    Unlike the codex adapter this keeps a default bound (see
    default-timeout-ms). The pouch is a persistent stdio protocol: abandoning a
    read leaves an unconsumed `result` that shifts every later turn one behind
    (the desync drain-pending! exists to repair), so removing the bound here
    needs a pouch-level cancel first. Tracked in README-agency-cap.md."
-  [pouch timeout-ms on-event]
-  (let [f (future (read-turn* pouch on-event))
+  [pouch timeout-ms on-event & [read-fn]]
+  (let [f (future ((or read-fn read-turn*) pouch on-event))
         bound (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))]
     (if-not bound
       @f
@@ -962,17 +1027,24 @@
                        (.write ^BufferedWriter (:writer pouch)
                                (str (control-line) "\n"))
                        (.flush ^BufferedWriter (:writer pouch))
-                       (read-turn-with-timeout pouch timeout on-event)))))]
+                       (read-turn-with-timeout pouch timeout on-event
+                                               read-compact*)))))]
             (if (= ::busy result)
               {:ok false :error "turn in flight"}
               (let [compact-result (:compact_result @status)
-                    compact-error (:compact_error @status)]
-                {:ok (= "success" compact-result)
-                 :compact-result compact-result
-                 :compact-error compact-error
-                 :session-id (:session-id result)
-                 :usage (:usage @result-event)
-                 :total-cost-usd (:total_cost_usd @result-event)})))
+                    compact-error (:compact_error @status)
+                    orphans (long (or (:compact/orphaned-turns result) 0))]
+                (cond-> {:ok (= "success" compact-result)
+                         :compact-result compact-result
+                         :compact-error compact-error
+                         :orphaned-turns orphans
+                         :session-id (:session-id result)
+                         :usage (:usage @result-event)
+                         :total-cost-usd (:total_cost_usd @result-event)}
+                  ;; Never answer `ok false` without saying why: Emacs renders
+                  ;; a reasonless payload as a bare "[compact] error".
+                  (nil? compact-result)
+                  (assoc :error "no compact status arrived before the result")))))
           (catch Throwable t
             {:ok false :error (.getMessage t)}))))))
 

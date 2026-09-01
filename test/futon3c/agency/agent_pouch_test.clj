@@ -26,7 +26,21 @@
                "        sys.exit(7)\n"
                "    if text == 'SLOW':\n"
                "        import time; time.sleep(1)\n"
+               "    if text == 'BURST':\n"
+               ;; One solicited turn, then — before reading the next stdin line —
+               ;; an agent-initiated turn that is still being emitted when the
+               ;; caller's drain runs (the sleep keeps it out of the drain).
+               "        print(json.dumps({'type':'system','session_id':sid}), flush=True)\n"
+               "        print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:BURST'}]}}), flush=True)\n"
+               "        print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"
+               "        import time; time.sleep(0.4)\n"
+               "        print(json.dumps({'type':'system','subtype':'task_notification'}), flush=True)\n"
+               "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
+               "        print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'unsolicited report'}]}}), flush=True)\n"
+               "        print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"
+               "        continue\n"
                "    if text == '/compact':\n"
+               "        print(json.dumps({'type':'system','subtype':'status','status':'compacting'}), flush=True)\n"
                "        print(json.dumps({'type':'system','subtype':'status','status':None,'compact_result':'success','compact_error':None}), flush=True)\n"
                "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
                "        print(json.dumps({'type':'result','subtype':'success','session_id':sid,'usage':{'input_tokens':12},'total_cost_usd':0.01}), flush=True)\n"
@@ -104,10 +118,28 @@
     (is (= {:ok true
             :compact-result "success"
             :compact-error nil
+            :orphaned-turns 0
             :session-id "fake-session-1"
             :usage {:input_tokens 12}
             :total-cost-usd 0.01}
            (pouch/compact-pouch! "claude-compact" {:timeout-ms 2000})))))
+
+(deftest compact-pouch-reads-past-an-in-flight-unsolicited-turn
+  ;; claude-1, 2026-09-01 18:24: a task-notification turn was mid-flight when
+  ;; /compact was written; its `result` was taken for the compaction's.
+  (let [bin (fake-claude-bin)]
+    (is (= "reply:BURST"
+           (:result (pouch/feed-turn! "claude-burst" "BURST"
+                                      {:claude-bin bin :timeout-ms 2000}))))
+    (let [r (pouch/compact-pouch! "claude-burst" {:timeout-ms 3000})]
+      (is (true? (:ok r)))
+      (is (= "success" (:compact-result r)))
+      (is (= 1 (:orphaned-turns r)) "the unsolicited turn's result is consumed, not reported")
+      (is (nil? (:error r))))
+    ;; alignment survives: the next fed turn reads its own reply
+    (is (= "reply:after"
+           (:result (pouch/feed-turn! "claude-burst" "after"
+                                      {:claude-bin bin :timeout-ms 2000}))))))
 
 (deftest compact-control-is-literal-without-changing-normal-user-lines
   (let [control (json/parse-string (#'pouch/control-line) true)
