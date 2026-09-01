@@ -1737,13 +1737,22 @@
        :inspect-fn (or inspect-fn #(frame-inspect! target-frame))
        :recover-claim-fn
        (fn [inspection]
-         (let [certificate (get-in inspection [:checkpoint :certificate])]
-           (executor/complete-claimed!
-            {:ledger-path (control-path ledger-path)
-             :current-certificate certificate
-             :handlers (:handlers (options))
-             :actor "countdown-recovery"
-             :at (str (Instant/now))})))
+         (let [certificate (get-in inspection [:checkpoint :certificate])
+               kind (get-in certificate
+                            [:active/claim :obligation
+                             :obligation/action :kind])
+               recovered
+               (executor/complete-claimed!
+                {:ledger-path (control-path ledger-path)
+                 :current-certificate certificate
+                 :handlers (:handlers (options))
+                 :actor "countdown-recovery"
+                 :at (str (Instant/now))})]
+           (if (and (:ok recovered) (= :close-frame kind))
+             (record-close-observations!
+              recovered target-frame (:effect-certificate recovered)
+              fingerprint-audit-fn)
+             recovered)))
        :drive-phase-fn (or drive-phase-fn drive-live-action!)
        :advance-fn (or advance-fn
                        (fn [kind certificate]

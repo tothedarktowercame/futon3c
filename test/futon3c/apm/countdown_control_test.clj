@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
+            [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner]
@@ -382,6 +383,68 @@
         (is (= (str campaign) (:campaign-directory @audit-call)))
         (is (= "f58" (:expected-frame-id @audit-call)))
         (is (= 2 (:expected-minimum-rows @audit-call)))))))
+
+(deftest recovered-close-records-the-same-observations-exactly-once
+  (let [calls (atom [])
+        close-receipt {:receipt/id "close-recovery-58"
+                       :receipt/type :frame-close
+                       :receipt/result :closed}
+        inspection
+        {:ok true :stepper/status :stop
+         :decision {:reason :campaign-obligation-claim-recovery-required}
+         :checkpoint
+         {:certificate
+          {:active/claim
+           {:obligation
+            {:obligation/action {:kind :close-frame :frame-id "f58"}}}}}}
+        recovered {:ok true :recovered? true
+                   :effect-certificate close-receipt}]
+    (with-redefs [executor/complete-claimed!
+                  (fn [_]
+                    (swap! calls conj :complete)
+                    recovered)
+                  sut/record-close-observations!
+                  (fn [advanced frame-id receipt audit-fn]
+                    (swap! calls conj [:observe frame-id receipt audit-fn])
+                    (assoc advanced :observed? true))]
+      (let [audit-fn (fn [_] {:ok true})
+            result
+            (sut/set-alight!
+             {:agent "codex-17" :session "park-2" :surface "bell"
+              :target-frame "f58"}
+             {:launch-audit-fn (constantly {:ok true})
+              :inspect-fn (constantly inspection)
+              :project-fn (constantly {:ok true})
+              :park-fn (constantly {:ok true})
+              :fingerprint-audit-fn audit-fn})]
+        (is (= :claim-recovered (:status result)))
+        (is (true? (get-in result [:recovery :observed?])))
+        (is (= [:complete [:observe "f58" close-receipt audit-fn]] @calls))))))
+
+(deftest recovered-non-close-does-not-record-close-observations
+  (let [observations (atom 0)
+        inspection
+        {:ok true :stepper/status :stop
+         :decision {:reason :campaign-obligation-claim-recovery-required}
+         :checkpoint
+         {:certificate
+          {:active/claim
+           {:obligation {:obligation/action {:kind :solve :frame-id "f58"}}}}}}]
+    (with-redefs [executor/complete-claimed!
+                  (constantly {:ok true :recovered? true
+                               :effect-certificate {:receipt/id "solve-58"}})
+                  sut/record-close-observations!
+                  (fn [& _] (swap! observations inc) {:ok true})]
+      (let [result
+            (sut/set-alight!
+             {:agent "codex-17" :session "park-2" :surface "bell"
+              :target-frame "f58"}
+             {:launch-audit-fn (constantly {:ok true})
+              :inspect-fn (constantly inspection)
+              :project-fn (constantly {:ok true})
+              :park-fn (constantly {:ok true})})]
+        (is (= :claim-recovered (:status result)))
+        (is (zero? @observations))))))
 
 (deftest set-alight-drives-live-supervisor-with-exact-continuation
   (let [calls (atom [])
