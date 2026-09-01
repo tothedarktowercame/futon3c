@@ -956,7 +956,11 @@
     (is (= 1 (count @emitted)))
     (is (= calls-after-terminal @io-calls))
     (is (= persisted-after-terminal (count @persisted)))
-    (is (= terminal repeated))))
+    (is (false? (:ok repeated)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code repeated)))
+    (is (= :promotion-publication (:repair/kind repeated)))
+    (is (= 1 (:repair/attempts repeated)))
+    (is (= (:state terminal) (:state repeated)))))
 
 (deftest transport-publication-retry-boundary-matches-zero-based-decision-rule
   (doseq [[attempt expected-status expected-stage]

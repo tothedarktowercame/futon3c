@@ -775,8 +775,18 @@
   (cond
     (and (= :awaiting-apparatus-repair (:stage state))
          (:transport-retry/terminal? state))
-    (cond-> {:ok true :status :awaiting-apparatus-repair
-             :state state :findings (:findings state)
+    ;; The terminal certificate is the durable boundary after the bounded
+    ;; transport retries.  Returning another waiting status here made the
+    ;; state absorb every subsequent tick, so the queue could never apply its
+    ;; configured park-frame-and-continue action.  Surface the typed apparatus
+    ;; exhaustion on the next tick; the queued-frame adapter retains the
+    ;; judgement and finding in a frame park before advancing the queue.
+    (cond-> {:ok false
+             :error/code :promotion-apparatus-repair-exhausted
+             :state state
+             :repair/kind (:repair/kind state)
+             :repair/attempts (:repair/attempts state)
+             :findings (:findings state)
              :transport-retry/escalation (:transport-retry/escalation state)}
       (:transport-certificate-emission state)
       (assoc :transport-certificate (:transport-certificate-emission state)))
@@ -1183,6 +1193,8 @@
     (if (and persist-fn
              (map? result)
              (false? (:ok result))
+             (not= :promotion-apparatus-repair-exhausted
+                   (:error/code result))
              (transport-failure? result))
       (hold-incomplete-pass!
        state
