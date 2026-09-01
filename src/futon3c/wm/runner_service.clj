@@ -10,7 +10,9 @@
             [futon3c.agency.registry :as reg])
   (:import [java.time Instant]
            [java.util UUID]
-           [java.nio.file Files StandardCopyOption]))
+           [java.nio ByteBuffer]
+           [java.nio.channels FileChannel]
+           [java.nio.file Files StandardCopyOption StandardOpenOption]))
 
 (def war-machine-agent-id "war-machine")
 
@@ -38,6 +40,11 @@
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
   requiring-resolve)
+
+(def ^:dynamic *click-run-binding-persist-stage-hook*
+  "Fault-injection seam. Stages are :temp-forced before rename and :renamed
+   after authoritative replacement but before directory force."
+  nil)
 
 (defn status
   "Return the current click service status."
@@ -180,6 +187,7 @@
         record (cond-> {:schema :wm-click-run-binding-v1
                         :click/id click-id
                         :attempt/id (:attempt-id result)
+                        :outcome (or (:outcome result) :unknown)
                         :run-record-status run-record-status
                         :recorded-at (str (Instant/now))}
                  run-record-path
@@ -201,14 +209,61 @@
                         :reason :runner-did-not-return-run-id))
         dir (io/file *click-run-binding-dir*)
         target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
-        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))]
+        tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
+        renamed? (volatile! false)]
     (io/make-parents target)
-    (spit tmp (str (pr-str record) "\n"))
-    (Files/move (.toPath tmp) (.toPath target)
-                (into-array StandardCopyOption
-                            [StandardCopyOption/ATOMIC_MOVE
-                             StandardCopyOption/REPLACE_EXISTING]))
-    (assoc record :path (.getAbsolutePath target))))
+    (try
+      (let [bytes (.getBytes (str (pr-str record) "\n") "UTF-8")]
+        (with-open [channel (FileChannel/open
+                             (.toPath tmp)
+                             (into-array StandardOpenOption
+                                         [StandardOpenOption/CREATE_NEW
+                                          StandardOpenOption/WRITE
+                                          StandardOpenOption/TRUNCATE_EXISTING]))]
+          (let [buffer (ByteBuffer/wrap bytes)]
+            (while (.hasRemaining buffer)
+              (.write channel buffer)))
+          (.force channel true)))
+      (when *click-run-binding-persist-stage-hook*
+        (*click-run-binding-persist-stage-hook*
+         :temp-forced {:target target :temporary tmp}))
+      (Files/move (.toPath tmp) (.toPath target)
+                  (into-array StandardCopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING]))
+      (vreset! renamed? true)
+      (when *click-run-binding-persist-stage-hook*
+        (*click-run-binding-persist-stage-hook*
+         :renamed {:target target :temporary tmp}))
+      (with-open [directory (FileChannel/open
+                             (.toPath dir)
+                             (into-array StandardOpenOption
+                                         [StandardOpenOption/READ]))]
+        (.force directory true))
+      (assoc record
+             :path (.getAbsolutePath target)
+             :durability :confirmed)
+      (catch Throwable throwable
+        (if @renamed?
+          ;; Atomic replacement is already authoritative. Report the weaker
+          ;; durability guarantee without pretending the binding is absent.
+          (assoc record
+                 :path (.getAbsolutePath target)
+                 :durability :unconfirmed
+                 :durability-warning
+                 {:error-class (.getName (class throwable))
+                  :cause (or (ex-message throwable)
+                             (.getName (class throwable)))})
+          (throw (ex-info "click-run binding persistence failed"
+                          {:path (.getAbsolutePath target)
+                           :temporary-path (.getAbsolutePath tmp)
+                           :committed? false
+                           :durability :not-committed
+                           :cause (or (ex-message throwable)
+                                      (.getName (class throwable)))}
+                          throwable))))
+      (finally
+        (Files/deleteIfExists (.toPath tmp))))))
 
 (defn- result-summary
   [click-id result fallback-attempt-id]
@@ -218,7 +273,10 @@
              :outcome (or (:outcome result) :unknown)
              :run-id-status (:run-id-status binding)
              :run-record-status (:run-record-status binding)
-             :run-binding (:path binding)}
+             :run-binding (:path binding)
+             :binding-durability (:durability binding)}
+      (:durability-warning binding)
+      (assoc :binding-durability-warning (:durability-warning binding))
       (:run-record binding)
       (assoc :run-record (:run-record binding))
 

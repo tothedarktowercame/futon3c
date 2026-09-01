@@ -273,6 +273,46 @@
           (is (= {:click/id click-id :run/id run-id :run-id-status :present}
                  (select-keys record [:click/id :run/id :run-id-status]))))))))
 
+(deftest pre-rename-binding-failure-is-absent-and-service-failed
+  (let [run! (fn [_] {:attempt-id "attempt-binding-not-committed"
+                      :outcome :grounded-change
+                      :run/id "run-binding-not-committed"})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))
+              service/*click-run-binding-persist-stage-hook*
+              (fn [stage _]
+                (when (= :temp-forced stage)
+                  (throw (ex-info "pre-rename failure" {}))))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (is (= :service-failed
+               (get-in (service/status) [:last-result :outcome])))
+        (is (false?
+             (.exists (io/file service/*click-run-binding-dir*
+                               (str "click-run-binding-" click-id ".edn")))))))))
+
+(deftest post-rename-binding-warning-closes-consistently
+  (let [run-id "run-binding-unconfirmed"
+        run! (fn [_] {:attempt-id "attempt-binding-unconfirmed"
+                      :outcome :grounded-change
+                      :run/id run-id})]
+    (binding [service/*resolve-var*
+              (resolver run! (fn [_] {:selected-policy-id "unused"}))
+              service/*click-run-binding-persist-stage-hook*
+              (fn [stage _]
+                (when (= :renamed stage)
+                  (throw (ex-info "directory force failure" {}))))]
+      (let [{:keys [click-id]} (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! click-id))))
+        (let [last-result (:last-result (service/status))
+              record (edn/read-string (slurp (:run-binding last-result)))]
+          (is (false? (:running? (service/status))))
+          (is (= :grounded-change (:outcome last-result) (:outcome record)))
+          (is (= run-id (:run/id last-result) (:run/id record)))
+          (is (= :unconfirmed (:binding-durability last-result)))
+          (is (= "directory force failure"
+                 (get-in last-result [:binding-durability-warning :cause]))))))))
+
 (deftest mismatched-run-record-is-typed-and-rejected
   (let [record-path (str (io/file service/*click-run-binding-dir* "wrong-run.edn"))
         run! (fn [opts]
