@@ -49,7 +49,11 @@ check() {
   form="(do (require 'futon3c.apm.projection-watchdog) (futon3c.apm.projection-watchdog/evaluate (futon3c.apm.projection-watchdog/observe {:transition-log \"$transition_log\" :coordinator-state \"$coordinator_state\" :max-heartbeat-age-seconds $max_age_seconds :agency-base \"http://localhost:7070\"})))"
   result=$(printf '%s' "$form" | scripts/proof-eval.sh -)
   printf '%s\n' "$result"
-  [[ "$result" == *":watch/status :healthy"* ]]
+  # A declared wait is an operationally successful observation. Requiring a
+  # later :healthy sample makes callers occupy an agent through retry and
+  # substrate deadlines even though durable state settles the liveness check.
+  [[ "$result" == *":watch/status :healthy"* ||
+     "$result" == *":watch/status :waiting"* ]]
 }
 
 if $once; then

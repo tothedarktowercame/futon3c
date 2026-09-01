@@ -113,6 +113,24 @@
     (is (not (contains? (codes result) :coordinator-heartbeat-stale)))
     (is (not (contains? (codes result) :unattended-transition-stale)))))
 
+(deftest expired-transport-retry-no-longer-suppresses-staleness
+  (let [result
+        (watchdog/evaluate
+         (-> healthy
+             (assoc :coordinator-age-seconds 180)
+             (assoc-in [:transition :operation] nil)
+             (assoc-in [:transition :event/observed-at]
+                       "2026-08-23T21:57:00Z")
+             (assoc :phase-state
+                    {:state/type :promotion
+                     :stage :awaiting-transport-retry
+                     :transport-retry/not-before-ms 1787522399000
+                     :transport-retry/attempt 1
+                     :transport-retry/max-attempts 3})))]
+    (is (= :alert (:watch/status result)))
+    (is (contains? (codes result) :coordinator-heartbeat-stale))
+    (is (contains? (codes result) :unattended-transition-stale))))
+
 (deftest all-modeled-failure-classes-alert
   (is (= :healthy (:watch/status (watchdog/evaluate healthy))))
   (is (= watchdog/obligation-ids (:watch/checked (watchdog/evaluate healthy))))
@@ -298,3 +316,18 @@
         result (watchdog/evaluate handoff)]
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
+
+(deftest healthy-and-evidence-backed-waiting-are-operational
+  (is (watchdog/operational? (watchdog/evaluate healthy)))
+  (let [waiting (watchdog/evaluate
+                 (assoc healthy :phase-state
+                        {:state/type :promotion
+                         :stage :awaiting-transport-retry
+                         :transport-retry/not-before-ms 1787523000000
+                         :transport-retry/attempt 1
+                         :transport-retry/max-attempts 3}))]
+    (is (= :waiting (:watch/status waiting)))
+    (is (watchdog/operational? waiting)))
+  (is (not (watchdog/operational?
+            (watchdog/evaluate
+             (assoc healthy :coordinator-age-seconds 121))))))

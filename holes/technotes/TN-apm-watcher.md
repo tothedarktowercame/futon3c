@@ -150,6 +150,14 @@ consultation. Say so plainly; it is a real finding, not a failed measurement.
 
 ## Reporting contract
 
+- **An evidence-backed `:waiting` result completes the observation.** Report
+  its durable wait kind and deadline, then return. Do not occupy an agent until
+  a later `:healthy` phase. A subsequent watcher observation owns detecting a
+  missed deadline.
+- **One bell owns one captured finding set.** Resolve that finding by
+  classifying a valid declared wait, validating a repair against the captured
+  observation, or recording a typed invariant conflict. Do not turn it into an
+  open-ended obligation to follow the frame through later phases.
 - **Report at**: each student attempt completion (used/accessible, provenance
   and fingerprint per memory), review verdicts, certification with the full
   tally, and any new machine defect.

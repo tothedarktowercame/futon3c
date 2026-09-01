@@ -14,8 +14,10 @@ entries appended to :regulator/failures.
 
 An alert must survive two consecutive watchdog observations before it fires an
 Agency bell. Incidents are keyed by frame and reason, so retry counters do not
-turn one unresolved condition into a bell storm. Queue-level state, rather
-than a regulator tick result, is authoritative for pause/completion.
+turn one unresolved condition into a bell storm. An evidence-backed
+``:waiting`` observation is operational: it clears alert debounce state and
+never holds an agent until a later phase. Queue-level state, rather than a
+regulator tick result, is authoritative for pause/completion.
 
 Runtime configuration is available through `APM_BABYSIT_*` environment
 variables; in particular `APM_BABYSIT_FROM_ID`, `APM_BABYSIT_TO_ID`, and
@@ -616,12 +618,28 @@ while True:
                         f"scripts/apm-watch-projection.sh reported an alert:\n\n"
                         f"{line}\n\nPlease investigate and repair so this frame "
                         f"(and the overnight campaign) can keep progressing. "
-                        f"Verify the fix with:\n"
+                        f"This bell covers only the captured finding set "
+                        f"above. Return as soon as you have either (a) shown "
+                        f"that it is a valid declared wait, (b) validated a "
+                        f"repair that removes these findings on the captured "
+                        f"observation, or (c) recorded a typed invariant "
+                        f"conflict. Do not wait for a later phase or deadline, "
+                        f"and do not hand-resume the coordinator or alter its "
+                        f"workspace as part of this watcher job. Verify with:\n"
                         f"  scripts/apm-watch-projection.sh --once "
                         f"{CAMPAIGN_DIR}/{CAMPAIGN_ID}-{current_frame}/"
                         f"problem-transitions.edn {COORD} 120\n"
-                        f"-- should report :watch/status :healthy.")
+                        f"-- should report :watch/status :healthy or :waiting "
+                        f"with :watch/findings [].")
                     last_frame_alert = reason
+            elif ':watch/status :waiting' in line:
+                pending_frame_alert = None
+                pending_frame_alert_count = 0
+                if last_frame_alert is not None:
+                    out(f"FRAME CLASSIFIED WAITING [{current_frame}]: "
+                        f"declared wait after {last_frame_alert}")
+                    clear_bell(f"frame-{current_frame}-watchdog-alert")
+                    last_frame_alert = None
             elif ':watch/status :healthy' in line:
                 pending_frame_alert = None
                 pending_frame_alert_count = 0

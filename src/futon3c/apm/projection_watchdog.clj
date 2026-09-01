@@ -23,6 +23,17 @@
 
 (def projection-catchup-grace-seconds 10)
 
+(def operational-statuses
+  "Watcher outcomes that require no immediate repair. `:waiting` is backed by
+  a durable retry, substrate wake, or bounded operation and is therefore a
+  successful observation, not a request to wait synchronously for `:healthy`."
+  #{:healthy :waiting})
+
+(defn operational?
+  [result]
+  (and (contains? operational-statuses (:watch/status result))
+       (empty? (:watch/findings result))))
+
 (defn- age-seconds [^Instant now value]
   (when value
     (.getSeconds (Duration/between (Instant/parse value) now))))
@@ -70,6 +81,12 @@
                                    (= (:problem-id transition)
                                       (:problem-id cascade-operation)))
         transport-retry? (= :awaiting-transport-retry (:stage phase-state))
+        transport-retry-wake-at-ms
+        (when transport-retry?
+          (:transport-retry/not-before-ms phase-state))
+        transport-retry-wait?
+        (and (nat-int? transport-retry-wake-at-ms)
+             (< now-ms transport-retry-wake-at-ms))
         substrate-resume-at-ms
         (when (and (true? (get-in coordinator [:regulator/last-result :ok]))
                    (= :awaiting-substrate
@@ -111,7 +128,7 @@
           (not (or (= :running (:regulator/status coordinator)) complete?))
           (conj (finding :coordinator-running :coordinator-not-running
                          {:observed (:regulator/status coordinator)}))
-          (and (not transport-retry?)
+          (and (not transport-retry-wait?)
                (not substrate-wait?)
                (> coordinator-age-seconds max-heartbeat-age-seconds)
                (not cascade-within-bound?))
@@ -131,7 +148,7 @@
                          :projection-publication-diverged
                          {:transition (:event/id transition)
                           :publication-transition (:transition/event-id publication)}))
-          (and (not transport-retry?) (not substrate-wait?) (not waiting?)
+          (and (not transport-retry-wait?) (not substrate-wait?) (not waiting?)
                (not frame-closed?) transition-age
                (> transition-age max-heartbeat-age-seconds)
                (not= :complete (:regulator/status coordinator)))
@@ -192,7 +209,7 @@
                          :coordinator-last-result-failed
                          {:result (:regulator/last-result coordinator)})))]
     {:watch/status (cond (seq findings) :alert
-                         transport-retry? :waiting
+                         transport-retry-wait? :waiting
                          substrate-wait? :waiting
                          cascade-within-bound? :waiting
                          :else :healthy)
@@ -324,4 +341,4 @@
                                               {:message (.getMessage t)})]}))]
     (prn result)
     (shutdown-agents)
-    (System/exit (if (= :healthy (:watch/status result)) 0 2))))
+    (System/exit (if (operational? result) 0 2))))
