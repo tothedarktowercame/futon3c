@@ -439,6 +439,39 @@
     (is (= :terminal-repair-instruction-missing (:error/code repair)))
     (is (= [finding] (:findings repair)))))
 
+(deftest specific-validator-findings-have-bare-and-wrapped-repair-instructions
+  (doseq [[finding expected-action expected-detail]
+          [[:depositor-missing "Set :depositor" ":depositor must be a string"]
+           [:candidates-missing "Add at least one candidate" ":candidates must be a non-empty vector"]
+           [:candidate-shape-invalid "nonblank :name, :hook, and :body" "Every Guide candidate"]
+           [:memory-use-audit-shape "Copy the request's complete :memory-use-audit" ":memory-use-audit must be a vector"]
+           [:memory-use-audit-mismatch "Replace it with the request's :memory-use-audit" ":memory-use-audit must be returned verbatim"]]
+          submitted [finding {:finding finding}]]
+    (testing (str (name finding) " as " (pr-str submitted))
+      (let [repair (sut/terminal-repair-request
+                    {:dispatch/id "original" :dispatch/type :guide-intervention
+                     :frame-id "f72" :phase :guide-intervention-1
+                     :problem-id "b93J04" :agent-id "f72-guide"
+                     :mode :store-mode
+                     :role-card-path "guide.md" :role-card-blob "blob"}
+                    {:ticket/id "ticket-1"} {:job-id "job-1"}
+                    {:error/code :live-learning-terminal-invalid
+                     :findings [submitted]})
+            packet (sut/prompt (:request repair))]
+        (is (:ok repair))
+        (is (re-find (re-pattern expected-action) packet))
+        (is (re-find (re-pattern expected-detail) packet))))))
+
+(deftest finding-wrapper-normalization-is-exact-and-remains-loud
+  (doseq [finding [{:finding :new-unrendered-finding}
+                   {:finding :candidates-missing :unexpected true}]]
+    (let [repair (sut/terminal-repair-request
+                  {:dispatch/id "original" :frame-id "f72"}
+                  {:ticket/id "ticket-1"} {:job-id "job-1"}
+                  {:findings [finding]})]
+      (is (= :terminal-repair-instruction-missing (:error/code repair)))
+      (is (= [finding] (:findings repair))))))
+
 (deftest review-validation-findings-have-specific-repair-instructions
   (doseq [[finding expected]
           {:reviewer-missing "acting reviewer identity"

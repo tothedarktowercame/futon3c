@@ -870,6 +870,26 @@
    :solver-promotion-candidates-invalid
    ["Your Solver promotion supplied no valid memory candidates." "Promotion requires a non-empty vector of typed candidates."
     "Add at least one schema-valid candidate derived from the verified trace, then submit below."]
+   :depositor-missing
+   ["Your Guide deposit did not identify its depositor."
+    "The typed Guide-deposit contract requires :depositor to name this acting Guide seat."
+    "Set :depositor to this dispatch's agent id, keep it a nonblank string, and resubmit the deposit below."]
+   :candidates-missing
+   ["Your Guide deposit did not contain candidates."
+    "The typed Guide-deposit contract requires :candidates to be a non-empty vector."
+    "Add at least one candidate with every generated candidate field completed, then resubmit below."]
+   :candidate-shape-invalid
+   ["At least one Guide candidate had an invalid shape."
+    "Each candidate must supply the semantic fields required by the typed Guide-deposit contract."
+    "For every candidate, provide nonblank :name, :hook, and :body strings plus a non-empty vector of nonblank :pattern-ids, then resubmit below."]
+   :memory-use-audit-shape
+   ["Your close-frame memory-use audit had the wrong shape."
+    "The controller-authorized :memory-use-audit must be returned as the vector supplied in the close-frame request."
+    "Copy the request's complete :memory-use-audit vector verbatim into the revised typed submission."]
+   :memory-use-audit-mismatch
+   ["Your close-frame memory-use audit did not match the authorized audit."
+    "The submitted :memory-use-audit differed from the controller-derived value in the close-frame request."
+    "Replace it with the request's :memory-use-audit value verbatim and resubmit below."]
    :reviewer-missing
    ["Your promotion review did not identify its acting reviewer."
     "The independent-review envelope requires a string reviewer identity."
@@ -925,24 +945,35 @@
               (str/join ", " uncovered)
               ", and return the complete reviewed pattern set.")]))))
 
+(defn- wrapped-finding-keyword [finding]
+  (when (and (map? finding)
+             (= #{:finding} (set (keys finding)))
+             (keyword? (:finding finding)))
+    (:finding finding)))
+
 (defn- finding-instruction [finding]
-  (or (get repair-finding-instructions finding)
+  (or (get repair-finding-instructions
+           (or (wrapped-finding-keyword finding) finding))
       (projection-finding-instruction finding)))
 
 (defn- rendered-finding-detail [request finding]
-  (let [detail (get-in request [:repair/validation-output
-                                :finding/details finding])]
+  (let [finding-key (or (wrapped-finding-keyword finding) finding)
+        detail (get-in request [:repair/validation-output
+                                :finding/details finding-key])]
     (cond
-      (and (= :guide-candidates-invalid finding) (seq detail))
+      (contains? specific-finding-instructions finding-key)
+      (specific-finding-instructions finding-key)
+
+      (and (= :guide-candidates-invalid finding-key) (seq detail))
       (str/join " " (map #(or (specific-finding-instructions %)
                               (str "Unrendered validator finding " (name %) "."))
                            detail))
 
-      (and (= :scribe-reduction-evidence-missing finding) (seq detail))
+      (and (= :scribe-reduction-evidence-missing finding-key) (seq detail))
       (str "Missing or invalid collection fields: "
            (str/join ", " (map name detail)) ".")
 
-      (and (= :close-evidence-invalid finding) (seq detail))
+      (and (= :close-evidence-invalid finding-key) (seq detail))
       (str/join " " (map #(or (specific-finding-instructions %)
                                 (str "Missing or invalid close field " (name %) "."))
                              detail))
