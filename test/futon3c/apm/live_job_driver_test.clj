@@ -979,3 +979,19 @@
       (let [again (sut/drive! (assoc deferred :state (:state waiting)))]
         (is (= :awaiting-terminal (:status again)))
         (is (= 2 (count (filter #{:receipt} @calls))))))))
+
+(deftest transport-classification-is-not-a-whole-tree-scan
+  ;; transport-failure? checks THIS failure's own error envelope. An earlier
+  ;; version walked the validated value with tree-seq, which would also match
+  ;; a transport envelope carried incidentally in nested context and
+  ;; reclassify an agent fault as apparatus on that basis.
+  (let [own {:ok false :error {:error/component :transport
+                               :error/code :memory-assert-unreachable}}
+        nested {:ok false
+                :error/component :E-store
+                :error/code :memory-assert-rejected
+                :context {:prior-attempt
+                          {:error {:error/component :transport}}}}
+        transport? #'futon3c.apm.live-job-driver/transport-failure?]
+    (is (true? (transport? own)))
+    (is (false? (transport? nested)))))

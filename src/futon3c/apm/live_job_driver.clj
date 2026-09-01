@@ -13,10 +13,18 @@
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 (def default-apparatus-repair-attempts 1)
 
-(defn- transport-failure? [value]
-  (boolean
-   (some #(and (map? %) (= :transport (:error/component %)))
-         (tree-seq coll? seq value))))
+(defn- transport-failure?
+  "True when THIS failure's own error envelope is a transport fault.
+
+  Checks the same four paths as live-learning-phases/posthoc-fault-origin
+  rather than walking the whole value: a tree-seq over the validated result
+  would also match a transport envelope carried incidentally in nested
+  context, and reclassify an agent fault as apparatus on that basis."
+  [value]
+  (= :transport (or (:error/component value)
+                    (get-in value [:error :error/component])
+                    (get-in value [:finding :error/component])
+                    (get-in value [:finding :error :error/component]))))
 
 (defn reopen-posthoc-rejection
   "Reopen an exact cached provider rejection after its apparatus was repaired.
@@ -601,15 +609,21 @@
                                :findings [:typed-submission-missing]}
                               (terminal-validator active-request
                                                   (:ticket state) job)))
-              ;; Reclassify cached rejections through the current policy. This
-              ;; covers both records predating fault-origin and records whose
-              ;; producer used an older, underspecified classifier.
+              ;; Reclassify a cached rejection through the current policy when
+              ;; it has no origin yet, or when that policy says :apparatus.
+              ;; Reclassifying unconditionally can DOWNGRADE an explicit
+              ;; :apparatus to :agent, which is the direction this whole
+              ;; change exists to prevent -- it would spend the role's repair
+              ;; budget on a fault the role cannot repair.
+              posthoc-origin (when (and (:posthoc-rejection state)
+                                        (fn? posthoc-fault-origin-fn))
+                               (posthoc-fault-origin-fn active-request
+                                                        validated))
               validated (cond-> validated
-                          (and (:posthoc-rejection state)
-                               (fn? posthoc-fault-origin-fn))
-                          (assoc :repair/fault-origin
-                                 (posthoc-fault-origin-fn active-request
-                                                          validated)))
+                          (and posthoc-origin
+                               (or (nil? (:repair/fault-origin validated))
+                                   (= :apparatus posthoc-origin)))
+                          (assoc :repair/fault-origin posthoc-origin))
               typed-contract-migration?
               (and (fn? terminal-submission-provider)
                    (= [:typed-submission-missing] (:findings validated))
