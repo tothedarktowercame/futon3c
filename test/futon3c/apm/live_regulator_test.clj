@@ -310,3 +310,20 @@
                  :persist-fn (constantly {:ok true})})]
     (is (not (contains? (get-in result [:state :regulator/last-result])
                         :exception/data)))))
+
+(deftest thrown-tick-records-the-cause-chain-as-strings
+  ;; Clojure wraps a runtime failure in a CompilerException reading "Syntax
+  ;; error macroexpanding at (some/ns.clj:1:1)" with :phase :execution, and the
+  ;; real fault is only reachable through getCause. The chain must be recorded
+  ;; as strings: this map is persisted to coordinator.edn and read back with
+  ;; edn/read-string, so a raw Throwable would write an unreadable #object.
+  (let [root (java.io.IOException. "the actual fault")
+        wrapped (RuntimeException. "wrapper" root)
+        result (sut/tick!
+                {:state (sut/initial-state "r")
+                 :tick-fn (fn [] (throw wrapped))
+                 :persist-fn (constantly {:ok true})})
+        causes (get-in result [:state :regulator/last-result :exception/causes])]
+    (is (= [["java.io.IOException" "the actual fault"]] causes))
+    (is (every? string? (flatten causes)))
+    (is (= (pr-str causes) (pr-str (read-string (pr-str causes)))))))

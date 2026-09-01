@@ -116,7 +116,30 @@
                         (cond-> {:ok false
                                  :error/code :live-regulator-tick-threw
                                  :exception/class (.getName (class t))
-                                 :exception/message (.getMessage t)}
+                                 :exception/message (.getMessage t)
+                                 ;; Walk the causes. Clojure wraps a runtime
+                                 ;; failure in a CompilerException reading
+                                 ;; "Syntax error macroexpanding at
+                                 ;; (some/ns.clj:1:1)" with :phase :execution,
+                                 ;; and the real error is only in getCause.
+                                 ;; On 2026-09-01 that surfaced as a syntax
+                                 ;; error in futon3c/blackboard.clj, which was
+                                 ;; unmodified since 2026-08-26 and compiled
+                                 ;; clean -- ex-data alone named the file and
+                                 ;; still not the fault.
+                                 ;; Strings only: this map is persisted to
+                                 ;; coordinator.edn and read back with
+                                 ;; edn/read-string, so a raw Throwable here
+                                 ;; would write an unreadable #object and
+                                 ;; break state loading.
+                                 :exception/causes
+                                 (vec (->> (iterate #(some-> ^Throwable % .getCause) t)
+                                           (take-while some?)
+                                           rest
+                                           (take 8)
+                                           (mapv (fn [^Throwable c]
+                                                   [(.getName (class c))
+                                                    (str (.getMessage c))]))))}
                           (instance? clojure.lang.IExceptionInfo t)
                           (assoc :exception/data (ex-data t)))))
           status (cond
