@@ -23,6 +23,8 @@
 (def ^:dynamic *cascade-request-timeout-ms* 60000)
 (def ^:dynamic *cascade-connect-timeout-ms* 5000)
 (def ^:dynamic *cascade-read-parallelism* 8)
+(def ^:dynamic *cascade-admission-retries* 3)
+(def ^:dynamic *cascade-retry-sleep!* #(Thread/sleep %))
 
 (def default-memory-cascade-operation-budget-ms (* 30 60 1000))
 
@@ -286,12 +288,44 @@
   (saved-step handle problem/advance
               ["apm-conductor" (:problem-id (:config handle)) payload]))
 
+(defn- decoded-response-body [response]
+  (let [body (:body response)]
+    (if (string? body)
+      (try (edn/read-string body) (catch Throwable _ body))
+      body)))
+
+(defn- expensive-read-busy? [response]
+  (and (= 503 (:status response))
+       (= :expensive-read-busy (:error (decoded-response-body response)))))
+
 (defn- response-edn [response context]
   (if (= 200 (:status response))
-    (edn/read-string (:body response))
+    (decoded-response-body response)
     (throw (ex-info "memory cascade substrate read failed"
-                    (assoc context :status (:status response)
-                           :body (:body response))))))
+                    (cond-> (assoc context :status (:status response)
+                                   :body (:body response))
+                      (expensive-read-busy? response)
+                      (assoc :error/component :transport
+                             :error/code :memory-cascade-unreachable))))))
+
+(defn- cascade-read-edn
+  "Run one bounded cascade request, honoring futon1b's explicit busy signal.
+
+   Only 503 :expensive-read-busy is retried. The retry count is separate from
+   transport timeouts and the server's retry-after is used when present."
+  [request-fn context]
+  (loop [attempt 0]
+    (let [response (request-fn)]
+      (if (and (expensive-read-busy? response)
+               (< attempt *cascade-admission-retries*))
+        (let [body (decoded-response-body response)
+              retry-after (get body :retry-after-seconds)
+              delay-ms (if (and (number? retry-after) (pos? retry-after))
+                         (* 1000 (long retry-after))
+                         (* 100 (bit-shift-left 1 attempt)))]
+          (*cascade-retry-sleep!* delay-ms)
+          (recur (inc attempt)))
+        (response-edn response context)))))
 
 (defn- bounded-cascade-get
   "GET and decode the complete response body inside one wall-clock bound.
@@ -333,21 +367,23 @@
                           cause)))))))
 
 (defn- cascade-get [base path query-params]
-  (response-edn
-   (bounded-cascade-get (str (str/replace base #"/+$" "") path)
-                        {:query-params query-params :throw false}
-                        {:path path :query-params query-params})
-   {:path path :query-params query-params}))
+  (let [context {:path path :query-params query-params}]
+    (cascade-read-edn
+     #(bounded-cascade-get (str (str/replace base #"/+$" "") path)
+                           {:query-params query-params :throw false}
+                           context)
+     context)))
 
 (defn- cascade-pattern [base pattern-id]
   (let [path (str "/api/alpha/entity/"
-                  (java.net.URLEncoder/encode (str pattern-id) "UTF-8"))]
-    (response-edn
-     (bounded-cascade-get (str (str/replace base #"/+$" "") path)
-                          {:headers {"Accept" "application/edn"}
-                           :throw false}
-                          {:path path :pattern-id pattern-id})
-     {:path path :pattern-id pattern-id})))
+                  (java.net.URLEncoder/encode (str pattern-id) "UTF-8"))
+        context {:path path :pattern-id pattern-id}]
+    (cascade-read-edn
+     #(bounded-cascade-get (str (str/replace base #"/+$" "") path)
+                           {:headers {"Accept" "application/edn"}
+                            :throw false}
+                           context)
+     context)))
 
 (defn- qualified-name [x]
   (if (keyword? x)

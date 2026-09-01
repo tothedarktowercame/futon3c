@@ -353,6 +353,33 @@
     (is (= :memory-cascade-unreachable (:error/code result)))
     (is (nil? (:request result)))))
 
+(deftest exhausted-cascade-busy-refuses-attempt-as-apparatus-degraded
+  (let [result
+        (sut/build-request
+         (merge base
+                {:unit (assoc unit :memory-cascade
+                              {:enabled? true :routes [:sibling] :cap 10})
+                 :action cascade-action
+                 :seat {:agent-id "f19-student" :invoke-ready? true}
+                 :snapshot-access {:ok true
+                                   :snapshot {:snapshot/digest "snapshot-digest"
+                                              :snapshot/memories []}
+                                   :accessible-memory-ids #{}}
+                 :cascade-fn
+                 (fn [& _]
+                   (throw
+                    (ex-info "substrate remained busy"
+                             {:status 503
+                              :error/component :transport
+                              :error/code :memory-cascade-unreachable})))
+                 :cascade-readers {}}))]
+    (is (false? (:ok result)))
+    (is (= :transport (:error/component result)))
+    (is (= :memory-cascade-unreachable (:error/code result)))
+    (is (= :failed-503 (get-in result [:memory-cascade :outcome])))
+    (is (nil? (:request result))
+        "no Student dispatch can be recorded as a Student failure")))
+
 (deftest typed-terminal-repair-preserves-authority-and-carries-findings
   (let [repair (sut/terminal-repair-request
                 {:dispatch/id "original" :frame-id "f25"

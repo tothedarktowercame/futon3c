@@ -123,6 +123,69 @@
         (.countDown release)
         (.stop server 0)))))
 
+(deftest cascade-read-retries-expensive-read-busy-and-then-succeeds
+  (let [responses (atom [{:status 503
+                          :body (pr-str {:ok false :error :expensive-read-busy
+                                         :retry-after-seconds 1})}
+                         {:status 200 :body (pr-str {:hyperedges [:edge]})}])
+        sleeps (atom [])]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.apm.conductor 'bounded-cascade-get)
+       (fn [& _]
+         (let [response (first @responses)]
+           (swap! responses rest)
+           response))}
+      #(binding [conductor/*cascade-retry-sleep!* (fn [delay-ms]
+                                                    (swap! sleeps conj delay-ms))]
+         (is (= {:hyperedges [:edge]}
+                (#'conductor/cascade-get "http://substrate.test"
+                                         "/api/alpha/hyperedges" {})))
+         (is (= [1000] @sleeps))
+         (is (empty? @responses))))))
+
+(deftest cascade-read-does-not-retry-other-http-failures
+  (let [calls (atom 0)
+        sleeps (atom [])]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.apm.conductor 'bounded-cascade-get)
+       (fn [& _]
+         (swap! calls inc)
+         {:status 500 :body (pr-str {:ok false :error :store-failed})})}
+      #(binding [conductor/*cascade-retry-sleep!* (fn [delay-ms]
+                                                    (swap! sleeps conj delay-ms))]
+         (let [error (try
+                       (#'conductor/cascade-get "http://substrate.test"
+                                                "/api/alpha/hyperedges" {})
+                       nil
+                       (catch clojure.lang.ExceptionInfo e e))]
+           (is (some? error))
+           (is (= 500 (:status (ex-data error))))
+           (is (= 1 @calls))
+           (is (empty? @sleeps)))))))
+
+(deftest cascade-read-busy-retry-bound-still-throws
+  (let [calls (atom 0)
+        sleeps (atom [])]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.apm.conductor 'bounded-cascade-get)
+       (fn [& _]
+         (swap! calls inc)
+         {:status 503
+          :body (pr-str {:ok false :error :expensive-read-busy})})}
+      #(binding [conductor/*cascade-admission-retries* 2
+                 conductor/*cascade-retry-sleep!* (fn [delay-ms]
+                                                    (swap! sleeps conj delay-ms))]
+         (let [error (try
+                       (#'conductor/cascade-get "http://substrate.test"
+                                                "/api/alpha/hyperedges" {})
+                       nil
+                       (catch clojure.lang.ExceptionInfo e e))]
+           (is (some? error))
+           (is (= :transport (:error/component (ex-data error))))
+           (is (= :memory-cascade-unreachable (:error/code (ex-data error))))
+           (is (= 3 @calls))
+           (is (= [100 200] @sleeps)))))))
+
 (deftest minimum-cascade-leaf-only
   (let [edge (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
         result (conductor/expand-memory-cascade
