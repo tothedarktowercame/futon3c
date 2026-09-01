@@ -252,3 +252,32 @@ deadlines, and bounding each bell to one captured finding would remove most of
 the visible activity without weakening any workflow invariant.  They also
 make subsequent reviews meaningful: the reviewer can test a finite incident
 contract instead of approving another special case in an open-ended loop.
+
+## Repair outcome (2026-09-01)
+
+The live recovery exposed two coordinator/watchdog lifecycle races beyond the
+original watcher-noise problem.
+
+First, after a repair resume, the semantic watchdog treated the previous
+generation's `:live-supervisor-launch-audit-failed` result as a current fatal
+result even though the resumed generation held a valid reconciliation tick
+claim.  It disabled the coordinator at its first ten-second observation.  The
+watchdog now lets that claimed reconciliation settle under its declared
+deadline; a repeated failure still halts after the claim settles.  This is
+commit `fb8e2ce5`.
+
+Second, an older watchdog thread could survive a coordinator stop/resume and
+call its captured stop function against the new registry entry.  Watchdog
+identity alone was insufficient because it did not establish authority over
+the current coordinator generation.  Each armed watchdog now captures the
+registry entry digest and revalidates both the digest and enabled state before
+observation and again immediately before a durable stop.  A stale watcher
+returns `:durable-coordinator-watchdog-authority-superseded` instead of
+mutating the new generation.  This is commit `648da15b`.
+
+Both repairs have focused regression tests.  The durable-coordinator tests
+pass with 27 tests and 168 assertions; the semantic-progress-watchdog tests
+pass with 13 tests and 35 assertions.  `clj-kondo` and the workspace
+parenthesis checker also pass.  After live recovery, coordinator epoch 135
+remained enabled across the watchdog interval and durably completed successive
+ticks, demonstrating that the stale watcher can no longer stop current work.
