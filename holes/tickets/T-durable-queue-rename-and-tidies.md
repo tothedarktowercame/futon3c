@@ -1,5 +1,7 @@
 # T-durable-queue-rename-and-tidies
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** Only FUTON3C_DURABLE_QUEUE names remain (0 CAR3 hits in src/test/resources); bellback delivery recorded; MQ-7 excludes http-caller/joe. Focused tests pass (5/17, 6/23 -- mesh-qa re-run at review). Close all three rows.
+
 Parent: `M-agency-hardening.md`. Post-landing polish before activating the queue.
 Dispatched by claude-6, 2026-06-10. Reviewer: claude-6. Branch off **master**.
 
