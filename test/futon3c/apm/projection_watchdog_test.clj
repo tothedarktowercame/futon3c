@@ -78,6 +78,20 @@
       (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
       (is (empty? (:watch/findings result))))))
 
+(deftest declared-substrate-backoff-is-waiting-not-unattended
+  (let [result
+        (watchdog/evaluate
+         (-> healthy
+             (assoc-in [:transition :operation] nil)
+             (assoc-in [:transition :event/observed-at]
+                       "2026-08-23T21:57:00Z")
+             (assoc-in [:coordinator :regulator/last-result]
+                       {:ok true :status :awaiting-substrate
+                        :retry/not-before-ms 1787523000000})))]
+    (is (= :waiting (:watch/status result)))
+    (is (= {:wake-at-ms 1787523000000} (:substrate-wait result)))
+    (is (not (contains? (codes result) :unattended-transition-stale)))))
+
 (deftest all-modeled-failure-classes-alert
   (is (= :healthy (:watch/status (watchdog/evaluate healthy))))
   (is (= watchdog/obligation-ids (:watch/checked (watchdog/evaluate healthy))))

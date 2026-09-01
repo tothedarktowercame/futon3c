@@ -70,6 +70,14 @@
                                    (= (:problem-id transition)
                                       (:problem-id cascade-operation)))
         transport-retry? (= :awaiting-transport-retry (:stage phase-state))
+        substrate-resume-at-ms
+        (when (and (true? (get-in coordinator [:regulator/last-result :ok]))
+                   (= :awaiting-substrate
+                      (get-in coordinator [:regulator/last-result :status])))
+          (get-in coordinator
+                  [:regulator/last-result :retry/not-before-ms]))
+        substrate-wait? (and (nat-int? substrate-resume-at-ms)
+                             (< now-ms substrate-resume-at-ms))
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
         ;; identity, timeout, or terminal-budget check.
@@ -121,7 +129,7 @@
                          :projection-publication-diverged
                          {:transition (:event/id transition)
                           :publication-transition (:transition/event-id publication)}))
-          (and (not transport-retry?) (not waiting?)
+          (and (not transport-retry?) (not substrate-wait?) (not waiting?)
                (not frame-closed?) transition-age
                (> transition-age max-heartbeat-age-seconds)
                (not= :complete (:regulator/status coordinator)))
@@ -183,6 +191,7 @@
                          {:result (:regulator/last-result coordinator)})))]
     {:watch/status (cond (seq findings) :alert
                          transport-retry? :waiting
+                         substrate-wait? :waiting
                          cascade-within-bound? :waiting
                          :else :healthy)
      :watch/checked obligation-ids
@@ -201,6 +210,9 @@
         :last-failure (or (:transport-retry/last-error-code phase-state)
                           (some-> (:transport-retry/history phase-state)
                                   last :error/code))})
+     :substrate-wait
+     (when substrate-wait?
+       {:wake-at-ms substrate-resume-at-ms})
      :cascade-operation cascade-operation}))
 
 (defn- read-edn [path] (edn/read-string (slurp (io/file (str path)))))
