@@ -252,8 +252,9 @@
 (defonce ^:private invoke-jobs-writer-lock (Object.))
 
 (def ^:dynamic *invoke-jobs-persist-stage-hook*
-  "Test/fault-injection seam called after the temporary snapshot is forced and
-   before it is renamed. Production leaves this nil."
+  "Test/fault-injection seam called at durable commit boundaries. Production
+   leaves this nil. Stages are :temp-forced (before rename) and :renamed
+   (after the authoritative replacement, before directory force)."
   nil)
 (defonce ^:private !active-invoke-job-index
   ;; Derived, process-local projection. The durable ledger remains the sole
@@ -329,7 +330,8 @@
           parent (.getParent target)
           _ (Files/createDirectories parent (make-array java.nio.file.attribute.FileAttribute 0))
           tmp (Files/createTempFile parent ".invoke-jobs-" ".tmp"
-                                    (make-array java.nio.file.attribute.FileAttribute 0))]
+                                    (make-array java.nio.file.attribute.FileAttribute 0))
+          renamed? (volatile! false)]
       (try
         (let [bytes (.getBytes (pr-str ledger) "UTF-8")]
           (with-open [channel (FileChannel/open
@@ -348,6 +350,10 @@
                     (into-array StandardCopyOption
                                 [StandardCopyOption/ATOMIC_MOVE
                                  StandardCopyOption/REPLACE_EXISTING]))
+        (vreset! renamed? true)
+        (when *invoke-jobs-persist-stage-hook*
+          (*invoke-jobs-persist-stage-hook* :renamed
+                                            {:target target :temp tmp}))
         ;; Persist the directory entry as well as the file contents. Without
         ;; this force, a power loss may forget the rename after acknowledgement.
         (with-open [directory (FileChannel/open
@@ -357,12 +363,43 @@
           (.force directory true))
         ledger
         (catch Throwable t
-          (throw (ex-info "invoke-jobs ledger persistence failed"
+          (throw (ex-info (if @renamed?
+                            "invoke-jobs ledger committed but durability confirmation failed"
+                            "invoke-jobs ledger persistence failed")
                           {:path (str target)
-                           :temporary-path (str tmp)}
+                           :temporary-path (str tmp)
+                           :committed? @renamed?
+                           :durability (if @renamed? :unconfirmed :not-committed)}
                           t)))
         (finally
           (Files/deleteIfExists tmp))))))
+
+(defn- validate-invoke-jobs-ledger!
+  [ledger]
+  (let [required {:version integer?
+                  :next-seq integer?
+                  :job-order vector?
+                  :trace->job map?
+                  :jobs map?}
+        missing (into [] (remove #(contains? ledger %)) (keys required))
+        wrong (into []
+                    (keep (fn [[k pred]]
+                            (when (and (contains? ledger k)
+                                       (not (pred (get ledger k))))
+                              k)))
+                    required)]
+    (when (or (seq missing)
+              (seq wrong)
+              (not= 1 (:version ledger))
+              (neg? (:next-seq ledger))
+              (empty? (:jobs ledger)))
+      (throw (ex-info "invoke-jobs ledger schema is incomplete"
+                      {:missing missing
+                       :wrong-type wrong
+                       :version (:version ledger)
+                       :empty-jobs? (and (map? (:jobs ledger))
+                                         (empty? (:jobs ledger)))})))
+    ledger))
 
 (defn- load-invoke-jobs-ledger
   []
@@ -380,7 +417,7 @@
             (when-not (map? parsed)
               (throw (ex-info "invoke-jobs ledger root is not a map"
                               {:root-type (some-> parsed class .getName)})))
-            (merge (default-invoke-jobs-ledger) parsed)))
+            (validate-invoke-jobs-ledger! parsed)))
         (catch Throwable t
           (throw (ex-info "invoke-jobs ledger is unreadable; refusing empty fallback"
                           {:path (.getAbsolutePath f)}
@@ -424,14 +461,21 @@
   []
   (locking invoke-jobs-writer-lock
     (when (nil? @!invoke-jobs-ledger)
-      (let [loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
+      (let [store-existed? (.exists (io/file (invoke-jobs-store-path)))
+            loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
         (try
-          (persist-invoke-jobs-ledger! loaded)
+          ;; Absence means a genuinely fresh installation. Do not manufacture
+          ;; an existing-but-empty authority that would be ambiguous on restart.
+          (when store-existed?
+            (persist-invoke-jobs-ledger! loaded))
           (reset! !invoke-jobs-ledger loaded)
           (rebuild-active-invoke-job-index! loaded)
           (catch Throwable t
-            (reset! !invoke-jobs-ledger nil)
-            (reset! !active-invoke-job-index nil)
+            (if (:committed? (ex-data t))
+              (do (reset! !invoke-jobs-ledger loaded)
+                  (rebuild-active-invoke-job-index! loaded))
+              (do (reset! !invoke-jobs-ledger nil)
+                  (reset! !active-invoke-job-index nil)))
             (throw t))))))
   (when-not (identical? @!invoke-jobs-ledger
                         (:ledger @!active-invoke-job-index))
@@ -447,8 +491,9 @@
         (persist-invoke-jobs-ledger! updated)
         (rebuild-active-invoke-job-index! updated)
         (catch Throwable t
-          (reset! !invoke-jobs-ledger before)
-          (rebuild-active-invoke-job-index! before)
+          (let [authoritative (if (:committed? (ex-data t)) updated before)]
+            (reset! !invoke-jobs-ledger authoritative)
+            (rebuild-active-invoke-job-index! authoritative))
           (throw t))))))
 
 (defn- update-invoke-jobs-ledger-vals!
@@ -468,8 +513,9 @@
         (rebuild-active-invoke-job-index! after)
         [before after]
         (catch Throwable t
-          (reset! !invoke-jobs-ledger before)
-          (rebuild-active-invoke-job-index! before)
+          (let [authoritative (if (:committed? (ex-data t)) after before)]
+            (reset! !invoke-jobs-ledger authoritative)
+            (rebuild-active-invoke-job-index! authoritative))
           (throw t))))))
 
 (defn- trim-stream-event

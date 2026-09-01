@@ -17,10 +17,16 @@ now:
    storage;
 6. return success only after those steps complete.
 
-If any step fails, `persist-invoke-jobs-ledger!` throws an `ExceptionInfo`
-containing the target and temporary paths. Lifecycle mutation helpers restore
-the prior in-memory ledger and active index before propagating the exception.
-They no longer acknowledge an in-memory state that failed to commit.
+Historical statement (superseded by C263): if any step failed, lifecycle
+mutation helpers restored the prior in-memory ledger and active index before
+propagating the exception.
+
+2026-09-01 amendment (C263): failure before rename remains
+`:committed? false` and rolls memory back. Once atomic rename succeeds, the new
+snapshot is authoritative; failure to force the parent directory is reported
+as `{:committed? true :durability :unconfirmed}` and propagated to the caller,
+but memory remains equal to the new disk snapshot. Rolling back after rename
+created a false memory/disk split.
 
 The same lock covers stream-event atom changes. Although those events remain
 intentionally non-durable until finalization, they can no longer interleave
@@ -30,10 +36,15 @@ disk out of atom order.
 ## Loud loading
 
 An existing ledger is read as exactly one EDN form. Empty input, truncated or
-malformed EDN, a non-map root, or trailing forms throw
+malformed EDN, a non-map root, trailing forms, missing required schema keys,
+wrong required value types, an unsupported version, or an empty `:jobs` map throw
 `invoke-jobs ledger is unreadable; refusing empty fallback`. Only an actually
 absent file receives the fresh default ledger. Corruption can no longer be
 coerced to an apparently valid empty history.
+
+The fresh default is held in memory but is not written as an empty authority;
+the first real job mutation creates the file. Thus “no file yet” remains
+distinguishable from “an existing file claims an empty history.”
 
 ## Falsifiers
 

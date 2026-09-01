@@ -56,6 +56,45 @@
                (#'http/load-invoke-jobs-ledger)))))
       (finally (delete-tree! dir)))))
 
+(deftest schema-incomplete-ledgers-are-loud-and-unchanged
+  (doseq [incomplete [{} {:version 1} {:jobs {}}
+                      {:version 1 :next-seq 0 :job-order []
+                       :trace->job {} :jobs {}}]]
+    (let [dir (temp-dir)
+          target (io/file dir "invoke-jobs.edn")
+          original (pr-str incomplete)]
+      (try
+        (spit target original)
+        (with-redefs-fn {#'http/invoke-jobs-store-path
+                         (constantly (.getAbsolutePath target))}
+          (fn []
+            (is (thrown-with-msg?
+                 clojure.lang.ExceptionInfo
+                 #"refusing empty fallback"
+                 (#'http/load-invoke-jobs-ledger)))
+            (is (= original (slurp target)))))
+        (finally (delete-tree! dir))))))
+
+(deftest absent-ledger-is-a-fresh-install-not-an-empty-authority
+  (let [dir (temp-dir)
+        target (io/file dir "invoke-jobs.edn")
+        ledger-atom (var-get #'http/!invoke-jobs-ledger)
+        index-atom (var-get #'http/!active-invoke-job-index)
+        before-ledger @ledger-atom
+        before-index @index-atom]
+    (try
+      (reset! ledger-atom nil)
+      (reset! index-atom nil)
+      (with-redefs-fn {#'http/invoke-jobs-store-path
+                       (constantly (.getAbsolutePath target))}
+        (fn []
+          (is (= {} (:jobs (#'http/ensure-invoke-jobs-ledger!))))
+          (is (false? (.exists target)))))
+      (finally
+        (reset! ledger-atom before-ledger)
+        (reset! index-atom before-index)
+        (delete-tree! dir)))))
+
 (deftest persistence-error-reaches-mutation-caller-and-rolls-back-memory
   (let [dir (temp-dir)
         ledger-atom (var-get #'http/!invoke-jobs-ledger)
@@ -77,6 +116,46 @@
                  (#'http/update-invoke-jobs-ledger!
                   #(assoc % :next-seq 1))))
             (is (= old @ledger-atom)))))
+      (finally
+        (reset! ledger-atom before-ledger)
+        (reset! index-atom before-index)
+        (delete-tree! dir)))))
+
+(deftest post-rename-force-failure-keeps-memory-equal-to-disk
+  (let [dir (temp-dir)
+        target (io/file dir "invoke-jobs.edn")
+        ledger-atom (var-get #'http/!invoke-jobs-ledger)
+        index-atom (var-get #'http/!active-invoke-job-index)
+        before-ledger @ledger-atom
+        before-index @index-atom
+        old {:version 1 :next-seq 1 :job-order ["old"]
+             :trace->job {} :jobs {"old" {:state "done"}}}]
+    (try
+      (reset! ledger-atom old)
+      (reset! index-atom nil)
+      (with-redefs-fn {#'http/invoke-jobs-store-path
+                       (constantly (.getAbsolutePath target))}
+        (fn []
+          (#'http/persist-invoke-jobs-ledger! old)
+          (let [failure (try
+                          (with-bindings
+                            {#'http/*invoke-jobs-persist-stage-hook*
+                             (fn [stage _]
+                               (when (= :renamed stage)
+                                 (throw (ex-info "directory force failed" {}))))}
+                            (#'http/update-invoke-jobs-ledger!
+                             #(-> %
+                                  (assoc :next-seq 2)
+                                  (assoc-in [:jobs "new"] {:state "queued"})
+                                  (update :job-order conj "new"))))
+                          nil
+                          (catch clojure.lang.ExceptionInfo e e))
+                disk (edn/read-string (slurp target))]
+            (is (some? failure))
+            (is (true? (:committed? (ex-data failure))))
+            (is (= :unconfirmed (:durability (ex-data failure))))
+            (is (= disk @ledger-atom))
+            (is (= 2 (:next-seq disk))))))
       (finally
         (reset! ledger-atom before-ledger)
         (reset! index-atom before-index)
