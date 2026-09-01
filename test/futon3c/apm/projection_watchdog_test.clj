@@ -82,6 +82,7 @@
   (let [result
         (watchdog/evaluate
          (-> healthy
+             (assoc :coordinator-age-seconds 180)
              (assoc-in [:transition :operation] nil)
              (assoc-in [:transition :event/observed-at]
                        "2026-08-23T21:57:00Z")
@@ -90,12 +91,14 @@
                         :retry/not-before-ms 1787523000000})))]
     (is (= :waiting (:watch/status result)))
     (is (= {:wake-at-ms 1787523000000} (:substrate-wait result)))
+    (is (not (contains? (codes result) :coordinator-heartbeat-stale)))
     (is (not (contains? (codes result) :unattended-transition-stale)))))
 
 (deftest operationless-guide-promotion-retry-is-waiting
   (let [result
         (watchdog/evaluate
          (-> healthy
+             (assoc :coordinator-age-seconds 180)
              (assoc-in [:transition :operation] nil)
              (assoc-in [:transition :event/observed-at]
                        "2026-08-23T21:57:00Z")
@@ -107,6 +110,7 @@
                      :transport-retry/max-attempts 3})))]
     (is (= :waiting (:watch/status result)))
     (is (= 1 (get-in result [:transport-retry :attempt])))
+    (is (not (contains? (codes result) :coordinator-heartbeat-stale)))
     (is (not (contains? (codes result) :unattended-transition-stale)))))
 
 (deftest all-modeled-failure-classes-alert

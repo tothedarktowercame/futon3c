@@ -111,7 +111,9 @@
           (not (or (= :running (:regulator/status coordinator)) complete?))
           (conj (finding :coordinator-running :coordinator-not-running
                          {:observed (:regulator/status coordinator)}))
-          (and (> coordinator-age-seconds max-heartbeat-age-seconds)
+          (and (not transport-retry?)
+               (not substrate-wait?)
+               (> coordinator-age-seconds max-heartbeat-age-seconds)
                (not cascade-within-bound?))
           (conj (finding :coordinator-heartbeat-current
                          :coordinator-heartbeat-stale
