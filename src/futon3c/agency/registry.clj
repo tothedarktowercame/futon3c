@@ -451,7 +451,25 @@
   []
   @!agent-personas)
 
-(reload-agent-personas!)
+(defn- init-agent-personas!
+  "Load persona bindings at namespace load time, tolerantly.
+
+   `reload-agent-personas!` throws on a missing or malformed resource. That is
+   right when an operator asks for a reload and wrong here: this call sits at the
+   top level of the registry namespace, and `(require 'futon3c.agency.registry
+   :reload)` is the sanctioned hot-load path for the shared JVM. A typo in a
+   hand-edited config file whose empty value is legitimate must not be able to
+   abort that require and take the registry with it. So: fall back to no personas
+   and say so on stdout."
+  []
+  (try
+    (reload-agent-personas!)
+    (catch Throwable t
+      (reset! !agent-personas {})
+      (println "[registry] agent personas unavailable, continuing with none:"
+               (.getMessage t)))))
+
+(init-agent-personas!)
 
 (defn- persona-agent
   [reg id]
