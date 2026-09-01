@@ -19,18 +19,13 @@
   "/home/joe/code/futon2/holes/labs/wm-contract/tick-run-record-2026-08-31.edn")
 (def certificate-source
   "/home/joe/code/futon2/checks/wm_operational_certificate.clj")
+(def observer-source
+  "/home/joe/code/futon2/checks/wm_click_resource_observer.clj")
 
 (defn- git! [root & args]
   (let [{:keys [exit err]} (apply shell/sh "git" "-C" root args)]
     (when-not (zero? exit)
       (throw (ex-info "fixture git failed" {:args args :err err})))))
-
-(defn- wait-until [pred]
-  (let [deadline (+ (System/currentTimeMillis) 5000)]
-    (loop []
-      (cond (pred) true
-            (< (System/currentTimeMillis) deadline) (do (Thread/sleep 5) (recur))
-            :else false))))
 
 (defn- handler []
   (http/make-handler {:registry (fix/mock-registry)
@@ -51,9 +46,10 @@
                   "(defn config [x] x)\n"
                   "(defn run-opportunity! [_]\n"
                   "  (let [run (assoc (edn/read-string (slurp " (pr-str fixture-run) "))\n"
+                  "                   :startedAt (str (java.time.Instant/now))\n"
                   "                   :click/id (:click-id _))]\n"
                   "    (spit " (pr-str run-out) " (pr-str run))\n"
-                  "    {:attempt-id \"rehearsal-attempt\" :outcome :rehearsed\n"
+                  "    {:attempt-id \"rehearsal-attempt\" :outcome :grounded-no-change\n"
                   "     :run/id (:run/id run) :run-record-status :present\n"
                   "     :run-record " (pr-str run-out) "}))\n")]
     (io/make-parents source)
@@ -76,12 +72,6 @@
     futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
     nil))
 
-(defn- resource [run-id]
-  {:schema 1 :run/id run-id :source-schema :futon-bounded-test-v1
-   :status :clean :reason nil :command-exit 0 :wrapper-exit 0
-   :pids-events-max-delta 0 :native-thread-exhaustion false
-   :tasks-peak 1 :source-receipt "rehearsal"})
-
 (deftest ^:slow reload-click-certificate-chain-and-mismatch-control
   (let [out-root (.toFile (java.nio.file.Files/createTempDirectory
                            "wm-chain-output-"
@@ -92,6 +82,7 @@
         good-resource (.getPath (io/file out-root "resource.edn"))
         bad-resource (.getPath (io/file out-root "resource-mismatch.edn"))
         binding-dir (.getPath (io/file out-root "bindings"))
+        observed-receipt (atom nil)
         {:keys [root source]} (fixture-repo run-out)]
     (identity/reset-for-test!)
     (reset! service/!status service/initial-status)
@@ -104,16 +95,28 @@
       (is (= head (:git-head loaded)))
       (is (false? (:dirty? loaded)))
       (is (true? (:stable? loaded))))
+    (load-file observer-source)
     (binding [service/*resolve-var* resolver
               service/*click-run-binding-dir* binding-dir]
-      (let [response ((handler) {:request-method :post
-                                 :uri "/api/alpha/wm/click"
-                                 :body (json/generate-string
-                                        {:reviewer "rehearsal-reviewer"})})]
-        (is (= 200 (:status response)))
-        (is (wait-until #(false? (:running? (service/status)))))))
+      (let [h (handler)
+            observe! (resolve 'checks.wm-click-resource-observer/observe!)]
+        (reset! observed-receipt
+                (observe! {:payload {:reviewer "rehearsal-reviewer"}
+                           :post-click #(json/parse-string
+                                         (:body (h {:request-method :post
+                                                    :uri "/api/alpha/wm/click"
+                                                    :body (json/generate-string %)})) true)
+                           :status service/status
+                           :cgroup-sample (constantly {:cgroup "/fixture-serving"
+                                                       :pids-events-max 0
+                                                       :pids-current 12})
+                           :journal-sample (constantly {:readable? true
+                                                        :native-thread-markers []})
+                           :sleep-ms (fn [_] (Thread/sleep 5))})))
+      (is (= "clean" (:resource-status @observed-receipt))))
     (is (.isFile (io/file run-out)))
-    (is (= :rehearsed (get-in (service/status) [:last-result :outcome])))
+    (is (= :grounded-no-change
+           (get-in (service/status) [:last-result :outcome])))
     (is (= :present (get-in (service/status) [:last-result :run-id-status])))
     (is (= :present (get-in (service/status) [:last-result :run-record-status])))
     (load-file certificate-source)
@@ -122,18 +125,24 @@
           binding-record (edn/read-string
                           (slurp (get-in (service/status)
                                          [:last-result :run-binding])))
-          certificate-main (resolve 'checks.wm-operational-certificate/main)]
+          certificate-main (resolve 'checks.wm-operational-certificate/main)
+          normalize (resolve 'checks.wm-click-resource-observer/certificate-resource)]
       ;; The join now crosses the production service port. The fixture record
       ;; and durable binding must independently resolve the same run id.
       (is (= run-id (:run/id run) (:run/id binding-record)))
       (is (= (:click/id binding-record) (:click-id (service/status))))
       (is (= (:click/id run) (:click/id binding-record)))
-      (spit good-resource (str (pr-str (resource run-id)) "\n"))
+      (spit good-resource
+            (str (pr-str (normalize run-id "rehearsal-observer"
+                                    @observed-receipt)) "\n"))
       (is (= 0 (certificate-main ["--run" run-out "--resource" good-resource
                                   "--certificate" cert-out])))
       (is (= :pass (:verdict (edn/read-string (slurp cert-out)))))
       ;; Broken seam: a resource receipt for a different run cannot certify.
-      (spit bad-resource (str (pr-str (resource "different-run")) "\n"))
+      (spit bad-resource
+            (str (pr-str (assoc (normalize run-id "rehearsal-observer"
+                                           @observed-receipt)
+                                :run/id "different-run")) "\n"))
       (is (= 1 (certificate-main ["--run" run-out "--resource" bad-resource
                                   "--certificate" bad-cert-out])))
       (is (= :fail (:verdict (edn/read-string (slurp bad-cert-out))))))))

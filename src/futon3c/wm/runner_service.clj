@@ -49,7 +49,16 @@
 (defn status
   "Return the current click service status."
   []
-  @!status)
+  (assoc @!status :serving-runner-code
+         (try
+           (if-let [status-fn (*resolve-var* 'futon3c.wm.code-identity/status)]
+             (status-fn)
+             {:availability :unavailable :reason :identity-status-unresolvable})
+           (catch Throwable throwable
+             {:availability :unavailable
+              :reason :identity-status-failed
+              :error (or (ex-message throwable)
+                         (.getName (class throwable)))}))))
 
 (defn- ensure-apparatus!
   [agent-id]
