@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 106 = 475 corpus - 284 not-open - 79 topology - 4 defective - 2
+    ;; 105 = 475 corpus - 285 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -37,8 +37,9 @@
     ;; attempts ran with a FAILED memory cascade (futon1b 503
     ;; :expensive-read-busy) and reported :failed, and the solver's proof
     ;; banked anyway. A degraded student protocol does not withhold the pin;
-    ;; only a park does.
-    (is (= 106 (count problems)))
+    ;; only a park does. f75/b94J03 followed at 105 -- three sorries closed,
+    ;; and the first frame to run end to end with the cascade retry live.
+    (is (= 105 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
