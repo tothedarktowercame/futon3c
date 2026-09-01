@@ -92,6 +92,23 @@
     (is (= {:wake-at-ms 1787523000000} (:substrate-wait result)))
     (is (not (contains? (codes result) :unattended-transition-stale)))))
 
+(deftest operationless-guide-promotion-retry-is-waiting
+  (let [result
+        (watchdog/evaluate
+         (-> healthy
+             (assoc-in [:transition :operation] nil)
+             (assoc-in [:transition :event/observed-at]
+                       "2026-08-23T21:57:00Z")
+             (assoc :phase-state
+                    {:state/type :promotion
+                     :stage :awaiting-transport-retry
+                     :transport-retry/not-before-ms 1787523000000
+                     :transport-retry/attempt 1
+                     :transport-retry/max-attempts 3})))]
+    (is (= :waiting (:watch/status result)))
+    (is (= 1 (get-in result [:transport-retry :attempt])))
+    (is (not (contains? (codes result) :unattended-transition-stale)))))
+
 (deftest all-modeled-failure-classes-alert
   (is (= :healthy (:watch/status (watchdog/evaluate healthy))))
   (is (= watchdog/obligation-ids (:watch/checked (watchdog/evaluate healthy))))

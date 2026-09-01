@@ -232,18 +232,37 @@
     (catch Throwable t {:ok false :exception/message (.getMessage t)})))
 
 (defn- phase-state-path
-  "Resolve the canonical durable state selected by the projected operation.
-  Guide promotion review is a nested, separately persisted phase machine; its
-  typed promotion-proctor operation must not be compared with the completed
-  outer Guide ticket."
+  "Return the projected durable phase-state path.  Retained as the path-level
+  selector used by diagnostics and focused tests."
   [frame-dir transition]
   (let [phase (:phase transition)
-        promotion-review? (and (= :promotion-proctor
-                                  (get-in transition [:operation :role]))
-                               (str/starts-with? (name phase)
-                                                 "guide-intervention-"))
-        filename (str (name phase) (when promotion-review? "-review") ".edn")]
-    (.resolve (.resolve frame-dir "live") filename)))
+        live-dir (.resolve frame-dir "live")]
+    (.resolve live-dir
+              (str (name phase)
+                   (when (and (str/starts-with? (name phase) "guide-intervention-")
+                              (= :promotion-proctor
+                                 (get-in transition [:operation :role])))
+                     "-review")
+                   ".edn"))))
+
+(defn- phase-state-observation
+  "Mirror production projection state selection.  A Guide's nested promotion
+  machine remains authoritative during operation-less retry backoff; selecting
+  it cannot depend on an operation that is deliberately absent while waiting."
+  [frame-dir transition]
+  (let [phase (:phase transition)
+        live-dir (.resolve frame-dir "live")
+        base (read-edn (phase-state-path frame-dir
+                                         (assoc transition :operation nil)))
+        review-path (.resolve live-dir (str (name phase) "-review.edn"))
+        review (when (and (str/starts-with? (name phase) "guide-intervention-")
+                          (Files/exists review-path
+                                        (make-array java.nio.file.LinkOption 0)))
+                 (read-edn review-path))]
+    (if (and (= :promotion (:state/type review))
+             (not= :live-job-certified (:state/type base)))
+      review
+      base)))
 
 (defn observe [{:keys [transition-log coordinator-state agency-base
                        max-heartbeat-age-seconds]}]
@@ -263,7 +282,7 @@
         (when (Files/exists cascade-path
                             (make-array java.nio.file.LinkOption 0))
           (read-edn cascade-path))
-        phase-state (read-edn (phase-state-path frame-dir transition))
+        phase-state (phase-state-observation frame-dir transition)
         agent-id (get-in transition [:operation :agent-id])
         job-id (get-in transition [:operation :job-id])]
     {:now (Instant/now)
