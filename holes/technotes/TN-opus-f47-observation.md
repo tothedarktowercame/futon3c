@@ -1274,3 +1274,39 @@ prior measurement here; the scribe seat has more than one flavour, which I had n
 So the honest state of the transfer question, after a day of measuring the wrong thing
 without knowing it: uptake of the sibling expansion is now measurable, and the first
 measurement is zero out of thirty-three.
+
+## 400 cascade offers, zero uptake (2026-09-01)
+
+Counting used-ids against an accessible total, which is what this note has done throughout,
+cannot tell a memory reached through the sibling cascade from one reached through the base
+shelf. Intersecting the cascade's offer list with the attempt's used-ids can. Across every
+attempt since the retry fix made the cascade work:
+
+    attempt   offers  used   via-cascade  via-shelf
+    f75/a3      100     1         0           1
+    f76/a1        0     0         0           0
+    f76/a2        0     2         0           2
+    f76/a3      100     0         0           0
+    f77/a1        0     0         0           0
+    f77/a2      100     3         0           3
+    f77/a3      100     0         0           0
+
+**Four hundred offers, zero taken.** All six memories that were used came through the base
+shelf, including the cross-frame ones.
+
+Two corrections to my own numbers earlier today. I reported f76/a3 as offering 33 and
+f77/a2 as offering 43 then 66; all three figures were artifacts of truncating my search
+window, not of the data. Every attempt that receives offers receives exactly 100 — the
+configured `:cap` in `{:enabled? true :routes [:sibling] :cap 100}`. The cascade saturates
+its cap whenever it fires.
+
+That reframes the finding. This is not a retrieval mechanism producing a few plausible
+suggestions that go unused; it is a mechanism delivering its maximum payload, four times,
+to students who take nothing from it — while the plain shelf supplies every memory that
+actually gets used, cross-frame ones included.
+
+Two caveats I cannot yet close. Four attempts is a small sample, and this is the first
+window in which the measurement was possible at all. And an offer is not the same as a
+prompt: I have not established what the student is shown of these 100, or whether the
+offers reach the prompt in a form distinguishable from the shelf. Both are answerable and
+neither is answered here.
