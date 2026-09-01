@@ -1352,3 +1352,44 @@ not exist as entities at all — `complex-arg-of-cpow-root`,
 `schwarz-disk-automorphism-formula`, `surj-via-oriented-root-preimage` all return "Entity
 not found" — and the cascade routes offers through them anyway. That is a dangling
 reference in the library or the routing, and it is its own piece of work.
+
+## A network timeout took a verified proof off master (2026-09-01)
+
+f78 parked at `:promotion` on this finding:
+
+    {:error/code :memory-snapshot-visibility-not-obtained
+     :error/component :transport
+     :error/message "request timed out"
+     :transport/classified-outcome :unavailable
+     :visibility/candidate-count 199
+     :visibility/reads-per-candidate-bound 4
+     :visibility/per-read-bound-ms 5000
+     :visibility/aggregate-bound-ms 2000000}
+
+f78's solver had proved b96A02. Its `verify.edn` records clean axioms, exit 0,
+sorry-warnings 0, statement unchanged, and I rebuilt the solver head `40b02e4e` here: 693
+lines, no `native_decide`, statement byte-identical to master, axioms exactly
+`[propext, Classical.choice, Quot.sound]`, three sorries closed. Pinned at
+`refs/apm/rescued-solves/b96A02/40b02e4e`. The seventh stranded solve.
+
+**It is the first stranded by the apparatus rather than by a role.** The six before it
+came from reviewer mistakes — a role reviewing four of five candidates, a student failing
+to surface a memory use, ordinary errors the repair path exists to correct. This one came
+from futon1b being briefly slow during a 199-candidate visibility sweep. Nothing about the
+proof changed when the substrate stopped answering.
+
+That is the strongest argument yet that the pin should not depend on the frame completing.
+It was already hard to defend that a learning-protocol failure withholds correct
+mathematics. A transient network timeout doing it is not a design choice anyone would
+write down.
+
+**Fourth uncovered finding shape, and the fix is not a fourth table entry.** This finding
+is already tagged `:error/component :transport` and `:transport/classified-outcome
+:unavailable`, and `e5f1d94c` already routes transport faults to the apparatus budget. That
+routing never runs, because `repair-instructions` — whose purpose is telling a ROLE what to
+do differently — is consulted first and throws on a fault no role can repair. Dispatched as
+a routing change, explicitly not as another instruction entry.
+
+Worth a second look independently: 199 candidates, 4 reads each, 5s per read, an aggregate
+bound of 2,000,000 ms — a 33-minute visibility sweep against the same substrate that has
+been returning 503 `:expensive-read-busy` to the memory cascade all day.
