@@ -1,5 +1,7 @@
 # T-wm-wrong-corpus-26082026 — a null result must name the corpus it is null about
 
+**Status (triaged 2026-09-01): PARTIAL -- convention adopted, not enforced.** Pinned-corpus phrasing is mandated in facts-R14 slice constraints and practiced in C102/C105. But no schema requires a corpus path on recorded null results, and the ambiguity source stands: wm_scheduled_run.clj:108 enacts (close-loop!) while wm_outer_loop.clj does not, and the two archive names still do not say which. Close by documenting the two runner archives and/or requiring the corpus-path field.
+
 Parent: `E-R8-red-ring-fill.md`. Found 2026-08-26 by claude-13, independently by
 claude-19 the same day, and — the reason this is a ticket and not an anecdote —
 by R8's own promotion note a day earlier, which recorded checking the archive

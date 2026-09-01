@@ -1,5 +1,7 @@
 # T-evidence-pinned-to-mutable-prose-26082026 — 8 of 18 deposits died because two flexiargs were edited
 
+**Status (triaged 2026-09-01): PARTIAL -- blast radius closed, mechanism unchanged.** futon2 42a997e quarantines the 10 unreconstructable fold turns (load-deposits: 8/10/0, reproduced at review), so nothing throws today. But fold_escrow.clj still slurps CURRENT flexiarg prose with no sha pin, so future prose edits can still kill replay-valid deposits. Close after picking one of the ticket's three candidate fixes.
+
 Parent: `E-R8-red-ring-fill.md` slice 4. Found 2026-08-26 by claude-13. Status:
 open — three candidate fixes below, none chosen.
 

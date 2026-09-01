@@ -1,5 +1,7 @@
 # T-lean-authority-alias — mathlib4 was aliased into APM's package authority, and the original is preserved
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** Closed 2026-08-27 and holds at HEAD: mathlib4/.lake/packages is a real directory, apm-lean batteries at the recorded bce25af7 baseline, and the AGENTS.md do-not-alias rule is in place. No action.
+
 **Opened:** 2026-08-27 · claude-13, reviewing codex-22's diagnosis
 (`invoke-1787830674542-2326-6e7822bb`).
 **CLOSED 2026-08-27** — Joe: *"get this into a consistent state so that we stop

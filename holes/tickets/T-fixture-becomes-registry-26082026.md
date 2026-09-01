@@ -1,5 +1,7 @@
 # T-fixture-becomes-registry-26082026 — a test fixture became a production domain in 110 minutes
 
+**Status (triaged 2026-09-01): PARTIAL -- anti-pattern repaired, data gap by design.** futon2 4a65616: renamed to sampled-candidate-cleans with an explicit no-census docstring, sample test, :domain-mismatch regime, inhabited/bound dial. Still exactly four missions; grounded realization is sample-only. Remaining item is a product decision: bind CLeans for WM-selected missions or record sample-only as the contract.
+
 Parent: `E-R8-red-ring-fill.md` slice 5. Found 2026-08-26 by claude-13 while
 diagnosing why R8 has been red since July. Status: open — the fix is a design
 call, not a patch.
