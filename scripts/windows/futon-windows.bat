@@ -22,72 +22,72 @@ goto collect_target_args
 
 if /i "%TARGET%"=="tools" (
   call "%SCRIPT_DIR%\bootstrap-tools.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="preflight" (
   call "%SCRIPT_DIR%\preflight-windows.bat"
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="stop-futon1a" (
   call "%SCRIPT_DIR%\stop-futon1a-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="kill-futon1a" (
   call "%SCRIPT_DIR%\stop-futon1a-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="dev" (
   call :run_windows_script "%SCRIPT_DIR%\dev-stack-windows.bat" dev!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="dev-arxana" (
   call :run_windows_script "%SCRIPT_DIR%\dev-stack-arxana-windows.bat" dev!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="dev-core" (
   call :run_windows_script "%SCRIPT_DIR%\dev-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="test" (
   call :run_windows_script "%SCRIPT_DIR%\test-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="status" (
   call :run_windows_script "%SCRIPT_DIR%\status-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="repl" (
   call :run_windows_script "%SCRIPT_DIR%\repl-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="codex" (
   call :run_windows_script "%SCRIPT_DIR%\codex-picker-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="codex-repl" (
   call :run_windows_script "%SCRIPT_DIR%\codex-repl-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="tickle" (
   call :run_windows_script "%SCRIPT_DIR%\tickle-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 if /i "%TARGET%"=="ngircd-bridge" (
   call :run_windows_script "%SCRIPT_DIR%\ngircd-bridge-windows.bat"!TARGET_ARGS!
-  exit /b %ERRORLEVEL%
+  exit /b !ERRORLEVEL!
 )
 
 call "%SCRIPT_DIR%\preflight-windows.bat"

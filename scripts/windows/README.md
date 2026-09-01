@@ -144,6 +144,13 @@ Full-stack launch (`dev`) behavior:
   receipt path plus the tail of the combined runtime log, instead of reducing
   everything to a generic port-wait timeout
 - waits for runtime ports, then starts `ngircd-bridge`
+- when `USE_LOCAL_IRC=0`, failure to start `ngircd-bridge` is treated as a
+  degraded external-transport condition:
+  - the launcher prints a warning and remains attached to the core futon
+    runtime lane, so supervisor cleanup is not triggered merely because the
+    Matrix/IRC adapter is down
+  - the Matrix/IRC adapter remains optional delivery infrastructure, not a hard
+    dependency of core futon3c startup
 
 IRC lane switch for `dev`:
 - unsupported positional args or unknown switches now fail fast with usage

@@ -61,6 +61,13 @@ set "AUTO_START_DEV=0"
 set "AUTO_STOP_FUTON1A=0"
 call "%SCRIPT_DIR%\ngircd-bridge-windows.bat" %FUTON_DEV_STACK_BRIDGE_ARGS%
 set "DS_EXIT=%ERRORLEVEL%"
+if "%DS_EXIT%"=="0" exit /b 0
+if "%USE_LOCAL_IRC%"=="0" (
+  1>&2 echo [dev-stack-windows] WARN: ngircd bridge did not start against external IRC target !BRIDGE_LOG_IRC_HOST!:!BRIDGE_LOG_IRC_PORT!.
+  1>&2 echo [dev-stack-windows] WARN: continuing because USE_LOCAL_IRC=0; futon runtime remains available without Matrix/IRC bridge delivery.
+  call :wait_for_runtime_exit_after_degraded_bridge
+  exit /b %ERRORLEVEL%
+)
 exit /b %DS_EXIT%
 
 :wait_for_port
@@ -144,3 +151,18 @@ exit /b %ERRORLEVEL%
 :sleep_1s
 ping -n 2 127.0.0.1 >nul 2>nul
 exit /b 0
+
+:wait_for_runtime_exit_after_degraded_bridge
+setlocal EnableDelayedExpansion
+echo [dev-stack-windows] Degraded bridge mode active. Press Ctrl-C to stop the futon runtime lane.
+:wait_degraded_bridge_loop
+if exist "!DEV_CORE_EXIT_FILE!" (
+  set "WAIT_DEGRADED_EXIT_CODE=0"
+  for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "$receipt = Get-Content -Raw '%DEV_CORE_EXIT_FILE%' | ConvertFrom-Json; if ($null -ne $receipt.exit_code) { [Console]::Out.WriteLine($receipt.exit_code) } else { [Console]::Out.WriteLine(0) }" 2^>nul`) do set "WAIT_DEGRADED_EXIT_CODE=%%I"
+  endlocal & exit /b !WAIT_DEGRADED_EXIT_CODE!
+)
+if not exist "!DEV_CORE_PID_FILE!" (
+  endlocal & exit /b 0
+)
+call :sleep_1s
+goto wait_degraded_bridge_loop

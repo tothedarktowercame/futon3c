@@ -7,6 +7,7 @@ rem - Babashka into:      <prefix>\bin\bb.exe
 rem - Clojure CLI tools:  <prefix>\clojure\ (bin\clojure.bat, bin\clj.bat, libexec\...)
 rem - GitHub CLI into:    <prefix>\bin\gh.exe
 rem - jq into:            <prefix>\bin\jq.exe
+rem - Node.js into:       <prefix>\bin\node.exe
 rem - emacsclient into:   <prefix>\bin\emacsclient.exe (copied from existing install or provisioned)
 rem - make shim into:     <prefix>\bin\make.bat when only mingw32-make is present
 
@@ -19,10 +20,12 @@ set "BB_VERSION=latest"
 set "CLJTOOLS_VERSION=latest"
 set "GH_VERSION=latest"
 set "JQ_VERSION=latest"
+set "NODE_VERSION=lts"
 set "INSTALL_BB=1"
 set "INSTALL_CLOJURE=1"
 set "INSTALL_GH=1"
 set "INSTALL_JQ=1"
+set "INSTALL_NODE=1"
 set "INSTALL_EMACSCLIENT=1"
 set "INSTALL_MSYS_PACKAGES=1"
 set "FORCE=0"
@@ -85,6 +88,17 @@ if /i "%~1"=="--jq-version" (
   goto parse_args
 )
 
+if /i "%~1"=="--node-version" (
+  if "%~2"=="" (
+    1>&2 echo ERROR: --node-version requires VER
+    exit /b 2
+  )
+  set "NODE_VERSION=%~2"
+  shift
+  shift
+  goto parse_args
+)
+
 if /i "%~1"=="--no-bb" (
   set "INSTALL_BB=0"
   shift
@@ -105,6 +119,12 @@ if /i "%~1"=="--no-gh" (
 
 if /i "%~1"=="--no-jq" (
   set "INSTALL_JQ=0"
+  shift
+  goto parse_args
+)
+
+if /i "%~1"=="--no-node" (
+  set "INSTALL_NODE=0"
   shift
   goto parse_args
 )
@@ -168,6 +188,11 @@ if "%INSTALL_JQ%"=="1" (
   if errorlevel 1 exit /b 1
 )
 
+if "%INSTALL_NODE%"=="1" (
+  call :install_node
+  if errorlevel 1 exit /b 1
+)
+
 if "%INSTALL_EMACSCLIENT%"=="1" (
   call :install_emacsclient
   if errorlevel 1 exit /b 1
@@ -189,6 +214,7 @@ echo   - babashka: %PREFIX%\bin\bb.exe
 echo   - clojure:  %PREFIX%\clojure\bin\clojure.bat
 echo   - gh:       %PREFIX%\bin\gh.exe
 echo   - jq:       %PREFIX%\bin\jq.exe
+echo   - node:     %PREFIX%\bin\node.exe
 echo   - emacs:    %PREFIX%\bin\emacsclient.exe
 echo   - make shim (when needed): %PREFIX%\bin\make.bat
 echo(
@@ -207,10 +233,12 @@ echo   --bb-version VER         Babashka version ^(default: latest^)
 echo   --cljtools-version VER   Clojure CLI tools version tag ^(default: latest^)
 echo   --gh-version VER         GitHub CLI version ^(default: latest^)
 echo   --jq-version VER         jq version ^(default: latest^)
+echo   --node-version VER       Node.js version ^(default: lts; accepts latest, lts, vX.Y.Z, or X.Y.Z^)
 echo   --no-bb                  Skip babashka install
 echo   --no-clojure             Skip clojure tools install
 echo   --no-gh                  Skip GitHub CLI install
 echo   --no-jq                  Skip jq install
+echo   --no-node                Skip Node.js install
 echo   --no-emacsclient         Skip emacsclient installation check/install
 echo   --no-msys-packages       Skip MSYS package best-effort check/install
 echo   --force                  Reinstall even if already present
@@ -220,6 +248,7 @@ echo Notes:
 echo   - Run where outbound network access is available.
 echo   - Uses GitHub release metadata for latest version resolution.
 echo   - On Windows, Clojure latest resolves via casselc/clj-msi.
+echo   - Node.js default resolves to latest LTS from nodejs.org/dist/index.json.
 echo   - PATH is not mutated by this script by policy.
 exit /b 0
 
@@ -527,6 +556,104 @@ if errorlevel 1 (
 echo [bootstrap] Installed jq: %JQ_BIN%
 "%JQ_BIN%" --version
 rmdir /s /q "%JQ_TMP%" >nul 2>nul
+exit /b 0
+
+:node_latest_tag
+set "NODE_CHANNEL=%~1"
+set "NODE_OUTVAR=%~2"
+set "NODE_TAG="
+for /f "usebackq delims=" %%T in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $releases = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json'; if ('%NODE_CHANNEL%' -ieq 'latest') { ($releases | Select-Object -First 1).version } else { ($releases | Where-Object { $_.lts } | Select-Object -First 1).version }"`) do (
+  if not defined NODE_TAG set "NODE_TAG=%%T"
+)
+if not defined NODE_TAG (
+  1>&2 echo Failed to resolve Node.js %NODE_CHANNEL% version.
+  exit /b 1
+)
+set "%NODE_OUTVAR%=%NODE_TAG%"
+exit /b 0
+
+:install_node
+call :detect_arch
+if errorlevel 1 exit /b 1
+
+set "NODE_BIN=%PREFIX%\bin\node.exe"
+set "NODE_TAG="
+set "NODE_VER="
+set "NODE_ARCH="
+
+if /i "%TOOL_ARCH%"=="amd64" set "NODE_ARCH=x64"
+if /i "%TOOL_ARCH%"=="aarch64" set "NODE_ARCH=arm64"
+
+if not defined NODE_ARCH (
+  1>&2 echo Unsupported Node.js architecture mapping for %TOOL_ARCH%.
+  exit /b 1
+)
+
+if /i "%NODE_VERSION%"=="latest" (
+  call :node_latest_tag latest NODE_TAG
+  if errorlevel 1 exit /b 1
+) else if /i "%NODE_VERSION%"=="lts" (
+  call :node_latest_tag lts NODE_TAG
+  if errorlevel 1 exit /b 1
+) else (
+  set "NODE_TAG=%NODE_VERSION%"
+  if /i "!NODE_TAG:~0,1!" NEQ "v" set "NODE_TAG=v!NODE_TAG!"
+)
+set "NODE_VER=!NODE_TAG:v=!"
+
+if exist "%NODE_BIN%" if "%FORCE%"=="0" (
+  set "NODE_CURRENT="
+  for /f "delims=" %%V in ('"%NODE_BIN%" --version 2^>nul') do (
+    if not defined NODE_CURRENT set "NODE_CURRENT=%%V"
+  )
+  if defined NODE_CURRENT if /i "!NODE_CURRENT!"=="!NODE_TAG!" (
+    echo [bootstrap] node already installed: %NODE_BIN% ^(!NODE_CURRENT!^)
+    exit /b 0
+  )
+)
+
+set "NODE_TMP=%TEMP%\futon3c-bootstrap-node-%RANDOM%%RANDOM%"
+set "NODE_ZIP=%NODE_TMP%\node.zip"
+set "NODE_EXTRACT=%NODE_TMP%\extract"
+mkdir "%NODE_EXTRACT%" >nul 2>nul
+
+set "NODE_URL=https://nodejs.org/dist/%NODE_TAG%/node-%NODE_TAG%-win-%NODE_ARCH%.zip"
+echo [bootstrap] Downloading Node.js %NODE_TAG%...
+call :download_file "%NODE_URL%" "%NODE_ZIP%"
+if errorlevel 1 (
+  1>&2 echo Failed to download Node.js archive.
+  rmdir /s /q "%NODE_TMP%" >nul 2>nul
+  exit /b 1
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -Path '%NODE_ZIP%' -DestinationPath '%NODE_EXTRACT%' -Force"
+if errorlevel 1 (
+  1>&2 echo Failed to extract Node.js archive.
+  rmdir /s /q "%NODE_TMP%" >nul 2>nul
+  exit /b 1
+)
+
+set "NODE_SRC="
+for /f "delims=" %%F in ('dir /b /s "%NODE_EXTRACT%\node.exe" 2^>nul') do (
+  if not defined NODE_SRC set "NODE_SRC=%%F"
+)
+
+if not defined NODE_SRC (
+  1>&2 echo node.exe not found in downloaded archive.
+  rmdir /s /q "%NODE_TMP%" >nul 2>nul
+  exit /b 1
+)
+
+copy /y "%NODE_SRC%" "%NODE_BIN%" >nul
+if errorlevel 1 (
+  1>&2 echo Failed to install node at %NODE_BIN%
+  rmdir /s /q "%NODE_TMP%" >nul 2>nul
+  exit /b 1
+)
+
+echo [bootstrap] Installed node: %NODE_BIN%
+"%NODE_BIN%" --version
+rmdir /s /q "%NODE_TMP%" >nul 2>nul
 exit /b 0
 
 :find_emacsclient
