@@ -1,5 +1,7 @@
 # T-dispatch-clock-excursion-prefix — E-*/C-* ids can't be dispatch-clocked
 
+**Status (triaged 2026-09-01): DONE-IN-FACT.** dispatch-clock routes ^[MEC]- ids to campaign/excursion/mission (clock_store.clj:94-104), bare ids still get M-; commit 926c15e1. Close.
+
 **Found 2026-07-05 (claude-18) while specifying the cascade-live tickets box.**
 
 `clock-store/set-dispatch-mission!` (futon3c/src/futon3c/agency/clock_store.clj)

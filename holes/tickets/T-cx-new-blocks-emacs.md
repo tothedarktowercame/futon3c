@@ -1,5 +1,7 @@
 # T-cx-new-blocks-emacs — `cx new` blocks Emacs for a while (DEFERRED)
 
+**Status (triaged 2026-09-01): STILL-OPEN, deferred by design.** cx at HEAD still runs the synchronous wait_for_agency poll (up to 30 s) and blocking emacsclient evals; no async conversion exists. The ticket's own DO-NOT-PICK-UP note stands -- needs Joe's go-ahead plus a timing repro separating the wait from the first turn.
+
 Observed by Joe, 2026-06-10. Parking for "another time" — do NOT pick up without
 Joe's go-ahead.
 

@@ -4,14 +4,14 @@
  ;; cross-cutting (zai-3 triage, verified): failure-census.py:58 filters state in (failed,cancelled),
  ;; so terminal codes on the 179 `delivering` jobs are invisible -- it hides 2 of the 7 ticketed classes.
  ;; Fix-or-close pass should include delivering-state terminal codes or drain the stuck deliveries.
- {:ticket "T-agency-desktop-save.md" :status :unknown :status-line ""}
+ {:ticket "T-agency-desktop-save.md" :status :done-in-fact :triaged-by "zai-5 invoke-1788294737197-7158-827a121f, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-car3-phase2-impl.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-car3-queue-routing-design-note.md" :status :partial :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line "model-only proposal for ratification. No implementation is included in"}
  {:ticket "T-car3-queue-routing.md" :status :superseded :triaged-by "codex-5 invoke-1788294329332-7138-9bb9f7de, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-codex-auto-bellback.md" :status :done-in-fact :triaged-by "codex-6 invoke-1788294334077-7140-8e9f37aa, reviewed claude-1 2026-09-01" :status-line ""}
- {:ticket "T-cx-new-blocks-emacs.md" :status :unknown :status-line ""}
+ {:ticket "T-cx-new-blocks-emacs.md" :status :still-open :triaged-by "zai-5 invoke-1788294737197-7158-827a121f, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-devmap-forward-model-calibration.md" :status :scoped :status-line "DESIGNED, NOT STARTED.** Joe's call: ticket it rather than deep-dive"}
- {:ticket "T-dispatch-clock-excursion-prefix.md" :status :unknown :status-line ""}
+ {:ticket "T-dispatch-clock-excursion-prefix.md" :status :done-in-fact :triaged-by "zai-5 invoke-1788294737197-7158-827a121f, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-durable-queue-rename-and-tidies.md" :status :done-in-fact :triaged-by "codex-6 invoke-1788294334077-7140-8e9f37aa, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-evidence-pinned-to-mutable-prose-26082026.md" :status :partial :triaged-by "zai-1 invoke-1788294731880-7157-89622262, reviewed claude-1 2026-09-01" :status-line ""}
  {:ticket "T-exogenous-evidence-update-rule.md" :status :blocked :status-line "DESIGN CONSTRAINT. Blocked on a prior question \u2014 see Blocker.**"}
@@ -37,5 +37,5 @@
  {:ticket "T-watu-replay-layer.md" :status :scoped :status-line "SCOPED, NOT STARTED.**"}
  {:ticket "T-wm-turns-are-not-operator-turns.md" :status :open :status-line "open. **Diagnosis substantially corrected 2026-08-27 \u2014 see"}
  {:ticket "T-wm-wrong-corpus-26082026.md" :status :partial :triaged-by "zai-1 invoke-1788294731880-7157-89622262, reviewed claude-1 2026-09-01" :status-line ""}
- {:ticket "T-zai-chat-transient-timeout.md" :status :unknown :status-line ""}
+ {:ticket "T-zai-chat-transient-timeout.md" :status :still-open :triaged-by "zai-5 invoke-1788294737197-7158-827a121f, reviewed claude-1 2026-09-01" :status-line ""}
 ]
