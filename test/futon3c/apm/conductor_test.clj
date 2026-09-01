@@ -468,6 +468,22 @@
       (is (= "Apply it independently of the subject."
              (:offer/pattern-body offer))))))
 
+(deftest pattern-surface-hook-falls-back-to-entity-source
+  (let [content #'conductor/pattern-surface-content]
+    (is (= "Find the Library's Measure-Theoretic Statement Before Rebuilding It"
+           (:offer/pattern-hook
+            (content {:entity
+                      {:source
+                       "Find the Library's Measure-Theoretic Statement Before Rebuilding It"
+                       :entity/props {:pattern/then "Use the library API."}}}))))
+    (is (= "The authored hook wins."
+           (:offer/pattern-hook
+            (content {:entity {:source "Fallback text."
+                               :entity/props {:hook "The authored hook wins."}}}))))
+    (is (not (contains? (content {:entity {:entity/props
+                                           {:pattern/then "No hook here."}}})
+                        :offer/pattern-hook)))))
+
 ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
 ;; merged with feat/registration-seat-keys) and must not be edited, so the
 ;; fixture stages a staffed copy under a temp path for the machine to read.

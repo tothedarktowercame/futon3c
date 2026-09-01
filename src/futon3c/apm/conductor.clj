@@ -488,7 +488,7 @@
 (defn- pattern-surface-content [surface]
   (let [entity (or (:entity surface) surface)
         props (or (:entity/props entity) (:props entity) entity)
-        hook (or (:hook props) (:pattern/hook props))
+        hook (or (:hook props) (:pattern/hook props) (:source entity))
         body (or (:body props) (:pattern/body props))
         content (when (and (map? props) (seq props)) props)]
     (cond-> {}
