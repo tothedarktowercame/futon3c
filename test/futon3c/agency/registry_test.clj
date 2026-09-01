@@ -45,6 +45,68 @@
   [^CountDownLatch latch message]
   (is (.await latch 3 TimeUnit/SECONDS) message))
 
+(defn- register-test-agent!
+  ([agent-id]
+   (register-test-agent! agent-id {}))
+  ([agent-id metadata]
+   (reg/register-agent!
+    {:agent-id (fix/make-agent-id agent-id)
+     :type :codex
+     :invoke-fn (fn [_prompt _session-id] {:result "ok"})
+     :capabilities [:edit]
+     :metadata metadata})))
+
+(defn- registry-key-count
+  []
+  (count @(var-get (ns-resolve 'futon3c.agency.registry '!registry))))
+
+(deftest persona-aliases-resolve-without-adding-registry-identities
+  (register-test-agent! "codex-persona-target")
+  (register-test-agent! "registered-persona")
+  (register-test-agent! "proxy-persona-target" {:proxy? true})
+  (let [target (reg/get-agent "codex-persona-target")
+        bare-winner (reg/get-agent "registered-persona")
+        key-count (registry-key-count)]
+    (with-redefs [reg/agent-personas
+                  (constantly {"countdown-control" "codex-persona-target"
+                               "missing-persona" "not-registered"
+                               "proxy-persona" "proxy-persona-target"
+                               "registered-persona" "not-registered"})]
+      (testing "a persona resolves to the registered target record everywhere"
+        (is (identical? target (reg/get-agent "countdown-control")))
+        (is (reg/agent-registered? "countdown-control"))
+        (is (contains? (reg/addressable-names) "countdown-control")))
+      (testing "missing and proxy targets do not resolve"
+        (is (nil? (reg/get-agent "missing-persona")))
+        (is (nil? (reg/get-agent "proxy-persona")))
+        (is (not (contains? (reg/addressable-names) "missing-persona")))
+        (is (not (contains? (reg/addressable-names) "proxy-persona"))))
+      (testing "a registered bare id takes precedence over its persona binding"
+        (is (identical? bare-winner (reg/get-agent "registered-persona"))))
+      (testing "persona lookup never adds registry keys"
+        (is (= key-count (registry-key-count)))))))
+
+(deftest empty-persona-map-preserves-ordinary-resolution
+  (register-test-agent! "ordinary-agent")
+  (with-redefs [reg/agent-personas (constantly {})]
+    (is (= "ordinary-agent"
+           (get-in (reg/get-agent "ordinary-agent") [:agent/id :id/value])))
+    (is (nil? (reg/get-agent "unregistered-persona")))
+    (is (contains? (reg/addressable-names) "ordinary-agent"))
+    (is (not (contains? (reg/addressable-names) "unregistered-persona")))))
+
+(deftest persona-bindings-can-be-reloaded-without-restarting
+  (let [read-personas (ns-resolve 'futon3c.agency.registry
+                                  'read-agent-personas)]
+    (try
+      (with-redefs-fn {read-personas
+                       (constantly {"countdown-control" "claude-owner"})}
+        #(is (= {"countdown-control" "claude-owner"}
+                (reg/reload-agent-personas!))))
+      (is (= {"countdown-control" "claude-owner"} (reg/agent-personas)))
+      (finally
+        (reg/reload-agent-personas!)))))
+
 (defn- await-status-publish-idle!
   []
   (let [state (var-get

@@ -1,0 +1,3 @@
+;; Persona names map to the registered agent ids that currently inhabit them.
+;; Example: {"countdown-control" "claude-4"}
+{}
