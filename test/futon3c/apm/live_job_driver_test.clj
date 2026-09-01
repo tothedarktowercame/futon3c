@@ -980,6 +980,23 @@
         (is (= :awaiting-terminal (:status again)))
         (is (= 2 (count (filter #{:receipt} @calls))))))))
 
+(deftest receipt-provider-boundary-state-survives-live-job-state-wrapping
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-guide" :state :done})
+        retry-state {:state/type :promotion
+                     :stage :awaiting-transport-retry
+                     :transport-retry/not-before-ms 601000}
+        inputs (assoc (effects calls job)
+                      :receipt-provider
+                      (fn [_ _ _ _]
+                        {:ok true :status :transport-retry-scheduled
+                         :state retry-state}))
+        dispatched (sut/drive! (assoc inputs :job-fn (fn [_] {:state :running})))
+        waiting (sut/drive! (assoc inputs :state (:state dispatched)))]
+    (is (= :transport-retry-scheduled (:status waiting)))
+    (is (= :live-job-dispatched (get-in waiting [:state :state/type])))
+    (is (= retry-state (:provider/state waiting)))))
+
 (deftest transport-classification-is-not-a-whole-tree-scan
   ;; transport-failure? checks THIS failure's own error envelope. An earlier
   ;; version walked the validated value with tree-seq, which would also match

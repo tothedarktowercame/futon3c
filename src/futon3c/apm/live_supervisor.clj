@@ -147,13 +147,13 @@
                      :finding parked}))
 
                 (= :waiting-transport-retry status-class)
-                (let [projected (project-fn)
+                (let [retry-state (or (:provider/state driven)
+                                      (:state driven))
+                      projected (project-fn)
                       parked (when (:ok projected)
                                (park-fn {:awaiting []
                                          :retry/not-before-ms
-                                         (get-in driven
-                                                 [:state
-                                                  :transport-retry/not-before-ms])
+                                         (:transport-retry/not-before-ms retry-state)
                                          :payload continuation-payload}))]
                   (cond
                     (not (:ok projected))
@@ -163,14 +163,13 @@
                     {:ok true :status :transport-retry-scheduled
                      :phase (:phase action) :projection projected :park parked
                      :retry/not-before-ms
-                     (get-in driven [:state :transport-retry/not-before-ms])
+                     (:transport-retry/not-before-ms retry-state)
                      :transport-retry
-                     {:attempt (get-in driven [:state :transport-retry/attempt])
+                     {:attempt (:transport-retry/attempt retry-state)
                       :max-attempts
-                      (get-in driven [:state
-                                      :transport-retry/max-attempts])}
+                      (:transport-retry/max-attempts retry-state)}
                      :transport-retry/history
-                     (get-in driven [:state :transport-retry/history])}
+                     (:transport-retry/history retry-state)}
                     :else
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))

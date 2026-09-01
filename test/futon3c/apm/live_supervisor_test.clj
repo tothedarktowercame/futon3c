@@ -90,6 +90,23 @@
     (is (= [] (get-in (last @calls) [1 :awaiting])))
     (is (= 601000 (get-in (last @calls) [1 :retry/not-before-ms])))))
 
+(deftest scheduled-provider-transport-retry-preserves-provider-boundary
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls
+                      {:ok true :status :transport-retry-scheduled
+                       :state {:state/type :live-job-dispatched}
+                       :provider/state
+                       {:transport-retry/not-before-ms 601000
+                        :transport-retry/attempt 0
+                        :transport-retry/max-attempts 3
+                        :transport-retry/history [{:attempt 0}]}}))]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= 601000 (:retry/not-before-ms result)))
+    (is (= {:attempt 0 :max-attempts 3} (:transport-retry result)))
+    (is (= [{:attempt 0}] (:transport-retry/history result)))
+    (is (= 601000 (get-in (last @calls) [1 :retry/not-before-ms])))))
+
 (deftest provider-usage-limit-parks-until-recorded-resumption-time
   (let [calls (atom [])
         result (sut/tick!

@@ -689,7 +689,9 @@
                 ;; may turn the live job into :live-job-certified.
                 (and (some? (:status provided))
                      (not= :certified (:status provided)))
-                (assoc provided :state state)
+                (cond-> (assoc provided :state state)
+                  (:state provided)
+                  (assoc :provider/state (:state provided)))
 
                 (not (map? (:certificate provided)))
                 {:ok false
