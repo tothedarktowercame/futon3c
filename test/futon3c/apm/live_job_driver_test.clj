@@ -466,9 +466,11 @@
 
 (deftest cached-posthoc-origin-is-reclassified-by-current-policy
   (let [state {:state/type :live-job-dispatched
+               :request {:dispatch/id "original"}
                :active-request {:dispatch/id "original"}
                :ticket {:job-id "job-1"}
                :activation/accepted? true
+               :terminal-collection {:evidence {:collection/id "collection-1"}}
                :terminal-repair-attempts 1
                :apparatus-repair-attempts 0
                :posthoc-rejection
@@ -478,6 +480,7 @@
         result (sut/drive!
                 (assoc (effects (atom []) (atom nil))
                        :state state
+                       :request (:active-request state)
                        :job-fn (constantly {:job-id "job-1" :state :done})
                        :posthoc-fault-origin-fn (constantly :apparatus)
                        :terminal-repair-request-fn
