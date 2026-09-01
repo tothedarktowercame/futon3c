@@ -1064,6 +1064,25 @@
        (assoc :findings [:guide-mode-authority-mismatch]
               :repair/fault-origin :apparatus)))))
 
+(defn posthoc-fault-origin
+  "Classify failures discovered after a role terminal has validated.
+
+  Transport failures belong to the apparatus even when the transport envelope
+  is nested under a provider finding.  Treating them as agent faults spends the
+  role's correction budget on an observation the agent cannot repair."
+  [active-request fresh-request failure]
+  (let [component (or (:error/component failure)
+                      (get-in failure [:error :error/component])
+                      (get-in failure [:finding :error/component])
+                      (get-in failure [:finding :error :error/component]))]
+    (if (or (= :transport component)
+            (and (= :frame-cycle-guide-mode-invalid (:error/code failure))
+                 (nil? (:mode active-request))
+                 (contains? #{:store-mode :harness-mode}
+                            (:mode (or fresh-request active-request)))))
+      :apparatus
+      :agent)))
+
 (declare guide-promotion-step!)
 
 (defn run-live!
@@ -1127,12 +1146,7 @@
     :terminal-validator validate-terminal
     :posthoc-fault-origin-fn
     (fn [active-request failure]
-      (if (and (= :frame-cycle-guide-mode-invalid (:error/code failure))
-               (nil? (:mode active-request))
-               (contains? #{:store-mode :harness-mode}
-                          (:mode (or fresh-request active-request))))
-        :apparatus
-        :agent))
+      (posthoc-fault-origin active-request fresh-request failure))
     :terminal-repair-request-fn
     (fn [active-request ticket job failure]
       (posthoc-terminal-repair-request fresh-request active-request ticket job

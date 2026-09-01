@@ -483,6 +483,20 @@
     (is (:ok agent))
     (is (= :agent (get-in agent [:request :repair/fault-origin])))))
 
+(deftest posthoc-transport-failure-is-apparatus-origin
+  (let [request {:dispatch/type :guide-intervention :mode :store-mode}
+        failure {:ok false
+                 :error/code :promotion-candidate-edge-write-failed
+                 :finding {:ok false
+                           :error {:error/component :transport
+                                   :error/code :memory-assert-unreachable}}}]
+    (is (= :apparatus
+           (sut/posthoc-fault-origin request request failure)))
+    (is (= :agent
+           (sut/posthoc-fault-origin
+            request request
+            {:ok false :error/code :promotion-candidate-invalid})))))
+
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"
                  :frame-id "f19" :problem-id "a01J05"}
