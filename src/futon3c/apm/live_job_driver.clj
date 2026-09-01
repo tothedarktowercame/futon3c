@@ -663,6 +663,16 @@
             (let [provided (receipt-provider active-request (:ticket state)
                                              job validated)]
               (cond
+                ;; Promotion has already spent and certified its bounded
+                ;; transport retries.  This typed result belongs to the frame
+                ;; queue, which records the apparatus park and advances.  Do
+                ;; not cache it as a role-terminal rejection: doing so asks
+                ;; the completed role to repair substrate transport and hides
+                ;; the queue transition behind a new invalid repair request.
+                (= :promotion-apparatus-repair-exhausted
+                   (:error/code provided))
+                provided
+
                 (not (:ok provided))
                 (let [provided (cond-> provided
                                  (fn? posthoc-fault-origin-fn)

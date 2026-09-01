@@ -424,6 +424,34 @@
     (is (false? (:ok (sut/reopen-posthoc-rejection
                       state :different-error "wrong target"))))))
 
+(deftest terminal-promotion-apparatus-exhaustion-passes-to-frame-queue
+  (let [calls (atom [])
+        provider-state {:state/type :promotion
+                        :stage :awaiting-apparatus-repair}
+        result
+        (sut/drive!
+         (assoc (effects calls
+                         (atom {:job-id "job-1" :agent-id "f19-proctor"
+                                :state :done}))
+                :state {:state/type :live-job-dispatched
+                        :request request
+                        :ticket {:job-id "job-1"}
+                        :activation/accepted? true}
+                :receipt-provider
+                (fn [& _]
+                  {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :repair/kind :promotion-publication
+                   :repair/attempts 1
+                   :findings [:transport-unavailable]
+                   :state provider-state})))]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= provider-state (:state result)))
+    (is (not-any? #(and (vector? %)
+                        (= :live-job-dispatched (second %)))
+                  @calls))))
+
 (deftest apparatus-repair-does-not-consume-the-agent-repair-turn
   (let [announcements (atom 0)
         repairs (atom [])
