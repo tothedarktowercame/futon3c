@@ -593,9 +593,17 @@
          (when (contains? routes-enabled :sibling)
            (for [pattern seed-patterns
                  edge (attachments-fn pattern)
-                 :let [memory-id (attachment-memory-id edge)]
+                 :let [memory-id (attachment-memory-id edge)
+                       ;; memory/assert props carry the deposited :name/:hook
+                       ;; (promotion_candidate_store/memory-edge); prefer them
+                       ;; over a per-memory substrate read.
+                       edge-name (get-in edge [:hx/props :name])
+                       edge-hook (get-in edge [:hx/props :hook])]
                  :when (and memory-id (not (seed-memory-set memory-id)))]
-             [memory-id {:route :sibling :hops 1 :pattern pattern}]))
+             [memory-id (cond-> {:route :sibling :hops 1 :pattern pattern}
+                          (and (some? edge-name) (some? edge-hook))
+                          (assoc :offer/name edge-name
+                                 :offer/hook edge-hook))]))
          (for [[pattern hops] why-patterns
                edge (attachments-fn pattern)
                :let [memory-id (attachment-memory-id edge)]
@@ -625,8 +633,13 @@
                                 (conj (route-key route) memory-id)))
                      vec)
         selected (vec (take cap ordered))
+        from-edge-props (count (filter #(and (= :sibling (get-in % [1 :route]))
+                                             (some? (get-in % [1 :offer/name])))
+                                       selected))
         sibling-selected (if memory-fn
-                           (filterv #(= :sibling (get-in % [1 :route])) selected)
+                           (filterv #(and (= :sibling (get-in % [1 :route]))
+                                          (nil? (get-in % [1 :offer/name])))
+                                    selected)
                            [])
         enrichment-results
         (bounded-parallel-map
@@ -646,7 +659,8 @@
         enrichment {:attempted (count sibling-selected)
                     :enriched (count enrichment-by-memory)
                     :failed (- (count sibling-selected)
-                               (count enrichment-by-memory))}
+                               (count enrichment-by-memory))
+                    :from-edge-props from-edge-props}
         offered-pattern-ids
         (->> selected
              (keep (comp :pattern second))

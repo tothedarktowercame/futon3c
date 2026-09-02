@@ -237,9 +237,34 @@
                                :offer/name "Sibling memory"
                                :offer/hook "Prefer this relevant memory."}]]
            (:routes result)))
-    (is (= {:attempted 1 :enriched 1 :failed 0}
+    (is (= {:attempted 1 :enriched 1 :failed 0 :from-edge-props 0}
            (:cascade/enrichment result)))
     (is (= #{:sibling} (:routes-enabled result)))))
+
+(deftest sibling-offers-enriched-from-edge-props-without-reads
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        sibling (-> (cascade-edge "memory/sibling" "pattern/seed" "a02A02")
+                    (assoc-in [:hx/props :name] "Edge-borne name")
+                    (assoc-in [:hx/props :hook] "Edge-borne hook."))
+        reads (atom [])
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf]
+                         "pattern/seed" [leaf sibling]}
+                        {})
+                       {:routes #{:sibling} :cap 10
+                        :memory-fn (fn [memory-id]
+                                     (swap! reads conj memory-id)
+                                     nil)}))]
+    (is (= [] @reads) "props-borne offers are never read")
+    (is (= ["memory/sibling"
+            {:route :sibling :hops 1 :pattern "pattern/seed"
+             :offer/name "Edge-borne name"
+             :offer/hook "Edge-borne hook."}]
+           (second (:routes result))))
+    (is (= {:attempted 0 :enriched 0 :failed 0 :from-edge-props 1}
+           (:cascade/enrichment result)))))
 
 (deftest sibling-enrichment-fails-soft-after-cap
   (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
@@ -260,7 +285,7 @@
             ["memory/1" {:route :sibling :hops 1 :pattern "pattern/seed"}]]
            (:routes result)))
     (is (= ["memory/1"] @reads) "discarded offers are never read")
-    (is (= {:attempted 1 :enriched 0 :failed 1}
+    (is (= {:attempted 1 :enriched 0 :failed 1 :from-edge-props 0}
            (:cascade/enrichment result)))))
 
 (deftest excluded-memories-are-not-offered-by-any-route
