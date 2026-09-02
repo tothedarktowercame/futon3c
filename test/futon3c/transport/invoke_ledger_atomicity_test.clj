@@ -160,3 +160,32 @@
         (reset! ledger-atom before-ledger)
         (reset! index-atom before-index)
         (delete-tree! dir)))))
+
+(deftest multi-chunk-persist-round-trips
+  ;; D13 regression (claude-2): the persist writes in 1MB chunks so no
+  ;; handler thread ever caches a ledger-sized direct buffer (the 2026-09-02
+  ;; outage: a 170MB single write exhausted MaxDirectMemory). A >2-chunk
+  ;; ledger must round-trip byte-exactly through the chunked path.
+  (testing "a ~3MB ledger persists and reads back equal via chunked writes"
+    (let [dir (temp-dir)
+          path (str (io/file dir "jobs.edn"))
+          filler (apply str (repeat 1500 "x"))
+          ledger {:version 1
+                  :next-seq 2048
+                  :job-order (vec (map #(str "job-" %) (range 2048)))
+                  :trace->job {}
+                  :jobs (into {} (map (fn [i]
+                                        [(str "job-" i)
+                                         {:job-id (str "job-" i)
+                                          :state "done"
+                                          :events [{:type "prompt" :text filler}]}])
+                                      (range 2048)))}]
+      (try
+        (with-redefs-fn {#'http/invoke-jobs-store-path (constantly path)}
+          (fn []
+            (#'http/persist-invoke-jobs-ledger! ledger)
+            (is (> (.length (io/file path)) (* 2 1024 1024))
+                "fixture is large enough to exercise multiple chunks")
+            (is (= ledger (edn/read-string (slurp path)))
+                "chunked write round-trips byte-exactly")))
+        (finally (delete-tree! dir))))))

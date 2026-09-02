@@ -333,15 +333,26 @@
                                     (make-array java.nio.file.attribute.FileAttribute 0))
           renamed? (volatile! false)]
       (try
-        (let [bytes (.getBytes (pr-str ledger) "UTF-8")]
+        (let [bytes (.getBytes (pr-str ledger) "UTF-8")
+              ;; D13 fix: write in bounded chunks. FileChannel/write of a heap
+              ;; buffer borrows a per-thread cached DIRECT buffer sized to the
+              ;; buffer's remaining bytes, so one whole-ledger write made every
+              ;; handler thread cache a ledger-sized direct buffer — at 170MB
+              ;; that exhausted MaxDirectMemory (the 2026-09-02 outage). A 1MB
+              ;; cap keeps the scratch buffers trivial forever.
+              chunk-size (int (* 1024 1024))]
           (with-open [channel (FileChannel/open
                                tmp
                                (into-array StandardOpenOption
                                            [StandardOpenOption/WRITE
                                             StandardOpenOption/TRUNCATE_EXISTING]))]
-            (let [buffer (ByteBuffer/wrap bytes)]
-              (while (.hasRemaining buffer)
-                (.write channel buffer)))
+            (loop [offset 0]
+              (when (< offset (alength bytes))
+                (let [len (min chunk-size (- (alength bytes) offset))
+                      buffer (ByteBuffer/wrap bytes offset len)]
+                  (while (.hasRemaining buffer)
+                    (.write channel buffer))
+                  (recur (+ offset len)))))
             (.force channel true)))
         (when *invoke-jobs-persist-stage-hook*
           (*invoke-jobs-persist-stage-hook* :temp-forced
