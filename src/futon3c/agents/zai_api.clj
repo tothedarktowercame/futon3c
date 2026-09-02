@@ -1109,11 +1109,13 @@ CALLS contains maps of tool name, arguments, and result digest."
   (zaif/env-profile (or profile (getenv "FUTON3C_ZAI_PROFILE"))))
 
 (defn- default-zaif-inputs
-  [{:keys [mission mission-source gamma observations task-belief c-belief]}]
+  [{:keys [mission mission-source gamma gamma-source observations task-belief c-belief]}]
   {:task-belief (or task-belief
                     {:absence :d8/task-belief-actand-source-absent})
    :c-belief (or c-belief {})
    :gamma (or gamma {})
+   :gamma-source (or gamma-source
+                     (if mission :default-table-miss :default-no-mission))
    :mission mission
    :mission-source (or mission-source
                        (if mission :ctx/mission :d10/unclocked))

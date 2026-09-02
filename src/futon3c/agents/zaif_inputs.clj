@@ -133,6 +133,14 @@
           1.0))
     1.0))
 
+(defn- gamma-source-for
+  [cells mission]
+  (cond
+    (nil? mission) :default-no-mission
+    (or (contains? cells (name mission))
+        (contains? cells (keyword mission))) :table-cell
+    :else :default-table-miss))
+
 (defn- correction-rate-from-cell
   "Derive per-mission correction rate from a γ table cell's perf-history.
    Each -0.5 entry is a correction event; each +0.5 is an approval. Rate =
@@ -219,11 +227,13 @@
                            (if mission :ctx/mission :d10/unclocked))
         context-text (or (:context ctx) (:prompt ctx) "")
         gamma-val (gamma-for cells mission)
+        gamma-source (gamma-source-for cells mission)
         c-uncertainty (c-uncertainty-for mission rate-table)
         posting-stats (estimate-posting-stats context-text)]
     {:mission mission
      :mission-source mission-source
      :gamma {mission {:policy-precision gamma-val}}
+     :gamma-source gamma-source
      :task-belief (task-belief-from (:actand-query-result ctx))
      :c-belief {:operator-c-uncertainty c-uncertainty}
      :observations {:posting-stats posting-stats}}))
@@ -240,6 +250,9 @@
         {:task-belief task-belief-absence
          :c-belief {}
          :gamma {}
+         :gamma-source (if (:mission ctx)
+                         :default-table-miss
+                         :default-no-mission)
          :mission (:mission ctx)
          :mission-source (or (:mission-source ctx)
                              (if (:mission ctx) :ctx/mission :d10/unclocked))

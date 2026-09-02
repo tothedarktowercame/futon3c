@@ -49,9 +49,23 @@
       (is (= "M-futon-forward-model" (:mission inputs)))
       (is (= 0.7071067811865476
              (get-in inputs [:gamma "M-futon-forward-model" :policy-precision])))
+      (is (= :table-cell (:gamma-source inputs)))
       (is (= 1.0 (get-in inputs [:c-belief :operator-c-uncertainty])))
       (is (= task-belief-absence (:task-belief inputs)))
       (is (contains? (get-in inputs [:observations :posting-stats]) :total-docs)))))
+
+(deftest gamma-source-distinguishes-table-cell-and-defaults
+  (testing "a table cell that equals the uniform prior is still a table read"
+    (is (= :table-cell
+           (:gamma-source
+            (zinputs/hydrate-inputs {:mission "M-points-de-fuite"})))))
+  (testing "a named mission absent from the table uses the table-miss default"
+    (is (= :default-table-miss
+           (:gamma-source
+            (zinputs/hydrate-inputs {:mission "M-not-in-gamma-table"})))))
+  (testing "an unclocked input uses the no-mission default"
+    (is (= :default-no-mission
+           (:gamma-source (zinputs/hydrate-inputs {}))))))
 
 (deftest absent-task-belief-is-zero-and-auditable-end-to-end
   (let [inputs (zinputs/hydrate-inputs {:mission "M-no-actand"
