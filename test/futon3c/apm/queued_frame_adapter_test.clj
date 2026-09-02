@@ -151,52 +151,42 @@
     (is (= :claude-supervisor (:decision/owner park)))
     (is (true? (:decision/bell-required park)))))
 
-(deftest exhausted-role-terminal-repair-parks-with-prior-receipt-intact
-  (let [result
-        (sut/role-terminal-repair-park
-         {:frame frame
-          :role-state-path "/campaign/f30/live/guide-intervention-1.edn"
-          :ledger {:projection {:active/frame
-                                {:phase :guide-intervention-1}}
-                   :events [{:event/body
-                             {:certificate {:receipt/id "student-receipt"}}}]}
-          :result {:ok false
-                   :error/code :live-job-terminal-repair-exhausted
-                   :findings [:typed-submission-missing]
-                   :repair/attempts 1}})
-        park (:frame/park result)]
-    (is (= :frame-parked (:status result)))
-    (is (= :role-terminal-repair-frame-park (:state/type park)))
-    (is (= "f30" (:frame/id park)))
-    (is (= "p1" (:problem/id park)))
-    (is (= :guide-intervention-1 (:phase park)))
-    (is (= "/campaign/f30/live/guide-intervention-1.edn"
-           (:role/state-path park)))
-    (is (= "student-receipt" (:last-valid-receipt/id park)))
-    (is (= [:typed-submission-missing] (:role/findings park)))
-    (is (= :terminal-submission (:repair/kind park)))
-    (is (= 1 (:repair/attempts park)))
-    (is (= :claude-supervisor (:decision/owner park)))
-    (is (true? (:decision/bell-required park)))))
+(deftest exhausted-role-terminal-repair-is-a-typed-frame-void
+  (let [void-call (atom nil)
+        certificate {:certificate/type :frame-void
+                     :classification :role-terminal-unrecoverable
+                     :certificate/id "void-certificate"}
+        error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        result
+        (with-redefs [sut/apply-reviewed-void!
+                      (fn [request]
+                        (reset! void-call request)
+                        {:ok true :certificate certificate})]
+          (sut/void-exhausted-role-terminal!
+           {:frame frame :ledger-path "/campaign/f30/ledger.edn"
+            :actor "queue" :now "2026-08-28T09:00:00Z"
+            :result error}))]
+    (is (= :terminal-collected (:status result)))
+    (is (= certificate (:frame/void result)))
+    (is (= :role-terminal-unrecoverable (:classification @void-call)))
+    (is (= [:live-job-terminal-repair-exhausted :typed-submission-missing]
+           (:failures @void-call)))
+    (is (= "f30" (:frame-id @void-call)))
+    (is (= "p1" (:problem-id @void-call)))))
 
-(deftest under-evidenced-role-terminal-exhaustion-is-not-parked
+(deftest under-evidenced-role-terminal-exhaustion-is-not-voided
   (let [error {:ok false
                :error/code :live-job-terminal-repair-exhausted
                :findings [:typed-submission-missing]
                :repair/attempts 1}
-        complete {:frame frame
-                  :role-state-path "/campaign/f30/live/guide.edn"
-                  :ledger {:projection {:active/frame {:phase :guide-intervention-1}}
-                           :events [{:event/body
-                                     {:certificate {:receipt/id "receipt"}}}]}
+        complete {:frame frame :ledger-path "/campaign/f30/ledger.edn"
                   :result error}]
-    (doseq [input [(assoc complete :role-state-path nil)
-                   (assoc-in complete [:ledger :projection :active/frame :phase]
-                             nil)
-                   (assoc-in complete [:ledger :events] [])
-                   (assoc-in complete [:result :findings] [])
+    (doseq [input [(assoc-in complete [:result :findings] [])
                    (assoc-in complete [:result :repair/attempts] 0)]]
-      (is (= (:result input) (sut/role-terminal-repair-park input))))))
+      (is (= (:result input) (sut/void-exhausted-role-terminal! input))))))
 
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
@@ -538,7 +528,9 @@
     (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))
     (is (= :skipped (get-in result [:terminal-receipt :learning/outcome])))
     (is (= :apparatus-invalidated
-           (get-in result [:terminal-receipt :void/classification])))))
+           (get-in result [:terminal-receipt :void/classification])))
+    (is (= [:student-snapshot-not-campaign-cumulative]
+           (get-in result [:terminal-receipt :void/failed-invariants])))))
 
 (deftest statement-refuted-void-has-distinct-problem-outcome
   (let [void {:certificate/type :frame-void :certificate/id digest

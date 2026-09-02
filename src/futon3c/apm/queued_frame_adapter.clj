@@ -141,37 +141,34 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
-(defn role-terminal-repair-park
-  "Park a frame after bounded repair of a role's terminal submission is
-  exhausted. The last certified phase receipt remains the re-entry authority;
-  an untyped terminal is recorded as the finding, never accepted as a receipt."
-  [{:keys [frame ledger role-state-path result]}]
-  (let [receipt (last (keep #(get-in % [:event/body :certificate])
-                            (:events ledger)))
-        phase (get-in ledger [:projection :active/frame :phase])
-        park (awaiting-claude-decision
-              {:state/type :role-terminal-repair-frame-park
-               :frame/id (:frame/id frame)
-               :problem/id (:problem/id frame)
-               :phase phase
-               :role/state-path role-state-path
-               :last-valid-receipt/id (or (:receipt/id receipt)
-                                          (:certificate/id receipt))
-               :error/code (:error/code result)
-               :repair/kind :terminal-submission
-               :repair/attempts (:repair/attempts result)
-               :role/findings (:findings result)
-               :residual (pr-str (:findings result))})]
-    (if (and (= :live-job-terminal-repair-exhausted (:error/code result))
-             (every? #(and (string? %) (not (str/blank? %)))
-                     ((juxt :frame/id :problem/id :role/state-path
-                            :last-valid-receipt/id :residual) park))
-             (keyword? (:phase park))
-             (keyword? (:repair/kind park))
-             (pos-int? (:repair/attempts park))
-             (seq (:role/findings park)))
-      {:ok true :status :frame-parked :frame/park park}
-      result)))
+(defn void-exhausted-role-terminal!
+  "Disposition one frame whose role turn exhausted terminal repair.
+
+  This is a frame-fatal transition, not evidence that the campaign apparatus
+  is unsafe. The queue separately counts identical consecutive dispositions
+  and escalates a systematic sequence."
+  [{:keys [frame ledger-path result actor now]}]
+  (if-not (and (= :live-job-terminal-repair-exhausted (:error/code result))
+               (pos-int? (:repair/attempts result))
+               (vector? (:findings result))
+               (seq (:findings result))
+               (every? keyword? (:findings result)))
+    result
+    (let [voided (apply-reviewed-void!
+                  {:ledger-path ledger-path
+                   :frame-id (:frame/id frame)
+                   :problem-id (:problem/id frame)
+                   :classification :role-terminal-unrecoverable
+                   :failures (vec (distinct
+                                   (cons :live-job-terminal-repair-exhausted
+                                         (:findings result))))
+                   :actor (or actor "countdown-control")
+                   :now now})]
+      (if (:ok voided)
+        {:ok true :status :terminal-collected
+         :frame/void (:certificate voided)
+         :repair/attempts (:repair/attempts result)}
+        voided))))
 
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
@@ -341,6 +338,7 @@
                        :head (or (:receipt/final-head solve) (:solver heads))}
               :void/certificate-id (:certificate/id void)
               :void/classification (:classification void)
+              :void/failed-invariants (:failed-invariants void)
               :workspace/terminal-heads heads}
         receipt (assoc body :receipt/id (machine/ledger-digest [body]))
         checked (terminal/validate-terminal frame receipt)]
