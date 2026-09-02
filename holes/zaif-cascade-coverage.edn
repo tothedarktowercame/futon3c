@@ -1,0 +1,369 @@
+{:as-of
+ {:cascade "../futon3/checks/zaif-cascade.edn",
+  :cascade-members
+  [:ai4ci/funding-justification
+   :aif/hierarchical-budget-aware-action-selection
+   :aif/no-self-certification
+   :aif/status-gated-belief-update
+   :budgeted-action-selection/mana-gated-work
+   :equity/confident-adaptation-as-published
+   :equity/confident-adaptation-merged
+   :features/operator-turns-enter-the-observation-vector
+   :forward-model/graduate-strategy-by-outcome
+   :forward-model/inhabit-supplies-labels
+   :math-formalization-CA/measure-integration-api
+   :math-formalization-CV/frontier-bound-from-arc-hypotheses
+   :math-formalization-CV/holomorphic-disk-api
+   :math-strategy/missing-dependency-protocol
+   :or3/ask-first-then-bring-the-expert
+   :or3/openness-without-exposure
+   :ukrns/publication-cadence],
+  :cohort-turn "zai-turn-f1513520-b760-4b67-bbd1-b2941d3e0325",
+  :rounds-with-a-transcript 102,
+  :temperament :widen-to-the-marginal-gain-floor,
+  :withheld
+  "v0 arms, the transcript oracle, and every agreement or comparison number. This packet is for gating the rule table, not for reading a result off it."},
+ :contention
+ {:conflict-policy
+  "fo/fire (find_organise.clj:398) sorts by the cascade's own precedence, least first, and takes the FIRST rule whose THEN returns a value. There is no second policy and no tie-break of this file's own: a contention is decided by the precedence the constructor wrote, which is what makes O4 a law about this run rather than a property of the table.",
+  :rounds-where-more-than-one-cascade-rule-fires []},
+ :controls
+ {:grain-separation [],
+  :rules-not-in-the-cascade
+  [:war-machine/ambient-pattern-retrieval
+   :agent/budget-bounds-exploration
+   :agent/pause-is-not-failure],
+  :then-correspondence
+  [{:counterfactual? false,
+    :encodes
+    "\"Search the library on every turn as a background process.\"",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :war-machine/ambient-pattern-retrieval,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [15 18],
+    :then-source
+    "war-machine/ambient-pattern-retrieval.flexiarg:16-16"}
+   {:counterfactual? false,
+    :encodes
+    "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\"",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :math-strategy/missing-dependency-protocol,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [58 78],
+    :then-source
+    "math-strategy/missing-dependency-protocol.flexiarg:59-77"}
+   {:counterfactual? true,
+    :encodes
+    "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\"",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :agent/budget-bounds-exploration,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [18 21],
+    :then-source "agent/budget-bounds-exploration.flexiarg:19-19"}
+   {:counterfactual? true,
+    :encodes
+    "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\"",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :agent/pause-is-not-failure,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [18 21],
+    :then-source "agent/pause-is-not-failure.flexiarg:19-19"}]},
+ :members-with-no-rule
+ [:ai4ci/funding-justification
+  :aif/hierarchical-budget-aware-action-selection
+  :aif/no-self-certification
+  :aif/status-gated-belief-update
+  :budgeted-action-selection/mana-gated-work
+  :equity/confident-adaptation-as-published
+  :equity/confident-adaptation-merged
+  :features/operator-turns-enter-the-observation-vector
+  :forward-model/graduate-strategy-by-outcome
+  :forward-model/inhabit-supplies-labels
+  :math-formalization-CA/measure-integration-api
+  :math-formalization-CV/frontier-bound-from-arc-hypotheses
+  :math-formalization-CV/holomorphic-disk-api
+  :or3/ask-first-then-bring-the-expert
+  :or3/openness-without-exposure
+  :ukrns/publication-cadence],
+ :rules
+ [{:antecedent-holds-on-n-rounds 2,
+   :antecedent-holds-on-rounds [1 2],
+   :counterfactual? false,
+   :emits :retrieve,
+   :encodes
+   "\"Search the library on every turn as a background process.\"",
+   :first-round 1,
+   :id :war-machine/ambient-pattern-retrieval,
+   :in-the-cascade? false,
+   :last-round 2,
+   :precedence :not-a-member,
+   :then-source "war-machine/ambient-pattern-retrieval.flexiarg:16-16"}
+  {:antecedent-holds-on-n-rounds 68,
+   :antecedent-holds-on-rounds
+   [3
+    4
+    5
+    6
+    7
+    8
+    9
+    10
+    11
+    12
+    13
+    14
+    15
+    16
+    17
+    18
+    19
+    20
+    21
+    22
+    23
+    24
+    25
+    26
+    27
+    28
+    29
+    30
+    31
+    32
+    33
+    34
+    35
+    36
+    37
+    38
+    39
+    40
+    41
+    44
+    45
+    46
+    47
+    51
+    52
+    53
+    54
+    55
+    61
+    62
+    63
+    64
+    65
+    66
+    67
+    68
+    69
+    70
+    76
+    77
+    80
+    83
+    86
+    90
+    95
+    96
+    97
+    98],
+   :counterfactual? false,
+   :emits :act,
+   :encodes
+   "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\"",
+   :first-round 3,
+   :id :math-strategy/missing-dependency-protocol,
+   :in-the-cascade? true,
+   :last-round 98,
+   :precedence 8,
+   :then-source
+   "math-strategy/missing-dependency-protocol.flexiarg:59-77"}
+  {:antecedent-holds-on-n-rounds 78,
+   :antecedent-holds-on-rounds
+   [25
+    26
+    27
+    28
+    29
+    30
+    31
+    32
+    33
+    34
+    35
+    36
+    37
+    38
+    39
+    40
+    41
+    42
+    43
+    44
+    45
+    46
+    47
+    48
+    49
+    50
+    51
+    52
+    53
+    54
+    55
+    56
+    57
+    58
+    59
+    60
+    61
+    62
+    63
+    64
+    65
+    66
+    67
+    68
+    69
+    70
+    71
+    72
+    73
+    74
+    75
+    76
+    77
+    78
+    79
+    80
+    81
+    82
+    83
+    84
+    85
+    86
+    87
+    88
+    89
+    90
+    91
+    92
+    93
+    94
+    95
+    96
+    97
+    98
+    99
+    100
+    101
+    102],
+   :counterfactual? true,
+   :emits :yield,
+   :encodes
+   "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\"",
+   :first-round 25,
+   :id :agent/budget-bounds-exploration,
+   :in-the-cascade? false,
+   :last-round 102,
+   :precedence :not-a-member,
+   :then-source "agent/budget-bounds-exploration.flexiarg:19-19"}
+  {:antecedent-holds-on-n-rounds 78,
+   :antecedent-holds-on-rounds
+   [25
+    26
+    27
+    28
+    29
+    30
+    31
+    32
+    33
+    34
+    35
+    36
+    37
+    38
+    39
+    40
+    41
+    42
+    43
+    44
+    45
+    46
+    47
+    48
+    49
+    50
+    51
+    52
+    53
+    54
+    55
+    56
+    57
+    58
+    59
+    60
+    61
+    62
+    63
+    64
+    65
+    66
+    67
+    68
+    69
+    70
+    71
+    72
+    73
+    74
+    75
+    76
+    77
+    78
+    79
+    80
+    81
+    82
+    83
+    84
+    85
+    86
+    87
+    88
+    89
+    90
+    91
+    92
+    93
+    94
+    95
+    96
+    97
+    98
+    99
+    100
+    101
+    102],
+   :counterfactual? true,
+   :emits :ask,
+   :encodes
+   "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\"",
+   :first-round 25,
+   :id :agent/pause-is-not-failure,
+   :in-the-cascade? false,
+   :last-round 102,
+   :precedence :not-a-member,
+   :then-source "agent/pause-is-not-failure.flexiarg:19-19"}]}
