@@ -55,6 +55,26 @@
     (is (not (contains? (:event result) :independence/grade)))
     (is (some #{:r9/grade-is-computed} (:notes result)))))
 
+(deftest missing-seat-is-malformed-not-distinct
+  ;; Reviewer addition (claude-2): absence must not manufacture distinctness.
+  (testing "nil worker-seat refused"
+    (is (= :r9/verdict-event-malformed
+           (:error/code (ch/validate-verdict-event
+                         (ch/verdict-event {:author-seat adjudicator-seat
+                                            :proposal proposal
+                                            :verdict :approve
+                                            :adjudication {:rerun-witness :absent}})
+                         (constantly nil))))))
+  (testing "blank author-seat refused"
+    (is (= :r9/verdict-event-malformed
+           (:error/code (ch/validate-verdict-event
+                         (ch/verdict-event {:worker-seat worker-seat
+                                            :author-seat ""
+                                            :proposal proposal
+                                            :verdict :approve
+                                            :adjudication {:rerun-witness :absent}})
+                         (constantly nil)))))))
+
 (deftest constructor-emits-exact-declared-shape
   (is (= {:event :checked-handoff/verdict
           :worker-seat worker-seat

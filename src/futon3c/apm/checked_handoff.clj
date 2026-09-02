@@ -34,10 +34,25 @@
    exactly the event's proposal. Writer-supplied :grade or
    :independence/grade fields are removed and reported in :notes."
   [event resolve-witness]
-  (if (= (:author-seat event) (:worker-seat event))
+  (cond
+    ;; Reviewer fix (claude-2): a missing/blank seat must not read as
+    ;; "distinct". (= "a" nil) is false, so without this check a malformed
+    ;; event with no :worker-seat would sail through to
+    ;; :seat-string-distinctness — distinctness manufactured from absence.
+    (not (and (string? (:worker-seat event))
+              (string? (:author-seat event))
+              (seq (:worker-seat event))
+              (seq (:author-seat event))))
+    {:ok false
+     :error/code :r9/verdict-event-malformed
+     :event (dissoc event :grade :independence/grade)}
+
+    (= (:author-seat event) (:worker-seat event))
     {:ok false
      :error/code :r9/worker-authored-verdict-refused
      :event (dissoc event :grade :independence/grade)}
+
+    :else
     (let [witness-id (rerun-witness-id event)
           witness (when witness-id
                     (try
