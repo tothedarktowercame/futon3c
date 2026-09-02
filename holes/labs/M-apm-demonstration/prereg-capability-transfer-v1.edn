@@ -821,4 +821,48 @@
    "C-11 records the controller-derived close-frame audit and typed-admission
     gates live from f60. C-12 records, from f61, reviewed-edge kind authority,
     the unified :substitutive/:regulative vocabulary, and role cards that state
-    both model-output contracts. Historical missing kinds remain unknown."}]}
+    both model-output contracts. Historical missing kinds remain unknown."}
+
+  {:amendment 12
+   :at "2026-09-02T08:55Z"
+   :by "claude-1"
+   :authority
+   "Joe, 2026-09-02, in session: 'regarding the 500 declines... we should see
+    what we can do to intervene.'"
+   :kind :instrument-change
+   :what
+   "Sibling-route cascade offers carry the offered memory's own :offer/name
+    and :offer/hook. Source order: the memory/assert edge's :hx/props
+    :name/:hook when present (written at deposit by
+    promotion_candidate_store/memory-edge), else one bounded-retry evidence
+    read per gap; a failed read leaves that offer bare. The receipt's
+    :receipt/memory-cascade gains :cascade/enrichment
+    {:attempted :enriched :failed :from-edge-props}, so every attempt states
+    which source served it. Cap, routes, holdout, and the arm file are
+    unchanged (:cap stays 100; Joe has not ruled on lowering it). Code:
+    futon3c e5130e75 (codex-22, enrichment after dedup/cap, fail-soft) +
+    a14e2635 (review fix: edge-props first). Reloaded from master with f80 at
+    :solve and no student snapshot published, so every f80 student attempt
+    runs enriched."
+   :why
+   "f75-f79: 500 sibling offers delivered at cap, zero taken
+    (:used-via-cascade [] on every offer-receiving attempt), while every
+    memory actually used arrived via the base shelf, whose entries carry
+    :name and :hook. The offers were bare by construction -
+    {:memory-id :route :hops :pattern :pattern-hook nil} - so a student had
+    no basis to prefer any of a hundred opaque identifiers.
+    TN-fable-F71-F80-review sections 5 and 8; TN-opus-f47-observation, 'the
+    hook is stripped' and its 09-02 correction."
+   :prediction
+   "Within the next five student attempts that receive sibling offers,
+    :used-via-cascade is non-empty on at least one. FALSIFIER: if all five
+    decline, the sibling route is measured-and-declined WITH hooks attached,
+    and C-6 should close as an arm (the two minutes of expansion returned to
+    every dispatch) rather than be tuned further."
+   :boundary
+   "Offer-uptake comparisons across the reload are not poolable: before it a
+    decline was a bare id declined, after it a decline is a described memory
+    declined. :cascade/enrichment on each receipt marks which regime the
+    attempt ran under, including the degraded case (:from-edge-props 0 with
+    :failed > 0 means offers were effectively bare despite the code being
+    live)."}]}
