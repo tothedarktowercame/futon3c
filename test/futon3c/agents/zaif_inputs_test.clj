@@ -104,6 +104,17 @@
     (is (= (:task-belief inputs)
            (get-in entry [:evidence/body :inputs-snapshot :task-belief])))))
 
+(deftest gamma-source-error-fallback-is-typed
+  ;; Reviewer addition (claude-2): the one branch d6f1d898's tests leave
+  ;; unpinned -- the make-hydrator catch path must speak the same vocabulary.
+  (let [hydrator (zinputs/make-hydrator)]
+    (with-redefs [zinputs/hydrate-inputs (fn [_] (throw (ex-info "boom" {})))]
+      (is (= :default-no-mission (:gamma-source (hydrator {:context "x"})))
+          "missionless error fallback")
+      (is (= :default-table-miss
+             (:gamma-source (hydrator {:mission "M-x" :context "x"})))
+          "mission-bearing error fallback"))))
+
 (deftest live-recorded-vocabulary-transition-pin
   ;; LIVE-PIN (board rule, 2026-09-02): values captured verbatim from live
   ;; record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (zai-3, 2026-08-09,
