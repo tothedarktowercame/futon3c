@@ -588,4 +588,41 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No candidate persistence, "
         "independent review, union snapshot, or Guide receipt was invented; the "
-        "candidate remains preserved but was not admitted as reusable memory.")}]}
+        "candidate remains preserved but was not admitted as reusable memory.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :last-valid-receipt/id
+   "69f496250ad03fe3261bfea12cff6ae75d143937547d320801583899db861006"
+   :frame/id "f73"
+   :decision/at "2026-09-01T07:52:00Z"
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/not-done
+   (str
+    "The frame is not voided or forgotten. No Student receipt, proof close, "
+    "or memory provenance was invented; the two reported residual proof "
+    "obligations remain open and the exact rejected terminal is preserved.")
+   :decision/recommended-route
+   (str
+    "Keep the last valid Guide-2 receipt and the rejected Student terminal "
+    "as diagnostic evidence. If b94A01 is revisited, begin from a clean "
+    "workspace and either surface every used memory through the controller "
+    "snapshot or use none; independently revalidate the reported partial "
+    "Lean changes before adopting them. Do not certify or replay this "
+    "terminal as a valid Student receipt.")
+   :decision/by "codex-17"
+   :problem/id "b94A01"
+   :decision/rationale
+   (str
+    "The preserved third Student terminal reports substantive compiling "
+    "progress and two remaining proof obligations, but declares memory "
+    "e-d97e95e6-f2de-4cf1-a70f-c171ba8c6045 as used. That identifier is "
+    "absent from both the authoritative snapshot's accessible set and the "
+    "surfaced set. The Student's own account says it used commutator memory, "
+    "so the validator correctly rejected the receipt rather than certifying "
+    "unaccounted provenance. The bounded terminal repair then failed to "
+    "produce a conformant replacement. This is agent submission "
+    "nonconformance; the fail-closed apparatus behavior is correct.")
+   :decision/class :student-unsurfaced-memory-use
+   :decision/owner :claude-supervisor
+   :decision/status :decided}]}
