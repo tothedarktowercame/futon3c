@@ -282,10 +282,78 @@
       (let [entries (mapv #(get-in @store [:entries %]) (:order @store))
             events (mapv #(get-in % [:evidence/body :event]) entries)
             turn-ids (set (keep #(get-in % [:evidence/body :turn-id]) entries))]
-        (is (= [:turn-start :zaif-arm-choice :turn-round] events))
+        (is (= [:turn-start :zaif-arm-choice :zaif-arm-choice :turn-round]
+               events))
         (is (= 1 (count turn-ids)))
         (is (= [:transcript :turn-start :zaif]
                (:evidence/tags (first entries))))))))
+
+(deftest clocked-mission-enters-live-shaped-zaif-decision
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store :profile :zaif})]
+    (with-redefs [zai/chat! (fn [_client _opts _messages]
+                              (text-response "done"))]
+      (invoke "continue without naming the task" nil
+              {:dispatch-id "job-d10"
+               :mission-id "M-futon-forward-model"})
+      (let [entry (->> (:order @store)
+                       (map #(get-in @store [:entries %]))
+                       (filter #(= :zaif-arm-choice
+                                   (get-in % [:evidence/body :event])))
+                       first)
+            body (:evidence/body entry)]
+        (is (= "M-futon-forward-model" (:mission body)))
+        (is (= "M-futon-forward-model"
+               (get-in body [:inputs-snapshot :mission])))
+        (is (= :dispatch/mission-id
+               (get-in body [:inputs-snapshot :mission-source])))
+        (is (= 0.7071067811865476 (:gamma-used body))
+            "the clocked mission selects its burned-in gamma cell")))))
+
+(deftest missionless-live-shaped-zaif-decision-is-typed-unclocked
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store :profile :zaif})]
+    (with-redefs [zai/chat! (fn [_client _opts _messages]
+                              (text-response "done"))]
+      (invoke "continue M-futon-forward-model" nil {:dispatch-id "job-unclocked"})
+      (let [body (->> (:order @store)
+                      (map #(get-in @store [:entries % :evidence/body]))
+                      (filter #(= :zaif-arm-choice (:event %)))
+                      first)]
+        (is (nil? (:mission body)))
+        (is (= :d10/unclocked
+               (get-in body [:inputs-snapshot :mission-source])))))))
+
+(deftest live-missionless-record-vocabulary-transition-pin
+  ;; LIVE PIN: body fields copied verbatim from
+  ;; e-0f2f9aec-6240-40e9-a25a-e45d9452076f. It predates D10 and therefore
+  ;; has neither a body mission nor an inputs-snapshot mission-source.
+  (let [live-body
+        {:turn-id "zai-turn-a5e293f5-a9f5-4d1f-89e0-0f415d1ecaa9"
+         :inputs-digest {:sha256-16 "8152eff576f2dc85" :chars 211}
+         :arm :retrieve
+         :why "zaif v0 chose retrieve: retrieve 0.746, act 0.000, ask 0.150, yield 0.000"
+         :g-terms {:retrieve 0.7456643332946383 :act 0.0 :ask 0.15 :yield 0.0}
+         :constant 0.15
+         :pairing-key "zai-turn-a5e293f5-a9f5-4d1f-89e0-0f415d1ecaa9:r1"
+         :gamma-used 1.0
+         :round 1
+         :event :zaif-arm-choice
+         :constant-label :sweep
+         :operator-attention-cost 0.15
+         :inputs-snapshot
+         {:task-belief {}
+          :c-belief {:operator-c-uncertainty 0.3}
+          :gamma "{nil {:policy-precision 1.0}}"
+          :observations {:posting-stats
+                         {:total-docs 106 :dfs [1 1 1 1 1 1 1 1 1 1]
+                          :estimated-tokens 212}}}}
+        new-mission-source :d10/unclocked]
+    (is (nil? (:mission live-body)))
+    (is (nil? (get-in live-body [:inputs-snapshot :mission-source])))
+    (is (= :d10/unclocked new-mission-source))
+    (is (not= (get-in live-body [:inputs-snapshot :mission-source])
+              new-mission-source))))
 
 (deftest invoke-construction-requires-evidence-store
   (is (thrown-with-msg?
@@ -295,13 +363,15 @@
                             :api-key "test-key"
                             :memory-mode :none}))))
 
-(deftest transcript-persistence-failure-is-counted-and-stops-turn
+(deftest transcript-persistence-failure-is-counted-without-killing-turn
   (let [store (atom {:entries {} :order []})
-        invoke (make-invoke {:evidence-store store})
         before (:failure-count (zai/transcript-persistence-status))]
     (with-redefs [boundary/append!
                   (fn [& _] {:ok false :error/code :store-rejected})]
-      (is (thrown? clojure.lang.ExceptionInfo (invoke "must be durable" nil))))
+      (is (nil? (#'zai/persist-turn-start!
+                 {:evidence-store store :agent-id "zai-test" :sid "sid"
+                  :dispatch-id "job" :turn-id "turn" :profile :zai
+                  :prompt "must remain a live turn"}))))
     (let [status (zai/transcript-persistence-status)]
       (is (= (inc before) (:failure-count status)))
       (is (string? (:last-error status))))))

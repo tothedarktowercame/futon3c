@@ -109,10 +109,11 @@
         (is (not= (:task-belief live-snapshot) (:task-belief inputs))
             "an audit can now distinguish post-D8b records from the 114-session corpus")))))
 
-(deftest hydrate-inputs-extracts-mission-from-context
-  (testing "mission extracted from context text when :mission not given"
+(deftest hydrate-inputs-does-not-infer-mission-from-context
+  (testing "prompt text is not a typed mission source"
     (let [inputs (zinputs/hydrate-inputs {:context "working on M-points-de-fuite today"})]
-      (is (= "M-points-de-fuite" (:mission inputs))))))
+      (is (nil? (:mission inputs)))
+      (is (= :d10/unclocked (:mission-source inputs))))))
 
 (deftest hydrator-fn-failure-path
   (testing "make-hydrator returns empty maps when gamma file is missing"

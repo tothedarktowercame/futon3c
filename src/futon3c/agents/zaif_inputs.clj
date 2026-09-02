@@ -198,14 +198,6 @@
          :dfs (vec (take 10 (sort dfs)))
          :estimated-tokens (min 2000 (* 2 (count words)))}))))
 
-(defn- extract-mission-from-ctx
-  "Try to extract a mission id from the ctx. Checks :mission key first,
-   then searches :context or :prompt text for M-/E- patterns."
-  [ctx]
-  (or (:mission ctx)
-      (when-let [text (or (:context ctx) (:prompt ctx))]
-        (first (re-seq #"[ME]-[a-z0-9-]+" (str text))))))
-
 (defn hydrate-inputs
   "Build controller inputs from ctx. Pure: reads cached γ table and derives
    beliefs. Returns the full inputs map for `decide`.
@@ -214,18 +206,23 @@
    seam. Its value must carry a finite numeric `:act-value`,
    `:pragmatic-value`, or `:expected-utility` and
    `:provenance {:source ... :query ...}`. Unprovenanced values are refused;
-   no task-belief is inferred from the other hydration channels. Any channel
-   that fails degrades to its typed empty default (failure discipline)."
+   no task-belief is inferred from the other hydration channels. Mission is
+   accepted only from ctx `:mission`, whose `:mission-source` is supplied by
+   the invoke boundary; prompt text is not a mission-identity source. Any
+   channel that fails degrades to its typed empty default (failure discipline)."
   [ctx]
   (let [gamma-data (or (load-gamma-table) {:cells {}})
         cells (gamma-cells gamma-data)
         rate-table (correction-rate-table gamma-data)
-        mission (extract-mission-from-ctx ctx)
+        mission (:mission ctx)
+        mission-source (or (:mission-source ctx)
+                           (if mission :ctx/mission :d10/unclocked))
         context-text (or (:context ctx) (:prompt ctx) "")
         gamma-val (gamma-for cells mission)
         c-uncertainty (c-uncertainty-for mission rate-table)
         posting-stats (estimate-posting-stats context-text)]
     {:mission mission
+     :mission-source mission-source
      :gamma {mission {:policy-precision gamma-val}}
      :task-belief (task-belief-from (:actand-query-result ctx))
      :c-belief {:operator-c-uncertainty c-uncertainty}
@@ -243,5 +240,7 @@
         {:task-belief task-belief-absence
          :c-belief {}
          :gamma {}
-         :mission nil
+         :mission (:mission ctx)
+         :mission-source (or (:mission-source ctx)
+                             (if (:mission ctx) :ctx/mission :d10/unclocked))
          :observations {}}))))

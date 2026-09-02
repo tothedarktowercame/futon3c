@@ -4154,7 +4154,8 @@
             raw-result (try
                          (invoke-agent-with-session-recovery!
                           aid effective-prompt
-                          {:timeout-ms timeout-ms :model model} job-id)
+                          {:timeout-ms timeout-ms :model model
+                           :mission-id mission-id} job-id)
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -4259,7 +4260,8 @@
                           #(invoke-agent-with-session-recovery!
                             aid effective-prompt
                             {:timeout-ms timeout-ms
-                             :model model :reasoning-effort reasoning-effort}
+                             :model model :reasoning-effort reasoning-effort
+                             :mission-id mission-id}
                             job-id))
                          (finally
                            (if prev-sink

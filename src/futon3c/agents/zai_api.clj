@@ -1109,11 +1109,14 @@ CALLS contains maps of tool name, arguments, and result digest."
   (zaif/env-profile (or profile (getenv "FUTON3C_ZAI_PROFILE"))))
 
 (defn- default-zaif-inputs
-  [{:keys [mission gamma observations task-belief c-belief]}]
-  {:task-belief (or task-belief {})
+  [{:keys [mission mission-source gamma observations task-belief c-belief]}]
+  {:task-belief (or task-belief
+                    {:absence :d8/task-belief-actand-source-absent})
    :c-belief (or c-belief {})
    :gamma (or gamma {})
    :mission mission
+   :mission-source (or mission-source
+                       (if mission :ctx/mission :d10/unclocked))
    :observations (or observations {})})
 
 (defn- zaif-pairing-key
@@ -1413,6 +1416,14 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; Direct calls have no Agency job, so their generated turn id is
             ;; the dispatch id and the turn-start record binds them explicitly.
             dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
+            dispatch-mission (some-> (:mission-id invoke-context)
+                                     str str/trim not-empty)
+            clocked-mission (or dispatch-mission
+                                (current-mission-id agent-id sid))
+            mission-source (cond
+                             dispatch-mission :dispatch/mission-id
+                             clocked-mission :clock-store/current-clock
+                             :else :d10/unclocked)
             runner-budget (:student-runner-budget invoke-context)
             call-timeout-ms
             (or (:timeout-ms invoke-context)
@@ -1491,6 +1502,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :agent-id agent-id
                            :sid sid
                            :dispatch-id dispatch-id
+                           :mission clocked-mission
+                           :mission-source mission-source
                            :turn-id turn-id
                            :deadline-ms deadline-ms
                            :report-reserve-ms (report-reserve-for call-timeout-ms)
