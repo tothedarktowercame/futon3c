@@ -2,6 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.agency.parked-on :as parked-on]
             [futon3c.transport.http :as http])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
@@ -189,3 +190,43 @@
             (is (= ledger (edn/read-string (slurp path)))
                 "chunked write round-trips byte-exactly")))
         (finally (delete-tree! dir))))))
+
+(deftest rolling-expiry-compacts-terminal-detail-but-retains-live-and-parked-jobs
+  ;; Live ledger pin, /tmp/futon3c-invoke-jobs.edn, job
+  ;; invoke-1787750995295-1507-0f434f39 (captured 2026-09-02): these values are
+  ;; verbatim -- state "failed", created-at 2026-08-26T13:29:55.295079374Z,
+  ;; finished-at 2026-08-26T13:29:56.668288653Z, event-seq 5.
+  (let [old-id "invoke-1787750995295-1507-0f434f39"
+        active-id "active-job"
+        parked-id "parked-terminal-job"
+        bulky (apply str (repeat 10000 "recorded packet text "))
+        old {:job-id old-id :state "failed"
+             :created-at "2026-08-26T13:29:55.295079374Z"
+             :finished-at "2026-08-26T13:29:56.668288653Z"
+             :event-seq 5 :result-text bulky :result bulky
+             :events [{:seq 1 :type "accepted" :at "2026-08-26T13:29:55.295079374Z"
+                       :text bulky}
+                      {:seq 5 :type "failed" :at "2026-08-26T13:29:56.668288653Z"
+                       :message "ended"}]}
+        active (assoc old :job-id active-id :state "running" :finished-at nil)
+        parked (assoc old :job-id parked-id)
+        ledger {:version 1 :next-seq 3
+                :job-order [old-id active-id parked-id]
+                :trace->job {} :jobs {old-id old active-id active parked-id parked}}
+        compacted (with-redefs [http/*invoke-ledger-now*
+                                (constantly (java.time.Instant/parse
+                                             "2026-09-02T20:00:00Z"))
+                                parked-on/snapshot
+                                (constantly {:index {parked-id #{"park-1"}}})]
+                    (#'http/compact-invoke-jobs-ledger ledger))]
+    (is (= {old-id "failed" active-id "running" parked-id "failed"}
+           (into {} (map (fn [[id job]] [id (:state job)])) (:jobs compacted)))
+        "expiry retains every id and lifecycle state")
+    (is (= :d13/rolling-expiry (get-in compacted [:jobs old-id :events-trimmed])))
+    (is (nil? (get-in compacted [:jobs old-id :result-text])))
+    (is (< (count (pr-str (get-in compacted [:jobs old-id]))) 2000)
+        "expired terminal payload has a fixed small bound")
+    (is (= bulky (get-in compacted [:jobs active-id :result-text]))
+        "active job remains complete")
+    (is (= bulky (get-in compacted [:jobs parked-id :result-text]))
+        "park-dependent terminal job remains complete")))

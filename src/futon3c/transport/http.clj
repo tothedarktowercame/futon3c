@@ -322,6 +322,68 @@
    :trace->job {}
    :jobs {}})
 
+(declare terminal-invoke-state?)
+
+(def ^:private invoke-terminal-detail-retention-ms
+  "Keep terminal job transcripts for one day; thereafter retain a small
+   identity/state tombstone. Non-terminal jobs and jobs named by a live parked
+   continuation are never compacted."
+  (* 24 60 60 1000))
+
+(def ^:dynamic *invoke-ledger-now*
+  "Clock seam for deterministic retention tests."
+  #(Instant/now))
+
+(defn- parked-invoke-job-ids
+  []
+  (-> (parked-on/snapshot) :index keys set))
+
+(defn- expired-terminal-job?
+  [job now]
+  (and (terminal-invoke-state? (:state job))
+       (when-let [finished-at (:finished-at job)]
+         (try
+           (not (.isAfter (Instant/parse (str finished-at))
+                          (.minusMillis now invoke-terminal-detail-retention-ms)))
+           (catch Throwable _ false)))))
+
+(defn- compact-terminal-job
+  [job]
+  (let [event-edge (fn [event]
+                     (some-> event
+                             (select-keys [:seq :type :at :code :message])
+                             (update :message #(when % (subs (str %) 0 (min 220 (count (str %))))))))
+        events (:events job)]
+    (-> (select-keys job [:job-id :agent-id :caller :surface :request-digest
+                          :bellback-of :mode :state :created-at :started-at :finished-at
+                          :terminal-code :terminal-message :session-id :trace-id
+                          :result-summary :artifact-ref :execution :invocation/model
+                          :delivery :event-seq :auto-bellback])
+        (update :terminal-message #(when % (subs (str %) 0 (min 220 (count (str %))))))
+        (assoc :events (->> [(first events) (last events)]
+                            (keep event-edge)
+                            distinct
+                            vec)
+               :events-trimmed :d13/rolling-expiry))))
+
+(defn- compact-invoke-jobs-ledger
+  "Bound retained transcript payload by compacting terminal jobs after 24h.
+   Job ids and lifecycle states remain queryable. Park dependencies retain the
+   complete job even if a terminal completion has not yet been folded into the
+   parked continuation."
+  [ledger]
+  (let [now (*invoke-ledger-now*)
+        protected (parked-invoke-job-ids)]
+    (update ledger :jobs
+            (fn [jobs]
+              (into {}
+                    (map (fn [[job-id job]]
+                           [job-id (if (and (not (contains? protected job-id))
+                                            (expired-terminal-job? job now))
+                                     (compact-terminal-job job)
+                                     job)]))
+                    jobs)))))
+
 (defn- persist-invoke-jobs-ledger!
   [ledger]
   (locking invoke-jobs-writer-lock
@@ -473,7 +535,9 @@
   (locking invoke-jobs-writer-lock
     (when (nil? @!invoke-jobs-ledger)
       (let [store-existed? (.exists (io/file (invoke-jobs-store-path)))
-            loaded (-> (load-invoke-jobs-ledger) recover-inflight-jobs)]
+            loaded (-> (load-invoke-jobs-ledger)
+                       recover-inflight-jobs
+                       compact-invoke-jobs-ledger)]
         (try
           ;; Absence means a genuinely fresh installation. Do not manufacture
           ;; an existing-but-empty authority that would be ambiguous on restart.
@@ -497,7 +561,8 @@
   [f]
   (locking invoke-jobs-writer-lock
     (ensure-invoke-jobs-ledger!)
-    (let [[before updated] (swap-vals! !invoke-jobs-ledger f)]
+    (let [[before updated] (swap-vals! !invoke-jobs-ledger
+                                       (comp compact-invoke-jobs-ledger f))]
       (try
         (persist-invoke-jobs-ledger! updated)
         (rebuild-active-invoke-job-index! updated)
@@ -518,7 +583,8 @@
   [f]
   (locking invoke-jobs-writer-lock
     (ensure-invoke-jobs-ledger!)
-    (let [[before after] (swap-vals! !invoke-jobs-ledger f)]
+    (let [[before after] (swap-vals! !invoke-jobs-ledger
+                                     (comp compact-invoke-jobs-ledger f))]
       (try
         (persist-invoke-jobs-ledger! after)
         (rebuild-active-invoke-job-index! after)
