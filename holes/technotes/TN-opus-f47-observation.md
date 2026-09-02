@@ -1497,3 +1497,33 @@ protocol whose subject is how well a student learns, and the artifact it withhol
 proof that was finished and verified before the first student attempt began. b96J02 is the
 sharpest case: 950 lines, four sorries, the largest problem this campaign has closed, held
 off master because a student twice failed to declare which memory it had used.
+
+### Retraction: the emptied cascade is an a1 property, not substrate load
+
+Earlier today I wrote that futon1b saturation was emptying the cascade — visibility reads
+timing out, provenance becoming unverifiable, candidates excluded. The ordinal breakdown
+refutes it:
+
+    attempt   cascade emptied by :unverifiable-depositor-provenance
+    a1        7 of 8      (the eighth, f75/a1, had a failed cascade READ instead)
+    a2        0 of 7
+    a3        0 of 6
+
+Eight of eight first attempts ran without cascade enrichment; no second or third attempt
+ever lost it. Substrate load does not select for attempt ordinal.
+
+The gate itself (`memory_access_gate.clj:66`) decides on the memory's own record:
+`:provenance` must be a map with non-blank `:campaign-id`, `:frame-id` and `:problem-id`,
+and the `f<N>-` prefix of `:depositor` must equal that `:frame-id`. Nothing in that
+predicate involves a read succeeding. So the same memory cannot pass at a2 and fail at a1
+on substrate grounds — which means the candidate handed to the gate at a1 is not the same
+object handed to it at a2, and the most likely reading is that a1's candidates arrive
+unresolved, without a `:provenance` map to check.
+
+**What I have established:** every first attempt in this window ran with no cascade. **What
+I have not:** why. My substrate explanation was inference from correlation with the
+timeouts I had been chasing, and the ordinal data kills it.
+
+This also revises the f77/a2-vs-f79/a1 comparison I made this morning. I read "the same 100
+memories offered in one attempt and refused in another, hours apart" as proof of a
+transient substrate fault. The variable was not time; it was the attempt ordinal.
