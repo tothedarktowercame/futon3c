@@ -1468,3 +1468,32 @@ domain-general patterns; and these frames get only the former. Whether a student
 complex-analysis problem should be denied the CA patterns' own `:source` lines —
 "Assemble Disk Theorems From the Library's Interface" — is a design question I have not
 answered and should not have implied was a bug.
+
+## Eight stranded solves, and the reasons have changed (2026-09-02)
+
+    problem   frame  sorries  why the frame parked
+    a99J05    f54      2      guide-mode barrier
+    a99J06    f55      1      guide-mode barrier
+    aunk04    f58      3      guide-mode barrier
+    b90A03    f68      1      :review-set-mismatch, no repair instruction
+    b93J04    f72      1      :candidates-missing, no repair instruction
+    b94A01    f73      1      student failed the repair twice
+    b96A02    f78      3      futon1b request timed out
+    b96J02    f80      4      student failed the repair twice
+
+Sixteen sorries of verified proof, every one built here against apm-lean's pinned Mathlib
+with axioms exactly `[propext, Classical.choice, Quot.sound]` and a theorem statement
+byte-identical to master, all pinned under `refs/apm/rescued-solves/` and none swept.
+
+**The reasons have shifted, and that is the finding.** The first five were defects: a
+barrier that has since been cleared, and findings the machine could detect but never ask
+anyone to repair, all fixed on 2026-08-31 and 09-01. The last three are not defects.
+b96A02 was a network timeout. b94A01 and b96J02 were students failing a repair they had
+been given clear instructions for — an ordinary mistake the repair path is designed to
+absorb, absorbed correctly, twice, and then the budget ran out.
+
+Better instructions cannot recover these. Nothing is broken in them. The pin depends on a
+protocol whose subject is how well a student learns, and the artifact it withholds is a
+proof that was finished and verified before the first student attempt began. b96J02 is the
+sharpest case: 950 lines, four sorries, the largest problem this campaign has closed, held
+off master because a student twice failed to declare which memory it had used.
