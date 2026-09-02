@@ -1,5 +1,6 @@
 (ns futon3c.agents.zaif-controller-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.evidence.boundary :as boundary]))
@@ -240,6 +241,27 @@
                     (set (keys (:decision %))))
                 dual-plain)
         "each paired decision is pinned to the current-turn output")))
+
+(deftest r13-allowlist-agrees-with-live-vocabulary
+  ;; LIVE-PIN (board rule, 2026-09-02): body key set captured verbatim from
+  ;; live record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (zai-3, 2026-08-09,
+  ;; :zaif-arm-choice). Two facts pinned: (1) the R13 allowlist above speaks
+  ;; the vocabulary the live recorder actually persists (every allowlisted
+  ;; key except :mission appears in the recorded body -- the rest of the
+  ;; body's keys are recorder envelope, not decide output); (2) that record
+  ;; carries NO :mission key -- the pre-D10 attribution absence
+  ;; (:u8/decision-mission-attribution-absent), kept here as history even
+  ;; after D10 lands.
+  (let [live-body-keys #{:turn-id :inputs-digest :arm :why :g-terms :constant
+                         :pairing-key :gamma-used :round :event :constant-label
+                         :operator-attention-cost :inputs-snapshot}
+        decide-output-keys
+        #{:arm :g-terms :gamma-used :mission :operator-attention-cost :why}]
+    (is (= (disj decide-output-keys :mission)
+           (clojure.set/intersection decide-output-keys live-body-keys))
+        "the allowlist minus :mission is exactly what the live recorder persisted")
+    (is (not (contains? live-body-keys :mission))
+        "the 2026-08-09 corpus records no mission -- D10's finding, pinned")))
 
 (deftest dual-decide-determinism-check
   (testing "arms are re-derivable from recorded inputs by calling decide again"
