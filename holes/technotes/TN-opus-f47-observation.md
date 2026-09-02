@@ -1560,3 +1560,41 @@ opaque because the hook was stripped, and dispatched a fix at the PATTERN level
 never route through that function at all, and concluded bare offers were the design. The
 correct answer was neither: they were bare, it was fixable, and the fix belonged at the
 memory level — where someone else put it.
+
+## A frame was VOIDED over a transient probe failure (2026-09-02)
+
+f82 did not park. It was voided:
+
+    :frame/result :void
+    :void/classification :role-terminal-unrecoverable
+    :void/failed-invariants [:live-job-terminal-repair-exhausted
+                             :workspace-probe-failed
+                             :typed-submission-missing]
+
+Joe rejected void-and-advance after F32 on 2026-08-25: the machine is to fix the apparatus
+defect and resume. This is that disposition, taken automatically.
+
+The triggering invariant was `:workspace-probe-failed`, `:probe/exit 1`, in
+`/home/joe/code/apm-frames/f82-b96J04-student`. I ran the same probe in the same worktree
+minutes later — `lake env lean problems/b96J04/lean/Main.lean` — and it compiles, Mathlib
+present, one sorry warning and nothing else. The failure was transient, was recorded
+`:repair/fault-origin :agent`, consumed the student's single repair attempt, and the frame
+was then declared unrecoverable.
+
+f82's solver had proved b96J04. Verified here: 526 lines, zero `sorry`, statement
+byte-identical to master, axioms exactly `[propext, Classical.choice, Quot.sound]`. Pinned
+at `refs/apm/rescued-solves/b96J04/c4b370ae`. Ninth stranded solve, and the first lost to a
+void rather than a park.
+
+**A void is worse than a park and should be read differently.** A parked frame keeps its
+decision record, its residual, and its recoverability — someone can resume it. A void is
+the machine concluding the work cannot be recovered and advancing past it. Doing that on a
+build-environment blip, while charging the blip to the agent, is the failure mode this
+whole note keeps circling: apparatus trouble recorded as role failure, and this time it
+costs the frame outright.
+
+`:workspace-probe-failed` is also the harder case for the fix I shipped earlier. A transport
+error is never the role's fault, so routing it to the apparatus budget is unambiguous. A
+probe failure genuinely CAN be the role's fault — a student writing Lean that does not
+compile produces exactly this. Separating the two needs the probe's output, not its exit
+code.
