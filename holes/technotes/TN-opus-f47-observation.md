@@ -1436,3 +1436,35 @@ required opening a field I was not looking at.
 It also retires a speculation of mine from yesterday: I suggested the cascade "only fires
 for some problems" and wondered whether offers depend on which patterns have accumulated
 memories. They do not. The offers depend on whether futon1b answered.
+
+### Correction: sibling offers are bare by design, and the hook fix does not reach them
+
+I wrote above that the cascade "ships identifiers with the explanatory text stripped", and
+dispatched a fix on that basis. The fix (`f302fee4`) is correct in itself and is live, but
+it does not change what these students see, and my diagnosis conflated two things.
+
+`pattern-surface-content` — the function that attaches `:offer/pattern-hook` — is applied
+at `conductor.clj:665` to ONE offer type: the `:route :pattern` item. Every offer in
+f76-f79 is `:route :sibling`:
+
+    offer routes: {sibling 100}
+
+A sibling offer carries `:memory-id :route :hops :pattern :pattern-hook`, and its
+pattern-hook was never populated by that path. It is bare by construction.
+
+The hook-carrying pattern offer is additionally gated by `domain-general-pattern-id?`,
+which rejects any family ending in two or more capitals:
+
+    math-formalization-CA/…  -> not domain-general
+    math-formalization-CV/…  -> not domain-general
+    math-formalization/…     -> domain-general
+
+f76 through f79 route entirely through CA and CV families, so no pattern item is emitted at
+all and no hook-bearing offer exists to fix.
+
+So "500 offers declined because they were opaque" overstates what I established. What is
+true: the sibling channel is bare by design; the explanatory channel is restricted to
+domain-general patterns; and these frames get only the former. Whether a student working a
+complex-analysis problem should be denied the CA patterns' own `:source` lines —
+"Assemble Disk Theorems From the Library's Interface" — is a design question I have not
+answered and should not have implied was a bug.
