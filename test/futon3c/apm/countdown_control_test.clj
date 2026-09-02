@@ -8,12 +8,16 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.campaign-trace :as campaign-trace]
+            [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.memory-snapshot :as memory-snapshot]
+            [futon3c.apm.promotion-pipeline :as promotion-pipeline]
+            [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.problem-projection :as problem-projection]
@@ -249,6 +253,54 @@
       (is (= 7200000
              (get-in @captured [:reviewer-request :turn-timeout-ms])))
       (is (fn? (:publish-fn @captured))))))
+
+(deftest countdown-promotion-persists-compared-seats-and-preserves-refusal
+  ;; LIVE-PIN: both strings occur verbatim as :depositor and :reviewer in
+  ;; data/apm-campaigns/jit-all-open-v2/jit-all-open-v2-f75/live/promote-solver.edn.
+  (let [depositor "f75-scribe"
+        reviewer "f75-promotion-proctor"
+        phase-inputs {:contract {}
+                      :action {:frame-id "f75" :problem-id "b05J03"}
+                      :receipts {}
+                      :request {:input-receipt-ids #{}}}
+        promotion-inputs {:candidates []
+                          :deposit {:depositor depositor :lanes []}
+                          :reviewer reviewer
+                          :reviews []
+                          :job-id "f75-scribe-job"}
+        snapshot {:snapshot/id "snapshot"
+                  :snapshot/digest "digest"
+                  :snapshot/memories []}
+        publish (fn [input]
+                  (#'sut/publish-zai-scribe-promotion! phase-inputs input))]
+    (with-redefs [frame-cycle-handlers/latest-snapshot-receipt (constantly nil)
+                  memory-snapshot/publish!
+                  (constantly {:ok true :snapshot snapshot
+                               :path "/tmp/snapshot.edn"})
+                  promotion-pipeline/validate-extension-publication-accounting
+                  (constantly {:ok true})
+                  frame-cycle-handlers/validate-completion (constantly {:ok true})]
+      (let [accepted (publish promotion-inputs)
+            receipt (:receipt accepted)
+            same-seat (publish (assoc promotion-inputs :reviewer depositor))
+            rederived (checked-handoff/validate-verdict-event
+                       {:event :checked-handoff/verdict
+                        :worker-seat (:receipt/depositor-seat receipt)
+                        :author-seat (:receipt/reviewer-seat receipt)
+                        :proposal {:ref (:receipt/id receipt)}
+                        :verdict :approved
+                        :adjudication {:rerun-witness :absent}}
+                       (constantly nil))]
+        (is (:ok accepted))
+        (is (= depositor (:receipt/depositor-seat receipt)))
+        (is (= reviewer (:receipt/reviewer-seat receipt)))
+        (is (true? (:receipt/independent-review? receipt)))
+        (is (= :seat-string-distinctness (:independence/grade rederived))
+            "persisted strings re-derive the validator grade")
+        (is (= {:ok false
+                :error/code :zai-scribe-reviewer-is-depositor}
+               same-seat)
+            "the same-seat refusal and keyword are unchanged")))))
 
 (deftest promotion-resume-reconstructs-authority-when-stage-state-has-no-request
   (let [manifest {:apparatus {:artifacts {:scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v3.md"

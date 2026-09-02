@@ -1098,6 +1098,11 @@
      :base-file-blob (when base-readable? expected-blob)
      :text-fn (memory-snapshot/evidence-text-fn)}))
 
+(defn- independent-review-fields [deposit reviewer]
+  {:receipt/depositor-seat (:depositor deposit)
+   :receipt/reviewer-seat reviewer
+   :receipt/independent-review? (not= (:depositor deposit) reviewer)})
+
 (defn- publish-promotion!
   [{:keys [contract action receipts request] :as phase-inputs}
    {:keys [candidates deposit reviewer reviews dispositions job-id]}]
@@ -1144,7 +1149,7 @@
               (promotion-pipeline/validate-certified-promotion-pass
                dispositions snapshot (:path published) own))
             prior-dropped (into (vec (:dropped prior)) (:prior-dropped published))
-            body (cond-> {:receipt/type :solver-promotion
+            body (cond-> (merge {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
                   :receipt/job-id job-id
@@ -1159,12 +1164,10 @@
                   :receipt/snapshot-digest (:snapshot/digest snapshot)
                   :receipt/snapshot-path (:path published)
                   :receipt/reviewed-memory-ids
-                  (mapv :memory-id (:snapshot/memories snapshot))
-                  :receipt/independent-review? (not= (:depositor deposit)
-                                                     reviewer)}
-                   certification
-                   (assoc :receipt/promotion-pass-witness
-                          (:witness certification)))
+                  (mapv :memory-id (:snapshot/memories snapshot))}
+                                 (independent-review-fields deposit reviewer))
+                   certification (assoc :receipt/promotion-pass-witness
+                                        (:witness certification)))
             receipt (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (frame-cycle-handlers/validate-completion
                      contract action receipt receipts)]
@@ -1221,7 +1224,7 @@
             (when (vector? dispositions)
               (promotion-pipeline/validate-certified-promotion-pass
                dispositions snapshot (:path published) current))
-            body (cond-> {:receipt/type :scribe-reduce
+            body (cond-> (merge {:receipt/type :scribe-reduce
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
                   :receipt/job-id job-id
@@ -1234,12 +1237,10 @@
                   :receipt/snapshot-digest (:snapshot/digest snapshot)
                   :receipt/snapshot-path (:path published)
                   :receipt/reviewed-memory-ids
-                  (mapv :memory-id (:snapshot/memories snapshot))
-                  :receipt/independent-review? (not= (:depositor deposit)
-                                                     reviewer)}
-                   certification
-                   (assoc :receipt/promotion-pass-witness
-                          (:witness certification)))
+                  (mapv :memory-id (:snapshot/memories snapshot))}
+                                 (independent-review-fields deposit reviewer))
+                   certification (assoc :receipt/promotion-pass-witness
+                                        (:witness certification)))
             receipt (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (frame-cycle-handlers/validate-completion
                      contract action receipt receipts)]
@@ -1304,7 +1305,7 @@
                 (when (vector? dispositions)
                   (promotion-pipeline/validate-certified-promotion-pass
                    dispositions snapshot (:path published) current))
-                body (cond-> {:receipt/type :guide-promotion
+                body (cond-> (merge {:receipt/type :guide-promotion
                       :receipt/frame-id (:frame-id action)
                       :receipt/problem-id (:problem-id action)
                       :receipt/intervention-ordinal ordinal
@@ -1315,12 +1316,10 @@
                       :receipt/snapshot-digest (:snapshot/digest snapshot)
                       :receipt/snapshot-path (:path published)
                       :receipt/reviewed-memory-ids
-                      (mapv :memory-id (:snapshot/memories snapshot))
-                      :receipt/independent-review? (not= (:depositor deposit)
-                                                         reviewer)}
-                       certification
-                       (assoc :receipt/promotion-pass-witness
-                              (:witness certification)))]
+                      (mapv :memory-id (:snapshot/memories snapshot))}
+                                     (independent-review-fields deposit reviewer))
+                       certification (assoc :receipt/promotion-pass-witness
+                                            (:witness certification)))]
             (cond
               (and certification (not (:ok certification))) certification
               (not (:ok accounting)) accounting
