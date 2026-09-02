@@ -14,14 +14,17 @@
                      :evidence_id "e-u7-no-such-evidence"
                      :limit 1}
    "pattern_memory" {:tags ["u7-no-such-tag"] :limit 1}
-   "recent_coordination" {:scope "jobs" :limit 1}})
+   "recent_coordination" {:scope "jobs" :limit 1}
+   "mission_context" {:target "M-u7-no-such-mission" :limit 1}})
 
 (defn- registered-read-only-memory-tools
   "Derive U7's tool set from zai-api's actual family and tool registries."
   []
   (let [registered (set (map :name @#'zai/tool-specs))]
     (->> (disj (set @#'zai/memory-family-tool-names)
-               "memory_record" "mission_context")
+               ;; memory_record is the family's one WRITE tool; every
+               ;; read-only member must carry an R2/R16 pair here.
+               "memory_record")
          (filter registered)
          set)))
 
@@ -135,6 +138,9 @@
 
 (def-memory-tool-pair "recent-coordination" "recent_coordination"
   {:scope "jobs" :limit 1})
+
+(def-memory-tool-pair "mission-context" "mission_context"
+  {:target "M-u7-no-such-mission" :limit 1})
 
 (deftest registry-pins-one-r2-r16-pair-per-read-only-memory-tool
   (let [registered (registered-read-only-memory-tools)
