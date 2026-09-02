@@ -3,40 +3,40 @@
   {:NOT-A-RESULT
    "these two rules encode patterns the constructor did NOT select. The arm exists to measure what the override would have done had find returned them, and to keep the rule table from being fitted to the cascade. It is not evidence about the constructor.",
    :agreement-with-the-oracle
-   {:agree 1,
+   {:agree 2,
     :confusion
-    {[:retrieve :retrieve] 1, [:yield :act] 15, [:yield :retrieve] 13},
-    :rounds 29},
-   :arms {:retrieve 1, :yield 28},
-   :fired #:agent{:budget-bounds-exploration 28},
-   :first-round-that-fired 3},
+    {[:retrieve :retrieve] 2, [:yield :act] 1, [:yield :retrieve] 2},
+    :rounds 5},
+   :arms {:retrieve 2, :yield 3},
+   :fired #:agent{:budget-bounds-exploration 3},
+   :first-round-that-fired 4},
   :sham
   {:agreement-with-the-oracle
-   {:agree 14,
-    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
-    :rounds 29},
-   :arms {:retrieve 29},
+   {:agree 4,
+    :confusion {[:retrieve :act] 1, [:retrieve :retrieve] 4},
+    :rounds 5},
+   :arms {:retrieve 5},
    :tautological? true,
    :why
    "with no rule, every round defers, so the sham reproduces v0 by construction. The second pre-run review is right that this is not an independent control; it is kept as a WIRING check -- if it ever differed, `play` would not be deferring where it says it defers."},
   :v0
   {:agreement-with-the-oracle
-   {:agree 14,
-    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
-    :rounds 29},
-   :arms {:retrieve 29}},
+   {:agree 4,
+    :confusion {[:retrieve :act] 1, [:retrieve :retrieve] 4},
+    :rounds 5},
+   :arms {:retrieve 5}},
   :v0-with-cascade-override
   {:agreement-with-the-oracle
-   {:agree 14,
-    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
-    :rounds 29},
-   :arms {:retrieve 29},
+   {:agree 4,
+    :confusion {[:retrieve :act] 1, [:retrieve :retrieve] 4},
+    :rounds 5},
+   :arms {:retrieve 5},
    :fired {},
    :on-fired-rounds-only {:agree 0, :confusion {}, :rounds 0},
    :rounds-that-fired 0,
    :sensitivity-over-the-ambiguous-rounds
-   {:if-ambiguous-rounds-are-act {:rounds 20, :agree 0},
-    :if-ambiguous-rounds-are-retrieve {:rounds 20, :agree 19}},
+   {:if-ambiguous-rounds-are-act {:rounds 32, :agree 0},
+    :if-ambiguous-rounds-are-retrieve {:rounds 32, :agree 32}},
    :what-this-is
    "v0's arm on every round, overridden on the rounds where a cascade member's THEN emits. A deferred round is v0's answer and is not evidence about the cascade."}},
  :as-of
@@ -44,26 +44,20 @@
   :cascade-commit
   "futon3 37f7506 -- constructed and committed BEFORE this gate existed",
   :cascade-members 17,
-  :cohort "holes/zaif-cohort-a97J05.edn",
-  :cohort-agent "zai-4",
-  :cohort-turn "zai-turn-f1513520-b760-4b67-bbd1-b2941d3e0325",
-  :rounds 103,
-  :rounds-with-a-transcript 102,
-  :rounds-with-a-v0-decision 50,
+  :cohort "holes/zaif-cohort-holdout.edn",
+  :cohort-agent "zai-3",
+  :cohort-turn "zai-turn-4d7eafbc-2c74-4dd0-a75f-0e1dbbf44734",
+  :rounds 137,
+  :rounds-with-a-transcript 137,
+  :rounds-with-a-v0-decision 37,
   :temperament :widen-to-the-marginal-gain-floor},
  :comparison
- {:counterfactual-vs-v0-differing-round-count 46,
+ {:counterfactual-vs-v0-differing-round-count 32,
   :estimand
   "v0 with cascade override, versus unmodified v0, on the rounds carrying both a transcript and a recorded v0 decision. IN-SAMPLE RETROSPECTIVE: the tension's cues were authored from the same task whose transcript is the oracle, so this is not predictive validation of anything.",
-  :null? false,
-  :override-vs-v0-differing-round-count 1,
-  :override-vs-v0-rounds-that-differ
-  [{:round 7,
-    :override :yield,
-    :v0 :retrieve,
-    :fired :math-strategy/missing-dependency-protocol,
-    :oracle :retrieve,
-    :oracle-is-uncertain? true}]},
+  :null? true,
+  :override-vs-v0-differing-round-count 0,
+  :override-vs-v0-rounds-that-differ []},
  :controls
  {:anti-fitting
   {:protocol
@@ -134,16 +128,16 @@
   {:arm-disagreements [],
    :g-term-disagreement-examples [],
    :g-term-disagreements 0,
-   :rounds 50}},
+   :rounds 37}},
  :denominators
- {:dropped-no-v0-decision 53,
-  :dropped-oracle-uncertain 20,
-  :paired 49,
-  :primary 29,
-  :rounds-with-a-transcript 102,
+ {:dropped-no-v0-decision 100,
+  :dropped-oracle-uncertain 32,
+  :paired 37,
+  :primary 5,
+  :rounds-with-a-transcript 137,
   :why
   "repairs 2 and 3 of the second pre-run review. A round with no recorded v0 decision is not a paired observation, and a round whose only calls are run_shell has no oracle label the record determines."},
- :held-out? false,
+ :held-out? true,
  :o4
  {:exercised? false,
   :members-carrying-a-rule
@@ -155,11 +149,9 @@
  :oracle
  {:classifier
   "act iff a write tool was called; yield iff the round is final with no calls; retrieve otherwise",
-  :distribution {:act 19, :retrieve 83},
+  :distribution {:act 7, :retrieve 129, :yield 1},
   :turn-outcome
-  {:final? false,
-   :last-round 102,
-   :reading :the-seat-exhausted-its-rounds-without-reporting},
+  {:final? true, :last-round 137, :reading :the-seat-reported},
   :uncertain-note
   "rounds whose only calls are run_shell. run_shell runs reads and writes alike, so their :retrieve label is this file's choice and not a fact the record carries.",
-  :uncertain-rounds 54}}
+  :uncertain-rounds 111}}

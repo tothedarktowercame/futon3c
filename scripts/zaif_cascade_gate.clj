@@ -68,9 +68,14 @@
             [find-organise :as fo]
             [futon3c.agents.zaif-controller :as zaif]))
 
-(def cohort-path "holes/zaif-cohort-a97J05.edn")
+(def cohort-path
+  "The PRIMARY cohort.  `-main` takes an optional path so the SAME cascade and the
+   SAME four rules can be run over a second, held-out task without a line of
+   either changing -- repair 6 of the second pre-run review, which is right that
+   two unused rules are a weak anti-fitting guard and that a task the table was
+   not written against is what would establish one."
+  "holes/zaif-cohort-a97J05.edn")
 (def cascade-path "../futon3/checks/zaif-cascade.edn")
-(def report-path "holes/zaif-cascade-gate.edn")
 (def library-root "../futon3/library")
 
 (def temperament-under-test
@@ -397,8 +402,8 @@
      :g-term-disagreements (count (remove :g-terms-match? rows))
      :g-term-disagreement-examples (vec (take 3 (remove :g-terms-match? rows))))))
 
-(defn report []
-  (let [cohort (edn/read-string (slurp cohort-path))
+(defn report [cohort-file]
+  (let [cohort (edn/read-string (slurp cohort-file))
         cascade-report (edn/read-string (slurp cascade-path))
         cascade (get-in cascade-report [:runs temperament-under-test :cascade])
         members (set (:members cascade))
@@ -446,7 +451,7 @@
         acting-order (fn [ps] (vec (keep :fired ps)))]
     (sorted-map
      :as-of (sorted-map
-             :cohort cohort-path
+             :cohort cohort-file
              :cohort-turn (get-in cohort [:as-of :turn-id])
              :cohort-agent (get-in cohort [:as-of :agent])
              :cascade cascade-path
@@ -586,7 +591,6 @@
                       {:finding (:finding (first failures)) :failures (vec failures)})))
     result))
 
-(def coverage-path "holes/zaif-cascade-coverage.edn")
 
 (defn coverage
   "THE SECOND PRE-RUN REVIEW PACKET.  Everything a reviewer needs to gate the
@@ -598,8 +602,8 @@
    not politeness: the rule table must not be revised after its author has seen
    how it scores, and the reviewer must not be gating a table whose score they
    already know."
-  []
-  (let [cohort (edn/read-string (slurp cohort-path))
+  [cohort-file]
+  (let [cohort (edn/read-string (slurp cohort-file))
         cascade-report (edn/read-string (slurp cascade-path))
         cascade (get-in cascade-report [:runs temperament-under-test :cascade])
         members (set (:members cascade))
@@ -661,33 +665,58 @@
 
 (declare -run-gate)
 
-(defn -main [& args]
-  (if (= "coverage" (first args))
-    (let [c (coverage)]
-      (spit coverage-path (with-out-str (pprint/pprint c)))
-      (println (format "coverage over %d rounds of %s; cascade %s has %d members, %d with no rule"
-                       (get-in c [:as-of :rounds-with-a-transcript])
-                       (get-in c [:as-of :cohort-turn])
-                       (name (get-in c [:as-of :temperament]))
-                       (count (get-in c [:as-of :cascade-members]))
-                       (count (:members-with-no-rule c))))
-      (doseq [r (:rules c)]
-        (println (format "  %-48s in-cascade %-5s cf %-5s emits %-9s fires on %d rounds (first %s last %s)"
-                         (:id r) (:in-the-cascade? r) (:counterfactual? r) (pr-str (:emits r))
-                         (:antecedent-holds-on-n-rounds r) (:first-round r) (:last-round r))))
-      (println (format "contentions: %d; grain leaks %d; rules not in the cascade %s"
-                       (count (get-in c [:contention :rounds-where-more-than-one-cascade-rule-fires]))
-                       (count (get-in c [:controls :grain-separation]))
-                       (pr-str (get-in c [:controls :rules-not-in-the-cascade]))))
-      (println (format "wrote %s -- NOTHING about v0, the oracle or agreement is in it" coverage-path))
-      (shutdown-agents)
-      (System/exit 0))
-    (-run-gate)))
+(defn- print-coverage [c]
+  (println (format "coverage over %d rounds of %s; cascade %s has %d members, %d with no rule"
+                   (get-in c [:as-of :rounds-with-a-transcript])
+                   (get-in c [:as-of :cohort-turn])
+                   (name (get-in c [:as-of :temperament]))
+                   (count (get-in c [:as-of :cascade-members]))
+                   (count (:members-with-no-rule c))))
+  (doseq [r (:rules c)]
+    (println (format "  %-48s in-cascade %-5s cf %-5s emits %-26s fires on %d rounds (first %s last %s)"
+                     (:id r) (:in-the-cascade? r) (:counterfactual? r) (pr-str (:emits r))
+                     (:antecedent-holds-on-n-rounds r) (:first-round r) (:last-round r))))
+  (println (format "contentions: %d; grain leaks %d; rules not in the cascade %s"
+                   (count (get-in c [:contention :rounds-where-more-than-one-cascade-rule-fires]))
+                   (count (get-in c [:controls :grain-separation]))
+                   (pr-str (get-in c [:controls :rules-not-in-the-cascade])))))
 
-(defn -run-gate []
+(defn -main
+  "  -m zaif-cascade-gate                       the primary cohort, full gate
+   -m zaif-cascade-gate coverage              the primary cohort, coverage only
+   -m zaif-cascade-gate <cohort.edn>          a HELD-OUT cohort, full gate
+   -m zaif-cascade-gate coverage <cohort.edn> a held-out cohort, coverage only
+
+   The cascade and the rule table are the same object in every case; only the
+   cohort moves.  That is what makes a held-out run mean anything."
+  [& args]
+  (let [coverage? (boolean (some #{"coverage"} args))
+        cohort-file (or (first (remove #{"coverage"} args)) cohort-path)
+        held-out? (not= cohort-file cohort-path)
+        suffix (if held-out? "-holdout" "")]
+    (try
+      (if coverage?
+        (let [c (coverage cohort-file)
+              out (str "holes/zaif-cascade-coverage" suffix ".edn")]
+          (spit out (with-out-str (pprint/pprint c)))
+          (print-coverage c)
+          (println (format "wrote %s -- NOTHING about v0, the oracle or agreement is in it" out))
+          (shutdown-agents)
+          (System/exit 0))
+        (-run-gate cohort-file (str "holes/zaif-cascade-gate" suffix ".edn") held-out?))
+      (catch clojure.lang.ExceptionInfo e
+        (println "zaif-cascade-gate: FAIL" (ex-message e))
+        (pprint/pprint (ex-data e))
+        (shutdown-agents)
+        (System/exit 1)))))
+
+
+(defn -run-gate [cohort-file out-path held-out?]
   (try
-    (let [result (require-pass! (report))]
-      (spit report-path (with-out-str (pprint/pprint result)))
+    (let [result (assoc (require-pass! (report cohort-file)) :held-out? held-out?)]
+      (spit out-path (with-out-str (pprint/pprint result)))
+      (when held-out?
+        (println "HELD-OUT RUN: the cascade and all four rules are byte-identical to the primary run; only the cohort differs."))
       (let [a (:as-of result) c (:controls result) arms (:arms result) cmp (:comparison result)]
         (println (format "cohort %s: %d rounds, %d with a transcript, %d with a v0 decision"
                          (:cohort-turn a) (:rounds a) (:rounds-with-a-transcript a)
@@ -744,7 +773,7 @@
                    (format "O4 %s (members carrying a rule: %s)"
                            (name (get-in result [:o4 :reading]))
                            (pr-str (get-in result [:o4 :members-carrying-a-rule])))))
-        (println (format "wrote %s" report-path))
+        (println (format "wrote %s" out-path))
         (println "zaif-cascade-gate: PASS exit-convention=0-pass/1-fail"))
       (shutdown-agents)
       (System/exit 0))
