@@ -255,15 +255,33 @@ def main():
         #     corpus, not about the student;
         #   it offered and the student declined -- the only one that is
         #     evidence about uptake.
+        #   it ran, FOUND candidates, and the holdout excluded every one for
+        #     :unverifiable-depositor-provenance -- a fact about the substrate.
+        #     On 2026-09-02 f79/a1 excluded 200 candidates that way while
+        #     f77/a2 had been OFFERED the same 100 memories hours earlier; the
+        #     provenance check is the visibility sweep, and it had timed out.
+        #     Printing that as "nothing to offer" reads as a statement about
+        #     the corpus and hides a substrate outage.
         cascade_failed = "memory cascade substrate read failed" in t
         casc = re.search(r":receipt/memory-cascade \{(.{0,400})", t, re.S)
         offered = bool(casc and re.search(r":offers \[\s*\{", casc.group(1)))
+        # :excluded sits ~7KB past the receipt key, well beyond the 400-char
+        # window above, so scan the whole record for it.
+        unverifiable = len(re.findall(r":reason :unverifiable-depositor-provenance", t))
         flag = ""
         if cascade_failed:
             flag = "   <-- CASCADE READ FAILED (uptake not measurable)"
         elif na and not nu:
-            flag = ("   <-- ZERO UPTAKE (cascade offered, declined)" if offered
-                    else "   <-- ZERO UPTAKE (cascade had nothing to offer)")
+            if offered:
+                flag = "   <-- ZERO UPTAKE (cascade offered, declined)"
+            elif unverifiable:
+                flag = (f"   <-- CASCADE EMPTIED: {unverifiable} candidates excluded"
+                        " :unverifiable-depositor-provenance (substrate, not uptake)")
+            else:
+                flag = "   <-- ZERO UPTAKE (cascade had nothing to offer)"
+        elif unverifiable and not offered:
+            flag = (f"   <-- cascade emptied: {unverifiable} excluded"
+                    " :unverifiable-depositor-provenance")
         print(f"    a{n}: memory {nu}/{na} used   "
               f"{'sorries='+sor.group(1) if sor else ''} "
               f"{'outcome='+out.group(1) if out else ''}{flag}")
