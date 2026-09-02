@@ -59,16 +59,16 @@
   ;; Reviewer addition (claude-2): absence must not manufacture distinctness.
   (testing "nil worker-seat refused"
     (is (= :r9/verdict-event-malformed
-           (:error/code (ch/validate-verdict-event
-                         (ch/verdict-event {:author-seat adjudicator-seat
+           (:error/code (checked-handoff/validate-verdict-event
+                         (checked-handoff/verdict-event {:author-seat adjudicator-seat
                                             :proposal proposal
                                             :verdict :approve
                                             :adjudication {:rerun-witness :absent}})
                          (constantly nil))))))
   (testing "blank author-seat refused"
     (is (= :r9/verdict-event-malformed
-           (:error/code (ch/validate-verdict-event
-                         (ch/verdict-event {:worker-seat worker-seat
+           (:error/code (checked-handoff/validate-verdict-event
+                         (checked-handoff/verdict-event {:worker-seat worker-seat
                                             :author-seat ""
                                             :proposal proposal
                                             :verdict :approve
