@@ -625,4 +625,39 @@
     "nonconformance; the fail-closed apparatus behavior is correct.")
    :decision/class :student-unsurfaced-memory-use
    :decision/owner :claude-supervisor
-   :decision/status :decided}]}
+   :decision/status :decided}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f78"
+   :problem/id "b96A02"
+   :last-valid-receipt/id
+   "88a4393f9883c1137c128fe055b5e282063d77b3c945b925049ecedf008a0dd3"
+   :decision/at "2026-09-01T18:56:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :promotion-visibility-scan-blocked-regulator
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved independent review is substantive and complete for the "
+        "Guide candidate e-apm-promotion-945284a4a27badfbcfb7d10d4fde0612. "
+        "Promotion failed instead while checking snapshot visibility across "
+        "199 candidates: the bounded-parallel scan timed out on pre-existing "
+        "memory e-apm-promotion-3f336581fbce65fb34344d8f867a3b5e. "
+        "Its declared aggregate bound is 2000000ms at concurrency two, and the "
+        "synchronous retry occupied the regulator past its durable wake without "
+        "heartbeat commits. This is an apparatus transport/latency failure, not "
+        "evidence invalidating the preserved review or the mathematical artifact.")
+   :decision/recommended-route
+   (str "Advance f78 as partial while preserving the last valid receipt, the "
+        "persisted review result, both exact memory identifiers, and the timeout "
+        "residual. Repair promotion visibility as a durable asynchronous "
+        "operation with independent heartbeats and a global deadline. Prefer "
+        "direct indexed reads of the newly published/reviewed identifiers over "
+        "rescanning the entire 199-candidate snapshot; on deadline, commit a "
+        "typed retry or park without occupying the regulator thread.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No visibility result, promotion "
+        "certificate, union snapshot, or Guide receipt was invented; the exact "
+        "preserved receipt, review, and residual remain authoritative.")}]}
