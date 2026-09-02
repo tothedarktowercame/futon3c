@@ -1,10 +1,29 @@
 (ns futon3c.agents.zaif-inputs-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zinputs]))
 
 (def task-belief-absence
   {:absence :d8/task-belief-actand-source-absent})
+
+(deftest default-gamma-path-is-classpath-anchored
+  (let [source (io/resource "futon3c/agents/zaif_inputs.clj")
+        expected (.getCanonicalPath
+                  (io/file
+                   "/home/joe/code/futon2/holes/labs/M-zaif-harness/b1-gamma-mission.edn"))
+        original-cwd (System/getProperty "user.dir")]
+    (try
+      (System/setProperty "user.dir" "/tmp/a-foreign-review-checkout")
+      (let [resolved (.getCanonicalPath
+                      (io/file
+                       (zinputs/default-gamma-path-from-source source)))]
+        (is (= expected resolved)
+            "checkout basename and process cwd do not participate in resolution")
+        (is (.isFile (io/file resolved))
+            "live pin: the resolved default is the real B1 artifact"))
+      (finally
+        (System/setProperty "user.dir" original-cwd)))))
 
 (deftest gamma-cell-exact-value
   (testing "the exact γ cell M-futon-forward-model → 0.7071067811865476 (2^-1/2)"

@@ -25,17 +25,30 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+(defn default-gamma-path-from-source
+  "Resolve the B1 gamma artifact from this namespace's classpath source URL.
+   Walk upward to the checkout owning `deps.edn`, then use its parent as the
+   multi-repository workspace root. This depends on neither `user.dir` nor the
+   checkout's basename, so sibling/review worktrees resolve identically."
+  [source-url]
+  (let [source-file (when (= "file" (some-> source-url .getProtocol))
+                      (io/file (.toURI source-url)))
+        repo-root (loop [dir (some-> source-file .getParentFile)]
+                    (cond
+                      (nil? dir) nil
+                      (.isFile (io/file dir "deps.edn")) dir
+                      :else (recur (.getParentFile dir))))]
+    (when-not repo-root
+      (throw (ex-info "Could not locate ZAIF checkout root from classpath source"
+                      {:source-url (some-> source-url str)})))
+    (.getPath (io/file (.getParentFile repo-root)
+                       "futon2" "holes" "labs" "M-zaif-harness"
+                       "b1-gamma-mission.edn"))))
+
 (def ^:private default-gamma-edn-path
-  "The B1 γ(mission) artifact. Resolved relative to the workspace root
-   (/home/joe/code), not futon3c/, so it works from any cwd. The workspace
-   root is derived from the user.dir system property's parent when running
-   from futon3c/, or directly when running from the workspace root."
-  (let [cwd (System/getProperty "user.dir")
-        ;; Handle both /home/joe/code and /home/joe/code/futon3c as cwd
-        root (if (str/ends-with? cwd "futon3c")
-               (subs cwd 0 (- (count cwd) (count "futon3c")))
-               (str cwd "/"))]
-    (str root "futon2/holes/labs/M-zaif-harness/b1-gamma-mission.edn")))
+  (delay
+    (default-gamma-path-from-source
+     (io/resource "futon3c/agents/zaif_inputs.clj"))))
 
 (def ^:private default-gamma-fn
   (fn [path]
@@ -82,8 +95,8 @@
    B1 artifact path."
   []
   (or (some-> (System/getenv "FUTON3C_ZAIF_GAMMA_EDN")
-              str/trim not-empty)
-      default-gamma-edn-path))
+      str/trim not-empty)
+      @default-gamma-edn-path))
 
 (defn load-gamma-table
   "Read and cache the B1 γ(mission) table. Returns the full EDN structure
