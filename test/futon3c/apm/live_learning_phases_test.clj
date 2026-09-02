@@ -249,8 +249,10 @@
                        (is (= #{:sibling} (:routes options)))
                        {:routes [["shelf-memory" {:route :leaf :hops 0}]
                                  ["offered-memory"
-                                  {:route :sibling :hops 1
-                                   :pattern "math-strategy/p"}]]
+                                 {:route :sibling :hops 1
+                                   :pattern "math-strategy/p"
+                                   :offer/name "Offered memory"
+                                   :offer/hook "Prefer this memory."}]]
                         :pattern-surfaces
                         {"math-strategy/p" {:offer/pattern-hook "Try the bridge"}}
                         :memory-metadata
@@ -259,7 +261,9 @@
                           :provenance {:campaign-id "c" :frame-id "f18"
                                        :problem-id "different"}}}
                         :expanded-available 1 :expanded-count 1 :cap 10
-                        :truncated? false :routes-enabled #{:sibling}}))
+                        :truncated? false :routes-enabled #{:sibling}
+                        :cascade/enrichment
+                        {:attempted 1 :enriched 1 :failed 0}}))
                     (assoc :memory-snapshot
                            {:receipt-id "promotion" :snapshot-id "snapshot"
                             :snapshot-digest "digest"
@@ -267,8 +271,12 @@
         ticket {:job-id "cascade-job"}
         job (student-job ["offered-memory"])]
     (is (= [{:memory-id "offered-memory" :route :sibling :hops 1
-             :pattern "math-strategy/p" :pattern-hook "Try the bridge"}]
+             :pattern "math-strategy/p" :pattern-hook "Try the bridge"
+             :offer/name "Offered memory"
+             :offer/hook "Prefer this memory."}]
            (get-in request [:memory-cascade :offers])))
+    (is (= {:attempted 1 :enriched 1 :failed 0}
+           (get-in request [:memory-cascade :cascade/enrichment])))
     (is (= {:sibling 1} (get-in request [:memory-cascade :histogram])))
     (is (re-find #"memory-cascade offers are also readable and citable"
                  (sut/prompt request)))
@@ -280,6 +288,9 @@
                                        (certified-candidate "f19" "a01J05" 1)))]
         (is (:ok validated))
         (is (:ok result) (pr-str result))
+        (is (= {:attempted 1 :enriched 1 :failed 0}
+               (get-in result [:certificate :receipt/memory-cascade
+                               :cascade/enrichment])))
         (is (= [{:memory-id "offered-memory" :route :sibling
                  :pattern "math-strategy/p"}]
                (get-in result [:certificate :receipt/memory-cascade

@@ -225,12 +225,43 @@
                         {"memory/leaf" [leaf]
                          "pattern/seed" [leaf sibling]}
                         {})
-                       {:routes #{:sibling} :cap 10}))]
+                       {:routes #{:sibling} :cap 10
+                        :memory-fn (fn [memory-id]
+                                     (is (= "memory/sibling" memory-id))
+                                     {:evidence/body
+                                      {:name "Sibling memory"
+                                       :hook "Prefer this relevant memory."}})}))]
     (is (= [["memory/leaf" {:route :leaf :hops 0}]
             ["memory/sibling" {:route :sibling :hops 1
-                               :pattern "pattern/seed"}]]
+                               :pattern "pattern/seed"
+                               :offer/name "Sibling memory"
+                               :offer/hook "Prefer this relevant memory."}]]
            (:routes result)))
+    (is (= {:attempted 1 :enriched 1 :failed 0}
+           (:cascade/enrichment result)))
     (is (= #{:sibling} (:routes-enabled result)))))
+
+(deftest sibling-enrichment-fails-soft-after-cap
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        siblings (mapv #(cascade-edge (str "memory/" %) "pattern/seed" "a02A02")
+                       [1 2])
+        reads (atom [])
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf]
+                         "pattern/seed" (into [leaf] siblings)} {})
+                       {:routes #{:sibling}
+                        :cap 1
+                        :memory-fn (fn [memory-id]
+                                     (swap! reads conj memory-id)
+                                     (throw (ex-info "unavailable" {})))}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]
+            ["memory/1" {:route :sibling :hops 1 :pattern "pattern/seed"}]]
+           (:routes result)))
+    (is (= ["memory/1"] @reads) "discarded offers are never read")
+    (is (= {:attempted 1 :enriched 0 :failed 1}
+           (:cascade/enrichment result)))))
 
 (deftest excluded-memories-are-not-offered-by-any-route
   ;; The attempt-1 same-problem holdout (amendment 8) removes ids from the

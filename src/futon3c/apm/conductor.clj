@@ -385,6 +385,17 @@
                            context)
      context)))
 
+(defn- cascade-memory [base memory-id]
+  (let [path (str "/api/alpha/evidence/"
+                  (java.net.URLEncoder/encode (str memory-id) "UTF-8"))
+        context {:path path :memory-id memory-id}]
+    (cascade-read-edn
+     #(bounded-cascade-get (str (str/replace base #"/+$" "") path)
+                           {:headers {"Accept" "application/edn"}
+                            :throw false}
+                           context)
+     context)))
+
 (defn- qualified-name [x]
   (if (keyword? x)
     (if-let [ns (namespace x)] (str ns "/" (name x)) (name x))
@@ -471,13 +482,15 @@
              (catch clojure.lang.ExceptionInfo error
                (if (= :transport (:error/component (ex-data error)))
                  (throw error)
-                 nil)))))]
+                 nil)))))
+        memory (memoize #(cascade-memory base %))]
     {:attachments-fn
      attachments
      :why-targets-fn why-targets
      ;; Pattern content is additive. A missing legacy entity must not hide
      ;; the named pattern offer or break an otherwise valid memory cascade.
-     :pattern-fn pattern}))
+     :pattern-fn pattern
+     :memory-fn memory}))
 
 (defn domain-general-pattern-id?
   "True when PATTERN-ID's pre-slash family has no uppercase subject suffix."
@@ -496,6 +509,17 @@
       (some? body) (assoc :offer/pattern-body body)
       content (assoc :offer/pattern-content content))))
 
+(defn- memory-surface-content [surface]
+  (let [entry (or (:entry surface) surface)
+        raw-body (:evidence/body entry)
+        body (if (string? raw-body)
+               (try (edn/read-string raw-body) (catch Throwable _ nil))
+               raw-body)
+        name (:name body)
+        hook (:hook body)]
+    (when (and (some? name) (some? hook))
+      {:offer/name name :offer/hook hook})))
+
 (defn expand-memory-cascade
   "Expand surfaced memories through reviewed pattern attachments.
 
@@ -503,8 +527,8 @@
    `why-targets-fn` returns authored @why targets for a pattern. The result is
    bounded after cheapest-route deduplication. `:expanded-count` excludes the
    leaf memories already surfaced by retrieval."
-  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap routes
-                           exclude]
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn memory-fn
+                           cap routes exclude]
                     :or {cap default-memory-cascade-cap}}]
   (let [attachments-fn (memoize attachments-fn)
         routes-enabled (or routes #{:why-hop :co-incidence})
@@ -601,6 +625,28 @@
                                 (conj (route-key route) memory-id)))
                      vec)
         selected (vec (take cap ordered))
+        sibling-selected (if memory-fn
+                           (filterv #(= :sibling (get-in % [1 :route])) selected)
+                           [])
+        enrichment-results
+        (bounded-parallel-map
+         (fn [[memory-id _]]
+           (try
+             [memory-id (some-> (memory-fn memory-id)
+                                memory-surface-content)]
+             (catch Throwable _ [memory-id nil])))
+         sibling-selected)
+        enrichment-by-memory (into {} (keep (fn [[memory-id content]]
+                                               (when content [memory-id content])))
+                                         enrichment-results)
+        selected (mapv (fn [[memory-id route]]
+                         [memory-id (merge route
+                                           (get enrichment-by-memory memory-id))])
+                       selected)
+        enrichment {:attempted (count sibling-selected)
+                    :enriched (count enrichment-by-memory)
+                    :failed (- (count sibling-selected)
+                               (count enrichment-by-memory))}
         offered-pattern-ids
         (->> selected
              (keep (comp :pattern second))
@@ -618,6 +664,7 @@
     {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
                    selected)
      :routes-enabled routes-enabled
+     :cascade/enrichment enrichment
      :pattern-surfaces pattern-surfaces
      :seed-patterns seed-patterns
      :patterns-per-problem (count seed-patterns)
@@ -688,6 +735,10 @@
          (assoc :offer/pattern-body (:offer/pattern-body route))
          (:offer/pattern-content route)
          (assoc :offer/pattern-content (:offer/pattern-content route))
+         (:offer/name route)
+         (assoc :offer/name (:offer/name route))
+         (:offer/hook route)
+         (assoc :offer/hook (:offer/hook route))
          enabled?
          (assoc :offer/patterns-per-problem (:patterns-per-problem expansion)
                 :offer/cascade-cap (:cap expansion)

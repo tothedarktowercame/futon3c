@@ -56,32 +56,35 @@
             expanded (cascade-fn seed-ids options)
             offers0 (->> (:routes expanded)
                         (remove #(= :leaf (get-in % [1 :route])))
-                        (mapv (fn [[memory-id {:keys [route hops pattern]}]]
-                                {:memory-id memory-id
-                                 :route route
-                                 :hops hops
-                                 :pattern pattern
+                        (mapv (fn [[memory-id route-data]]
+                                (merge
+                                 {:memory-id memory-id
+                                  :route (:route route-data)
+                                  :hops (:hops route-data)
+                                  :pattern (:pattern route-data)
                                  :pattern-hook
                                  (or (get-in expanded
-                                             [:pattern-surfaces pattern
+                                             [:pattern-surfaces (:pattern route-data)
                                               :offer/pattern-hook])
                                      (get-in expanded
-                                             [:pattern-surfaces pattern
+                                             [:pattern-surfaces (:pattern route-data)
                                               :pattern/hook])
                                      (get-in expanded
-                                             [:pattern-surfaces pattern :hook])
+                                             [:pattern-surfaces (:pattern route-data) :hook])
                                      (get-in expanded
-                                             [:pattern-surfaces pattern :entity
+                                             [:pattern-surfaces (:pattern route-data) :entity
                                               :entity/props :hook])
                                      (get-in expanded
-                                             [:pattern-surfaces pattern :entity
+                                             [:pattern-surfaces (:pattern route-data) :entity
                                               :props :hook]))
                                  :depositor (get-in expanded
                                                     [:memory-metadata memory-id
                                                      :depositor])
                                  :provenance (get-in expanded
                                                      [:memory-metadata memory-id
-                                                      :provenance])})))
+                                                      :provenance])}
+                                 (select-keys route-data
+                                              [:offer/name :offer/hook])))))
             gated (access-gate/enforce-carrier :cascade authority offers0)
             prompt-gated (access-gate/enforce-carrier
                           :prompt-assembly authority (:allowed gated))
@@ -92,6 +95,7 @@
          :cap (:cap expanded)
          :truncated? (:truncated? expanded)
          :expanded-available (:expanded-available expanded)
+         :cascade/enrichment (:cascade/enrichment expanded)
          :offers offers
          :holdout-decision (:evidence gated)
          :prompt-holdout-decision (:evidence prompt-gated)
