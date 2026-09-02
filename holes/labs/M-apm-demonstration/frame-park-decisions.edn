@@ -660,4 +660,40 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No visibility result, promotion "
         "certificate, union snapshot, or Guide receipt was invented; the exact "
-        "preserved receipt, review, and residual remain authoritative.")}]}
+        "preserved receipt, review, and residual remain authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f80"
+   :problem/id "b96J02"
+   :last-valid-receipt/id
+   "bdb8236a2bc1b5d553e20ca71e414be25ccb4e2fda78f23d9b7d41ff72e882fc"
+   :decision/at "2026-09-02T11:26:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :student-unauthorized-memory-citation-repeated
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The repaired Student submission reports substantial compiled partial "
+        "progress: bridge_1 and the three cardinality conjuncts are closed, with "
+        "bridge_2 and bridge_3 preserved as exact residuals. Three reported used "
+        "memories are in the controller-bound 204-id snapshot. The fourth, "
+        "e-apm-promotion-82be416d1b3c9b9cc510c099ad086c74, is in neither that "
+        "snapshot nor the 100 controller-provided cascade offers. The original "
+        "terminal lacked a typed submission; the sole repair then repeated this "
+        "unauthorized citation despite the contract's explicit instruction. The "
+        "fail-closed :student-memory-used-without-surfacing finding is therefore "
+        "correct and agent-originated, not an apparatus normalization failure.")
+   :decision/recommended-route
+   (str "Advance f80 as partial. Preserve the last valid receipt, both terminal "
+        "collections, the compiled bridge_1/cardinality work, and the exact two "
+        "remaining bridge residuals. Any future continuation must start from the "
+        "preserved artifact and cite only memory identifiers surfaced in its new "
+        "controller-bound snapshot or job-bound search receipts; do not certify "
+        "the rejected Student terminal retroactively.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No valid Student receipt, Guide "
+        "phase, promotion result, or closure was invented. The rejected terminal "
+        "and its unauthorized-memory finding remain preserved alongside the last "
+        "valid receipt and mathematical residuals.")}]}
