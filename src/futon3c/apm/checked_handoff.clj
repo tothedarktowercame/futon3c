@@ -8,6 +8,14 @@
 
 (def event-type :checked-handoff/verdict)
 
+(def independence-grades
+  "Closed vocabulary accepted from typed receipt fields."
+  #{:asserted-unverified
+    :seat-string-distinctness
+    :adjudicator-rerun-witnessed
+    :constant-assertion
+    :ungradeable-legacy})
+
 (defn verdict-event
   "Construct the declared checked-handoff event shape."
   [{:keys [worker-seat author-seat proposal verdict adjudication]}]
@@ -73,3 +81,42 @@
        :event (dissoc event :grade :independence/grade)
        :independence/grade grade
        :notes notes})))
+
+(defn grade-receipt
+  "Derive an independence grade from a promotion or guide RECEIPT.
+
+   Persisted seat evidence takes precedence over an asserted typed field.
+   Legacy booleans never establish independence: without the seats or typed
+   field they are permanently :ungradeable-legacy, regardless of their value.
+   An unknown typed grade is refused rather than silently becoming a grade."
+  [receipt]
+  (let [seats-present? (and (contains? receipt :receipt/depositor-seat)
+                            (contains? receipt :receipt/reviewer-seat))
+        typed-present? (contains? receipt :receipt/independence)
+        typed-grade (:receipt/independence receipt)]
+    (cond
+      seats-present?
+      (let [seat-grade (if (= (:receipt/depositor-seat receipt)
+                              (:receipt/reviewer-seat receipt))
+                         :constant-assertion
+                         :seat-string-distinctness)
+            notes (cond-> []
+                    (= :constant-assertion seat-grade) (conj :r9/same-seat)
+                    (and typed-present? (not= seat-grade typed-grade))
+                    (conj :r9/persisted-seats-override-typed-field))]
+        {:independence/grade seat-grade
+         :grade-source :persisted-seats
+         :notes notes})
+
+      typed-present?
+      (if (contains? independence-grades typed-grade)
+        {:independence/grade typed-grade
+         :grade-source :typed-field}
+        (throw (ex-info "Unknown receipt independence grade"
+                        {:error/code :r9/independence-grade-vocabulary-invalid
+                         :actual typed-grade
+                         :known independence-grades})))
+
+      :else
+      {:independence/grade :ungradeable-legacy
+       :grade-source :legacy-boolean})))

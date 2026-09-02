@@ -1,5 +1,7 @@
 (ns futon3c.apm.checked-handoff-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.checked-handoff :as checked-handoff]))
 
 ;; LIVE-PIN: both strings occur verbatim as :depositor and :reviewer in
@@ -88,3 +90,62 @@
            :proposal proposal
            :verdict :approved
            :adjudication {:rerun-witness :absent}}))))
+
+(deftest receipt-grades-are-derived-from-the-best-recorded-evidence
+  (testing "legacy Boolean values are both ungradeable"
+    (doseq [legacy-value [true false]]
+      (is (= {:independence/grade :ungradeable-legacy
+              :grade-source :legacy-boolean}
+             (checked-handoff/grade-receipt
+              {:receipt/independent-review? legacy-value})))))
+  (testing "post-b persisted seats are compared"
+    (is (= {:independence/grade :seat-string-distinctness
+            :grade-source :persisted-seats
+            :notes []}
+           (checked-handoff/grade-receipt
+            {:receipt/depositor-seat worker-seat
+             :receipt/reviewer-seat adjudicator-seat}))))
+  (testing "post-c typed assertion is passed through"
+    (is (= {:independence/grade :asserted-unverified
+            :grade-source :typed-field}
+           (checked-handoff/grade-receipt
+            {:receipt/independence :asserted-unverified}))))
+  (testing "computed seats override a disagreeing assertion"
+    (is (= {:independence/grade :seat-string-distinctness
+            :grade-source :persisted-seats
+            :notes [:r9/persisted-seats-override-typed-field]}
+           (checked-handoff/grade-receipt
+            {:receipt/depositor-seat worker-seat
+             :receipt/reviewer-seat adjudicator-seat
+             :receipt/independence :asserted-unverified}))))
+  (testing "same-seat evidence cannot dignify the assertion"
+    (is (= {:independence/grade :constant-assertion
+            :grade-source :persisted-seats
+            :notes [:r9/same-seat]}
+           (checked-handoff/grade-receipt
+            {:receipt/depositor-seat worker-seat
+             :receipt/reviewer-seat worker-seat}))))
+  (testing "unknown typed grades are refused"
+    (is (= :r9/independence-grade-vocabulary-invalid
+           (try
+             (checked-handoff/grade-receipt
+              {:receipt/independence :future-grade})
+             nil
+             (catch clojure.lang.ExceptionInfo e
+               (:error/code (ex-data e))))))))
+
+(deftest real-legacy-receipt-is-ungradeable-when-available
+  ;; LIVE-PIN: this exact f75 receipt predates U14b/c. Campaign data is
+  ;; intentionally untracked, so a checkout without it reports a visible skip.
+  (let [file (io/file (str "data/apm-campaigns/jit-all-open-v2/"
+                           "jit-all-open-v2-f75/live/promote-solver.edn"))]
+    (if (.exists file)
+      (let [receipt (:receipt (edn/read-string (slurp file)))]
+        (is (= ["f75" "b94J03" true]
+               [(:receipt/frame-id receipt)
+                (:receipt/problem-id receipt)
+                (:receipt/independent-review? receipt)]))
+        (is (= {:independence/grade :ungradeable-legacy
+                :grade-source :legacy-boolean}
+               (checked-handoff/grade-receipt receipt))))
+      (is true (str "SKIP: untracked live pin absent: " (.getPath file))))))
