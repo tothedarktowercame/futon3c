@@ -1527,3 +1527,36 @@ timeouts I had been chasing, and the ordinal data kills it.
 This also revises the f77/a2-vs-f79/a1 comparison I made this morning. I read "the same 100
 memories offered in one attempt and refused in another, hours apart" as proof of a
 transient substrate fault. The variable was not time; it was the attempt ordinal.
+
+## First cascade uptake, after 800 offers (2026-09-02)
+
+f82/a2 used four memories. One of them —
+`e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation` —
+appears in the cascade's own offer list. That is the first memory this campaign has taken
+from the sibling cascade.
+
+What changed is not mine. Two commits by another agent, landing after `f302fee4`:
+
+    e5130e75  Enrich sibling memory cascade offers
+    a14e2635  Sibling offers take name/hook from edge props before reading
+
+Sibling offers now carry `:offer/name` and `:offer/hook` — the MEMORY's own name and hook,
+not the pattern's `:source` that my dispatch was aimed at:
+
+    {:route :sibling :hops 1 :memory-id "e-14c2c205-…"
+     :offer/name "cpow-root-arg-divides-via-polar-form"
+     :offer/hook "cpow-arg-division-not-in-mathlib-build-from-arg-mu…"}
+
+    condition                             offers   cascade uptake
+    bare offers (f75-f81)                   800          0
+    offers with name and hook (f82/a2)       20          1
+
+One attempt is one attempt. But the direction is the one the opacity reading predicted, and
+it arrived on the first attempt where an offer said what it was.
+
+This also resolves my two wrong turns on the same question. I first said the offers were
+opaque because the hook was stripped, and dispatched a fix at the PATTERN level
+(`pattern-surface-content`, `:source`). I then retracted that on discovering sibling offers
+never route through that function at all, and concluded bare offers were the design. The
+correct answer was neither: they were bare, it was fixable, and the fix belonged at the
+memory level — where someone else put it.
