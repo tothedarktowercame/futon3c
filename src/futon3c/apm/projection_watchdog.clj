@@ -124,6 +124,7 @@
                        (= :frame-complete
                           (get-in coordinator [:regulator/last-result :status])))
         waiting? (and (not transport-retry?)
+                      (not coordinator-intent-wait?)
                       (not complete?)
                       (not frame-closed?)
                       (= :waiting-for-terminal-result (:status operation)))

@@ -134,6 +134,27 @@
     (is (= {:job-id "tick" :deadline-ms 1787523000000}
            (:coordinator-intent-wait result)))))
 
+(deftest bounded-coordinator-intent-owns-certified-terminal-handoff
+  (let [intent {:state/type :durable-coordinator-intent
+                :intent/digest "intent"
+                :dispatch/id "dispatch"
+                :dispatch/action :tick
+                :job-id "tick"
+                :pre-state/digest "pre"
+                :pre-state/version 1
+                :expected/postcondition {:status :phase-advanced}
+                :dispatch/parameters {:deadline-ms 1787523000000}}
+        result (watchdog/evaluate
+                (-> healthy
+                    (assoc :coordinator-age-seconds 180
+                           :phase-state {:state/type :live-job-certified}
+                           :agent {:ok false}
+                           :job {:ok false})
+                    (assoc-in [:coordinator :coordinator/pending-intent] intent)))]
+    (is (= :waiting (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))
+    (is (= "tick" (get-in result [:coordinator-intent-wait :job-id])))))
+
 (deftest expired-coordinator-intent-does-not-hide-staleness
   (let [intent {:state/type :durable-coordinator-intent
                 :intent/digest "intent"
