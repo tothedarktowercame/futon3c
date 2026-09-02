@@ -1393,3 +1393,46 @@ a routing change, explicitly not as another instruction entry.
 Worth a second look independently: 199 candidates, 4 reads each, 5s per read, an aggregate
 bound of 2,000,000 ms — a 33-minute visibility sweep against the same substrate that has
 been returning 503 `:expensive-read-busy` to the memory cascade all day.
+
+## "Cascade had nothing to offer" was the substrate failing a provenance check (2026-09-02)
+
+Attempts since the retry fix split cleanly into two groups: 100 offers (the cap) or zero.
+I took the zero-offer attempts to mean the sibling routing found no related memories. It
+does not.
+
+f79/a1's cascade record carries `:offers []`, `:histogram {}`, and a `:holdout-decision`
+whose `:excluded` list holds 200 entries, every one
+`:reason :unverifiable-depositor-provenance`. The attempts WITH offers — f76/a3, f77/a2,
+f78/a2 — have an empty exclusion list.
+
+The exclusion is not a property of the memories:
+
+    f79/a1 excluded: 102 distinct ids
+    f77/a2 offered : 100 distinct ids
+    same memories excluded in f79 but offered in f77: 100 of 100
+
+Every memory f77/a2 was offered, f79/a1 refused as unverifiable, hours apart. Provenance is
+re-derived per attempt, and in f79 the derivation failed.
+
+**It failed because the substrate did.** f79's own promote-solver recorded
+`:memory-snapshot-visibility-not-obtained` — `:error/component :transport`, "request timed
+out" — over `:visibility/candidate-count 199`. The holdout excluded ~200. The visibility
+sweep IS the provenance verification, and when futon1b times it out every candidate becomes
+unverifiable and the cascade is emptied.
+
+So the chain is:
+
+    futon1b saturated (permits 0, rejected 34 -> 125 over a day)
+      -> provenance/visibility reads time out
+      -> every cascade candidate excluded :unverifiable-depositor-provenance
+      -> :offers []
+      -> reported as "cascade had nothing to offer"
+
+That is the third distinct place today where apparatus trouble arrives dressed as an
+ordinary result — after `:outcome :failed` for a student that never got its shelf, and
+`:repair/fault-origin :agent` for a substrate timeout. In each case the honest reading
+required opening a field I was not looking at.
+
+It also retires a speculation of mine from yesterday: I suggested the cascade "only fires
+for some problems" and wondered whether offers depend on which patterns have accumulated
+memories. They do not. The offers depend on whether futon1b answered.
