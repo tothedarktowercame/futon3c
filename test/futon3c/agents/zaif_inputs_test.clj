@@ -90,6 +90,25 @@
     (is (= (:task-belief inputs)
            (get-in entry [:evidence/body :inputs-snapshot :task-belief])))))
 
+(deftest live-recorded-vocabulary-transition-pin
+  ;; LIVE-PIN (board rule, 2026-09-02): values captured verbatim from live
+  ;; record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (zai-3, 2026-08-09,
+  ;; :zaif-arm-choice) -- the recorded pre-D8b vocabulary, so this test fails
+  ;; if either the record's meaning or the new absence vocabulary drifts.
+  (let [live-snapshot {:task-belief {}
+                       :c-belief {:operator-c-uncertainty 0.3}
+                       :gamma "{nil {:policy-precision 1.0}}"
+                       :observations {:posting-stats {:total-docs 106
+                                                      :dfs [1 1 1 1 1 1 1 1 1 1]
+                                                      :estimated-tokens 212}}}]
+    (testing "the live corpus's recorded task-belief vocabulary is bare {}"
+      (is (= {} (:task-belief live-snapshot))))
+    (testing "the same source-less condition now hydrates to the typed absence"
+      (let [inputs (zinputs/hydrate-inputs {:context "continue the task"})]
+        (is (= task-belief-absence (:task-belief inputs)))
+        (is (not= (:task-belief live-snapshot) (:task-belief inputs))
+            "an audit can now distinguish post-D8b records from the 114-session corpus")))))
+
 (deftest hydrate-inputs-extracts-mission-from-context
   (testing "mission extracted from context text when :mission not given"
     (let [inputs (zinputs/hydrate-inputs {:context "working on M-points-de-fuite today"})]
