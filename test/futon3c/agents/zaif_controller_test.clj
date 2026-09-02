@@ -205,6 +205,42 @@
       (is (= #{:shipped :sweep} (set (map :label results))))
       (is (= #{0.65 0.15} (set (map :operator-attention-cost results)))))))
 
+(deftest controller-is-pinned-to-the-current-turn
+  ;; R13 horizon-entry seam: app-zaif assigns the longer horizon to the
+  ;; mission. A mission-supplied T would enter when :clocked-mission is turned
+  ;; into :mission by the ctx/zaif_inputs hydrator path, before `decide` sees
+  ;; this map. Until that seam is implemented, these kernels must neither read
+  ;; multi-turn state nor emit a plan beyond this turn.
+  (let [inputs {:mission "M-z"
+                :c-belief {:operator-c-uncertainty 0.5}
+                :task-belief {:act-value 0.3}
+                :gamma {"M-z" {:policy-precision 1.0}}
+                :observations {:retrieve-eig 0.1}}
+        horizon-state {:prior-turn {:arm :retrieve}
+                       :plan [:retrieve :act]
+                       :horizon 3}
+        decide-output-keys
+        #{:arm :g-terms :gamma-used :mission :operator-attention-cost :why}
+        dual-output-keys #{:label :operator-attention-cost :decision}
+        plain (zaif/decide inputs)
+        with-horizon (zaif/decide (merge inputs horizon-state))
+        dual-plain (vec (zaif/dual-decide inputs))
+        dual-with-horizon (vec (zaif/dual-decide (merge inputs horizon-state)))]
+    (is (empty? (select-keys inputs (keys horizon-state)))
+        "the declared controller input carries no prior turn, plan, or horizon")
+    (is (= plain with-horizon)
+        "decide ignores planted multi-turn state")
+    (is (= dual-plain dual-with-horizon)
+        "dual-decide ignores planted multi-turn state")
+    (is (= decide-output-keys (set (keys plain)))
+        "a new plan or horizon output must fail the R13 pin")
+    (is (every? #(= dual-output-keys (set (keys %))) dual-plain)
+        "dual-decide's envelope is pinned")
+    (is (every? #(= decide-output-keys
+                    (set (keys (:decision %))))
+                dual-plain)
+        "each paired decision is pinned to the current-turn output")))
+
 (deftest dual-decide-determinism-check
   (testing "arms are re-derivable from recorded inputs by calling decide again"
     ;; This is the acceptance criterion 2 determinism check: the scorer
