@@ -263,8 +263,11 @@ def main():
         #     Printing that as "nothing to offer" reads as a statement about
         #     the corpus and hides a substrate outage.
         cascade_failed = "memory cascade substrate read failed" in t
-        casc = re.search(r":receipt/memory-cascade \{(.{0,400})", t, re.S)
-        offered = bool(casc and re.search(r":offers \[\s*\{", casc.group(1)))
+        # Do NOT window this: the cascade map's key order varies, so a fixed
+        # 400-char slice missed :offers on f80/a2 and reported "nothing to
+        # offer" for an attempt whose receipt carried 198 expanded candidates.
+        # Match the :offers vector itself, wherever it sits.
+        offered = bool(re.search(r":offers \[\s*\{", t))
         # :excluded sits ~7KB past the receipt key, well beyond the 400-char
         # window above, so scan the whole record for it.
         unverifiable = len(re.findall(r":reason :unverifiable-depositor-provenance", t))
