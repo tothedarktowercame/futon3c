@@ -188,6 +188,26 @@
                    (assoc-in complete [:result :repair/attempts] 0)]]
       (is (= (:result input) (sut/void-exhausted-role-terminal! input))))))
 
+(deftest exhausted-role-terminal-collects-nested-validation-and-repair-findings
+  (let [request (atom nil)
+        result {:ok false
+                :error/code :live-job-terminal-repair-exhausted
+                :repair/attempts 1
+                :validation {:findings [:workspace-probe-failed]}
+                :repair/history [{:findings [:typed-submission-missing]}]}]
+    (with-redefs [sut/apply-reviewed-void!
+                  (fn [value]
+                    (reset! request value)
+                    {:ok true :certificate {:certificate/id "void"}})]
+      (is (= :terminal-collected
+             (:status (sut/void-exhausted-role-terminal!
+                       {:frame frame :ledger-path "/campaign/ledger.edn"
+                        :result result}))))
+      (is (= [:live-job-terminal-repair-exhausted
+              :workspace-probe-failed
+              :typed-submission-missing]
+             (:failures @request))))))
+
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
                   {:frame frame :apparatus-repository "."

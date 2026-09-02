@@ -141,6 +141,14 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
+(defn- terminal-repair-findings [result]
+  (->> (concat (:findings result)
+               (get-in result [:validation :findings])
+               (mapcat :findings (:repair/history result)))
+       (filter keyword?)
+       distinct
+       vec))
+
 (defn void-exhausted-role-terminal!
   "Disposition one frame whose role turn exhausted terminal repair.
 
@@ -148,27 +156,26 @@
   is unsafe. The queue separately counts identical consecutive dispositions
   and escalates a systematic sequence."
   [{:keys [frame ledger-path result actor now]}]
-  (if-not (and (= :live-job-terminal-repair-exhausted (:error/code result))
-               (pos-int? (:repair/attempts result))
-               (vector? (:findings result))
-               (seq (:findings result))
-               (every? keyword? (:findings result)))
-    result
-    (let [voided (apply-reviewed-void!
+  (let [findings (terminal-repair-findings result)]
+    (if-not (and (= :live-job-terminal-repair-exhausted (:error/code result))
+                 (pos-int? (:repair/attempts result))
+                 (seq findings))
+      result
+      (let [voided (apply-reviewed-void!
                   {:ledger-path ledger-path
                    :frame-id (:frame/id frame)
                    :problem-id (:problem/id frame)
                    :classification :role-terminal-unrecoverable
                    :failures (vec (distinct
                                    (cons :live-job-terminal-repair-exhausted
-                                         (:findings result))))
+                                         findings)))
                    :actor (or actor "countdown-control")
                    :now now})]
-      (if (:ok voided)
-        {:ok true :status :terminal-collected
-         :frame/void (:certificate voided)
-         :repair/attempts (:repair/attempts result)}
-        voided))))
+        (if (:ok voided)
+          {:ok true :status :terminal-collected
+           :frame/void (:certificate voided)
+           :repair/attempts (:repair/attempts result)}
+          voided)))))
 
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
