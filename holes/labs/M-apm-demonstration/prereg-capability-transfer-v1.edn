@@ -865,4 +865,45 @@
     declined. :cascade/enrichment on each receipt marks which regime the
     attempt ran under, including the degraded case (:from-edge-props 0 with
     :failed > 0 means offers were effectively bare despite the code being
-    live)."}]}
+    live)."}
+
+  {:amendment 13
+   :at "2026-09-02T09:05Z"
+   :by "claude-1"
+   :authority "Joe, 2026-09-02, in session: 'let's lower the cap, yes'"
+   :kind :instrument-change
+   :what
+   "memory-cascade-arm.edn :cap lowered 100 -> 20. The arm file is read per
+    tick and pinned into each frame's manifest at mint, so f80 (minted
+    07:55Z at cap 100) completes under the old cap; the first frame minted
+    after this edit runs at 20. The file is untracked operator data; this
+    entry is the durable record of the change."
+   :why
+   "At cap 100 the cascade saturated on every firing (pools 184-198,
+    :truncated? true always) and the offer set was dominated by single hub
+    patterns - f77/a2's 100 offers routed through 7 patterns with 57 from
+    math-formalization-CA/measure-integration-api alone. Twenty offers, each
+    now carrying :offer/name and :offer/hook (amendment 12), is a set a
+    student can actually read; a hundred was a dump. The read-cost argument
+    for a lower cap was retired by a14e2635 (edge-props-first enrichment);
+    this change is purely about offer-set legibility."
+   :known-limitation
+   "Selection under the cap is not relevance-ordered. Cheapest-route dedup
+    sorts by [hops route-rank pattern-string memory-id] (conductor.clj
+    route-key + ordered/selected); sibling-only offers tie on hops and rank,
+    so take-20 fills alphabetically by pattern name. Which patterns' leaves
+    are offered is therefore an artifact of naming, not of fit to the
+    problem. A relevance signal (e.g. the shelf ordering v2's identifier
+    overlap, amendment 6) would be the follow-up if uptake stays zero at 20
+    and the alphabetical bias is suspected; it is NOT part of this change."
+   :boundary
+   "Offer counts and uptake rates are not poolable across the cap change.
+    Frames at cap 100: f45-f80. Frames at cap 20: first post-edit mint
+    onward. Each receipt's :receipt/memory-cascade carries :cap, so the
+    regime of any attempt is readable off its own record. The amendment-12
+    prediction (uptake within five offer-receiving attempts) counts attempts
+    under EITHER cap - both deliver enriched offers, and refusing to pool
+    the falsifier across the cap change would let the arm dodge it."
+   :reversal
+   "Restore :cap 100 in the arm file (read per tick); frames already minted
+    keep their pinned unit."}]}
