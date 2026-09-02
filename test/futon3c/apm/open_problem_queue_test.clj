@@ -7,7 +7,7 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 103 = 475 corpus - 287 not-open - 79 topology - 4 defective - 2
+    ;; 102 = 475 corpus - 288 not-open - 79 topology - 4 defective - 2
     ;; construction-blocked. Each subtrahend is asserted below, so a future
     ;; move in this count identifies which class changed rather than being an
     ;; unexplained integer.
@@ -42,7 +42,8 @@
     ;; f76/b95J02 took it to 104 and closed outright rather than partial --
     ;; the first :closed frame result since f66. f77/b95J04 took it to 103,
     ;; the twentieth banked and the second three-sorry problem closed.
-    (is (= 103 (count problems)))
+    ;; f79/b96A03 took it to 102.
+    (is (= 102 (count problems)))
     (is (every? #(and (= :non-excluded (:classification %))
                       (not (.startsWith ^String (:problem/id %) "t"))
                       (every? string? ((juxt :repository :base-branch :revision
