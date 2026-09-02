@@ -35,6 +35,18 @@
   problem; move on when the budget is spent`) and states that stopping is
   permitted (`Skipping honestly is BETTER than a forced fake`).
 
+  WHAT TWO PRE-RUN REVIEWS CHANGED, before this gate was ever run.  codex-17
+  reviewed the cascade (2026-09-02, verdict REVISE) and then this rule table
+  (REVISE again), and six of the repairs below are theirs, not mine: the
+  comparison is restricted to rounds carrying BOTH a transcript and a v0
+  decision; the oracle's ambiguous rounds are excluded from the primary and
+  bounded in a sensitivity arm rather than labelled `:retrieve`; the treatment is
+  named an OVERRIDE of v0 rather than an alternative to it, because a deferred
+  round carries v0's answer and not the cascade's; the
+  `missing-dependency-protocol` rule is a one-shot sequence rather than the
+  predicate that was true on 68 of 102 rounds; and the sham is recorded as
+  tautological rather than offered as an independent control.
+
   THE PLAY-GRAIN RULE TABLE, and the two things that keep it from being fitted.
   A cascade member is a pattern, and a pattern acts only through its own THEN.
   `rule-table` below encodes four THENs, each citing a line span re-read from disk
@@ -66,7 +78,14 @@
    one halts before admitting anything (its seed of 38 already exceeds the
    transplanted budget of 20), so the floor arm is the one whose membership the
    constructor actually decided.  `construct_ants_cascade.clj` chose the floor arm
-   for the same reason."
+   for the same reason.
+
+   AFTER THE CUE LICENCE (futon3 c4b4831) that reason no longer holds: the seed
+   is 11, the budget arm admits 9 and reaches 20 members, the floor arm reaches
+   17, and neither is degenerate.  The floor arm is kept as the arm under test
+   because it is the one `:LA4` used, and because changing which arm is measured
+   once the membership is in view is a choice made with the answer visible.  Both
+   arms are in `zaif-cascade.edn` and either can be read."
   :widen-to-the-marginal-gain-floor)
 
 ;; ---------------------------------------------------------------------------
@@ -102,9 +121,35 @@
                       ;; rather than passing a string to `gamma-for-mission`,
                       ;; where it would silently fall through to the 1.0 prior.
                       (if (string? g) (try (edn/read-string g) (catch Exception _ {})) (or g {})))
+              ;; THE ONE-SHOT PHASES of `missing-dependency-protocol`'s THEN,
+              ;; computed here so the rule's closure stays legible.  Repair 1 of
+              ;; the second pre-run review: the THEN prescribes a SEQUENCE --
+              ;; "Search once more ... look for an adapter ... before building",
+              ;; then "Put exactly one `sorry` at the observed gap ... leave the
+              ;; consultation trail", then "stop researching once the misses
+              ;; repeat" -- and the first encoding read it as a standing
+              ;; predicate that held on 68 of 102 rounds.  Each flag below is
+              ;; true on EXACTLY ONE round and is computed from rounds already
+              ;; seen, never from later ones: a live seat at round n could
+              ;; compute all three.
+              once-more? (and (:store-consulted? acc)          ; the store was consulted BEFORE this round
+                              (not (:once-more-done? acc))
+                              (seq calls))
+              record-gap? (and (:once-more-done? acc)
+                               (not (:gap-recorded? acc))
+                               (not wrote?))
+              ;; "the misses repeat": two further rounds after the gap was
+              ;; recorded in which nothing landed.  Two, because that is what
+              ;; `repeat` means, not a number chosen from this cohort.
+              stop-researching? (and (:gap-recorded? acc)
+                                     (not (:stopped? acc))
+                                     (>= (- (dec round) (:gap-round acc)) 2))
               s {:grain :play
                  :round round
                  :rounds-so-far (dec round)
+                 :md-once-more? once-more?
+                 :md-record-gap? record-gap?
+                 :md-stop-researching? stop-researching?
                  :round-budget budget
                  :store-consulted? (:store-consulted? acc)
                  :edits-so-far (:edits acc)
@@ -130,8 +175,13 @@
               (assoc :store-consulted? (or (:store-consulted? acc) store?))
               (update :edits + (count (filter write-tools calls)))
               (update :reads + (count (filter read-only-tools calls)))
+              (assoc :once-more-done? (or (:once-more-done? acc) once-more?))
+              (assoc :gap-recorded? (or (:gap-recorded? acc) record-gap?))
+              (assoc :gap-round (if record-gap? round (:gap-round acc)))
+              (assoc :stopped? (or (:stopped? acc) stop-researching?))
               (assoc :last-edit-round (if wrote? round (:last-edit-round acc))))))
-      {:rows [] :store-consulted? false :edits 0 :reads 0 :last-edit-round 0}
+      {:rows [] :store-consulted? false :edits 0 :reads 0 :last-edit-round 0
+       :once-more-done? false :gap-recorded? false :gap-round 0 :stopped? false}
       (:rounds cohort)))))
 
 ;; ---------------------------------------------------------------------------
@@ -151,21 +201,29 @@
   [{:id :war-machine/ambient-pattern-retrieval
     :then-source "war-machine/ambient-pattern-retrieval.flexiarg:16-16"
     :encodes "\"Search the library on every turn as a background process.\""
+    ;; "on every turn" means on every turn.  The first encoding had this fall
+    ;; silent after the store was first consulted, which the second pre-run
+    ;; review correctly called the author's reading of the HOWEVER's notification
+    ;; fatigue rather than anything the THEN says.
     :if (fn [s] (and (= :play (:grain s)) (:has-transcript? s)))
-    ;; the counter-force the pattern's own HOWEVER names is notification
-    ;; fatigue -- "low-relevance patterns keep firing" -- so this fires while the
-    ;; store has NOT yet been consulted in the turn and falls silent afterwards.
-    :however (fn [s] (not (:store-consulted? s)))
+    :however (fn [_] true)
+    :encoding-limit "the THEN also says to display results, log the activation history, and tune retrieval from hot/cold zones. The zaif arm set has no term for any of those, so this rule encodes the search clause only and the rest is unencodable rather than encoded."
     :then (fn [_] :retrieve)}
 
    {:id :math-strategy/missing-dependency-protocol
     :then-source "math-strategy/missing-dependency-protocol.flexiarg:59-77"
     :encodes "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\""
+    ;; A SEQUENCE, not a standing predicate.  The three phases fire on one round
+    ;; each and the rule is silent before and after.  What the first encoding got
+    ;; wrong, and the second review named: `(> rounds-since-last-edit 1)` held on
+    ;; 68 of 102 rounds, which reads "act whenever nothing has landed lately" and
+    ;; not "search once more, then record the gap, then stop".
     :if (fn [s] (and (= :play (:grain s)) (:store-consulted? s)))
-    ;; "once more", then the trail.  The rule is live when the seat has gone more
-    ;; rounds than that without an edit landing: the misses have repeated.
-    :however (fn [s] (> (:rounds-since-last-edit s) 1))
-    :then (fn [_] :act)}
+    :however (fn [s] (or (:md-once-more? s) (:md-record-gap? s) (:md-stop-researching? s)))
+    :then (fn [s] (cond (:md-once-more? s) :retrieve       ; "search once more"
+                        (:md-record-gap? s) :act           ; "put exactly one sorry ... leave the trail"
+                        (:md-stop-researching? s) :yield   ; "stop researching once the misses repeat"
+                        :else nil))}
 
    ;; --- NOT SELECTED BY THE CONSTRUCTOR.  Counterfactual arm only. ---
    {:id :agent/budget-bounds-exploration
@@ -173,20 +231,28 @@
     :then-source "agent/budget-bounds-exploration.flexiarg:19-19"
     :encodes "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\""
     :if (fn [s] (and (= :play (:grain s)) (some? (:round-budget s))))
-    ;; "nears exhaustion" is read off the RUNNER's own declared constant --
-    ;; `tool-round-budget` 24, futon3c/src/futon3c/agents/zai_api.clj:1033-1037 --
-    ;; and not off this cohort.  A threshold chosen from the data would make the
-    ;; round it fires on a property of the data.
+    ;; The constant 24 is the RUNNER's own `tool-round-budget`
+    ;; (futon3c/src/futon3c/agents/zai_api.clj:1033-1037) and not a number taken
+    ;; from this cohort.  The predicate is `>=`, which is AT OR BEYOND the budget
+    ;; and not the THEN's "nears"; it is left as `>=` because any "nears" margin
+    ;; would be a number this file chose, and it is named here rather than
+    ;; described as what the THEN says.
     :however (fn [s] (>= (:rounds-so-far s) (:round-budget s)))
+    :encoding-limit "the THEN offers three terminal choices -- commit to best-so-far, escalate to a supervisor, expand scope with justification -- and asks for reset rules. The zaif arm set has a term for none of the three: :yield is the nearest to `commit to best-so-far`, :ask is the nearest to `escalate`, and nothing expresses `expand scope`. The 102 recorded rounds also cross continuation boundaries this file does not reconstruct, so `rounds-so-far` is rounds since the turn began and not rounds since the current budget window opened."
     :then (fn [_] :yield)}
 
    {:id :agent/pause-is-not-failure
     :counterfactual? true
     :then-source "agent/pause-is-not-failure.flexiarg:19-19"
     :encodes "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\""
+    ;; The `confidence below threshold` trigger is DROPPED.  The first encoding
+    ;; set it at 0.5, a number the THEN does not state and this file invented;
+    ;; the second pre-run review named it, and the repair is removal, not a
+    ;; different number.  What is left is the one trigger the THEN states in
+    ;; terms the record carries.
     :if (fn [s] (= :play (:grain s)))
-    :however (fn [s] (or (>= (:rounds-so-far s) (:round-budget s))
-                         (>= (double (or (:operator-c-uncertainty s) 0.0)) 0.5)))
+    :however (fn [s] (>= (:rounds-so-far s) (:round-budget s)))
+    :encoding-limit "the THEN also requires the pause to carry a resumption payload (reason, missing info, requested decision, scope impact, confidence/budget snapshot). An arm choice carries none of that, so this rule encodes the trigger and not the payload."
     :then (fn [_] :ask)}])
 
 (defn then-correspondence
@@ -214,6 +280,7 @@
             (sorted-map
              :rule id :counterfactual? (boolean counterfactual?)
              :then-source then-source :encodes encodes
+             :encoding-limit (:encoding-limit (first (filter #(= id (:id %)) rule-table)))
              :file-exists? (some? lines)
              :pattern-id-matches-path?
              (= id (keyword (str/replace rel #"\.flexiarg$" "")))
@@ -264,16 +331,49 @@
       (and (:final? s) (empty? calls)) :yield
       :else :retrieve)))
 
-(defn oracle-uncertain? [s]
+(defn oracle-uncertain?
+  "A round whose only calls are `run_shell`.  Repair 3 of the second pre-run
+   review: 54 of the 102 rounds are of this kind, so labelling them `:retrieve`
+   and reporting the count is not the same as having 102 labelled observations.
+   They are EXCLUDED from the primary and bounded in a sensitivity arm instead."
+  [s]
   (and (seq (:calls s)) (every? #(= :run_shell %) (:calls s))))
 
 (defn- dist [xs] (into (sorted-map) (frequencies xs)))
 
-(defn- agreement [plays sits]
-  (let [pairs (remove nil? (map (fn [p s] (when (:has-transcript? s) [(:arm p) (oracle s)])) plays sits))]
+(defn paired?
+  "Repair 2 of the second pre-run review: a round is a comparison observation only
+   if it carries BOTH a transcript and a v0 decision.  52 of the 102 transcript
+   rounds have no recorded v0 decision, and on those the deferral fallback would
+   hand back `nil` -- an arm neither controller chose."
+  [s]
+  (and (:has-transcript? s) (:has-v0? s)))
+
+(defn- agreement
+  "Agreement with the oracle over the rounds `keep?` admits.  `:rounds` is the
+   denominator and is always reported beside `:agree`, because the denominator is
+   what the two repairs above change."
+  [plays sits keep?]
+  (let [pairs (remove nil? (map (fn [p s] (when (keep? s) [(:arm p) (oracle s)])) plays sits))]
     (sorted-map :rounds (count pairs)
                 :agree (count (filter (fn [[a o]] (= a o)) pairs))
                 :confusion (into (sorted-map) (frequencies pairs)))))
+
+(defn- sensitivity
+  "The ambiguous rounds under each label they could carry.  Not a result: a range
+   the primary sits inside, so a reader can see how much of any difference is the
+   classifier's choice rather than the record's."
+  [plays sits]
+  (let [amb (fn [label]
+              (let [pairs (remove nil?
+                                  (map (fn [p s]
+                                         (when (and (paired? s) (oracle-uncertain? s))
+                                           [(:arm p) label]))
+                                       plays sits))]
+                {:rounds (count pairs)
+                 :agree (count (filter (fn [[a o]] (= a o)) pairs))}))]
+    (sorted-map :if-ambiguous-rounds-are-retrieve (amb :retrieve)
+                :if-ambiguous-rounds-are-act (amb :act))))
 
 ;; ---------------------------------------------------------------------------
 ;; the report
@@ -288,11 +388,14 @@
   (let [rows (for [s sits :when (and (:has-v0? s) (:inputs s))]
                (let [d (zaif/decide (:inputs s))]
                  {:round (:round s) :recorded (:v0-arm s) :rederived (:arm d)
-                  :g-terms-match? (= (:g-terms s) (:g-terms d))}))]
+                  :recorded-g-terms (:v0-g-terms s) :rederived-g-terms (:g-terms d)
+                  :g-terms-match? (= (:v0-g-terms s) (:g-terms d))}))]
     (sorted-map
      :rounds (count rows)
-     :arm-disagreements (vec (for [r rows :when (not= (:recorded r) (:rederived r))] r))
-     :g-term-disagreements (count (remove :g-terms-match? rows)))))
+     :arm-disagreements (vec (for [r rows :when (not= (:recorded r) (:rederived r))]
+                               (dissoc r :recorded-g-terms :rederived-g-terms)))
+     :g-term-disagreements (count (remove :g-terms-match? rows))
+     :g-term-disagreement-examples (vec (take 3 (remove :g-terms-match? rows))))))
 
 (defn report []
   (let [cohort (edn/read-string (slurp cohort-path))
@@ -320,11 +423,17 @@
                              (zipmap (map :id (filter :counterfactual? rule-table))
                                      (repeat (inc (count members)))))
                       sits)
-        with-t (fn [ps] (keep-indexed (fn [i p] (when (:has-transcript? (nth sits i)) p)) ps))
+        ;; the two denominators the second pre-run review required.  `primary?`
+        ;; is the one every headline number is over: a round with a transcript,
+        ;; a recorded v0 decision, and an oracle label the record actually
+        ;; determines.
+        primary? (fn [s] (and (paired? s) (not (oracle-uncertain? s))))
+        primary (fn [ps] (keep-indexed (fn [i p] (when (primary? (nth sits i)) p)) ps))
         differs (fn [ps] (vec (for [[c v s] (map vector ps v0-plays sits)
-                                    :when (and (:has-transcript? s) (not= (:arm c) (:arm v)))]
-                                {:round (:round s) :cascade (:arm c) :v0 (:arm v)
-                                 :fired (:fired c) :oracle (oracle s)})))
+                                    :when (and (paired? s) (not= (:arm c) (:arm v)))]
+                                {:round (:round s) :override (:arm c) :v0 (:arm v)
+                                 :fired (:fired c) :oracle (oracle s)
+                                 :oracle-is-uncertain? (oracle-uncertain? s)})))
         ;; O4: exchange the precedence of the two members that carry a rule.  The
         ;; six numbers only; `construct_zaif_cascade.clj` applies the predicate.
         two (mapv :id cascade-rules)
@@ -365,27 +474,59 @@
                 :rules-not-in-the-cascade
                 (mapv :id (remove #(contains? members (:id %)) rule-table))
                 :members-with-no-rule
-                (count (remove (set (map :id rule-table)) members)))
+                (count (remove (set (map :id rule-table)) members))
+                :anti-fitting
+                (sorted-map
+                 :protocol "every rule's :then, :if and :however are written from the cited THEN's own clauses and from nothing else; a rule may read only fields of the Situation that a live seat could compute at that round; no threshold is taken from this cohort."
+                 :rules-outside-the-cascade
+                 (count (remove #(contains? members (:id %)) rule-table))
+                 :what-this-does-NOT-establish
+                 "the second pre-run review is right that unused rules are a weak guard: require-pass! only asks that SOME rule lie outside the cascade, and arbitrary unused rules would satisfy it. A frozen encoding protocol reviewed independently of any cascade, and a second task, are what would establish it. Neither is done, and this row does not claim them."))
+     :denominators (sorted-map
+                    :rounds-with-a-transcript (count (filter :has-transcript? sits))
+                    :paired (count (filter paired? sits))
+                    :primary (count (filter primary? sits))
+                    :dropped-no-v0-decision
+                    (count (filter #(and (:has-transcript? %) (not (:has-v0? %))) sits))
+                    :dropped-oracle-uncertain
+                    (count (filter #(and (paired? %) (oracle-uncertain? %)) sits))
+                    :why "repairs 2 and 3 of the second pre-run review. A round with no recorded v0 decision is not a paired observation, and a round whose only calls are run_shell has no oracle label the record determines.")
      :arms (sorted-map
-            :v0 (sorted-map :arms (dist (map :arm (with-t v0-plays)))
-                            :agreement-with-the-oracle (agreement v0-plays sits))
-            :cascade (sorted-map :arms (dist (map :arm (with-t c-plays)))
-                                 :fired (dist (keep :fired (with-t c-plays)))
-                                 :rounds-that-fired (count (filter :fired (with-t c-plays)))
-                                 :agreement-with-the-oracle (agreement c-plays sits))
-            :sham (sorted-map :arms (dist (map :arm (with-t s-plays)))
-                              :agreement-with-the-oracle (agreement s-plays sits))
+            :v0 (sorted-map :arms (dist (map :arm (primary v0-plays)))
+                            :agreement-with-the-oracle (agreement v0-plays sits primary?))
+            ;; REPAIR 4.  This arm is NOT "the cascade": on every round where no
+            ;; rule fires it carries v0's own answer.  It is v0 with the cascade
+            ;; allowed to override, and the fired-round numbers below are the only
+            ;; ones that are about the cascade at all.
+            :v0-with-cascade-override
+            (sorted-map
+             :what-this-is "v0's arm on every round, overridden on the rounds where a cascade member's THEN emits. A deferred round is v0's answer and is not evidence about the cascade."
+             :arms (dist (map :arm (primary c-plays)))
+             :fired (dist (keep :fired (primary c-plays)))
+             :rounds-that-fired (count (filter :fired (primary c-plays)))
+             :agreement-with-the-oracle (agreement c-plays sits primary?)
+             :on-fired-rounds-only
+             (agreement c-plays sits (fn [s] (and (primary? s)
+                                                  (some #(and (= (:round %) (:round s)) (:fired %))
+                                                        c-plays))))
+             :sensitivity-over-the-ambiguous-rounds (sensitivity c-plays sits))
+            :sham (sorted-map
+                   :tautological? true
+                   :why "with no rule, every round defers, so the sham reproduces v0 by construction. The second pre-run review is right that this is not an independent control; it is kept as a WIRING check -- if it ever differed, `play` would not be deferring where it says it defers."
+                   :arms (dist (map :arm (primary s-plays)))
+                   :agreement-with-the-oracle (agreement s-plays sits primary?))
             :counterfactual
             (sorted-map
              :NOT-A-RESULT
-             "these two rules encode patterns the constructor did NOT select. The arm exists to measure what the cascade would have done had find returned them, and to keep the rule table from being fitted to the cascade. It is not evidence about the constructor."
-             :arms (dist (map :arm (with-t x-plays)))
-             :fired (dist (keep :fired (with-t x-plays)))
+             "these two rules encode patterns the constructor did NOT select. The arm exists to measure what the override would have done had find returned them, and to keep the rule table from being fitted to the cascade. It is not evidence about the constructor."
+             :arms (dist (map :arm (primary x-plays)))
+             :fired (dist (keep :fired (primary x-plays)))
              :first-round-that-fired (:round (first (filter :fired x-plays)))
-             :agreement-with-the-oracle (agreement x-plays sits)))
+             :agreement-with-the-oracle (agreement x-plays sits primary?)))
      :comparison (sorted-map
-                  :cascade-vs-v0-rounds-that-differ (differs c-plays)
-                  :cascade-vs-v0-differing-round-count (count (differs c-plays))
+                  :estimand "v0 with cascade override, versus unmodified v0, on the rounds carrying both a transcript and a recorded v0 decision. IN-SAMPLE RETROSPECTIVE: the tension's cues were authored from the same task whose transcript is the oracle, so this is not predictive validation of anything."
+                  :override-vs-v0-rounds-that-differ (differs c-plays)
+                  :override-vs-v0-differing-round-count (count (differs c-plays))
                   :counterfactual-vs-v0-differing-round-count (count (differs x-plays))
                   :null? (zero? (count (differs c-plays))))
      :oracle (sorted-map
@@ -410,10 +551,10 @@
           :exercised? true
           :precedence-before (mapv #(get precedence % ) two)
           :precedence-after (mapv #(get swapped %) two)
-          :acting-order-before (acting-order (with-t c-plays))
-          :acting-order-after (acting-order (with-t o4-plays))
-          :score-before (:agree (agreement c-plays sits))
-          :score-after (:agree (agreement o4-plays sits))
+          :acting-order-before (acting-order (primary c-plays))
+          :acting-order-after (acting-order (primary o4-plays))
+          :score-before (:agree (agreement c-plays sits primary?))
+          :score-after (:agree (agreement o4-plays sits primary?))
           :score-is "rounds on which the arm agrees with the transcript oracle")))))
 
 (defn require-pass! [result]
@@ -484,7 +625,10 @@
                        :precedence (get precedence (:id r) :not-a-member)
                        :then-source (:then-source r)
                        :encodes (:encodes r)
-                       :emits ((:then r) (first with-t))
+                       :emits (vec (sort (distinct (keep (fn [s] (when (try (fo/fires? r s) (catch Exception _ false))
+                                                                          ((:then r) s)))
+                                                        with-t))))
+                       :encoding-limit (:encoding-limit r)
                        :antecedent-holds-on-rounds rounds
                        :antecedent-holds-on-n-rounds (count rounds)
                        :first-round (first rounds)
@@ -529,7 +673,7 @@
                        (count (:members-with-no-rule c))))
       (doseq [r (:rules c)]
         (println (format "  %-48s in-cascade %-5s cf %-5s emits %-9s fires on %d rounds (first %s last %s)"
-                         (:id r) (:in-the-cascade? r) (:counterfactual? r) (:emits r)
+                         (:id r) (:in-the-cascade? r) (:counterfactual? r) (pr-str (:emits r))
                          (:antecedent-holds-on-n-rounds r) (:first-round r) (:last-round r))))
       (println (format "contentions: %d; grain leaks %d; rules not in the cascade %s"
                        (count (get-in c [:contention :rounds-where-more-than-one-cascade-rule-fires]))
@@ -563,19 +707,28 @@
                          (pr-str (get-in arms [:v0 :arms]))
                          (get-in arms [:v0 :agreement-with-the-oracle :agree])
                          (get-in arms [:v0 :agreement-with-the-oracle :rounds])))
-        (println (format "cascade   arms %s, fired on %d rounds %s, agrees with the oracle on %d/%d"
-                         (pr-str (get-in arms [:cascade :arms]))
-                         (get-in arms [:cascade :rounds-that-fired])
-                         (pr-str (get-in arms [:cascade :fired]))
-                         (get-in arms [:cascade :agreement-with-the-oracle :agree])
-                         (get-in arms [:cascade :agreement-with-the-oracle :rounds])))
+        (let [o (:v0-with-cascade-override arms) d (:denominators result)]
+          (println (format "denominators: %d transcript rounds -> %d paired (%d dropped, no v0 decision) -> %d primary (%d dropped, oracle uncertain)"
+                           (:rounds-with-a-transcript d) (:paired d)
+                           (:dropped-no-v0-decision d) (:primary d) (:dropped-oracle-uncertain d)))
+          (println (format "override  arms %s, fired on %d primary rounds %s, agrees with the oracle on %d/%d (on FIRED rounds only %d/%d)"
+                           (pr-str (:arms o)) (:rounds-that-fired o) (pr-str (:fired o))
+                           (get-in o [:agreement-with-the-oracle :agree])
+                           (get-in o [:agreement-with-the-oracle :rounds])
+                           (get-in o [:on-fired-rounds-only :agree])
+                           (get-in o [:on-fired-rounds-only :rounds])))
+          (println (format "  sensitivity over the %d ambiguous rounds: %s"
+                           (:dropped-oracle-uncertain d)
+                           (pr-str (:sensitivity-over-the-ambiguous-rounds o)))))
         (println (format "counterfactual (NOT A RESULT) arms %s, first fired round %s, agrees on %d/%d"
                          (pr-str (get-in arms [:counterfactual :arms]))
                          (pr-str (get-in arms [:counterfactual :first-round-that-fired]))
                          (get-in arms [:counterfactual :agreement-with-the-oracle :agree])
                          (get-in arms [:counterfactual :agreement-with-the-oracle :rounds])))
-        (println (format "COMPARISON cascade vs v0: %d rounds differ; null? %s"
-                         (:cascade-vs-v0-differing-round-count cmp) (:null? cmp)))
+        (println (format "COMPARISON override vs unmodified v0 over %d paired rounds: %d differ; null? %s; counterfactual would differ on %d"
+                         (get-in result [:denominators :paired])
+                         (:override-vs-v0-differing-round-count cmp) (:null? cmp)
+                         (:counterfactual-vs-v0-differing-round-count cmp)))
         (println (format "oracle %s; %d uncertain (run_shell only); turn outcome %s at round %s"
                          (pr-str (get-in result [:oracle :distribution]))
                          (get-in result [:oracle :uncertain-rounds])

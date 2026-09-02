@@ -1,0 +1,164 @@
+{:arms
+ {:counterfactual
+  {:NOT-A-RESULT
+   "these two rules encode patterns the constructor did NOT select. The arm exists to measure what the override would have done had find returned them, and to keep the rule table from being fitted to the cascade. It is not evidence about the constructor.",
+   :agreement-with-the-oracle
+   {:agree 1,
+    :confusion
+    {[:retrieve :retrieve] 1, [:yield :act] 15, [:yield :retrieve] 13},
+    :rounds 29},
+   :arms {:retrieve 1, :yield 28},
+   :fired #:agent{:budget-bounds-exploration 28},
+   :first-round-that-fired 3},
+  :sham
+  {:agreement-with-the-oracle
+   {:agree 14,
+    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
+    :rounds 29},
+   :arms {:retrieve 29},
+   :tautological? true,
+   :why
+   "with no rule, every round defers, so the sham reproduces v0 by construction. The second pre-run review is right that this is not an independent control; it is kept as a WIRING check -- if it ever differed, `play` would not be deferring where it says it defers."},
+  :v0
+  {:agreement-with-the-oracle
+   {:agree 14,
+    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
+    :rounds 29},
+   :arms {:retrieve 29}},
+  :v0-with-cascade-override
+  {:agreement-with-the-oracle
+   {:agree 14,
+    :confusion {[:retrieve :act] 15, [:retrieve :retrieve] 14},
+    :rounds 29},
+   :arms {:retrieve 29},
+   :fired {},
+   :on-fired-rounds-only {:agree 0, :confusion {}, :rounds 0},
+   :rounds-that-fired 0,
+   :sensitivity-over-the-ambiguous-rounds
+   {:if-ambiguous-rounds-are-act {:rounds 20, :agree 0},
+    :if-ambiguous-rounds-are-retrieve {:rounds 20, :agree 19}},
+   :what-this-is
+   "v0's arm on every round, overridden on the rounds where a cascade member's THEN emits. A deferred round is v0's answer and is not evidence about the cascade."}},
+ :as-of
+ {:cascade "../futon3/checks/zaif-cascade.edn",
+  :cascade-commit
+  "futon3 37f7506 -- constructed and committed BEFORE this gate existed",
+  :cascade-members 17,
+  :cohort "holes/zaif-cohort-a97J05.edn",
+  :cohort-agent "zai-4",
+  :cohort-turn "zai-turn-f1513520-b760-4b67-bbd1-b2941d3e0325",
+  :rounds 103,
+  :rounds-with-a-transcript 102,
+  :rounds-with-a-v0-decision 50,
+  :temperament :widen-to-the-marginal-gain-floor},
+ :comparison
+ {:counterfactual-vs-v0-differing-round-count 46,
+  :estimand
+  "v0 with cascade override, versus unmodified v0, on the rounds carrying both a transcript and a recorded v0 decision. IN-SAMPLE RETROSPECTIVE: the tension's cues were authored from the same task whose transcript is the oracle, so this is not predictive validation of anything.",
+  :null? false,
+  :override-vs-v0-differing-round-count 1,
+  :override-vs-v0-rounds-that-differ
+  [{:round 7,
+    :override :yield,
+    :v0 :retrieve,
+    :fired :math-strategy/missing-dependency-protocol,
+    :oracle :retrieve,
+    :oracle-is-uncertain? true}]},
+ :controls
+ {:anti-fitting
+  {:protocol
+   "every rule's :then, :if and :however are written from the cited THEN's own clauses and from nothing else; a rule may read only fields of the Situation that a live seat could compute at that round; no threshold is taken from this cohort.",
+   :rules-outside-the-cascade 3,
+   :what-this-does-NOT-establish
+   "the second pre-run review is right that unused rules are a weak guard: require-pass! only asks that SOME rule lie outside the cascade, and arbitrary unused rules would satisfy it. A frozen encoding protocol reviewed independently of any cascade, and a second task, are what would establish it. Neither is done, and this row does not claim them."},
+  :grain-separation [],
+  :members-with-no-rule 16,
+  :rules-in-the-cascade [:math-strategy/missing-dependency-protocol],
+  :rules-not-in-the-cascade
+  [:war-machine/ambient-pattern-retrieval
+   :agent/budget-bounds-exploration
+   :agent/pause-is-not-failure],
+  :sham-rounds-that-differ 0,
+  :sham-ties-v0-exactly? true,
+  :then-correspondence
+  [{:counterfactual? false,
+    :encodes
+    "\"Search the library on every turn as a background process.\"",
+    :encoding-limit
+    "the THEN also says to display results, log the activation history, and tune retrieval from hot/cold zones. The zaif arm set has no term for any of those, so this rule encodes the search clause only and the rest is unencodable rather than encoded.",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :war-machine/ambient-pattern-retrieval,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [15 18],
+    :then-source
+    "war-machine/ambient-pattern-retrieval.flexiarg:16-16"}
+   {:counterfactual? false,
+    :encodes
+    "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\"",
+    :encoding-limit nil,
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :math-strategy/missing-dependency-protocol,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [58 78],
+    :then-source
+    "math-strategy/missing-dependency-protocol.flexiarg:59-77"}
+   {:counterfactual? true,
+    :encodes
+    "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\"",
+    :encoding-limit
+    "the THEN offers three terminal choices -- commit to best-so-far, escalate to a supervisor, expand scope with justification -- and asks for reset rules. The zaif arm set has a term for none of the three: :yield is the nearest to `commit to best-so-far`, :ask is the nearest to `escalate`, and nothing expresses `expand scope`. The 102 recorded rounds also cross continuation boundaries this file does not reconstruct, so `rounds-so-far` is rounds since the turn began and not rounds since the current budget window opened.",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :agent/budget-bounds-exploration,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [18 21],
+    :then-source "agent/budget-bounds-exploration.flexiarg:19-19"}
+   {:counterfactual? true,
+    :encodes
+    "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\"",
+    :encoding-limit
+    "the THEN also requires the pause to carry a resumption payload (reason, missing info, requested decision, scope impact, confidence/budget snapshot). An arm choice carries none of that, so this rule encodes the trigger and not the payload.",
+    :file-exists? true,
+    :pattern-id-matches-path? true,
+    :rule :agent/pause-is-not-failure,
+    :span-inside-the-then-block? true,
+    :span-is-non-empty? true,
+    :then-block [18 21],
+    :then-source "agent/pause-is-not-failure.flexiarg:19-19"}],
+  :v0-rederivation
+  {:arm-disagreements [],
+   :g-term-disagreement-examples [],
+   :g-term-disagreements 0,
+   :rounds 50}},
+ :denominators
+ {:dropped-no-v0-decision 53,
+  :dropped-oracle-uncertain 20,
+  :paired 49,
+  :primary 29,
+  :rounds-with-a-transcript 102,
+  :why
+  "repairs 2 and 3 of the second pre-run review. A round with no recorded v0 decision is not a paired observation, and a round whose only calls are run_shell has no oracle label the record determines."},
+ :o4
+ {:exercised? false,
+  :members-carrying-a-rule
+  [:math-strategy/missing-dependency-protocol],
+  :note
+  "O4 is a law about a run: precedence changed => acting order or score changed. With one rule there is no pair to exchange, so the law is recorded as not exercised rather than passed on a swap that changes nothing. :LA3 recorded it as :not-exercised-nothing-is-played for the adjacent reason.",
+  :reading
+  :not-exercised-fewer-than-two-members-carry-a-play-grain-rule},
+ :oracle
+ {:classifier
+  "act iff a write tool was called; yield iff the round is final with no calls; retrieve otherwise",
+  :distribution {:act 19, :retrieve 83},
+  :turn-outcome
+  {:final? false,
+   :last-round 102,
+   :reading :the-seat-exhausted-its-rounds-without-reporting},
+  :uncertain-note
+  "rounds whose only calls are run_shell. run_shell runs reads and writes alike, so their :retrieve label is this file's choice and not a fact the record carries.",
+  :uncertain-rounds 54}}

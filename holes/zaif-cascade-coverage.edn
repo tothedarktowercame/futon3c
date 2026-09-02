@@ -37,6 +37,8 @@
   [{:counterfactual? false,
     :encodes
     "\"Search the library on every turn as a background process.\"",
+    :encoding-limit
+    "the THEN also says to display results, log the activation history, and tune retrieval from hot/cold zones. The zaif arm set has no term for any of those, so this rule encodes the search clause only and the rest is unencodable rather than encoded.",
     :file-exists? true,
     :pattern-id-matches-path? true,
     :rule :war-machine/ambient-pattern-retrieval,
@@ -48,6 +50,7 @@
    {:counterfactual? false,
     :encodes
     "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\"",
+    :encoding-limit nil,
     :file-exists? true,
     :pattern-id-matches-path? true,
     :rule :math-strategy/missing-dependency-protocol,
@@ -59,6 +62,8 @@
    {:counterfactual? true,
     :encodes
     "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\"",
+    :encoding-limit
+    "the THEN offers three terminal choices -- commit to best-so-far, escalate to a supervisor, expand scope with justification -- and asks for reset rules. The zaif arm set has a term for none of the three: :yield is the nearest to `commit to best-so-far`, :ask is the nearest to `escalate`, and nothing expresses `expand scope`. The 102 recorded rounds also cross continuation boundaries this file does not reconstruct, so `rounds-so-far` is rounds since the turn began and not rounds since the current budget window opened.",
     :file-exists? true,
     :pattern-id-matches-path? true,
     :rule :agent/budget-bounds-exploration,
@@ -69,6 +74,8 @@
    {:counterfactual? true,
     :encodes
     "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\"",
+    :encoding-limit
+    "the THEN also requires the pause to carry a resumption payload (reason, missing info, requested decision, scope impact, confidence/budget snapshot). An arm choice carries none of that, so this rule encodes the trigger and not the payload.",
     :file-exists? true,
     :pattern-id-matches-path? true,
     :rule :agent/pause-is-not-failure,
@@ -94,21 +101,11 @@
   :or3/openness-without-exposure
   :ukrns/publication-cadence],
  :rules
- [{:antecedent-holds-on-n-rounds 2,
-   :antecedent-holds-on-rounds [1 2],
-   :counterfactual? false,
-   :emits :retrieve,
-   :encodes
-   "\"Search the library on every turn as a background process.\"",
-   :first-round 1,
-   :id :war-machine/ambient-pattern-retrieval,
-   :in-the-cascade? false,
-   :last-round 2,
-   :precedence :not-a-member,
-   :then-source "war-machine/ambient-pattern-retrieval.flexiarg:16-16"}
-  {:antecedent-holds-on-n-rounds 68,
+ [{:antecedent-holds-on-n-rounds 102,
    :antecedent-holds-on-rounds
-   [3
+   [1
+    2
+    3
     4
     5
     6
@@ -147,15 +144,25 @@
     39
     40
     41
+    42
+    43
     44
     45
     46
     47
+    48
+    49
+    50
     51
     52
     53
     54
     55
+    56
+    57
+    58
+    59
+    60
     61
     62
     63
@@ -166,24 +173,61 @@
     68
     69
     70
+    71
+    72
+    73
+    74
+    75
     76
     77
+    78
+    79
     80
+    81
+    82
     83
+    84
+    85
     86
+    87
+    88
+    89
     90
+    91
+    92
+    93
+    94
     95
     96
     97
-    98],
+    98
+    99
+    100
+    101
+    102],
    :counterfactual? false,
-   :emits :act,
+   :emits [:retrieve],
+   :encodes
+   "\"Search the library on every turn as a background process.\"",
+   :encoding-limit
+   "the THEN also says to display results, log the activation history, and tune retrieval from hot/cold zones. The zaif arm set has no term for any of those, so this rule encodes the search clause only and the rest is unencodable rather than encoded.",
+   :first-round 1,
+   :id :war-machine/ambient-pattern-retrieval,
+   :in-the-cascade? false,
+   :last-round 102,
+   :precedence :not-a-member,
+   :then-source "war-machine/ambient-pattern-retrieval.flexiarg:16-16"}
+  {:antecedent-holds-on-n-rounds 3,
+   :antecedent-holds-on-rounds [3 4 7],
+   :counterfactual? false,
+   :emits [:act :retrieve :yield],
    :encodes
    "\"Search once more against the installed source ... and look for an adapter to an existing theorem before building\"; \"Put exactly one `sorry` at the observed gap ... Beside that `sorry`, leave the consultation trail\"; \"stop researching once the misses repeat\"",
+   :encoding-limit nil,
    :first-round 3,
    :id :math-strategy/missing-dependency-protocol,
    :in-the-cascade? true,
-   :last-round 98,
+   :last-round 7,
    :precedence 8,
    :then-source
    "math-strategy/missing-dependency-protocol.flexiarg:59-77"}
@@ -268,9 +312,11 @@
     101
     102],
    :counterfactual? true,
-   :emits :yield,
+   :emits [:yield],
    :encodes
    "\"When budget nears exhaustion, force a decision: commit to best-so-far, escalate to a supervisor, or explicitly expand scope with justification.\"",
+   :encoding-limit
+   "the THEN offers three terminal choices -- commit to best-so-far, escalate to a supervisor, expand scope with justification -- and asks for reset rules. The zaif arm set has a term for none of the three: :yield is the nearest to `commit to best-so-far`, :ask is the nearest to `escalate`, and nothing expresses `expand scope`. The 102 recorded rounds also cross continuation boundaries this file does not reconstruct, so `rounds-so-far` is rounds since the turn began and not rounds since the current budget window opened.",
    :first-round 25,
    :id :agent/budget-bounds-exploration,
    :in-the-cascade? false,
@@ -358,9 +404,11 @@
     101
     102],
    :counterfactual? true,
-   :emits :ask,
+   :emits [:ask],
    :encodes
    "\"Treat 'pause and ask' as a first-class action with defined triggers: ... confidence below threshold, resource budget near exhaustion.\"",
+   :encoding-limit
+   "the THEN also requires the pause to carry a resumption payload (reason, missing info, requested decision, scope impact, confidence/budget snapshot). An arm choice carries none of that, so this rule encodes the trigger and not the payload.",
    :first-round 25,
    :id :agent/pause-is-not-failure,
    :in-the-cascade? false,
