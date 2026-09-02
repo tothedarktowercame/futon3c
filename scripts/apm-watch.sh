@@ -121,6 +121,22 @@ while true; do
   # completed frame and reported f46 as stalled for 5909 minutes, four days
   # after it closed and banked. queue-state.edn holds :active, :parked and
   # :completed, and their order is not guaranteed.
+  # A regulator awaiting dispatched work does not tick, and that is correct.
+  # coordinator.edn carries :coordinator/pending-intent with an absolute
+  # :deadline-ms (permitted duration is 30 min), so flat ticks inside that
+  # window are "waiting", not "stuck" -- the same distinction the machine's own
+  # watchdog draws with :valid-external-wait?. Without this the alarm fired ten
+  # minutes into every solve: at 22:46 it called ticks frozen at 48587 while an
+  # intent persisted at 22:36 was live until 23:06.
+  waiting=$(python3 -c "
+import re,sys,time
+try: t=open('$C/coordinator.edn').read()
+except OSError: sys.exit()
+i=t.find(':coordinator/pending-intent')
+if i<0: sys.exit()
+m=re.search(r':deadline-ms (\d+)', t[i:i+900])
+if m and int(m.group(1))/1000 > time.time(): print('yes')" 2>/dev/null)
+
   # Anchoring to :active is not enough. BETWEEN frames :active is nil, so a
   # forward search runs past it into :completed and returns its first entry --
   # which is f46, reported as stalled for 6311 minutes at 17:37 while f67 was
@@ -141,7 +157,13 @@ for j,ch in enumerate(rest):
         if depth==0: break
 m=re.search(r':frame/id \"([^\"]+)\"', rest[:j+1])
 print(m.group(1) if m else '')" 2>/dev/null)
-  if [ -n "$afr" ] && [ "$en" = "enabled" ]; then
+  # Same waiting-vs-stuck rule as the tick alarm below. A frame whose phase
+  # file has not been rewritten is not stalled while a dispatched intent is
+  # still inside its deadline: a solve round only rewrites solve.edn when it
+  # COMPLETES, and f83 sat 90 minutes on eight legitimate solver rounds with a
+  # live intent 30 minutes from expiry. I fixed this for ticks on 2026-08-31
+  # and left the identical hole here.
+  if [ -n "$afr" ] && [ "$en" = "enabled" ] && [ -z "$waiting" ]; then
     newest=$(ls -t "$C"/*"$afr"/live/*.edn 2>/dev/null | head -1)
     if [ -n "$newest" ]; then
       age=$(( $(date +%s) - $(stat -c %Y "$newest" 2>/dev/null || echo 0) ))
@@ -156,21 +178,6 @@ print(m.group(1) if m else '')" 2>/dev/null)
     fi
   fi
 
-  # A regulator awaiting dispatched work does not tick, and that is correct.
-  # coordinator.edn carries :coordinator/pending-intent with an absolute
-  # :deadline-ms (permitted duration is 30 min), so flat ticks inside that
-  # window are "waiting", not "stuck" -- the same distinction the machine's own
-  # watchdog draws with :valid-external-wait?. Without this the alarm fired ten
-  # minutes into every solve: at 22:46 it called ticks frozen at 48587 while an
-  # intent persisted at 22:36 was live until 23:06.
-  waiting=$(python3 -c "
-import re,sys,time
-try: t=open('$C/coordinator.edn').read()
-except OSError: sys.exit()
-i=t.find(':coordinator/pending-intent')
-if i<0: sys.exit()
-m=re.search(r':deadline-ms (\d+)', t[i:i+900])
-if m and int(m.group(1))/1000 > time.time(): print('yes')" 2>/dev/null)
 
   if [ -n "$tk" ] && [ "$qs" != ":paused" ] && [ "$qs" != ":pause-after-active" ] \
      && [ "$rs" != ":failed" ] && [ "$en" != "disabled" ] && [ -z "$waiting" ]; then
