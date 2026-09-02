@@ -334,15 +334,22 @@
 (deftest live-guide-receipt-pins-legacy-independence-shape
   ;; Captured verbatim from jit-all-open-v2 frame f75.  The stored receipt
   ;; predates the typed field and must remain acceptable during migration.
+  ;; Reviewer guard (claude-2): campaign data is not tracked by git, so this
+  ;; file is absent in review worktrees and CI checkouts. Guard with a
+  ;; visible skip rather than an uncaught FileNotFoundException; the pin
+  ;; enforces in any checkout that carries the data (the canonical one).
   (let [path (str "data/apm-campaigns/jit-all-open-v2/"
-                  "jit-all-open-v2-f75/live/guide-intervention-1.edn")
-        receipt (:receipt (edn/read-string (slurp path)))]
-    (is (= ["f75" "b94J03" 1 :store-mode]
-           [(:receipt/frame-id receipt)
-            (:receipt/problem-id receipt)
-            (:receipt/intervention-ordinal receipt)
-            (:receipt/mode receipt)]))
-    (is (true? (:receipt/independent-review? receipt)))
-    (is (not (contains? receipt :receipt/independence)))
-    (is (#'handlers/guide-snapshot-evidence-valid? receipt))
-    (is (#'handlers/guide-independence-vocabulary-valid? receipt))))
+                  "jit-all-open-v2-f75/live/guide-intervention-1.edn")]
+    (if-not (.exists (java.io.File. path))
+      (println "SKIP live-guide-receipt-pins-legacy-independence-shape:"
+               "campaign data not present in this checkout")
+      (let [receipt (:receipt (edn/read-string (slurp path)))]
+        (is (= ["f75" "b94J03" 1 :store-mode]
+               [(:receipt/frame-id receipt)
+                (:receipt/problem-id receipt)
+                (:receipt/intervention-ordinal receipt)
+                (:receipt/mode receipt)]))
+        (is (true? (:receipt/independent-review? receipt)))
+        (is (not (contains? receipt :receipt/independence)))
+        (is (#'handlers/guide-snapshot-evidence-valid? receipt))
+        (is (#'handlers/guide-independence-vocabulary-valid? receipt))))))
