@@ -29,7 +29,10 @@
 (declare transport-failure?)
 
 (def ^:private implementation-resource "futon3c/apm/live_promotion.clj")
-(defonce ^:private loaded-runtime-id
+;; This is evidence about the source loaded by THIS namespace evaluation.  A
+;; defonce preserves an obsolete digest across `require :reload`, making the
+;; exact repair operation permanently fail its runtime/source identity guard.
+(def ^:private loaded-runtime-id
   (transport/source-resource-id implementation-resource))
 
 (defn transport-implementation-identity []

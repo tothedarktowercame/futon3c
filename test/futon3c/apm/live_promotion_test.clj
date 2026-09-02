@@ -1109,6 +1109,12 @@
     (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
     (is (= state (:state result)))))
 
+(deftest loaded-transport-implementation-identifies-current-source
+  (let [{:keys [source-id loaded-runtime-id]}
+        (sut/transport-implementation-identity)]
+    (is (string? source-id))
+    (is (= source-id loaded-runtime-id))))
+
 (deftest exhausted-promotion-pass-review-set-mismatch-terminates
   (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
                :contract-digest "contract-v1"
