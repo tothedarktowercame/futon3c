@@ -308,9 +308,41 @@
         action {:kind :guide-intervention :role :guide :phase :guide-intervention-1
                 :frame-id "f18" :problem-id "a97J07"}
         partial (addressed (dissoc v2-guide-1-with-union :receipt/id
-                                   :receipt/promotion-reviews))]
+                                   :receipt/promotion-reviews))
+        typed (addressed (assoc (dissoc v2-guide-1-with-union :receipt/id)
+                                :receipt/independence :asserted-unverified))
+        unknown (addressed (assoc (dissoc v2-guide-1-with-union :receipt/id)
+                                  :receipt/independence :future-grade))
+        missing-boolean (addressed
+                         (dissoc v2-guide-1-with-union :receipt/id
+                                 :receipt/independent-review?))]
+    ;; Migration is additive: the legacy Boolean-only receipt and the new
+    ;; typed receipt both remain valid during the reload window.
     (is (:ok (handlers/validate-completion v2-contract action v2-guide-1-with-union
                                            receipts)))
+    (is (:ok (handlers/validate-completion v2-contract action typed receipts)))
     (is (= :frame-cycle-guide-snapshot-evidence-invalid
            (:error/code (handlers/validate-completion v2-contract action partial
+                                                      receipts))))
+    (is (= :frame-cycle-guide-snapshot-evidence-invalid
+           (:error/code (handlers/validate-completion v2-contract action
+                                                      missing-boolean receipts))))
+    (is (= :frame-cycle-guide-independence-vocabulary-invalid
+           (:error/code (handlers/validate-completion v2-contract action unknown
                                                       receipts))))))
+
+(deftest live-guide-receipt-pins-legacy-independence-shape
+  ;; Captured verbatim from jit-all-open-v2 frame f75.  The stored receipt
+  ;; predates the typed field and must remain acceptable during migration.
+  (let [path (str "data/apm-campaigns/jit-all-open-v2/"
+                  "jit-all-open-v2-f75/live/guide-intervention-1.edn")
+        receipt (:receipt (edn/read-string (slurp path)))]
+    (is (= ["f75" "b94J03" 1 :store-mode]
+           [(:receipt/frame-id receipt)
+            (:receipt/problem-id receipt)
+            (:receipt/intervention-ordinal receipt)
+            (:receipt/mode receipt)]))
+    (is (true? (:receipt/independent-review? receipt)))
+    (is (not (contains? receipt :receipt/independence)))
+    (is (#'handlers/guide-snapshot-evidence-valid? receipt))
+    (is (#'handlers/guide-independence-vocabulary-valid? receipt))))

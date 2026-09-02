@@ -33,6 +33,11 @@
     (is (= ["solver-memory-1"]
            (get-in proof [:student-request :memory-snapshot
                           :accessible-memory-ids])))
+    (is (= {:receipt/independent-review? true
+            :receipt/independence :asserted-unverified}
+           (select-keys (:promotion proof)
+                        [:receipt/independent-review?
+                         :receipt/independence])))
     (is (= "future-regime-1"
            (get-in proof [:analyst-final-state :analyst/regime-proposals 0
                           :proposed-regime-id])))

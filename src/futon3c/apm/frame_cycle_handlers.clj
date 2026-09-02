@@ -10,6 +10,25 @@
 (def executable-kinds
   #{:student-attempt :guide-intervention :scribe-reduce :close-frame})
 
+(def ^:private receipt-independence-vocabulary
+  #{:asserted-unverified
+    :seat-string-distinctness
+    :adjudicator-rerun-witnessed
+    :constant-assertion
+    :ungradeable-legacy})
+
+(defn- guide-snapshot-evidence-valid? [receipt]
+  (and (string? (:receipt/snapshot-id receipt))
+       (string? (:receipt/snapshot-path receipt))
+       (vector? (:receipt/reviewed-memory-ids receipt))
+       (vector? (:receipt/promotion-reviews receipt))
+       (true? (:receipt/independent-review? receipt))))
+
+(defn- guide-independence-vocabulary-valid? [receipt]
+  (or (not (contains? receipt :receipt/independence))
+      (contains? receipt-independence-vocabulary
+                 (:receipt/independence receipt))))
+
 (defn- phases-before [cycle-contract phase]
   (take-while #(not= phase %) (:phase-order cycle-contract)))
 
@@ -171,12 +190,14 @@
 
       (and (= :guide-intervention (:kind spec))
            (string? (:receipt/snapshot-digest receipt))
-           (not (and (string? (:receipt/snapshot-id receipt))
-                     (string? (:receipt/snapshot-path receipt))
-                     (vector? (:receipt/reviewed-memory-ids receipt))
-                     (vector? (:receipt/promotion-reviews receipt))
-                     (true? (:receipt/independent-review? receipt)))))
+           (not (guide-snapshot-evidence-valid? receipt)))
       {:error/code :frame-cycle-guide-snapshot-evidence-invalid}
+
+      (and (= :guide-intervention (:kind spec))
+           (not (guide-independence-vocabulary-valid? receipt)))
+      {:error/code :frame-cycle-guide-independence-vocabulary-invalid
+       :finding {:actual (:receipt/independence receipt)
+                 :known receipt-independence-vocabulary}}
 
       (and (= :guide-intervention (:kind spec))
            (not= ordinal (:receipt/intervention-ordinal receipt)))

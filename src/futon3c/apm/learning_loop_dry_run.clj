@@ -40,7 +40,8 @@
               :receipt/snapshot-digest (:snapshot/digest snap)
               :receipt/snapshot-path (str snapshot-path)
               :receipt/reviewed-memory-ids (mapv :memory-id candidates)
-              :receipt/independent-review? true})
+              :receipt/independent-review? true
+              :receipt/independence :asserted-unverified})
             access (snapshot/verify-student-access
                     {:path snapshot-path :expected (:snapshot/digest snap)
                      :frame-id frame-id :problem-id problem-id

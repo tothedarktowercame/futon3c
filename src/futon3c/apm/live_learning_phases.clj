@@ -615,7 +615,8 @@
                             (:reviewed-memory-ids snapshot)
                             :receipt/promotion-reviews
                             (:promotion-reviews snapshot)
-                            :receipt/independent-review? true)))
+                            :receipt/independent-review? true
+                            :receipt/independence :asserted-unverified)))
                  :scribe-reduce
                  (if (= :promote-solver (:phase action))
                    {:receipt/type :solver-promotion
@@ -631,7 +632,8 @@
                     (get-in report [:memory-snapshot :snapshot-path])
                     :receipt/reviewed-memory-ids
                     (get-in report [:memory-snapshot :reviewed-memory-ids])
-                    :receipt/independent-review? true}
+                    :receipt/independent-review? true
+                    :receipt/independence :asserted-unverified}
                    {:receipt/type :scribe-reduce
                     :receipt/job-id (:job-id ticket)
                     :receipt/input-receipt-ids (:input-receipt-ids request)
@@ -1247,7 +1249,8 @@
                                    :snapshot-path (:path published)
                                    :reviewed-memory-ids
                                    (mapv :memory-id (:snapshot/memories snap))
-                                   :independent-review? true})]
+                                   :independent-review? true
+                                   :receipt/independence :asserted-unverified})]
                 (receipt contract action receipts request ticket job
                          (assoc validated :report report))))))
 
@@ -1336,7 +1339,8 @@
           :snapshot-path (:receipt/snapshot-path published)
           :reviewed-memory-ids (:receipt/reviewed-memory-ids published)
           :promotion-reviews (:receipt/promotion-reviews published)
-          :independent-review? true}})
+          :independent-review? true
+          :receipt/independence :asserted-unverified}})
 
       :else
       (let [stepped (run-fn)]
