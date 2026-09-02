@@ -45,6 +45,38 @@
 (defonce ^:private !gamma-cache
   (atom nil))
 
+(def ^:private task-belief-absence
+  {:absence :d8/task-belief-actand-source-absent})
+
+(defn- finite-number?
+  [x]
+  (and (number? x)
+       (Double/isFinite (double x))))
+
+(defn- actand-value
+  [result]
+  (some #(when (finite-number? (get result %)) (get result %))
+        [:act-value :pragmatic-value :expected-utility]))
+
+(defn- provenance-bearing?
+  [result]
+  (let [{:keys [source query]} (:provenance result)]
+    (and (some? source) (some? query))))
+
+(defn- task-belief-from
+  "Accept an actand/world-model query result only when it carries both one of
+   the controller's numeric value keys and `:provenance {:source ... :query
+   ...}`. The result is preserved whole so its provenance reaches decision
+   evidence. A value without provenance is explicitly refused."
+  [result]
+  (cond
+    (nil? result) task-belief-absence
+    (and (actand-value result) (provenance-bearing? result)) result
+    (actand-value result) (assoc task-belief-absence
+                                :refused :d8/unprovenanced-task-belief)
+    :else (assoc task-belief-absence
+                 :refused :d8/invalid-task-belief-source)))
+
 (defn gamma-edn-path
   "Resolve the γ table EDN path from FUTON3C_ZAIF_GAMMA_EDN or the default
    B1 artifact path."
@@ -176,8 +208,14 @@
 
 (defn hydrate-inputs
   "Build controller inputs from ctx. Pure: reads cached γ table and derives
-   beliefs. Returns the full inputs map for `decide`. Any channel that
-   fails degrades to its empty default (failure discipline)."
+   beliefs. Returns the full inputs map for `decide`.
+
+   Optional ctx key `:actand-query-result` is the sole task-belief acceptance
+   seam. Its value must carry a finite numeric `:act-value`,
+   `:pragmatic-value`, or `:expected-utility` and
+   `:provenance {:source ... :query ...}`. Unprovenanced values are refused;
+   no task-belief is inferred from the other hydration channels. Any channel
+   that fails degrades to its typed empty default (failure discipline)."
   [ctx]
   (let [gamma-data (or (load-gamma-table) {:cells {}})
         cells (gamma-cells gamma-data)
@@ -189,7 +227,7 @@
         posting-stats (estimate-posting-stats context-text)]
     {:mission mission
      :gamma {mission {:policy-precision gamma-val}}
-     :task-belief {}
+     :task-belief (task-belief-from (:actand-query-result ctx))
      :c-belief {:operator-c-uncertainty c-uncertainty}
      :observations {:posting-stats posting-stats}}))
 
@@ -202,7 +240,7 @@
     (try
       (hydrate-inputs ctx)
       (catch Throwable _
-        {:task-belief {}
+        {:task-belief task-belief-absence
          :c-belief {}
          :gamma {}
          :mission nil

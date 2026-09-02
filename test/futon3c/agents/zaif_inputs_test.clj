@@ -1,6 +1,10 @@
 (ns futon3c.agents.zaif-inputs-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zinputs]))
+
+(def task-belief-absence
+  {:absence :d8/task-belief-actand-source-absent})
 
 (deftest gamma-cell-exact-value
   (testing "the exact γ cell M-futon-forward-model → 0.7071067811865476 (2^-1/2)"
@@ -46,7 +50,45 @@
       (is (= 0.7071067811865476
              (get-in inputs [:gamma "M-futon-forward-model" :policy-precision])))
       (is (= 1.0 (get-in inputs [:c-belief :operator-c-uncertainty])))
+      (is (= task-belief-absence (:task-belief inputs)))
       (is (contains? (get-in inputs [:observations :posting-stats]) :total-docs)))))
+
+(deftest absent-task-belief-is-zero-and-auditable-end-to-end
+  (let [inputs (zinputs/hydrate-inputs {:mission "M-no-actand"
+                                        :context "continue the task"})
+        decision (zaif/decide inputs)
+        entry (zaif/decision-evidence-entry
+               {:agent-id "zai-test" :sid "sid-d8" :turn-id "turn-d8"
+                :round 1 :decision decision :inputs inputs})]
+    (is (= 0.0 (get-in decision [:g-terms :act])))
+    (is (= task-belief-absence
+           (get-in entry [:evidence/body :inputs-snapshot :task-belief])))))
+
+(deftest provenanced-actand-value-reaches-controller
+  (let [source {:act-value 0.4
+                :provenance {:source :z1/actand-world-model
+                             :query :actand-for-task}}
+        inputs (zinputs/hydrate-inputs {:mission "M-new-source"
+                                        :context "act now"
+                                        :actand-query-result source})
+        decision (zaif/decide inputs)]
+    (is (= source (:task-belief inputs)))
+    (is (= 0.4 (get-in decision [:g-terms :act])))))
+
+(deftest unprovenanced-actand-value-is-refused
+  (let [inputs (zinputs/hydrate-inputs {:mission "M-refuse"
+                                        :context "act now"
+                                        :actand-query-result {:act-value 0.9}})
+        decision (zaif/decide inputs)
+        entry (zaif/decision-evidence-entry
+               {:agent-id "zai-test" :sid "sid-refuse" :turn-id "turn-refuse"
+                :round 1 :decision decision :inputs inputs})]
+    (is (= {:absence :d8/task-belief-actand-source-absent
+            :refused :d8/unprovenanced-task-belief}
+           (:task-belief inputs)))
+    (is (= 0.0 (get-in decision [:g-terms :act])))
+    (is (= (:task-belief inputs)
+           (get-in entry [:evidence/body :inputs-snapshot :task-belief])))))
 
 (deftest hydrate-inputs-extracts-mission-from-context
   (testing "mission extracted from context text when :mission not given"
@@ -64,6 +106,12 @@
         (is (map? inputs))
         (is (contains? inputs :gamma))
         (is (contains? inputs :c-belief))))))
+
+(deftest hydrator-error-fallback-carries-typed-task-belief-absence
+  (with-redefs [zinputs/hydrate-inputs (fn [_]
+                                        (throw (ex-info "planted failure" {})))]
+    (is (= task-belief-absence
+           (:task-belief ((zinputs/make-hydrator) {:context "test"}))))))
 
 (deftest hydrator-fn-never-throws
   (testing "the hydrator fn never throws, even with garbage input"
