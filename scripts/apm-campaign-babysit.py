@@ -253,6 +253,28 @@ def reconcile_park_decisions():
         out(f"park decisions reconciled: {result.stdout.strip()}")
 
 
+def report_park_decision_dirt():
+    """Report uncommitted park-decision artifacts without changing them."""
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "-z", "--untracked-files=all", "--",
+             "holes/labs/M-apm-demonstration/"],
+            cwd=REPO, capture_output=True, text=True, timeout=10)
+    except Exception as e:
+        out(f"park-decision dirt check failed: {e}")
+        return
+    if result.returncode != 0:
+        out(f"park-decision dirt check failed: {result.stderr.strip()}")
+        return
+    entries = [entry for entry in result.stdout.split("\0") if entry]
+    paths = [entry[3:] if len(entry) > 3 and entry[2] == " " else entry
+             for entry in entries]
+    if paths:
+        out("PARK-DECISION DIRT uncommitted in shared tree: "
+            f"{', '.join(paths)} — the decision step should have committed "
+            "these path-scoped")
+
+
 def send_bell(subject, body, to_id=TO_ID):
     tmp = f"/tmp/claude-babysit-bell-{int(time.time() * 1000)}.md"
     with open(tmp, "w") as f:
@@ -394,6 +416,9 @@ while True:
     initial_q = parse_queue_state(read_text(QUEUE_STATE)) or {}
     if initial_q.get('pending_parks'):
         reconcile_park_decisions()
+        report_park_decision_dirt()
+    else:
+        report_park_decision_dirt()
     q = parse_queue_state(read_text(QUEUE_STATE)) or {}
     for park in q.get('pending_parks', []):
         if park.get('owner') == 'claude-supervisor':
@@ -407,7 +432,18 @@ while True:
                 f"park record is in {QUEUE_STATE}. Please inspect the "
                 f"preserved receipt and residual, then record the disposition "
                 f"or apparatus repair; do not void or silently forget the "
-                f"frame.",
+                f"frame. When your decision is recorded, finish by committing "
+                f"YOUR artifacts path-scoped in {REPO}:\n"
+                f"  git add -- holes/labs/M-apm-demonstration/"
+                f"frame-park-decisions.edn <plus any pattern-library or run "
+                f"artifact you wrote>\n"
+                f"  git commit -m '{park['frame_id']} park decision: "
+                f"<disposition>' -- <the same paths>\n"
+                f"Never `git commit -a`, never --amend (check `git log -1` is "
+                f"not someone else's in-flight work first). The shared tree "
+                f"must be clean of your artifacts when you finish — "
+                f"uncommitted decision files escalate to the operator through "
+                f"inbox-zero.",
                 to_id=PARK_DECISION_TO_ID)
     if c is None:
         maybe_bell("coordinator-missing", "coordinator.edn unreadable",
