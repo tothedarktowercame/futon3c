@@ -72,6 +72,21 @@
            (get-in result [:request :problem-repository])))
     (is (re-find #":sorry-warnings INT" (sut/prompt (:request result))))))
 
+(deftest read-only-proof-phase-repair-is-content-addressed-and-fresh
+  (let [req (request :preflight)
+        repaired (sut/terminal-repair-request
+                  req {:job-id "failed-job" :ticket/id "failed-ticket"}
+                  {:job-id "failed-job"}
+                  {:findings [:typed-submission-missing]
+                   :repair/next-attempt 1})
+        replacement (:request repaired)]
+    (is (:ok repaired))
+    (is (= "failed-job" (:repair/of-job-id replacement)))
+    (is (= "failed-ticket" (:repair/of-ticket-id replacement)))
+    (is (= [:typed-submission-missing] (:repair/findings replacement)))
+    (is (string? (:submission/token replacement)))
+    (is (not= (:dispatch/id req) (:dispatch/id replacement)))))
+
 (deftest preflight-refuses-a-workspace-not-bound-to-the-problem-pin
   (let [result (sut/build-request
                 {:kind :preflight

@@ -233,17 +233,36 @@
     (driver/drive!
      (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
                                  :ticket-register-fn :terminal-submission-provider
-                                 :terminal-budget-config])
+                                 :terminal-budget-config :terminal-repair-request-fn])
             :request request
             :terminal-validator preflight/validate-terminal
             :receipt-provider (fn [r t j _] (preflight/receipt contract r t j))))
     (driver/drive!
      (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
                                  :ticket-register-fn :terminal-submission-provider
-                                 :terminal-budget-config])
+                                 :terminal-budget-config :terminal-repair-request-fn])
             :request request
             :terminal-validator (partial validate-terminal kind)
             :receipt-provider (partial receipt contract kind)))))
+
+(defn terminal-repair-request
+  "Create one content-addressed replacement dispatch for a failed read-only
+  preflight or verify invocation. The original request and exact failure remain
+  in the driver's predecessor archive."
+  [request ticket job failure]
+  (let [body (-> request
+                 (dissoc :dispatch/id :submission/token :submission/job-id)
+                 (assoc :repair/of-job-id (:job-id job)
+                        :repair/of-ticket-id (:ticket/id ticket)
+                        :repair/attempt (:repair/next-attempt failure 1)
+                        :repair/findings (vec (:findings failure))
+                        :instructions
+                        (str (:instructions request)
+                             " Re-run this read-only phase and return fresh "
+                             "typed terminal evidence; the prior invocation "
+                             "ended without a submission.")))
+        request (assoc body :dispatch/id (machine/ledger-digest [body]))]
+    {:ok true :request (submission/prepare-request request)}))
 
 (defn prompt [request]
   (str (str/upper-case (:frame-id request)) " "
@@ -345,6 +364,7 @@
     :terminal-budget-config (or terminal-budget
                                 (:terminal-budget request)
                                 driver/default-terminal-budget)
+    :terminal-repair-request-fn terminal-repair-request
     :terminal-submission-provider (fn [_ ticket _]
                                     (submission/submitted (:job-id ticket)))}]
     (if (= :solve kind)
