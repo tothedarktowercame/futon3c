@@ -232,6 +232,7 @@
                        :tension/born-of :refused-prediction
                        :tension/pattern-links []
                        :tension/refusal identity
+                       :tension/minted-by {:row :U28z :seat :codex-work}
                        :tension/provenance
                        {:who "zaif rung-3 refusal mint"
                         :when "2026-09-03"
