@@ -203,4 +203,4 @@
     (is (= [:ask :act :retrieve] (ordered-arms real-rows)))
     (is (= [:retrieve :ask :act] (ordered-arms planted-rows)))
     (is (= (:provenance (:retrieve real-rows))
-           (:provenance (:retrieve planted-rows))))))
+           (:provenance (actand/demo-bridge (:retrieve planted-rows)))))))
