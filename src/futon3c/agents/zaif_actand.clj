@@ -195,8 +195,61 @@
                :actand actand
                :action action
                :target :gold-judged
-               :kin (mapv (juxt :actand :action) kin)})))
+               :kin (mapv (juxt :actand :action) kin)
+               :provenance (:provenance target)})))
         (no-typed-source :arm-session actand action)))))
+
+(defn append-refused-prediction-tension
+  "Mint the rung-3 refusal into a U41 tension ledger, exactly once.
+
+  The refusal itself is the identity and remains present verbatim in the
+  tension body. This function is pure: the caller owns the append-only ledger
+  file and may validate the returned value with u41_tension_ledger.bb."
+  [ledger refusal]
+  (if-not (= :q-actand/zero-support-after-kin-pool
+             (:q-actand/refusal refusal))
+    ledger
+    (let [identity (select-keys refusal
+                                [:q-actand/refusal :grain :actand :action
+                                 :target :kin])
+          tension-id [:refused-prediction identity]
+          event-id [:refused-prediction identity :mint]]
+      (if (some #(= tension-id (:tension/id %)) (:tensions ledger))
+        ledger
+        (let [next-seq (inc (reduce max 0 (map :event/seq (:events ledger))))
+              record-ids (get-in refusal [:provenance :record-ids])]
+          (-> ledger
+              (update :tensions conj
+                      {:tension/id tension-id
+                       :tension/poles ["make a finite prediction"
+                                       "preserve the finite-evidence gate"]
+                       :tension/statement (pr-str identity)
+                       :tension/statement-source
+                       "futon2/holes/labs/zaif-harness/worklist.edn:248-251"
+                       :tension/carried-by "M-zaif-harness-v1"
+                       :tension/resolution-path nil
+                       :tension/status :carried
+                       :tension/born-of :refused-prediction
+                       :tension/pattern-links []
+                       :tension/refusal identity
+                       :tension/provenance
+                       {:who "zaif rung-3 refusal mint"
+                        :when "2026-09-03"
+                        :record-ids record-ids
+                        :pointers ["futon2/holes/labs/zaif-harness/worklist.edn:248-251"
+                                   "futon3c/src/futon3c/agents/zaif_actand.clj"]}})
+              (update :events conj
+                      {:event/id event-id
+                       :event/seq next-seq
+                       :event/tension tension-id
+                       :event/type :carried
+                       :event/at "2026-09-03"
+                       :event/by "zaif rung-3 refusal mint (row :U28z)"
+                       :event/to-status :carried
+                       :event/row :U28z
+                       :event/evidence
+                       (mapv #(str "calibration-sessions.edn record " %)
+                             record-ids)})))))))
 
 (defn demo-bridge
   "Apply U11 design amendment [A4]'s demo-scoped density-to-scalar bridge.

@@ -8,6 +8,9 @@
 (def calibration-path
   "../futon2/holes/labs/M-zaif-harness/calibration-sessions.edn")
 
+(def tension-ledger-path
+  "../futon2/holes/labs/wm-contract/tension-ledger.edn")
+
 (defn- sessions []
   (actand/read-calibration-sessions calibration-path))
 
@@ -95,9 +98,47 @@
             :actand actand-key
             :action :retrieve
             :target :gold-judged
-            :kin []}
+            :kin []
+            :provenance {:source :zaif/calibration-sessions
+                         :query :q-actand/calibration-v1
+                         :record-ids ["e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4"]}}
            (actand/calibration-density-with-kin
             (sessions) actand-key :retrieve)))))
+
+(deftest rung-three-refusal-mints-one-u41-tension
+  (let [actand-key {:route :actand :correction-label true}
+        refusal (actand/calibration-density-with-kin
+                 (sessions) actand-key :retrieve)
+        ledger (edn/read-string (slurp tension-ledger-path))
+        identity (select-keys refusal
+                              [:q-actand/refusal :grain :actand :action
+                               :target :kin])
+        tension-id [:refused-prediction identity]
+        before (-> ledger
+                   (update :tensions #(filterv (fn [t]
+                                                 (not= tension-id
+                                                       (:tension/id t))) %))
+                   (update :events #(filterv (fn [e]
+                                               (not= tension-id
+                                                     (:event/tension e))) %)))
+        once (actand/append-refused-prediction-tension before refusal)
+        twice (actand/append-refused-prediction-tension once refusal)
+        minted (last (:tensions once))]
+    ;; Live calibration pin: e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4 is the
+    ;; sole actand x :retrieve row and supplies the refusal's 0/1 evidence.
+    (is (= ["e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4"]
+           (get-in refusal [:provenance :record-ids])))
+    (is (= :refused-prediction (:tension/born-of minted)))
+    (is (= identity (:tension/refusal minted)))
+    (is (= (inc (count (:tensions before))) (count (:tensions once))))
+    (is (= once twice))
+    (is (= ledger (actand/append-refused-prediction-tension ledger refusal)))
+    ;; D8b remains below the ladder: the refusal has no finite value and the
+    ;; hydration seam records the typed absence instead of accepting it.
+    (is (= {:absence :d8/task-belief-actand-source-absent
+            :refused :d8/invalid-task-belief-source}
+           (:task-belief (inputs/hydrate-inputs
+                          {:actand-query-result refusal}))))))
 
 (deftest constructed-record-validator-rejects-untyped-derivation
   (let [row (actand/calibration-density-with-kin
