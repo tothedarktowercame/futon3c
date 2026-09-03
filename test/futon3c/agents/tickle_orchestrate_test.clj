@@ -287,13 +287,17 @@
           (is (not (re-find #"GitHub issue #99" @invoked))))))))
 
 (deftest review-complete-preserves-legacy-shape-and-refuses-worker-author
-  ;; ABSENCE PIN, rerun 2026-09-03T10:56:03Z against
-  ;; GET http://127.0.0.1:7073/api/alpha/evidence:
-  ;;   tags=tickle,orchestrate => {:count 0 :checked 0}, index-as-of
-  ;;     2026-08-18T10:54:27.600018076Z / e-b8d38abc-bf3d-4c15-bb7b-ca8daacdde58
-  ;;   tags=orchestrate-family => {:count 0 :checked 0}, index-as-of
-  ;;     2026-08-19T17:21:41.556742116Z / e-f6fb8432-9c39-444b-8d23-829d9ff1248f
-  ;; Both API responses scanned 20,000 indexed entries and returned no entries.
+  ;; ABSENCE PIN (U14e-1 amended condition 2a): the evidence store held NO
+  ;; record from this flow before this change, in both required query forms:
+  ;;   tags=tickle,orchestrate => {:count 0 :checked 0}
+  ;;     (rerun 2026-09-03T10:56:03Z, index cursor e-b8d38abc-bf3d-4c15)
+  ;;   tags=orchestrate        => {:count 0 :checked 0}
+  ;;     (claude-2 review rerun 2026-09-03T10:58:34.487Z, index cursor
+  ;;      e-607326e4-9ab6-4b1d; the build-time rerun queried the literal
+  ;;      tag "orchestrate-family", which no emission carries -- vacuously
+  ;;      zero, so it pinned nothing; corrected at review to the real
+  ;;      single-tag form. Lesson: an absence pin must name a tag some
+  ;;      emission actually writes, or it cannot fail.)
   (testing "the additive event leaves the captured legacy bytes unchanged"
     (let [store (make-evidence-store)]
       (register-mock-agent!
