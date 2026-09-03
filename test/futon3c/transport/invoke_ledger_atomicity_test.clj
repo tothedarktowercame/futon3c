@@ -229,4 +229,9 @@
     (is (= bulky (get-in compacted [:jobs active-id :result-text]))
         "active job remains complete")
     (is (= bulky (get-in compacted [:jobs parked-id :result-text]))
-        "park-dependent terminal job remains complete")))
+        "park-dependent terminal job remains complete")
+    (is (= :d13/rolling-expiry
+           (:events-trimmed (#'http/invoke-job-public-view
+                             (get-in compacted [:jobs old-id]))))
+        "the public job view reports the expiry, so :result nil is not
+         mistaken for a job that produced nothing")))

@@ -1702,6 +1702,10 @@
                           :session-id :trace-id :invocation/model
                           :result :result-summary :artifact-ref
                           :execution :auto-bellback :delivery
+                          ;; D13 review: a rolling-expiry tombstone must SAY so.
+                          ;; Without this the compacted job's :result nil is
+                          ;; indistinguishable from a job that never produced one.
+                          :events-trimmed
                           :trace/delivery-observation :events])]
     (if (and (terminal-invoke-state? (:state job))
              (= "pending" (get-in job [:delivery :status])))
