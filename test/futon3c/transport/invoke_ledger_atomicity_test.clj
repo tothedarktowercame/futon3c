@@ -213,6 +213,10 @@
         ledger {:version 1 :next-seq 3
                 :job-order [old-id active-id parked-id]
                 :trace->job {} :jobs {old-id old active-id active parked-id parked}}
+        ;; D14: this clock must stay INSIDE the seven-day tombstone horizon
+        ;; (finished-at + 7d = 2026-09-02T13:29Z). Past it, old-id would be
+        ;; dropped rather than compacted and this test would be asserting the
+        ;; wrong horizon. It is >24h after finished-at, so detail expiry fires.
         compacted (with-redefs [http/*invoke-ledger-now*
                                 (constantly (java.time.Instant/parse
                                              "2026-08-28T20:00:00Z"))
@@ -286,5 +290,12 @@
       (is (= [(last aged-ids)] (:job-order one-sentinel))
           "the corruption-detection invariant retains only the newest tombstone")
       (is (= {} (:trace->job one-sentinel)))
+      ;; Discriminating check: the fixture already carries :events-trimmed, so
+      ;; asserting that key alone passes whether or not compaction ran. The
+      ;; fixture has no :events key at all, and compact-terminal-job is the
+      ;; only thing that can add one -- so this proves the retained sentinel
+      ;; is a compacted tombstone rather than the untouched input record.
+      (is (= [] (get-in one-sentinel [:jobs (last aged-ids) :events]))
+          "the retained sentinel is compacted, not passed through")
       (is (= :d13/rolling-expiry
              (get-in one-sentinel [:jobs (last aged-ids) :events-trimmed]))))))
