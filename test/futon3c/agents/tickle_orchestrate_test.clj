@@ -230,7 +230,8 @@
        (fn [prompt _session]
          {:result "APPROVE — the button was added correctly to index.html."
           :session-id "sess-claude-1"}))
-      (let [codex-result {:ok true :result "I added the button."}
+      (let [codex-result {:ok true :agent-id "codex-1"
+                          :result "I added the button."}
             result (orch/request-review!
                     sample-issue codex-result
                     {:evidence-store store
@@ -239,6 +240,9 @@
                      :session-id "tko-test-3"})]
         (is (true? (:ok result)))
         (is (= :approve (:verdict result)))
+        (is (= :seat-string-distinctness (:independence/grade result)))
+        (is (not= :adjudicator-rerun-witnessed
+                  (:independence/grade result)))
         ;; Evidence: review-assigned + review-complete
         (let [entries (estore/query* store {})]
           (is (= 2 (count entries)))
@@ -254,7 +258,7 @@
          {:result "REQUEST_CHANGES — the button has no click handler."
           :session-id "s1"}))
       (let [result (orch/request-review!
-                    sample-issue {:ok true :result "done"}
+                    sample-issue {:ok true :agent-id "codex-1" :result "done"}
                     {:evidence-store store
                      :repo-dir "/tmp/test-repo"
                      :timeout-ms 5000
@@ -272,7 +276,7 @@
       (with-redefs [mfuton-mode/mfuton-mode (constantly "mfuton")]
         (let [result (orch/request-review!
                       sample-issue
-                      {:ok true :result "done"}
+                      {:ok true :agent-id "codex-1" :result "done"}
                       {:repo-dir "/tmp/test-repo"
                        :timeout-ms 5000
                       :session-id "tko-test-mfuton-review"})]
@@ -281,6 +285,71 @@
           (is (re-find #"mfuton gitlab issue #99" @invoked))
           (is (not (re-find #"tracked work item #99" @invoked)))
           (is (not (re-find #"GitHub issue #99" @invoked))))))))
+
+(deftest review-complete-preserves-legacy-shape-and-refuses-worker-author
+  ;; ABSENCE PIN, rerun 2026-09-03T10:56:03Z against
+  ;; GET http://127.0.0.1:7073/api/alpha/evidence:
+  ;;   tags=tickle,orchestrate => {:count 0 :checked 0}, index-as-of
+  ;;     2026-08-18T10:54:27.600018076Z / e-b8d38abc-bf3d-4c15-bb7b-ca8daacdde58
+  ;;   tags=orchestrate-family => {:count 0 :checked 0}, index-as-of
+  ;;     2026-08-19T17:21:41.556742116Z / e-f6fb8432-9c39-444b-8d23-829d9ff1248f
+  ;; Both API responses scanned 20,000 indexed entries and returned no entries.
+  (testing "the additive event leaves the captured legacy bytes unchanged"
+    (let [store (make-evidence-store)]
+      (register-mock-agent!
+       "claude-1"
+       (fn [_ _] {:result "APPROVE — pinned legacy review."
+                  :session-id "review-session"}))
+      (let [result (orch/request-review!
+                    sample-issue
+                    {:ok true :agent-id "codex-1" :result "worker result"}
+                    {:evidence-store store :repo-dir "/tmp/test-repo"
+                     :timeout-ms 5000 :session-id "u14e1-pin"})
+            entry (first (filter #(= :review-complete
+                                     (last (:evidence/tags %)))
+                                 (estore/query* store {})))
+            body (:evidence/body entry)]
+        ;; Captured before the change from the unmodified emission path:
+        ;; {:ok true :verdict :approve
+        ;;  :result-preview "APPROVE — pinned legacy review."
+        ;;  :error nil :elapsed-ms 0 :event :review-complete}, beneath the
+        ;; exact envelope asserted here. elapsed-ms is runtime-measured, so
+        ;; byte identity is pinned between the return and persisted body.
+        (is (= {:evidence/author "tickle-1"
+                :evidence/tags [:tickle :orchestrate :review-complete]
+                :evidence/claim-type :observation}
+               (select-keys entry [:evidence/author :evidence/tags
+                                   :evidence/claim-type])))
+        (is (= {:ok true :verdict :approve
+                :result-preview "APPROVE — pinned legacy review."
+                :error nil :elapsed-ms (:elapsed-ms result)}
+               (select-keys body [:ok :verdict :result-preview :error
+                                  :elapsed-ms])))
+        (is (= :checked-handoff/verdict
+               (get-in body [:checked-handoff/event :event])))
+        (is (= ["codex-1" "claude-1"]
+               [(get-in body [:checked-handoff/event :worker-seat])
+                (get-in body [:checked-handoff/event :author-seat])]))
+        (is (= :seat-string-distinctness (:independence/grade body))))))
+  (testing "a worker-authored review cannot be represented as accepted"
+    (let [store (make-evidence-store)]
+      (register-mock-agent! "claude-1"
+                            (fn [_ _] {:result "APPROVE" :session-id "s"}))
+      (let [result (orch/request-review!
+                    sample-issue
+                    {:ok true :agent-id "claude-1" :result "worker result"}
+                    {:evidence-store store :repo-dir "/tmp/test-repo"
+                     :timeout-ms 5000 :session-id "u14e1-refusal"})
+            entry (first (filter #(= :review-complete
+                                     (last (:evidence/tags %)))
+                                 (estore/query* store {})))
+            body (:evidence/body entry)]
+        (is (false? (:ok result)))
+        (is (= :r9/worker-authored-verdict-refused (:error/code result)))
+        (is (= :unclear (:verdict result)))
+        (is (false? (:ok body)))
+        (is (= :unclear (:verdict body)))
+        (is (not (contains? body :checked-handoff/event)))))))
 
 ;; =============================================================================
 ;; mfuton issue/workflow adapter

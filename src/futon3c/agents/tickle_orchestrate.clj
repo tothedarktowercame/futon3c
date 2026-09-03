@@ -16,6 +16,7 @@
             [cheshire.core :as json]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
+            [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.blackboard :as bb]
@@ -363,6 +364,7 @@
                      :error (when-not ok? (str (:error result)))
                      :elapsed-ms elapsed}})
       {:ok ok?
+       :agent-id agent-id
        :result (:result result)
        :session-id (:session-id result)
        :error (:error result)
@@ -394,25 +396,48 @@
           result (reg/invoke-agent! "claude-1" prompt timeout-ms)
           elapsed (- (System/currentTimeMillis) start)
           ok? (:ok result)
-          verdict (when ok? (parse-verdict (:result result)))]
+          verdict (when ok? (parse-verdict (:result result)))
+          handoff-event (checked-handoff/verdict-event
+                         {:worker-seat (:agent-id codex-result)
+                          :author-seat "claude-1"
+                          :proposal {:issue issue
+                                     :worker-result (:result codex-result)}
+                          :verdict verdict
+                          :adjudication {:rerun-witness :absent}})
+          checked (checked-handoff/validate-verdict-event
+                   handoff-event (constantly nil))
+          accepted? (and ok? (:ok checked))
+          emitted-verdict (if accepted? verdict :unclear)]
       (emit! evidence-store
              {:session-id session-id
               :issue-number issue-number
               :repo repo-dir
               :claim-type :observation
               :event-tag :review-complete
-              :body {:ok ok?
-                     :verdict verdict
-                     :result-preview (when (:result result)
-                                       (subs (:result result)
-                                             0 (min 300 (count (:result result)))))
-                     :error (when-not ok? (str (:error result)))
-                     :elapsed-ms elapsed}})
-      {:ok ok?
-       :result (:result result)
-       :verdict verdict
-       :error (:error result)
-       :elapsed-ms elapsed})))
+              :body (cond-> {:ok accepted?
+                              :verdict emitted-verdict
+                              :result-preview (when (:result result)
+                                                (subs (:result result)
+                                                      0 (min 300 (count (:result result)))))
+                              :error (if-not ok?
+                                       (str (:error result))
+                                       (when-not (:ok checked)
+                                         (:error/code checked)))
+                              :elapsed-ms elapsed}
+                      (:ok checked)
+                      (assoc :checked-handoff/event (:event checked)
+                             :independence/grade
+                             (:independence/grade checked)))})
+      (cond-> {:ok accepted?
+               :result (:result result)
+               :verdict emitted-verdict
+               :error (:error result)
+               :elapsed-ms elapsed}
+        (:ok checked)
+        (assoc :checked-handoff/event (:event checked)
+               :independence/grade (:independence/grade checked))
+        (not (:ok checked))
+        (assoc :error/code (:error/code checked))))))
 
 (defn comment-on-issue!
   "Post a comment on a GitHub issue via gh CLI.
