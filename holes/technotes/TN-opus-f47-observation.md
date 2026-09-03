@@ -1598,3 +1598,35 @@ error is never the role's fault, so routing it to the apparatus budget is unambi
 probe failure genuinely CAN be the role's fault — a student writing Lean that does not
 compile produces exactly this. Separating the two needs the probe's output, not its exit
 code.
+
+## The largest proof in the campaign was stranded by a reviewer (2026-09-03)
+
+f83 took b97A01 — five sorries, the hardest problem in the corpus — from 5 to 0 across
+nine solver rounds of a fifty-round budget, over about seventeen hours:
+
+    sorry-warnings by round:  4  2  2  2  2  2  1  1  0  0
+
+`verify.edn` recorded `:axioms ["propext" "Classical.choice" "Quot.sound"]`, exit 0,
+sorry-warnings 0, statement unchanged. I rebuilt the solver head `05fdbfd1` here: 813
+lines, no `sorry`, no `native_decide`, statement byte-identical to master, axioms exactly
+the permitted three. Pinned at `refs/apm/rescued-solves/b97A01/05fdbfd1`.
+
+The frame then parked on `[:reviewer-missing :review-set-mismatch]` with
+`:repair/attempts 1` and `:live-job-terminal-repair-exhausted`. Both findings have had
+repair instructions since `15eaf71d`. The instruction was issued; the reviewer failed it
+again; the budget ran out; the frame parked. Tenth stranded solve, and the largest.
+
+**Nothing malfunctioned, and that is the whole of the argument.** Every component behaved
+as designed: the finding was detected, an actionable instruction was rendered, a repair was
+dispatched, the budget was respected, the park was recorded with its decision and residual
+intact. The outcome is that seventeen hours of solver work and the corpus's hardest closed
+problem sit in a ref instead of on master, because a reviewer twice failed to cover its
+candidate set.
+
+This is also where I predicted the exposure would be worst, an hour before it happened: the
+longest and most expensive proofs are exactly the ones a late-protocol failure strands,
+because they have the most protocol left to fail after the mathematics is finished.
+
+Ten pinned and unswept, twenty-two sorries: a99J05, a99J06, aunk04, b90A03, b93J04,
+b94A01, b96A02, b96J02, b96J04, b97A01. They are recoverable only while someone remembers
+they are in `refs/apm/rescued-solves`.
