@@ -1,8 +1,25 @@
 (ns futon3c.agents.zaif-inputs-test
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zinputs]))
+
+(defn- workspace-root
+  []
+  (let [source-file (-> (io/resource "futon3c/agents/zaif_inputs_test.clj")
+                        .toURI
+                        io/file)]
+    (loop [dir (.getParentFile source-file)]
+      (cond
+        (nil? dir)
+        (throw (ex-info "Could not locate futon3c checkout" {}))
+
+        (.isFile (io/file dir "deps.edn"))
+        (.getParentFile dir)
+
+        :else
+        (recur (.getParentFile dir))))))
 
 (def task-belief-absence
   {:absence :d8/task-belief-actand-source-absent})
@@ -72,6 +89,55 @@
       (is (= 1.0 (get-in inputs [:c-belief :operator-c-uncertainty])))
       (is (= task-belief-absence (:task-belief inputs)))
       (is (contains? (get-in inputs [:observations :posting-stats]) :total-docs)))))
+
+(deftest attributed-mission-controls-zaif-act-risk
+  (let [actand {:act-value 0.8
+                :provenance {:source :z1/actand-world-model
+                             :query :actand-for-task}}
+        attributed (zinputs/hydrate-inputs
+                    {:mission "M-futon-forward-model"
+                     :mission-source :dispatch/mission-id
+                     :actand-query-result actand})
+        unclocked (zinputs/hydrate-inputs {:actand-query-result actand})
+        attributed-decision (zaif/decide attributed)
+        unclocked-decision (zaif/decide unclocked)
+        evidence (zaif/decision-evidence-entry
+                  {:agent-id "zai-test" :sid "sid-r5" :turn-id "turn-r5"
+                   :round 1 :decision attributed-decision :inputs attributed})]
+    (testing "the attributed mission selects its real gamma cell before scoring act"
+      (is (= :table-cell (:gamma-source attributed)))
+      (is (= 0.7071067811865476 (:gamma-used attributed-decision)))
+      (is (= (* 0.8 0.7071067811865476)
+             (get-in attributed-decision [:g-terms :act])))
+      (is (< (get-in attributed-decision [:g-terms :act])
+             (get-in unclocked-decision [:g-terms :act]))))
+    (testing "the decision record retains the attribution used by the risk term"
+      (is (= "M-futon-forward-model" (get-in evidence [:evidence/body :mission])))
+      (is (= :dispatch/mission-id
+             (get-in evidence [:evidence/body :inputs-snapshot :mission-source])))
+      (is (= :table-cell
+             (get-in evidence [:evidence/body :inputs-snapshot :gamma-source]))))))
+
+(deftest wm-r5-fixture-pins-mission-risk-identity
+  ;; LIVE PIN: values below are read verbatim from tracked fixture
+  ;; 0a18c4f7-R5.edn, harvested from live record/run id
+  ;; 0a18c4f7-758e-400a-8223-9c52edf07450.
+  (let [fixture-file (io/file
+                      (workspace-root)
+                      "futon2/holes/labs/wm-contract/runs"
+                      "U12-c-mis-falsifier/node-fixtures/0a18c4f7-R5.edn")
+        fixture (edn/read-string (slurp fixture-file))
+        ranked (:value fixture)
+        top (first ranked)]
+    (is (= :R5 (:node fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.aif.efe/rank-actions" (:via fixture)))
+    (is (= "M-zaif-harness-v1" (get-in top [:action :target])))
+    (is (= 114.21190142192009 (:G-risk top)))
+    (is (= -108.87689318874708 (:G-ambiguity top)))
+    (is (= 5.3350082331730135 (:G-core top)))
+    (is (= (:G-core top) (+ (:G-risk top) (:G-ambiguity top)))
+        "the recorded mission ranking reaches R5 as risk plus ambiguity")))
 
 (deftest gamma-source-distinguishes-table-cell-and-defaults
   (testing "a table cell that equals the uniform prior is still a table read"
