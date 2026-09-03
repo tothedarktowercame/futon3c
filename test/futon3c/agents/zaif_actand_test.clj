@@ -129,3 +129,36 @@
            (get-in turn-two [:g-terms :act])))
     (is (= (get-in turn-one-inputs [:task-belief :provenance])
            (get-in turn-two-inputs [:task-belief :provenance])))))
+
+(deftest r3-belief-update-is-directional-and-typed-empty-is-unchanged
+  (let [live-row (actand/calibration-density
+                  (sessions)
+                  {:route :gamma :correction-label true}
+                  :ask)
+        planted-low (assoc live-row
+                           :density {:gold-judged 1/2 :not-gold-judged 1/2}
+                           :counts {:gold-judged 1 :not-gold-judged 1})
+        planted-high (assoc live-row
+                            :density {:gold-judged 3/4 :not-gold-judged 1/4}
+                            :counts {:gold-judged 3 :not-gold-judged 1})
+        low-belief (:task-belief
+                    (inputs/hydrate-inputs
+                     {:actand-query-result (actand/demo-bridge planted-low)}))
+        high-belief (:task-belief
+                     (inputs/hydrate-inputs
+                      {:actand-query-result (actand/demo-bridge planted-high)}))
+        empty-before (:task-belief (inputs/hydrate-inputs {}))
+        empty-after (:task-belief (inputs/hydrate-inputs
+                                   {:actand-query-result nil}))]
+    ;; Tracked calibration record e-0cae94f2-9ca8-4863-9251-44278445a5f7
+    ;; pins the real row from which both directional plants retain provenance.
+    (is (= {:gold-judged 18 :not-gold-judged 10} (:counts live-row)))
+    (is (some #{"e-0cae94f2-9ca8-4863-9251-44278445a5f7"}
+              (get-in live-row [:provenance :record-ids])))
+    (is (= 0.0 (:act-value low-belief)))
+    (is (= (- (Math/log 0.75) (Math/log 0.5))
+           (:act-value high-belief)))
+    (is (> (:act-value high-belief) (:act-value low-belief)))
+    (is (= (:provenance live-row) (:provenance high-belief)))
+    (is (= {:absence :d8/task-belief-actand-source-absent} empty-before))
+    (is (= empty-before empty-after))))
