@@ -445,10 +445,61 @@
         (let [entries (estore/query* store {})]
           (is (= 6 (count entries)))
           (is (some #(= :workflow-start (last (:evidence/tags %))) entries))
-          (is (some #(= :workflow-complete (last (:evidence/tags %))) entries)))
+          (let [review (first (filter #(= :review-complete
+                                         (last (:evidence/tags %))) entries))
+                workflow (first (filter #(= :workflow-complete
+                                           (last (:evidence/tags %))) entries))
+                review-body (:evidence/body review)
+                workflow-body (:evidence/body workflow)]
+            (is (some? workflow))
+            ;; U14e-2 ABSENCE PIN, rerun 2026-09-03T11:00:42Z:
+            ;; tags=tickle,orchestrate => {:count 0 :checked 0}, cursor
+            ;; e-b8d38abc-bf3d-4c15; tags=orchestrate =>
+            ;; {:count 0 :checked 0}, cursor e-0df00797-589b-44a9.
+            ;; Both responses scanned 20,000 entries; neither contained a
+            ;; :workflow-complete record.
+            ;; Pre-change behavior capture pinned this legacy body:
+            ;; {:issue-number 99 :status :complete :verdict :approve
+            ;;  :total-elapsed-ms <measured> :event :workflow-complete}.
+            (is (= {:issue-number 99 :status :complete :verdict :approve
+                    :total-elapsed-ms (:total-elapsed-ms result)}
+                   (select-keys workflow-body
+                                [:issue-number :status :verdict
+                                 :total-elapsed-ms])))
+            (is (= {:evidence/author "tickle-1"
+                    :evidence/tags [:tickle :orchestrate :workflow-complete]
+                    :evidence/claim-type :observation}
+                   (select-keys workflow
+                                [:evidence/author :evidence/tags
+                                 :evidence/claim-type])))
+            (is (= (:checked-handoff/event review-body)
+                   (:checked-handoff/event workflow-body)))
+            (is (= (:independence/grade review-body)
+                   (:independence/grade workflow-body)))))
         ;; IRC report sent
         (is (= 1 (count @irc-messages)))
         (is (re-find #"#99" (:text (first @irc-messages))))))))
+
+(deftest refused-review-cannot-mint-workflow-checked-event
+  (let [store (make-evidence-store)]
+    ;; The configured worker is the fixed reviewer seat, so U14e-1 refuses it.
+    (register-mock-agent!
+     "claude-1"
+     (fn [_ _] {:result "APPROVE" :session-id "same-seat"}))
+    (let [result (orch/run-issue-workflow!
+                  sample-issue
+                  {:agent-id "claude-1"
+                   :evidence-store store
+                   :repo-dir "/tmp/test-repo"})
+          workflow (first (filter #(= :workflow-complete
+                                      (last (:evidence/tags %)))
+                                  (estore/query* store {})))
+          body (:evidence/body workflow)]
+      (is (= :review-failed (:status result)))
+      (is (= :unclear (:verdict result)))
+      (is (not (contains? result :checked-handoff/event)))
+      (is (not (contains? body :checked-handoff/event)))
+      (is (not (contains? body :independence/grade))))))
 
 (deftest run-issue-workflow-codex-failure-stops
   (testing "run-issue-workflow! stops if Codex fails (no review invoked)"

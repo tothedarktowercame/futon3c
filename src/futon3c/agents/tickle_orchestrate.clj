@@ -519,10 +519,16 @@
                                                     :timeout-ms review-timeout-ms))
               elapsed (- (System/currentTimeMillis) start)
               verdict (or (:verdict review-result) :unclear)
-              summary {:issue-number issue-number
-                       :status (if (:ok review-result) :complete :review-failed)
-                       :verdict verdict
-                       :total-elapsed-ms elapsed}]
+              summary (cond->
+                       {:issue-number issue-number
+                        :status (if (:ok review-result) :complete :review-failed)
+                        :verdict verdict
+                        :total-elapsed-ms elapsed}
+                        (:checked-handoff/event review-result)
+                        (assoc :checked-handoff/event
+                               (:checked-handoff/event review-result)
+                               :independence/grade
+                               (:independence/grade review-result)))]
 
           ;; 4. Report
           (emit! evidence-store
