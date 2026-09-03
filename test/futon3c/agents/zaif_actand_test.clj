@@ -100,3 +100,32 @@
     (is (nil? (get-in hydrated [:task-belief :refused])))
     (is (not (zero? (get-in decision [:g-terms :act]))))
     (is (= expected (get-in decision [:g-terms :act])))))
+
+(deftest task-belief-persists-and-reconstructs-across-two-turns
+  (let [row (actand/calibration-density
+             (sessions)
+             {:route :gamma :correction-label true}
+             :ask)
+        turn-one-belief (actand/demo-bridge row)
+        turn-one-inputs (inputs/hydrate-inputs
+                         {:actand-query-result turn-one-belief})
+        turn-one (controller/decide turn-one-inputs)
+        persisted-bytes (pr-str turn-one-belief)
+        reconstructed-belief (edn/read-string persisted-bytes)
+        turn-two-inputs (inputs/hydrate-inputs
+                         {:actand-query-result reconstructed-belief})
+        turn-two (controller/decide turn-two-inputs)]
+    ;; Tracked calibration record
+    ;; e-0cae94f2-9ca8-4863-9251-44278445a5f7 is quoted verbatim here: it is
+    ;; one of the 18 :gold-judged records in the persisted density's 28 ids.
+    (is (= {:gold-judged 18 :not-gold-judged 10} (:counts row)))
+    (is (contains? (set (get-in reconstructed-belief
+                                [:provenance :record-ids]))
+                   "e-0cae94f2-9ca8-4863-9251-44278445a5f7"))
+    (is (= turn-one-belief reconstructed-belief))
+    (is (= :q-actand/demo-bridge-a4 (:bridge reconstructed-belief)))
+    (is (= 0.2513144282809061 (get-in turn-one [:g-terms :act])))
+    (is (= (get-in turn-one [:g-terms :act])
+           (get-in turn-two [:g-terms :act])))
+    (is (= (get-in turn-one-inputs [:task-belief :provenance])
+           (get-in turn-two-inputs [:task-belief :provenance])))))
