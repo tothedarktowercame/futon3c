@@ -24,7 +24,7 @@
 (def task-belief-absence
   {:absence :d8/task-belief-actand-source-absent})
 
-(defn- r7-artifact
+(defn- harness-artifact
   [filename]
   (-> (io/file (workspace-root)
                "futon2/holes/labs"
@@ -36,8 +36,8 @@
   ;; LIVE PIN: the coupling-density precision is captured verbatim from tracked
   ;; fixture 801976e7-R7.edn, harvested from live record/run id
   ;; 801976e7-01c6-4e39-aada-27f620f7c2f1.
-  (let [table (r7-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
-        fixture (r7-artifact
+  (let [table (harness-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
+        fixture (harness-artifact
                  "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R7.edn")
         rows (into {} (map (juxt :channel-class identity)) (:rows table))
         declared (get-in rows [:declared-operator-mark :precision])
@@ -53,8 +53,8 @@
 (deftest r7-wm-fixture-preserves-present-and-absent-precision-channels
   ;; LIVE PIN: values are read verbatim from tracked fixture 801976e7-R7.edn,
   ;; harvested from live record/run id 801976e7-01c6-4e39-aada-27f620f7c2f1.
-  (let [table (r7-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
-        fixture (r7-artifact
+  (let [table (harness-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
+        fixture (harness-artifact
                  "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R7.edn")
         wm-row (some #(when (= :war-machine-observation (:channel-class %)) %)
                      (:rows table))]
@@ -67,6 +67,39 @@
     (is (= 7.285663818719639
            (get-in wm-row [:precision :coupling-density])
            (get-in fixture [:value :coupling-density :precision])))))
+
+(deftest r8-zaif-replay-types-the-missing-realised-observation
+  ;; LIVE PIN: values are read verbatim from D9's tracked replay of live
+  ;; evidence record e-0f2f9aec-6240-40e9-a25a-e45d9452076f.
+  (let [report (harness-artifact "zaif-harness/runs/D9-tie-order-count.edn")
+        pin (get-in report [:live :live-pin])
+        replayed (zaif/decide (:inputs pin))
+        realised-observation
+        (if (contains? replayed :realised-observation)
+          {:status :present :value (:realised-observation replayed)}
+          {:status :absent :reason :zaif-v0-no-realised-observation})]
+    (is (= "e-0f2f9aec-6240-40e9-a25a-e45d9452076f" (:id pin)))
+    (is (= (:decision pin) replayed))
+    (is (= {:status :absent :reason :zaif-v0-no-realised-observation}
+           realised-observation))))
+
+(deftest r8-wm-fixture-replays-at-exact-delta-zero
+  ;; LIVE PIN: values are read verbatim from tracked fixture 801976e7-R8.edn,
+  ;; harvested from live record/run id 801976e7-01c6-4e39-aada-27f620f7c2f1.
+  (let [fixture (harness-artifact
+                 "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R8.edn")
+        prediction-error (get-in fixture [:value :ticks-firing-ratio])
+        replayed-error (- (:observed prediction-error)
+                          (:predicted-mean prediction-error))
+        replayed-weighted-error (* (:precision prediction-error)
+                                   replayed-error)]
+    (is (= "801976e7-01c6-4e39-aada-27f620f7c2f1" (:run/id fixture)))
+    (is (= :R8 (:node fixture)))
+    (is (= :prediction-error/v1 (:producer-contract prediction-error)))
+    (is (= 0.0 (:observed prediction-error) (:predicted-mean prediction-error)))
+    (is (= 21.0 (:precision prediction-error)))
+    (is (= 0.0 replayed-error (:error prediction-error)))
+    (is (= 0.0 replayed-weighted-error (:weighted-error prediction-error)))))
 
 (deftest default-gamma-path-is-classpath-anchored
   (let [source (io/resource "futon3c/agents/zaif_inputs.clj")
