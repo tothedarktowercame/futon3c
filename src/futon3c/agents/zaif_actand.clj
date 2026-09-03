@@ -56,7 +56,7 @@
          (vector? record-ids)
          (seq record-ids)
          (every? string? record-ids)
-         (or (not constructed?)
+         (or (and (not constructed?) (nil? derivation))
              (and (= true (:constructed record))
                   (= (:construction-rule q-actand-record) (:rule derivation))
                   (vector? (:kin derivation))

@@ -104,6 +104,9 @@
              (sessions) {:route :c-channel :correction-label true} :ask)]
     (is (actand/q-actand-record? row))
     (is (false? (actand/q-actand-record? (dissoc row :derivation))))
+    ;; A constructed density must not validate as observed once de-marked:
+    ;; the unioned kin provenance would otherwise read as 36 direct records.
+    (is (false? (actand/q-actand-record? (dissoc row :constructed))))
     (is (false? (actand/q-actand-record?
                  (assoc-in row [:derivation :rule] :unregistered-rule))))))
 
