@@ -377,7 +377,9 @@
                :repair/attempts (:terminal-repair-attempts active)
                :collection (:evidence collection) :state state}))
 
-          (and expected-session (not= expected-session (:session-id job)))
+          (and expected-session
+               (not= expected-session (:session-id job))
+               (or (some? (:session-id job)) (nil? typed)))
             {:ok false :error/code :solver-session-mismatch
              :finding {:expected expected-session :actual (:session-id job)}}
 

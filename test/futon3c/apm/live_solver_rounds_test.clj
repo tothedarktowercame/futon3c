@@ -115,7 +115,13 @@
         provider-calls (atom 0)
         submission {:schema :apm/role-submission-v1
                     :payload {:outcome "complete" :command-own-exit 0}}
+        state {:state/type :solver-rounds
+               :budget/max-rounds 50
+               :base-request base-request
+               :rounds [{:ordinal 8 :session-id "prior-solver-session"}]
+               :active legacy-state}
         base (assoc (effects persisted)
+                    :state state
                     :job-fn (fn [_]
                               {:job-id "job-1" :agent-id "f19-solver"
                                :state :running})
