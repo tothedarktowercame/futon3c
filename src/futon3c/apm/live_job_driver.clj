@@ -137,15 +137,24 @@
    {:condition/type :provider-request-timeout
     :state :failed
     :terminal-code :invoke-exception
-    :terminal-message "request timed out"}])
+    :terminal-message "request timed out"}
+   {:condition/type :provider-response-endpoint-not-found
+    :state :failed
+    :terminal-code :invoke-error
+    :terminal-message-pattern
+    #"^Exit 1: unexpected status 404 Not Found: Unknown error, url: https://chatgpt[.]com/backend-api/codex/responses, cf-ray: [A-Za-z0-9-]+$"}])
 
 (defn expected-role-terminal-condition
   "Return the named expected condition for an exact Agency terminal, if any."
   [job]
-  (some (fn [{:keys [state terminal-code terminal-message] :as condition}]
+  (some (fn [{:keys [state terminal-code terminal-message
+                     terminal-message-pattern] :as condition}]
           (when (and (= state (:state job))
                      (= terminal-code (:terminal-code job))
-                     (= terminal-message (:terminal-message job)))
+                     (if terminal-message-pattern
+                       (boolean (re-matches terminal-message-pattern
+                                            (or (:terminal-message job) "")))
+                       (= terminal-message (:terminal-message job))))
             (select-keys condition [:condition/type])))
         expected-role-terminal-conditions))
 
