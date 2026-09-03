@@ -153,6 +153,55 @@
          (assert-paired! (conj registered "future_memory") paired))
         "The pin must fail when a new registry tool has no test pair")))
 
+(deftest every-registered-runner-tool-records-an-r16-witness
+  (let [registered (set (map :name @#'zai/tool-specs))]
+    (doseq [tool registered]
+      (with-redefs-fn {#'zai/execute-tool
+                       (fn [_backend _ctx call]
+                         {:detail {:id (:id call)
+                                   :name (get-in call [:function :name])
+                                   :input {}}
+                          :message {:role "tool"
+                                    :tool_call_id (:id call)
+                                    :name (get-in call [:function :name])
+                                    :content "ok"}})}
+        #(let [witness (r16-witness tool {})
+               call (get-in witness [:evidence/body :calls 0])]
+           (is (= :turn-round (get-in witness [:evidence/body :event])))
+           (is (= tool (:tool call)))
+           (is (= {} (edn/read-string (:args call)))))))
+    (is (= registered
+           (set (map #(get-in % [:function :name])
+                     (#'zai/openai-tools :full))))
+        "The exercised names are exactly the tools exposed to the runner")))
+
+(deftest runner-ask-and-yield-endings-record-r16-witnesses
+  (doseq [[ending text] [[:ask "Need operator input"]
+                         [:yield "Yielding control"]]]
+    (let [store (atom {:entries {} :order []})
+          invoke (zai/make-invoke-fn
+                  {:agent-id "zai-u22z"
+                   :api-key "test-key"
+                   :initial-session-id "sid-u22z"
+                   :evidence-store store
+                   :memory-mode :full
+                   :profile :zaif
+                   :cwd "/home/joe/code/futon3c"})]
+      (with-redefs [zai/chat! (fn [& _]
+                                {:choices [{:message {:role "assistant"
+                                                      :content text}}]})]
+        (is (= text (:result (invoke "exercise terminal action" nil
+                                    {:dispatch-id "dispatch-u22z"}))))
+        (let [witness (->> (:order @store)
+                           (map #(get-in @store [:entries %]))
+                           (filter #(= :turn-round
+                                       (get-in % [:evidence/body :event])))
+                           first)]
+          (is (= ending (case (get-in witness [:evidence/body :text])
+                          "Need operator input" :ask
+                          "Yielding control" :yield)))
+          (is (= [] (get-in witness [:evidence/body :calls]))))))))
+
 (defn- workspace-root
   []
   (let [source-file (-> (io/resource
@@ -169,6 +218,22 @@
 
         :else
         (recur (.getParentFile dir))))))
+
+(deftest wm-r16-fixture-pins-typed-no-enactment-absence
+  ;; LIVE PIN: fields read verbatim from tracked fixture 801976e7-R16.edn,
+  ;; harvested from live record/run id 801976e7-01c6-4e39-aada-27f620f7c2f1.
+  (let [fixture (-> (io/file (workspace-root)
+                             "futon2/holes/labs/wm-contract/runs"
+                             "U12-c-mis-falsifier/node-fixtures/801976e7-R16.edn")
+                    slurp
+                    edn/read-string)]
+    (is (= :R16 (:node fixture)))
+    (is (= "801976e7-01c6-4e39-aada-27f620f7c2f1" (:run/id fixture)))
+    (is (= "enactment" (:via fixture)))
+    (is (= "S7: R16 enactment data does not exist until a flight flies"
+           (:basis fixture)))
+    (is (= :absent (:status fixture)))
+    (is (= :no-enactment-yet (:reason fixture)))))
 
 (deftest operator-turn-and-declared-mark-are-r2-typed-observations
   (let [turn {:evidence/id "e-u16z-operator-turn"
