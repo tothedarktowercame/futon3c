@@ -24,6 +24,50 @@
 (def task-belief-absence
   {:absence :d8/task-belief-actand-source-absent})
 
+(defn- r7-artifact
+  [filename]
+  (-> (io/file (workspace-root)
+               "futon2/holes/labs"
+               filename)
+      slurp
+      edn/read-string))
+
+(deftest r7-declared-mark-outranks-lexical-guess
+  ;; LIVE PIN: the coupling-density precision is captured verbatim from tracked
+  ;; fixture 801976e7-R7.edn, harvested from live record/run id
+  ;; 801976e7-01c6-4e39-aada-27f620f7c2f1.
+  (let [table (r7-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
+        fixture (r7-artifact
+                 "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R7.edn")
+        rows (into {} (map (juxt :channel-class identity)) (:rows table))
+        declared (get-in rows [:declared-operator-mark :precision])
+        lexical (get-in rows [:lexical-probe :precision])]
+    (is (= "801976e7-01c6-4e39-aada-27f620f7c2f1" (:run/id fixture)))
+    (is (= 7.285663818719639
+           (get-in fixture [:value :coupling-density :precision])))
+    (is (= 1.0 declared))
+    (is (= 0.42 lexical))
+    (is (> declared lexical)
+        "the declared operator channel, not lexical mission guessing, has higher within-kind precision")))
+
+(deftest r7-wm-fixture-preserves-present-and-absent-precision-channels
+  ;; LIVE PIN: values are read verbatim from tracked fixture 801976e7-R7.edn,
+  ;; harvested from live record/run id 801976e7-01c6-4e39-aada-27f620f7c2f1.
+  (let [table (r7-artifact "zaif-harness/runs/U9-r7-precision-table.edn")
+        fixture (r7-artifact
+                 "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R7.edn")
+        wm-row (some #(when (= :war-machine-observation (:channel-class %)) %)
+                     (:rows table))]
+    (is (= :R7 (:node fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.aif.precision/update-precision-state" (:via fixture)))
+    (is (= (:run/id fixture) (:run/id wm-row)))
+    (is (= 8 (:covered-count wm-row) (count (:value fixture))))
+    (is (= 6 (count (:absent-not-zero wm-row))))
+    (is (= 7.285663818719639
+           (get-in wm-row [:precision :coupling-density])
+           (get-in fixture [:value :coupling-density :precision])))))
+
 (deftest default-gamma-path-is-classpath-anchored
   (let [source (io/resource "futon3c/agents/zaif_inputs.clj")
         expected (.getCanonicalPath
