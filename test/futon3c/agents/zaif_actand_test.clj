@@ -162,3 +162,45 @@
     (is (= (:provenance live-row) (:provenance high-belief)))
     (is (= {:absence :d8/task-belief-actand-source-absent} empty-before))
     (is (= empty-before empty-after))))
+
+(deftest r4-real-q-actand-orders-arms-and-a-plant-reverses-the-order
+  (let [table (actand/calibration-table (sessions))
+        row-for (fn [route correction-label action]
+                  (some #(when (and (= {:route route
+                                        :correction-label correction-label}
+                                       (:actand %))
+                                    (= action (:action %)))
+                           %)
+                        table))
+        real-rows {:ask (row-for :gamma true :ask)
+                   :act (row-for nil false :act)
+                   :retrieve (row-for :actand true :retrieve)}
+        score (comp :act-value actand/demo-bridge)
+        ordered-arms (fn [rows]
+                       (->> rows
+                            (sort-by (comp - score val))
+                            (mapv key)))
+        planted-rows (assoc real-rows :retrieve
+                            (assoc (:retrieve real-rows)
+                                   :density {:gold-judged 3/4
+                                             :not-gold-judged 1/4}
+                                   :counts {:gold-judged 3
+                                            :not-gold-judged 1}))]
+    ;; Tracked calibration pins: the real :ask row contains
+    ;; e-0cae94f2-9ca8-4863-9251-44278445a5f7; the real :act row contains
+    ;; e-81ccb710-4c93-48b7-8f40-0178dfb0c61b; and the real :retrieve row is
+    ;; e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4.
+    (is (= {:ask {:gold-judged 18 :not-gold-judged 10}
+            :act {:gold-judged 13 :not-gold-judged 64}
+            :retrieve {:gold-judged 0 :not-gold-judged 1}}
+           (update-vals real-rows :counts)))
+    (is (contains? (set (get-in real-rows [:ask :provenance :record-ids]))
+                   "e-0cae94f2-9ca8-4863-9251-44278445a5f7"))
+    (is (contains? (set (get-in real-rows [:act :provenance :record-ids]))
+                   "e-81ccb710-4c93-48b7-8f40-0178dfb0c61b"))
+    (is (= ["e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4"]
+           (get-in real-rows [:retrieve :provenance :record-ids])))
+    (is (= [:ask :act :retrieve] (ordered-arms real-rows)))
+    (is (= [:retrieve :ask :act] (ordered-arms planted-rows)))
+    (is (= (:provenance (:retrieve real-rows))
+           (:provenance (:retrieve planted-rows))))))
