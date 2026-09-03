@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [clojure.java.io :as io]
+            [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.agents.tickle-work-queue :as wq]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]
@@ -198,6 +199,75 @@
         (is (= "tickle-1" (:evidence/author ct-entry)))
         (is (some #{:ct-extraction} (:evidence/tags ct-entry)))
         (is (= "pm-ct-TestEntry" (get-in ct-entry [:evidence/body :entity-id])))))))
+
+(deftest ct-evidence-preserves-legacy-shapes-and-validates-checked-events
+  ;; ABSENCE PIN, rerun 2026-09-03T11:04:24Z:
+  ;; tags=tickle,ct-extraction => {:count 0 :checked 0}, index cursor
+  ;; e-e785d6ba-871a-449d; tags=ct-extraction => {:count 0 :checked 0},
+  ;; index cursor e-9ecfdbff-65f0-48ee. Both queries scanned 20,000 entries.
+  (testing "legacy bodies remain exact with and without verdict"
+    (doseq [verdict [nil :approve]]
+      (let [store (make-evidence-store)
+            input (cond-> {:entity-id "pm-ct-Pin"
+                           :entity-type "Definition"
+                           :session-id "u14e3-pin"
+                           :event-tag :review-complete
+                           :ground-truth {:scopes 1}
+                           :extraction-result "captured result"}
+                    verdict (assoc :verdict verdict))]
+        (wq/emit-ct-evidence! store input)
+        (let [entry (first (estore/query* store {}))
+              body (:evidence/body entry)]
+          ;; These are the two complete pre-change bodies; only :at varies.
+          (is (= (cond-> {:entity-id "pm-ct-Pin"
+                          :entity-type "Definition"
+                          :at (:at body)
+                          :ground-truth {:scopes 1}
+                          :result-preview "captured result"}
+                   verdict (assoc :verdict verdict))
+                 body))
+          (is (= {:evidence/author "tickle-1"
+                  :evidence/tags [:tickle :ct-extraction :review-complete]
+                  :evidence/claim-type :observation}
+                 (select-keys entry [:evidence/author :evidence/tags
+                                     :evidence/claim-type])))))))
+  (testing "validated event and computed grade are additive"
+    (let [store (make-evidence-store)
+          event (checked-handoff/verdict-event
+                 {:worker-seat "f75-scribe"
+                  :author-seat "f75-promotion-proctor"
+                  :proposal {:ref "ct-fixture"}
+                  :verdict :approve
+                  :adjudication {:rerun-witness :absent}})]
+      (wq/emit-ct-evidence!
+       store {:entity-id "pm-ct-Checked" :entity-type "Definition"
+              :session-id "u14e3-checked" :event-tag :review-complete
+              :verdict :approve :checked-handoff/event event})
+      (let [entry (first (estore/query* store {}))
+            body (:evidence/body entry)]
+        (is (= "tickle-1" (:evidence/author entry)))
+        (is (= "f75-promotion-proctor"
+               (get-in body [:checked-handoff/event :author-seat])))
+        (is (= event (:checked-handoff/event body)))
+        (is (= :seat-string-distinctness (:independence/grade body)))
+        (is (= :approve (:verdict body))))))
+  (testing "worker-authored event is refused before append"
+    (let [store (make-evidence-store)
+          event (checked-handoff/verdict-event
+                 {:worker-seat "f75-scribe"
+                  :author-seat "f75-scribe"
+                  :proposal {:ref "ct-forged"}
+                  :verdict :approve
+                  :adjudication {:rerun-witness :absent}})
+          result (wq/emit-ct-evidence!
+                  store {:entity-id "pm-ct-Forged"
+                         :entity-type "Definition"
+                         :session-id "u14e3-forged"
+                         :event-tag :review-complete
+                         :verdict :approve
+                         :checked-handoff/event event})]
+      (is (= :r9/worker-authored-verdict-refused (:error/code result)))
+      (is (empty? (estore/query* store {}))))))
 
 ;; =============================================================================
 ;; arXiv entity loading

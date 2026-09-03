@@ -15,6 +15,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]))
@@ -258,29 +259,40 @@
   "Emit CT extraction evidence. Wraps the standard evidence format with
    CT-specific metadata."
   [evidence-store {:keys [entity-id entity-type session-id event-tag
-                          ground-truth extraction-result verdict]}]
-  (when evidence-store
-    (boundary/append! evidence-store
-                    {:subject {:ref/type :task
-                               :ref/id entity-id}
-                     :type :coordination
-                     :claim-type (case event-tag
-                                   :workflow-start :goal
-                                   :extraction-complete :observation
-                                   :review-complete :observation
-                                   :workflow-complete :observation
-                                   :observation)
-                     :author "tickle-1"
-                     :tags [:tickle :ct-extraction event-tag]
-                     :session-id session-id
-                     :body (cond-> {:entity-id entity-id
-                                    :entity-type entity-type
-                                    :at (str (Instant/now))}
-                             ground-truth (assoc :ground-truth ground-truth)
-                             extraction-result (assoc :result-preview
-                                                      (subs extraction-result
-                                                            0 (min 500 (count extraction-result))))
-                             verdict (assoc :verdict verdict))})))
+                          ground-truth extraction-result verdict]
+                   :as input}]
+  (let [event (:checked-handoff/event input)
+        checked (when event
+                  (checked-handoff/validate-verdict-event
+                   event (or (:resolve-witness input) (constantly nil))))]
+    (if (and event (not (:ok checked)))
+      checked
+      (when evidence-store
+        (boundary/append!
+         evidence-store
+         {:subject {:ref/type :task
+                    :ref/id entity-id}
+          :type :coordination
+          :claim-type (case event-tag
+                        :workflow-start :goal
+                        :extraction-complete :observation
+                        :review-complete :observation
+                        :workflow-complete :observation
+                        :observation)
+          :author "tickle-1"
+          :tags [:tickle :ct-extraction event-tag]
+          :session-id session-id
+          :body (cond-> {:entity-id entity-id
+                         :entity-type entity-type
+                         :at (str (Instant/now))}
+                  ground-truth (assoc :ground-truth ground-truth)
+                  extraction-result (assoc :result-preview
+                                           (subs extraction-result
+                                                 0 (min 500 (count extraction-result))))
+                  verdict (assoc :verdict verdict)
+                  (:ok checked) (assoc :checked-handoff/event (:event checked)
+                                       :independence/grade
+                                       (:independence/grade checked)))})))))
 
 ;; =============================================================================
 ;; Batch helpers
