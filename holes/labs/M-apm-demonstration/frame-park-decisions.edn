@@ -696,4 +696,40 @@
    (str "The frame is not voided or forgotten. No valid Student receipt, Guide "
         "phase, promotion result, or closure was invented. The rejected terminal "
         "and its unauthorized-memory finding remain preserved alongside the last "
-        "valid receipt and mathematical residuals.")}]}
+        "valid receipt and mathematical residuals.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f83"
+   :problem/id "b97A01"
+   :last-valid-receipt/id
+   "ccf72124a8da2c0842d80342e6126731170ff1a96764cc59dab47083956fe72a"
+   :decision/at "2026-09-03T15:29:07Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :promotion-review-empty-terminal-after-repair
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The last valid Guide receipt materialized three candidates with stable "
+        "identifiers and read-back-matching content digests. The independent "
+        "promotion-proctor terminal and its sole successor repair both supplied "
+        "no review records: the persisted result is {}, producing exactly "
+        ":reviewer-missing and :review-set-mismatch. This is no evidence for any "
+        "candidate verdict. In particular, candidate prose includes located but "
+        "explicitly unverified API names, so promotion cannot be inferred from "
+        "the successful solver proof or from candidate materialization alone. "
+        "The exhausted empty review path is an apparatus/terminal-contract "
+        "failure, not a valid rejection of the mathematical artifact.")
+   :decision/recommended-route
+   (str "Advance f83 as partial while preserving the last valid Guide receipt, "
+        "all three materialized candidate identifiers, both empty promotion "
+        "terminals, and the exact residual. Repair promotion-proctor collection "
+        "to reject an empty report before consuming the repair budget and require "
+        "one typed review per candidate with reviewer identity. Do not publish, "
+        "reject, or redispatch these historical candidates without a new "
+        "independent review.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No reviewer identity, candidate "
+        "verdict, memory publication, union snapshot, or promotion certificate "
+        "was invented; the preserved receipt and residual remain authoritative.")} ]}
