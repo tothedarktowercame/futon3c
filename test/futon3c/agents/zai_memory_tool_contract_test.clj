@@ -175,9 +175,16 @@
                      (#'zai/openai-tools :full))))
         "The exercised names are exactly the tools exposed to the runner")))
 
-(deftest runner-ask-and-yield-endings-record-r16-witnesses
-  (doseq [[ending text] [[:ask "Need operator input"]
-                         [:yield "Yielding control"]]]
+(deftest runner-records-r16-ask-and-yield-decision-witnesses
+  (doseq [[expected-arm inputs]
+          [[:ask {:mission "M-u22z-ask"
+                  :task-belief {:act-value 0.1}
+                  :c-belief {:operator-c-uncertainty 1.0}
+                  :observations {:retrieve-eig 0.1}}]
+           [:yield {:mission "M-u22z-yield"
+                    :task-belief {:act-value -1.0}
+                    :c-belief {:operator-c-uncertainty 0.0}
+                    :observations {}}]]]
     (let [store (atom {:entries {} :order []})
           invoke (zai/make-invoke-fn
                   {:agent-id "zai-u22z"
@@ -186,21 +193,23 @@
                    :evidence-store store
                    :memory-mode :full
                    :profile :zaif
+                   :zaif-inputs-fn (constantly inputs)
                    :cwd "/home/joe/code/futon3c"})]
       (with-redefs [zai/chat! (fn [& _]
                                 {:choices [{:message {:role "assistant"
-                                                      :content text}}]})]
-        (is (= text (:result (invoke "exercise terminal action" nil
-                                    {:dispatch-id "dispatch-u22z"}))))
-        (let [witness (->> (:order @store)
-                           (map #(get-in @store [:entries %]))
-                           (filter #(= :turn-round
-                                       (get-in % [:evidence/body :event])))
-                           first)]
-          (is (= ending (case (get-in witness [:evidence/body :text])
-                          "Need operator input" :ask
-                          "Yielding control" :yield)))
-          (is (= [] (get-in witness [:evidence/body :calls]))))))))
+                                                      :content "done"}}]})]
+        (is (= "done" (:result (invoke "exercise decision arm" nil
+                                       {:dispatch-id "dispatch-u22z"}))))
+        (let [witnesses (->> (:order @store)
+                             (map #(get-in @store [:entries %]))
+                             (filter #(= :zaif-arm-choice
+                                         (get-in % [:evidence/body :event]))))]
+          (is (= 2 (count witnesses)))
+          (is (= #{expected-arm}
+                 (set (map #(get-in % [:evidence/body :arm]) witnesses))))
+          (is (= #{:shipped :sweep}
+                 (set (map #(get-in % [:evidence/body :constant-label])
+                           witnesses)))))))))
 
 (defn- workspace-root
   []
