@@ -44,6 +44,31 @@
     (is (every? #(< % selected-score) other-scores)
         "the recorded posterior scores, rather than case order, select the arm")))
 
+(deftest u15-bare-scalars-are-typed-without-changing-live-replay
+  ;; LIVE PIN: inputs and expected values are read verbatim from the tracked
+  ;; D9 replay of evidence record e-0f2f9aec-6240-40e9-a25a-e45d9452076f.
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        source (-> (io/resource "futon3c/agents/zaif_controller.clj") slurp)
+        replayed (zaif/decide (:inputs pin))]
+    (doseq [token [":retrieve-eig-scale" ":retrieve-token-cost"
+                   ":default-retrieve-tokens" ":act-pragmatic-scale"
+                   ":ask-eig-scale" ":operator-attention-cost"
+                   ":yield-baseline"]]
+      (is (re-find (re-pattern (str ":scalar-awaiting-density[^\\n]*\\n\\s*"
+                                    token))
+                   source)
+          (str token " must immediately follow its structured type marker")))
+    (is (re-find #":scalar-awaiting-density[^\n]*\n\s*\(- \(\* \(:ask-eig-scale"
+                 source)
+        "the computed ask payoff carries the same structured marker")
+    (is (= (:decision pin) replayed)
+        "typing comments leave the live record's numeric decision byte-identical")))
+
 (deftest wm-r6-fixture-posterior-selects-counterfactual-winner
   ;; LIVE PIN: values are read verbatim from tracked fixture 4abad68c-R6.edn,
   ;; harvested from live record/run id 4abad68c-5481-4402-8f0e-252add62c54b.

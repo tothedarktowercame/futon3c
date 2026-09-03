@@ -11,12 +11,19 @@
 (def constants
   "Fixed, uncalibrated Z2 v0 constants. These are deliberately documented in
    data so tests can assert the arithmetic without tuning against outcomes."
-  {:retrieve-eig-scale 1.0
+  {;; :scalar-awaiting-density {:awaits "a declared preference density over retrieval information-gain outcomes; :retrieve-eig-scale remains a bare scalar until that C is declared"}
+   :retrieve-eig-scale 1.0
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over retrieval token expenditure; :retrieve-token-cost remains a bare scalar until that C is declared"}
    :retrieve-token-cost 0.0005
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over retrieval context size; :default-retrieve-tokens remains a bare scalar until that C is declared"}
    :default-retrieve-tokens 800
+   ;; :scalar-awaiting-density {:awaits "a declared Q_actand density over pragmatic outcomes; :act-pragmatic-scale remains a bare scalar until that Q is declared"}
    :act-pragmatic-scale 1.0
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over operator-information outcomes; :ask-eig-scale remains a bare scalar until that C is declared"}
    :ask-eig-scale 1.0
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over operator-attention expenditure; :operator-attention-cost remains a bare scalar until that C is declared"}
    :operator-attention-cost 0.65
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over yielding outcomes; :yield-baseline remains a bare scalar until that C is declared"}
    :yield-baseline 0.0})
 
 (defn- finite-number?
@@ -88,6 +95,7 @@
   ([c-belief]
    (ask-value c-belief constants))
   ([c-belief consts]
+   ;; :scalar-awaiting-density {:awaits "a declared preference density over the joint operator-information and attention-expenditure outcome; this ask payoff remains an affine combination of bare scalars until that C is declared"}
    (- (* (:ask-eig-scale consts)
         (as-double (or (:operator-c-uncertainty c-belief)
                        (:uncertainty c-belief)
