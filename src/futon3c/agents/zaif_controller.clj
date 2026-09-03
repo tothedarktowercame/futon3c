@@ -170,6 +170,71 @@
      :decision (decide (assoc inputs :constants-override
                               {:operator-attention-cost operator-attention-cost}))}))
 
+(defn receipt-learning-summary
+  "Reduce persisted Z3a arm-choice receipts into an auditable learning report.
+
+   Receipts are grouped by :pairing-key.  Only complete shipped/sweep pairs
+   enter the comparison, and every included arm is re-derived from the
+   receipt's :inputs-snapshot and :constant.  Malformed or non-replayable
+   groups are reported, never silently counted.  This function observes the
+   A/B evidence; it deliberately does not change `constants` -- a later J-gate
+   owns any decision to ship a learned value."
+  [receipts]
+  (let [arm-receipts (filter #(= :zaif-arm-choice
+                                 (get-in % [:evidence/body :event]))
+                             receipts)
+        groups (group-by #(get-in % [:evidence/body :pairing-key])
+                         arm-receipts)
+        classify
+        (fn [[pairing-key entries]]
+          (let [by-label (group-by #(get-in % [:evidence/body :constant-label])
+                                   entries)
+                complete? (and (some? pairing-key)
+                               (= #{:shipped :sweep} (set (keys by-label)))
+                               (every? #(= 1 (count (get by-label %)))
+                                       [:shipped :sweep]))
+                replayable?
+                (and complete?
+                     (every?
+                      (fn [entry]
+                        (let [body (:evidence/body entry)
+                              inputs (:inputs-snapshot body)
+                              constant (:constant body)]
+                          (and (map? inputs)
+                               (finite-number? constant)
+                               (= (:arm body)
+                                  (:arm (decide
+                                         (assoc inputs :constants-override
+                                                {:operator-attention-cost constant})))))))
+                      entries))]
+            (cond
+              (not complete?) {:pairing-key pairing-key :status :incomplete}
+              (not replayable?) {:pairing-key pairing-key :status :non-replayable}
+              :else
+              (let [arms (into {}
+                               (map (fn [[label [entry]]]
+                                      [label (get-in entry [:evidence/body :arm])]))
+                               by-label)]
+                {:pairing-key pairing-key
+                 :status :replayed
+                 :arms arms
+                 :divergent? (not= (:shipped arms) (:sweep arms))}))))
+        pairs (mapv classify groups)
+        replayed (filter #(= :replayed (:status %)) pairs)]
+    {:receipt-count (count arm-receipts)
+     :pair-count (count pairs)
+     :replayed-pair-count (count replayed)
+     :divergent-pair-count (count (filter :divergent? replayed))
+     :arm-counts (reduce (fn [counts {:keys [arms]}]
+                           (reduce-kv (fn [m label arm]
+                                        (update-in m [label arm] (fnil inc 0)))
+                                      counts arms))
+                         {:shipped {} :sweep {}}
+                         replayed)
+     :pairs pairs
+     :constants-update :none
+     :constants-update-reason :j-gate-required}))
+
 (defn- sha256-16
   [x]
   (let [s (pr-str x)

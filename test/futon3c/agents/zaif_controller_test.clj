@@ -460,3 +460,57 @@
         (let [arms (set (map #(get-in % [:evidence/body :arm]) entries))]
           (is (> (count arms) 1)
               "high-c-uncertainty inputs should produce arm divergence across constants"))))))
+
+(deftest r17-receipt-fed-learning-replays-recorded-input
+  ;; LIVE PIN: input values and shipped decision are read verbatim from tracked
+  ;; D9 record e-0f2f9aec-6240-40e9-a25a-e45d9452076f (56-record live replay).
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        inputs (:inputs pin)
+        pairing-key "e-0f2f9aec-6240-40e9-a25a-e45d9452076f:r1"
+        receipts
+        (mapv (fn [{:keys [label operator-attention-cost decision]}]
+                (zaif/decision-evidence-entry
+                 {:agent-id "zai-3"
+                  :sid "recorded-replay"
+                  :turn-id (:id pin)
+                  :round 1
+                  :decision decision
+                  :inputs inputs
+                  :constant operator-attention-cost
+                  :constant-label label
+                  :pairing-key pairing-key}))
+              (zaif/dual-decide inputs))
+        learning (zaif/receipt-learning-summary receipts)
+        corrupted (assoc-in (first receipts) [:evidence/body :arm] :yield)
+        refused (zaif/receipt-learning-summary
+                 [corrupted (second receipts)])]
+    (is (= "e-0f2f9aec-6240-40e9-a25a-e45d9452076f" (:id pin)))
+    (is (= 56 (get-in report [:live :count])))
+    (is (= (:decision pin)
+           (select-keys (get-in (first receipts) [:evidence/body])
+                        [:arm :g-terms :gamma-used :mission
+                         :operator-attention-cost :why]))
+        "the shipped receipt replays the tracked live decision verbatim")
+    (is (= {:shipped {:retrieve 1} :sweep {:retrieve 1}}
+           (:arm-counts learning)))
+    (is (= 1 (:replayed-pair-count learning)))
+    (is (= 0 (:divergent-pair-count learning)))
+    (is (= :none (:constants-update learning)))
+    (is (= :j-gate-required (:constants-update-reason learning)))
+    (is (= :non-replayable (get-in refused [:pairs 0 :status]))
+        "a receipt whose recorded arm does not replay is excluded")
+    (is (= 0 (:replayed-pair-count refused)))
+    (is (= zaif/constants
+           {:retrieve-eig-scale 1.0
+            :retrieve-token-cost 0.0005
+            :default-retrieve-tokens 800
+            :act-pragmatic-scale 1.0
+            :ask-eig-scale 1.0
+            :operator-attention-cost 0.65
+            :yield-baseline 0.0})
+        "receipt-fed learning reports evidence without silently tuning v0")))
