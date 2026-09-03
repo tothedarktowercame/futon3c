@@ -2,8 +2,10 @@
   "U7: R2 observation and R16 action-witness contracts for ZAI memory tools."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon3c.agents.zai-api :as zai]
+            [futon3c.marks :as marks]
             [futon3c.peripheral.tools :as tools]))
 
 (def paired-memory-tools
@@ -150,3 +152,60 @@
          AssertionError #"unpaired=\(\"future_memory\"\)"
          (assert-paired! (conj registered "future_memory") paired))
         "The pin must fail when a new registry tool has no test pair")))
+
+(defn- workspace-root
+  []
+  (let [source-file (-> (io/resource
+                         "futon3c/agents/zai_memory_tool_contract_test.clj")
+                        .toURI
+                        io/file)]
+    (loop [dir (.getParentFile source-file)]
+      (cond
+        (nil? dir)
+        (throw (ex-info "Could not locate futon3c checkout" {}))
+
+        (.isFile (io/file dir "deps.edn"))
+        (.getParentFile dir)
+
+        :else
+        (recur (.getParentFile dir))))))
+
+(deftest operator-turn-and-declared-mark-are-r2-typed-observations
+  (let [turn {:evidence/id "e-u16z-operator-turn"
+              :evidence/subject {:ref/type :agent :ref/id "joe"}
+              :evidence/type :coordination
+              :evidence/claim-type :observation
+              :evidence/author "joe"
+              :evidence/at "2026-09-03T00:00:00Z"
+              :evidence/body {:event :chat-turn
+                              :role :user
+                              :text "✓ R2 declared mark"}
+              :evidence/tags [:chat-turn]}
+        observed (marks/decorate-turn turn)]
+    (is (= :observation (:evidence/claim-type observed))
+        "the operator turn is explicitly an R2 observation")
+    (is (= {:glyph "✓" :verdict :event :type :approval
+            :ref nil :payload nil :offset 0}
+           (get-in observed [:evidence/body :marks 0]))
+        "the declared mark remains typed inside that observation")
+    (is (contains? (set (:evidence/tags observed)) :approval))))
+
+(deftest wm-r2-fixture-feeds-the-observation-contract
+  ;; LIVE PIN: values below are read verbatim from tracked fixture
+  ;; 0a18c4f7-R2.edn, harvested from live record/run id
+  ;; 0a18c4f7-758e-400a-8223-9c52edf07450.
+  (let [fixture-file (io/file
+                      (workspace-root)
+                      "futon2/holes/labs/wm-contract/runs"
+                      "U12-c-mis-falsifier/node-fixtures/0a18c4f7-R2.edn")
+        fixture (edn/read-string (slurp fixture-file))
+        observation (:value fixture)]
+    (is (= :R2 (:node fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.aif.observation/observe" (:via fixture)))
+    (is (= 14 (count observation)))
+    (is (= 0.4666666666666667 (:coupling-density observation)))
+    (is (= 0.023376623376623377 (:mission-health observation)))
+    (is (= 0.9968474148802018 (:stack-pct observation)))
+    (is (every? number? (vals observation))
+        "the WM fixture supplies the complete numeric R2 observation vector")))
