@@ -1,7 +1,9 @@
 (ns futon3c.agents.zaif-actand-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
-            [futon3c.agents.zaif-actand :as actand]))
+            [futon3c.agents.zaif-actand :as actand]
+            [futon3c.agents.zaif-controller :as controller]
+            [futon3c.agents.zaif-inputs :as inputs]))
 
 (def calibration-path
   "../futon2/holes/labs/M-zaif-harness/calibration-sessions.edn")
@@ -61,4 +63,40 @@
   (is (= {:q-actand/refusal :q-actand/missing-input
           :field :gold_judged}
          (actand/calibration-table
-          [{:id "incomplete" :route :gamma :is_correction true}]))))
+          [{:id "incomplete" :route :gamma :is_correction true}])))
+  (let [row (first (actand/calibration-table (sessions)))]
+    (is (= {:q-actand/refusal :q-actand/missing-input
+            :field [:density :gold-judged]}
+           (actand/demo-bridge
+            (-> row
+                (update :density dissoc :gold-judged)
+                (update :observables disj :gold-judged)
+                (update :counts dissoc :gold-judged)))))))
+
+(deftest real-density-reaches-controller-act-value
+  (let [row (actand/calibration-density
+             (sessions)
+             {:route :gamma :correction-label true}
+             :ask)
+        bridged (actand/demo-bridge row)
+        hydrated (inputs/hydrate-inputs {:actand-query-result bridged})
+        decision (controller/decide hydrated)
+        expected (* (:act-pragmatic-scale controller/constants)
+                    (:gamma-used decision)
+                    (- (Math/log (double 9/14)) (Math/log 0.5)))]
+    ;; After-pin source: calibration session
+    ;; e-0cae94f2-9ca8-4863-9251-44278445a5f7 contributes to this real row,
+    ;; whose counts are {:gold-judged 18 :not-gold-judged 10}.
+    ;; Before-pin: live decision e-0f2f9aec-6240-40e9-a25a-e45d9452076f
+    ;; recorded :task-belief {}, :g-terms {:act 0.0}, and :gamma-used 1.0.
+    ;; Shipped :act-pragmatic-scale is 1.0 (controller/constants).
+    (is (= {:gold-judged 18 :not-gold-judged 10} (:counts row)))
+    (is (some #{"e-0cae94f2-9ca8-4863-9251-44278445a5f7"}
+              (get-in row [:provenance :record-ids])))
+    (is (= bridged (:task-belief hydrated)))
+    (is (= (:provenance row) (get-in hydrated [:task-belief :provenance])))
+    (is (= :q-actand/demo-bridge-a4
+           (get-in hydrated [:task-belief :bridge])))
+    (is (nil? (get-in hydrated [:task-belief :refused])))
+    (is (not (zero? (get-in decision [:g-terms :act]))))
+    (is (= expected (get-in decision [:g-terms :act])))))

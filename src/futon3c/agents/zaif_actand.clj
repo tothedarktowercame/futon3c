@@ -128,6 +128,22 @@
                 result)
           (no-typed-source :arm-session actand action)))))
 
+(defn demo-bridge
+  "Apply U11 design amendment [A4]'s demo-scoped density-to-scalar bridge.
+
+  The declared target is :gold-judged and the declared baseline is the
+  uniform two-observable density, 1/2. U11e may replace this bridge; the U11c
+  and U11d adapters do not inherit it. Provenance is forwarded unchanged."
+  [record]
+  (if-not (contains? (:density record) :gold-judged)
+    (missing-input [:density :gold-judged])
+    (if-not (q-actand-record? record)
+      (no-typed-source (:grain record) (:actand record) (:action record))
+      {:act-value (- (Math/log (double (get-in record [:density :gold-judged])))
+                     (Math/log 0.5))
+       :bridge :q-actand/demo-bridge-a4
+       :provenance (:provenance record)})))
+
 (defn read-calibration-sessions
   "Read tracked calibration bytes. The materialised table itself remains pure."
   [path]
