@@ -269,3 +269,80 @@
       (is (false? (:created-commit? second-result)))
       (is (= candidate (:candidate second-result))
           "a crash before receipt persistence reuses the exact candidate"))))
+
+;; f84, 2026-09-03: retirement failed on exactly one precondition that no
+;; operator could repair -- a role job the frame owned had not yet left a live
+;; state. It was classified :workspace-retirement-audit-invalid, the regulator
+;; failed, and the watchdog durably disabled the campaign. Forty minutes later
+;; every f84 job was `done`. These tests fix the classification boundary.
+
+(defn- observations-missing [& ks]
+  (reduce #(assoc %1 %2 false)
+          (zipmap sut/required-retirement-preconditions (repeat true))
+          ks))
+
+(defn- certify [observations]
+  (sut/certify-retirement-audit
+   {:lease {:workspace/id "w"}
+    :validation {:valid? true :findings [] :head "head"}
+    :observations observations
+    :terminal-head "head"
+    :context :test-auditor}))
+
+(deftest transient-shortfall-is-pending-not-invalid
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace))]
+    (is (= :workspace-retirement-audit-pending (:error/code result)))
+    (is (true? (:retirement/pending? result)))
+    (is (= #{:no-running-or-parked-job-references-workspace} (:pending result)))
+    (is (false? (:ok result))
+        "pending is still not a certification -- retirement may not proceed")))
+
+(deftest both-transient-preconditions-are-pending
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace
+                         :no-active-ledger-claim-references-workspace))]
+    (is (= :workspace-retirement-audit-pending (:error/code result)))
+    (is (= sut/transient-retirement-preconditions (:pending result)))))
+
+(deftest structural-shortfall-remains-invalid
+  (doseq [k sut/structural-retirement-preconditions]
+    (is (= :workspace-retirement-audit-invalid
+           (:error/code (certify (observations-missing k))))
+        (str k " must never be classified pending"))))
+
+(deftest mixed-shortfall-remains-invalid
+  (let [result (certify (observations-missing
+                         :no-running-or-parked-job-references-workspace
+                         :worktree-clean))]
+    (is (= :workspace-retirement-audit-invalid (:error/code result))
+        "a structural defect is not excused by an accompanying transient one")))
+
+(deftest pending-requires-otherwise-sound-validation
+  (let [result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation {:valid? false :findings [:workspace-probe-failed]
+                              :head "head"}
+                 :observations (observations-missing
+                                :no-running-or-parked-job-references-workspace)
+                 :terminal-head "head"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result))
+        "a failed probe is a defect even when the only shortfall is transient")))
+
+(deftest head-mismatch-is-never-pending
+  (let [result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation {:valid? true :findings [] :head "observed"}
+                 :observations (observations-missing
+                                :no-running-or-parked-job-references-workspace)
+                 :terminal-head "expected"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result)))))
+
+(deftest transient-and-structural-partition-the-required-set
+  (is (= sut/required-retirement-preconditions
+         (into sut/structural-retirement-preconditions
+               sut/transient-retirement-preconditions)))
+  (is (empty? (clojure.set/intersection sut/structural-retirement-preconditions
+                                        sut/transient-retirement-preconditions))))

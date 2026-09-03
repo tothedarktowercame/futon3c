@@ -2,6 +2,7 @@
   "Lease-backed provisioning and fail-closed retirement of APM worktrees."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
@@ -17,6 +18,33 @@
     :no-active-ledger-claim-references-workspace :worktree-clean
     :head-commit-recorded-in-terminal-receipt :branch-ref-exists
     :required-artifacts-content-addressed :independent-retirement-audit-passed})
+
+(def transient-retirement-preconditions
+  "Preconditions that a later observation can satisfy without any repair.
+
+  Both describe a workspace that is still referenced by work which is itself
+  progressing to a terminal state: a role job the frame owns has not yet left
+  {announced queued running invoking parked}, or the ledger still carries an
+  active claim. Neither is a defect, and neither can be repaired by an
+  operator -- waiting is the only correct response. Retirement still requires
+  every precondition in `required-retirement-preconditions`; this set only
+  changes how a shortfall is CLASSIFIED, never whether retirement may proceed.
+
+  Why this exists: on 2026-09-03 f84 failed retirement on exactly one of these
+  (`:no-running-or-parked-job-references-workspace`) while the other seven
+  passed. The shortfall was reported as `:workspace-retirement-audit-invalid`,
+  the regulator recorded a failure, and the semantic-progress watchdog durably
+  disabled the campaign. Forty minutes later every f84 job was `done` and the
+  audit would have passed unchanged. The registry records 173 such stops and
+  170 hand-issued resumes across seven days, a mean enabled span of 42
+  minutes, of which 121 resumes were explicitly `:repair-resume-requested`."
+  #{:no-running-or-parked-job-references-workspace
+    :no-active-ledger-claim-references-workspace})
+
+(def structural-retirement-preconditions
+  "Preconditions that never satisfy themselves; a shortfall here is a defect."
+  (set/difference required-retirement-preconditions
+                          transient-retirement-preconditions))
 
 (defn- run [repository & args]
   (apply shell/sh (map str (concat ["git" "-C" repository] args))))
@@ -413,18 +441,45 @@
 (defn certify-retirement-audit
   "Content-address an independent observation of every retirement precondition."
   [{:keys [lease validation observations terminal-head context audited-at]}]
-  (let [passed (->> observations (keep (fn [[k v]] (when (true? v) k))) set)]
-    (if-not (and (:valid? validation)
-                 (= terminal-head (:head validation))
-                 (= required-retirement-preconditions passed)
-                 (keyword? context))
-      {:ok false :error/code :workspace-retirement-audit-invalid
+  (let [passed (->> observations (keep (fn [[k v]] (when (true? v) k))) set)
+        missing (set/difference required-retirement-preconditions passed)
+        ;; A shortfall confined to the transient set, with every structural
+        ;; precondition and the whole validation intact, is "not yet" rather
+        ;; than "invalid". Callers must retry it; they must not treat it as a
+        ;; regulator failure. Certification itself is unchanged -- the success
+        ;; branch below still demands the full required set.
+        pending? (and (:valid? validation)
+                      (= terminal-head (:head validation))
+                      (keyword? context)
+                      (seq missing)
+                      (empty? (set/intersection
+                               missing structural-retirement-preconditions)))]
+    (cond
+      pending?
+      {:ok false :error/code :workspace-retirement-audit-pending
+       :retirement/pending? true
+       :pending missing
        :passed passed :required required-retirement-preconditions
        :validation/valid? (:valid? validation)
        :validation/findings (:findings validation)
        :terminal-head terminal-head
        :validation/head (:head validation)
        :context context}
+
+      (not (and (:valid? validation)
+                (= terminal-head (:head validation))
+                (= required-retirement-preconditions passed)
+                (keyword? context)))
+      {:ok false :error/code :workspace-retirement-audit-invalid
+       :passed passed :required required-retirement-preconditions
+       :missing missing
+       :validation/valid? (:valid? validation)
+       :validation/findings (:findings validation)
+       :terminal-head terminal-head
+       :validation/head (:head validation)
+       :context context}
+
+      :else
       (let [body {:audit/type :workspace-retirement
                   :workspace/id (:workspace/id lease)
                   :terminal-head terminal-head :context context
