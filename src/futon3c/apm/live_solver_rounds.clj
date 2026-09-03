@@ -333,6 +333,7 @@
             job (if typed
                   (let [payload (:payload typed)]
                     (assoc raw-job
+                           :state :done
                            :report (merge (:authority typed) (:evidence payload)
                                           (select-keys payload
                                                        [:command-own-exit :outcome

@@ -131,7 +131,8 @@
                       submission)
                     :validate-solved
                     (fn [_ _ job]
-                      {:ok (= submission (:typed-submission job))})
+                      {:ok (and (= :done (:state job))
+                                (= submission (:typed-submission job)))})
                     :provide-receipt
                     (fn [& _]
                       {:ok true :certificate {:receipt/id "solved"}}))

@@ -142,7 +142,11 @@
                   :terminal-submission-provider
                   (fn [& _]
                     (swap! provider-calls inc)
-                    submission))
+                    submission)
+                  :terminal-validator
+                  (fn [_ _ job]
+                    (swap! calls conj :validate)
+                    {:ok (= :done (:state job))}))
         collected (sut/drive! (assoc fx :state dispatched))
         certified (sut/drive! (assoc fx :state (:state collected)))]
     (is (= :terminal-collected (:status collected)))

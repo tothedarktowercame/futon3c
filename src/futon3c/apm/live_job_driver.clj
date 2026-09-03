@@ -634,6 +634,7 @@
                     (let [report (typed-submission-report active-request
                                                           submission)]
                       (assoc job :report report
+                             :state :done
                              :typed-submission submission))
                     job)
               validated (or (:posthoc-rejection state)
