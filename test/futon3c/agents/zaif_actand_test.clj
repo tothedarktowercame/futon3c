@@ -127,7 +127,7 @@
     (is (= 0.2513144282809061 (get-in turn-one [:g-terms :act])))
     (is (= (get-in turn-one [:g-terms :act])
            (get-in turn-two [:g-terms :act])))
-    (is (= (get-in turn-one-inputs [:task-belief :provenance])
+    (is (= (:provenance row)
            (get-in turn-two-inputs [:task-belief :provenance])))))
 
 (deftest r3-belief-update-is-directional-and-typed-empty-is-unchanged
