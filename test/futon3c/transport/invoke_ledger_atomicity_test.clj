@@ -215,7 +215,7 @@
                 :trace->job {} :jobs {old-id old active-id active parked-id parked}}
         compacted (with-redefs [http/*invoke-ledger-now*
                                 (constantly (java.time.Instant/parse
-                                             "2026-09-02T20:00:00Z"))
+                                             "2026-08-28T20:00:00Z"))
                                 parked-on/snapshot
                                 (constantly {:index {parked-id #{"park-1"}}})]
                     (#'http/compact-invoke-jobs-ledger ledger))]
@@ -235,3 +235,56 @@
                              (get-in compacted [:jobs old-id]))))
         "the public job view reports the expiry, so :result nil is not
          mistaken for a job that produced nothing")))
+
+(deftest rolling-expiry-drops-aged-tombstones-without-dangling-indexes
+  ;; Live ledger pin, /tmp/futon3c-invoke-jobs.edn, job
+  ;; invoke-1787750995295-1507-0f434f39 (captured 2026-09-02): the id, state
+  ;; "failed", and finished-at 2026-08-26T13:29:56.668288653Z are verbatim.
+  (let [live-id "invoke-1787750995295-1507-0f434f39"
+        active-id "active-job"
+        parked-id "parked-terminal-job"
+        aged-job (fn [id]
+                   {:job-id id :state "failed"
+                    :finished-at "2026-08-26T13:29:56.668288653Z"
+                    :events-trimmed :d13/rolling-expiry})
+        aged-ids (into [live-id] (map #(str "aged-job-" %) (range 5000)))
+        jobs (into {active-id {:job-id active-id :state "running"}
+                    parked-id (aged-job parked-id)}
+                   (map (fn [id] [id (aged-job id)]))
+                   aged-ids)
+        order (into aged-ids [active-id parked-id])
+        ledger {:version 1 :next-seq 5003 :job-order order
+                :trace->job {"expired-trace" live-id
+                             "active-trace" active-id
+                             "parked-trace" parked-id}
+                :jobs jobs}
+        compacted (with-redefs [http/*invoke-ledger-now*
+                                (constantly (java.time.Instant/parse
+                                             "2026-09-03T14:00:00Z"))
+                                parked-on/snapshot
+                                (constantly {:index {parked-id #{"park-1"}}})]
+                    (#'http/compact-invoke-jobs-ledger ledger))]
+    (is (= #{active-id parked-id} (set (keys (:jobs compacted))))
+        "an arbitrarily large aged population leaves only protected jobs")
+    (is (= [active-id parked-id] (:job-order compacted))
+        ":job-order preserves retained ordering and contains no dropped ids")
+    (is (= {"active-trace" active-id "parked-trace" parked-id}
+           (:trace->job compacted))
+        ":trace->job contains no dropped ids")
+    (is (= "running" (get-in compacted [:jobs active-id :state])))
+    (is (= "failed" (get-in compacted [:jobs parked-id :state])))
+    (let [only-aged (assoc ledger
+                           :job-order aged-ids
+                           :trace->job {"expired-trace" live-id}
+                           :jobs (select-keys jobs aged-ids))
+          one-sentinel (with-redefs [http/*invoke-ledger-now*
+                                     (constantly (java.time.Instant/parse
+                                                  "2026-09-03T14:00:00Z"))
+                                     parked-on/snapshot
+                                     (constantly {:index {}})]
+                         (#'http/compact-invoke-jobs-ledger only-aged))]
+      (is (= [(last aged-ids)] (:job-order one-sentinel))
+          "the corruption-detection invariant retains only the newest tombstone")
+      (is (= {} (:trace->job one-sentinel)))
+      (is (= :d13/rolling-expiry
+             (get-in one-sentinel [:jobs (last aged-ids) :events-trimmed]))))))

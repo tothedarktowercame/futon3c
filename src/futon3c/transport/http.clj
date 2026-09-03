@@ -330,6 +330,11 @@
    continuation are never compacted."
   (* 24 60 60 1000))
 
+(def ^:private invoke-terminal-tombstone-retention-ms
+  "Drop unreferenced terminal jobs after seven days. Active jobs and terminal
+   jobs named by a live parked continuation are retained without an age limit."
+  (* 7 24 60 60 1000))
+
 (def ^:dynamic *invoke-ledger-now*
   "Clock seam for deterministic retention tests."
   #(Instant/now))
@@ -339,13 +344,15 @@
   (-> (parked-on/snapshot) :index keys set))
 
 (defn- expired-terminal-job?
-  [job now]
-  (and (terminal-invoke-state? (:state job))
-       (when-let [finished-at (:finished-at job)]
-         (try
-           (not (.isAfter (Instant/parse (str finished-at))
-                          (.minusMillis now invoke-terminal-detail-retention-ms)))
-           (catch Throwable _ false)))))
+  ([job now]
+   (expired-terminal-job? job now invoke-terminal-detail-retention-ms))
+  ([job now retention-ms]
+   (and (terminal-invoke-state? (:state job))
+        (when-let [finished-at (:finished-at job)]
+          (try
+            (not (.isAfter (Instant/parse (str finished-at))
+                           (.minusMillis now retention-ms)))
+            (catch Throwable _ false))))))
 
 (defn- compact-terminal-job
   [job]
@@ -367,22 +374,40 @@
                :events-trimmed :d13/rolling-expiry))))
 
 (defn- compact-invoke-jobs-ledger
-  "Bound retained transcript payload by compacting terminal jobs after 24h.
-   Job ids and lifecycle states remain queryable. Park dependencies retain the
-   complete job even if a terminal completion has not yet been folded into the
-   parked continuation."
+  "Bound terminal-job retention in two stages: compact transcript payload
+   after 24h, then drop the unreferenced tombstone after seven days. Active
+   jobs and park dependencies survive both horizons. :job-order and
+   :trace->job are pruned with :jobs so neither contains dangling job ids."
   [ledger]
   (let [now (*invoke-ledger-now*)
-        protected (parked-invoke-job-ids)]
-    (update ledger :jobs
-            (fn [jobs]
-              (into {}
-                    (map (fn [[job-id job]]
-                           [job-id (if (and (not (contains? protected job-id))
-                                            (expired-terminal-job? job now))
-                                     (compact-terminal-job job)
-                                     job)]))
-                    jobs)))))
+        protected (parked-invoke-job-ids)
+        drop? (fn [[job-id job]]
+                (and (not (contains? protected job-id))
+                     (expired-terminal-job?
+                      job now invoke-terminal-tombstone-retention-ms)))
+        retained-jobs* (into {} (remove drop?) (:jobs ledger))
+        ;; A persisted ledger with no jobs is rejected as probable truncation.
+        ;; Preserve the newest tombstone only when expiry would otherwise make
+        ;; a previously populated ledger indistinguishable from corruption.
+        sentinel-id (when (and (empty? retained-jobs*) (seq (:jobs ledger)))
+                      (or (some #(when (contains? (:jobs ledger) %) %)
+                                (reverse (:job-order ledger)))
+                          (first (keys (:jobs ledger)))))
+        retained-jobs (cond-> retained-jobs*
+                        sentinel-id (assoc sentinel-id (get-in ledger [:jobs sentinel-id])))
+        retained-ids (set (keys retained-jobs))]
+    (-> ledger
+        (assoc :jobs
+               (into {}
+                     (map (fn [[job-id job]]
+                            [job-id (if (and (not (contains? protected job-id))
+                                             (expired-terminal-job? job now))
+                                      (compact-terminal-job job)
+                                      job)]))
+                     retained-jobs))
+        (update :job-order #(into [] (filter retained-ids) %))
+        (update :trace->job
+                #(into {} (filter (fn [[_ job-id]] (contains? retained-ids job-id))) %)))))
 
 (defn- persist-invoke-jobs-ledger!
   [ledger]
