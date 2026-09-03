@@ -59,6 +59,54 @@
     (is (= (actand/calibration-table parsed-a)
            (actand/calibration-table parsed-b)))))
 
+(deftest zero-support-ladder-constructs-from-v1-kin
+  (let [actand-key {:route :c-channel :correction-label true}
+        row (actand/calibration-density-with-kin (sessions) actand-key :ask)
+        bridged (actand/demo-bridge row)]
+    ;; Tracked live calibration records, one from each pooled group:
+    ;; c-channel e-251899fa-68be-448e-af00-4da0258723bf and
+    ;; gamma e-0cae94f2-9ca8-4863-9251-44278445a5f7.
+    (is (= true (:constructed row)))
+    (is (= {:rule :v1-kin-pool
+            :kin [[{:route :gamma :correction-label true} :ask]]}
+           (:derivation row)))
+    (is (= {:gold-judged 18 :not-gold-judged 18} (:counts row)))
+    (is (= {:gold-judged 1/2 :not-gold-judged 1/2} (:density row)))
+    (is (= 36 (count (get-in row [:provenance :record-ids]))))
+    (is (contains? (set (get-in row [:provenance :record-ids]))
+                   "e-251899fa-68be-448e-af00-4da0258723bf"))
+    (is (contains? (set (get-in row [:provenance :record-ids]))
+                   "e-0cae94f2-9ca8-4863-9251-44278445a5f7"))
+    (is (actand/q-actand-record? row))
+    (is (= 0.0 (:act-value bridged)))
+    (is (= (:provenance row) (:provenance bridged)))
+    (is (= row
+           (actand/calibration-density-with-kin
+            (reverse (sessions)) actand-key :ask)))))
+
+(deftest zero-support-ladder-leaves-typed-rung-three-trigger
+  (let [actand-key {:route :actand :correction-label true}]
+    ;; Tracked live calibration record
+    ;; e-b78c3d3b-a530-40c7-a333-ec4e6b258fe4 is the sole retrieve row: 0/1.
+    (is (= {:gold-judged 0 :not-gold-judged 1}
+           (:counts (actand/calibration-density (sessions) actand-key :retrieve))))
+    (is (= {:q-actand/refusal :q-actand/zero-support-after-kin-pool
+            :grain :arm-session
+            :actand actand-key
+            :action :retrieve
+            :target :gold-judged
+            :kin []}
+           (actand/calibration-density-with-kin
+            (sessions) actand-key :retrieve)))))
+
+(deftest constructed-record-validator-rejects-untyped-derivation
+  (let [row (actand/calibration-density-with-kin
+             (sessions) {:route :c-channel :correction-label true} :ask)]
+    (is (actand/q-actand-record? row))
+    (is (false? (actand/q-actand-record? (dissoc row :derivation))))
+    (is (false? (actand/q-actand-record?
+                 (assoc-in row [:derivation :rule] :unregistered-rule))))))
+
 (deftest missing-input-is-a-typed-refusal
   (is (= {:q-actand/refusal :q-actand/missing-input
           :field :gold_judged}

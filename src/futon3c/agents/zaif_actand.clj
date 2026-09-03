@@ -11,7 +11,8 @@
   "The shared record contract for both current Q_actand grains."
   {:required #{:grain :actand :action :observables :density :counts :provenance}
    :grains grains
-   :provenance-required #{:source :query :record-ids}})
+   :provenance-required #{:source :query :record-ids}
+   :construction-rule :v1-kin-pool})
 
 (defn no-typed-source
   [grain actand action]
@@ -33,7 +34,9 @@
   "True only for a complete Q_actand density record; no coercion is performed."
   [record]
   (let [{:keys [grain actand action observables density counts provenance]} record
-        record-ids (:record-ids provenance)]
+        record-ids (:record-ids provenance)
+        constructed? (contains? record :constructed)
+        derivation (:derivation record)]
     (and (map? record)
          (every? #(contains? record %) (:required q-actand-record))
          (contains? grains grain)
@@ -52,7 +55,13 @@
          (keyword? (:query provenance))
          (vector? record-ids)
          (seq record-ids)
-         (every? string? record-ids))))
+         (every? string? record-ids)
+         (or (not constructed?)
+             (and (= true (:constructed record))
+                  (= (:construction-rule q-actand-record) (:rule derivation))
+                  (vector? (:kin derivation))
+                  (seq (:kin derivation))
+                  (every? vector? (:kin derivation)))))))
 
 (defn calibration-actand
   "Derive the calibration actand class without interpreting context text."
@@ -127,6 +136,67 @@
                    %)
                 result)
           (no-typed-source :arm-session actand action)))))
+
+(defn- positive-target-support?
+  [record]
+  (pos? (get-in record [:counts :gold-judged] 0)))
+
+(defn- same-v1-kin-class?
+  [target candidate]
+  (and (= (:action target) (:action candidate))
+       (= (get-in target [:actand :correction-label])
+          (get-in candidate [:actand :correction-label]))))
+
+(defn- pool-density-records
+  [target kin]
+  (let [pool (into [target] kin)
+        counts (apply merge-with + (map :counts pool))
+        support (reduce + (vals counts))]
+    (assoc target
+           :constructed true
+           :derivation {:rule :v1-kin-pool
+                        :kin (mapv (juxt :actand :action) kin)}
+           :density (update-vals counts #(/ % support))
+           :counts counts
+           :provenance (assoc (:provenance target)
+                              :record-ids (->> pool
+                                               (mapcat #(get-in % [:provenance :record-ids]))
+                                               distinct
+                                               sort
+                                               vec)))))
+
+(defn calibration-density-with-kin
+  "Apply rungs 1 and 2 of the declared v1 zero-support ladder.
+
+  A directly supported row is returned unchanged. A zero-support row pools
+  with the other rows sharing its arm and correction label. If no such kin
+  exists, or the pooled target support remains zero, return a typed trigger
+  for rung 3 rather than manufacturing a finite value."
+  [sessions actand action]
+  (let [table (calibration-table sessions)]
+    (if (map? table)
+      table
+      (if-let [target (some #(when (and (= actand (:actand %))
+                                         (= action (:action %)))
+                                %)
+                            table)]
+        (if (positive-target-support? target)
+          target
+          (let [kin (->> table
+                         (remove #(= [actand action] [(:actand %) (:action %)]))
+                         (filter #(same-v1-kin-class? target %))
+                         (sort-by (comp pr-str (juxt :actand :action)))
+                         vec)
+                pooled (when (seq kin) (pool-density-records target kin))]
+            (if (and pooled (positive-target-support? pooled))
+              pooled
+              {:q-actand/refusal :q-actand/zero-support-after-kin-pool
+               :grain :arm-session
+               :actand actand
+               :action action
+               :target :gold-judged
+               :kin (mapv (juxt :actand :action) kin)})))
+        (no-typed-source :arm-session actand action)))))
 
 (defn demo-bridge
   "Apply U11 design amendment [A4]'s demo-scoped density-to-scalar bridge.
