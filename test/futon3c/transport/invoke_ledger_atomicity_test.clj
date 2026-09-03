@@ -162,12 +162,11 @@
         (reset! index-atom before-index)
         (delete-tree! dir)))))
 
-(deftest multi-chunk-persist-round-trips
-  ;; D13 regression (claude-2): the persist writes in 1MB chunks so no
-  ;; handler thread ever caches a ledger-sized direct buffer (the 2026-09-02
-  ;; outage: a 170MB single write exhausted MaxDirectMemory). A >2-chunk
-  ;; ledger must round-trip byte-exactly through the chunked path.
-  (testing "a ~3MB ledger persists and reads back equal via chunked writes"
+(deftest heap-stream-persist-round-trips-large-ledger
+  ;; D15 retains D13's ~3MB round-trip regression while replacing the payload
+  ;; FileChannel with heap-backed streams. FileChannel.write of heap buffers
+  ;; populated per-thread direct-buffer caches during the 2026-09-02 outage.
+  (testing "a ~3MB ledger persists and reads back equal via heap streams"
     (let [dir (temp-dir)
           path (str (io/file dir "jobs.edn"))
           filler (apply str (repeat 1500 "x"))
@@ -186,9 +185,9 @@
           (fn []
             (#'http/persist-invoke-jobs-ledger! ledger)
             (is (> (.length (io/file path)) (* 2 1024 1024))
-                "fixture is large enough to exercise multiple chunks")
+                "fixture exercises a production-sized write")
             (is (= ledger (edn/read-string (slurp path)))
-                "chunked write round-trips byte-exactly")))
+                "heap-stream write round-trips byte-exactly")))
         (finally (delete-tree! dir))))))
 
 (deftest rolling-expiry-compacts-terminal-detail-but-retains-live-and-parked-jobs
