@@ -256,7 +256,11 @@ def main():
         #   it offered and the student declined -- the only one that is
         #     evidence about uptake.
         #   it ran, FOUND candidates, and the holdout excluded every one for
-        #     :unverifiable-depositor-provenance -- a fact about the substrate.
+        #     :unverifiable-depositor-provenance -- whatever that is a fact
+        #     about, it is not the student declining memory. I first wrote
+        #     "substrate" here; that was wrong. The exclusion is
+        #     ordinal-selective (8/8 first attempts, 0/13 later ones), and
+        #     load does not select for attempt ordinal. Cause still unknown.
         #     On 2026-09-02 f79/a1 excluded 200 candidates that way while
         #     f77/a2 had been OFFERED the same 100 memories hours earlier; the
         #     provenance check is the visibility sweep, and it had timed out.
@@ -279,7 +283,7 @@ def main():
                 flag = "   <-- ZERO UPTAKE (cascade offered, declined)"
             elif unverifiable:
                 flag = (f"   <-- CASCADE EMPTIED: {unverifiable} candidates excluded"
-                        " :unverifiable-depositor-provenance (substrate, not uptake)")
+                        " :unverifiable-depositor-provenance (not a measure of uptake)")
             else:
                 flag = "   <-- ZERO UPTAKE (cascade had nothing to offer)"
         elif unverifiable and not offered:
