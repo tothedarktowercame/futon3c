@@ -561,6 +561,12 @@
     :else
     (let [active-request (or (:active-request state) request)
           job (job-fn (get-in state [:ticket :job-id]))
+          terminal? (contains? terminal-states (:state job))
+          observed-submission
+          (delay
+            (when (and (fn? terminal-submission-provider)
+                       (nil? (:terminal-collection state)))
+              (terminal-submission-provider active-request (:ticket state) job)))
           job-usage-limit (provider-usage-limit
                            {:report (:report job)
                             :output (:output job)
@@ -591,10 +597,13 @@
         {:ok false :error/code :live-job-state-unclassified
          :finding {:job-id (:job-id job) :state (:state job)}}
 
-        (not (contains? terminal-states (:state job)))
+        (and (not terminal?)
+             (nil? (:terminal-collection state))
+             (nil? @observed-submission))
         {:ok true :status :awaiting-terminal :state state}
 
-        (and (not= :done (:state job))
+        (and terminal?
+             (not= :done (:state job))
              (not (and (expected-role-terminal-condition job)
                        (fn? terminal-submission-provider))))
         {:ok false :error/code :live-job-terminal-failure
@@ -604,8 +613,7 @@
         :else
         (if (and (fn? terminal-submission-provider)
                  (nil? (:terminal-collection state)))
-          (let [submission (terminal-submission-provider
-                            active-request (:ticket state) job)
+          (let [submission @observed-submission
                 configured (terminal-budget terminal-budget-config)
                 collection (terminal-collection-record
                             active-request (:ticket state) job submission 1)

@@ -125,6 +125,33 @@
     (is (= [:poll :validate :receipt [:persist :live-job-certified]]
            (take-last 4 @calls)))))
 
+(deftest typed-submission-reconciles-a-stranded-running-invoke-job
+  ;; Live pin: f83/b97A01 job apm-role-f65f2382682c9e5c76d69bfe29a903d8a4bac09061caba4db4555d60dde690c7
+  ;; remained :running after submitting a clean Lean result at 05fdbfd181d29014b3482199b099575a1b4d9499.
+  (let [calls (atom [])
+        provider-calls (atom 0)
+        running-job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                           :state :running})
+        dispatched (:state (sut/drive! (effects calls running-job)))
+        submission {:schema :apm/role-submission-v1
+                    :request-id "dispatch-1"
+                    :job-id "job-1"
+                    :agent-id "f19-proctor"
+                    :payload {:outcome "complete"}}
+        fx (assoc (effects calls running-job)
+                  :terminal-submission-provider
+                  (fn [& _]
+                    (swap! provider-calls inc)
+                    submission))
+        collected (sut/drive! (assoc fx :state dispatched))
+        certified (sut/drive! (assoc fx :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :running (get-in collected [:collection :terminal-state])))
+    (is (true? (get-in collected [:collection :submission/available?])))
+    (is (= :certified (:status certified)))
+    (is (= 1 @provider-calls))
+    (is (= 1 (count (filter #{:validate} @calls))))))
+
 (deftest receipt-provider-hold-never-certifies-a-nil-receipt
   (let [calls (atom [])
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
