@@ -277,7 +277,8 @@
                   load-state-fn (or (:load-state-fn options) inbox-state/load-state)
                   plan-fn (or (:plan-fn options) promotion/plan-promotion)
                   screen-fn (or (:screen-fn options) escalation/screen-sensitivity)
-                  execute-fn (or (:execute-fn options) promote-exec/execute-plan!)
+                  execute-fn (or (:execute-fn options)
+                                 promote-exec/execute-plan-with-refresh!)
                   push-fn (or (:push-fn options) promote-push/push-promoted!)
                   route-fn (or (:route-fn options) escalation/route)
                   roster-fn (or (:roster-fn options) default-roster)
@@ -330,6 +331,15 @@
                                     :worktree/id (:worktree/id plan) :plan plan)
                              executed))))
                      screened))
+                  ;; A :resolved outcome is a stale plan that self-healed
+                  ;; against live git status (the dirt was already committed);
+                  ;; it must not route, but it should not vanish silently.
+                  _ (doseq [o outcomes
+                            :when (= :resolved (:verdict o))]
+                      (print-fn (str "[inbox-zero] stale plan self-healed for "
+                                     (get-in o [:plan :repo/id])
+                                     " — already-committed paths dropped: "
+                                     (pr-str (:refresh/dropped o)))))
                   considered (if (= :propose mode)
                                outcomes
                                (filterv #(or (= :held (:verdict %))
