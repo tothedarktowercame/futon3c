@@ -111,10 +111,10 @@
             [clojure.string :as str]
             [org.httpkit.server :as hk])
   (:import [java.time Instant]
-           [java.io PushbackReader]
+           [java.io BufferedWriter FileOutputStream OutputStreamWriter PushbackReader]
            [java.net Socket InetSocketAddress]
-           [java.nio ByteBuffer]
            [java.nio.channels AsynchronousCloseException ClosedChannelException ClosedSelectorException FileChannel]
+           [java.nio.charset StandardCharsets]
            [java.nio.file Files Path StandardCopyOption StandardOpenOption]
            [java.util UUID]
            [java.util.concurrent Executors ExecutorService RejectedExecutionException]
@@ -420,27 +420,18 @@
                                     (make-array java.nio.file.attribute.FileAttribute 0))
           renamed? (volatile! false)]
       (try
-        (let [bytes (.getBytes (pr-str ledger) "UTF-8")
-              ;; D13 fix: write in bounded chunks. FileChannel/write of a heap
-              ;; buffer borrows a per-thread cached DIRECT buffer sized to the
-              ;; buffer's remaining bytes, so one whole-ledger write made every
-              ;; handler thread cache a ledger-sized direct buffer — at 170MB
-              ;; that exhausted MaxDirectMemory (the 2026-09-02 outage). A 1MB
-              ;; cap keeps the scratch buffers trivial forever.
-              chunk-size (int (* 1024 1024))]
-          (with-open [channel (FileChannel/open
-                               tmp
-                               (into-array StandardOpenOption
-                                           [StandardOpenOption/WRITE
-                                            StandardOpenOption/TRUNCATE_EXISTING]))]
-            (loop [offset 0]
-              (when (< offset (alength bytes))
-                (let [len (min chunk-size (- (alength bytes) offset))
-                      buffer (ByteBuffer/wrap bytes offset len)]
-                  (while (.hasRemaining buffer)
-                    (.write channel buffer))
-                  (recur (+ offset len)))))
-            (.force channel true)))
+        ;; D15: FileChannel.write of a heap ByteBuffer borrows a per-thread
+        ;; cached direct buffer. Legacy live threads exhausted that pool even
+        ;; after D13 capped each new cache at 1MB. This payload path stays on
+        ;; the heap; FileDescriptor.sync preserves the pre-rename durability
+        ;; boundary formerly supplied by FileChannel.force.
+        (with-open [stream (FileOutputStream. (.toFile tmp))
+                    writer (BufferedWriter.
+                            (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+          (binding [*out* writer]
+            (pr ledger))
+          (.flush writer)
+          (.sync (.getFD stream)))
         (when *invoke-jobs-persist-stage-hook*
           (*invoke-jobs-persist-stage-hook* :temp-forced
                                             {:target target :temp tmp}))
