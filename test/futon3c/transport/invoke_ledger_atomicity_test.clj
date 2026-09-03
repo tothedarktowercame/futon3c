@@ -4,7 +4,10 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.transport.http :as http])
-  (:import [java.nio.file Files]
+  (:import [java.lang.management BufferPoolMXBean ManagementFactory]
+           [java.nio ByteBuffer]
+           [java.nio.channels FileChannel]
+           [java.nio.file Files StandardOpenOption]
            [java.nio.file.attribute FileAttribute]))
 
 (defn- temp-dir []
@@ -162,6 +165,24 @@
         (reset! index-atom before-index)
         (delete-tree! dir)))))
 
+(defn- production-sized-ledger
+  "A ~3MB ledger. Size, not content, is what these two tests exercise: the
+  2026-09-02 outage was caused by the number of bytes handed to one write, so
+  the fixture only has to exceed the 1MB scale at which the old path started
+  caching per-thread direct buffers."
+  []
+  (let [filler (apply str (repeat 1500 "x"))]
+    {:version 1
+     :next-seq 2048
+     :job-order (vec (map #(str "job-" %) (range 2048)))
+     :trace->job {}
+     :jobs (into {} (map (fn [i]
+                           [(str "job-" i)
+                            {:job-id (str "job-" i)
+                             :state "done"
+                             :events [{:type "prompt" :text filler}]}])
+                         (range 2048)))}))
+
 (deftest heap-stream-persist-round-trips-large-ledger
   ;; D15 retains D13's ~3MB round-trip regression while replacing the payload
   ;; FileChannel with heap-backed streams. FileChannel.write of heap buffers
@@ -169,17 +190,7 @@
   (testing "a ~3MB ledger persists and reads back equal via heap streams"
     (let [dir (temp-dir)
           path (str (io/file dir "jobs.edn"))
-          filler (apply str (repeat 1500 "x"))
-          ledger {:version 1
-                  :next-seq 2048
-                  :job-order (vec (map #(str "job-" %) (range 2048)))
-                  :trace->job {}
-                  :jobs (into {} (map (fn [i]
-                                        [(str "job-" i)
-                                         {:job-id (str "job-" i)
-                                          :state "done"
-                                          :events [{:type "prompt" :text filler}]}])
-                                      (range 2048)))}]
+          ledger (production-sized-ledger)]
       (try
         (with-redefs-fn {#'http/invoke-jobs-store-path (constantly path)}
           (fn []
@@ -189,6 +200,73 @@
             (is (= ledger (edn/read-string (slurp path)))
                 "heap-stream write round-trips byte-exactly")))
         (finally (delete-tree! dir))))))
+
+(defn- direct-buffer-bytes
+  "JVM-wide direct buffer pool usage. Must be sampled from INSIDE the thread
+  that did the write: NIO's scratch buffers live in a ThreadLocal cache, so a
+  sample taken after the thread dies can already have been reclaimed (that is
+  why a naive before/after around a join reads zero for both paths)."
+  []
+  (.getMemoryUsed ^BufferPoolMXBean
+                  (first (filter #(= "direct" (.getName ^BufferPoolMXBean %))
+                                 (ManagementFactory/getPlatformMXBeans BufferPoolMXBean)))))
+
+(defn- on-cold-thread
+  "Run f on a thread that has never touched NIO, returning the direct-pool
+  bytes it allocated while running."
+  [f]
+  (let [delta (atom nil)
+        thread (Thread. ^Runnable (fn []
+                                    (let [before (direct-buffer-bytes)]
+                                      (f)
+                                      (reset! delta (- (direct-buffer-bytes) before)))))]
+    (.start thread)
+    (.join thread)
+    @delta))
+
+(deftest persist-allocates-no-direct-buffers
+  ;; D15 acceptance, made a test rather than a review claim: the round-trip
+  ;; test above passes just as well under the old FileChannel path, so on its
+  ;; own it locks nothing about WHERE the bytes were buffered.
+  (let [dir (temp-dir)
+        ledger (production-sized-ledger)
+        payload (.getBytes (pr-str ledger) "UTF-8")
+        ;; Negative control: the pre-D15 shape (FileChannel write of a heap
+        ;; ByteBuffer) on the same payload. If this does not allocate, the
+        ;; probe cannot tell the two paths apart on this JVM and asserting on
+        ;; it would pass for the wrong reason.
+        control (on-cold-thread
+                 (fn []
+                   (let [tmp (.toPath (io/file dir "control.bin"))]
+                     (Files/createFile tmp (make-array FileAttribute 0))
+                     (with-open [channel (FileChannel/open
+                                          tmp
+                                          (into-array StandardOpenOption
+                                                      [StandardOpenOption/WRITE]))]
+                       (let [buffer (ByteBuffer/wrap payload)]
+                         (while (.hasRemaining buffer)
+                           (.write channel buffer)))))))]
+    (try
+      (if-not (pos? control)
+        (println (str "SKIP persist-allocates-no-direct-buffers: this JVM ("
+                      (System/getProperty "java.version")
+                      ") allocated no direct buffer for a "
+                      (alength payload)
+                      "-byte FileChannel heap write, so the probe cannot"
+                      " distinguish the two write paths."))
+        (let [path (str (io/file dir "jobs.edn"))
+              persisted (on-cold-thread
+                         (fn []
+                           (with-redefs-fn {#'http/invoke-jobs-store-path
+                                            (constantly path)}
+                             (fn [] (#'http/persist-invoke-jobs-ledger! ledger)))))]
+          (is (>= control (* 1024 1024))
+              "control confirms the old path cached a write-sized direct buffer")
+          (is (zero? persisted)
+              "persist writes the whole ledger without touching the direct pool")
+          (is (= ledger (edn/read-string (slurp path)))
+              "and the no-direct-buffer write is still the correct ledger")))
+      (finally (delete-tree! dir)))))
 
 (deftest rolling-expiry-compacts-terminal-detail-but-retains-live-and-parked-jobs
   ;; Live ledger pin, /tmp/futon3c-invoke-jobs.edn, job
