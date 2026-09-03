@@ -1,9 +1,70 @@
 (ns futon3c.agents.zaif-controller-test
-  (:require [clojure.set]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.set]
             [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.evidence.boundary :as boundary]))
+
+(defn- workspace-root
+  []
+  (let [source-file (-> (io/resource "futon3c/agents/zaif_controller_test.clj")
+                        .toURI
+                        io/file)]
+    (loop [dir (.getParentFile source-file)]
+      (cond
+        (nil? dir)
+        (throw (ex-info "Could not locate futon3c checkout" {}))
+
+        (.isFile (io/file dir "deps.edn"))
+        (.getParentFile dir)
+
+        :else
+        (recur (.getParentFile dir))))))
+
+(deftest d9-live-replay-scores-select-the-arm
+  ;; LIVE PIN: values are read verbatim from D9's tracked replay of live
+  ;; evidence record e-0f2f9aec-6240-40e9-a25a-e45d9452076f.
+  (let [report (-> (io/file (workspace-root)
+                            "futon2/holes/labs/zaif-harness/runs"
+                            "D9-tie-order-count.edn")
+                   slurp
+                   edn/read-string)
+        pin (get-in report [:live :live-pin])
+        replayed (zaif/decide (:inputs pin))
+        selected-score (get-in replayed [:g-terms (:arm replayed)])
+        other-scores (vals (dissoc (:g-terms replayed) (:arm replayed)))]
+    (is (= "e-0f2f9aec-6240-40e9-a25a-e45d9452076f" (:id pin)))
+    (is (= 56 (get-in report [:live :count])))
+    (is (= {:score-settled 56} (get-in report [:live :settlement-counts])))
+    (is (= (:decision pin) replayed))
+    (is (= :retrieve (:arm replayed)))
+    (is (= 0.7456643332946383 selected-score))
+    (is (every? #(< % selected-score) other-scores)
+        "the recorded posterior scores, rather than case order, select the arm")))
+
+(deftest wm-r6-fixture-posterior-selects-counterfactual-winner
+  ;; LIVE PIN: values are read verbatim from tracked fixture 4abad68c-R6.edn,
+  ;; harvested from live record/run id 4abad68c-5481-4402-8f0e-252add62c54b.
+  (let [fixture (-> (io/file (workspace-root)
+                             "futon2/holes/labs/wm-contract/runs"
+                             "U12-c-mis-falsifier/node-fixtures/4abad68c-R6.edn")
+                    slurp
+                    edn/read-string)
+        decision (:value fixture)
+        posterior (:habit-adjusted-ranking decision)
+        winner (get-in decision [:counterfactual :winner])]
+    (is (= :R6 (:node fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.aif.policy/select-action" (:via fixture)))
+    (is (= 25.0681481226624 (:tau-spread decision)))
+    (is (= winner (first posterior)))
+    (is (= "M-learning-loop" (get-in winner [:action :target])))
+    (is (= -7.669223854855124 (:selection-score winner)))
+    (is (every? #(>= (:selection-score winner) (:selection-score %))
+                (rest posterior))
+        "the recorded posterior ordering supplies the selected winner")))
 
 (deftest fixture-beliefs-produce-deterministic-arm-choices
   (testing "posting statistics can select retrieve"
@@ -102,7 +163,8 @@
         (is (= 2 (count @persisted)))
         (doseq [p @persisted]
           (let [inputs (:inputs p)]
-            (is (= "M-a-sorry-enterprise" (:mission inputs)))
+            (is (nil? (:mission inputs)))
+            (is (= :d10/unclocked (:mission-source inputs)))
             (is (number? (get-in inputs [:c-belief :operator-c-uncertainty])))
             (is (seq (get-in inputs [:observations :posting-stats])))))))))
 
