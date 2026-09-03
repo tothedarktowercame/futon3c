@@ -61,7 +61,15 @@
    :correction-label (:is_correction session)})
 
 (defn calibration-arm
-  "Return the arm warranted by the calibration session's correction label."
+  "Return the arm warranted by the calibration session's correction label.
+
+  DECLARED MAPPING (U11 design section 4 discipline; review finding, U11b):
+  this route->arm warrant is AUTHORED for v1, not derived from any record --
+  no calibration session carries an arm, so the grouping needs a declared
+  bridge: a correction routed to :gamma or :c-channel warrants :ask, one
+  routed to :actand warrants :retrieve, a non-correction warrants :act.
+  Its effect on the table is measurable and revisable at the U11e comparison;
+  changing it changes group keys, never densities within a group."
   [{:keys [is_correction route]}]
   (if is_correction
     (case route
