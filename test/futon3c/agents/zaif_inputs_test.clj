@@ -2,6 +2,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
+            [futon2.aif.policy :as policy]
+            [futon2.aif.selection-gain :as selection-gain]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zinputs]))
 
@@ -100,6 +102,48 @@
     (is (= 21.0 (:precision prediction-error)))
     (is (= 0.0 replayed-error (:error prediction-error)))
     (is (= 0.0 replayed-weighted-error (:weighted-error prediction-error)))))
+
+(deftest r14-verdict-stream-moves-temperature-and-types-empty
+  ;; LIVE PIN: the gamma value and event id are captured verbatim from tracked
+  ;; B1 fold record b1-gamma-mission.edn, whose live corpus includes evidence
+  ;; record e-63c25e11-ac8b-4287-966e-bdc7f007bc78.
+  (let [record (harness-artifact "M-zaif-harness/b1-gamma-mission.edn")
+        pinned-cell (get-in record [:cells "M-futon-forward-model"])
+        empty-stream {:status :absent
+                      :reason :no-verdict-events
+                      :state (selection-gain/coerce-state nil)}
+        corrections (repeat 5 -0.5)
+        corrected-state (reduce selection-gain/update-selection-gain
+                                (selection-gain/initial-selection-gain-state)
+                                corrections)
+        spread-tau 0.2]
+    (is (= 0.7071067811865476 (:policy-precision pinned-cell)))
+    (is (= 10 (:samples pinned-cell)))
+    (is (some #(= "e-63c25e11-ac8b-4287-966e-bdc7f007bc78" (:id %))
+              (:events record)))
+    (is (= :absent (:status empty-stream)))
+    (is (= :no-verdict-events (:reason empty-stream)))
+    (is (= 1.0 (selection-gain/selection-gain-for (:state empty-stream))))
+    (is (= 0.7071067811865476
+           (selection-gain/selection-gain-for corrected-state)))
+    (is (> (policy/effective-temperature
+            [0.0 1.0] (selection-gain/selection-gain-for corrected-state))
+           (policy/effective-temperature
+            [0.0 1.0] (selection-gain/selection-gain-for (:state empty-stream))))
+        "a sustained correction stream lowers selection gain and raises effective tau")
+    (is (= spread-tau (policy/effective-temperature [0.0 1.0] 1.0)))))
+
+(deftest r14-wm-fixture-pins-live-temperature
+  ;; LIVE PIN: values are read verbatim from tracked fixture 801976e7-R14.edn,
+  ;; harvested from live record/run id 801976e7-01c6-4e39-aada-27f620f7c2f1.
+  (let [fixture (harness-artifact
+                 "wm-contract/runs/U12-c-mis-falsifier/node-fixtures/801976e7-R14.edn")]
+    (is (= :R14 (:node fixture)))
+    (is (= "801976e7-01c6-4e39-aada-27f620f7c2f1" (:run/id fixture)))
+    (is (= :present (:status fixture)))
+    (is (= "futon2.report.war-machine/invoke-strategic-selection" (:via fixture)))
+    (is (= [:decision :tau] (:field fixture)))
+    (is (= 1.0 (:value fixture)))))
 
 (deftest default-gamma-path-is-classpath-anchored
   (let [source (io/resource "futon3c/agents/zaif_inputs.clj")
