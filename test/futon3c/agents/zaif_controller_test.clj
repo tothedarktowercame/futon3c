@@ -513,4 +513,36 @@
             :ask-eig-scale 1.0
             :operator-attention-cost 0.65
             :yield-baseline 0.0})
-        "receipt-fed learning reports evidence without silently tuning v0")))
+        "receipt-fed learning reports evidence without silently tuning v0")
+    ;; The A/B half of the report. The D9 pin above chooses :retrieve under
+    ;; both constants, so it cannot exercise divergence or per-label arm
+    ;; attribution; these inputs are the synthetic c-uncertainty 0.5 case
+    ;; already pinned by dual-decide-constants-diverge-on-high-c-uncertainty.
+    (let [ab-inputs {:mission "M-z"
+                     :c-belief {:operator-c-uncertainty 0.5}
+                     :task-belief {:act-value 0.3}
+                     :gamma {"M-z" {:policy-precision 1.0}}
+                     :observations {}}
+          ab-receipts
+          (mapv (fn [{:keys [label operator-attention-cost decision]}]
+                  (zaif/decision-evidence-entry
+                   {:agent-id "zai-3"
+                    :sid "recorded-replay"
+                    :turn-id "ab-divergent"
+                    :round 2
+                    :decision decision
+                    :inputs ab-inputs
+                    :constant operator-attention-cost
+                    :constant-label label
+                    :pairing-key "ab-divergent:r2"}))
+                (zaif/dual-decide ab-inputs))
+          ab (zaif/receipt-learning-summary ab-receipts)
+          half (zaif/receipt-learning-summary [(first ab-receipts)])]
+      (is (= 2 (:receipt-count ab)))
+      (is (= {:shipped {:act 1} :sweep {:ask 1}} (:arm-counts ab))
+          "each label counts the arm its own constant produced")
+      (is (true? (get-in ab [:pairs 0 :divergent?])))
+      (is (= 1 (:divergent-pair-count ab)))
+      (is (= :incomplete (get-in half [:pairs 0 :status]))
+          "a half pair is reported incomplete, never counted as replayed")
+      (is (= 0 (:replayed-pair-count half))))))
