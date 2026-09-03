@@ -325,9 +325,10 @@
             state-class (job-state/classify (:state raw-job))
             terminal? (= :terminal state-class)
             collection (:terminal-collection active)
-            freshly-collected (when (and terminal? provider (nil? collection))
-                                (provider (:request active) (:ticket active)
-                                          raw-job))
+            freshly-collected
+            (delay
+              (when (and provider (nil? collection))
+                (provider (:request active) (:ticket active) raw-job)))
             typed (if provider (:submission collection) nil)
             job (if typed
                   (let [payload (:payload typed)]
@@ -344,19 +345,22 @@
           {:ok false :error/code :solver-job-state-unclassified
            :finding {:job-id (:job-id raw-job) :state (:state raw-job)}}
 
-          (and terminal? provider (nil? collection))
+          (and provider
+               (nil? collection)
+               (or terminal? (some? @freshly-collected)))
           (let [evidence (job-driver/terminal-collection-record
                           (:request active) (:ticket active) raw-job
-                          freshly-collected 1)
+                          @freshly-collected 1)
                 next-state (assoc-in state [:active :terminal-collection]
                                      {:evidence evidence
-                                      :submission freshly-collected})]
+                                      :submission @freshly-collected})]
             (if (:ok (persist-container persist-fn next-state))
               {:ok true :status :terminal-collected :state next-state
                :collection evidence}
               {:ok false :error/code :solver-terminal-collection-persistence-failed}))
 
-          (not (contains? job-driver/terminal-states (:state job)))
+          (and (not (contains? job-driver/terminal-states (:state job)))
+               (nil? typed))
           {:ok true :status :awaiting-terminal
            :job-id (get-in state [:active :ticket :job-id])
            :state state}
@@ -378,7 +382,7 @@
              :finding {:expected expected-session :actual (:session-id job)}}
 
           :else
-          (let [validation (if (and (= :done (:state job))
+          (let [validation (if (and (or (= :done (:state job)) typed)
                                     (or (nil? (:terminal-submission-provider effects))
                                         typed))
                              (validate-solved (:request active) (:ticket active) job)

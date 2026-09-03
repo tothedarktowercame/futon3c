@@ -108,6 +108,35 @@
            (:error/code exhausted)))
     (is (= 1 (:repair/attempts exhausted)))))
 
+(deftest typed-submission-reconciles-a-stranded-running-solver-job
+  ;; Live pin: f83/b97A01 job apm-role-f65f2382682c9e5c76d69bfe29a903d8a4bac09061caba4db4555d60dde690c7
+  ;; remained :running after submitting a clean Lean result at 05fdbfd181d29014b3482199b099575a1b4d9499.
+  (let [persisted (atom nil)
+        provider-calls (atom 0)
+        submission {:schema :apm/role-submission-v1
+                    :payload {:outcome "complete" :command-own-exit 0}}
+        base (assoc (effects persisted)
+                    :job-fn (fn [_]
+                              {:job-id "job-1" :agent-id "f19-solver"
+                               :state :running})
+                    :terminal-submission-provider
+                    (fn [& _]
+                      (swap! provider-calls inc)
+                      submission)
+                    :validate-solved
+                    (fn [_ _ job]
+                      {:ok (= submission (:typed-submission job))})
+                    :provide-receipt
+                    (fn [& _]
+                      {:ok true :certificate {:receipt/id "solved"}}))
+        collected (sut/drive! base)
+        certified (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :running (get-in collected [:collection :terminal-state])))
+    (is (= :certified (:status certified)))
+    (is (= "solved" (get-in certified [:certificate :receipt/id])))
+    (is (= 1 @provider-calls))))
+
 (deftest terminal-repair-archive-failure-blocks-announcement
   (let [announcements (atom 0)
         persisted (atom [])
