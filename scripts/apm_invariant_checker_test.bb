@@ -107,15 +107,33 @@
            (fn [n]
              (check n (:invariant/verdict (coordinator-health-check {:coordinator/id "x"})) :unknown)))
 
-      ;; JVM count: 5 procs vs 2 -> violated with process details.
+      ;; JVM count is per repo: only procs whose :cwd is the repo are counted.
       _ (run! "jvm-count-violated"
            (fn [n]
-             (let [r (jvm-check 2 (repeat 5 {:pid 1 :age-days 4.0 :rss-gb 5.0 :cmd "a"}))]
+             (let [r (jvm-check 1 "/tmp" (repeat 5 {:pid 1 :age-days 4.0 :rss-gb 5.0 :cwd "/tmp"}))]
                (check (str n ":verdict") (:invariant/verdict r) :violated))))
 
       _ (run! "jvm-count-zero-unknown"
            (fn [n]
-             (check n (:invariant/verdict (jvm-check 2 [])) :unknown)))
+             (check n (:invariant/verdict (jvm-check 1 "/tmp" [])) :unknown)))
+
+      ;; The regression this scoping fixes: JVMs from other checkouts must not
+      ;; make the check red. One local JVM plus many foreign ones is a pass.
+      _ (run! "jvm-count-ignores-foreign-repos"
+           (fn [n]
+             (let [r (jvm-check 1 "/tmp"
+                                (cons {:pid 1 :cwd "/tmp"}
+                                      (repeat 4 {:pid 2 :cwd "/home/other/repo"})))]
+               (check (str n ":verdict") (:invariant/verdict r) :pass)
+               (check (str n ":count") (:jvm/count (:invariant/observed r)) 1)
+               (check (str n ":foreign") (:jvm/foreign-count (:invariant/observed r)) 4))))
+
+      ;; An unreadable cwd (another user's process) is foreign, never local.
+      _ (run! "jvm-count-unreadable-cwd-not-counted-local"
+           (fn [n]
+             (let [r (jvm-check 1 "/tmp" [{:pid 1 :cwd "/tmp"} {:pid 9 :cwd nil}])]
+               (check (str n ":verdict") (:invariant/verdict r) :pass)
+               (check (str n ":count") (:jvm/count (:invariant/observed r)) 1))))
 
       ;; parse-jps handles etime with day prefix and plain minutes.
       _ (run! "parse-jps-etime"

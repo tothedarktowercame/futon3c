@@ -54,7 +54,7 @@
    :apm-lean-root    "/home/joe/code/apm-lean"
    :frames-root      "/home/joe/code/apm-frames"
    :campaigns-root   "data/apm-campaigns"
-   :max-jvms         2
+   :max-jvms         1                   ; per repo; other checkouts are not counted
    :churn-window-ms  (* 24 60 60 1000)   ; stop count window: 24h
    :churn-span-window-ms (* 7 24 60 60 1000) ; span statistics window: 7d
    :min-mean-span-ms (* 2 60 60 1000)    ; < 2h mean enabled span is a defect
@@ -81,22 +81,46 @@
 
 (defn now-ms [] (System/currentTimeMillis))
 
+(defn proc-cwd
+  "Working directory of PID, or nil when unreadable (other user, or exited)."
+  [pid]
+  (try (let [r (p/shell {:out :string :err :string :continue true}
+                        "readlink" "-f" (str "/proc/" pid "/cwd"))]
+         (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))
+       (catch Exception _ nil)))
+
+(defn with-cwds
+  "Attach :cwd to each proc so the per-repo invariant can be evaluated."
+  [procs]
+  (mapv #(assoc % :cwd (proc-cwd (:pid %))) procs))
+
 (defn jvm-check
-  "Expected: at most :max-jvms java processes at rest (1 by the base invariant,
-   2 under the futon1b override documented in the same CLAUDE.md section)."
-  [max-jvms procs]
-  (let [n (count procs)]
+  "Expected: at most :max-jvms java processes *for this repo*. CLAUDE.md states
+   the invariant per repo, so JVMs belonging to other checkouts (futon1b,
+   benchmarks) are reported but never counted -- a global count goes red
+   whenever any other repo runs a JVM, and a permanently-red check trains
+   readers to ignore the checker."
+  [max-jvms repo procs]
+  (let [repo* (str (fs/canonicalize repo))
+        mine (filterv #(= repo* (:cwd %)) procs)
+        foreign (filterv #(not= repo* (:cwd %)) procs)
+        n (count mine)]
     (verdict :apm/jvm-count
-             "futon3c/CLAUDE.md, One JVM per repo (pgrep java = one PID at rest; two under futon1b override)"
-             {:jvm/count n
-              :jvm/processes (mapv #(select-keys % [:pid :age-days :rss-gb :cmd]) procs)}
+             "futon3c/CLAUDE.md, One JVM per repo (counted for this repo only, by /proc/<pid>/cwd)"
+             {:jvm/repo repo*
+              :jvm/count n
+              :jvm/processes (mapv #(select-keys % [:pid :age-days :rss-gb :cwd]) mine)
+              :jvm/foreign (mapv #(select-keys % [:pid :cwd]) foreign)
+              :jvm/foreign-count (count foreign)}
              {:jvm/count-max max-jvms}
              (if (and (pos? n) (<= n max-jvms)) :pass
                (if (zero? n) :unknown :violated))
-             (cond (zero? n) "no JVM running — live stack is down or pgrep failed"
-                   (<= n max-jvms) "within documented limit"
-                   :else (str n " JVMs running; documented limit is " max-jvms
-                        " (one futon3c, plus futon1b override). Extra JVMs mean loaded code has drifted from master.")))))
+             (cond (zero? n) (str "no JVM with cwd " repo*
+                                  " -- live stack is down, or every candidate cwd was unreadable")
+                   (<= n max-jvms) (str n " JVM(s) for this repo (" (count foreign)
+                                        " other-repo JVMs ignored)")
+                   :else (str n " JVMs share cwd " repo* "; limit is " max-jvms
+                              ". Concurrent drivers can double-write durable APM state.")))))
 
 (defn parse-jps
   "Parse `ps -eo pid,etime,rss,args` lines into maps for java processes."
@@ -382,7 +406,7 @@
   (let [now (now-ms)
         cfg (merge cfg {:now now})
         repo (:repo-root cfg)
-        procs (-> (p/shell {:out :string} "ps -eo pid,etime,rss,args") :out str/split-lines parse-jps)
+        procs (-> (p/shell {:out :string} "ps -eo pid,etime,rss,args") :out str/split-lines parse-jps with-cwds)
         registry (read-edn-file (str (fs/path repo (:registry-path cfg))))
         enabled-entries (when (map? registry)
                           (->> (:entries registry) vals (filter :coordinator/enabled?)))
@@ -404,7 +428,7 @@
      :check/read-only true
      :invariants
      (vec (concat
-           [(jvm-check (:max-jvms cfg) procs)
+           [(jvm-check (:max-jvms cfg) repo procs)
             (worktrees-check (:apm-lean-root cfg) (:max-worktrees cfg))
             (frames-disk-check (:frames-root cfg) (:max-frames-gb cfg))
             (disk-headroom-check (str repo "/data") cfg)]
