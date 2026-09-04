@@ -54,7 +54,11 @@
    :apm-lean-root    "/home/joe/code/apm-lean"
    :frames-root      "/home/joe/code/apm-frames"
    :campaigns-root   "data/apm-campaigns"
-   :max-jvms         1                   ; per repo; other checkouts are not counted
+   ;; CLAUDE.md I-0: exactly one serving JVM on this machine (futon3c), plus
+   ;; the 2026-08-10 override making the futon1b substrate its own JVM. Joe
+   ;; sanctions these two and no others; anything else is a finding.
+   :sanctioned-jvms  {"/home/joe/code/futon3c" 1
+                      "/home/joe/code/futon1b" 1}
    :churn-window-ms  (* 24 60 60 1000)   ; stop count window: 24h
    :churn-span-window-ms (* 7 24 60 60 1000) ; span statistics window: 7d
    :min-mean-span-ms (* 2 60 60 1000)    ; < 2h mean enabled span is a defect
@@ -95,46 +99,69 @@
   (mapv #(assoc % :cwd (proc-cwd (:pid %))) procs))
 
 (defn jvm-check
-  "Expected: at most :max-jvms java processes *for this repo*. CLAUDE.md states
-   the invariant per repo, so JVMs belonging to other checkouts (futon1b,
-   benchmarks) are reported but never counted -- a global count goes red
-   whenever any other repo runs a JVM, and a permanently-red check trains
-   readers to ignore the checker."
-  [max-jvms repo procs]
-  (let [repo* (str (fs/canonicalize repo))
-        mine (filterv #(= repo* (:cwd %)) procs)
-        foreign (filterv #(not= repo* (:cwd %)) procs)
-        n (count mine)]
+  "Expected: exactly the sanctioned JVMs, one each, and nothing else.
+
+   CLAUDE.md I-0 states this per *machine*, not per repo: one futon3c serving
+   JVM, plus the futon1b substrate under the 2026-08-10 override. Counting
+   `pgrep java` globally without an allowlist makes every unrelated checkout
+   look like futon3c drift; ignoring non-futon3c JVMs entirely lets real
+   unsanctioned processes accumulate unseen. Both readings are wrong, so
+   name the sanctioned set and report deviations on either side."
+  [sanctioned procs]
+  (let [canon (fn [d] (try (str (fs/canonicalize d)) (catch Exception _ d)))
+        sanctioned (into {} (map (fn [[d n]] [(canon d) n])) sanctioned)
+        by-repo (group-by :cwd procs)
+        counts (into {} (map (fn [[d n]] [d {:limit n :actual (count (get by-repo d))}]))
+                     sanctioned)
+        over (into {} (filter (fn [[_ v]] (> (:actual v) (:limit v)))) counts)
+        absent (into #{} (comp (filter (fn [[_ v]] (zero? (:actual v)))) (map key)) counts)
+        unsanctioned (filterv #(not (contains? sanctioned (:cwd %))) procs)
+        n (count procs)]
     (verdict :apm/jvm-count
-             "futon3c/CLAUDE.md, One JVM per repo (counted for this repo only, by /proc/<pid>/cwd)"
-             {:jvm/repo repo*
-              :jvm/count n
-              :jvm/processes (mapv #(select-keys % [:pid :age-days :rss-gb :cwd]) mine)
-              :jvm/foreign (mapv #(select-keys % [:pid :cwd]) foreign)
-              :jvm/foreign-count (count foreign)}
-             {:jvm/count-max max-jvms}
-             (if (and (pos? n) (<= n max-jvms)) :pass
-               (if (zero? n) :unknown :violated))
-             (cond (zero? n) (str "no JVM with cwd " repo*
-                                  " -- live stack is down, or every candidate cwd was unreadable")
-                   (<= n max-jvms) (str n " JVM(s) for this repo (" (count foreign)
-                                        " other-repo JVMs ignored)")
-                   :else (str n " JVMs share cwd " repo* "; limit is " max-jvms
-                              ". Concurrent drivers can double-write durable APM state.")))))
+             "futon3c/CLAUDE.md I-0 (one serving JVM) + 2026-08-10 futon1b substrate override; sanctioned set matched by /proc/<pid>/cwd"
+             {:jvm/total n
+              :jvm/sanctioned counts
+              :jvm/unsanctioned (mapv #(select-keys % [:pid :user :cwd :age-days :rss-gb])
+                                      unsanctioned)
+              :jvm/unsanctioned-count (count unsanctioned)}
+             {:jvm/sanctioned sanctioned :jvm/unsanctioned-count 0}
+             (cond (zero? n) :unknown
+                   (or (seq over) (seq unsanctioned)) :violated
+                   (seq absent) :unknown
+                   :else :pass)
+             (cond
+               (zero? n) "no JVM running at all -- live stack is down or ps failed"
+               (seq over)
+               (str "sanctioned repo over its limit: "
+                    (str/join ", " (map (fn [[d v]] (str d " has " (:actual v)
+                                                         ", limit " (:limit v))) over))
+                    ". Concurrent drivers can double-write durable APM state.")
+               (seq unsanctioned)
+               (str (count unsanctioned) " unsanctioned JVM(s): "
+                    (str/join ", " (map #(str (or (:cwd %) "cwd-unreadable (other user)")
+                                              " (pid " (:pid %) ", " (:user %) ", "
+                                              (some-> (:rss-gb %) (* 10) Math/round (/ 10.0))
+                                              "G)")
+                                        unsanctioned))
+                    ". Only futon3c and futon1b are sanctioned (I-0 + override).")
+               (seq absent)
+               (str "sanctioned JVM not running: " (str/join ", " absent))
+               :else (str "exactly the sanctioned JVMs: " (str/join ", " (keys sanctioned)))))))
 
 (defn parse-jps
-  "Parse `ps -eo pid,etime,rss,args` lines into maps for java processes."
+  "Parse `ps -eo pid,user,etime,rss,args` lines into maps for java processes."
   [lines]
   (->> lines
        (filter #(str/includes? (str/lower-case %) "java"))
        (map (fn [line]
-              (let [[pid etime rss & args] (str/split (str/trim line) #"\s+")
+              (let [[pid user etime rss & args] (str/split (str/trim line) #"\s+")
                     age-days (when-let [[_ d] (re-find #"(\d+)-" (str etime))]
                                (/ (parse-long d) 1.0))]
-                {:pid (parse-long pid)
+                {:pid (parse-long (str pid))
+                 :user user
                  :etime etime
                  :age-days age-days
-                 :rss-gb (when rss (/ (parse-long rss) 1048576.0))
+                 :rss-gb (some-> (parse-long (str rss)) (/ 1048576.0))
                  :cmd (str/join " " (take 3 args))})))
        (vec)))
 
@@ -406,7 +433,7 @@
   (let [now (now-ms)
         cfg (merge cfg {:now now})
         repo (:repo-root cfg)
-        procs (-> (p/shell {:out :string} "ps -eo pid,etime,rss,args") :out str/split-lines parse-jps with-cwds)
+        procs (-> (p/shell {:out :string} "ps -eo pid,user,etime,rss,args") :out str/split-lines parse-jps with-cwds)
         registry (read-edn-file (str (fs/path repo (:registry-path cfg))))
         enabled-entries (when (map? registry)
                           (->> (:entries registry) vals (filter :coordinator/enabled?)))
@@ -428,7 +455,7 @@
      :check/read-only true
      :invariants
      (vec (concat
-           [(jvm-check (:max-jvms cfg) repo procs)
+           [(jvm-check (:sanctioned-jvms cfg) procs)
             (worktrees-check (:apm-lean-root cfg) (:max-worktrees cfg))
             (frames-disk-check (:frames-root cfg) (:max-frames-gb cfg))
             (disk-headroom-check (str repo "/data") cfg)]

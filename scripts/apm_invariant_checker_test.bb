@@ -107,42 +107,68 @@
            (fn [n]
              (check n (:invariant/verdict (coordinator-health-check {:coordinator/id "x"})) :unknown)))
 
-      ;; JVM count is per repo: only procs whose :cwd is the repo are counted.
-      _ (run! "jvm-count-violated"
+      ;; The sanctioned set is an allowlist, not a bare count. Exactly the
+      ;; sanctioned JVMs, one each -> pass.
+      _ (run! "jvm-sanctioned-exact-pass"
            (fn [n]
-             (let [r (jvm-check 1 "/tmp" (repeat 5 {:pid 1 :age-days 4.0 :rss-gb 5.0 :cwd "/tmp"}))]
-               (check (str n ":verdict") (:invariant/verdict r) :violated))))
+             (let [r (jvm-check {"/tmp" 1} [{:pid 1 :user "joe" :cwd "/tmp"}])]
+               (check n (:invariant/verdict r) :pass))))
+
+      ;; Two JVMs in one sanctioned repo is the real danger: concurrent
+      ;; drivers double-writing durable state.
+      _ (run! "jvm-sanctioned-over-limit-violated"
+           (fn [n]
+             (let [r (jvm-check {"/tmp" 1} [{:pid 1 :user "joe" :cwd "/tmp"}
+                                            {:pid 2 :user "joe" :cwd "/tmp"}])]
+               (check n (:invariant/verdict r) :violated))))
+
+      ;; Regression both ways: an unrelated checkout must NOT be silently
+      ;; excused as "foreign" -- I-0 is stated per machine.
+      _ (run! "jvm-unsanctioned-is-violated"
+           (fn [n]
+             (let [r (jvm-check {"/tmp" 1} [{:pid 1 :user "joe" :cwd "/tmp"}
+                                            {:pid 9 :user "joe" :cwd "/other/repo"}])]
+               (check (str n ":verdict") (:invariant/verdict r) :violated)
+               (check (str n ":count")
+                      (:jvm/unsanctioned-count (:invariant/observed r)) 1))))
+
+      ;; Another user's JVM is still unsanctioned, and its owner is reported
+      ;; so the reader knows it is not theirs to kill.
+      _ (run! "jvm-unsanctioned-reports-owner"
+           (fn [n]
+             (let [r (jvm-check {"/tmp" 1} [{:pid 1 :user "joe" :cwd "/tmp"}
+                                            {:pid 9 :user "apollo" :cwd "/home/apollo/x"}])]
+               (check (str n ":verdict") (:invariant/verdict r) :violated)
+               (check (str n ":user")
+                      (:user (first (:jvm/unsanctioned (:invariant/observed r)))) "apollo"))))
+
+      ;; A sanctioned JVM that is not running is unknown, not pass: the
+      ;; checker must not report health for a stack that is down.
+      _ (run! "jvm-sanctioned-absent-unknown"
+           (fn [n]
+             (let [r (jvm-check {"/tmp" 1 "/var" 1} [{:pid 1 :user "joe" :cwd "/tmp"}])]
+               (check n (:invariant/verdict r) :unknown))))
 
       _ (run! "jvm-count-zero-unknown"
            (fn [n]
-             (check n (:invariant/verdict (jvm-check 1 "/tmp" [])) :unknown)))
-
-      ;; The regression this scoping fixes: JVMs from other checkouts must not
-      ;; make the check red. One local JVM plus many foreign ones is a pass.
-      _ (run! "jvm-count-ignores-foreign-repos"
-           (fn [n]
-             (let [r (jvm-check 1 "/tmp"
-                                (cons {:pid 1 :cwd "/tmp"}
-                                      (repeat 4 {:pid 2 :cwd "/home/other/repo"})))]
-               (check (str n ":verdict") (:invariant/verdict r) :pass)
-               (check (str n ":count") (:jvm/count (:invariant/observed r)) 1)
-               (check (str n ":foreign") (:jvm/foreign-count (:invariant/observed r)) 4))))
-
-      ;; An unreadable cwd (another user's process) is foreign, never local.
-      _ (run! "jvm-count-unreadable-cwd-not-counted-local"
-           (fn [n]
-             (let [r (jvm-check 1 "/tmp" [{:pid 1 :cwd "/tmp"} {:pid 9 :cwd nil}])]
-               (check (str n ":verdict") (:invariant/verdict r) :pass)
-               (check (str n ":count") (:jvm/count (:invariant/observed r)) 1))))
+             (check n (:invariant/verdict (jvm-check {"/tmp" 1} [])) :unknown)))
 
       ;; parse-jps handles etime with day prefix and plain minutes.
       _ (run! "parse-jps-etime"
            (fn [n]
-             (let [procs (parse-jps ["  123 11-04:00:00 500000 /usr/bin/java -Xfoo"]
-                                    )]
+             (let [procs (parse-jps ["  123 joe 11-04:00:00 500000 /usr/bin/java -Xfoo"])]
                (check (str n ":pid") (:pid (first procs)) 123)
+               (check (str n ":user") (:user (first procs)) "joe")
                (check (str n ":age") (:age-days (first procs)) 11.0)
                (check (str n ":rss") (:rss-gb (first procs)) (/ 500000.0 1048576.0)))))
+
+      ;; A malformed ps line must not abort the whole check.
+      _ (run! "parse-jps-malformed-line-survives"
+           (fn [n]
+             (let [procs (parse-jps ["garbage java line with no numbers"
+                                     "  7 joe 05:00 250000 /usr/bin/java -Xb"])]
+               (check (str n ":count") (count procs) 2)
+               (check (str n ":good") (:pid (second procs)) 7))))
 
       ;; frame-advanced-at picks the max ISO timestamp.
       _ (run! "frame-advanced-latest"
