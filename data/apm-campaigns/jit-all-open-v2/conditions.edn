@@ -185,4 +185,28 @@
   "futon3c.apm.projection-watchdog"
   "futon3c.apm.countdown-control"],
  :loaded? true}
+ {:namespaces
+  ["futon3c.apm.phase-status"
+   "futon3c.apm.workspace-lifecycle"
+   "futon3c.apm.typed-role-submission"
+   "futon3c.apm.semantic-progress-watchdog"
+   "futon3c.apm.durable-coordinator"
+   "futon3c.apm.queued-frame-terminal"
+   "futon3c.apm.problem-queue-supervisor"
+   "futon3c.apm.live-job-driver"
+   "futon3c.apm.live-supervisor"
+   "futon3c.apm.queued-frame-adapter"
+   "futon3c.apm.live-learning-phases"
+   "futon3c.apm.jit-queue-coordinator"
+   "futon3c.apm.library-lane-coordinator"],
+  :expect
+  "A retirement shortfall confined to the transient preconditions classifies :workspace-retirement-audit-pending and is retried, instead of :workspace-retirement-audit-invalid failing the regulator and tripping the watchdog stop. Falsifier: any stop whose cause is a retirement audit on an otherwise-valid frame.",
+  :note
+  "Unattended-progress repair stack, reloaded into the serving JVM via Drawbridge on 2026-09-04 (13 namespaces, dependency order, all :ok). Root cause: certify-retirement-audit did one set equality over 8 preconditions, so f84 failing only :no-running-or-parked-job-references-workspace (a job that had not finished yet) was ruled invalid; 173 stops / 170 resumes in 7 days, mean enabled span 42 min. Constituent commits: 712c4140 99bb3f26 88d0645d ed75d53f ccc422a0 e0cb5462 5ba9ce73 3e4b6b70 0c75a5d3 78ff3422 33401764 5a9bf298 9e984f9e. Verified by replaying f84's stored observation set through the live image: returns :workspace-retirement-audit-pending with :ok false. C-7/C-8/C-10 remain :loaded? false and are NOT part of this reload.",
+  :head "5c26746b",
+  :id "C-16",
+  :kind :code,
+  :at "2026-09-04T12:00Z",
+  :by "claude-7",
+  :loaded? true}
 ]
