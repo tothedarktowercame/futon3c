@@ -1630,3 +1630,35 @@ because they have the most protocol left to fail after the mathematics is finish
 Ten pinned and unswept, twenty-two sorries: a99J05, a99J06, aunk04, b90A03, b93J04,
 b94A01, b96A02, b96J02, b96J04, b97A01. They are recoverable only while someone remembers
 they are in `refs/apm/rescued-solves`.
+
+## Voids are now a pattern, and the corpus has not moved in two days (2026-09-04)
+
+A second frame was voided:
+
+    f82  b96J04  :void/failed-invariants [:live-job-terminal-repair-exhausted
+                                          :workspace-probe-failed
+                                          :typed-submission-missing]
+    f84  b97A02  :void/failed-invariants [:live-job-terminal-repair-exhausted
+                                          :fresh-session-id-missing]
+
+Both classified `:role-terminal-unrecoverable`. Neither was unrecoverable. f82's probe
+succeeded when I re-ran it in the same worktree minutes later; f84's
+`:fresh-session-id-missing` is a finding that HAS a repair instruction. In both cases a
+budget was spent and the frame was then declared beyond recovery.
+
+Both had a finished proof in hand. b97A02's solver head `3bb5b904` is 447 lines, no
+`sorry`, statement byte-identical to master, axioms exactly
+`[propext, Classical.choice, Quot.sound]`. Pinned. Eleventh rescue.
+
+**The classification is doing damage of its own.** `:role-terminal-unrecoverable` reads as
+a considered judgement about the work. What it actually records is that a repair budget of
+one was exhausted. Those are different claims, and the second does not license
+void-and-advance — the disposition Joe rejected after F32.
+
+**Throughput has stopped.** Nothing has banked since f81 (b96J03, 2026-09-02). f82 voided,
+f83 parked, f84 voided. The open queue has held at 101 for two days while the solver closed
+b96J04, b97A01 and b97A02 — eleven sorries of finished work in that window, none of it on
+master. The campaign is still solving; it has stopped depositing.
+
+Eleven pinned, twenty-three sorries: a99J05, a99J06, aunk04, b90A03, b93J04, b94A01,
+b96A02, b96J02, b96J04, b97A01, b97A02.
