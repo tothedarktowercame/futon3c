@@ -650,6 +650,43 @@
     (is (= [:apparatus :agent]
            (mapv :fault-origin (:repair-attempt-history final-state))))))
 
+(deftest repair-request-origin-governs-the-budget-charge
+  (let [announcements (atom 0)
+        base (assoc (effects (atom []) (atom nil))
+                    :job-fn (fn [job-id]
+                              {:job-id job-id :agent-id "f84-student"
+                               :state (if (= "job-2" job-id) :running :done)})
+                    :terminal-validator
+                    (constantly {:ok false
+                                 :error/code :live-learning-terminal-invalid
+                                 :findings [:fresh-session-id-missing]})
+                    :terminal-repair-request-fn
+                    (fn [request _ticket _job failure]
+                      {:ok true
+                       :request (assoc request
+                                       :dispatch/id "missing-session-repair"
+                                       :repair/fault-origin :apparatus
+                                       :repair/kind :orphaned-session-recovery
+                                       :repair/findings (:findings failure))})
+                    :announce-fn
+                    (fn [_]
+                      {:ok true :job-id
+                       (str "job-" (swap! announcements inc))}))
+        dispatched {:state/type :live-job-dispatched
+                    :request request
+                    :active-request request
+                    :ticket {:job-id "job-1" :ticket/id "ticket-1"}
+                    :activation/accepted? true
+                    :terminal-collection {:evidence {:collection/id "c1"}}}
+        repaired (sut/drive! (assoc base :state dispatched))
+        repaired-state (:state repaired)]
+    (is (:repair? repaired))
+    (is (= :apparatus (:terminal-repair/fault-origin repaired-state)))
+    (is (= 1 (:apparatus-repair-attempts repaired-state)))
+    (is (zero? (:terminal-repair-attempts repaired-state)))
+    (is (= :apparatus
+           (:fault-origin (peek (:repair-attempt-history repaired-state)))))))
+
 (deftest cached-posthoc-origin-is-reclassified-by-current-policy
   (let [state {:state/type :live-job-dispatched
                :request {:dispatch/id "original"}

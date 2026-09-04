@@ -964,31 +964,53 @@
                 :persist-fn persist-fn})
 
               :else
-              (let [repair-origin (if (transport-failure? validated)
-                                    :apparatus
-                                    (or (:repair/fault-origin validated) :agent))
+              (let [inferred-repair-origin
+                    (if (transport-failure? validated)
+                      :apparatus
+                      (or (:repair/fault-origin validated) :agent))
                     agent-repairs (or (:terminal-repair-attempts state) 0)
                     apparatus-repairs (or (:apparatus-repair-attempts state) 0)
-                    exhausted? (and (not typed-contract-migration?)
-                                    (if (= :apparatus repair-origin)
-                                      (>= apparatus-repairs
-                                          default-apparatus-repair-attempts)
-                                      (>= agent-repairs max-repairs)))
-                    repair (when (and (not exhausted?)
+                    cached-repair-origin
+                    (when (= (:terminal-repair/findings state)
+                             (:findings validated))
+                      (:terminal-repair/fault-origin state))
+                    preliminary-repair-origin
+                    (if (contains? #{:agent :apparatus} cached-repair-origin)
+                      cached-repair-origin
+                      inferred-repair-origin)
+                    preliminary-exhausted?
+                    (and (not typed-contract-migration?)
+                         (if (= :apparatus preliminary-repair-origin)
+                           (>= apparatus-repairs
+                               default-apparatus-repair-attempts)
+                           (>= agent-repairs max-repairs)))
+                    repair (when (and (not preliminary-exhausted?)
                                       (fn? terminal-repair-request-fn))
                              (terminal-repair-request-fn
                               active-request (:ticket state) job
                               (cond-> (assoc validated
-                                             :repair/fault-origin repair-origin)
+                                             :repair/fault-origin
+                                             inferred-repair-origin)
                                 typed-contract-migration?
                                 (assoc :repair/kind
                                        :typed-submission-contract-migration)
                                 (not typed-contract-migration?)
                                 (assoc :repair/next-attempt
-                                       (inc (if (= :apparatus repair-origin)
+                                       (inc (if (= :apparatus
+                                                   inferred-repair-origin)
                                               apparatus-repairs
                                               agent-repairs))))))
-                    repair-request (:request repair)]
+                    repair-request (:request repair)
+                    declared-repair-origin (:repair/fault-origin repair-request)
+                    repair-origin (if (contains? #{:agent :apparatus}
+                                                 declared-repair-origin)
+                                    declared-repair-origin
+                                    inferred-repair-origin)
+                    exhausted? (and (not typed-contract-migration?)
+                                    (if (= :apparatus repair-origin)
+                                      (>= apparatus-repairs
+                                          default-apparatus-repair-attempts)
+                                      (>= agent-repairs max-repairs)))]
                 (cond
                   exhausted?
                   (if (and (= :agent repair-origin)
