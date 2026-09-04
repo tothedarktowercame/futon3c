@@ -413,6 +413,23 @@
                             :error/code])))
     (is (not= "original" (:dispatch/id request)))))
 
+(deftest missing-fresh-session-repairs-with-a-new-session
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :frame-id "f84"
+                 :problem-id "b97A02" :fresh-session? false}
+                {:ticket/id "ticket-1"}
+                {:job-id "job-1"}
+                {:error/code :live-learning-terminal-invalid
+                 :findings [:fresh-session-id-missing]})
+        request (:request repair)]
+    (is (:ok repair))
+    (is (true? (:fresh-session? request)))
+    (is (string? (:fresh-session-nonce request)))
+    (is (= :orphaned-session-recovery (:repair/kind request)))
+    (is (= :apparatus (:repair/fault-origin request)))
+    (is (= [:fresh-session-id-missing] (:repair/findings request)))
+    (is (not= "original" (:dispatch/id request)))))
+
 (deftest repair-packet-leads-with-actionable-revision-instructions
   (let [repair (sut/terminal-repair-request
                 {:dispatch/id "original" :dispatch/type :guide-intervention

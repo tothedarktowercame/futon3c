@@ -1069,21 +1069,27 @@
   [request ticket job failure]
   (let [contract-migration?
         (= :typed-submission-contract-migration (:repair/kind failure))
+        fresh-session-recovery?
+        (some #{:fresh-session-id-missing} (:findings failure))
+        fresh-session? (boolean (or contract-migration? fresh-session-recovery?))
         transport-failure?
         (= :transport (or (:error/component failure)
                           (get-in failure [:error :error/component])
                           (get-in failure [:finding :error/component])
                           (get-in failure [:finding :error :error/component])))
-        migration-nonce (when contract-migration?
+        migration-nonce (when fresh-session?
                           (machine/ledger-digest
                            [(:dispatch/id request) (:ticket/id ticket)
-                            (:job-id job) submission/completion-contract]))
+                            (:job-id job) submission/completion-contract
+                            (if contract-migration?
+                              :typed-contract-migration
+                              :missing-session-recovery)]))
         findings (vec (:findings failure))
         role-findings (if transport-failure? [] findings)
         missing-instructions (vec (remove finding-instruction role-findings))
-        body (-> request
+        body (cond-> (-> request
                  (dissoc :dispatch/id)
-                 (assoc :fresh-session? contract-migration?
+                 (assoc :fresh-session? fresh-session?
                         :repair/attempt (if contract-migration?
                                           :typed-contract-migration-1
                                           (:repair/next-attempt failure 1))
@@ -1091,7 +1097,7 @@
                         :repair/of-ticket-id (:ticket/id ticket)
                         :repair/findings role-findings
                         :repair/fault-origin
-                        (if transport-failure?
+                        (if (or transport-failure? fresh-session-recovery?)
                           :apparatus
                           (or (:repair/fault-origin failure) :agent))
                         :repair/validation-output
@@ -1103,13 +1109,16 @@
                    (assoc :repair/apparatus-findings findings))
                  (cond-> contract-migration?
                    (assoc :fresh-session-nonce migration-nonce
-                          :repair/kind :typed-submission-contract-migration)))]
+                          :repair/kind :typed-submission-contract-migration)))
+               fresh-session-recovery?
+               (assoc :fresh-session-nonce migration-nonce
+                      :repair/kind :orphaned-session-recovery))]
     (if (seq missing-instructions)
       {:ok false :error/code :terminal-repair-instruction-missing
        :findings missing-instructions}
       {:ok true :request (submission/prepare-request
                           (assoc body :dispatch/id
-                                 (machine/ledger-digest [body])))})))
+                                 (machine/ledger-digest [body]))) })))
 
 (defn posthoc-terminal-repair-request
   "Rebuild a post-hoc repair from current campaign authority. A predecessor
