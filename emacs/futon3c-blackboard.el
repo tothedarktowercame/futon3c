@@ -46,7 +46,7 @@ If nil, reads from `.admintoken' in a nearby project root at first use."
          (not (member (downcase (string-trim raw))
                       '("0" "false" "no" "off")))))
   "When non-nil, keep automatically updated HUD buffers out of editing frames.
-`*agents*', `*mission*', `*proof*', `*problem: ...*', `*processes*',
+`*agents*', `*mission...*', `*proof*', `*problem: ...*', `*processes*',
 `*context*', and `*invoke:*' remain available as ordinary buffers and may be
 shown in the dedicated terminal HUD."
   :type 'boolean
@@ -433,7 +433,7 @@ When disabling, also dismiss any existing local `*agents*' windows."
   "Return non-nil if BUFFER should be routed to the HUD frame."
   (let ((name (if (bufferp buffer) (buffer-name buffer) buffer)))
     (or (string= name "*agents*")
-        (string= name "*mission*")
+        (string-prefix-p "*mission" name)
         (string= name "*proof*")
         (string= name "*processes*")
         (string= name "*context*")
