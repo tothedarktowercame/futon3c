@@ -83,16 +83,19 @@
         (is (every? string? (map :durable-state/digest history)))
         (is (apply < (map :transition/timestamp-ms history)))))))
 
-(deftest stop-cause-is-required-and-legacy-history-remains-unknown
+(deftest malformed-stop-cause-does-not-veto-disable-and-legacy-remains-unknown
   (let [{:keys [registry state-a]} (temp-paths)]
     (is (:ok (sut/register! {:registry-path registry
                              :coordinator-id "c:legacy"
                              :adapter :test/none :config {}
                              :state-path state-a :period-ms 10})))
-    (is (= :durable-coordinator-stop-cause-invalid
-           (:error/code (sut/stop! registry "c:legacy" nil))))
-    (is (true? (get-in (sut/read-registry registry)
-                       [:entries "c:legacy" :coordinator/enabled?])))
+    (is (:durably-disabled? (sut/stop! registry "c:legacy" nil)))
+    (is (false? (get-in (sut/read-registry registry)
+                        [:entries "c:legacy" :coordinator/enabled?])))
+    (is (= {:stop-cause/type :unknown
+            :stop-cause/finding {:rejected-value nil}}
+           (-> (registered-entry registry "c:legacy")
+               :coordinator/enabled-history last :stop/cause)))
     (let [entry (registered-entry registry "c:legacy")
           legacy-transition
           (-> (last (:coordinator/enabled-history entry))

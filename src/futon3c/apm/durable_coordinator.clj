@@ -60,7 +60,16 @@
          :fault (and (contains? #{:integrity :substrate}
                                 (:stop-cause/fault-class cause))
                      (keyword? (:stop-cause/reason-code cause)))
+         :unknown (and (map? (:stop-cause/finding cause))
+                       (contains? (:stop-cause/finding cause)
+                                  :rejected-value))
          false)))
+
+(defn- normalize-stop-cause [cause]
+  (if (valid-stop-cause? cause)
+    cause
+    {:stop-cause/type :unknown
+     :stop-cause/finding {:rejected-value cause}}))
 
 (defn transition-stop-cause
   "Return a stop cause for a transition without inventing one for legacy
@@ -725,14 +734,11 @@
   contains a quiescence witness and no tick claim; otherwise names the durable
   in-flight tick and leaves the coordinator in :draining."
   [registry-path coordinator-id stop-cause]
-  (let [disabled (if (valid-stop-cause? stop-cause)
-                   (set-enabled! registry-path coordinator-id false
-                                 :durable-coordinator/stop!
-                                 :stop-requested
-                                 stop-cause)
-                   {:ok false
-                    :error/code :durable-coordinator-stop-cause-invalid
-                    :finding {:stop/cause stop-cause}})]
+  (let [recorded-cause (normalize-stop-cause stop-cause)
+        disabled (set-enabled! registry-path coordinator-id false
+                               :durable-coordinator/stop!
+                               :stop-requested
+                               recorded-cause)]
     (if-not (:ok disabled)
       disabled
       (let [entry (get-in (read-registry registry-path)
