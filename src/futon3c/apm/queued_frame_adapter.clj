@@ -19,9 +19,51 @@
             [futon3c.apm.queued-frame-terminal :as terminal]
             [futon3c.apm.workspace-build :as workspace-build]
             [futon3c.apm.workspace-lifecycle :as workspace])
-  (:import [java.nio.file Files LinkOption Path]))
+  (:import [java.nio.channels FileChannel]
+           [java.nio.file Files LinkOption Path StandardOpenOption]
+           [java.nio.file.attribute FileAttribute]))
 
 (declare mint qualify open-and-prepare!)
+
+(defonce ^:private retirement-locks (atom {}))
+
+(defn- with-retirement-lock [retry-path f]
+  (let [lock-path (Path/of (str retry-path ".lock") (make-array String 0))
+        process-lock (get (swap! retirement-locks
+                                 #(if (contains? % (str lock-path))
+                                    % (assoc % (str lock-path) (Object.))))
+                          (str lock-path))]
+    (locking process-lock
+      (Files/createDirectories (.getParent lock-path) (make-array FileAttribute 0))
+      (with-open [channel (FileChannel/open
+                           lock-path
+                           (into-array StandardOpenOption
+                                       [StandardOpenOption/CREATE
+                                        StandardOpenOption/WRITE]))
+                  _lock (.lock channel)]
+        (f)))))
+
+(defn- read-retirement-retry-state [retry-path marker-path]
+  (try
+    (let [state (runtime/read-state retry-path)
+          started? (Files/isRegularFile marker-path (make-array LinkOption 0))]
+      (cond
+        (and state
+             (= :workspace-retirement-audit (:retry/type state))
+             (contains? #{:initialized :pending :resolved :exhausted
+                          :structural-invalid}
+                        (:retry/status state))
+             (vector? (:retry/attempts state)))
+        {:ok true :state state}
+        state {:ok false
+               :error/code :workspace-retirement-audit-retry-state-corrupt
+               :error/message "retry state has an invalid shape"}
+        started? {:ok false
+                  :error/code :workspace-retirement-audit-retry-state-missing}
+        :else {:ok true :state nil :initialize? true}))
+    (catch Throwable t
+      {:ok false :error/code :workspace-retirement-audit-retry-state-corrupt
+       :error/message (.getMessage t)})))
 
 (defn apply-reviewed-void!
   "Apply Ground Control's typed void disposition to the active frame ledger.
@@ -269,6 +311,8 @@
      :frame-terminal-path (str (.resolve root "terminal/frame-terminal.edn"))
      :problem-bank-path (str (.resolve root "terminal/problem-bank.edn"))
      :retirement-retry-path (str (.resolve root "terminal/retirement-retry.edn"))
+     :retirement-retry-marker-path
+     (str (.resolve root "terminal/retirement-retry-started.edn"))
      :retirement-receipt-directory (str (.resolve root "terminal/workspaces"))
      :contract-path contract-path
      :generated-contract-path generated-contract-path
@@ -706,14 +750,37 @@
              {:ok false :error/code :queued-frame-terminal-persistence-failed}
              :else
              (let [retry-path (Path/of (:retirement-retry-path paths)
-                                       (make-array String 0))]
-               (terminal/retire-with-retry!
+                                       (make-array String 0))
+                   marker-path (Path/of (:retirement-retry-marker-path paths)
+                                        (make-array String 0))
+                   persist! (or persist-fn runtime/atomic-persist!)]
+               (with-retirement-lock
+                 retry-path
+                 (fn []
+                   (let [loaded (read-retirement-retry-state retry-path marker-path)
+                         initialized
+                         (when (and (:ok loaded) (:initialize? loaded))
+                           (let [state-result
+                                 (persist! retry-path
+                                           {:retry/type :workspace-retirement-audit
+                                            :retry/status :initialized
+                                            :retry/attempts []})]
+                             (if (:ok state-result)
+                               (persist! marker-path
+                                         {:retry/type :workspace-retirement-audit
+                                          :retry/started? true})
+                               state-result)))]
+                     (cond
+                       (not (:ok loaded)) loaded
+                       (and initialized (not (:ok initialized))) initialized
+                       :else
+                       (terminal/retire-with-retry!
               {:frame frame :terminal-receipt terminal-receipt :leases leases
-             :retry-state (runtime/read-state retry-path)
+             :retry-state (or (:state loaded)
+                              {:retry/type :workspace-retirement-audit
+                               :retry/status :initialized :retry/attempts []})
              :now-ms-fn retirement-now-ms-fn
-             :persist-retry-fn
-             (fn [state]
-               ((or persist-fn runtime/atomic-persist!) retry-path state))
+             :persist-retry-fn (fn [state] (persist! retry-path state))
              :pin-solve-fn pin-solve-fn
              :audit-fn retirement-audit-fn
              :retirement-status-fn
@@ -744,7 +811,7 @@
                                      (keys live-preparation/required-seat-types))
                              (keys live-preparation/required-seat-types)))]
                  {:ok (every? #(and (:ok %) (= 200 (:http/status %))) responses)
-                  :responses responses}))}))))))})
+                  :responses responses}))}))))))))))})
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix

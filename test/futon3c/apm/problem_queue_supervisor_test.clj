@@ -61,6 +61,20 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest awaiting-retirement-leaves-active-frame-and-mints-no-successor
+  (let [{:keys [providers state calls]} (harness)
+        awaiting {:ok false :status :awaiting-substrate
+                  :error/code :workspace-retirement-audit-retry-waiting
+                  :pending #{:no-running-or-parked-job-references-workspace}}]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [before @state
+          result (sut/tick! (assoc providers :retire-frame-fn
+                                   (constantly awaiting)))]
+      (is (= awaiting result))
+      (is (= before @state) "active frame remains authoritative")
+      (is (= ["p1"] (mapv second (filter #(= :mint (first %)) @calls))))
+      (is (empty? (filter #(= :bank-write (first %)) @calls))))))
+
 (deftest ineligible-unit-is-parked-and-next-problem-is-prepared
   (let [{:keys [providers state calls]} (harness)
         result

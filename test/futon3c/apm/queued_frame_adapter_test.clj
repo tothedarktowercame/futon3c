@@ -11,6 +11,43 @@
                               :frame-number-base 30})))
 (def digest (apply str (repeat 64 "a")))
 
+(deftest retirement-lock-serializes-two-in-process-attempts
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "retirement-lock-" (make-array java.nio.file.attribute.FileAttribute 0))
+        retry-path (.resolve directory "retry.edn")
+        active (atom 0)
+        maximum (atom 0)
+        entered (promise)
+        run (fn []
+              (#'sut/with-retirement-lock
+               retry-path
+               (fn []
+                 (let [n (swap! active inc)]
+                   (swap! maximum max n)
+                   (deliver entered true)
+                   (Thread/sleep 30)
+                   (swap! active dec)))))]
+    (let [first-attempt (future (run))]
+      @entered
+      (let [second-attempt (future (run))]
+        @first-attempt
+        @second-attempt))
+    (is (= 1 @maximum))))
+
+(deftest missing-or-corrupt-retry-state-fails-closed
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "retirement-state-" (make-array java.nio.file.attribute.FileAttribute 0))
+        retry-path (.resolve directory "retry.edn")
+        marker-path (.resolve directory "retry-started.edn")]
+    (spit (str marker-path) (pr-str {:retry/started? true}))
+    (is (= :workspace-retirement-audit-retry-state-missing
+           (:error/code (#'sut/read-retirement-retry-state
+                         retry-path marker-path))))
+    (spit (str retry-path) "{:not valid")
+    (is (= :workspace-retirement-audit-retry-state-corrupt
+           (:error/code (#'sut/read-retirement-retry-state
+                         retry-path marker-path))))))
+
 (def coherent-seat-cast
   {"solver" {:model "gpt-5.6-sol"}
    "student" {:model "glm-5.3"}

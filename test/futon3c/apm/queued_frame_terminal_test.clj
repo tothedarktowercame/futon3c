@@ -53,7 +53,9 @@
         success {:ok true :workspace-receipts {:solver {:receipt/id "done"}}}
         final-result (run-at @persisted persisted 16000 success calls)]
     (is (= :awaiting-substrate (:status first-result)))
+    (is (false? (:ok first-result)))
     (is (= :awaiting-substrate (:status waiting)))
+    (is (false? (:ok waiting)))
     (is (= 1 calls-before-due) "not-before prevents an early audit")
     (is (:ok final-result))
     (is (= :resolved (:retry/status @persisted)))

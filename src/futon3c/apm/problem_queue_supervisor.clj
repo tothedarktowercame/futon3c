@@ -500,8 +500,11 @@
           (let [retired (retire-frame-fn
                          {:frame (:frame active) :terminal-receipt
                           (:terminal-receipt result)})]
-            (if-not (:ok retired)
-              retired
+            (cond
+              (= :workspace-retirement-audit-retry-waiting
+                 (:error/code retired)) retired
+              (not (:ok retired)) retired
+              :else
               (let [void? (= :void (:frame/result result))
                     refuted? (and void?
                                   (= :refuted

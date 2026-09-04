@@ -216,7 +216,8 @@
 
       (and (= :pending stored-status)
            (< now-ms (or (:retry/not-before-ms retry-state) 0)))
-      {:ok true :status :awaiting-substrate
+      {:ok false :status :awaiting-substrate
+       :error/code :workspace-retirement-audit-retry-waiting
        :retry/kind :workspace-retirement-audit
        :retry/not-before-ms (:retry/not-before-ms retry-state)
        :retry/attempts (:retry/attempts retry-state)}
@@ -247,7 +248,8 @@
                            :retry/status :pending
                            :retry/not-before-ms not-before
                            :retry/attempts attempts'}]
-                [state {:ok true :status :awaiting-substrate
+                [state {:ok false :status :awaiting-substrate
+                        :error/code :workspace-retirement-audit-retry-waiting
                         :retry/kind :workspace-retirement-audit
                         :retry/not-before-ms not-before
                         :pending (:pending result)
