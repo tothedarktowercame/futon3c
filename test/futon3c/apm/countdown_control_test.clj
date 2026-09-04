@@ -1,5 +1,6 @@
 (ns futon3c.apm.countdown-control-test
   (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
@@ -22,7 +23,51 @@
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
+            [futon3c.apm.queued-frame-terminal :as queued-frame-terminal]
+            [futon3c.apm.series-terminal :as series-terminal]
+            [futon3c.apm.solver-progress-rollover :as progress-rollover]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
+
+(deftest solver-progress-pending-retirement-does-not-complete-active-frame
+  (let [completed (atom 0)
+        state-directory "/tmp/f84-pending-retirement"
+        solve-state {:rounds [{:report {:final-head (apply str (repeat 40 "a"))
+                                        :branch "exp/f84"
+                                        :failure-account ["pending"]}}]}
+        leases {:solver {:workspace/path "/tmp/solver"}
+                :student {:workspace/path "/tmp/student"}}
+        pending {:ok false
+                 :error/code :workspace-retirement-audit-pending
+                 :status :workspace-retirement-audit-pending
+                 :pending #{:no-running-or-parked-job-references-workspace}}]
+    (with-redefs [runtime/read-state
+                  (fn [path]
+                    (if (.endsWith (str path) "live/solve.edn")
+                      solve-state
+                      leases))
+                  shell/sh
+                  (fn [& _] {:exit 0 :out (str (apply str (repeat 40 "a")) "\n")})
+                  progress-rollover/derive-terminal
+                  (constantly {:ok true
+                               :progress-receipt {:receipt/id "progress"}
+                               :terminal-receipt {:receipt/id "terminal"}})
+                  series-terminal/close! (constantly {:ok true})
+                  runtime/atomic-persist! (fn [& _] {:ok true})
+                  queued-frame-terminal/retire! (constantly pending)
+                  problem-queue/complete-active-without-successor
+                  (fn [& _] (swap! completed inc) {:ok true})]
+      (let [result
+            (sut/finalize-solver-progress-retry!
+             {:frame {:frame/id "f84" :problem/id "p84"}
+              :campaign-config
+              {:state-directory state-directory
+               :workspace-leases-path (str state-directory "/live/workspace-leases.edn")
+               :ledger-path (str state-directory "/ledger.edn")
+               :problem-bank-path (str state-directory "/terminal/problem-bank.edn")
+               :retirement-receipt-directory (str state-directory "/terminal/workspaces")}
+              :queue-state-path "/tmp/queue-state.edn"})]
+        (is (= pending result))
+        (is (zero? @completed))))))
 
 (def campaign-priors-fixture
   (-> "test/resources/apm-regressions/campaign-priors-legacy-v1.edn"

@@ -178,7 +178,6 @@
                               (if (= :workspace-retirement-audit-pending
                                      (:error/code audit-result))
                                 (assoc audit-result
-                                       :ok true
                                        :status :workspace-retirement-audit-pending
                                        :role role)
                                 audit-result))
@@ -224,7 +223,8 @@
 
       :else
       (let [result (retire! opts)
-            pending? (= :workspace-retirement-audit-pending (:status result))
+            pending? (= :workspace-retirement-audit-pending
+                        (:error/code result))
             structural? (and (not (:ok result))
                              (= :workspace-retirement-audit-invalid
                                 (:error/code result)))

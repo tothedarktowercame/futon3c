@@ -37,14 +37,15 @@
                     :pending #{:no-running-or-parked-job-references-workspace}})
                  :retire-workspace-fn (fn [& _] (throw (ex-info "not due" {})))
                  :retire-seats-fn (fn [& _] (swap! seats-called inc) {:ok true})})]
-    (is (:ok result))
+    (is (false? (:ok result)))
     (is (= :workspace-retirement-audit-pending (:status result)))
     (is (zero? @seats-called))))
 
 (deftest pending-retries-durably-then-succeeds
   (let [persisted (atom nil)
         calls (atom 0)
-        pending {:ok true :status :workspace-retirement-audit-pending
+        pending {:ok false :error/code :workspace-retirement-audit-pending
+                 :status :workspace-retirement-audit-pending
                  :pending #{:no-running-or-parked-job-references-workspace}}
         first-result (run-at nil persisted 1000 pending calls)
         waiting (run-at @persisted persisted 2000 pending calls)
@@ -63,7 +64,8 @@
 (deftest pending-exhausts-with-distinct-durable-failure
   (let [persisted (atom nil)
         calls (atom 0)
-        pending {:ok true :status :workspace-retirement-audit-pending
+        pending {:ok false :error/code :workspace-retirement-audit-pending
+                 :status :workspace-retirement-audit-pending
                  :pending #{:no-active-ledger-claim-references-workspace}}
         times (reductions + 0 sut/retirement-audit-retry-delays-ms)
         results (mapv (fn [now]
@@ -90,9 +92,11 @@
 (deftest retry-evidence-keeps-each-pending-set-and-timestamp
   (let [persisted (atom nil)
         calls (atom 0)
-        pending-a {:ok true :status :workspace-retirement-audit-pending
+        pending-a {:ok false :error/code :workspace-retirement-audit-pending
+                   :status :workspace-retirement-audit-pending
                    :pending #{:no-running-or-parked-job-references-workspace}}
-        pending-b {:ok true :status :workspace-retirement-audit-pending
+        pending-b {:ok false :error/code :workspace-retirement-audit-pending
+                   :status :workspace-retirement-audit-pending
                    :pending #{:no-active-ledger-claim-references-workspace}}]
     (run-at nil persisted 10 pending-a calls)
     (run-at @persisted persisted 15010 pending-b calls)
