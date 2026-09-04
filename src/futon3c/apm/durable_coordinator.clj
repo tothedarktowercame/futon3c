@@ -53,6 +53,22 @@
 (defn enabled-transition-digest [transition]
   (sha256 (dissoc transition :transition/digest)))
 
+(defn valid-stop-cause? [cause]
+  (and (map? cause)
+       (case (:stop-cause/type cause)
+         :operator (keyword? (:stop-cause/reason-code cause))
+         :fault (and (contains? #{:integrity :substrate}
+                                (:stop-cause/fault-class cause))
+                     (keyword? (:stop-cause/reason-code cause)))
+         false)))
+
+(defn transition-stop-cause
+  "Return a stop cause for a transition without inventing one for legacy
+   history. Older stop records remain unchanged and are reported as unknown."
+  [transition]
+  (or (:stop/cause transition)
+      {:stop-cause/type :unknown}))
+
 (defn intent-digest [intent]
   (sha256 (dissoc intent :intent/digest)))
 
@@ -134,6 +150,8 @@
                         (boolean? (:enabled/new transition))
                         (keyword? (:transition/actor transition))
                         (keyword? (:transition/reason transition))
+                        (or (nil? (:stop/cause transition))
+                            (valid-stop-cause? (:stop/cause transition)))
                         (nat-int? (:transition/timestamp-ms transition))
                         (string? (:durable-state/digest transition))
                         (= (:transition/digest transition)
@@ -480,9 +498,9 @@
              ;; Fence the destructive stop itself, not only observation, so a
              ;; stale observer cannot disable or stop the current generation
              ;; in the gap between evaluation and action.
-             :stop-fn (fn [path coordinator]
+             :stop-fn (fn [path coordinator cause]
                         (if (current-authority?)
-                          (stop! path coordinator)
+                          (stop! path coordinator cause)
                           {:ok false
                            :error/code
                            :durable-coordinator-watchdog-authority-superseded
@@ -542,7 +560,11 @@
                              :running-after-arm? false}})))))))))
 
 (defn- halt-for-watchdog-repair! [registry-path entry repair]
-  (let [halted (stop! registry-path (:coordinator/id entry))]
+  (let [halted (stop! registry-path (:coordinator/id entry)
+                       {:stop-cause/type :fault
+                        :stop-cause/fault-class :integrity
+                        :stop-cause/reason-code :watchdog-repair-failed
+                        :stop-cause/reason repair})]
     {:ok false
      :error/code :durable-coordinator-watchdog-repair-failed
      :finding {:watchdog/repair repair
@@ -656,7 +678,10 @@
           :reconciliation/status
           (:regulator/reconciliation durable-state)})))))
 
-(defn- set-enabled! [registry-path coordinator-id enabled? actor reason]
+(defn- set-enabled!
+  ([registry-path coordinator-id enabled? actor reason]
+   (set-enabled! registry-path coordinator-id enabled? actor reason nil))
+  ([registry-path coordinator-id enabled? actor reason stop-cause]
   (let [registry (read-registry registry-path)
         entry (get-in registry [:entries coordinator-id])]
     (cond
@@ -666,7 +691,7 @@
       {:ok false :error/code :durable-coordinator-not-registered}
       :else
       (let [durable-state (read-edn (:coordinator/state-path entry))
-            transition {:state/type :durable-coordinator-enabled-transition
+            transition (cond-> {:state/type :durable-coordinator-enabled-transition
                         :coordinator/id coordinator-id
                         :enabled/previous (:coordinator/enabled? entry)
                         :enabled/new enabled?
@@ -674,6 +699,7 @@
                         :transition/reason reason
                         :transition/timestamp-ms (*enabled-transition-now-fn*)
                         :durable-state/digest (state-digest durable-state)}
+                         stop-cause (assoc :stop/cause stop-cause))
             transition (assoc transition :transition/digest
                               (enabled-transition-digest transition))
             updated (-> entry
@@ -686,7 +712,7 @@
                            (entry-digest updated))]
         (persistence/atomic-persist!
          (Path/of (str registry-path) (make-array String 0))
-         (assoc-in registry [:entries coordinator-id] updated))))))
+         (assoc-in registry [:entries coordinator-id] updated)))))))
 
 (defn cancel-scheduler!
   "Process-local scheduler cancellation for test cleanup and internal failure
@@ -698,10 +724,15 @@
   "Durably drain a coordinator. Returns :stopped only when the state file
   contains a quiescence witness and no tick claim; otherwise names the durable
   in-flight tick and leaves the coordinator in :draining."
-  [registry-path coordinator-id]
-  (let [disabled (set-enabled! registry-path coordinator-id false
-                               :durable-coordinator/stop!
-                               :stop-requested)]
+  [registry-path coordinator-id stop-cause]
+  (let [disabled (if (valid-stop-cause? stop-cause)
+                   (set-enabled! registry-path coordinator-id false
+                                 :durable-coordinator/stop!
+                                 :stop-requested
+                                 stop-cause)
+                   {:ok false
+                    :error/code :durable-coordinator-stop-cause-invalid
+                    :finding {:stop/cause stop-cause}})]
     (if-not (:ok disabled)
       disabled
       (let [entry (get-in (read-registry registry-path)

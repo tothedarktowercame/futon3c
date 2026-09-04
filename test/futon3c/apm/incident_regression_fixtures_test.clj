@@ -208,8 +208,8 @@
                        :now-ms 1787840000000
                        :registry-path registry-file
                        :coordinator-id coordinator-id
-                       :stop-fn (fn [path id]
-                                  (reset! stopped (coordinator/stop! path id))
+                       :stop-fn (fn [path id cause]
+                                  (reset! stopped (coordinator/stop! path id cause))
                                   @stopped)
                        :persist-fn (fn [_] {:ok true})})
               progress (get-in result [:state :watchdog/trace-observation])

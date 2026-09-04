@@ -34,8 +34,8 @@
                  :now-ms now-ms
                  :registry-path "/registry.edn"
                  :coordinator-id "campaign"
-                 :stop-fn (fn [registry-path coordinator-id]
-                            (swap! stops conj [registry-path coordinator-id])
+                 :stop-fn (fn [registry-path coordinator-id cause]
+                            (swap! stops conj [registry-path coordinator-id cause])
                             {:ok true :status :stopped
                              :durably-disabled? true})
                  :persist-fn (fn [state]
@@ -50,7 +50,14 @@
     (is (= :halted (:status result)))
     (is (= :internal-semantic-progress-stalled
            (get-in result [:reason :code])))
-    (is (= [["/registry.edn" "campaign"]] stops))
+    (is (= [["/registry.edn" "campaign"
+             {:stop-cause/type :fault
+              :stop-cause/fault-class :substrate
+              :stop-cause/reason-code :internal-semantic-progress-stalled
+              :stop-cause/reason
+              {:code :internal-semantic-progress-stalled
+               :last-progress-ms 1000}}]]
+           stops))
     (is (= true (get-in result [:stop :durably-disabled?])))
     (is (= :halted (:watchdog/status (last persisted))))))
 
@@ -104,6 +111,20 @@
                    (observation :tick-claim {:claimed-at 1000})
                    (+ 1000 sut/scheduler-claim-max-ms 1))]
     (is (= :scheduler-claim-stale (get-in result [:reason :code])))))
+
+(deftest watchdog-fault-classification-is-conservative-and-actionable
+  (doseq [code sut/integrity-fault-codes]
+    (is (= :integrity
+           (:stop-cause/fault-class (sut/fault-stop-cause {:code code})))
+        (str code " must never be automatically restarted")))
+  (doseq [code sut/substrate-fault-codes]
+    (is (= :substrate
+           (:stop-cause/fault-class (sut/fault-stop-cause {:code code})))
+        (str code " is eligible for supervised restart")))
+  (is (= :integrity
+         (:stop-cause/fault-class
+          (sut/fault-stop-cause {:code :unclassified-future-fault})))
+      "unknown future faults fail closed"))
 
 (deftest stale-tick-claim-validly-awaiting-external-job-does-not-halt
   (let [claimed-at 1000

@@ -113,8 +113,8 @@
   ([] (recover! default-registry-path))
   ([registry-path] (coordinator/recover-all! registry-path)))
 
-(defn stop! [registry-path coordinator-id]
-  (coordinator/stop! registry-path coordinator-id))
+(defn stop! [registry-path coordinator-id stop-cause]
+  (coordinator/stop! registry-path coordinator-id stop-cause))
 
 (defn status [registry-path coordinator-id]
   (coordinator/status registry-path coordinator-id))

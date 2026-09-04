@@ -11,6 +11,31 @@
 (def external-deadline-grace-ms (* 2 60 1000))
 (def default-period-ms 10000)
 
+(def integrity-fault-codes
+  #{:regulator-failed
+    :external-job-deadline-missing
+    :impossible-transition
+    :invalid-state
+    :failed-launch-audit})
+
+(def substrate-fault-codes
+  #{:internal-semantic-progress-stalled
+    :external-job-deadline-exceeded
+    :scheduler-claim-stale})
+
+(defn fault-stop-cause
+  "Turn a watchdog halt reason into the explicit durable stop cause. Integrity
+   faults require repair; substrate faults are eligible for supervised restart."
+  [{:keys [code] :as reason}]
+  (let [fault-class (cond
+                      (contains? integrity-fault-codes code) :integrity
+                      (contains? substrate-fault-codes code) :substrate
+                      :else :integrity)]
+    {:stop-cause/type :fault
+     :stop-cause/fault-class fault-class
+     :stop-cause/reason-code code
+     :stop-cause/reason reason}))
+
 (def cursor-keys
   [:frame-id :phase :attempt-ordinal :obligation/status :active-job-id
    :last-committed-event-id])
@@ -148,12 +173,13 @@
    tests."
   [{:keys [watch-state observation now-ms registry-path coordinator-id
            stop-fn persist-fn]
-    :or {stop-fn (fn [path id]
+    :or {stop-fn (fn [path id cause]
                    ((requiring-resolve
-                     'futon3c.apm.durable-coordinator/stop!) path id))}}]
+                     'futon3c.apm.durable-coordinator/stop!) path id cause))}}]
   (let [decision (evaluate watch-state observation now-ms)]
     (if (= :halt (:status decision))
-      (let [stopped (stop-fn registry-path coordinator-id)
+      (let [stopped (stop-fn registry-path coordinator-id
+                             (fault-stop-cause (:reason decision)))
             final-state (-> (:state decision)
                             (assoc :watchdog/durable-stop stopped)
                             (assoc-in [:watchdog/trace-observation

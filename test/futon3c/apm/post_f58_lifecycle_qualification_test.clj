@@ -141,7 +141,9 @@
               (constantly "2026-08-30T11:05:00Z")]
       (with-redefs [regulator/cancel-scheduler!
                     (fn [_] {:ok true :status :stopped})]
-        (let [stopped (coordinator/stop! registry coordinator-id)
+        (let [stopped (coordinator/stop! registry coordinator-id
+                                          {:stop-cause/type :operator
+                                           :stop-cause/reason-code :test-requested})
               durable (edn/read-string (slurp state))
               recovered (coordinator/recover-all! registry)]
           (is (= :stopped (:status stopped)))

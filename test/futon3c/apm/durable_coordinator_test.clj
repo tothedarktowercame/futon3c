@@ -54,6 +54,10 @@
 (defn- registered-entry [registry coordinator-id]
   (get-in (sut/read-registry registry) [:entries coordinator-id]))
 
+(def operator-stop-cause
+  {:stop-cause/type :operator
+   :stop-cause/reason-code :test-requested})
+
 (deftest enabled-transitions-are-append-only-and-preserve-current-read-path
   (let [{:keys [registry state-a]} (temp-paths)]
     (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:history"
@@ -61,9 +65,9 @@
                              :state-path state-a :period-ms 10})))
     (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})
                   sut/start-registered! (fn [_ _] {:ok true :status :started})]
-      (is (:durably-disabled? (sut/stop! registry "c:history")))
+      (is (:durably-disabled? (sut/stop! registry "c:history" operator-stop-cause)))
       (is (:ok (sut/resume! registry "c:history")))
-      (is (:durably-disabled? (sut/stop! registry "c:history")))
+      (is (:durably-disabled? (sut/stop! registry "c:history" operator-stop-cause)))
       (let [entry (registered-entry registry "c:history")
             history (:coordinator/enabled-history entry)]
         (is (false? (:coordinator/enabled? entry)))
@@ -74,8 +78,52 @@
                 :durable-coordinator/resume!
                 :durable-coordinator/stop!]
                (mapv :transition/actor history)))
+        (is (= [nil operator-stop-cause nil operator-stop-cause]
+               (mapv :stop/cause history)))
         (is (every? string? (map :durable-state/digest history)))
         (is (apply < (map :transition/timestamp-ms history)))))))
+
+(deftest stop-cause-is-required-and-legacy-history-remains-unknown
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:legacy"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (is (= :durable-coordinator-stop-cause-invalid
+           (:error/code (sut/stop! registry "c:legacy" nil))))
+    (is (true? (get-in (sut/read-registry registry)
+                       [:entries "c:legacy" :coordinator/enabled?])))
+    (let [entry (registered-entry registry "c:legacy")
+          legacy-transition
+          (-> (last (:coordinator/enabled-history entry))
+              (assoc :enabled/previous true
+                     :enabled/new false
+                     :transition/actor :durable-coordinator/stop!
+                     :transition/reason :stop-requested)
+              (dissoc :stop/cause :transition/digest))
+          legacy-transition
+          (assoc legacy-transition :transition/digest
+                 (sut/enabled-transition-digest legacy-transition))
+          legacy-entry
+          (-> entry
+              (assoc :coordinator/enabled? false
+                     :coordinator/lifecycle :draining
+                     :coordinator/enabled-history [legacy-transition])
+              (dissoc :coordinator/entry-digest))
+          legacy-entry (assoc legacy-entry :coordinator/entry-digest
+                              (sut/entry-digest legacy-entry))
+          legacy-registry (assoc-in (sut/read-registry registry)
+                                    [:entries "c:legacy"] legacy-entry)]
+      (is (:ok (persistence/atomic-persist!
+                (java.nio.file.Path/of registry (make-array String 0))
+                legacy-registry)))
+      (let [read-transition (-> (sut/read-registry registry)
+                                (get-in [:entries "c:legacy"
+                                         :coordinator/enabled-history])
+                                first)]
+        (is (nil? (:stop/cause read-transition)))
+        (is (= {:stop-cause/type :unknown}
+               (sut/transition-stop-cause read-transition)))))))
 
 (deftest failed-history-write-blocks-enabled-transition-and-successor
   (let [{:keys [registry state-a]} (temp-paths)
@@ -92,7 +140,7 @@
                     sut/start-registered! (fn [& _] (swap! started inc)
                                             {:ok true :status :started})]
         (is (= :test/archive-failed
-               (:error/code (sut/stop! registry "c:blocked"))))
+               (:error/code (sut/stop! registry "c:blocked" operator-stop-cause))))
         (is (= before (sut/read-registry registry)))
         (is (zero? @stopped))
         (is (= :test/archive-failed
@@ -186,7 +234,7 @@
                 (swap! stopped conj id)
                 {:ok true :status :stopped})]
       (with-redefs [regulator/cancel-scheduler! (fn [_] {:ok true :status :stopped})]
-        (let [result (sut/stop! registry "c:watch")]
+        (let [result (sut/stop! registry "c:watch" operator-stop-cause)]
           (is (:durably-disabled? result))
           (is (= ["semantic-progress:c:watch"] @stopped)))))))
 
@@ -338,7 +386,7 @@
       (is (:ok (sut/register! {:registry-path registry :coordinator-id id
                                :adapter :test/rearm :config {}
                                :state-path state :period-ms 10}))))
-    (is (:durably-disabled? (sut/stop! registry "c:disabled")))
+    (is (:durably-disabled? (sut/stop! registry "c:disabled" operator-stop-cause)))
     (binding [sut/*watchdog-start-fn*
               (fn [request]
                 (swap! armed conj (:watchdog-id request))
@@ -713,14 +761,14 @@
       (let [started (sut/start-registered! registry "c:stop")]
         (is (:ok started))
       (is (await-until #(some? (sut/status "c:stop"))))
-        (let [first-stop (sut/stop! registry "c:stop")]
+        (let [first-stop (sut/stop! registry "c:stop" operator-stop-cause)]
           (is (:durably-disabled? first-stop))
           (when (= :draining (:status first-stop))
             (is (string? (get-in first-stop [:in-flight-tick :tick/id])))
             (is (not= :timeout
                       (deref (:first-tick started) 2000 :timeout)))
             (is (= :stopped
-                   (:status (sut/stop! registry "c:stop"))))))
+                   (:status (sut/stop! registry "c:stop" operator-stop-cause))))))
       (is (= :disabled
              (get-in (sut/recover-all! registry) [:results "c:stop" :status])))
       (is (false? (get-in (sut/status registry "c:stop")
@@ -751,7 +799,7 @@
                "\n"))
     (with-redefs [regulator/cancel-scheduler!
                   (fn [_] {:ok true :status :stopped})]
-      (let [stopped (sut/stop! registry "c:stopped-active-frame")
+      (let [stopped (sut/stop! registry "c:stopped-active-frame" operator-stop-cause)
             durable (edn/read-string (slurp state-a))
             recovered (sut/recover-all! registry)]
         (is (= :stopped (:status stopped)))
@@ -785,7 +833,7 @@
     (try
       (let [started (sut/start-registered! registry coordinator-id)]
         (is (= true (deref tick-entered 2000 :timeout)))
-        (let [stop-result (future (sut/stop! registry coordinator-id))
+        (let [stop-result (future (sut/stop! registry coordinator-id operator-stop-cause))
               observer (future
                          (loop []
                            (let [registration
@@ -810,7 +858,7 @@
                          [:results coordinator-id :in-flight-tick :tick/id])))
           (deliver release-tick true)
           (is (not= :timeout (deref (:first-tick started) 2000 :timeout)))
-          (let [stopped (sut/stop! registry coordinator-id)
+          (let [stopped (sut/stop! registry coordinator-id operator-stop-cause)
                 durable (edn/read-string (slurp state-a))]
             (is (= :stopped (:status stopped)))
             (is (= :stopped (:regulator/status durable)))

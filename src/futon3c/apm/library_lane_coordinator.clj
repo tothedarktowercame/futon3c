@@ -159,8 +159,8 @@
 (defn status [registry-path coordinator-id]
   (coordinator/status registry-path coordinator-id))
 
-(defn stop! [registry-path coordinator-id]
-  (coordinator/stop! registry-path coordinator-id))
+(defn stop! [registry-path coordinator-id stop-cause]
+  (coordinator/stop! registry-path coordinator-id stop-cause))
 
 (defn hydrate-control-authority!
   "Migrate one legacy library registration to explicit control authority.
