@@ -128,31 +128,46 @@
   [t]
   (or (:stop/cause t) {:stop-cause/type :unknown}))
 
+(defn read-edn-file [path]
+  (when (fs/exists? path)
+    (try (edn/read-string (slurp path))
+         (catch Exception _ ::unparseable))))
+
 (defn coordinator-health-check
   [entry]
   (let [cid (:coordinator/id entry "?")
         enabled (:coordinator/enabled? entry)
         lifecycle (get-in entry [:coordinator/lifecycle :coordinator/lifecycle])
+        state-path (or (:coordinator/state-path entry)
+                       (get-in entry [:coordinator/lifecycle :coordinator/state-path]))
+        state (read-edn-file (str state-path))
+        status (when (map? state) (:regulator/status state))
         stop-t (latest-stop-transition (:coordinator/enabled-history entry))
         cause (some-> stop-t transition-stop-cause)
         fault (:stop-cause/fault-class cause)
         substrate-stopped? (and (false? enabled) (= :substrate fault))]
     (verdict (keyword "apm.coordinator" cid)
-             "data/apm-coordinators/registry.edn (:coordinator/enabled?, :coordinator/lifecycle, :stop/cause per commits 99bb3f26/88d064d)"
+             "data/apm-coordinators/registry.edn (:coordinator/enabled?, :coordinator/lifecycle, :stop/cause per commits 99bb3f26/88d064d) + coordinator.edn :regulator/status"
              {:coordinator/enabled? enabled
               :coordinator/lifecycle lifecycle
-              :stop/cause cause}
+              :regulator/status status}
              {:coordinator/enabled? :any
               :stop/fault-class-not :substrate-while-disabled}
              (cond
                (nil? enabled) :unknown
                substrate-stopped? :violated
+               ;; "Enabled" alone is not liveness: an enabled coordinator whose
+               ;; own state says :complete is finished-but-never-disabled.
+               (and enabled (= :complete status)) :completed-but-enabled
+               (and enabled (nil? status)) :unknown
                :else :pass)
              (cond
                (nil? enabled) "registry entry lacks :coordinator/enabled? — cannot evaluate"
                substrate-stopped? (str "STOPPED BY SUBSTRATE FAULT AND NOT RESTARTED — restartable fault class with nobody restarting it (reason-code " (:stop-cause/reason-code cause) ")")
+               (and enabled (= :complete status)) "registry enabled but campaign state :regulator/status :complete — finished, never disabled (bookkeeping debt; the liveness check carries the same finding)"
+               (and enabled (nil? status)) "enabled but coordinator state unreadable — cannot confirm the loop is alive (see liveness check)"
                (false? enabled) "disabled (intentional or legacy stop; no substrate fault class recorded)"
-               :else "enabled"))))
+               :else "enabled and state readable"))))
 
 (defn enabled-spans
   "Completed enabled spans [start-ms end-ms] from an enabled-history, computed
@@ -203,11 +218,6 @@
                (< m-ms min-mean-span-ms) (str "mean enabled span " (format "%.0f" m-min) " min over " (count spans) " spans — below the 2h defect floor; churn is the defect, each stop is not an isolated incident")
                 :else "mean enabled span within floor"))))
 
-(defn read-edn-file [path]
-  (when (fs/exists? path)
-    (try (edn/read-string (slurp path))
-         (catch Exception _ ::unparseable))))
-
 (defn parse-ledger-events
   "ledger.edn is line-delimited EDN event maps."
   [path]
@@ -246,11 +256,12 @@
    stale means the loop is spinning without advancing work."
   [{:keys [state-path ticks-sample-ms max-frame-staleness-ms]} now]
   (let [state1 (read-edn-file state-path)
-        ticks1 (:regulator/ticks state1)]
+        ticks1 (:regulator/ticks state1)
+        status1 (:regulator/status state1)]
     (if (or (nil? state1) (= ::unparseable state1) (nil? ticks1))
       (verdict :apm/campaign-liveness
                "coordinator.edn :regulator/ticks; frame ledger.edn :frame/advanced"
-               {:liveness/state-path state-path :liveness/ticks ticks1}
+               {:liveness/state-path state-path :liveness/ticks ticks1 :liveness/regulator-status status1}
                {:liveness/ticks-advance true}
                :unknown
                (if (= ::unparseable state1)
@@ -269,22 +280,31 @@
             stale-ms (when adv-ms (- now adv-ms))
             ticks-ok? (and ticks2 (> ticks2 ticks1))]
         (verdict :apm/campaign-liveness
-                 "coordinator.edn :regulator/ticks (mechanical) + active frame ledger.edn :frame/advanced (semantic)"
+                 "coordinator.edn :regulator/ticks (mechanical) + :regulator/status + active frame ledger.edn :frame/advanced (semantic)"
                  {:liveness/ticks-before ticks1
                   :liveness/ticks-after ticks2
                   :liveness/ticks-advanced ticks-ok?
+                  :liveness/regulator-status status1
                   :liveness/last-frame-advanced-at adv
                   :liveness/hours-since-frame-advanced (when stale-ms (/ stale-ms 3600000.0))
                   :liveness/ledger-path ledger-path}
                  {:liveness/ticks-advance true
                   :liveness/max-frame-staleness-hours (/ max-frame-staleness-ms 3600000.0)}
                  (cond
-                   (not ticks-ok?) :violated
+                   (not ticks-ok?)
+                   (case status1
+                     :complete :completed-but-enabled
+                     :running :violated
+                     :unknown) ; status missing/unrecognized: static ticks unexplained
                    (nil? adv-ms) :unknown
                    (> stale-ms max-frame-staleness-ms) :violated
                    :else :pass)
                  (cond
-                   (not ticks-ok?) (str "ticks not advancing across " ticks-sample-ms "ms sample — loop is not running")
+                   (not ticks-ok?)
+                   (case status1
+                     :complete (str "ticks static and :regulator/status :complete — campaign FINISHED but never disabled in the registry (bookkeeping debt, not a zombie; will trip forever until unregistered)")
+                     :running (str "ZOMBIE: registry says enabled, own state says :regulator/status :running, and ticks have not advanced across " ticks-sample-ms "ms — a running loop that is not running")
+                     (str "ticks not advancing across " ticks-sample-ms "ms sample and :regulator/status is " (pr-str status1) " — cannot classify (see TN-apm-watcher.md on stale :running)"))
                    (nil? adv-ms) "ticks advance but no :frame/advanced event found in active frame ledger — semantic signal unavailable"
                    (> stale-ms max-frame-staleness-ms) (str "ticks advance (mechanical liveness) but last :frame/advanced was " (format "%.1f" (/ stale-ms 3600000.0)) "h ago — loop is spinning without semantic progress")
                    :else "ticks advancing and frames advancing recently"))))))
@@ -413,16 +433,29 @@
                    (for [iv ivs]
                      (format "  [%s] %-40s %s"
                              (case (:invariant/verdict iv)
-                               :pass "PASS" :violated "VIOLATED" :unknown "UNKNOWN")
+                               :pass "PASS" :violated "VIOLATED" :completed-but-enabled "DONE-ENABLED" :unknown "UNKNOWN")
                              (name (:invariant/id iv))
                              (:invariant/reason iv))))
          "\n")))
 
 (defn exit-code [report]
   (let [vs (set (map :invariant/verdict (:invariants report)))]
+    ;; :completed-but-enabled is low-severity bookkeeping debt, deliberately
+    ;; non-failing: it would otherwise trip forever and train everyone to
+    ;; ignore a permanent red light.
     (cond (vs :violated) 1 (vs :unknown) 2 :else 0)))
 
-(defn -main [& _args]
+(defn usage []
+  (binding [*out* *err*]
+    (println "usage: bb scripts/apm_invariant_checker.bb [--check]")
+    (println "  Runs all read-only APM invariant checks. EDN report on stdout,")
+    (println "  human summary on stderr. Exit 0 = all pass, 1 = violation(s),")
+    (println "  2 = unknown(s) only. There is no other mode: the checker only observes.")))
+
+(defn -main [& args]
+  (when-not (every? #(= "--check" %) args)
+    (usage)
+    (System/exit 64))
   (let [opts (merge defaults
                     {:registry-path (str (fs/path (:repo-root defaults) (:registry-path defaults)))}
                     (when-let [r (some-> (System/getenv "APM_CHECKER_REPO") not-empty)]
@@ -432,5 +465,8 @@
     (pp/pprint report)
     (System/exit (exit-code report))))
 
-;; Run as a script only when invoked with arguments; loading for tests passes none.
-(when (seq *command-line-args*) (apply -main *command-line-args*))
+;; Standard babashka main-detection: run on any direct invocation (with or
+;; without --check); loading for tests (load-file) does not match and stays
+;; silent. An unrecognised argument prints usage and exits non-zero — never
+;; exit 0 having done nothing.
+(when (= *file* (System/getProperty "babashka.file")) (apply -main (or *command-line-args* [])))

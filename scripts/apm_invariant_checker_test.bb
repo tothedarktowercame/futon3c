@@ -100,7 +100,7 @@
                            {:transition/timestamp-ms 2 :enabled/new false}]}
                    r (coordinator-health-check entry)]
                (check (str n ":verdict") (:invariant/verdict r) :pass)
-               (check (str n ":cause") (get-in r [:invariant/observed :stop/cause :stop-cause/type]) :unknown))))
+               (check (str n ":cause") (contains? (:invariant/observed r) :stop/cause) false))))
 
       ;; Missing :coordinator/enabled? -> unknown, not silent pass.
       _ (run! "health-missing-enabled-unknown"
@@ -134,6 +134,19 @@
                                    {:event/type :frame/advanced :event/at "2026-08-02T00:00:00Z"}
                                    {:event/type :block/opened :event/at "2026-08-03T00:00:00Z"}])
                "2026-08-02T00:00:00Z")))
+
+      ;; Enabled + state :complete -> bookkeeping verdict, not pass, not violated.
+      _ (run! "health-enabled-complete-done"
+           (fn [n]
+             (with-redefs [read-edn-file (fn [_] {:regulator/status :complete})]
+               (let [r (coordinator-health-check {:coordinator/id "x:v1"
+                                                  :coordinator/enabled? true})]
+                 (check (str n ":verdict") (:invariant/verdict r) :completed-but-enabled)))))
+
+      ;; Exit code: completed-but-enabled alone does not fail the run.
+      _ (run! "exit-code-done-enabled-not-failing"
+           (fn [n]
+             (check n (exit-code {:invariants [{:invariant/verdict :completed-but-enabled}]}) 0)))
 
       ;; Exit codes: violated -> 1, unknown-only -> 2, all pass -> 0.
       _ (run! "exit-codes"
