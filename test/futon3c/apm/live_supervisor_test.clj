@@ -1,5 +1,6 @@
 (ns futon3c.apm.live-supervisor-test
   (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.live-job-driver :as live-job-driver]
             [futon3c.apm.phase-status :as phase-status]
             [futon3c.apm.live-supervisor :as sut]))
 
@@ -56,6 +57,39 @@
     (is (not-any? #{:advance} @calls))
     (is (= [] (get-in (last @calls) [1 :awaiting])))
     (is (nil? (get-in (last @calls) [1 :retry/not-before-ms])))))
+
+(deftest proved-orphan-through-live-supervisor-schedules-recovery
+  (let [calls (atom [])
+        session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        request {:dispatch/id "dispatch-1" :agent-id "f19-proctor"
+                 :frame-id "f19" :problem-id "a01J05" :phase :preflight
+                 :session-id session}
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true}
+        driver-ports
+        {:request request :state state
+         :announce-fn (constantly {:ok true :job-id "unused"})
+         :activate-fn (constantly {:ok true})
+         :terminal-submission-provider (constantly nil)
+         :job-fn (constantly
+                  {:job-id "job-1" :agent-id "f19-proctor" :state :running
+                   :stderr (str "2026-09-04T01:02:03Z ERROR "
+                                "codex_core::session: thread " session
+                                " not found")})
+         :persist-fn (constantly {:ok true})
+         :terminal-validator (constantly {:ok true})
+         :receipt-provider
+         (constantly {:ok true :certificate {:receipt/id "unused"}})}
+        result (sut/tick!
+                (base calls
+                      (live-job-driver/drive! driver-ports)))]
+    (is (= :orphan-recovery-scheduled (:status result)))
+    (is (= 0 (get-in result
+                     [:orphan/recovery-state :orphan/recovery-attempts])))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))
+    (is (not-any? #{:advance} @calls))))
 
 (deftest certified-phase-defers-successor-projection-until-it-is-driven
   (let [calls (atom [])
@@ -124,7 +158,8 @@
            (get-in (last @calls) [1 :retry/not-before-ms])))))
 
 (deftest phase-status-vocabulary-is-closed-and-unknowns-name-the-gap
-  (is (= #{:awaiting-terminal :awaiting-apparatus-repair :awaiting-substrate
+  (is (= #{:awaiting-terminal :orphaned :awaiting-orphan-recovery
+           :awaiting-apparatus-repair :awaiting-substrate
            :transport-retry-scheduled :terminal-collected :certified}
          (phase-status/known-statuses :phase-driver)))
   (is (= :waiting-substrate

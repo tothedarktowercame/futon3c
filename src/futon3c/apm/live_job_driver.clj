@@ -43,7 +43,7 @@
        (= :codex-session-not-found (:finding observation))
        (= (:job-id ticket) (:job-id observation))
        (string? (:session-id observation))
-       (keyword? (:evidence/source observation))))
+       (= :canonical-codex-stderr (:evidence/source observation))))
 
 (defn orphan-recovery-request
   "Address a fresh-session successor for a proved orphan without claiming a
@@ -568,37 +568,42 @@
                            :ticket (:ticket announced)
                            :activation/accepted? false
                            :orphan/recovery-attempts attempt))]
-            (if-not (:ok (persist-fn next-state))
-              {:ok false :error/code :live-job-orphan-successor-persistence-failed
-               :state state}
-              (let [registered (if (fn? ticket-register-fn)
-                                 (ticket-register-fn recovery-request
-                                                     (:ticket announced))
-                                 {:ok true})
-                    activated (when (:ok registered)
-                                (activate-fn recovery-request
-                                             (:ticket announced)))]
-                (cond
-                  (not (:ok registered))
-                  (orphan-recovery-failure!
-                   next-state
-                   {:error/code :live-job-orphan-authority-registration-failed
-                    :finding registered}
-                   persist-fn orphan-recovery-max-attempts)
-                  (not (:ok activated))
-                  (orphan-recovery-failure!
-                   next-state {:error/code :live-job-orphan-activation-failed
-                               :finding activated}
-                   persist-fn orphan-recovery-max-attempts)
-                  :else
-                  (let [accepted (assoc next-state :activation/accepted? true)]
-                    (if (:ok (persist-fn accepted))
-                      {:ok true :status :awaiting-terminal :orphan/recovered? true
-                       :state accepted}
-                      {:ok false
-                       :error/code
-                       :live-job-orphan-activation-acceptance-persistence-failed
-                       :state next-state})))))))))))
+            (if (= (:job-id old-ticket) (get-in announced [:ticket :job-id]))
+              (orphan-recovery-failure!
+              state {:error/code :live-job-orphan-successor-identity-reused
+                      :job-id (:job-id old-ticket)}
+               persist-fn orphan-recovery-max-attempts)
+              (if-not (:ok (persist-fn next-state))
+                {:ok false :error/code :live-job-orphan-successor-persistence-failed
+                 :state state}
+                (let [registered (if (fn? ticket-register-fn)
+                                   (ticket-register-fn recovery-request
+                                                       (:ticket announced))
+                                   {:ok true})
+                      activated (when (:ok registered)
+                                  (activate-fn recovery-request
+                                               (:ticket announced)))]
+                  (cond
+                    (not (:ok registered))
+                    (orphan-recovery-failure!
+                     next-state
+                     {:error/code :live-job-orphan-authority-registration-failed
+                      :finding registered}
+                     persist-fn orphan-recovery-max-attempts)
+                    (not (:ok activated))
+                    (orphan-recovery-failure!
+                     next-state {:error/code :live-job-orphan-activation-failed
+                                 :finding activated}
+                     persist-fn orphan-recovery-max-attempts)
+                    :else
+                    (let [accepted (assoc next-state :activation/accepted? true)]
+                      (if (:ok (persist-fn accepted))
+                        {:ok true :status :awaiting-terminal
+                         :orphan/recovered? true :state accepted}
+                        {:ok false
+                         :error/code
+                         :live-job-orphan-activation-acceptance-persistence-failed
+                         :state next-state}))))))))))))
 
 (defn- recover-orphan!
   [{:keys [state orphan-recovery-max-attempts] :as context}]
@@ -627,7 +632,7 @@
            posthoc-fault-origin-fn
            ticket-register-fn terminal-submission-provider cancel-fn
            missing-observation-provider terminal-budget-config now-ms-fn
-           orphan-observation-provider orphan-recovery-request-fn
+           orphan-recovery-request-fn
            orphan-recovery-max-attempts
            provider-usage-limit-signatures provider-usage-limit-window-ms]
     :or {now-ms-fn #(System/currentTimeMillis)
@@ -760,10 +765,7 @@
           terminal? (contains? terminal-states (:state job))
           orphan-observation
           (when (and (nil? observed-submission) (not terminal?))
-            (or (when (fn? orphan-observation-provider)
-                  (orphan-observation-provider active-request
-                                               (:ticket state) job))
-                (session-orphan-observation active-request job)))
+            (session-orphan-observation active-request job))
           job-usage-limit (provider-usage-limit
                            {:report (:report job)
                             :output (:output job)
@@ -835,9 +837,10 @@
 
         (and orphan-observation
              (valid-orphan-observation? orphan-observation (:ticket state)))
-        (let [next-state (assoc state
-                                :orphan/observation orphan-observation
-                                :orphan/recovery-attempts 0)]
+        (let [next-state (cond->
+                          (assoc state :orphan/observation orphan-observation)
+                           (not (contains? state :orphan/recovery-attempts))
+                           (assoc :orphan/recovery-attempts 0))]
           (if (:ok (persist-fn next-state))
             {:ok true :status :orphaned :state next-state
              :orphan/observation orphan-observation}

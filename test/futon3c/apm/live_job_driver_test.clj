@@ -221,6 +221,67 @@
     (is (nil? (get-in result [:state :terminal-collection])))
     (is (not-any? #{:validate :receipt} @calls))))
 
+(deftest repeated-orphan-observation-preserves-lineage-attempts
+  (let [session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        diagnostic (str "2026-09-04T01:02:03Z ERROR codex_core::session: "
+                        "thread " session " not found")
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :active-request (assoc request :session-id session)
+               :ticket {:job-id "job-2"}
+               :activation/accepted? true
+               :orphan/recovery-attempts 1}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-2" :state :running
+                                       :stderr diagnostic}))
+                       :request (:active-request state)
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :orphaned (:status result)))
+    (is (= 1 (get-in result [:state :orphan/recovery-attempts])))))
+
+(deftest orphan-recovery-rejects-predecessor-job-identity
+  (let [calls (atom [])
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/recovery-attempts 0
+               :orphan/observation
+               {:observation/type :job-owner-orphaned
+                :finding :codex-session-not-found :job-id "job-1"
+                :agent-id "f19-proctor"
+                :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                :evidence/source :canonical-codex-stderr}}
+        result (sut/drive!
+                (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                       :state state :terminal-submission-provider (constantly nil)
+                       :cancel-fn (constantly {:ok true :state :cancelled})
+                       :announce-fn (constantly {:ok true :job-id "job-1"})))]
+    (is (= :awaiting-orphan-recovery (:status result)))
+    (is (= :live-job-orphan-successor-identity-reused
+           (get-in result [:finding :error/code])))
+    (is (= 1 (get-in result [:state :orphan/recovery-attempts])))
+    (is (not-any? #{:activate} @calls))))
+
+(deftest fabricated-provider-orphan-evidence-is-not-an-input-port
+  (let [session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :active-request (assoc request :session-id session)
+               :ticket {:job-id "job-1"} :activation/accepted? true}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-1" :state :running}))
+                       :request (:active-request state) :state state
+                       :terminal-submission-provider (constantly nil)
+                       :orphan-observation-provider
+                       (constantly {:observation/type :job-owner-orphaned
+                                    :finding :codex-session-not-found
+                                    :job-id "job-1" :session-id session
+                                    :evidence/source :fabricated})))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (nil? (get-in result [:state :orphan/observation])))))
+
 (deftest orphan-session-mint-exhaustion-is-distinct-and-bounded
   (let [observation {:observation/type :job-owner-orphaned
                      :finding :codex-session-not-found

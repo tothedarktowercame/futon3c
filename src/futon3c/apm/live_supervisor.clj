@@ -91,6 +91,24 @@
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
+                (= :waiting-orphan-recovery status-class)
+                (let [projected (project-fn)
+                      parked (when (:ok projected)
+                               (park-fn {:awaiting []
+                                         :payload continuation-payload}))]
+                  (cond
+                    (not (:ok projected))
+                    {:ok false :error/code :live-supervisor-projection-failed
+                     :finding projected}
+                    (:ok parked)
+                    {:ok true :status :orphan-recovery-scheduled
+                     :phase (:phase action)
+                     :orphan/recovery-state (:state driven)
+                     :projection projected :park parked}
+                    :else
+                    {:ok false :error/code :live-supervisor-park-failed
+                     :finding parked}))
+
                 (= :certified status-class)
                 (let [advanced (advance-fn (:kind action)
                                            (:certificate driven))]

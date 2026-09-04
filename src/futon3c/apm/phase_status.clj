@@ -10,6 +10,8 @@
 (def boundary-status-classes
   {:phase-driver
    {:awaiting-terminal :waiting-terminal
+    :orphaned :waiting-orphan-recovery
+    :awaiting-orphan-recovery :waiting-orphan-recovery
     :awaiting-apparatus-repair :waiting-apparatus-repair
     :awaiting-substrate :waiting-substrate
     :transport-retry-scheduled :waiting-transport-retry
@@ -17,6 +19,7 @@
     :certified :certified}
    :live-supervisor-frame
    {:parked :waiting-terminal
+    :orphan-recovery-scheduled :waiting-orphan-recovery
     :awaiting-substrate :waiting-substrate
     :transport-retry-scheduled :waiting-transport-retry
     :terminal-collected :terminal-evidence-collected
@@ -25,6 +28,7 @@
     :frame-complete :frame-complete}
    :problem-queue-frame
    {:parked :waiting-terminal
+    :orphan-recovery-scheduled :waiting-orphan-recovery
     :awaiting-substrate :waiting-substrate
     :transport-retry-scheduled :waiting-transport-retry
     :terminal-collected :terminal-evidence-collected
@@ -34,6 +38,7 @@
     :frame-complete :frame-complete}
    :live-batch-frame
    {:parked :waiting-terminal
+    :orphan-recovery-scheduled :waiting-orphan-recovery
     :awaiting-substrate :waiting-substrate
     :transport-retry-scheduled :waiting-transport-retry
     :terminal-collected :terminal-evidence-collected
@@ -42,6 +47,7 @@
     :frame-complete :frame-complete}
    :problem-queue-result
    {:frame-prepared :queue-progress
+    :orphan-recovery-scheduled :queue-progress
     :parked :queue-progress
     :awaiting-substrate :queue-waiting-substrate
     :transport-retry-scheduled :queue-progress
@@ -52,6 +58,7 @@
     :batch-complete :queue-terminal}
    :jit-queue-postcondition
    {:frame-prepared :queue-progress
+    :orphan-recovery-scheduled :queue-progress
     :parked :queue-progress
     :awaiting-substrate :queue-waiting-substrate
     :transport-retry-scheduled :queue-progress
@@ -69,6 +76,8 @@
   [{:producer :phase-driver
     :consumer :live-supervisor-frame
     :mapping {:awaiting-terminal :parked
+              :orphaned :orphan-recovery-scheduled
+              :awaiting-orphan-recovery :orphan-recovery-scheduled
               :awaiting-apparatus-repair :parked
               :awaiting-substrate :awaiting-substrate
               :transport-retry-scheduled :transport-retry-scheduled
@@ -77,6 +86,7 @@
    {:producer :live-supervisor-frame
     :consumer :problem-queue-frame
     :mapping {:parked :parked
+              :orphan-recovery-scheduled :orphan-recovery-scheduled
               :awaiting-substrate :awaiting-substrate
               :transport-retry-scheduled :transport-retry-scheduled
               :terminal-collected :terminal-collected
@@ -86,6 +96,7 @@
    {:producer :live-supervisor-frame
     :consumer :live-batch-frame
     :mapping {:parked :parked
+              :orphan-recovery-scheduled :orphan-recovery-scheduled
               :awaiting-substrate :awaiting-substrate
               :transport-retry-scheduled :transport-retry-scheduled
               :terminal-collected :terminal-collected
@@ -95,6 +106,7 @@
    {:producer :problem-queue-result
     :consumer :jit-queue-postcondition
     :mapping {:frame-prepared :frame-prepared
+              :orphan-recovery-scheduled :orphan-recovery-scheduled
               :parked :parked
               :awaiting-substrate :awaiting-substrate
               :transport-retry-scheduled :transport-retry-scheduled
