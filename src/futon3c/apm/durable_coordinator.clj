@@ -65,11 +65,36 @@
                                   :rejected-value))
          false)))
 
+(defn- edn-roundtrip-safe? [value]
+  (try
+    (= value (edn/read-string (pr-str value)))
+    (catch Throwable _ false)))
+
+(defn- evidence-projection [value]
+  {:evidence/type (if (nil? value) "nil" (.getName (class value)))
+   :evidence/printed (try
+                       (pr-str value)
+                       (catch Throwable error
+                         (str "<printing failed: "
+                              (.getName (class error)) ">")))})
+
+(defn- edn-safe [value]
+  (if (edn-roundtrip-safe? value)
+    value
+    (cond
+      (map? value) (into {} (map (fn [[k v]] [(edn-safe k) (edn-safe v)]))
+                         value)
+      (vector? value) (mapv edn-safe value)
+      (set? value) (into #{} (map edn-safe) value)
+      (sequential? value) (mapv edn-safe value)
+      :else (evidence-projection value))))
+
 (defn- normalize-stop-cause [cause]
-  (if (valid-stop-cause? cause)
-    cause
-    {:stop-cause/type :unknown
-     :stop-cause/finding {:rejected-value cause}}))
+  (edn-safe
+   (if (valid-stop-cause? cause)
+     cause
+     {:stop-cause/type :unknown
+      :stop-cause/finding {:rejected-value cause}})))
 
 (defn transition-stop-cause
   "Return a stop cause for a transition without inventing one for legacy

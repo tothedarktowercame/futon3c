@@ -126,6 +126,26 @@
           (sut/fault-stop-cause {:code :unclassified-future-fault})))
       "unknown future faults fail closed"))
 
+(deftest every-current-watchdog-halt-has-a-keyword-reason-code
+  (let [prior (:state (sut/evaluate nil (observation) 1000))
+        halt-observations
+        [[nil (observation :regulator {:regulator/status :failed}) 1000]
+         [nil (observation :invalid-state? true :invalid-state {}) 1000]
+         [nil (observation :failed-launch-audit? true
+                           :launch-audit {}) 1000]
+         [nil (observation :impossible-transition? true
+                           :transition {}) 1000]
+         [nil (observation :awaiting-job {:job-id "job"}) 1000]
+         [nil (observation :awaiting-job {:job-id "job" :deadline 1})
+          (+ 1 sut/external-deadline-grace-ms 1)]
+         [nil (observation :tick-claim {:claimed-at 1})
+          (+ 1 sut/scheduler-claim-max-ms 1)]
+         [prior (observation) (+ 1000 sut/internal-progress-max-ms)]]]
+    (doseq [[watch-state observed now-ms] halt-observations]
+      (let [decision (sut/evaluate watch-state observed now-ms)]
+        (is (= :halt (:status decision)))
+        (is (keyword? (get-in decision [:reason :code])))))))
+
 (deftest stale-tick-claim-validly-awaiting-external-job-does-not-halt
   (let [claimed-at 1000
         now (+ claimed-at sut/scheduler-claim-max-ms 1)

@@ -128,6 +128,29 @@
         (is (= {:stop-cause/type :unknown}
                (sut/transition-stop-cause read-transition)))))))
 
+(deftest non-edn-stop-evidence-is-projected-and-registry-remains-readable
+  (doseq [[coordinator-id cause]
+          [["c:function-cause" identity]
+           ["c:throwable-reason"
+            {:stop-cause/type :fault
+             :stop-cause/fault-class :integrity
+             :stop-cause/reason-code :regulator-failed
+             :stop-cause/reason {:exception (Exception. "boom")}}]]]
+    (let [{:keys [registry state-a]} (temp-paths)]
+      (is (:ok (sut/register! {:registry-path registry
+                               :coordinator-id coordinator-id
+                               :adapter :test/none :config {}
+                               :state-path state-a :period-ms 10})))
+      (is (:durably-disabled? (sut/stop! registry coordinator-id cause)))
+      (let [reread (sut/read-registry registry)
+            entry (get-in reread [:entries coordinator-id])
+            recorded (-> entry :coordinator/enabled-history last :stop/cause)]
+        (is (map? reread))
+        (is (false? (:coordinator/enabled? entry)))
+        (is (sut/valid-stop-cause? recorded))
+        (is (re-find #"#(?:object|error)"
+                     (pr-str recorded)))))))
+
 (deftest failed-history-write-blocks-enabled-transition-and-successor
   (let [{:keys [registry state-a]} (temp-paths)
         stopped (atom 0)
@@ -277,7 +300,8 @@
                              :adapter :test/rearm-fails :config {}
                              :state-path state-a :period-ms 10})))
     (binding [sut/*watchdog-start-fn*
-              (fn [_] {:ok false :error/code :test-watchdog-arm-failed})
+              (fn [_] {:ok false :error/code :test-watchdog-arm-failed
+                       :finding {:exception (Exception. "arm failed")}})
               sut/*watchdog-running-fn* (constantly false)
               sut/*watchdog-stop-fn* (fn [_] {:ok true :status :not-running})]
       (with-redefs [regulator/start! (fn [_]
@@ -291,9 +315,15 @@
                  (get-in result [:finding :watchdog/repair
                                  :finding :arming :error/code])))
           (is (zero? @coordinator-starts))
-          (is (false? (get-in (sut/read-registry registry)
-                              [:entries "c:failed-arm"
-                               :coordinator/enabled?]))))))))
+          (let [reread (sut/read-registry registry)
+                entry (get-in reread [:entries "c:failed-arm"])
+                cause (-> entry :coordinator/enabled-history last :stop/cause)]
+            (is (map? reread))
+            (is (false? (:coordinator/enabled? entry)))
+            (is (= :integrity (:stop-cause/fault-class cause)))
+            (is (string? (get-in cause [:stop-cause/reason :finding :arming
+                                        :finding :exception
+                                        :evidence/printed])))))))))
 
 (deftest live-watchdog-is-not-rearmed
   (let [{:keys [registry state-a]} (temp-paths)
