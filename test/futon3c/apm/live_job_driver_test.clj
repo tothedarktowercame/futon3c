@@ -139,6 +139,10 @@
                     :agent-id "f19-proctor"
                     :payload {:outcome "complete"}}
         fx (assoc (effects calls running-job)
+                  :cancel-fn
+                  (fn [job-id]
+                    (swap! calls conj :cancel)
+                    {:ok true :job-id job-id :state :cancelled})
                   :terminal-submission-provider
                   (fn [& _]
                     (swap! provider-calls inc)
@@ -154,7 +158,92 @@
     (is (true? (get-in collected [:collection :submission/available?])))
     (is (= :certified (:status certified)))
     (is (= 1 @provider-calls))
-    (is (= 1 (count (filter #{:validate} @calls))))))
+    (is (= 1 (count (filter #{:validate} @calls))))
+    (is (= 1 (count (filter #{:announce} @calls))))
+    (is (= 1 (count (filter #{:activate} @calls))))
+    (is (= 1 (count (filter #{:cancel} @calls))))
+    (is (= :cancelled
+           (get-in collected [:state :wrapper/reconciliation :state])))))
+
+(deftest proved-session-loss-is-persisted-as-orphan-without-a-terminal
+  (let [calls (atom [])
+        session "01a0633d-05b7-7861-adca-320b6e9ff94e"
+        diagnostic (str "2026-09-04T01:02:03Z ERROR codex_core::session: "
+                        "thread " session " not found")
+        job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                   :state :running :stderr diagnostic})
+        state {:state/type :live-job-dispatched
+               :request (assoc request :session-id session)
+               :ticket {:job-id "job-1"} :activation/accepted? true}
+        result (sut/drive! (assoc (effects calls job)
+                                  :request (assoc request :session-id session)
+                                  :state state
+                                  :terminal-submission-provider (constantly nil)))]
+    (is (= :orphaned (:status result)))
+    (is (= {:observation/type :job-owner-orphaned
+            :finding :codex-session-not-found
+            :job-id "job-1" :agent-id "f19-proctor"
+            :session-id session
+            :evidence/source :canonical-codex-stderr}
+           (:orphan/observation result)))
+    (is (nil? (get-in result [:state :terminal-collection])))
+    (is (not-any? #{:validate :receipt :announce :activate} @calls))))
+
+(deftest orphan-recovery-mints-fresh-session-without-synthesizing-terminal
+  (let [calls (atom [])
+        observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/observation observation}
+        seen-request (atom nil)
+        result
+        (sut/drive!
+         (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                :state state :terminal-submission-provider (constantly nil)
+                :cancel-fn (fn [id] (swap! calls conj :cancel)
+                             {:ok true :job-id id :state :cancelled})
+                :announce-fn (fn [req] (reset! seen-request req)
+                               {:ok true :job-id "job-2"})
+                :ticket-register-fn (fn [& _] {:ok true})
+                :activate-fn (fn [& _] (swap! calls conj :activate) {:ok true})))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:orphan/recovered? result)))
+    (is (true? (:fresh-session? @seen-request)))
+    (is (string? (:fresh-session-nonce @seen-request)))
+    (is (= "job-1" (:orphan/of-job-id @seen-request)))
+    (is (= "job-2" (get-in result [:state :ticket :job-id])))
+    (is (nil? (get-in result [:state :terminal-collection])))
+    (is (not-any? #{:validate :receipt} @calls))))
+
+(deftest orphan-session-mint-exhaustion-is-distinct-and-bounded
+  (let [observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        saved (atom nil)
+        attempts (atom 0)
+        base (assoc (effects (atom []) (atom {:job-id "job-1" :state :running}))
+                    :state {:state/type :live-job-dispatched :request request
+                            :active-request request :ticket {:job-id "job-1"}
+                            :activation/accepted? true
+                            :orphan/observation observation}
+                    :terminal-submission-provider (constantly nil)
+                    :cancel-fn (fn [id] {:ok true :job-id id :state :cancelled})
+                    :announce-fn (fn [_] (swap! attempts inc) {:ok false})
+                    :persist-fn (fn [state] (reset! saved state) {:ok true})
+                    :orphan-recovery-max-attempts 2)
+        first-result (sut/drive! base)
+        second-result (sut/drive! (assoc base :state (:state first-result)))]
+    (is (= :awaiting-orphan-recovery (:status first-result)))
+    (is (= :live-job-orphan-recovery-exhausted (:error/code second-result)))
+    (is (= 2 (:recovery/attempts second-result)))
+    (is (= 2 @attempts))
+    (is (nil? (:terminal-collection @saved)))))
 
 (deftest receipt-provider-hold-never-certifies-a-nil-receipt
   (let [calls (atom [])

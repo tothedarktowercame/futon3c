@@ -1203,11 +1203,12 @@
     :cancel-fn
     (fn [job-id]
       (job-port/cancel! agency-base job-id
-                        "typed-submission activation supersession"))
+                        "typed-submission wrapper reconciliation"))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :ticket-register-fn submission/register!
-    :terminal-submission-provider (fn [_ ticket _]
-                                    (submission/submitted (:job-id ticket)))
+    :terminal-submission-provider
+    (fn [req ticket _]
+      (submission/authenticated-completion req ticket))
     :terminal-validator validate-terminal
     :posthoc-fault-origin-fn
     (fn [active-request failure]

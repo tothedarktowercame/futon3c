@@ -14,6 +14,58 @@
 ;; Keep one additional apparatus turn available when a repaired terminal reaches
 ;; a later transport boundary.  The agent repair budget remains independent.
 (def default-apparatus-repair-attempts 2)
+(def default-orphan-recovery-attempts 2)
+
+(def ^:private codex-session-loss-pattern
+  #"(?m)^\d{4}-\d{2}-\d{2}T\S+\s+ERROR\s+codex_core::session:\s+.*\bthread\s+([0-9a-f-]{36})\s+not found\s*$")
+
+(defn session-orphan-observation
+  "Return typed evidence only for a canonical Codex session-loss diagnostic.
+
+  A nil session id or an old job is deliberately insufficient: neither proves
+  that the externally owned session died.  The diagnostic must name the exact
+  session the request was trying to resume."
+  [request job]
+  (let [expected (or (:session-id request) (:solver/prior-session-id request))
+        diagnostic (str (or (:stderr job) (get-in job [:result :stderr])
+                            (:terminal-message job) ""))
+        observed (second (re-find codex-session-loss-pattern diagnostic))]
+    (when (and (string? expected) (= expected observed))
+      {:observation/type :job-owner-orphaned
+       :finding :codex-session-not-found
+       :job-id (:job-id job)
+       :agent-id (:agent-id job)
+       :session-id expected
+       :evidence/source :canonical-codex-stderr})))
+
+(defn- valid-orphan-observation? [observation ticket]
+  (and (= :job-owner-orphaned (:observation/type observation))
+       (= :codex-session-not-found (:finding observation))
+       (= (:job-id ticket) (:job-id observation))
+       (string? (:session-id observation))
+       (keyword? (:evidence/source observation))))
+
+(defn orphan-recovery-request
+  "Address a fresh-session successor for a proved orphan without claiming a
+  terminal result for its predecessor. ATTEMPT is durable bounded state, not a
+  role repair budget."
+  [request ticket observation attempt]
+  (if-not (and (valid-orphan-observation? observation ticket)
+               (pos-int? attempt))
+    {:ok false :error/code :live-job-orphan-recovery-input-invalid}
+    (let [body (-> request
+                   (dissoc :dispatch/id :submission/token :submission/job-id
+                           :session-id :solver/prior-session-id)
+                   (assoc :fresh-session? true
+                          :fresh-session-nonce
+                          (machine/ledger-digest
+                           [(:dispatch/id request) (:job-id ticket)
+                            (:session-id observation) attempt])
+                          :orphan/recovery-attempt attempt
+                          :orphan/of-job-id (:job-id ticket)
+                          :orphan/observation observation))
+          addressed (assoc body :dispatch/id (machine/ledger-digest [body]))]
+      {:ok true :request (submission/prepare-request addressed)})))
 
 (defn- transport-failure?
   "True when THIS failure's own error envelope is a transport fault.
@@ -453,6 +505,99 @@
               :submission/id (:submission/id submission)}]
     (assoc body :collection/id (machine/ledger-digest [body]))))
 
+(defn- orphan-recovery-failure!
+  [state finding persist-fn max-attempts]
+  (let [attempt (inc (or (:orphan/recovery-attempts state) 0))
+        next-state (-> state
+                       (assoc :orphan/recovery-attempts attempt
+                              :orphan/last-failure finding)
+                       (update :orphan/recovery-history (fnil conj []) finding))]
+    (if-not (:ok (persist-fn next-state))
+      {:ok false :error/code :live-job-orphan-recovery-persistence-failed
+       :state state}
+      (if (>= attempt max-attempts)
+        {:ok false :error/code :live-job-orphan-recovery-exhausted
+         :recovery/attempts attempt :finding finding :state next-state}
+        {:ok true :status :awaiting-orphan-recovery
+         :recovery/attempts attempt :finding finding :state next-state}))))
+
+(defn- recover-orphan!
+  [{:keys [state active-request announce-fn activate-fn persist-fn cancel-fn
+           ticket-register-fn orphan-recovery-request-fn
+           orphan-recovery-max-attempts]}]
+  (let [observation (:orphan/observation state)
+        old-ticket (:ticket state)
+        attempt (inc (or (:orphan/recovery-attempts state) 0))
+        request-fn (or orphan-recovery-request-fn orphan-recovery-request)
+        planned (request-fn active-request old-ticket observation attempt)
+        recovery-request (:request planned)
+        cancelled (when (and (:ok planned) (map? recovery-request)
+                             (fn? cancel-fn))
+                    (cancel-fn (:job-id old-ticket)))]
+    (cond
+      (not (and (:ok planned) (map? recovery-request)
+                (string? (:dispatch/id recovery-request))))
+      (orphan-recovery-failure!
+       state {:error/code :live-job-orphan-recovery-request-invalid
+              :finding planned}
+       persist-fn orphan-recovery-max-attempts)
+
+      (not (:ok cancelled))
+      (orphan-recovery-failure!
+       state {:error/code :live-job-orphan-wrapper-cancellation-failed
+              :finding cancelled}
+       persist-fn orphan-recovery-max-attempts)
+
+      :else
+      (let [announced (ticket recovery-request (announce-fn recovery-request))]
+        (if-not (:ok announced)
+          (orphan-recovery-failure!
+           state {:error/code :live-job-orphan-session-mint-failed
+                  :finding announced}
+           persist-fn orphan-recovery-max-attempts)
+          (let [next-state
+                (-> state
+                    (update :orphan/history (fnil conj [])
+                            {:observation observation :ticket old-ticket
+                             :cancelled cancelled})
+                    (dissoc :terminal-collection :orphan/observation
+                            :orphan/last-failure)
+                    (assoc :active-request recovery-request
+                           :ticket (:ticket announced)
+                           :activation/accepted? false
+                           :orphan/recovery-attempts attempt))]
+            (if-not (:ok (persist-fn next-state))
+              {:ok false :error/code :live-job-orphan-successor-persistence-failed
+               :state state}
+              (let [registered (if (fn? ticket-register-fn)
+                                 (ticket-register-fn recovery-request
+                                                     (:ticket announced))
+                                 {:ok true})
+                    activated (when (:ok registered)
+                                (activate-fn recovery-request
+                                             (:ticket announced)))]
+                (cond
+                  (not (:ok registered))
+                  (orphan-recovery-failure!
+                   next-state
+                   {:error/code :live-job-orphan-authority-registration-failed
+                    :finding registered}
+                   persist-fn orphan-recovery-max-attempts)
+                  (not (:ok activated))
+                  (orphan-recovery-failure!
+                   next-state {:error/code :live-job-orphan-activation-failed
+                               :finding activated}
+                   persist-fn orphan-recovery-max-attempts)
+                  :else
+                  (let [accepted (assoc next-state :activation/accepted? true)]
+                    (if (:ok (persist-fn accepted))
+                      {:ok true :status :awaiting-terminal :orphan/recovered? true
+                       :state accepted}
+                      {:ok false
+                       :error/code
+                       :live-job-orphan-activation-acceptance-persistence-failed
+                       :state next-state})))))))))))
+
 (defn drive!
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
@@ -460,8 +605,11 @@
            posthoc-fault-origin-fn
            ticket-register-fn terminal-submission-provider cancel-fn
            missing-observation-provider terminal-budget-config now-ms-fn
+           orphan-observation-provider orphan-recovery-request-fn
+           orphan-recovery-max-attempts
            provider-usage-limit-signatures provider-usage-limit-window-ms]
     :or {now-ms-fn #(System/currentTimeMillis)
+         orphan-recovery-max-attempts default-orphan-recovery-attempts
          provider-usage-limit-signatures []
          provider-usage-limit-window-ms default-provider-usage-limit-window-ms}}]
   (cond
@@ -470,6 +618,7 @@
                             terminal-validator receipt-provider])
               (valid-terminal-budget? terminal-budget-config)
               (pos-int? provider-usage-limit-window-ms)
+              (pos-int? orphan-recovery-max-attempts)
               (sequential? provider-usage-limit-signatures)))
     {:ok false :error/code :live-job-driver-input-invalid}
 
@@ -569,13 +718,30 @@
 
     :else
     (let [active-request (or (:active-request state) request)
+          ;; The controller-owned store is reconciliation authority. Read it
+          ;; before polling or classifying the externally owned wrapper.
+          submission-observation
+          (when (and (fn? terminal-submission-provider)
+                     (nil? (:terminal-collection state)))
+            (terminal-submission-provider active-request (:ticket state) nil))
+          submission-provider-error
+          (when (and (map? submission-observation)
+                     (false? (:ok submission-observation)))
+            submission-observation)
+          observed-submission
+          (if (and (map? submission-observation)
+                   (true? (:ok submission-observation))
+                   (contains? submission-observation :submission))
+            (:submission submission-observation)
+            submission-observation)
           job (job-fn (get-in state [:ticket :job-id]))
           terminal? (contains? terminal-states (:state job))
-          observed-submission
-          (delay
-            (when (and (fn? terminal-submission-provider)
-                       (nil? (:terminal-collection state)))
-              (terminal-submission-provider active-request (:ticket state) job)))
+          orphan-observation
+          (when (and (nil? observed-submission) (not terminal?))
+            (or (when (fn? orphan-observation-provider)
+                  (orphan-observation-provider active-request
+                                               (:ticket state) job))
+                (session-orphan-observation active-request job)))
           job-usage-limit (provider-usage-limit
                            {:report (:report job)
                             :output (:output job)
@@ -583,6 +749,36 @@
                             :error (:error job)}
                            provider-usage-limit-signatures)]
       (cond
+        submission-provider-error
+        {:ok false :error/code :live-job-submission-reconciliation-invalid
+         :finding submission-provider-error :state state}
+
+        ;; An authenticated completion outranks the wrapper's stale live state.
+        ;; Persist collection before any orphan or redispatch decision.
+        (and observed-submission (nil? (:terminal-collection state)))
+        (let [wrapper-reconciliation
+              (when (and (not terminal?) (fn? cancel-fn))
+                (cancel-fn (:job-id (:ticket state))))
+              configured (terminal-budget terminal-budget-config)
+              collection (terminal-collection-record
+                          active-request (:ticket state) job
+                          observed-submission 1)
+              next-state
+              (cond-> (assoc state :terminal-collection
+                             {:evidence collection
+                              :submission observed-submission
+                              :budget configured})
+                wrapper-reconciliation
+                (assoc :wrapper/reconciliation wrapper-reconciliation))]
+          (if (and wrapper-reconciliation (not (:ok wrapper-reconciliation)))
+            {:ok false :error/code :live-job-wrapper-reconciliation-failed
+             :finding wrapper-reconciliation :state state}
+            (if (:ok (persist-fn next-state))
+              {:ok true :status :terminal-collected :state next-state
+               :collection collection}
+              {:ok false :error/code :live-job-terminal-collection-persistence-failed
+               :state state})))
+
         (:substrate/wait state)
         (if (< (now-ms-fn) (get-in state [:substrate/wait :resume-at-ms]))
           (substrate-wait-result state)
@@ -606,9 +802,32 @@
         {:ok false :error/code :live-job-state-unclassified
          :finding {:job-id (:job-id job) :state (:state job)}}
 
+        (:orphan/observation state)
+        (recover-orphan!
+         {:state state :active-request active-request
+          :announce-fn announce-fn :activate-fn activate-fn
+          :persist-fn persist-fn :cancel-fn cancel-fn
+          :ticket-register-fn ticket-register-fn
+          :orphan-recovery-request-fn orphan-recovery-request-fn
+          :orphan-recovery-max-attempts orphan-recovery-max-attempts})
+
+        (and orphan-observation
+             (valid-orphan-observation? orphan-observation (:ticket state)))
+        (let [next-state (assoc state :orphan/observation orphan-observation)]
+          (if (:ok (persist-fn next-state))
+            {:ok true :status :orphaned :state next-state
+             :orphan/observation orphan-observation}
+            {:ok false :error/code :live-job-orphan-observation-persistence-failed
+             :state state}))
+
+        (and orphan-observation
+             (not (valid-orphan-observation? orphan-observation
+                                             (:ticket state))))
+        {:ok false :error/code :live-job-orphan-observation-invalid
+         :finding orphan-observation :state state}
+
         (and (not terminal?)
-             (nil? (:terminal-collection state))
-             (nil? @observed-submission))
+             (nil? (:terminal-collection state)))
         {:ok true :status :awaiting-terminal :state state}
 
         (and terminal?
@@ -622,7 +841,7 @@
         :else
         (if (and (fn? terminal-submission-provider)
                  (nil? (:terminal-collection state)))
-          (let [submission @observed-submission
+          (let [submission observed-submission
                 configured (terminal-budget terminal-budget-config)
                 collection (terminal-collection-record
                             active-request (:ticket state) job submission 1)

@@ -119,6 +119,22 @@
                              (assoc-in (payload :student-attempt-1)
                                        [:evidence :memory-use] false)))))))))
 
+(deftest authenticated-completion-refuses-a-different-controller-authority
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "apm-reconciliation"
+                         (make-array java.nio.file.attribute.FileAttribute 0)))
+        request (dissoc (authority :student-attempt-1) :job-id)
+        ticket {:job-id "job-student-attempt-1"}]
+    (binding [sut/*submission-root* root]
+      (is (:ok (sut/register! request ticket)))
+      (is (:ok (sut/submit! (:job-id ticket) "secret"
+                            (payload :student-attempt-1))))
+      (is (:ok (sut/authenticated-completion request ticket)))
+      (is (= :role-submission-authority-conflict
+             (:error/code
+              (sut/authenticated-completion
+               (assoc request :frame-id "forged-frame") ticket)))))))
+
 (deftest malformed-and-forged-payloads-fail-before-persistence
   (testing "field-level feedback names missing evidence"
     (let [result (sut/validate-payload (authority :solve)

@@ -422,6 +422,26 @@
 (defn submitted [job-id]
   (some-> (read-record job-id) :submission))
 
+(defn authenticated-completion
+  "Return a persisted completion only when its controller-owned authority still
+  matches REQUEST and TICKET.  This is the reconciliation read used before an
+  apparently live transport wrapper is considered for orphan recovery."
+  [request ticket]
+  (let [job-id (:job-id ticket)
+        record (read-record job-id)
+        expected (some-> (authority request ticket) (dissoc :submission/token))
+        observed (some-> record :authority (dissoc :submission/token))
+        completion (:submission record)]
+    (cond
+      (nil? completion) nil
+      (not= expected observed)
+      {:ok false :error/code :role-submission-authority-conflict
+       :expected expected :observed observed}
+      (not= observed (:authority completion))
+      {:ok false :error/code :role-submission-completion-authority-invalid
+       :expected observed :observed (:authority completion)}
+      :else {:ok true :submission completion})))
+
 (defn command
   "Exact client command placed into the activated role prompt."
   [request ticket]
