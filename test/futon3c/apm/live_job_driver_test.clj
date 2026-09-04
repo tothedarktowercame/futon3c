@@ -186,6 +186,7 @@
             :session-id session
             :evidence/source :canonical-codex-stderr}
            (:orphan/observation result)))
+    (is (zero? (get-in result [:state :orphan/recovery-attempts])))
     (is (nil? (get-in result [:state :terminal-collection])))
     (is (not-any? #{:validate :receipt :announce :activate} @calls))))
 
@@ -198,7 +199,8 @@
                      :evidence/source :canonical-codex-stderr}
         state {:state/type :live-job-dispatched :request request
                :active-request request :ticket {:job-id "job-1"}
-               :activation/accepted? true :orphan/observation observation}
+               :activation/accepted? true :orphan/observation observation
+               :orphan/recovery-attempts 0}
         seen-request (atom nil)
         result
         (sut/drive!
@@ -231,7 +233,8 @@
                     :state {:state/type :live-job-dispatched :request request
                             :active-request request :ticket {:job-id "job-1"}
                             :activation/accepted? true
-                            :orphan/observation observation}
+                            :orphan/observation observation
+                            :orphan/recovery-attempts 0}
                     :terminal-submission-provider (constantly nil)
                     :cancel-fn (fn [id] {:ok true :job-id id :state :cancelled})
                     :announce-fn (fn [_] (swap! attempts inc) {:ok false})
@@ -242,8 +245,61 @@
     (is (= :awaiting-orphan-recovery (:status first-result)))
     (is (= :live-job-orphan-recovery-exhausted (:error/code second-result)))
     (is (= 2 (:recovery/attempts second-result)))
+    (is (= :failed-attempt-at-ceiling
+           (:recovery/exhaustion-reason second-result)))
     (is (= 2 @attempts))
     (is (nil? (:terminal-collection @saved)))))
+
+(deftest orphan-recovery-ceiling-refuses-before-a-successful-mint
+  (let [calls (atom [])
+        persisted (atom [])
+        observation {:observation/type :job-owner-orphaned
+                     :finding :codex-session-not-found
+                     :job-id "job-1" :agent-id "f19-proctor"
+                     :session-id "01a0633d-05b7-7861-adca-320b6e9ff94e"
+                     :evidence/source :canonical-codex-stderr}
+        state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true :orphan/observation observation
+               :orphan/recovery-attempts 2}
+        result
+        (sut/drive!
+         (assoc (effects calls (atom {:job-id "job-1" :state :running}))
+                :state state :terminal-submission-provider (constantly nil)
+                :orphan-recovery-max-attempts 2
+                :orphan-recovery-request-fn
+                (fn [& _] (swap! calls conj :plan)
+                  {:ok true :request (assoc request :dispatch/id "new")})
+                :cancel-fn (fn [& _] (swap! calls conj :cancel) {:ok true})
+                :announce-fn (fn [& _] (swap! calls conj :announce)
+                               {:ok true :job-id "job-2"})
+                :ticket-register-fn
+                (fn [& _] (swap! calls conj :register) {:ok true})
+                :activate-fn (fn [& _] (swap! calls conj :activate) {:ok true})
+                :persist-fn (fn [value] (swap! persisted conj value) {:ok true})))]
+    (is (false? (:ok result)))
+    (is (= :live-job-orphan-recovery-exhausted (:error/code result)))
+    (is (= :attempt-ceiling-before-mint (:recovery/exhaustion-reason result)))
+    (is (= 2 (:recovery/attempts result)))
+    (is (= 2 (get-in result [:state :orphan/recovery-attempts])))
+    (is (empty? @persisted))
+    (is (not-any? #{:plan :cancel :announce :register :activate} @calls))))
+
+(deftest orphan-recovery-refuses-an-absent-durable-attempt-count
+  (let [state {:state/type :live-job-dispatched :request request
+               :active-request request :ticket {:job-id "job-1"}
+               :activation/accepted? true
+               :orphan/observation
+               {:observation/type :job-owner-orphaned}}
+        result (sut/drive!
+                (assoc (effects (atom [])
+                                (atom {:job-id "job-1" :state :running}))
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (false? (:ok result)))
+    (is (= :live-job-orphan-recovery-attempt-count-invalid
+           (:error/code result)))
+    (is (nil? (get-in result [:state :orphan/recovery-attempts])))))
 
 (deftest receipt-provider-hold-never-certifies-a-nil-receipt
   (let [calls (atom [])

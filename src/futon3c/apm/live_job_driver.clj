@@ -507,7 +507,7 @@
 
 (defn- orphan-recovery-failure!
   [state finding persist-fn max-attempts]
-  (let [attempt (inc (or (:orphan/recovery-attempts state) 0))
+  (let [attempt (inc (:orphan/recovery-attempts state))
         next-state (-> state
                        (assoc :orphan/recovery-attempts attempt
                               :orphan/last-failure finding)
@@ -517,17 +517,19 @@
        :state state}
       (if (>= attempt max-attempts)
         {:ok false :error/code :live-job-orphan-recovery-exhausted
-         :recovery/attempts attempt :finding finding :state next-state}
+         :recovery/attempts attempt
+         :recovery/exhaustion-reason :failed-attempt-at-ceiling
+         :finding finding :state next-state}
         {:ok true :status :awaiting-orphan-recovery
          :recovery/attempts attempt :finding finding :state next-state}))))
 
-(defn- recover-orphan!
+(defn- recover-orphan-attempt!
   [{:keys [state active-request announce-fn activate-fn persist-fn cancel-fn
            ticket-register-fn orphan-recovery-request-fn
            orphan-recovery-max-attempts]}]
   (let [observation (:orphan/observation state)
         old-ticket (:ticket state)
-        attempt (inc (or (:orphan/recovery-attempts state) 0))
+        attempt (inc (:orphan/recovery-attempts state))
         request-fn (or orphan-recovery-request-fn orphan-recovery-request)
         planned (request-fn active-request old-ticket observation attempt)
         recovery-request (:request planned)
@@ -597,6 +599,26 @@
                        :error/code
                        :live-job-orphan-activation-acceptance-persistence-failed
                        :state next-state})))))))))))
+
+(defn- recover-orphan!
+  [{:keys [state orphan-recovery-max-attempts] :as context}]
+  (let [attempts (:orphan/recovery-attempts state)]
+    (cond
+      (not (nat-int? attempts))
+      {:ok false
+       :error/code :live-job-orphan-recovery-attempt-count-invalid
+       :finding {:observed attempts :required :durable-natural-number}
+       :state state}
+
+      (>= attempts orphan-recovery-max-attempts)
+      {:ok false
+       :error/code :live-job-orphan-recovery-exhausted
+       :recovery/attempts attempts
+       :recovery/exhaustion-reason :attempt-ceiling-before-mint
+       :state state}
+
+      :else
+      (recover-orphan-attempt! context))))
 
 (defn drive!
   "Advance one job by at most one externally visible state transition."
@@ -813,7 +835,9 @@
 
         (and orphan-observation
              (valid-orphan-observation? orphan-observation (:ticket state)))
-        (let [next-state (assoc state :orphan/observation orphan-observation)]
+        (let [next-state (assoc state
+                                :orphan/observation orphan-observation
+                                :orphan/recovery-attempts 0)]
           (if (:ok (persist-fn next-state))
             {:ok true :status :orphaned :state next-state
              :orphan/observation orphan-observation}
