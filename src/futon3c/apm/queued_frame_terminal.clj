@@ -229,6 +229,7 @@
             structural? (and (not (:ok result))
                              (= :workspace-retirement-audit-invalid
                                 (:error/code result)))
+            retryable? (and (not (:ok result)) (not structural?))
             attempts (vec (or (:retry/attempts retry-state) []))
             attempt (inc (count attempts))
             observation (cond-> {:attempt attempt :observed-at-ms now-ms
@@ -242,7 +243,7 @@
             delay-ms (get retirement-audit-retry-delays-ms (dec attempt))
             [state returned]
             (cond
-              (and pending? delay-ms)
+              (and retryable? delay-ms)
               (let [not-before (+ now-ms delay-ms)
                     state {:retry/type :workspace-retirement-audit
                            :retry/status :pending
@@ -252,14 +253,21 @@
                         :error/code :workspace-retirement-audit-retry-waiting
                         :retry/kind :workspace-retirement-audit
                         :retry/not-before-ms not-before
-                        :pending (:pending result)
+                        :retry/last-error
+                        (select-keys result [:error/code :status :pending])
                         :retry/attempts attempts'}])
 
-              pending?
-              (let [failure {:ok false
-                             :error/code :workspace-retirement-audit-retry-exhausted
-                             :pending (:pending result)
-                             :retry/attempts attempts'}]
+              retryable?
+              (let [failure (cond->
+                              {:ok false
+                               :error/code
+                               (if pending?
+                                 :workspace-retirement-audit-retry-exhausted
+                                 :workspace-retirement-effect-retry-exhausted)
+                               :retry/last-error
+                               (select-keys result [:error/code :status :pending])
+                               :retry/attempts attempts'}
+                              (:pending result) (assoc :pending (:pending result)))]
                 [{:retry/type :workspace-retirement-audit
                   :retry/status :exhausted :retry/attempts attempts'
                   :retry/result failure}

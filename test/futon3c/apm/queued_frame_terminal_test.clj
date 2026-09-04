@@ -79,6 +79,25 @@
     (is (= 8 (count (:retry/attempts @persisted))))
     (is (= 8 @calls))))
 
+(deftest plain-retirement-failure-is-durable-and-bounded
+  (let [persisted (atom nil)
+        calls (atom 0)
+        ;; This is the shape retire! returns when retire-seats-fn returns
+        ;; {:ok false}; it must consume attempts rather than retry forever.
+        seat-failure {:ok false}
+        times (reductions + 0 sut/retirement-audit-retry-delays-ms)
+        results (mapv (fn [now]
+                        (run-at @persisted persisted now seat-failure calls))
+                      times)]
+    (is (= :awaiting-substrate (:status (first results))))
+    (is (false? (:ok (first results))))
+    (is (= :workspace-retirement-effect-retry-exhausted
+           (:error/code (last results))))
+    (is (= 8 (count (:retry/attempts @persisted))))
+    (is (every? #(= :failure (:classification %))
+                (:retry/attempts @persisted)))
+    (is (= 8 @calls))))
+
 (deftest structural-invalid-is-fatal-on-first-observation
   (let [persisted (atom nil)
         calls (atom 0)
