@@ -268,6 +268,7 @@
      :preparation-path (str (.resolve root "preparation.edn"))
      :frame-terminal-path (str (.resolve root "terminal/frame-terminal.edn"))
      :problem-bank-path (str (.resolve root "terminal/problem-bank.edn"))
+     :retirement-retry-path (str (.resolve root "terminal/retirement-retry.edn"))
      :retirement-receipt-directory (str (.resolve root "terminal/workspaces"))
      :contract-path contract-path
      :generated-contract-path generated-contract-path
@@ -589,6 +590,7 @@
            qualification-report-path manifest-fn ledger-fn contract
            role-cards workspace-root substrate-path agency-base http-fn
            open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
+           retirement-now-ms-fn
            persist-fn]
     :as config}]
   {:dispatch-statement-repair-fn
@@ -703,8 +705,15 @@
              (not (:ok terminal-persisted))
              {:ok false :error/code :queued-frame-terminal-persistence-failed}
              :else
-             (terminal/retire!
+             (let [retry-path (Path/of (:retirement-retry-path paths)
+                                       (make-array String 0))]
+               (terminal/retire-with-retry!
               {:frame frame :terminal-receipt terminal-receipt :leases leases
+             :retry-state (runtime/read-state retry-path)
+             :now-ms-fn retirement-now-ms-fn
+             :persist-retry-fn
+             (fn [state]
+               ((or persist-fn runtime/atomic-persist!) retry-path state))
              :pin-solve-fn pin-solve-fn
              :audit-fn retirement-audit-fn
              :retirement-status-fn
@@ -735,7 +744,7 @@
                                      (keys live-preparation/required-seat-types))
                              (keys live-preparation/required-seat-types)))]
                  {:ok (every? #(and (:ok %) (= 200 (:http/status %))) responses)
-                  :responses responses}))})))))})
+                  :responses responses}))}))))))})
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix

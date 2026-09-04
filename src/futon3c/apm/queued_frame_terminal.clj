@@ -10,6 +10,11 @@
 (def frame-results #{:closed :partial :void})
 (def learning-outcomes #{:observed :partially-observed :unobserved :skipped})
 
+(def retirement-audit-retry-delays-ms
+  "Bounded retry schedule for transient retirement preconditions.  The seven
+  waits total 585 seconds; an eighth pending observation exhausts the retry."
+  [15000 30000 60000 120000 120000 120000 120000])
+
 (defn addressed? [receipt id-key]
   (= (get receipt id-key)
      (machine/ledger-digest [(dissoc receipt id-key)])))
@@ -169,7 +174,14 @@
                                (audit-fn frame terminal-receipt role lease)
                                audit (:audit audit-result)]
                            (if-not (:ok audit-result)
-                             (reduced audit-result)
+                             (reduced
+                              (if (= :workspace-retirement-audit-pending
+                                     (:error/code audit-result))
+                                (assoc audit-result
+                                       :ok true
+                                       :status :workspace-retirement-audit-pending
+                                       :role role)
+                                audit-result))
                              (let [retired (retire-workspace-fn lease audit)]
                                (if (:ok retired)
                                  (assoc-in result [:workspace-receipts role]
@@ -177,7 +189,9 @@
                                  (reduced retired)))))))))
                  {:ok true :workspace-receipts {}}
                  (sort-by (comp name key) leases))]
-            (if-not (:ok retirements)
+            (if (or (not (:ok retirements))
+                    (= :workspace-retirement-audit-pending
+                       (:status retirements)))
               retirements
               (let [seats (retire-seats-fn frame terminal-receipt)]
                 (if-not (:ok seats)
@@ -185,3 +199,88 @@
                   {:ok true :bank-receipt bank
                    :workspace-receipts (:workspace-receipts retirements)
                    :seat-retirement seats})))))))))
+
+(defn retire-with-retry!
+  "Run one due retirement attempt and durably record its classification.
+
+  RETRY-STATE is the previously persisted value (or nil). PERSIST-RETRY-FN is
+  called before a pending, exhausted, resolved, or structural result is
+  returned. NOW-MS-FN is injectable so tests do not sleep. A structural audit
+  failure is recorded and replayed without another audit attempt."
+  [{:keys [retry-state persist-retry-fn now-ms-fn] :as opts}]
+  (let [now-ms ((or now-ms-fn #(System/currentTimeMillis)))
+        terminal-state? #{:resolved :exhausted :structural-invalid}
+        stored-status (:retry/status retry-state)]
+    (cond
+      (and (terminal-state? stored-status) (:retry/result retry-state))
+      (:retry/result retry-state)
+
+      (and (= :pending stored-status)
+           (< now-ms (or (:retry/not-before-ms retry-state) 0)))
+      {:ok true :status :awaiting-substrate
+       :retry/kind :workspace-retirement-audit
+       :retry/not-before-ms (:retry/not-before-ms retry-state)
+       :retry/attempts (:retry/attempts retry-state)}
+
+      :else
+      (let [result (retire! opts)
+            pending? (= :workspace-retirement-audit-pending (:status result))
+            structural? (and (not (:ok result))
+                             (= :workspace-retirement-audit-invalid
+                                (:error/code result)))
+            attempts (vec (or (:retry/attempts retry-state) []))
+            attempt (inc (count attempts))
+            observation (cond-> {:attempt attempt :observed-at-ms now-ms
+                                 :classification (cond pending? :pending
+                                                       structural? :structural-invalid
+                                                       (:ok result) :resolved
+                                                       :else :failure)}
+                          (:pending result) (assoc :pending (:pending result))
+                          (:role result) (assoc :role (:role result)))
+            attempts' (conj attempts observation)
+            delay-ms (get retirement-audit-retry-delays-ms (dec attempt))
+            [state returned]
+            (cond
+              (and pending? delay-ms)
+              (let [not-before (+ now-ms delay-ms)
+                    state {:retry/type :workspace-retirement-audit
+                           :retry/status :pending
+                           :retry/not-before-ms not-before
+                           :retry/attempts attempts'}]
+                [state {:ok true :status :awaiting-substrate
+                        :retry/kind :workspace-retirement-audit
+                        :retry/not-before-ms not-before
+                        :pending (:pending result)
+                        :retry/attempts attempts'}])
+
+              pending?
+              (let [failure {:ok false
+                             :error/code :workspace-retirement-audit-retry-exhausted
+                             :pending (:pending result)
+                             :retry/attempts attempts'}]
+                [{:retry/type :workspace-retirement-audit
+                  :retry/status :exhausted :retry/attempts attempts'
+                  :retry/result failure}
+                 failure])
+
+              structural?
+              [{:retry/type :workspace-retirement-audit
+                :retry/status :structural-invalid :retry/attempts attempts'
+                :retry/result result}
+               result]
+
+              (:ok result)
+              [{:retry/type :workspace-retirement-audit
+                :retry/status :resolved :retry/attempts attempts'
+                :retry/result result}
+               result]
+
+              :else [nil result])]
+        (if-not state
+          returned
+          (let [persisted (persist-retry-fn state)]
+            (if (:ok persisted)
+              returned
+              {:ok false
+               :error/code :workspace-retirement-audit-retry-persistence-failed
+               :persistence/result persisted})))))))
