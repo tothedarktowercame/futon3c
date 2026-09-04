@@ -152,6 +152,12 @@
                     (swap! calls conj :validate)
                     {:ok (= :done (:state job))}))
         collected (sut/drive! (assoc fx :state dispatched))
+        _ (reset! running-job {:job-id "job-1" :agent-id "f19-proctor"
+                               :state :cancelled
+                               :terminal-code :operator-cancelled
+                               :terminal-message
+                               (str "Cancelled by http-caller: typed-submission "
+                                    "wrapper reconciliation")})
         certified (sut/drive! (assoc fx :state (:state collected)))]
     (is (= :terminal-collected (:status collected)))
     (is (= :running (get-in collected [:collection :terminal-state])))

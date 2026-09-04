@@ -859,6 +859,7 @@
 
         (and terminal?
              (not= :done (:state job))
+             (nil? (:terminal-collection state))
              (not (and (expected-role-terminal-condition job)
                        (fn? terminal-submission-provider))))
         {:ok false :error/code :live-job-terminal-failure
