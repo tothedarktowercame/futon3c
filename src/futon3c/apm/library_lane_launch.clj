@@ -141,13 +141,30 @@
       true)
     (catch Throwable _ false)))
 
-(defn- read-persisted-config [f]
-  (or (try (edn/read-string (slurp f))
-           (catch Throwable _ nil))
-      ;; Compatibility for configs written before state paths were normalized
-      ;; to strings. Those contain the registered #xt/path tagged literal.
-      (try (binding [*read-eval* false] (read-string (slurp f)))
-           (catch Throwable _ nil))))
+(defn- read-persisted-config
+  "Typed read. A config that is PRESENT BUT UNREADABLE is not the same fact as
+  no config, and returning nil for both is why an unreadable file silently
+  became a relaunch: resume-config concluded there was nothing to resume, and
+  launch! then revalidated a worktree the solver had dirtied by design."
+  [f]
+  (let [attempt (fn [read-fn]
+                  (try {:ok true :config (read-fn (slurp f))}
+                       (catch Throwable t {:ok false :throwable t})))
+        edn-read (attempt edn/read-string)
+        ;; Compatibility for configs written before state paths were normalized
+        ;; to strings. Those contain the registered #xt/path tagged literal.
+        fallback (when-not (:ok edn-read)
+                   (attempt #(binding [*read-eval* false] (read-string %))))]
+    (cond
+      (:ok edn-read) edn-read
+      (:ok fallback) fallback
+      :else
+      {:ok false
+       :error/code :library-lane-launch-config-unreadable
+       :finding {:path (str f)
+                 :bytes (try (.length f) (catch Throwable _ nil))
+                 :edn-error (some-> (:throwable edn-read) .getMessage)
+                 :reader-error (some-> (:throwable fallback) .getMessage)}})))
 
 (defn- rehydrate-config [config outcome-fn]
   (when config
@@ -177,9 +194,15 @@
     (when (:ok frame)
       (let [f (config-path state-root (:frame-id frame))]
         (when (.isFile f)
-          (try
-            (rehydrate-config (read-persisted-config f) outcome-fn)
-            (catch Throwable _ nil)))))))
+          (let [read (read-persisted-config f)]
+            (if (:ok read)
+              (rehydrate-config (:config read) outcome-fn)
+              ;; The file exists and cannot be read. Relaunching here is a
+              ;; guaranteed refusal -- launch! revalidates a worktree the
+              ;; solver has dirtied -- so the fault is raised with its cause
+              ;; instead of being flattened into "nothing to resume".
+              (throw (ex-info "library lane launch config unreadable"
+                              (dissoc read :ok))))))))))
 
 (defn launch!
   "Prepare and return the exact configuration consumed by both lane adapters.

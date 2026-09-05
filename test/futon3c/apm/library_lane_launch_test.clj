@@ -212,3 +212,34 @@
         (is (= :status-json-missing
                (get-in result [:findings 0 :findings 0 :finding]))))
       (finally (delete-tree! (:root fixture))))))
+
+(deftest unreadable-launch-config-is-typed-not-silently-absent
+  ;; 11 of 17 lane frames carry a launch-config.edn written before d4d9cee0
+  ;; normalized state paths to strings; they contain
+  ;; #object[sun.nio.fs.UnixPath ...] and no reader can read them back. Before
+  ;; this, read-persisted-config returned nil for them -- the SAME value as a
+  ;; config that does not exist -- so resume-config concluded there was
+  ;; nothing to resume and launch! revalidated a worktree the solver had
+  ;; dirtied by design, which refuses. An unreadable file is a fault with a
+  ;; cause; a missing file is not.
+  (let [dir (java.nio.file.Files/createTempDirectory
+             "lane-config" (make-array java.nio.file.attribute.FileAttribute 0))
+        f (io/file (.toFile dir) "launch-config.edn")
+        read-cfg #'sut/read-persisted-config]
+    (try
+      (spit f (str "{:state-paths {:solve "
+                   "#object[sun.nio.fs.UnixPath 0x1 \"/tmp/solve.edn\"]}}"))
+      (let [r (read-cfg f)]
+        (is (false? (:ok r)))
+        (is (= :library-lane-launch-config-unreadable (:error/code r)))
+        (is (= (str f) (get-in r [:finding :path]))
+            "the fault must name the file it could not read")
+        (is (string? (get-in r [:finding :edn-error]))
+            "and why it could not read it"))
+      ;; a readable config still reads
+      (spit f (pr-str {:state-paths {:solve "/tmp/solve.edn"} :unit {:problem/id "p"}}))
+      (let [r (read-cfg f)]
+        (is (true? (:ok r)))
+        (is (= "/tmp/solve.edn" (get-in r [:config :state-paths :solve]))))
+      (finally
+        (doseq [x (reverse (file-seq (.toFile dir)))] (io/delete-file x true))))))
