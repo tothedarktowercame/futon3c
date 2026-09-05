@@ -904,4 +904,38 @@
    (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
         "result, Guide decision, promotion, memory publication, or proof verdict was "
         "invented. The unrelated untracked f87/f88/f89 pattern-library artifacts were "
-        "not authored or adopted by this decision.")} ]}
+        "not authored or adopted by this decision.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f90"
+   :problem/id "b98A02"
+   :decision/at "2026-09-05T15:31:57Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :verified-closed-submission-unreconciled-by-terminal-repair
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}. Student processing "
+        "first recorded :live-learning-terminal-invalid/:report-not-map despite an "
+        "authenticated closed submission reporting the final theorem fully proved and "
+        "Main.lean compiling with zero errors and zero sorries. Two authenticated "
+        "successor submissions then report clean recompilation; the last also records "
+        "an axiom audit. Every corresponding durable terminal collection nevertheless "
+        "remained :running and wrapper reconciliation cancelled the successor. This is "
+        "strong verified closure evidence, but the nil-finding repair request is an "
+        "apparatus failure and cannot substitute for a valid terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f90 as partial while preserving the closed submission, both successor "
+        "verifications, the axiom audit, and exact residual. Repair typed-report "
+        "normalization and reconcile authenticated completion before terminal repair; "
+        "reject nil repair findings before budget consumption. Independently revalidate "
+        "the stored head in a fresh frame before certification, Guide work, or promotion; "
+        "do not rewrite a historical running collection into a terminal.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
+        "result, Guide decision, promotion, memory publication, or proof verdict was "
+        "invented. The unrelated untracked f87/f88/f89/f90 pattern-library artifacts "
+        "were not authored or adopted by this decision.")} ]}
