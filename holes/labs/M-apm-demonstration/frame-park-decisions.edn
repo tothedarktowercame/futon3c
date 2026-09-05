@@ -1006,4 +1006,38 @@
    (str "The frame is not voided or forgotten. No completed proof, terminal receipt, "
         "certified Student result, Guide decision, promotion, memory publication, or "
         "verdict was invented. Unrelated pattern-library artifacts through f92 were "
-        "not authored or adopted by this decision.")} ]}
+        "not authored or adopted by this decision.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f93"
+   :problem/id "b98J04"
+   :decision/at "2026-09-05T18:19:17Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solver-session-loss-after-axiom-safe-statement-refutation
+   :decision/apparatus-repair-required? true
+   :decision/statement-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative residual is exactly :solver-session-mismatch with expected "
+        "session 01a0729a-eb0a-7740-b573-34c6c3088577 and actual nil. Before that "
+        "apparatus identity failure, nineteen durable Solver progress rounds compiled "
+        "the universe-polymorphic theorem, a Small-qualified frozen variant, and an "
+        "axiom-safe exact counterexample no_frozen_conclusion_for_largeDivisionRing. "
+        "The counterexample shows the frozen Type-0 coefficient-ring existential is "
+        "false for an arbitrary large division ring; the sole frozen sorry and sorryAx "
+        "therefore cannot be removed honestly without changing the statement. The "
+        "session mismatch is real, but redispatching the same false target is not a "
+        "valid repair.")
+   :decision/recommended-route
+   (str "Advance f93 as partial while preserving every Solver checkpoint, final head, "
+        "counterexample, axiom audits, and exact session-mismatch residual. Repair "
+        "solver continuation so a missing prior session becomes a typed orphan/recovery "
+        "event rather than an unowned nil identity. Separately submit the frozen theorem "
+        "for statement review: make D universe-polymorphic or add the necessary Small "
+        "hypothesis, then use a fresh frame. Do not continue or certify the false target.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No proof of the false frozen statement, "
+        "terminal receipt, Student phase, Guide decision, promotion, memory publication, "
+        "or verdict was invented; the refutation and residual remain authoritative.")} ]}
