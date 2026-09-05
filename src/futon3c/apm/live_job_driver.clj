@@ -16,7 +16,13 @@
 (def default-apparatus-repair-attempts 2)
 (def default-orphan-recovery-attempts 2)
 (def default-transport-retry-attempts 3)
-(def default-transport-retry-delay-ms (* 10 60 1000))
+;; 60s, not 10 minutes. The Lean acceptance predicate
+;; progressObservationValid requires elapsedMs <= 300000 for an enabled
+;; coordinator; a 10-minute wait makes every progress observation in the
+;; frame invalid, so the frame can never produce an accepted trace and can
+;; never close. Three attempts at 60s stay inside that budget cumulatively.
+;; The announce call is to localhost anyway.
+(def default-transport-retry-delay-ms (* 60 1000))
 
 (def ^:private codex-session-loss-pattern
   #"(?m)^\d{4}-\d{2}-\d{2}T\S+\s+ERROR\s+codex_core::session:\s+.*\bthread\s+([0-9a-f-]{36})\s+not found\s*$")
