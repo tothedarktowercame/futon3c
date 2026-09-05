@@ -18,7 +18,8 @@
      GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
      POST /api/alpha/invoke/jobs/:id/ack — acknowledge an inbox delivery
-     POST /api/alpha/invoke/jobs/:id/cancel — terminate a job by explicit request
+     POST /api/alpha/invoke/jobs/:id/cancel — end THAT job by explicit request
+                     (job grain: never interrupts a different job of the agent)
      GET  /api/alpha/agency/queue — operator view of the per-agent turn queues
      POST /api/alpha/agency/queue/hold — pause a queue after the turn in flight
      POST /api/alpha/agency/queue/release — lift a hold, resume the backlog
@@ -1482,6 +1483,34 @@
                               (= "running" (some-> job :state str)))
                      job))))
          first)))
+
+(def ^:private process-owning-job-states
+  "Job states whose turn owns the agent's invoke subprocess tree. `queued` has
+   started no process and `delivered` is an inbox drop, so neither authorises a
+   process-tree kill."
+  #{"running" "overrun"})
+
+(defn- executing-invoke-job-ids-for-agent
+  "Job-ids that own AGENT-ID's invoke subprocess tree right now, newest first.
+
+   The cancel path needs this to stay at JOB grain. futon3c.dev's interrupt
+   control is registered per agent, so an interrupt aimed at a queued job used
+   to destroy whichever process tree the agent happened to be running (F8
+   slice-7 incident, 2026-09-05: a cancel of a redundant queued job killed the
+   owner's running continuation mid-turn)."
+  [agent-id]
+  (ensure-invoke-jobs-ledger!)
+  (let [aid (canonical-job-agent-id agent-id)
+        ledger @!invoke-jobs-ledger]
+    (->> (get ledger :job-order [])
+         reverse
+         (keep (fn [jid]
+                 (let [job (get-in ledger [:jobs jid])]
+                   (when (and (= aid (canonical-job-agent-id (:agent-id job)))
+                              (contains? process-owning-job-states
+                                         (some-> job :state str)))
+                     (str (:job-id job))))))
+         vec)))
 
 (defn- mark-invoke-job-running!
   [job-id]
@@ -4316,9 +4345,11 @@
        ;; Guarantee: every terminal outcome resets agent status.
        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
 
-(defn- run-invoke-job!
+(defn- run-invoke-job-body!
   "Execute a queued invoke job to terminal state.
-   Used by async bell worker and can be reused by other async surfaces."
+   Used by async bell worker and can be reused by other async surfaces.
+   Call run-invoke-job! rather than this: the wrapper refuses jobs that already
+   reached a terminal state while they sat in the queue."
   [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
            model reasoning-effort]}]
   (let [ev-opts (when mission-id [:mission-id mission-id])]
@@ -4411,6 +4442,29 @@
        ;; is killed or the invoke-fn blocks past process boundaries, mark-idle!
        ;; may never run. This finally ensures no terminal path leaks :invoking.
        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
+
+(defn- run-invoke-job!
+  "Run JOB-ID unless it already ended while queued.
+
+   POST /api/alpha/invoke/jobs/:id/cancel finalizes the ledger row immediately,
+   but a queued job also sits in its agent's turn-queue, and the drainer used to
+   reach it later and mark it running again — resurrecting a job the operator
+   had stopped and putting the seat back to work under a `cancelled` row. The
+   state read here is the same single-finalizer ledger the cancel writes."
+  [{:keys [job-id agent-id] :as opts}]
+  (let [state (some-> (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]) :state str)]
+    (if (terminal-invoke-state? state)
+      (do
+        (unregister-job-worker! job-id)
+        (println (str "[invoke] skipping " job-id " for " agent-id
+                      ": already " state " before execution began"))
+        {:ok false
+         :job-id job-id
+         :error "invoke-job-already-terminal"
+         :state state
+         :message (str "Job " job-id " was already " state
+                       " when the queue reached it; not run.")})
+      (run-invoke-job-body! opts))))
 
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
@@ -5818,13 +5872,19 @@
       {:ok false :error "interrupt-error" :message (.getMessage t)})))
 
 (defn- handle-cancel-invoke-job
-  "POST /api/alpha/invoke/jobs/:id/cancel — end a job by explicit request.
+  "POST /api/alpha/invoke/jobs/:id/cancel — end THAT job by explicit request.
 
    This is the intended way to stop a long-running turn now that the wall-clock
    ceiling is opt-in (see job-ceiling-ms). Order matters: take the terminal
    transition FIRST so this cancellation wins the single-finalizer race, then
    kill the process tree and interrupt the supervising worker. Finalizing after
-   the kill would let the worker's own error path record 'failed' instead."
+   the kill would let the worker's own error path record 'failed' instead.
+
+   The kill is at JOB grain: the process tree is destroyed only when the job
+   named in the URL is the one the agent is executing (see
+   executing-invoke-job-ids-for-agent). Cancelling a queued job therefore ends
+   that job and leaves the agent's running turn alone — the F8 slice-7 incident
+   (2026-09-05) is the case this refuses."
   [job-id request]
   (let [payload (or (parse-json-map (read-body request)) {})
         caller (or (some-> (or (:caller payload) (get payload "caller")) str str/trim not-empty)
@@ -5845,6 +5905,16 @@
 
       :else
       (let [agent-id (str (:agent-id job))
+            ;; JOB grain, not agent grain. The ledger transition and the worker
+            ;; interrupt below are already per-job; the process-tree kill was
+            ;; not, and futon3c.dev/interrupt-agent-invoke! has no job to check
+            ;; against because its control is registered per agent. So decide
+            ;; here: the tree may only be destroyed when the job named in the
+            ;; URL is the one — the only one — the agent is executing.
+            executing (executing-invoke-job-ids-for-agent agent-id)
+            other-executing (vec (remove #(= (str job-id) %) executing))
+            owns-process? (and (contains? (set executing) (str job-id))
+                               (empty? other-executing))
             message (str "Cancelled by " caller
                          (when reason (str ": " reason)))
             finalized? (finalize-invoke-job!
@@ -5853,15 +5923,41 @@
                          :error {:error/code :cancelled
                                  :error/message message}}
                         (:session-id job))
-            interrupt (interrupt-agent-process-tree! agent-id)
+            interrupt (cond
+                        owns-process?
+                        (interrupt-agent-process-tree! agent-id)
+
+                        (empty? executing)
+                        {:ok false
+                         :agent-id agent-id
+                         :action :no-executing-job
+                         :message (str agent-id " is executing no job; "
+                                       job-id " was ended in the ledger without "
+                                       "a process interrupt.")}
+
+                        :else
+                        {:ok false
+                         :agent-id agent-id
+                         :action :refused-not-the-executing-job
+                         :executing-job-ids other-executing
+                         :message (str "Refusing to interrupt " agent-id ": it is "
+                                       "executing " (str/join ", " other-executing)
+                                       ", not " job-id ". The named job was ended "
+                                       "in the ledger; no process was killed.")})
             worker-interrupted? (boolean (interrupt-job-worker! job-id))]
-        (try (reg/mark-agent-idle! agent-id) (catch Throwable _))
+        ;; Only free the seat when nothing else of its own is still running —
+        ;; marking it idle mid-turn is how a cancelled duplicate used to hand
+        ;; the agent's live turn away to the next queued dispatch.
+        (when (empty? other-executing)
+          (try (reg/mark-agent-idle! agent-id) (catch Throwable _)))
         (json-response 200 {:ok true
                             :job-id (str job-id)
                             :agent-id agent-id
                             :state "cancelled"
                             :finalized finalized?
                             :worker-interrupted worker-interrupted?
+                            :process-interrupted owns-process?
+                            :preserved-job-ids other-executing
                             :process-interrupt interrupt})))))
 
 (defn- relay-invoke-delivery-over-ws!

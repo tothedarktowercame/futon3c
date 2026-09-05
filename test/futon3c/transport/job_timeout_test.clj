@@ -1,6 +1,7 @@
 (ns futon3c.transport.job-timeout-test
   "Tests for honest job timeout enforcement: cap -> :overrun, ceiling -> :timeout."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [cheshire.core :as json]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.transport.http :as http]
             [futon3c.agency.registry :as reg]
             [futon3c.social.persist :as persist]
@@ -125,6 +126,11 @@
   [job-id event-type]
   (->> (get-in @@#'http/!invoke-jobs-ledger [:jobs job-id :events])
        (filter #(= event-type (:type %)))))
+
+(defn- response-body
+  "Parse a handler's JSON body back into data."
+  [response]
+  (json/parse-string (:body response) true))
 
 (defn- agent-status
   [agent-id]
@@ -375,6 +381,59 @@
     (setup-running-job! "job-cancel-3" "agent-cancel-3" 1000)
     (is (= 200 (:status (cancel-job! "job-cancel-3" nil))))
     (is (= "cancelled" (job-state "job-cancel-3")))))
+
+(deftest cancel-of-a-queued-job-spares-the-running-job
+  (testing "job grain: cancelling a queued duplicate leaves the live turn alone"
+    ;; The F8 slice-7 incident, 2026-09-05: the interrupt was taken at AGENT
+    ;; grain, so a cancel aimed at a redundant queued job destroyed the process
+    ;; tree of the turn the agent was actually running (EPIC-run-era.md:923).
+    (register-mock-agent! "agent-cancel-grain")
+    (reg/update-agent! "agent-cancel-grain" :agent/status :invoking)
+    (setup-running-job! "job-live" "agent-cancel-grain" 1000)
+    (create-job! "job-queued" "agent-cancel-grain" "caller-1")
+    (let [interrupts (atom [])]
+      (with-redefs [http/interrupt-agent-process-tree!
+                    (fn [agent-id] (swap! interrupts conj agent-id) {:ok true})]
+        (let [response (cancel-job! "job-queued" "{\"caller\":\"seat\"}")
+              body (response-body response)]
+          (is (= 200 (:status response)))
+          (is (= "cancelled" (job-state "job-queued")))
+          (is (= "running" (job-state "job-live"))
+              "the agent's running job survives the cancel of a queued one")
+          (is (= [] @interrupts)
+              "no process tree is destroyed for a job that owns no process")
+          (is (false? (:process-interrupted body)))
+          (is (= ["job-live"] (:preserved-job-ids body)))
+          (is (= "refused-not-the-executing-job"
+                 (:action (:process-interrupt body))))
+          (is (= :invoking (agent-status "agent-cancel-grain"))
+              "the seat is not freed while its own turn is still running"))))))
+
+(deftest cancel-of-the-running-job-still-kills-its-process-tree
+  (testing "the named job IS the executing one, so the kill is authorised"
+    (register-mock-agent! "agent-cancel-grain-2")
+    (reg/update-agent! "agent-cancel-grain-2" :agent/status :invoking)
+    (setup-running-job! "job-live-2" "agent-cancel-grain-2" 1000)
+    (let [interrupts (atom [])]
+      (with-redefs [http/interrupt-agent-process-tree!
+                    (fn [agent-id] (swap! interrupts conj agent-id) {:ok true})]
+        (let [response (cancel-job! "job-live-2" nil)]
+          (is (= 200 (:status response)))
+          (is (= ["agent-cancel-grain-2"] @interrupts))
+          (is (true? (:process-interrupted (response-body response))))
+          (is (= [] (:preserved-job-ids (response-body response))))
+          (is (= :idle (agent-status "agent-cancel-grain-2"))))))))
+
+(deftest a-cancelled-queued-job-is-not-run-when-the-queue-reaches-it
+  (testing "the drainer must not resurrect a job the operator already ended"
+    (register-mock-agent! "agent-cancel-resurrect")
+    (create-job! "job-cancelled-early" "agent-cancel-resurrect" "caller-1")
+    (cancel-job! "job-cancelled-early" nil)
+    (let [result (run-job! "job-cancelled-early" "agent-cancel-resurrect" 1000)]
+      (is (false? (:ok result)))
+      (is (= "invoke-job-already-terminal" (:error result)))
+      (is (= "cancelled" (job-state "job-cancelled-early"))
+          "the cancelled state is not overwritten by a late run"))))
 
 (deftest cancel-is-404-and-409-on-bad-targets
   (testing "unknown job -> 404; already-terminal job -> 409"
