@@ -490,6 +490,42 @@
                               {:requirement/id id :actual pass? :pass? pass?})
                             evidence)}}]))
 
+(defn- persist-close-proof-standard!
+  [action frame-root]
+  (let [loaded (ledger/read-ledger (control-path ledger-path))
+        certificates (keep #(get-in % [:event/body :certificate])
+                           (:events loaded))
+        solve (some #(when (= :frame-solve (:receipt/type %)) %) certificates)
+        verify (some #(when (= :frame-verify (:receipt/type %)) %) certificates)
+        head (:receipt/final-head solve)
+        problem-id (:problem-id action)
+        unit (frame-unit (:manifest (inputs)) (:frame-id action))
+        repo (get-in unit [:problem :repository])
+        solved? (and (= 0 (get-in solve [:receipt/lean :sorry-warnings]))
+                     (true? (:receipt/mathematical-sound? verify)))
+        audit (if solved?
+                (bank-audit/proof-standard-observation!
+                 {:problem-id problem-id :head head :repo repo})
+                {:ok true
+                 :trace/proof-standard-observation
+                 {:artifact-id (or head "unsolved")
+                  :declaration-name (str "apm_" (str/lower-case problem-id))
+                  :solved-claim? false
+                  :axiom-names []
+                  :allowed-axiom-names bank-audit/allowed-proof-axioms}})]
+    (if-not (:trace/proof-standard-observation audit)
+      audit
+      (let [observation
+            (campaign-trace/validate-authoritative-observation
+             :proof-standard (:trace/proof-standard-observation audit))
+            document {:trace/proof-standard-observation observation}
+            path (.resolve frame-root "terminal/proof-standard.edn")
+            persisted (live-preflight-runtime/atomic-persist! path document)]
+        (if (:ok persisted)
+          (assoc audit :document document)
+          {:ok false :error/code :apm-proof-standard-evidence-persistence-failed
+           :finding persisted})))))
+
 (defn- certified-handler [kind action]
   (let [phase (or (:phase action) kind)
         state-path (state-path-for (:frame-id action) phase)
@@ -508,6 +544,7 @@
                            (or (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
                                "/tmp/futon3c-invoke-jobs.edn")
                            (make-array String 0))
+              proof-standard (persist-close-proof-standard! action frame-root)
               paths (concat
                      (when (java.nio.file.Files/isDirectory
                             live-root (make-array java.nio.file.LinkOption 0))
@@ -531,20 +568,28 @@
                              value (:frame-id action) registered-job-ids)
                             value))))
                     paths)
+              documents (cond-> (vec documents)
+                          (:document proof-standard)
+                          (conj (:document proof-standard)))
               prepared
-              (campaign-trace/persist-clean-successor-observation!
-               {:durable-documents documents
-                :disposition-path (.resolve frame-root
-                                            "terminal/successor-disposition.edn")})
+              (when (:document proof-standard)
+                (campaign-trace/persist-clean-successor-observation!
+                 {:durable-documents documents
+                  :disposition-path (.resolve frame-root
+                                              "terminal/successor-disposition.edn")}))
               issued
-              (campaign-trace/issue-combined-trace-receipt!
-               {:certificate receipt
-                :durable-documents (:durable-documents prepared)
-                :trace-path (.resolve frame-root
-                                      "terminal/combined-operational-trace.json")})]
-          (if (:ok issued)
+              (when (:document proof-standard)
+                (campaign-trace/issue-combined-trace-receipt!
+                 {:certificate receipt
+                  :durable-documents (:durable-documents prepared)
+                  :trace-path (.resolve frame-root
+                                        "terminal/combined-operational-trace.json")}))]
+          (cond
+            (not (:ok proof-standard))
+            (assoc proof-standard :trace/checker-result issued)
+            (:ok issued)
             {:ok true :certificate (:certificate issued)}
-            issued))
+            :else issued))
         {:ok true :certificate receipt})
       {:ok false :error/code :countdown-certified-phase-unavailable
        :finding {:kind kind :state/type (:state/type state)}})))

@@ -727,6 +727,44 @@
     (is (:ok result))
     (is (= receipt (:certificate result)))))
 
+(deftest solved-close-emits-nonstandard-axioms-and-refuses-closure
+  (let [receipt {:receipt/frame-id "f22" :receipt/problem-id "p22"
+                 :receipt/id "close-receipt"}
+        issued? (atom false)
+        result
+        (with-redefs [runtime/read-state
+                      (constantly {:state/type :live-job-certified
+                                   :receipt receipt})
+                      sut/persist-close-proof-standard!
+                      (fn [_ _]
+                        {:ok false
+                         :error/code :apm-proof-standard-axioms-invalid
+                         :axioms ["p22._native.native_decide.ax_1_2"]
+                         :allowed-axioms
+                         ["propext" "Classical.choice" "Quot.sound"]
+                         :document
+                         {:trace/proof-standard-observation
+                          {:artifact-id "head"
+                           :declaration-name "p22"
+                           :solved-claim? true
+                           :axiom-names ["p22._native.native_decide.ax_1_2"]
+                           :allowed-axiom-names
+                           ["propext" "Classical.choice" "Quot.sound"]}}})
+                      campaign-trace/persist-clean-successor-observation!
+                      (fn [{:keys [durable-documents]}]
+                        {:ok true :durable-documents durable-documents})
+                      campaign-trace/issue-combined-trace-receipt!
+                      (fn [_]
+                        (reset! issued? true)
+                        {:ok false :error/code :combined-trace-checker-rejected})]
+          (#'sut/certified-handler
+           :close-frame {:frame-id "f22" :problem-id "p22"}))]
+    (is (= :apm-proof-standard-axioms-invalid (:error/code result)))
+    (is (= ["p22._native.native_decide.ax_1_2"] (:axioms result)))
+    (is @issued?)
+    (is (= :combined-trace-checker-rejected
+           (get-in result [:trace/checker-result :error/code])))))
+
 (deftest live-projection-refreshes-the-certificate-cache-first
   (let [calls (atom [])]
     (with-redefs [runner/checkpoint!

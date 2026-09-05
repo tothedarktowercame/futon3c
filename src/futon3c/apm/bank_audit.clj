@@ -8,7 +8,7 @@
            (java.security MessageDigest)))
 
 (def ^:private proof-path-template "problems/%s/lean/Main.lean")
-(def ^:private clean-axioms ["propext" "Classical.choice" "Quot.sound"])
+(def allowed-proof-axioms ["propext" "Classical.choice" "Quot.sound"])
 
 (defn- default-read-at-rev
   [rev path]
@@ -75,13 +75,67 @@
   (shell/sh "lake" "env" "lean" (.getAbsolutePath ^java.io.File proof-file)
             :dir repo))
 
-(defn- axiom-list
+(defn axiom-list
   [{:keys [out err]}]
   (when-let [[_ axioms]
              (re-find #"(?s)depends on axioms:\s*\[([^]]*)\]"
                       (str out "\n" err))]
     (->> (str/split axioms #",")
          (mapv str/trim))))
+
+(defn proof-standard-for-source!
+  "Elaborate SOURCE and return its typed proof-standard observation. ARTIFACT-ID
+  identifies the immutable source revision or captured source object."
+  [{:keys [problem-id artifact-id repo source run-lean]
+    :or {run-lean default-run-lean}}]
+  (let [theorem (or (last (map second
+                               (re-seq #"(?m)^(?:theorem|lemma)\s+(apm_[A-Za-z0-9_']+)"
+                                       (str source))))
+                    (str "apm_" (str/lower-case problem-id)))
+            temp-path (java.nio.file.Files/createTempDirectory
+                       "apm-proof-standard-"
+                       (make-array java.nio.file.attribute.FileAttribute 0))
+            temp-dir (.toFile temp-path)
+            proof-file (io/file temp-dir "Main.lean")]
+    (try
+      (spit proof-file (str source "\n#print axioms " theorem "\n"))
+      (let [elaboration (run-lean repo proof-file)
+            axioms (axiom-list elaboration)
+            observation {:artifact-id artifact-id
+                         :declaration-name theorem
+                         :solved-claim? true
+                         :axiom-names axioms
+                         :allowed-axiom-names allowed-proof-axioms}]
+        (cond
+          (not (zero? (:exit elaboration)))
+          {:ok false :error/code :apm-proof-standard-elaboration-failed
+           :problem/id problem-id :artifact-id artifact-id
+           :exit (:exit elaboration) :stderr (:err elaboration)}
+          (not= allowed-proof-axioms axioms)
+          {:ok false :error/code :apm-proof-standard-axioms-invalid
+           :problem/id problem-id :artifact-id artifact-id :declaration theorem
+           :axioms axioms :allowed-axioms allowed-proof-axioms
+           :trace/proof-standard-observation observation}
+          :else
+          {:ok true :trace/proof-standard-observation observation}))
+      (finally
+        (doseq [file (reverse (file-seq temp-dir))]
+          (io/delete-file file true))))))
+
+(defn proof-standard-observation!
+  "Read the target declaration at HEAD, then elaborate it into durable trace
+  evidence. A nonstandard axiom set is a typed proof-standard failure, not a
+  compilation failure. Effects are injectable for focused tests."
+  [{:keys [problem-id head repo run-lean git]
+    :or {run-lean default-run-lean git default-git}}]
+  (let [proof-path (format proof-path-template problem-id)
+        shown (git repo "show" (str head ":" proof-path))]
+    (if-not (zero? (:exit shown))
+      {:ok false :error/code :apm-proof-standard-source-unresolvable
+       :problem/id problem-id :head head}
+      (proof-standard-for-source!
+       {:problem-id problem-id :artifact-id head :repo repo :source (:out shown)
+        :run-lean run-lean}))))
 
 (defn- safe-ref-component?
   [value]
@@ -144,7 +198,7 @@
                     (some #{"sorryAx"} axioms)
                     {:status :refused :reason :sorry-ax :axioms axioms}
 
-                    (not= clean-axioms axioms)
+                    (not= allowed-proof-axioms axioms)
                     {:status :refused :reason :unexpected-axioms :axioms axioms}
 
                     :else

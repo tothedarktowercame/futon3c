@@ -93,7 +93,13 @@
                 :delivery-status "delivered"
                 :inbox-file-created? true
                 :registered-push-performed? false
-                :polling-available? true}]}
+                :polling-available? true}]
+    :proof-standard [{:artifact-id "624e81d7"
+                      :declaration-name "apm_a99j05"
+                      :solved-claim? true
+                      :axiom-names ["propext" "Classical.choice" "Quot.sound"]
+                      :allowed-axiom-names
+                      ["propext" "Classical.choice" "Quot.sound"]}]}
    :analyst-wakes
    [{:frame-id "f1" :terminal true :ordinal 1 :series-input-version 1
      :append-only true :proposal-type nil :proposal-digest nil
@@ -136,10 +142,14 @@
                   [{:jobs {"job-1"
                            {:trace/delivery-observation
                             (first (get-in valid [:operational-observations
-                                                 :delivery]))}}}]})]
+                                                 :delivery]))}}}]
+                  :proof-standard-states
+                  [{:trace/proof-standard-observation
+                    (first (get-in valid [:operational-observations
+                                         :proof-standard]))}]})]
     (is (= (:operational-observations valid) sources))
     (is (= #{"progressObservations" "successorObservations"
-             "deliveryObservations"}
+             "deliveryObservations" "proofStandardObservations"}
            (set (keys (sut/project-operational-observations
                        (sut/require-complete-operational-sources sources))))))))
 
@@ -157,7 +167,7 @@
                   "f52" #{"registered-untagged"})
         sources (sut/operational-sources-from-durable
                  {:watchdog-states [] :successor-states []
-                  :delivery-ledgers [selected]})]
+                  :delivery-ledgers [selected] :proof-standard-states []})]
     (is (= #{"registered-untagged" "transport-tagged"}
            (set (keys (:jobs selected)))))
     (is (= 2 (count (:delivery sources))))))
@@ -217,7 +227,8 @@
           sources (sut/operational-sources-from-durable
                    {:watchdog-states []
                     :successor-states [successor-state]
-                    :delivery-ledgers []})]
+                    :delivery-ledgers []
+                    :proof-standard-states []})]
       (is (= :campaign-trace-observation-absent
              (:error/code
               (ex-data
@@ -312,7 +323,7 @@
             (slurp "test/resources/apm-traces/valid.json"))
            (-> (apply dissoc (json/parse-string (slurp a))
                       ["progressObservations" "successorObservations"
-                       "deliveryObservations"])
+                       "deliveryObservations" "proofStandardObservations"])
                (assoc "schemaVersion" 1))))))
 
 (deftest early-statement-refuted-trace-emits-only-executed-prefix
@@ -331,7 +342,7 @@
             (slurp "test/resources/apm-traces/early-statement-refuted.json"))
            (-> (apply dissoc (json/parse-string (slurp output))
                       ["progressObservations" "successorObservations"
-                       "deliveryObservations"])
+                       "deliveryObservations" "proofStandardObservations"])
                (assoc "schemaVersion" 1))))))
 
 (deftest durable-state-projection-does-not-invent-job-success

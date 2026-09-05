@@ -159,3 +159,40 @@
                  (bank-audit/verify-and-pin!
                   (verification-input repo status fail-if-called fail-if-called))))
           (is (empty? @calls)))))))
+
+(deftest proof-standard-observation-names-nonstandard-native-axiom
+  (with-temp-dir
+    (fn [repo]
+      (let [git (fn [_repo & _]
+                  {:exit 0
+                   :out "theorem apm_b00j02 : True := by trivial"
+                   :err ""})
+            clean (bank-audit/proof-standard-observation!
+                   {:problem-id "a99J05" :head "624e81d7" :repo repo
+                    :git git
+                    :run-lean
+                    (fn [_ _]
+                      {:exit 0
+                       :out "'apm_a99j05' depends on axioms: [propext, Classical.choice, Quot.sound]"
+                       :err ""})})
+            rejected (bank-audit/proof-standard-observation!
+                      {:problem-id "b00J02" :head "f60-head" :repo repo
+                       :git git
+                       :run-lean
+                       (fn [_ _]
+                         {:exit 0
+                          :out (str "'apm_b00j02' depends on axioms: "
+                                    "[propext, Classical.choice, Quot.sound, "
+                                    "apm_b00j02._native.native_decide.ax_1_2]")
+                          :err ""})})]
+        (is (:ok clean))
+        (is (= bank-audit/allowed-proof-axioms
+               (get-in clean [:trace/proof-standard-observation :axiom-names])))
+        (is (= :apm-proof-standard-axioms-invalid (:error/code rejected)))
+        (is (= ["propext" "Classical.choice" "Quot.sound"
+                "apm_b00j02._native.native_decide.ax_1_2"]
+               (get-in rejected
+                       [:trace/proof-standard-observation :axiom-names])))
+        (is (= ["propext" "Classical.choice" "Quot.sound"
+                "apm_b00j02._native.native_decide.ax_1_2"]
+               (:axioms rejected)))))))

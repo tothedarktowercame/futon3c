@@ -83,7 +83,8 @@
   "Collect observation records already embedded by the deciding durable
   writers. This function never derives a verdict or reconstructs a missing
   observation from adjacent fields."
-  [{:keys [watchdog-states successor-states delivery-ledgers]}]
+  [{:keys [watchdog-states successor-states delivery-ledgers
+           proof-standard-states]}]
   {:progress (into [] (keep :watchdog/trace-observation) watchdog-states)
    :successor (into []
                     (comp (mapcat #(or (:superseded-terminals %) []))
@@ -92,7 +93,9 @@
    :delivery (into []
                    (comp (mapcat #(vals (or (:jobs %) {})))
                          (keep :trace/delivery-observation))
-                   delivery-ledgers)})
+                   delivery-ledgers)
+   :proof-standard
+   (into [] (keep :trace/proof-standard-observation) proof-standard-states)})
 
 (defn delivery-ledger-for-frame
   "Select frame delivery jobs using immutable typed-submission authority.
