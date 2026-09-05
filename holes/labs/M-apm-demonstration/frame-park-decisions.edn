@@ -732,4 +732,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No reviewer identity, candidate "
         "verdict, memory publication, union snapshot, or promotion certificate "
-        "was invented; the preserved receipt and residual remain authoritative.")} ]}
+        "was invented; the preserved receipt and residual remain authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f85"
+   :problem/id "b97A03"
+   :decision/at "2026-09-05T09:35:00Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :launch-qualification-apparatus-failure
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative fault park preserves exactly "
+        "{:ok false, :error/code :live-job-announce-failed}; it carries no "
+        "last-valid receipt and therefore cannot support a role result, proof "
+        "verdict, or terminal synthesis. The subsequent launch audit stopped "
+        "at :apm-qualification-report-invalid with findings "
+        "[:qualification-not-passing :qualification-gate-failed] and observed "
+        "digest 246ee154ff844dcf49070baa8671439f28483acd24e6c1262d5a13b11b9fcc6a. "
+        "That digest equals the registered generated-contract digest, so the "
+        "fault is a failing apparatus qualification gate rather than an "
+        "artifact-identity mismatch or evidence about the mathematics.")
+   :decision/recommended-route
+   (str "Keep f85 partial and preserve its exact announce-failure residual. "
+        "Repair and independently rerun the four-gate APM qualification at the "
+        "registered contract digest; record the failing gate output and a new "
+        "passing qualification report before any later frame launch. Do not "
+        "retroactively redispatch f85 or infer a Student result from the "
+        "cancelled wrapper; any deliberate continuation must use a fresh frame "
+        "and authenticated typed submission.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No last-valid receipt, Student "
+        "result, terminal collection, qualification success, or proof verdict "
+        "was invented; queue-state.edn retains the exact fault residual.")} ]}
