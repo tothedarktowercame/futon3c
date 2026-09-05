@@ -6,6 +6,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.bank-audit :as bank-audit]
             [futon3c.apm.campaign-trace :as trace]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.live-preflight-runtime :as persistence]
@@ -23,8 +24,14 @@
 (def problem-count 10)
 (def phases [:solve :verify :close])
 
-(def template
-  "import Mathlib\n\nexample : 1 + 1 = 2 := by\n  sorry\n")
+(defn template
+  "A NAMED theorem, so the production proof-standard audit can address it with
+  #print axioms. An anonymous `example` cannot be named, which is why this
+  harness emitted no :proof-standard observation and stopped running when that
+  observation became required."
+  [frame-number]
+  (format "import Mathlib\n\ntheorem apm_csquare_c%02d : 1 + 1 = 2 := by\n  sorry\n"
+          frame-number))
 
 (defn- path [s] (Path/of (str s) (make-array String 0)))
 
@@ -56,7 +63,7 @@
         source (io/file directory "Main.lean")
         terminal (io/file directory "programmatic-terminal.edn")]
     (.mkdirs directory)
-    (spit source template)
+    (spit source (template frame-number))
     ;; The synthetic solver performs the promised edit, rather than asking a
     ;; gate to pretend the sorry-bearing source passed.
     (spit source (.replace (slurp source) "sorry" "norm_num"))
@@ -64,6 +71,8 @@
                             :dir "/home/joe/code/apm-lean")
           record {:terminal-job-id (format "csquare-solver-%02d" frame-number)
                   :source (.getCanonicalPath source) :exit (:exit checked)
+                  :declaration (format "apm_csquare_c%02d" frame-number)
+                  :source-text (slurp source)
                   :stdout (:out checked) :stderr (:err checked)}]
       (spit terminal (pr-str record))
       (assoc record :terminal-file (.getCanonicalPath terminal)))))
@@ -88,7 +97,21 @@
            :delivery-status "delivered"
            ;; programmatic-terminal.edn is the observable inbox action.
            :inbox-file-created? true :registered-push-performed? false
-           :polling-available? true}}]]
+           :polling-available? true}}
+         ;; The PRODUCTION axiom gate, run against the synthetic solver's real
+         ;; Lean source. Not a stub: this is the observation kind whose absence
+         ;; stopped this harness running, and stubbing it would leave the
+         ;; harness unable to catch a regression in the gate itself.
+         {:trace/proof-standard-observation
+          (let [audited (bank-audit/proof-standard-for-source!
+                         {:problem-id (format "csquare-c%02d" frame-number)
+                          :artifact-id (:terminal-job-id terminal)
+                          :repo "/home/joe/code/apm-lean"
+                          :source (:source-text terminal)})]
+            (or (:trace/proof-standard-observation audited)
+                (throw (ex-info "csquare proof-standard audit failed"
+                                {:error/code :csquare-proof-standard-failed
+                                 :finding audited}))))}]]
     (.mkdirs directory)
     (mapv (fn [index document]
             (let [target (io/file directory (str index ".edn"))]
