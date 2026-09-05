@@ -938,4 +938,38 @@
    (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
         "result, Guide decision, promotion, memory publication, or proof verdict was "
         "invented. The unrelated untracked f87/f88/f89/f90 pattern-library artifacts "
-        "were not authored or adopted by this decision.")} ]}
+        "were not authored or adopted by this decision.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f91"
+   :problem/id "b98A04"
+   :decision/at "2026-09-05T16:23:12Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :unreconciled-authenticated-incomplete-proof
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}. Student processing "
+        "also recorded :live-learning-terminal-invalid/:report-not-map. Three "
+        "authenticated submissions report not-closed, incomplete-proof, and "
+        "not-closed respectively, while their durable terminal collections remained "
+        ":running. The last submission preserves a newly compiled "
+        "apm_b98a04_simple_embeds_coordinatewise lemma and reports exactly one "
+        "remaining sorry: the quotient-of-submodule factor-occurrence bridge via "
+        "Jordan-Hölder comparison and quotient normalization. Thus the mathematics is "
+        "genuinely partial, and the nil repair finding is a separate apparatus fault.")
+   :decision/recommended-route
+   (str "Advance f91 as partial while preserving all authenticated submissions, the "
+        "compiled coordinatewise lemma, and the exact remaining bridge. Repair typed "
+        "report normalization and reconcile authenticated incomplete outcomes before "
+        "terminal repair; reject nil repair findings before budget consumption. Any "
+        "future continuation must use a fresh frame and independently close the stated "
+        "Jordan-Hölder bridge before certification or promotion.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No completed proof, terminal receipt, "
+        "certified Student result, Guide decision, promotion, memory publication, or "
+        "verdict was invented. The unrelated untracked pattern-library artifacts "
+        "through f91 were not authored or adopted by this decision.")} ]}
