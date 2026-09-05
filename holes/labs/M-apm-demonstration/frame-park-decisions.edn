@@ -1106,4 +1106,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
         "result, Guide decision, promotion, memory publication, or verdict was invented. "
-        "Unrelated pattern-library artifacts were not authored or adopted here.")} ]}
+        "Unrelated pattern-library artifacts were not authored or adopted here.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f98"
+   :problem/id "m00A04"
+   :decision/at "2026-09-05T23:15:18Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :unreconciled-authenticated-positive-dimensional-construction-gap
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following "
+        ":live-learning-terminal-invalid/:report-not-map. All three authenticated "
+        "Student submissions report not-closed, while their durable collections remain "
+        ":running. They preserve a compiling frozen Main except for the sole sorry at "
+        "apm_m00A04_positive_dimensional_weak_solution. The residual is the genuine "
+        "positive-dimensional H¹₀ weak-solution construction: the available snapshot "
+        "does not package the required completion, Lax-Milgram descent, and representative "
+        "extraction bridge. The nil repair finding is a separate apparatus failure, not "
+        "a mathematical closure or terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f98 as partial while preserving all three authenticated submissions and "
+        "the exact positive-dimensional residual. Repair typed-report normalization and "
+        "reconcile authenticated incomplete submissions before terminal repair; reject "
+        "nil repair findings before budget consumption. In a fresh frame, construct and "
+        "audit the missing bundled completion/Lax-Milgram descent/representative bridge "
+        "before any claim of certification, Guide work, or promotion.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No weak solution, terminal receipt, "
+        "certified Student result, Guide decision, promotion, memory publication, or "
+        "verdict was invented. Unrelated pattern-library artifacts were not authored or "
+        "adopted here.")} ]}
