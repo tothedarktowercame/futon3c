@@ -97,13 +97,27 @@
            (get-in result [:reason :code])))
     (is (= 1 (count stops)))))
 
-(deftest failed-regulator-halts-immediately
+(deftest failed-regulator-halts-only-for-underlying-corruption
   (let [[result stops _]
         (run-check nil
-                   (observation :regulator {:regulator/status :failed})
+                   (observation
+                    :regulator {:regulator/status :failed
+                                :regulator/last-result
+                                {:ok false :error/code
+                                 :campaign-ledger-digest-mismatch}})
                    0)]
-    (is (= :regulator-failed (get-in result [:reason :code])))
-    (is (= 1 (count stops)))))
+    (is (= :campaign-ledger-digest-mismatch
+           (get-in result [:reason :code])))
+    (is (= 1 (count stops))))
+  (let [[result stops _]
+        (run-check nil
+                   (observation
+                    :regulator {:regulator/status :failed
+                                :regulator/last-result
+                                {:ok false :error/code :mundane-failure}})
+                   0)]
+    (is (= :watching (:status result)))
+    (is (empty? stops))))
 
 (deftest stale-tick-claim-halts
   (let [[result _ _]
@@ -121,15 +135,19 @@
     (is (= :substrate
            (:stop-cause/fault-class (sut/fault-stop-cause {:code code})))
         (str code " is eligible for supervised restart")))
-  (is (= :integrity
+  (is (= :frame
          (:stop-cause/fault-class
           (sut/fault-stop-cause {:code :unclassified-future-fault})))
-      "unknown future faults fail closed"))
+      "unknown codes are frame-confined, not evidence of corruption"))
 
 (deftest every-current-watchdog-halt-has-a-keyword-reason-code
   (let [prior (:state (sut/evaluate nil (observation) 1000))
         halt-observations
-        [[nil (observation :regulator {:regulator/status :failed}) 1000]
+        [[nil (observation :regulator
+                           {:regulator/status :failed
+                            :regulator/last-result
+                            {:ok false :error/code
+                             :campaign-ledger-digest-mismatch}}) 1000]
          [nil (observation :invalid-state? true :invalid-state {}) 1000]
          [nil (observation :failed-launch-audit? true
                            :launch-audit {}) 1000]

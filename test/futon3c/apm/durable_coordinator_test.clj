@@ -128,6 +128,29 @@
         (is (= {:stop-cause/type :unknown}
                (sut/transition-stop-cause read-transition)))))))
 
+(deftest mundane-regulator-failure-does-not-disable-coordinator
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:frame-fault"
+                             :adapter :test/none :config {}
+                             :state-path state-a :period-ms 10})))
+    (let [decision
+          (watchdog/check!
+           {:watch-state nil
+            :observation
+            {:cursor {} :supervisor/status nil
+             :regulator {:regulator/status :failed
+                         :regulator/last-result
+                         {:ok false :error/code :mundane-frame-failure}}}
+            :now-ms 1000 :registry-path registry
+            :coordinator-id "c:frame-fault"
+            :stop-fn (fn [path id cause] (sut/stop! path id cause))
+            :persist-fn (fn [_] {:ok true})})]
+      (is (= :watching (:status decision)))
+      (is (true? (get-in (sut/read-registry registry)
+                         [:entries "c:frame-fault"
+                          :coordinator/enabled?]))))))
+
 (deftest non-edn-stop-evidence-is-projected-and-registry-remains-readable
   (doseq [[coordinator-id cause]
           [["c:function-cause" identity]

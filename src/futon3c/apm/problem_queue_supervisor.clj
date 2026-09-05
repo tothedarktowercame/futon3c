@@ -4,6 +4,7 @@
   At most one frame is provisioned. A successor may be minted only from a
   durably terminal predecessor; queued problems carry no seats or workspaces."
   (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.fault-taxonomy :as fault-taxonomy]
             [futon3c.apm.phase-status :as phase-status]))
 
 (def terminal-results #{:closed :partial :void})
@@ -15,8 +16,7 @@
   [park]
   (and
    (every? #(and (string? %) (not-empty %))
-           ((juxt :frame/id :problem/id :residual
-                  :last-valid-receipt/id) park))
+           ((juxt :frame/id :problem/id :residual) park))
    (= :claude-supervisor (:decision/owner park))
    (or (and (= :awaiting-decision (:decision/status park))
             (true? (:decision/bell-required park)))
@@ -25,21 +25,32 @@
             (= (:last-valid-receipt/id park)
                (get-in park [:decision/record :last-valid-receipt/id]))))
    (case (:state/type park)
+     :fault-frame-park
+     (and (= :frame-park (:fault/disposition park))
+          (keyword? (:error/code park))
+          (map? (:fault/result park)))
+
      :solver-human-intervention-frame-park
-     (and (every? #(and (string? %) (not-empty %))
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (every? #(and (string? %) (not-empty %))
                   ((juxt :solver/final-head :solver/state-path) park))
           (= :claude-required (:student/decision park))
           (pos-int? (:solver/rounds-completed park)))
 
      :scribe-reduce-apparatus-frame-park
-     (and (= :scribe-reduce (:phase park))
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (= :scribe-reduce (:phase park))
           (= :promotion-deposit-retries-exhausted (:error/code park))
           (string? (:promotion/state-path park))
           (pos-int? (:deposit/attempts park))
           (seq (:deposit/findings park)))
 
      :promotion-apparatus-frame-park
-     (and (= :promotion (:phase park))
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (= :promotion (:phase park))
           (= :promotion-apparatus-repair-exhausted (:error/code park))
           (string? (:promotion/state-path park))
           (keyword? (:repair/kind park))
@@ -47,7 +58,9 @@
           (seq (:promotion/findings park)))
 
      :role-terminal-repair-frame-park
-     (and (keyword? (:phase park))
+     (and (string? (:last-valid-receipt/id park))
+          (not-empty (:last-valid-receipt/id park))
+          (keyword? (:phase park))
           (= :live-job-terminal-repair-exhausted (:error/code park))
           (string? (:role/state-path park))
           (keyword? (:repair/kind park))
@@ -55,6 +68,20 @@
           (seq (:role/findings park)))
 
      false)))
+
+(defn fault-frame-park [frame result]
+  (let [fault (fault-taxonomy/classify result)]
+    (when (= :frame-park (:fault/disposition fault))
+      {:state/type :fault-frame-park
+       :frame/id (:frame/id frame)
+       :problem/id (:problem/id frame)
+       :error/code (:fault/code fault)
+       :fault/disposition :frame-park
+       :fault/result result
+       :residual (pr-str result)
+       :decision/owner :claude-supervisor
+       :decision/status :awaiting-decision
+       :decision/bell-required true})))
 
 (defn queue-plan [problems]
   (let [body {:queue/type :apm-problem-queue :queue/version 1
@@ -421,6 +448,27 @@
                 {:ok false :error/code
                  :problem-queue-state-persistence-failed}))))))))
 
+(defn- park-active-and-advance
+  [plan state park {:keys [persist-state-fn] :as providers}]
+  (let [active (:active state)]
+    (if-not (and (valid-frame-park? park)
+                 (= (:frame/id park) (get-in active [:frame :frame/id]))
+                 (= (:problem/id park) (get-in active [:frame :problem/id])))
+      {:ok false :error/code :problem-queue-frame-park-invalid
+       :finding park}
+      (let [pause? (= :pause-after-active (:status state))
+            cleared (addressed
+                     (-> state
+                         (update :parked (fnil conj []) park)
+                         (assoc :active nil)
+                         (cond-> pause? (assoc :status :paused))))
+            persisted (persist-state-fn cleared)]
+        (if-not (:ok persisted)
+          {:ok false :error/code :problem-queue-state-persistence-failed}
+          (if pause?
+            {:ok true :status :batch-paused :state cleared}
+            (prepare-next plan cleared providers)))))))
+
 (defn tick!
   "Perform one queue transition.
 
@@ -461,7 +509,10 @@
       (let [active (:active state)
             result (frame-tick-fn (:frame active))]
         (cond
-          (not (:ok result)) result
+          (not (:ok result))
+          (if-let [park (fault-frame-park (:frame active) result)]
+            (park-active-and-advance plan state park providers)
+            result)
           (= :unknown (phase-status/classify :problem-queue-frame
                                              (:status result)))
           {:ok false
@@ -472,25 +523,7 @@
                                  :problem-queue-frame)))}}
           (= :frame-parked (:status result))
           (let [park (:frame/park result)]
-            (if-not (and (valid-frame-park? park)
-                         (= (:frame/id park)
-                            (get-in active [:frame :frame/id]))
-                         (= (:problem/id park)
-                            (get-in active [:frame :problem/id])))
-              {:ok false :error/code :problem-queue-frame-park-invalid}
-              (let [pause? (= :pause-after-active (:status state))
-                    cleared (addressed
-                             (-> state
-                                 (update :parked (fnil conj []) park)
-                                 (assoc :active nil)
-                                 (cond-> pause? (assoc :status :paused))))
-                    persisted (persist-state-fn cleared)]
-                (if-not (:ok persisted)
-                  {:ok false :error/code
-                   :problem-queue-state-persistence-failed}
-                  (if pause?
-                    {:ok true :status :batch-paused :state cleared}
-                    (prepare-next plan cleared providers))))))
+            (park-active-and-advance plan state park providers))
           (not= :frame-complete (:status result))
           (assoc result :queue/id (:queue/id plan)
                  :active/frame-id (get-in active [:frame :frame/id]))
@@ -503,7 +536,10 @@
             (cond
               (= :workspace-retirement-audit-retry-waiting
                  (:error/code retired)) retired
-              (not (:ok retired)) retired
+              (not (:ok retired))
+              (if-let [park (fault-frame-park (:frame active) retired)]
+                (park-active-and-advance plan state park providers)
+                retired)
               :else
               (let [void? (= :void (:frame/result result))
                     refuted? (and void?

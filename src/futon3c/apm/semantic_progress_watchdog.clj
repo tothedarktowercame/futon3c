@@ -1,6 +1,7 @@
 (ns futon3c.apm.semantic-progress-watchdog
   "Independent liveness observer for one durable APM coordinator."
-  (:require [futon3c.apm.campaign-trace :as campaign-trace])
+  (:require [futon3c.apm.campaign-trace :as campaign-trace]
+            [futon3c.apm.fault-taxonomy :as fault-taxonomy])
   (:import [java.time Instant]
            [java.util.concurrent Executors ScheduledExecutorService
             ThreadFactory TimeUnit]
@@ -12,11 +13,7 @@
 (def default-period-ms 10000)
 
 (def integrity-fault-codes
-  #{:regulator-failed
-    :external-job-deadline-missing
-    :impossible-transition
-    :invalid-state
-    :failed-launch-audit})
+  (conj fault-taxonomy/integrity-codes :external-job-deadline-missing))
 
 (def substrate-fault-codes
   #{:internal-semantic-progress-stalled
@@ -30,7 +27,7 @@
   (let [fault-class (cond
                       (contains? integrity-fault-codes code) :integrity
                       (contains? substrate-fault-codes code) :substrate
-                      :else :integrity)]
+                      :else :frame)]
     {:stop-cause/type :fault
      :stop-cause/fault-class fault-class
      :stop-cause/reason-code code
@@ -64,7 +61,12 @@
 (defn- integrity-reason [observation]
   (cond
     (= :failed (get-in observation [:regulator :regulator/status]))
-    {:code :regulator-failed}
+    (let [result (get-in observation [:regulator :regulator/last-result])
+          fault (fault-taxonomy/classify result)]
+      (when (= :campaign-stop (:fault/disposition fault))
+        {:code (:fault/code fault)
+         :fault/disposition :campaign-stop
+         :finding result}))
 
     (:invalid-state? observation)
     {:code :invalid-state :finding (:invalid-state observation)}

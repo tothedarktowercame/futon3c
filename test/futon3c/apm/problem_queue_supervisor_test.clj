@@ -75,6 +75,67 @@
       (is (= ["p1"] (mapv second (filter #(= :mint (first %)) @calls))))
       (is (empty? (filter #(= :bank-write (first %)) @calls))))))
 
+(deftest frame-fault-disposition-parks-mundane-and-unknown-errors
+  (doseq [failure
+          [{:ok false :error/code :live-job-terminal-failure
+            :finding {:state :cancelled
+                      :terminal-message
+                      "Cancelled by http-caller: typed-submission wrapper reconciliation"}}
+           {:ok false :error/code :future-unrecognised-frame-failure
+            :finding {:detail "preserve me"}}]]
+    (let [{:keys [providers state]} (harness)]
+      (is (= :frame-prepared (:status (sut/tick! providers))))
+      (let [result (sut/tick! (assoc providers :frame-tick-fn
+                                     (constantly failure)))
+            park (first (:parked @state))]
+        (is (= :frame-prepared (:status result)))
+        (is (= "p2" (get-in @state [:active :frame :problem/id])))
+        (is (= :fault-frame-park (:state/type park)))
+        (is (= (:error/code failure) (:error/code park)))
+        (is (= failure (:fault/result park)))))))
+
+(deftest corruption-fault-does-not-park-or-advance
+  (let [{:keys [providers state]} (harness)
+        failure {:ok false :error/code :campaign-ledger-digest-mismatch
+                 :finding {:expected "a" :observed "b"}}]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [before @state
+          result (sut/tick! (assoc providers :frame-tick-fn
+                                   (constantly failure)))]
+      (is (= failure result))
+      (is (= before @state))
+      (is (empty? (:parked @state))))))
+
+(deftest recorded-campaign-failures-replay-as-frame-parks
+  (let [failures
+        [{:ok false :error/code :workspace-retirement-audit-invalid
+          :findings [:worktree-clean]
+          :finding {:workspace/status :dirty}}
+         {:ok false :error/code :workspace-retirement-audit-invalid
+          :passed #{:frame-terminal :worktree-clean :branch-ref-exists
+                    :required-artifacts-content-addressed
+                    :no-active-ledger-claim-references-workspace
+                    :head-commit-recorded-in-terminal-receipt
+                    :independent-retirement-audit-passed}
+          :missing #{:no-running-or-parked-job-references-workspace}}
+         {:ok false :error/code :live-job-terminal-failure
+          :finding {:state :cancelled :terminal-code :operator-cancelled
+                    :terminal-message
+                    "Cancelled by http-caller: typed-submission wrapper reconciliation"}}]]
+    (doseq [[index failure] (map-indexed vector failures)]
+      (let [{:keys [providers state]} (harness)]
+        (is (= :frame-prepared (:status (sut/tick! providers))))
+        (if (< index 2)
+          (sut/tick! (assoc providers :retire-frame-fn
+                            (constantly failure)))
+          (sut/tick! (assoc providers :frame-tick-fn
+                            (constantly failure))))
+        (let [park (first (:parked @state))]
+          (is (= :fault-frame-park (:state/type park)))
+          (is (= failure (:fault/result park)))
+          (is (= (:error/code failure) (:error/code park)))
+          (is (= "p2" (get-in @state [:active :frame :problem/id]))))))))
+
 (deftest ineligible-unit-is-parked-and-next-problem-is-prepared
   (let [{:keys [providers state calls]} (harness)
         result
