@@ -1169,7 +1169,6 @@
          student-candidate-fn workspace-lifecycle/preserve-student-candidate!}}]
   (driver/drive!
    {:request request :state (runtime/read-state state-path)
-    :state-provider #(runtime/read-state state-path)
     :announce-fn
     (fn [req]
       (let [req (submission/with-job-authority req)

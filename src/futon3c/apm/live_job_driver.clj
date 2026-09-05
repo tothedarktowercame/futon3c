@@ -649,7 +649,7 @@
 
 (defn drive!
   "Advance one job by at most one externally visible state transition."
-  [{:keys [request state announce-fn activate-fn job-fn persist-fn state-provider
+  [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
            posthoc-fault-origin-fn
            ticket-register-fn terminal-submission-provider cancel-fn
@@ -766,24 +766,7 @@
                  :state state}))))))
 
     :else
-    (let [observed-job (job-fn (get-in state [:ticket :job-id]))
-          refreshed-state
-          (when (and (= :cancelled (:state observed-job))
-                     (nil? (:terminal-collection state))
-                     (fn? state-provider))
-            (state-provider))
-          ;; A concurrent tick may persist collection after this tick received
-          ;; STATE. Adopt only a durable refresh which proves that this exact
-          ;; cancellation was initiated by the driver itself.
-          state (if (and (= :live-job-dispatched (:state/type refreshed-state))
-                         (= (:dispatch/id request)
-                            (get-in refreshed-state [:request :dispatch/id]))
-                         (= (:job-id observed-job)
-                            (get-in refreshed-state [:ticket :job-id]))
-                         (reconciled-self-cancellation refreshed-state
-                                                       observed-job))
-                  refreshed-state state)
-          active-request (or (:active-request state) request)
+    (let [active-request (or (:active-request state) request)
           ;; The controller-owned store is reconciliation authority. Read it
           ;; before polling or classifying the externally owned wrapper.
           submission-observation
@@ -800,7 +783,7 @@
                    (contains? submission-observation :submission))
             (:submission submission-observation)
             submission-observation)
-          job observed-job
+          job (job-fn (get-in state [:ticket :job-id]))
           terminal? (contains? terminal-states (:state job))
           orphan-observation
           (when (and (nil? observed-submission) (not terminal?))

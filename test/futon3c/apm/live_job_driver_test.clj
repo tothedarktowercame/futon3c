@@ -19,22 +19,19 @@
 
 (declare effects)
 
-(deftest durable-self-cancellation-refresh-defeats-stale-in-flight-state
+(deftest real-f85-persisted-collection-outranks-self-cancellation
   (let [job-id (:job-id f85-self-cancelled-job)
-        stale {:state/type :live-job-dispatched :request request
-               :ticket {:job-id job-id} :activation/accepted? true}
-        durable (assoc stale
-                       :terminal-collection
-                       {:evidence {:job-id job-id} :submission {:payload {}}
-                        :budget sut/default-terminal-budget}
-                       :wrapper/reconciliation
-                       {:ok true :job-id job-id
-                        :response {:ok true :job-id job-id
-                                   :state "cancelled"}})
+        durable {:state/type :live-job-dispatched :request request
+                 :ticket {:job-id job-id} :activation/accepted? true
+                 :terminal-collection
+                 {:evidence {:job-id job-id} :submission {:payload {}}
+                  :budget sut/default-terminal-budget}
+                 :wrapper/reconciliation
+                 {:ok true :job-id job-id
+                  :response {:ok true :job-id job-id :state "cancelled"}}}
         result (sut/drive!
                 (assoc (effects (atom []) (atom f85-self-cancelled-job))
-                       :state stale
-                       :state-provider (constantly durable)
+                       :state durable
                        :terminal-submission-provider (constantly nil)))]
     (is (= :certified (:status result)))
     (is (= (:terminal-collection durable)
@@ -53,7 +50,6 @@
         result (sut/drive!
                 (assoc (effects (atom []) (atom job))
                        :state state
-                       :state-provider (constantly state)
                        :terminal-submission-provider (constantly nil)))]
     (is (= :live-job-terminal-failure (:error/code result)))
     (is (nil? (sut/reconciled-self-cancellation state job)))))
