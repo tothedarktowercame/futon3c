@@ -209,3 +209,32 @@
              (try
                (tools/status! head run-dir run-process workspace)
                (catch clojure.lang.ExceptionInfo ex ex))))))))
+
+(deftest lane-axiom-audit-holds-the-apm-proof-standard
+  ;; The lane refused only on sorryAx. APM banked two sorry-free non-proofs
+  ;; -- b00J02 (one native_decide axiom) and b01A02 (five) -- and only a
+  ;; subset check against bank-audit/allowed-proof-axioms caught them. The
+  ;; inputs below are the real #print axioms outputs from those frames.
+  (let [offenders #'tools/nonstandard-axioms]
+    (is (= ["apm_b00j02._native.native_decide.ax_1_2"]
+           (offenders (str "'apm_b00j02' depends on axioms: [propext, "
+                           "Classical.choice, Quot.sound, "
+                           "apm_b00j02._native.native_decide.ax_1_2]")))
+        "a native_decide axiom must be named, and only it")
+    (is (= [] (offenders (str "'apm_a99j05' depends on axioms: "
+                              "[propext, Classical.choice, Quot.sound]")))
+        "the project standard passes")
+    ;; A proof depending on NOTHING is the strongest result. Lean prints it
+    ;; with no list at all, and an equality check would have rejected it --
+    ;; the defect found reviewing APM's own gate.
+    (is (= [] (offenders "'apm_x' does not depend on any axioms"))
+        "a fully constructive proof is not an offender")
+    ;; This audit prints one verdict per declaration; a clean neighbour must
+    ;; not mask a dirty one.
+    (is (= ["apm_b01A02_exists_normal_card_85._native.native_decide.ax_1_1"]
+           (offenders (str "'clean' depends on axioms: [propext, Quot.sound]\n"
+                           "'dirty' depends on axioms: [propext, "
+                           "apm_b01A02_exists_normal_card_85._native"
+                           ".native_decide.ax_1_1]\n"
+                           "'none' does not depend on any axioms")))
+        "every declaration is audited, not just the first")))

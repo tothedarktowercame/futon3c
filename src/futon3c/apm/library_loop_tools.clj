@@ -1,6 +1,7 @@
 (ns futon3c.apm.library-loop-tools
   "Production audit and status evidence commands for the files-only Library Loop."
   (:require [cheshire.core :as json]
+            [futon3c.apm.bank-audit :as bank-audit]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -99,6 +100,21 @@
        (str/join "\n" (map #(str "#print axioms " %) declarations))
        "\n"))
 
+(defn- nonstandard-axioms
+  "Every axiom named across ALL declarations in an audit output that is not in
+  bank-audit/allowed-proof-axioms. `#print axioms` prints one verdict per
+  declaration; a declaration proved without axioms prints \"does not depend on
+  any axioms\" with no list, which is the STRONGEST result and contributes no
+  offender."
+  [output]
+  (let [allowed (set bank-audit/allowed-proof-axioms)]
+    (->> (re-seq #"depends on axioms:\s*\[([^\]]*)\]" (str output))
+         (mapcat (fn [[_ names]] (map str/trim (str/split names #","))))
+         (remove str/blank?)
+         (remove allowed)
+         distinct
+         vec)))
+
 (defn- audit-module! [run-process workspace run-dir head ledger module]
   (let [declarations (declaration-names ledger module)
         build-result (command! run-process workspace ["lake" "build" module]
@@ -116,6 +132,19 @@
         (when (str/includes? output "sorryAx")
           (refuse! :axiom-audit-sorry-axiom
                    {:module module :declarations declarations :output output}))
+        ;; sorryAx alone is not the standard. APM banked two sorry-free
+        ;; non-proofs (b00J02, b01A02) that discharged counting steps with
+        ;; native_decide; only a subset check against
+        ;; bank-audit/allowed-proof-axioms caught them. This audit already
+        ;; prints a verdict per declaration, so every declaration is held to
+        ;; the same standard.
+        (let [offenders (nonstandard-axioms output)]
+          (when (seq offenders)
+            (refuse! :axiom-audit-nonstandard-axiom
+                     {:module module :declarations declarations
+                      :disallowed-axioms offenders
+                      :allowed-axioms bank-audit/allowed-proof-axioms
+                      :output output})))
         [module {:ok? true :head-sha head
                  :declarations (mapv symbol declarations)
                  :build (select-keys build-result
