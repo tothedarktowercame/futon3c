@@ -501,7 +501,14 @@
 (defn ticket [request response]
   (if-not (and (:ok response) (string? (:job-id response))
                (not-empty (:job-id response)))
-    {:ok false :error/code :live-job-announce-failed}
+    ;; Keep the announce response. Discarding it left f85/b97A03 parked with
+    ;; {:ok false :error/code :live-job-announce-failed} and no way to tell a
+    ;; transient agency failure from a malformed reply.
+    {:ok false :error/code :live-job-announce-failed
+     :finding {:response response
+               :agent-id (:agent-id request)
+               :frame-id (:frame-id request)
+               :phase (:phase request)}}
     (let [body {:dispatch/id (:dispatch/id request)
                 :job-id (:job-id response) :agent-id (:agent-id request)
                 :frame-id (:frame-id request) :problem-id (:problem-id request)
