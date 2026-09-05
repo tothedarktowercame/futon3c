@@ -800,4 +800,41 @@
    (str "The frame is not voided or forgotten. No last-valid receipt, Student "
         "certification, terminal result, Guide decision, promotion, or proof verdict "
         "was invented; the authenticated submissions and queue residual remain "
-        "authoritative.")} ]}
+        "authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f87"
+   :problem/id "b97J03"
+   :decision/at "2026-09-05T12:33:44Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :terminal-repair-nil-finding-after-partial-submission
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}. Before that "
+        "apparatus failure, Student attempt 1 produced a valid not-closed receipt "
+        "with four explicit residual sorries. Attempt 2 then produced authenticated "
+        "partial and blocked submissions. The partial submission records a compiled, "
+        "sorry-free core lemma identifying the restricted root count with the "
+        "cardinality of algebra endomorphisms of the simple adjoin; it explicitly "
+        "leaves the automorphism divisibility, abelian descent, and sixth-root "
+        "exclusion bridges open. Durable collections for the later authenticated "
+        "submissions remained :running. The nil repair finding is therefore an "
+        "apparatus state-machine failure, while the mathematical evidence supports "
+        "only partial progress, not closure.")
+   :decision/recommended-route
+   (str "Advance f87 as partial while preserving the attempt-1 receipt, all "
+        "authenticated attempt-2 submissions, the compiled core artifact, and the "
+        "exact residuals. Repair the driver to reconcile authenticated completion "
+        "before terminal repair and reject nil repair findings before consuming a "
+        "budget. Any future mathematical continuation must start in a fresh frame "
+        "from the preserved core lemma and independently close the three stated "
+        "bridges; do not certify the historical running collections retroactively.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No closed Student result, terminal "
+        "collection, Guide disposition, promotion, memory publication, or proof "
+        "verdict was invented. The unrelated untracked f87 pattern-library artifact "
+        "was not authored or adopted by this decision.")} ]}
