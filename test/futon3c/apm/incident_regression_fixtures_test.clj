@@ -201,9 +201,19 @@
               stopped (atom nil)
               result (watchdog/check!
                       {:watch-state nil
+                       ;; The production observation carries the WHOLE
+                       ;; regulator state under :regulator (see
+                       ;; durable-coordinator/watchdog-observation), which is
+                       ;; where the fault classifier reads :regulator/last-result
+                       ;; from. A partial map here silently exercised a shape
+                       ;; production never produces.
                        :observation {:cursor {:frame-id "f49"}
                                      :coordinator-enabled? true
-                                     :regulator {:regulator/status :failed}
+                                     :regulator
+                                     {:regulator/status :failed
+                                      :regulator/last-result
+                                      {:ok false
+                                       :error/code (:failure-code incident)}}
                                      :supervisor/status :ready}
                        :now-ms 1787840000000
                        :registry-path registry-file
@@ -219,8 +229,14 @@
           (is (not (progress-valid? historical-progress historical-history))
               "historical REJECTED")
           (is (progress-valid? progress upgraded-history) "upgraded ACCEPTED")
-          (is (= :regulator-failed (get-in result [:reason :code]))
-              "watchdog produced the progress delta")
+          ;; The watchdog now reports the UNDERLYING cause rather than the
+          ;; generic :regulator-failed symptom. f49's cause is
+          ;; :live-job-state-invalid -- a durable-state shape violation, and
+          ;; therefore still a campaign-stopping integrity fault.
+          (is (= (:failure-code incident) (get-in result [:reason :code]))
+              "watchdog named f49's underlying cause")
+          (is (= :campaign-stop (get-in result [:reason :fault/disposition]))
+              "a durable-state shape violation still stops the campaign")
           (is (:durably-disabled? @stopped))
           (is (= (inc (count historical-history))
                  (count upgraded-history))

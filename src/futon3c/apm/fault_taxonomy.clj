@@ -6,6 +6,7 @@
    world. These stop the campaign; every other failure is confined to its
    frame and preserves the original result in a park record."
   #{:invalid-state
+    :live-job-state-invalid
     :impossible-transition
     :failed-launch-audit
     :live-supervisor-launch-audit-failed
