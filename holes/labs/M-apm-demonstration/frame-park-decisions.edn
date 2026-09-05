@@ -1040,4 +1040,37 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No proof of the false frozen statement, "
         "terminal receipt, Student phase, Guide decision, promotion, memory publication, "
-        "or verdict was invented; the refutation and residual remain authoritative.")} ]}
+        "or verdict was invented; the refutation and residual remain authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f94"
+   :problem/id "b99A02"
+   :decision/at "2026-09-05T19:20:37Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :verified-success-submissions-unreconciled-by-terminal-repair
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following "
+        ":live-learning-terminal-invalid/:report-not-map. The first authenticated "
+        "Student submission reports partial with one remaining commutativity direction. "
+        "Two authenticated successors then report success: the proof closes the normal "
+        "Sylow subgroup and order-175 subgroup construction and derives commutativity "
+        "from normal Sylow factors; the final successor independently runs Main.lean "
+        "with clean exit, no errors, and no warnings. Their durable terminal collections "
+        "nevertheless remain :running. The success evidence is preserved, but the nil "
+        "repair finding is an apparatus failure, not a terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f94 as partial while preserving the partial submission, both success "
+        "submissions, completed artifact, and exact residual. Repair typed-report "
+        "normalization and reconcile authenticated completion before terminal repair; "
+        "reject nil repair findings before budget consumption. Independently validate "
+        "the stored head in a fresh frame before certification, Guide work, or promotion; "
+        "do not rewrite historical running collections into terminals.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
+        "result, Guide decision, promotion, memory publication, or verdict was invented. "
+        "Unrelated pattern-library artifacts were not authored or adopted here.")} ]}
