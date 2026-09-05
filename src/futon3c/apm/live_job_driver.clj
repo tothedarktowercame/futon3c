@@ -210,6 +210,28 @@
             (select-keys condition [:condition/type])))
         expected-role-terminal-conditions))
 
+(defn reconciled-self-cancellation
+  "Return typed evidence only when a cancelled job is the exact job named by
+  this driver's durable cancellation record. Wrapper reconciliation and
+  supersession use the same identity rule; cancellation prose is irrelevant."
+  [state job]
+  (when (= :cancelled (:state job))
+    (let [job-id (:job-id job)
+          wrapper (:wrapper/reconciliation state)
+          superseded (some #(when (and (= job-id (:job-id %))
+                                       (true? (get-in % [:cancellation
+                                                        :reconciled?])))
+                              %)
+                           (:superseded-tickets state))]
+      (cond
+        (and (:ok wrapper) (= job-id (:job-id wrapper)))
+        {:condition/type :driver-wrapper-reconciliation-cancellation
+         :job-id job-id}
+        superseded
+        {:condition/type :driver-supersession-cancellation
+         :job-id job-id}
+        :else nil))))
+
 (defn wall-clock-budget-exhausted?
   "Compatibility predicate for the first expected role terminal."
   [job]
@@ -627,7 +649,7 @@
 
 (defn drive!
   "Advance one job by at most one externally visible state transition."
-  [{:keys [request state announce-fn activate-fn job-fn persist-fn
+  [{:keys [request state announce-fn activate-fn job-fn persist-fn state-provider
            terminal-validator receipt-provider terminal-repair-request-fn
            posthoc-fault-origin-fn
            ticket-register-fn terminal-submission-provider cancel-fn
@@ -744,7 +766,24 @@
                  :state state}))))))
 
     :else
-    (let [active-request (or (:active-request state) request)
+    (let [observed-job (job-fn (get-in state [:ticket :job-id]))
+          refreshed-state
+          (when (and (= :cancelled (:state observed-job))
+                     (nil? (:terminal-collection state))
+                     (fn? state-provider))
+            (state-provider))
+          ;; A concurrent tick may persist collection after this tick received
+          ;; STATE. Adopt only a durable refresh which proves that this exact
+          ;; cancellation was initiated by the driver itself.
+          state (if (and (= :live-job-dispatched (:state/type refreshed-state))
+                         (= (:dispatch/id request)
+                            (get-in refreshed-state [:request :dispatch/id]))
+                         (= (:job-id observed-job)
+                            (get-in refreshed-state [:ticket :job-id]))
+                         (reconciled-self-cancellation refreshed-state
+                                                       observed-job))
+                  refreshed-state state)
+          active-request (or (:active-request state) request)
           ;; The controller-owned store is reconciliation authority. Read it
           ;; before polling or classifying the externally owned wrapper.
           submission-observation
@@ -761,7 +800,7 @@
                    (contains? submission-observation :submission))
             (:submission submission-observation)
             submission-observation)
-          job (job-fn (get-in state [:ticket :job-id]))
+          job observed-job
           terminal? (contains? terminal-states (:state job))
           orphan-observation
           (when (and (nil? observed-submission) (not terminal?))
@@ -860,7 +899,8 @@
         (and terminal?
              (not= :done (:state job))
              (nil? (:terminal-collection state))
-             (not (and (expected-role-terminal-condition job)
+             (not (and (or (expected-role-terminal-condition job)
+                           (reconciled-self-cancellation state job))
                        (fn? terminal-submission-provider))))
         {:ok false :error/code :live-job-terminal-failure
          :finding (select-keys job [:job-id :agent-id :state :terminal-code

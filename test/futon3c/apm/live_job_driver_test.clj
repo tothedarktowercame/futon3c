@@ -7,6 +7,73 @@
   {:dispatch/id "dispatch-1" :agent-id "f19-proctor" :frame-id "f19"
    :problem-id "a01J05" :phase :preflight})
 
+(def f85-self-cancelled-job
+  ;; Verbatim terminal identity from f85 student-attempt-1, observed
+  ;; 2026-09-04T14:12:53Z after driver wrapper reconciliation.
+  {:job-id "apm-role-ab0d2cd4afab7f0ed4c750d9896450ab3b359d65d8083e51479a71da80693997"
+   :agent-id "f85-student"
+   :state :cancelled
+   :terminal-code :operator-cancelled
+   :terminal-message
+   "Cancelled by http-caller: typed-submission wrapper reconciliation"})
+
+(declare effects)
+
+(deftest durable-self-cancellation-refresh-defeats-stale-in-flight-state
+  (let [job-id (:job-id f85-self-cancelled-job)
+        stale {:state/type :live-job-dispatched :request request
+               :ticket {:job-id job-id} :activation/accepted? true}
+        durable (assoc stale
+                       :terminal-collection
+                       {:evidence {:job-id job-id} :submission {:payload {}}
+                        :budget sut/default-terminal-budget}
+                       :wrapper/reconciliation
+                       {:ok true :job-id job-id
+                        :response {:ok true :job-id job-id
+                                   :state "cancelled"}})
+        result (sut/drive!
+                (assoc (effects (atom []) (atom f85-self-cancelled-job))
+                       :state stale
+                       :state-provider (constantly durable)
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :certified (:status result)))
+    (is (= (:terminal-collection durable)
+           (get-in result [:state :terminal-collection])))
+    (is (= :driver-wrapper-reconciliation-cancellation
+           (:condition/type
+            (sut/reconciled-self-cancellation durable
+                                              f85-self-cancelled-job))))))
+
+(deftest unfamiliar-cancellation-remains-terminal-failure
+  (let [job (assoc f85-self-cancelled-job
+                   :job-id "unfamiliar-job"
+                   :terminal-message "Cancelled by an unrelated operator")
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id "unfamiliar-job"} :activation/accepted? true}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom job))
+                       :state state
+                       :state-provider (constantly state)
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :live-job-terminal-failure (:error/code result)))
+    (is (nil? (sut/reconciled-self-cancellation state job)))))
+
+(deftest exact-self-cancellation-is-recognised-without-message-matching
+  (let [job-id (:job-id f85-self-cancelled-job)
+        state {:state/type :live-job-dispatched :request request
+               :ticket {:job-id job-id} :activation/accepted? true
+               :wrapper/reconciliation
+               {:ok true :job-id job-id
+                :response {:state "cancelled"}}}
+        job (assoc f85-self-cancelled-job
+                   :terminal-message "message text deliberately changed")
+        result (sut/drive!
+                (assoc (effects (atom []) (atom job))
+                       :state state
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :terminal-collected (:status result)))
+    (is (not= :live-job-terminal-failure (:error/code result)))))
+
 (defn effects [calls job]
   {:request request
    :announce-fn (fn [_] (swap! calls conj :announce)
