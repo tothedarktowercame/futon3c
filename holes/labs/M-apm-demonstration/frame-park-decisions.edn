@@ -972,4 +972,38 @@
    (str "The frame is not voided or forgotten. No completed proof, terminal receipt, "
         "certified Student result, Guide decision, promotion, memory publication, or "
         "verdict was invented. The unrelated untracked pattern-library artifacts "
-        "through f91 were not authored or adopted by this decision.")} ]}
+        "through f91 were not authored or adopted by this decision.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f92"
+   :problem/id "b98J01"
+   :decision/at "2026-09-05T17:24:31Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :unreconciled-authenticated-group-theory-partial
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following "
+        ":live-learning-terminal-invalid/:report-not-map. All three authenticated "
+        "Student submissions report partial and their durable terminal collections "
+        "remain :running. They preserve compiled progress including the normal "
+        "order-12 pullback, Klein-four/order-six exclusion, and the new "
+        "apm_b98J01_no_order_six lemma. They also explicitly preserve the open "
+        "Sylow-action first conjunct and the final center-dichotomy/centrality "
+        "assembly. The mathematical result is therefore partial; the nil repair "
+        "finding is a distinct apparatus state-machine failure.")
+   :decision/recommended-route
+   (str "Advance f92 as partial while preserving all authenticated submissions, "
+        "compiled lemmas, and exact residuals. Repair typed-report normalization and "
+        "reconcile authenticated partial outcomes before terminal repair; reject nil "
+        "repair findings before budget consumption. Continue only in a fresh frame "
+        "that independently closes the Sylow-action and center/centrality bridges "
+        "before certification or promotion.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No completed proof, terminal receipt, "
+        "certified Student result, Guide decision, promotion, memory publication, or "
+        "verdict was invented. Unrelated pattern-library artifacts through f92 were "
+        "not authored or adopted by this decision.")} ]}
