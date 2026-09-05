@@ -871,4 +871,37 @@
    (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
         "result, Guide decision, promotion, memory publication, or proof verdict was "
         "invented. The unrelated untracked f87/f88 pattern-library artifacts were not "
-        "authored or adopted by this decision.")} ]}
+        "authored or adopted by this decision.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f89"
+   :problem/id "b98A01"
+   :decision/at "2026-09-05T14:53:48Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :successful-submission-unreconciled-by-terminal-repair
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}. Earlier Student "
+        "processing recorded :live-learning-terminal-invalid/:report-not-map and two "
+        "authenticated partial submissions with explicit group-theory residuals. A "
+        "later authenticated successor submission reports outcome success, command "
+        "exit 0, and no memory use. Nevertheless its durable terminal collection "
+        "remained :running and wrapper reconciliation cancelled the successor. The "
+        "stored submission is evidence worth preserving, but the nil-finding repair "
+        "request is an apparatus failure and cannot serve as a terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f89 as partial while preserving all authenticated submissions and "
+        "their exact residual history. Repair typed-report normalization and reconcile "
+        "authenticated completion before terminal repair; reject nil repair findings "
+        "before budget consumption. Independently validate the successful submission "
+        "and its artifact in a fresh frame before any certification, Guide decision, "
+        "or promotion; do not rewrite the historical running collection.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
+        "result, Guide decision, promotion, memory publication, or proof verdict was "
+        "invented. The unrelated untracked f87/f88/f89 pattern-library artifacts were "
+        "not authored or adopted by this decision.")} ]}
