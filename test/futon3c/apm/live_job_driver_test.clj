@@ -128,6 +128,79 @@
     (is (zero? (count (filter #{:activate} @calls))))
     (is (= :running (get-in retried [:state :activation/reconciled-from])))))
 
+(deftest f85-unusable-announce-response-enters-bounded-transport-retry
+  (let [calls (atom [])
+        now (atom 1000)
+        inputs (assoc (effects calls (atom {:state :running}))
+                      :announce-fn
+                      (fn [_]
+                        (swap! calls conj :announce)
+                        {:ok true :status 200})
+                      :now-ms-fn #(deref now)
+                      :transport-retry-delay-ms 100
+                      :transport-retry-max-attempts 3)
+        first-result (sut/drive! inputs)]
+    (is (= :transport-retry-scheduled (:status first-result)))
+    (is (= :transport (:failure/class first-result)))
+    (is (= :delayed-retry (:failure/disposition first-result)))
+    (is (= :live-job-announce-failed
+           (get-in first-result [:transport-retry/history 0 :error/code])))
+    (is (= {:ok true :status 200}
+           (get-in first-result
+                   [:transport-retry/history 0 :finding :response])))
+    (let [waiting (sut/drive! (assoc inputs :state (:state first-result)))]
+      (is (= :transport-retry-scheduled (:status waiting)))
+      (is (= 1 (count (filter #{:announce} @calls)))))))
+
+(deftest exhausted-driver-transport-retries-escalate-with-history
+  (let [now (atom 1000)
+        inputs (assoc (effects (atom []) (atom {:state :running}))
+                      :announce-fn (constantly {:ok false :status 503})
+                      :now-ms-fn #(deref now)
+                      :transport-retry-delay-ms 10
+                      :transport-retry-max-attempts 3)
+        first-result (sut/drive! inputs)
+        _ (swap! now + 10)
+        second-result (sut/drive! (assoc inputs :state (:state first-result)))
+        _ (swap! now + 10)
+        exhausted (sut/drive! (assoc inputs :state (:state second-result)))
+        escalation (:finding exhausted)]
+    (is (= :awaiting-apparatus-repair (:status exhausted)))
+    (is (= :transport (:failure/class escalation)))
+    (is (= :apparatus-repair (:failure/disposition escalation)))
+    (is (= :live-job-transport-retry-exhausted (:error/code escalation)))
+    (is (= [1 2 3]
+           (mapv :attempt (:transport-retry/history escalation))))
+    (is (every? #(contains? % :finding)
+                (:transport-retry/history escalation)))))
+
+(deftest transport-envelope-on-activation-enters-the-same-retry-spine
+  (let [result
+        (sut/drive!
+         (assoc (effects (atom []) (atom {:state :queued}))
+                :activate-fn
+                (fn [& _]
+                  {:ok false :error/component :transport
+                   :error/code :http-service-unavailable
+                   :http/status 503})))]
+    (is (= :transport-retry-scheduled (:status result)))
+    (is (= :live-job-activation-failed
+           (get-in result [:transport-retry/history 0 :error/code])))
+    (is (= :http-service-unavailable
+           (get-in result [:transport-retry/history 0 :finding
+                           :error/code])))))
+
+(deftest corrupt-transport-attempt-count-fails-closed
+  (let [state {:state/type :live-job-dispatched :request request
+               :transport-retry/attempt "three"
+               :transport-retry/not-before-ms 999999}
+        result (sut/drive!
+                (assoc (effects (atom []) (atom {:state :running}))
+                       :state state :now-ms-fn (constantly 0)))]
+    (is (= :live-job-transport-retry-attempt-count-invalid
+           (:error/code result)))
+    (is (= state (:state result)))))
+
 (deftest unaccepted-supersession-archives-cancellation-before-redispatch
   (let [calls (atom [])
         job (atom {:job-id "job-1" :state :queued})

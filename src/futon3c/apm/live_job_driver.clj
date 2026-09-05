@@ -15,6 +15,8 @@
 ;; a later transport boundary.  The agent repair budget remains independent.
 (def default-apparatus-repair-attempts 2)
 (def default-orphan-recovery-attempts 2)
+(def default-transport-retry-attempts 3)
+(def default-transport-retry-delay-ms (* 10 60 1000))
 
 (def ^:private codex-session-loss-pattern
   #"(?m)^\d{4}-\d{2}-\d{2}T\S+\s+ERROR\s+codex_core::session:\s+.*\bthread\s+([0-9a-f-]{36})\s+not found\s*$")
@@ -79,6 +81,62 @@
                     (get-in value [:error :error/component])
                     (get-in value [:finding :error/component])
                     (get-in value [:finding :error :error/component]))))
+
+(defn- driver-transport-failure? [result]
+  (or (= :live-job-announce-failed (:error/code result))
+      (transport-failure? result)
+      (transport-failure? (:finding result))
+      (transport-failure? (get-in result [:finding :response]))))
+
+(defn- retry-history-entry [attempt now-ms result]
+  {:attempt attempt
+   :failed-at-ms now-ms
+   :failure/class :transport
+   :failure/disposition :delayed-retry
+   :error/code (:error/code result)
+   :finding (:finding result)})
+
+(defn- schedule-transport-retry!
+  [{:keys [request state persist-fn now-ms-fn
+           transport-retry-max-attempts transport-retry-delay-ms]}
+   result]
+  (let [attempt (inc (or (:transport-retry/attempt state) 0))
+        now-ms (long (now-ms-fn))
+        history (conj (vec (:transport-retry/history state))
+                      (retry-history-entry attempt now-ms result))
+        retry-state (-> (or (:state result) state
+                            {:state/type :live-job-dispatched
+                             :request request})
+                        (assoc :transport-retry/attempt attempt
+                               :transport-retry/max-attempts
+                               transport-retry-max-attempts
+                               :transport-retry/delay-ms transport-retry-delay-ms
+                               :transport-retry/history history))]
+    (if (< attempt transport-retry-max-attempts)
+      (let [retry-state (assoc retry-state :transport-retry/not-before-ms
+                               (+ now-ms transport-retry-delay-ms))]
+        (if (:ok (persist-fn retry-state))
+          {:ok true :status :transport-retry-scheduled :state retry-state
+           :failure/class :transport :failure/disposition :delayed-retry
+           :transport-retry/history history}
+          {:ok false :error/code :live-job-transport-retry-persistence-failed
+           :finding result}))
+      (let [escalation {:error/code :live-job-transport-retry-exhausted
+                        :failure/class :transport
+                        :failure/disposition :apparatus-repair
+                        :transport-retry/attempt attempt
+                        :transport-retry/max-attempts
+                        transport-retry-max-attempts
+                        :transport-retry/history history}
+            exhausted (-> retry-state
+                          (dissoc :transport-retry/not-before-ms)
+                          (assoc :transport-retry/terminal? true
+                                 :transport-retry/escalation escalation))]
+        (if (:ok (persist-fn exhausted))
+          {:ok true :status :awaiting-apparatus-repair
+           :state exhausted :finding escalation}
+          {:ok false :error/code :live-job-transport-retry-persistence-failed
+           :finding escalation})))))
 
 (defn reopen-posthoc-rejection
   "Reopen an exact cached provider rejection after its apparatus was repaired.
@@ -654,7 +712,7 @@
       :else
       (recover-orphan-attempt! context))))
 
-(defn drive!
+(defn- drive-step!
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
@@ -663,9 +721,12 @@
            missing-observation-provider terminal-budget-config now-ms-fn
            orphan-recovery-request-fn
            orphan-recovery-max-attempts
+           transport-retry-max-attempts transport-retry-delay-ms
            provider-usage-limit-signatures provider-usage-limit-window-ms]
     :or {now-ms-fn #(System/currentTimeMillis)
          orphan-recovery-max-attempts default-orphan-recovery-attempts
+         transport-retry-max-attempts default-transport-retry-attempts
+         transport-retry-delay-ms default-transport-retry-delay-ms
          provider-usage-limit-signatures []
          provider-usage-limit-window-ms default-provider-usage-limit-window-ms}}]
   (cond
@@ -675,6 +736,8 @@
               (valid-terminal-budget? terminal-budget-config)
               (pos-int? provider-usage-limit-window-ms)
               (pos-int? orphan-recovery-max-attempts)
+              (pos-int? transport-retry-max-attempts)
+              (pos-int? transport-retry-delay-ms)
               (sequential? provider-usage-limit-signatures)))
     {:ok false :error/code :live-job-driver-input-invalid}
 
@@ -1201,3 +1264,52 @@
                                   {:ok false
                                    :error/code :live-job-activation-acceptance-persistence-failed
                                    :state next-state})))))))))))))))))))))
+
+(defn drive!
+  "Advance one live job, delaying transport retries durably and escalating at
+  the configured bound. Transport failures never consume an agent repair
+  attempt."
+  [inputs]
+  (let [context (merge {:now-ms-fn #(System/currentTimeMillis)
+                        :transport-retry-max-attempts
+                        default-transport-retry-attempts
+                        :transport-retry-delay-ms
+                        default-transport-retry-delay-ms}
+                       inputs)
+        state (:state context)
+        now-ms ((:now-ms-fn context))]
+    (cond
+      (not (and (pos-int? (:transport-retry-max-attempts context))
+                (pos-int? (:transport-retry-delay-ms context))))
+      {:ok false :error/code :live-job-driver-input-invalid}
+
+      (and (contains? state :transport-retry/attempt)
+           (not (nat-int? (:transport-retry/attempt state))))
+      {:ok false :error/code :live-job-transport-retry-attempt-count-invalid
+       :finding {:observed (:transport-retry/attempt state)
+                 :required :durable-natural-number}
+       :state state}
+
+      (:transport-retry/terminal? state)
+      {:ok true :status :awaiting-apparatus-repair
+       :state state :finding (:transport-retry/escalation state)}
+
+      (and (:transport-retry/not-before-ms state)
+           (< now-ms (:transport-retry/not-before-ms state)))
+      {:ok true :status :transport-retry-scheduled :state state
+       :failure/class :transport :failure/disposition :delayed-retry
+       :transport-retry/history (:transport-retry/history state)}
+
+      :else
+      (let [ready-state (when state
+                          (dissoc state :transport-retry/not-before-ms))
+            ;; Before the first usable announcement there is deliberately no
+            ;; ticket. Re-enter the initial announce transition while keeping
+            ;; the durable retry state in CONTEXT for counting a further
+            ;; failure.
+            step-state (when (:ticket ready-state) ready-state)
+            result (drive-step! (assoc context :state step-state))]
+        (if (and (not (:ok result))
+                 (driver-transport-failure? result))
+          (schedule-transport-retry! context result)
+          result)))))
