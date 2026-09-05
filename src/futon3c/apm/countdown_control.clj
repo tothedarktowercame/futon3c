@@ -63,6 +63,8 @@
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
 (def ^:dynamic problem-queue-state-path
   "data/apm-campaigns/problem-queue/live/queue.edn")
+(def ^:dynamic frame-park-decisions-path
+  "holes/labs/M-apm-demonstration/frame-park-decisions.edn")
 (def ^:dynamic campaign-queue-state-path nil)
 (def ^:dynamic campaign-prior-campaigns nil)
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
@@ -2007,7 +2009,11 @@
       (problem-queue/tick!
        (merge {:plan plan
                :state-provider #(live-preflight-runtime/read-state path)
-               :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)}
+               :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)
+               :park-decision-records-provider
+               #(-> (live-preflight-runtime/read-state
+                      (control-path frame-park-decisions-path))
+                    :decisions)}
               concrete-effects
               (dissoc effects :jit/config))))))
 

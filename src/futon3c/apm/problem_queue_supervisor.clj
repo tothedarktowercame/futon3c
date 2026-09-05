@@ -22,8 +22,12 @@
             (true? (:decision/bell-required park)))
        (and (= :decided (:decision/status park))
             (false? (:decision/bell-required park))
-            (= (:last-valid-receipt/id park)
-               (get-in park [:decision/record :last-valid-receipt/id]))))
+            (if (= :fault-frame-park (:state/type park))
+              (= (:frame/id park)
+                 (get-in park [:decision/record :frame/id]))
+              (= (:last-valid-receipt/id park)
+                 (get-in park [:decision/record
+                               :last-valid-receipt/id])))))
    (case (:state/type park)
      :fault-frame-park
      (and (= :frame-park (:fault/disposition park))
@@ -296,8 +300,9 @@
 (defn reconcile-park-decisions
   "Attach authoritative decision records to their receipt-matched parks.
 
-  Matching is deliberately by the last valid receipt rather than frame id: a
-  frame may park more than once. Unmatched parks and records are inert. The
+  Evidence-bearing parks match by the last valid receipt because a frame may
+  park more than once. Fault parks have no synthesized receipt and match their
+  unique retired frame id instead. Unmatched parks and records are inert. The
   decision's disposition is recorded but never executed here."
   [state decision-records]
   (if-not (valid-state? state)
@@ -308,13 +313,21 @@
                                               (:last-valid-receipt/id record)]
                                      [receipt record])))
                            decision-records)
+          by-frame (into {}
+                         (keep (fn [record]
+                                 (when-let [frame-id (:frame/id record)]
+                                   [frame-id record])))
+                         decision-records)
           matched (volatile! [])
           parks (mapv
                  (fn [park]
-                   (if-let [record (get by-receipt
-                                        (:last-valid-receipt/id park))]
+                   (if-let [record (if (= :fault-frame-park
+                                          (:state/type park))
+                                    (get by-frame (:frame/id park))
+                                    (get by-receipt
+                                         (:last-valid-receipt/id park)))]
                      (do
-                       (vswap! matched conj (:last-valid-receipt/id park))
+                       (vswap! matched conj record)
                        (assoc park
                               :decision/status :decided
                               :decision/bell-required false
@@ -324,10 +337,10 @@
           changed? (not= parks (:parked state))]
       {:ok true
        :changed? changed?
-       :matched-receipt-ids @matched
+       :matched-receipt-ids (into [] (keep :last-valid-receipt/id) @matched)
+       :matched-frame-ids (into [] (keep :frame/id) @matched)
        :unmatched-records (->> decision-records
-                               (remove #(contains? (set @matched)
-                                                   (:last-valid-receipt/id %)))
+                               (remove (set @matched))
                                vec)
        :state (if changed?
                 (addressed (assoc state :parked parks))
@@ -469,6 +482,24 @@
             {:ok true :status :batch-paused :state cleared}
             (prepare-next plan cleared providers)))))))
 
+(defn- reconcile-decisions!
+  [state {:keys [park-decision-records-provider persist-state-fn]}]
+  (if-not (fn? park-decision-records-provider)
+    {:ok true :state state}
+    (try
+      (let [records (park-decision-records-provider)
+            reconciled (reconcile-park-decisions state records)]
+        (cond
+          (not (:ok reconciled)) reconciled
+          (not (:changed? reconciled)) reconciled
+          (:ok (persist-state-fn (:state reconciled))) reconciled
+          :else {:ok false
+                 :error/code :problem-queue-state-persistence-failed}))
+      (catch Throwable t
+        {:ok false :error/code :problem-queue-park-decision-read-failed
+         :finding {:exception/class (.getName (class t))
+                   :exception/message (.getMessage t)}}))))
+
 (defn tick!
   "Perform one queue transition.
 
@@ -480,7 +511,12 @@
            dispatch-statement-repair-fn]
     :as providers}]
   (let [plan-check (validate-plan plan)
-        state (or (state-provider) (initial-state plan))]
+        initial (or (state-provider) (initial-state plan))
+        decision-sync (when (and (:ok plan-check)
+                                 (valid-state? initial)
+                                 (= (:queue/id plan) (:queue/id initial)))
+                        (reconcile-decisions! initial providers))
+        state (or (:state decision-sync) initial)]
     (cond
       (not (:ok plan-check)) plan-check
       (not (every? fn? [state-provider persist-state-fn mint-frame-fn
@@ -491,6 +527,7 @@
       {:ok false :error/code :problem-queue-state-invalid}
       (not= (:queue/id plan) (:queue/id state))
       {:ok false :error/code :problem-queue-state-plan-mismatch}
+      (and decision-sync (not (:ok decision-sync))) decision-sync
       (= :complete (:status state))
       {:ok true :status :batch-complete :state state}
       (= :paused (:status state))

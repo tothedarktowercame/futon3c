@@ -94,6 +94,44 @@
         (is (= (:error/code failure) (:error/code park)))
         (is (= failure (:fault/result park)))))))
 
+(deftest fault-classification-reads-only-the-current-result-envelope
+  (doseq [[failure expected]
+          [[{:ok false :error/code :invalid-state} :campaign-stop]
+           [{:ok false :error/code :x
+             :findings [:campaign-ledger-digest-mismatch]} :campaign-stop]
+           [{:ok false :error/code :live-job-terminal-failure} :frame-park]
+           [{:ok false :error/code :live-job-terminal-failure
+             :repair-attempt-history
+             [{:attempt 1 :error/code :invalid-state}]
+             :superseded-terminals
+             [{:error/code :impossible-transition}]} :frame-park]]]
+    (is (= expected
+           (if (sut/fault-frame-park {:frame/id "f" :problem/id "p"}
+                                     failure)
+             :frame-park
+             :campaign-stop))
+        (pr-str failure))))
+
+(deftest queue-tick-reconciles-fault-park-decisions
+  (let [{:keys [providers state]} (harness)
+        failure {:ok false :error/code :mundane-frame-failure}]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (is (= :frame-prepared
+           (:status (sut/tick! (assoc providers :frame-tick-fn
+                                      (constantly failure))))))
+    (is (= :awaiting-decision
+           (get-in @state [:parked 0 :decision/status])))
+    (sut/tick!
+     (assoc providers :park-decision-records-provider
+            (constantly [{:frame/id "q1"
+                          :decision/status :decided
+                          :decision/disposition :partial}])))
+    (is (= :decided (get-in @state [:parked 0 :decision/status])))
+    (is (false? (get-in @state [:parked 0 :decision/bell-required])))
+    (is (= :partial
+           (get-in @state [:parked 0 :decision/record
+                           :decision/disposition])))))
+
 (deftest corruption-fault-does-not-park-or-advance
   (let [{:keys [providers state]} (harness)
         failure {:ok false :error/code :campaign-ledger-digest-mismatch

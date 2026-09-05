@@ -26,12 +26,13 @@
     :qualification-digest-invalid
     :ledger-digest-invalid})
 
-(declare declared-fault-codes)
-
 (defn- finding-keywords [value]
   (cond
     (keyword? value) [value]
-    (map? value) (declared-fault-codes value)
+    (map? value) (mapcat finding-keywords
+                         (keep #(get value %)
+                               [:error/code :finding :findings
+                                :validation/findings]))
     (coll? value) (mapcat finding-keywords value)
     :else []))
 
@@ -44,11 +45,8 @@
      (when (keyword? (:error/code value)) [(:error/code value)])
      (mapcat finding-keywords
              (keep #(get value %)
-                   [:finding :findings :validation/findings]))
-     (mapcat declared-fault-codes (vals value)))
-    (if (coll? value)
-      (mapcat declared-fault-codes value)
-      [])))
+                   [:finding :findings :validation/findings])))
+    []))
 
 (defn classify
   "Return the disposition for a failed tick result. Unknown codes park the
