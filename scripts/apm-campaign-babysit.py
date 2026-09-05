@@ -13,8 +13,9 @@ the frame watchdog can't see: regulator status, heartbeat staleness, and new
 entries appended to :regulator/failures.
 
 An alert must survive two consecutive watchdog observations before it fires an
-Agency bell. Incidents are keyed by frame and reason, so retry counters do not
-turn one unresolved condition into a bell storm. An evidence-backed
+Agency bell. Persistent incidents re-ring with bounded backoff and widen to
+voxterm speech after the configured number of primary bells. Incidents are
+keyed by campaign frame state, not message text. An evidence-backed
 ``:waiting`` observation is operational: it clears alert debounce state and
 never holds an agent until a later phase. Queue-level state, rather than a
 regulator tick result, is authoritative for pause/completion.
@@ -29,7 +30,11 @@ import subprocess
 import threading
 import time
 import calendar
+import json
 import os
+import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 REPO = os.environ.get(
@@ -41,9 +46,6 @@ FROM_ID = os.environ.get("APM_BABYSIT_FROM_ID", "claude-cli")
 TO_ID = os.environ.get("APM_BABYSIT_TO_ID", "codex-10")
 PARK_DECISION_TO_ID = os.environ.get(
     "APM_BABYSIT_PARK_DECISION_TO_ID", "claude-12")
-PARK_DECISIONS = os.environ.get(
-    "APM_BABYSIT_PARK_DECISIONS",
-    f"{REPO}/holes/labs/M-apm-demonstration/frame-park-decisions.edn")
 TARGET_COORDINATOR_ID = os.environ.get("APM_BABYSIT_COORDINATOR_ID")
 POLL_S = int(os.environ.get("APM_BABYSIT_POLL_S", "20"))
 DISCOVERY_LOG_EVERY_S = int(
@@ -51,6 +53,14 @@ DISCOVERY_LOG_EVERY_S = int(
 COORD_STALE_S = int(os.environ.get("APM_BABYSIT_COORD_STALE_S", "180"))
 BELL_COOLDOWN_S = int(
     os.environ.get("APM_BABYSIT_BELL_COOLDOWN_S", "1200"))
+ESCALATION_CEILING_S = int(
+    os.environ.get("APM_BABYSIT_ESCALATION_CEILING_S", "3600"))
+PRIMARY_ESCALATIONS = int(
+    os.environ.get("APM_BABYSIT_PRIMARY_ESCALATIONS", "3"))
+OPERATOR_SAY_URL = os.environ.get(
+    "APM_BABYSIT_OPERATOR_SAY_URL", "http://127.0.0.1:8081/say")
+STATE_HEARTBEAT_S = int(
+    os.environ.get("APM_BABYSIT_STATE_HEARTBEAT_S", "1200"))
 # current_frame values that are placeholders, not real frame-ids -- never a
 # valid target for start_watch (no such campaign directory exists).
 SENTINEL_FRAMES = ("__campaign_complete__", "__queue_paused__")
@@ -239,20 +249,6 @@ def parse_queue_state(text):
     return d
 
 
-def reconcile_park_decisions():
-    """Persist recorded decisions before considering any decision bells."""
-    if not QUEUE_STATE or not os.path.exists(PARK_DECISIONS):
-        return
-    result = subprocess.run(
-        ["clojure", "-M", "-m", "futon3c.apm.frame-park-decisions",
-         QUEUE_STATE, PARK_DECISIONS],
-        cwd=REPO, capture_output=True, text=True, timeout=60)
-    if result.returncode != 0:
-        out(f"park-decision reconciliation failed: {result.stderr.strip()}")
-    elif ":changed? true" in result.stdout:
-        out(f"park decisions reconciled: {result.stdout.strip()}")
-
-
 def report_park_decision_dirt():
     """Report uncommitted park-decision artifacts without changing them."""
     try:
@@ -289,7 +285,29 @@ def send_bell(subject, body, to_id=TO_ID):
         out(f"BELL SEND FAILED [{subject}]: {e}")
 
 
+def send_operator_speech(subject, incident_age_s):
+    """Queue one short voxterm utterance; a queue ACK is not delivery proof."""
+    text = (f"Campaign alert. {subject}. The condition has persisted for "
+            f"{fmt_duration(incident_age_s)}.")
+    request = urllib.request.Request(
+        OPERATOR_SAY_URL,
+        data=json.dumps({'text': text, 'kind': 'campaign-alert'}).encode('utf-8'),
+        headers={'Content-Type': 'application/json'},
+        method='POST')
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            payload = response.read().decode('utf-8', errors='replace')
+            out(f"OPERATOR SPEECH QUEUED (not delivery proof) [{subject}]: "
+                f"http={response.status} {payload[:200]}")
+            return True
+    except (OSError, urllib.error.URLError, ValueError) as error:
+        out(f"OPERATOR SPEECH FAILED [{subject}]: {error}")
+        return False
+
+
 last_bell = {}
+incident_escalations = {}
+condition_logs = {}
 # Operators can suppress delivery while retaining detection/logging by setting
 # APM_BABYSIT_BELLS_PAUSED=true before launch.
 BELLS_PAUSED = os.environ.get(
@@ -311,6 +329,133 @@ def maybe_bell(key, subject, body, to_id=TO_ID):
 def clear_bell(key):
     if key in last_bell:
         del last_bell[key]
+
+
+def escalation_delay(sent_count):
+    """Delay after SENT_COUNT deliveries: base, 2x, 4x, then ceiling."""
+    return min(BELL_COOLDOWN_S * (2 ** max(0, sent_count - 1)),
+               max(BELL_COOLDOWN_S, ESCALATION_CEILING_S))
+
+
+def escalation_due(key, now, initial_delay=0):
+    """Return whether persistent incident KEY is due, keyed on incident state."""
+    state = incident_escalations.setdefault(
+        key, {'first_seen': now, 'last_sent': None, 'sent_count': 0})
+    if state['last_sent'] is None:
+        return now - state['first_seen'] >= initial_delay
+    return now - state['last_sent'] >= escalation_delay(state['sent_count'])
+
+
+def mark_escalation_sent(key, now):
+    state = incident_escalations[key]
+    state['last_sent'] = now
+    state['sent_count'] += 1
+    return state['sent_count']
+
+
+def operator_widening_due(next_count):
+    return next_count > PRIMARY_ESCALATIONS
+
+
+def maybe_escalate(key, subject, body, initial_delay=0, now=None):
+    """Notify repeatedly while incident KEY persists, with bounded backoff.
+
+    This function only delivers observations. It has no coordinator or campaign
+    mutation path. Operator widening is handled after the declared number of
+    primary deliveries once an operator surface is configured.
+    """
+    now = time.time() if now is None else now
+    if not escalation_due(key, now, initial_delay=initial_delay):
+        return False
+    state = incident_escalations[key]
+    next_count = state['sent_count'] + 1
+    escalated_subject = f"{subject} (persistent alert #{next_count})"
+    if BELLS_PAUSED:
+        out(f"ESCALATION SUPPRESSED (bells paused) [{escalated_subject}]")
+    else:
+        send_bell(escalated_subject, body, to_id=TO_ID)
+        # Speech widens the alert after the declared number of primary bells;
+        # it never replaces them, and a voxterm queue ACK is not treated as an
+        # acknowledgement or as evidence that Joe heard it.
+        if operator_widening_due(next_count):
+            send_operator_speech(
+                escalated_subject, now - state['first_seen'])
+    mark_escalation_sent(key, now)
+    return True
+
+
+def clear_escalation(key):
+    incident_escalations.pop(key, None)
+
+
+def observe_condition(key, message, now=None):
+    """Log a transition once, then bounded heartbeats with observation counts."""
+    now = time.time() if now is None else now
+    state = condition_logs.get(key)
+    if state is None:
+        condition_logs[key] = {'first_seen': now, 'last_log': now, 'count': 1}
+        out(f"CONDITION DETECTED [{key}]: {message}")
+        return
+    state['count'] += 1
+    if now - state['last_log'] >= STATE_HEARTBEAT_S:
+        age = fmt_duration(now - state['first_seen'])
+        out(f"CONDITION PERSISTS [{key}]: observations={state['count']} "
+            f"age={age}; {message}")
+        state['last_log'] = now
+
+
+def clear_condition(key, message="cleared"):
+    state = condition_logs.pop(key, None)
+    if state is not None:
+        out(f"CONDITION CLEARED [{key}]: observations={state['count']}; {message}")
+
+
+def self_test():
+    """Small explicit test for schedule and state-log compaction."""
+    global out
+    incident_escalations.clear()
+    key = "test-incident"
+    assert not escalation_due(key, 0, initial_delay=10)
+    assert escalation_due(key, 10, initial_delay=10)
+    assert mark_escalation_sent(key, 10) == 1
+    assert not escalation_due(key, 10 + BELL_COOLDOWN_S - 1)
+    assert escalation_due(key, 10 + BELL_COOLDOWN_S)
+    assert mark_escalation_sent(key, 10 + BELL_COOLDOWN_S) == 2
+    assert not escalation_due(key, 10 + BELL_COOLDOWN_S * 3 - 1)
+    assert escalation_due(key, 10 + BELL_COOLDOWN_S * 3)
+    assert incident_escalations[key]['sent_count'] == 2
+    clear_escalation(key)
+    assert key not in incident_escalations
+    assert not operator_widening_due(PRIMARY_ESCALATIONS)
+    assert operator_widening_due(PRIMARY_ESCALATIONS + 1)
+    condition_logs.clear()
+    output, original_out = [], out
+    try:
+        out = output.append
+        observe_condition("down", "same state", now=0)
+        observe_condition("down", "same state", now=1)
+        observe_condition("down", "same state", now=STATE_HEARTBEAT_S)
+    finally:
+        out = original_out
+    assert len(output) == 2
+    assert condition_logs["down"]['count'] == 3
+    output, original_out = [], out
+    original_urlopen = urllib.request.urlopen
+    try:
+        out = output.append
+        urllib.request.urlopen = lambda *_args, **_kwargs: (
+            (_ for _ in ()).throw(urllib.error.URLError("offline")))
+        assert not send_operator_speech("test", 10)
+    finally:
+        urllib.request.urlopen = original_urlopen
+        out = original_out
+    assert output and "OPERATOR SPEECH FAILED" in output[0]
+    print("apm-campaign-babysit self-test: PASS")
+
+
+if "--self-test" in sys.argv:
+    self_test()
+    raise SystemExit(0)
 
 
 current_proc = None
@@ -413,12 +558,7 @@ while True:
 
     text = read_text(COORD)
     c = parse_coordinator(text)
-    initial_q = parse_queue_state(read_text(QUEUE_STATE)) or {}
-    if initial_q.get('pending_parks'):
-        reconcile_park_decisions()
-        report_park_decision_dirt()
-    else:
-        report_park_decision_dirt()
+    report_park_decision_dirt()
     q = parse_queue_state(read_text(QUEUE_STATE)) or {}
     for park in q.get('pending_parks', []):
         if park.get('owner') == 'claude-supervisor':
@@ -465,6 +605,10 @@ while True:
         if queue_status == 'complete':
             clear_bell("regulator-not-running")
             clear_bell("coordinator-heartbeat-stale")
+            if current_frame and current_frame not in SENTINEL_FRAMES:
+                incident_key = f"frame-{current_frame}-campaign-down"
+                clear_condition(incident_key, "campaign complete")
+                clear_escalation(incident_key)
             if current_frame != "__campaign_complete__":
                 out(f"CAMPAIGN COMPLETE: {CAMPAIGN_ID} finished all "
                     f"{q.get('next_index')} problems (queue-state.edn "
@@ -476,6 +620,10 @@ while True:
         elif queue_status == 'paused':
             clear_bell("regulator-not-running")
             clear_bell("coordinator-heartbeat-stale")
+            if current_frame and current_frame not in SENTINEL_FRAMES:
+                incident_key = f"frame-{current_frame}-campaign-down"
+                clear_condition(incident_key, "queue paused")
+                clear_escalation(incident_key)
             if current_frame != "__queue_paused__":
                 out(f"QUEUE PAUSED: {CAMPAIGN_ID} is paused after "
                     f"next-index={q.get('next_index')} of its problem plan "
@@ -500,12 +648,27 @@ while True:
                 f"outstanding.")
         elif c['status'] != 'running':
             if q.get('active_frame') is not None:
-                # The frame watchdog carries the actionable phase/job/result
-                # evidence.  Sending this generic coordinator alarm as well
-                # produced a second bell for the same incident.
-                out(f"REGULATOR NOT RUNNING WITH ACTIVE FRAME "
-                    f"[{q.get('active_frame')}]: deferring notification to "
-                    "the frame watchdog")
+                active = q.get('active_frame')
+                incident_key = f"frame-{active}-campaign-down"
+                # Give the frame watchdog one normal cooldown to deliver its
+                # richer phase/job/result evidence. If the outage remains,
+                # this queue-level observation becomes the recurring source;
+                # a dead or silent frame watcher cannot suppress escalation.
+                observe_condition(
+                    incident_key,
+                    f"regulator status=:{c['status']} with active frame "
+                    f"{active}, tick={c['ticks']}")
+                maybe_escalate(
+                    incident_key,
+                    f"campaign still down at frame {active}",
+                    f"Campaign {CAMPAIGN_ID}, frame {active}: coordinator.edn "
+                    f"still reports :regulator/status :{c['status']} at tick "
+                    f"{c['ticks']} while queue-state.edn still names this "
+                    f"active frame. The frame watchdog was given the initial "
+                    f"notification interval; the condition persists. Inspect "
+                    f"the coordinator and watcher evidence. This watcher will "
+                    f"not resume, enable, or repair campaign state.",
+                    initial_delay=BELL_COOLDOWN_S)
             else:
                 maybe_bell(
                     "regulator-not-running", "JIT regulator not running",
@@ -516,6 +679,10 @@ while True:
                     f"overnight.")
         else:
             clear_bell("regulator-not-running")
+            if q.get('active_frame') is not None:
+                active_key = f"frame-{q.get('active_frame')}-campaign-down"
+                clear_condition(active_key, "regulator running again")
+                clear_escalation(active_key)
 
         updated_at = parse_iso(c['updated_at']) if c['updated_at'] else None
         if updated_at is not None and queue_status not in ('complete', 'paused'):
@@ -575,6 +742,9 @@ while True:
         if active_frame and active_frame != current_frame:
             between_frames_logged = False
             if current_frame is not None:
+                prior_incident = f"frame-{current_frame}-campaign-down"
+                clear_condition(prior_incident, "queue advanced to a new frame")
+                clear_escalation(prior_incident)
                 out(f"frame advanced: {current_frame} -> {active_frame} "
                     f"(next-index={q.get('next_index')})")
                 if (current_frame not in ("__campaign_complete__", "__queue_paused__")
@@ -653,8 +823,8 @@ while True:
                 # That is one frame incident, not a fresh incident per reason.
                 if pending_frame_alert_count >= 2 and last_frame_alert is None:
                     out(f"FRAME ALERT [{current_frame}]: {line}")
-                    maybe_bell(
-                        f"frame-{current_frame}-watchdog-alert",
+                    maybe_escalate(
+                        f"frame-{current_frame}-campaign-down",
                         f"frame {current_frame} watchdog alert: {reason}",
                         f"Campaign {CAMPAIGN_ID}, frame {current_frame}: "
                         f"scripts/apm-watch-projection.sh reported an alert:\n\n"
@@ -672,7 +842,8 @@ while True:
                         f"{CAMPAIGN_DIR}/{CAMPAIGN_ID}-{current_frame}/"
                         f"problem-transitions.edn {COORD} 120\n"
                         f"-- should report :watch/status :healthy or :waiting "
-                        f"with :watch/findings [].")
+                        f"with :watch/findings [].",
+                        initial_delay=0)
                     last_frame_alert = reason
             elif ':watch/status :waiting' in line:
                 pending_frame_alert = None
@@ -680,7 +851,6 @@ while True:
                 if last_frame_alert is not None:
                     out(f"FRAME CLASSIFIED WAITING [{current_frame}]: "
                         f"declared wait after {last_frame_alert}")
-                    clear_bell(f"frame-{current_frame}-watchdog-alert")
                     last_frame_alert = None
             elif ':watch/status :healthy' in line:
                 pending_frame_alert = None
@@ -688,7 +858,6 @@ while True:
                 if last_frame_alert is not None:
                     out(f"FRAME RECOVERED [{current_frame}]: healthy again "
                         f"after {last_frame_alert}")
-                    clear_bell(f"frame-{current_frame}-watchdog-alert")
                     last_frame_alert = None
             elif ':problem-projection-transition' in line:
                 pm = re.search(r':phase :([A-Za-z0-9?*+!_-]+)', line)
