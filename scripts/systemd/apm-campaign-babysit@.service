@@ -1,0 +1,37 @@
+# apm-campaign-babysit@.service — NOT INSTALLED OR ENABLED.
+# The instance name is the coordinator suffix: jit-all-open-v2 watches
+# jit-queue:jit-all-open-v2. See apm-campaign-babysit.md for the cutover.
+[Unit]
+Description=Read-only APM campaign babysitter for jit-queue:%i
+After=network.target
+# Keep retrying after repeated crashes. There is no higher-level watcher that
+# can safely decide that this watcher should remain stopped.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/home/joe/code/futon3c
+ExecStart=/usr/bin/python3 /home/joe/code/futon3c/scripts/apm-campaign-babysit.py
+
+# These are the exact bindings on the live transient
+# apm-campaign-babysit-jit-all-open-v2.service as inspected on 2026-09-05.
+Environment=APM_BABYSIT_FROM_ID=apm-watcher-codex
+Environment=APM_BABYSIT_TO_ID=codex-17
+Environment=APM_BABYSIT_PARK_DECISION_TO_ID=codex-17
+Environment=APM_BABYSIT_BELL_COOLDOWN_S=1200
+Environment=APM_BABYSIT_COORDINATOR_ID=jit-queue:%i
+
+Restart=on-failure
+RestartSec=30s
+StandardOutput=journal
+StandardError=journal
+
+# The babysitter observes and notifies only. Filesystem hardening prevents this
+# service from acquiring a campaign-state mutation path later by accident.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=default.target
