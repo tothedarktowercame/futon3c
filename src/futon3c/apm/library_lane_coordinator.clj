@@ -109,9 +109,13 @@
           :finding {:intent-phase phase :state-phase current-phase
                     :intent-strategy-required? intent-strategy?
                     :state-strategy-required? current-strategy?}}
-         (let [result (run-step! (assoc config :phase phase
-                                        :strategy-required?
-                                        intent-strategy?))]
+         ;; The step is the lane's only injected seam, mirroring C-square's
+         ;; programmatic solver: phase progression, drift detection, ruling
+         ;; interpretation and status mapping below all stay production.
+         (let [step (or (:lane/step-fn config) run-step!)
+               result (step (assoc config :phase phase
+                                   :strategy-required?
+                                   intent-strategy?))]
            (case (:ruling result)
          :awaiting {:ok true :status :awaiting-job :lane/result result}
          :phase-certified
