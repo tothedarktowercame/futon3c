@@ -766,4 +766,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No last-valid receipt, Student "
         "result, terminal collection, qualification success, or proof verdict "
-        "was invented; queue-state.edn retains the exact fault residual.")} ]}
+        "was invented; queue-state.edn retains the exact fault residual.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f86"
+   :problem/id "b97J01"
+   :decision/at "2026-09-05T10:34:18Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :terminal-repair-nil-finding-apparatus-failure
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved original Student submission reports outcome solved and a "
+        "zero-exit direct Lean check with no sorry; its terminal repair finding "
+        "was :fresh-session-id-missing and classified :apparatus. The successor "
+        "also has an authenticated typed success submission with a zero-exit "
+        "direct Lean check. Despite that evidence, its durable terminal collection "
+        "remained :running and wrapper reconciliation cancelled the successor. "
+        "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}. A repair request "
+        "with no finding after authenticated completion is an apparatus state-machine "
+        "failure, not evidence that the submitted mathematics failed.")
+   :decision/recommended-route
+   (str "Keep f86 partial and preserve both authenticated submissions and the exact "
+        "nil-finding residual. Repair the driver to reconcile authenticated completion "
+        "before terminal repair, reject a nil repair finding before consuming any "
+        "budget, and treat a reconciled self-cancellation as wrapper cleanup rather "
+        "than role failure. Validate that repair by independently replaying the stored "
+        "submission evidence; any deliberate continuation must use a fresh frame.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No last-valid receipt, Student "
+        "certification, terminal result, Guide decision, promotion, or proof verdict "
+        "was invented; the authenticated submissions and queue residual remain "
+        "authoritative.")} ]}
