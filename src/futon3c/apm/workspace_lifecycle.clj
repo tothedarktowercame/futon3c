@@ -13,6 +13,11 @@
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]))
 
+(defn- subs-safe
+  "Truncate S to at most N characters, marking the truncation."
+  [s n]
+  (if (<= (count s) n) s (str (subs s 0 n) "... [truncated]")))
+
 (def required-retirement-preconditions
   #{:frame-terminal :no-running-or-parked-job-references-workspace
     :no-active-ledger-claim-references-workspace :worktree-clean
@@ -219,9 +224,19 @@
                     (conj :workspace-packages-authority-mismatch)
                     (not manifest-readable?) (conj :workspace-substrate-manifest-missing)
                     (not (zero? (:exit probe))) (conj :workspace-probe-failed))]
-     {:valid? (empty? findings) :findings findings :head head :branch branch
-      :worktree-clean? clean? :problem/blob blob :probe/exit (:exit probe)
-      :substrate/path (some-> substrate str)})))
+     (cond-> {:valid? (empty? findings) :findings findings :head head
+              :branch branch :worktree-clean? clean? :problem/blob blob
+              :probe/exit (:exit probe)
+              :substrate/path (some-> substrate str)}
+       ;; Keep WHY the probe failed. library-lane:t00J02 durably stopped on
+       ;; 2026-08-29 with :workspace-probe-failed and probe/exit 1, and the
+       ;; cause was unrecoverable from the record because the process output
+       ;; was discarded here. Bounded so a Lean error dump cannot bloat the
+       ;; durable state.
+       (not (zero? (:exit probe)))
+       (assoc :probe/err (some-> (:err probe) str (subs-safe 4000))
+              :probe/out (some-> (:out probe) str (subs-safe 4000))
+              :probe/bootstrap (:bootstrap probe))))))
 
 (defn archive-problem-source!
   "Copy the worktree's problem file into ARCHIVE-DIRECTORY, named by its git
