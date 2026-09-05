@@ -77,11 +77,16 @@
 
 (defn axiom-list
   [{:keys [out err]}]
-  (when-let [[_ axioms]
-             (re-find #"(?s)depends on axioms:\s*\[([^]]*)\]"
-                      (str out "\n" err))]
-    (->> (str/split axioms #",")
-         (mapv str/trim))))
+  (let [text (str out "\n" err)]
+    (cond
+      ;; A declaration proved without any axiom prints this instead of a list.
+      ;; That is the STRONGEST result, not a missing one.
+      (re-find #"does not depend on any axioms" text) []
+      :else
+      (when-let [[_ axioms]
+                 (re-find #"(?s)depends on axioms:\s*\[([^]]*)\]" text)]
+        (->> (str/split axioms #",")
+             (mapv str/trim))))))
 
 (defn proof-standard-for-source!
   "Elaborate SOURCE and return its typed proof-standard observation. ARTIFACT-ID
@@ -111,10 +116,20 @@
           {:ok false :error/code :apm-proof-standard-elaboration-failed
            :problem/id problem-id :artifact-id artifact-id
            :exit (:exit elaboration) :stderr (:err elaboration)}
-          (not= allowed-proof-axioms axioms)
+          ;; No parse at all: elaboration succeeded but produced no axiom
+          ;; verdict. Inconclusive is not clean.
+          (nil? axioms)
+          {:ok false :error/code :apm-proof-standard-observation-missing
+           :problem/id problem-id :artifact-id artifact-id :declaration theorem
+           :allowed-axioms allowed-proof-axioms
+           :trace/proof-standard-observation observation}
+          ;; Reject only axioms OUTSIDE the standard. A proof depending on
+          ;; fewer axioms than allowed -- or none -- is stronger, not invalid.
+          (seq (remove (set allowed-proof-axioms) axioms))
           {:ok false :error/code :apm-proof-standard-axioms-invalid
            :problem/id problem-id :artifact-id artifact-id :declaration theorem
            :axioms axioms :allowed-axioms allowed-proof-axioms
+           :disallowed-axioms (vec (remove (set allowed-proof-axioms) axioms))
            :trace/proof-standard-observation observation}
           :else
           {:ok true :trace/proof-standard-observation observation}))

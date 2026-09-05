@@ -196,3 +196,28 @@
         (is (= ["propext" "Classical.choice" "Quot.sound"
                 "apm_b00j02._native.native_decide.ax_1_2"]
                (:axioms rejected)))))))
+
+(deftest proof-standard-accepts-proofs-cleaner-than-the-standard
+  ;; A proof depending on FEWER axioms than the standard -- or none -- is
+  ;; stronger evidence, not weaker. An exact-list comparison rejected both,
+  ;; including Lean's own `does not depend on any axioms` output.
+  (with-temp-dir
+    (fn [repo]
+      (let [git (fn [_repo & _] {:exit 0 :out "theorem apm_x : True := by trivial" :err ""})
+            observe (fn [pid out]
+                      (bank-audit/proof-standard-observation!
+                       {:problem-id pid :head "h" :repo repo :git git
+                        :run-lean (fn [_ _] {:exit 0 :out out :err ""})}))
+            no-axioms (observe "zeroax" "'apm_zeroax' does not depend on any axioms")
+            subset (observe "subsetax"
+                            "'apm_subsetax' depends on axioms: [propext, Quot.sound]")
+            inconclusive (observe "silent" "")]
+        (is (:ok no-axioms))
+        (is (= [] (get-in no-axioms [:trace/proof-standard-observation :axiom-names])))
+        (is (:ok subset))
+        (is (= ["propext" "Quot.sound"]
+               (get-in subset [:trace/proof-standard-observation :axiom-names])))
+        ;; Elaboration succeeded but produced no verdict: inconclusive is not clean.
+        (is (not (:ok inconclusive)))
+        (is (= :apm-proof-standard-observation-missing
+               (:error/code inconclusive)))))))
