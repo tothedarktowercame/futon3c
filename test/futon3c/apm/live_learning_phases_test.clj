@@ -31,12 +31,17 @@
                         :guide-candidates-outside-store-mode}
                       (:findings result)))))))
 
-(deftest terminal-report-parser-accepts-one-prose-wrapped-edn-map-only
+(deftest terminal-report-parser-normalizes-prose-wrapped-reports
   (is (= {:command-own-exit 0 :frame-id "f21"}
          (runtime/parse-report
           "Bell sent. Final receipt:\n```clojure\n{:command-own-exit 0 :frame-id \"f21\"}\n```")))
-  (is (nil? (runtime/parse-report
-             "```edn\n{:a 1}\n``` and ```edn\n{:b 2}\n```"))))
+  ;; Ambiguity no longer refuses: two report-shaped fences resolve to the
+  ;; LAST one (a role's final answer ends its reply). Refusing here made
+  ;; the parser return nil and the driver record submission-missing, which
+  ;; burned the one repair attempt and voided frames (2026-09-06 ruling).
+  (is (= {:b 2}
+         (runtime/parse-report
+          "```edn\n{:a 1}\n``` and ```edn\n{:b 2}\n```"))))
 
 (def contract (edn/read-string
                (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))

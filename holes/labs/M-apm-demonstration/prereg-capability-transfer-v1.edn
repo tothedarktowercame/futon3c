@@ -949,4 +949,45 @@
    :reversal
    "Restore the void-exhausted-role-terminal! call at the
     countdown-control dispatch site (the function is retained); parks
-    already recorded keep their decision records."}]}
+    already recorded keep their decision records."}
+
+  {:amendment 15
+   :at "2026-09-06T22:05Z"
+   :by "claude-3"
+   :authority "Joe, 2026-09-06, in session: 'If the student can't write EDN,
+    get them to write it as JSON, and then convert it to EDN, or something...
+    we don't have time to keep wasting time on solving idiotic technology
+    problems.'"
+   :kind :instrument-change
+   :what
+   "Role terminal report acceptance is widened from one clean EDN fence to a
+    normalization ladder: fenced blocks (edn/clojure, json, untagged), then
+    balanced top-level {...} spans in the raw reply, then the whole trimmed
+    text; each candidate tried as EDN then as JSON with keys keywordized;
+    latest candidate wins within a rung; a candidate must carry at least one
+    keyword key to count as a report. The winning route is recorded on the
+    receipt as :report/normalization {:route ... :syntax ...}. Role cards
+    are unchanged and still request one EDN map; only acceptance widened.
+    clj-kondo is no longer an acceptance gate, only the diagnostic source
+    when nothing parses (historical error codes preserved)."
+   :why
+   "The report envelope, not report content, was killing frames: f172's
+    lint diagnostic shows a markdown reply (**Status:, bare paths) around
+    the mathematics; two fenced blocks made the old parser return nil
+    (recorded as submission-missing); ```json fences could not match. Each
+    such failure burned the single repair attempt, and the repair chain's
+    own wrapper cancellation then produced :fresh-session-id-missing.
+    Downstream phase field validation still judges every accepted map."
+   :known-limitation
+   "Replies containing no report map at all (f172's repair turn: the
+    harness halted the turn before the typed submit) still fail and now
+    park under amendment 14. Junk-map acceptance is bounded by the
+    keyword-key guard and downstream field validation, not eliminated."
+   :boundary
+   ":report/normalization is nil on receipts collected before this change;
+    rows are poolable on report content but not on envelope-failure rates
+    across the boundary. Routes other than :edn-fence measure role output
+    drift and should be reviewed at the next Fable audit."
+   :reversal
+   "Restore strict-parse-report-diagnostic as parse-report-diagnostic
+    (kept verbatim in live_preflight_runtime.clj)."}]}
