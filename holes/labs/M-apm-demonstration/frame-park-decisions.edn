@@ -1175,4 +1175,37 @@
    (str "The frame is not voided or forgotten. No global solution, attraction theorem, "
         "terminal receipt, certified Student result, Guide decision, promotion, memory "
         "publication, or verdict was invented. Unrelated pattern-library artifacts were "
-        "not authored or adopted here.")} ]}
+        "not authored or adopted here.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f100"
+   :problem/id "m00A06"
+   :decision/at "2026-09-06T01:47:53Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :authenticated-clean-success-unreconciled-by-terminal-repair
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following "
+        ":live-learning-terminal-invalid/:report-not-map. Two authenticated Student "
+        "submissions report partial and preserve the finite-part integral identity, "
+        "compact-support derivative lemma, and integrability estimates. The final "
+        "authenticated submission reports closed: it constructs the functional first "
+        "on the test-function submodule, extends it with LinearMap.exists_extend, proves "
+        "the order-one seminorm estimate, and reports a clean zero-sorry compilation. "
+        "Its durable collection nevertheless remains :running. This success evidence "
+        "must be preserved, but the nil repair finding is not a terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f100 as partial while preserving all authenticated submissions and the "
+        "completed candidate. Repair typed-report normalization and reconcile an "
+        "authenticated closed submission before terminal repair; reject nil repair "
+        "findings before budget consumption. Independently validate the stored candidate "
+        "in a fresh frame before certification, Guide work, promotion, or publication; "
+        "do not rewrite the historical running collection into a terminal.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
+        "result, Guide decision, promotion, memory publication, or verdict was invented. "
+        "Unrelated pattern-library artifacts were not authored or adopted here.")} ]}
