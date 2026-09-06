@@ -1769,3 +1769,32 @@
                                                          :receipt/problem-id "a01J05"})}}))]
         (is (= "/tmp/union.edn"
                (get-in guide-2 [:request :prior-snapshot :snapshot-path])))))))
+
+(deftest per-candidate-rejections-can-be-repaired
+  ;; f61/b01A02 and its Guide-family siblings parked as
+  ;; :live-job-terminal-repair-exhausted with repair/attempts 1, having never
+  ;; attempted a repair. The Guide deposit validator reports a rejected
+  ;; candidate as {:ordinal N :findings [...]}; wrapped-finding-keyword only
+  ;; recognises {:finding kw}, and a map is not a key in
+  ;; repair-finding-instructions, so finding-instruction returned nil.
+  ;; terminal-repair-request then refuses the WHOLE repair with
+  ;; :terminal-repair-instruction-missing when any finding lacks an
+  ;; instruction -- so one unrecognised shape suppressed the repair entirely.
+  (let [fi #'sut/finding-instruction]
+    ;; f61's exact recorded finding
+    (let [r (fi {:ordinal 1 :findings [:candidate-name-missing
+                                       :candidate-hook-missing
+                                       :candidate-body-missing]})]
+      (is (seq r) "a per-candidate rejection must be instructable")
+      (is (some #(re-find #"(?i)candidate at position 1" %) r)
+          "and must name which candidate")
+      (is (some #(re-find #"(?i)name" %) r) "and which fields")
+      (is (some #(re-find #"(?i)prose is not deposited|not deposited" %) r)
+          "the Guides described deposits in prose while :candidates was nil"))
+    ;; the already-working shapes must keep working
+    (is (seq (fi {:finding :candidates-missing})))
+    (is (seq (fi :typed-submission-missing)))
+    ;; and an undeclared finding must STILL refuse, so the repair path cannot
+    ;; silently invent guidance it does not have
+    (is (nil? (fi :some-finding-nobody-declared)))
+    (is (nil? (fi {:ordinal 1})) "an ordinal with no findings is not instructable")))

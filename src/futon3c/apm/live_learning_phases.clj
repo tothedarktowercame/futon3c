@@ -925,6 +925,24 @@
     "The trace id, canonical closed-or-partial result, and controller-derived :memory-use-audit must all match the request contract."
     "Supply the checker-bound trace id and result, and copy :memory-use-audit from the request verbatim, then submit below."]})
 
+(def candidate-field-instructions
+  "Per-candidate rejections. The Guide deposit validator reports these inside
+  {:ordinal N :findings [...]}, one entry per rejected candidate."
+  {:candidate-name-missing
+   "name: a short stable identifier for the pattern being deposited."
+   :candidate-hook-missing
+   "hook: the trigger phrase a future solver would recognise this by."
+   :candidate-body-missing
+   "body: the guidance itself, written to be useful without this problem."
+   :candidate-patterns-missing
+   "patterns: the pattern ids this candidate attaches to."
+   :candidate-pattern-binding-required
+   "a binding to an existing pattern, or an explicit new-pattern declaration."
+   :candidate-sha
+   "sha: the content digest of the persisted body."
+   :candidate-ids
+   "ids: the substrate memory id the body was persisted as."})
+
 (def specific-finding-instructions
   {:depositor-missing
    "The deposit's :depositor must be a string naming this Guide seat."
@@ -961,10 +979,35 @@
              (keyword? (:finding finding)))
     (:finding finding)))
 
+(defn- ordinal-finding-instruction
+  "Instruction for a per-candidate rejection, {:ordinal N :findings [...]}.
+
+  Without this the shape resolved to no instruction at all, so
+  terminal-repair-request refused the whole repair with
+  :terminal-repair-instruction-missing and the frame parked having never
+  attempted one. f61/b01A02 died exactly this way, carrying
+  [:candidate-name-missing :candidate-hook-missing :candidate-body-missing]."
+  [finding]
+  (when (and (map? finding)
+             (nat-int? (:ordinal finding))
+             (seq (:findings finding)))
+    (let [nested (vec (:findings finding))
+          named (keep candidate-field-instructions nested)]
+      (into [(str "Your store-mode candidate at position " (:ordinal finding)
+                  " was rejected because required fields were absent or empty.")
+             (str "Missing or invalid: "
+                  (str/join ", " (map name (filter keyword? nested))) ".")]
+            (concat
+             (when (seq named)
+               (cons "Every candidate must carry:" (vec named)))
+             ["Resubmit the whole candidate vector with every field populated."
+              "A candidate described only in your prose is not deposited."])))))
+
 (defn- finding-instruction [finding]
   (or (get repair-finding-instructions
            (or (wrapped-finding-keyword finding) finding))
-      (projection-finding-instruction finding)))
+      (projection-finding-instruction finding)
+      (ordinal-finding-instruction finding)))
 
 (defn- rendered-finding-detail [request finding]
   (let [finding-key (or (wrapped-finding-keyword finding) finding)
