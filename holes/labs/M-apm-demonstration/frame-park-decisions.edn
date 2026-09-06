@@ -1208,4 +1208,39 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No terminal receipt, certified Student "
         "result, Guide decision, promotion, memory publication, or verdict was invented. "
-        "Unrelated pattern-library artifacts were not authored or adopted here.")} ]}
+        "Unrelated pattern-library artifacts were not authored or adopted here.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f101"
+   :problem/id "m01J04"
+   :decision/at "2026-09-06T03:58:28Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :bounded-solver-progress-with-density-residual
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :last-valid-receipt/id
+   "8ce6b417389fc1004deec87a0231c273fa91c74a8243992851dcadec6c46413f"
+   :decision/rationale
+   (str "The solver completed its declared 50-round budget and left a clean committed "
+        "head 35683065c0a185ce273e955d843df9af57e52c2b. The final report compiles with "
+        "one sorry warning and attributes sorryAx solely to "
+        "apm_m01J04_localization_isH1Zero. All other theorem branches and surrounding "
+        "weak-gradient, restriction, distance, compact-core, thickening, and convolution-"
+        "support infrastructure are reported compiled. The exact residual is the smooth "
+        "level-set cutoff and common-kernel mollification construction, including H1 "
+        "convergence, multidimensional L2 approximate-identity convergence, and derivative "
+        "identification. This is an honest bounded human-intervention point, not proof "
+        "closure and not an apparatus failure.")
+   :decision/recommended-route
+   (str "Advance f101 as partial while preserving the last valid receipt, all 50 solver "
+        "reports, and the final episode commits 093255b1, b6b4e799, 6e36a050, 5a97bbad, "
+        "05f3c1ed, and 35683065. Continue from 35683065 in a fresh explicitly authorized "
+        "solver frame: construct the cutoff family, prove whole-space H1 convergence, "
+        "mollify below the compiled support-safe radius, identify the convolved gradient, "
+        "then rerun zero-sorry compilation and the permitted-axiom audit.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No density theorem, zero-sorry proof, "
+        "Student receipt, Guide decision, promotion, memory publication, or verdict was "
+        "invented. The solver branch and its residual remain authoritative.")} ]}
