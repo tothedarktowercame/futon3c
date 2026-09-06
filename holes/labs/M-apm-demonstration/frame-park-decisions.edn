@@ -1413,4 +1413,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. The frozen statement was not silently "
         "changed, no inconsistent proof was introduced, and no Student receipt, Guide "
+        "decision, promotion, memory publication, or verdict was invented.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f107"
+   :problem/id "m02A06"
+   :decision/at "2026-09-06T10:32:37Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :frozen-authority-refuted-by-off-domain-variation
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :last-valid-receipt/id
+   "c79da191b5fc93bd1f78af73ab99a141f5c777ac6de19b63f8c7a7f5e797e1dd"
+   :decision/rationale
+   (str "The solver completed its declared 50-round budget and left clean committed head "
+        "9247fae16aeca274f2941486ec239846223199d7. Commits befdaa6b and "
+        "9247fae1 prove apm_m02a06_not_unique_on_full_line and "
+        "apm_m02a06_frozen_statement_false: all hypotheses constrain solutions only on "
+        "Set.Ici 0 or atTop, so changing a solution on negative inputs preserves every "
+        "hypothesis while contradicting whole-function uniqueness. The exact frozen target "
+        "is therefore refuted with only propext, Classical.choice, and Quot.sound; its sole "
+        "sorry/sorryAx remains honest. This is a frozen-statement authority conflict, not "
+        "unfinished statement-preserving proof search.")
+   :decision/recommended-route
+   (str "Advance f107 as partial while preserving the last valid receipt, all 50 reports, "
+        "and clean counterexample head 9247fae1. Require successor frozen authority that "
+        "states uniqueness as EqOn (Set.Ici 0) or defines solutions on the interval "
+        "subtype. Retain the counterexample as a regression test; only after the repaired "
+        "domain interface is frozen should a fresh frame prove the Green-operator analytic "
+        "lemmas and assemble the contraction argument.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The frozen statement was not silently "
+        "changed, no inconsistent proof was introduced, and no Student receipt, Guide "
         "decision, promotion, memory publication, or verdict was invented.")} ]}
