@@ -1243,4 +1243,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No density theorem, zero-sorry proof, "
         "Student receipt, Guide decision, promotion, memory publication, or verdict was "
-        "invented. The solver branch and its residual remain authoritative.")} ]}
+        "invented. The solver branch and its residual remain authoritative.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f102"
+   :problem/id "m01J05"
+   :decision/at "2026-09-06T04:45:05Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :frozen-authority-refuted-by-kernel-checked-counterexample
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :last-valid-receipt/id
+   "ff969f193dddcd051eeeb61699ab024f37d3aff39a349a5433c0e3032916e8f4"
+   :decision/rationale
+   (str "The solver completed its declared 50-round budget and left clean committed head "
+        "4b04568097f6d0023d5809a3910ef230aaa0c911. The target apm_m01j05 is "
+        "the sole sorry/source of sorryAx. Commit e29168d5 kernel-checks "
+        "apm_m01J05_statement_false: the frozen first conjunct fails for X := ULift Empty, "
+        "T := id, and q := 0 because it demands a fixed point without inhabitation. "
+        "Commit 4b045680 separately proves apm_m01J05_contraction_clause_of_nonempty, "
+        "showing [Nonempty X] is a sufficient minimal repair. The exact frozen proposition "
+        "therefore cannot receive a sound statement-preserving proof; this is an authority "
+        "specification conflict, not remaining tactic search.")
+   :decision/recommended-route
+   (str "Advance f102 as partial while preserving the last valid receipt, all 50 solver "
+        "reports, the exact-negation certificate, and the minimally repaired contraction "
+        "proof. Require corrected frozen authority adding [Nonempty X] or an equivalent "
+        "inhabitation premise. Only under that new authority should a fresh frame reuse "
+        "the repaired first conjunct, prove the independent Newton clause, assemble the "
+        "new conjunction, and run zero-sorry and permitted-axiom validation.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The frozen statement was not silently "
+        "changed, no inconsistent axiom or proof was introduced, and no Student receipt, "
+        "Guide decision, promotion, memory publication, or verdict was invented.")} ]}
