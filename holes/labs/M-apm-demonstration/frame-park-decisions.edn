@@ -1346,4 +1346,37 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No density theorem, Poincare estimate, "
         "Poisson solution, terminal receipt, Guide decision, promotion, memory publication, "
-        "or verdict was invented. Unrelated pattern-library artifacts were not adopted.")} ]}
+        "or verdict was invented. Unrelated pattern-library artifacts were not adopted.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f105"
+   :problem/id "m02A03"
+   :decision/at "2026-09-06T08:47:29Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solved-frame-retirement-blocked-by-preserved-workspace-dirt
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative retirement audit passed seven of eight required conditions "
+        "and failed only :worktree-clean with :validation/findings [:workspace-dirty]. "
+        "The solver receipt e982d41ed549eed8cde92ca43fa257b096d9831cded136b3e8bcfd78b952471c "
+        "records head d266ca026571d60fdd500fb39ddfffea0484be6b, unchanged statement, Lean "
+        "exit 0, zero sorry warnings, and only propext, Classical.choice, and Quot.sound. "
+        "The promotion receipt records independent review. The retired Student workspace "
+        "is at base head 9fa428f7 and contains the untracked file scratch-m02A03.lean, "
+        "which explains the sole retirement finding. Earlier authenticated Student "
+        "not-closed submissions remain preserved but do not negate the certified solver "
+        "receipt. This is a workspace-retirement apparatus fault after solved work.")
+   :decision/recommended-route
+   (str "Advance f105 as partial while preserving the solver, verification, promotion, "
+        "Student, Guide, close-frame, and retirement-audit evidence. Have the retirement "
+        "apparatus archive or explicitly classify scratch-m02A03.lean, then re-run the "
+        "read-only eight-condition retirement audit. Do not silently delete the scratch "
+        "artifact, rewrite the terminal head, or rerun already certified proof work.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The scratch artifact was not deleted, and "
+        "no replacement retirement certificate, terminal receipt, proof, promotion, "
+        "memory publication, or verdict was invented. Unrelated shared-tree artifacts "
+        "were not authored or adopted here.")} ]}
