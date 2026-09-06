@@ -15,6 +15,13 @@
 ;; Keep one additional apparatus turn available when a repaired terminal reaches
 ;; a later transport boundary.  The agent repair budget remains independent.
 (def default-apparatus-repair-attempts 2)
+
+(def unauthorized-memory-findings
+  #{:student-memory-used-without-surfacing
+    :student-memory-used-despite-holdout})
+
+(defn- unauthorized-memory-repair-repeated? [validated]
+  (boolean (some unauthorized-memory-findings (:findings validated))))
 (def default-orphan-recovery-attempts 2)
 (def default-transport-retry-attempts 3)
 ;; 60s, not 10 minutes. The Lean acceptance predicate
@@ -1263,8 +1270,14 @@
                              :error/code :live-job-receipt-persistence-failed}))))
                     (assoc validated
                            :error/code
-                           (if (= :apparatus repair-origin)
+                           (cond
+                             (= :apparatus repair-origin)
                              :live-job-apparatus-repair-exhausted
+
+                             (unauthorized-memory-repair-repeated? validated)
+                             :live-job-unauthorized-memory-repair-rejected
+
+                             :else
                              :live-job-terminal-repair-exhausted)
                            :repair/fault-origin repair-origin
                            :repair/attempts

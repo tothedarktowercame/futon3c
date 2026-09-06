@@ -1119,6 +1119,43 @@
     (is (= :live-job-terminal-repair-exhausted (:error/code result)))
     (is (= 1 (:repair/attempts result)))))
 
+(deftest f83-shaped-repair-that-retains-unauthorized-memory-is-refused
+  ;; f83/a1's first terminal cited this exact rejected promotion candidate.
+  ;; A repair instruction is not enforcement: if the replacement submission
+  ;; still carries it, the driver must return a specific refusal and must not
+  ;; ask the receipt provider to certify the role.
+  (let [unauthorized-id
+        "e-apm-promotion-bf6a95b47dda46466e5bc4d6f8faa422"
+        receipts (atom 0)
+        job (atom {:job-id "f83-a1-repair" :agent-id "f83-student"
+                   :state :done
+                   :report {:memory-use {:used-ids [unauthorized-id]}}})
+        state (assoc (:state (sut/drive! (effects (atom []) job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        result
+        (sut/drive!
+         (assoc (effects (atom []) job)
+                :state state
+                :terminal-validator
+                (fn [_ _ observed-job]
+                  (is (= [unauthorized-id]
+                         (get-in observed-job [:report :memory-use :used-ids])))
+                  {:ok false
+                   :error/code :live-learning-terminal-invalid
+                   :findings [:student-memory-used-without-surfacing]})
+                :receipt-provider
+                (fn [& _]
+                  (swap! receipts inc)
+                  {:ok true :certificate {:receipt/id "must-not-exist"}})
+                :terminal-repair-request-fn (constantly {:ok true})))]
+    (is (= :live-job-unauthorized-memory-repair-rejected
+           (:error/code result)))
+    (is (= [:student-memory-used-without-surfacing] (:findings result)))
+    (is (= 1 (:repair/attempts result)))
+    (is (zero? @receipts))
+    (is (nil? (:certificate result)))))
+
 (deftest exhausted-missing-submission-can-produce-controller-observation
   (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
         state (assoc (:state (sut/drive! (effects calls job)))
