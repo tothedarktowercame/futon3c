@@ -1379,4 +1379,38 @@
    (str "The frame is not voided or forgotten. The scratch artifact was not deleted, and "
         "no replacement retirement certificate, terminal receipt, proof, promotion, "
         "memory publication, or verdict was invented. Unrelated shared-tree artifacts "
-        "were not authored or adopted here.")} ]}
+        "were not authored or adopted here.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f106"
+   :problem/id "m02A05"
+   :decision/at "2026-09-06T09:39:12Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :frozen-authority-refuted-by-off-interval-bump
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :last-valid-receipt/id
+   "e57ab50b0b6fd7f74de9c422f28ad293674bcb48d050b636befc1fb3bdb3b053"
+   :decision/rationale
+   (str "The solver completed its declared 50-round budget and left clean committed head "
+        "38b7925a392af50cae2e30b28ff09b5fb2f6ef6a. Commit b0fa43cf constructs "
+        "and verifies a smooth bump supported outside the constrained interval; commit "
+        "1e741e0a proves the frozen first conjunct false; commit 38b7925a proves "
+        "apm_m02a05_frozen_statement_false, the exact negation of the complete registered "
+        "target, using only propext, Classical.choice, and Quot.sound. The target's sole "
+        "sorry therefore cannot be soundly removed under unchanged authority: interval "
+        "hypotheses cannot imply global function equality. This is a frozen-statement "
+        "authority conflict, not an unresolved tactic search.")
+   :decision/recommended-route
+   (str "Advance f106 as partial while preserving the last valid receipt, all 50 solver "
+        "reports, and commits b0fa43cf, 1e741e0a, and 38b7925a as the counterexample "
+        "certificate. Require new frozen authority replacing global equality with EqOn "
+        "(Set.Icc 0 (Real.pi / 2)) or interval-subtype functions. Under that corrected "
+        "signature, retain the bump theorem as a regression test, then prove the coupled "
+        "ODE uniqueness and variational clauses and run zero-sorry permitted-axiom checks.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The frozen statement was not silently "
+        "changed, no inconsistent proof was introduced, and no Student receipt, Guide "
+        "decision, promotion, memory publication, or verdict was invented.")} ]}
