@@ -1040,7 +1040,15 @@
         (throw (ex-info "Terminal repair finding has no actionable instruction"
                         {:error/code :terminal-repair-instruction-missing
                          :findings (vec missing)})))
-      (str "REVISE AND RESUBMIT — THE PREVIOUS COMPLETION WAS REJECTED.\n"
+      (str (if (= :submit-step (:repair/kind request))
+             (str "SUBMIT STEP — ONLY THE TYPED SUBMISSION IS MISSING.\n"
+                  "The work turn is over. Do not resume or extend the "
+                  "mathematical work; do not modify workspace files. Report "
+                  "the workspace exactly as it stands — an honest partial "
+                  "status is a valid submission — including your memory-use "
+                  "account, then create, complete, and submit the typed JSON "
+                  "payload with the command below.\n")
+             "REVISE AND RESUBMIT — THE PREVIOUS COMPLETION WAS REJECTED.\n")
            (str/join
             "\n"
             (map-indexed
@@ -1065,7 +1073,14 @@
        " — follow frozen role card "
        (:role-card-path request) " at blob " (:role-card-blob request) ".\n"
        "Authority and exact receipt inputs:\n" (pr-str request) "\n"
-       (case (:dispatch/type request)
+       (if (= :submit-step (:repair/kind request))
+         (str "This is a submit-only step: the working turn is already over. "
+              "Do not attempt the problem or change any file. Read the "
+              "workspace state, then produce the typed completion for it — "
+              "including :memory-use with vector-valued :used-ids from the "
+              "prior turn's actual usage, and an explicit failure account "
+              "even on success.")
+         (case (:dispatch/type request)
          :student-attempt
          (str "Attempt the problem independently. The :memory-snapshot map is "
               "the reviewed starting shelf. You may also use the controller-owned "
@@ -1095,7 +1110,7 @@
                                ":dispositions, :promotion-reviews and :memory-candidates."))
          :close-frame
          (str "Audit the complete receipt graph and return a content-addressable trace result. "
-              "Copy :memory-use-audit verbatim from the request into the typed submission."))
+              "Copy :memory-use-audit verbatim from the request into the typed submission.")))
        (if-let [job-id (:submission/job-id request)]
          (str " Completion is accepted only through the typed submission tool; "
               "follow the shared completion contract "
@@ -1155,7 +1170,12 @@
                           :repair/kind :typed-submission-contract-migration)))
                fresh-session-recovery?
                (assoc :fresh-session-nonce migration-nonce
-                      :repair/kind :orphaned-session-recovery))]
+                      :repair/kind :orphaned-session-recovery)
+               ;; After the session clause on purpose: a submit step may also
+               ;; need a fresh session, but its instructions must say "submit
+               ;; what exists", not "recover and resume".
+               (= :submit-step (:repair/kind failure))
+               (assoc :repair/kind :submit-step))]
     (if (seq missing-instructions)
       {:ok false :error/code :terminal-repair-instruction-missing
        :findings missing-instructions}

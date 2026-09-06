@@ -12,6 +12,28 @@
 
 (def terminal-states job-state/terminal-states)
 (def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
+
+(def submission-only-findings
+  "Findings that say nothing is wrong with the role's work — only that no
+  typed submission landed (the turn halted before the submit step, or the
+  wrapper's own cancellation erased the session id)."
+  #{:typed-submission-missing :fresh-session-id-missing
+    :live-job-terminal-repair-exhausted})
+
+(defn submission-only-failure?
+  "True when the validated findings reduce to the submission step itself
+  being missing. This class gets the intended rescue chain (Joe,
+  2026-09-06: 'we could add another submit step ... it's just making the
+  system work as it's intended'): its repair packets are submit-only
+  (:repair/kind :submit-step), the typed-submission migration fires as the
+  extra submission turn, and the controller observation is the final
+  fallback. Exact [:typed-submission-missing] matching had let the
+  wrapper-cancellation's :fresh-session-id-missing pollution skip all
+  three (f171/f172 voided past every rescue)."
+  [findings]
+  (and (seq findings)
+       (some #{:typed-submission-missing} findings)
+       (every? submission-only-findings findings)))
 ;; Keep one additional apparatus turn available when a repaired terminal reaches
 ;; a later transport boundary.  The agent repair budget remains independent.
 (def default-apparatus-repair-attempts 2)
@@ -1111,9 +1133,13 @@
                                (or (nil? (:repair/fault-origin validated))
                                    (= :apparatus posthoc-origin)))
                           (assoc :repair/fault-origin posthoc-origin))
+              ;; submission-only-failure?, not an exact [:typed-submission-
+              ;; missing] match: the wrapper's own cancellation adds
+              ;; :fresh-session-id-missing, and that pollution made f171/f172
+              ;; skip this rescue entirely and void (2026-09-06).
               typed-contract-migration?
               (and (fn? terminal-submission-provider)
-                   (= [:typed-submission-missing] (:findings validated))
+                   (submission-only-failure? (:findings validated))
                    (pos? (or (:terminal-repair-attempts state) 0))
                    (zero? (or (:typed-submission-migration-attempts state) 0)))
               usage-limit
@@ -1218,6 +1244,15 @@
                                 typed-contract-migration?
                                 (assoc :repair/kind
                                        :typed-submission-contract-migration)
+                                ;; A submission-only repair is a submit step
+                                ;; at ANY attempt: the packet must say
+                                ;; "submit what exists", never re-frame the
+                                ;; attempt (f172's repair turn resumed proof
+                                ;; work and ran out of budget mid-fix).
+                                (and (not typed-contract-migration?)
+                                     (submission-only-failure?
+                                      (:findings validated)))
+                                (assoc :repair/kind :submit-step)
                                 (not typed-contract-migration?)
                                 (assoc :repair/next-attempt
                                        (inc (if (= :apparatus
@@ -1248,7 +1283,7 @@
                 (cond
                   exhausted?
                   (if (and (= :agent repair-origin)
-                           (= [:typed-submission-missing] (:findings validated))
+                           (submission-only-failure? (:findings validated))
                            (fn? missing-observation-provider))
                     (let [provided (missing-observation-provider
                                     active-request (:ticket state) job

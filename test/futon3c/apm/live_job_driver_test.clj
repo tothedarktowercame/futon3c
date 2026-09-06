@@ -1156,6 +1156,33 @@
     (is (zero? @receipts))
     (is (nil? (:certificate result)))))
 
+(deftest submission-only-repair-is-a-submit-step
+  ;; A repair whose findings reduce to the missing submission carries
+  ;; :repair/kind :submit-step from the FIRST attempt: the packet says
+  ;; "submit what exists", never re-frames the attempt (Joe, 2026-09-06).
+  (let [calls (atom []) seen-failure (atom nil)
+        job (atom {:job-id "job-1" :state :done})
+        state (:state (sut/drive! (effects calls job)))
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :announce-fn
+                    (fn [repair-request]
+                      (swap! calls conj [:announce (:dispatch/id repair-request)])
+                      {:ok true :job-id "submit-step-job"})
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job failure]
+                      (reset! seen-failure failure)
+                      {:ok true
+                       :request (assoc r :dispatch/id "submit-step-dispatch")}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (true? (:repair? result)))
+    (is (= :submit-step (:repair/kind @seen-failure)))
+    (is (= 1 (get-in result [:state :terminal-repair-attempts])))
+    (is (= 1 (count (filter #(and (vector? %) (= :announce (first %)))
+                            @calls))))))
+
 (deftest exhausted-missing-submission-can-produce-controller-observation
   (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
         state (assoc (:state (sut/drive! (effects calls job)))

@@ -990,4 +990,46 @@
     drift and should be reviewed at the next Fable audit."
    :reversal
    "Restore strict-parse-report-diagnostic as parse-report-diagnostic
-    (kept verbatim in live_preflight_runtime.clj)."}]}
+    (kept verbatim in live_preflight_runtime.clj)."}
+
+  {:amendment 16
+   :at "2026-09-06T23:10Z"
+   :by "claude-3"
+   :authority "Joe, 2026-09-06, in session: 'we could add another submit
+    step. Again, this is just bookkeeping... It's just making the system
+    work as it's intended.'"
+   :kind :instrument-change
+   :what
+   "Submission-only failures (findings within #{:typed-submission-missing
+    :fresh-session-id-missing :live-job-terminal-repair-exhausted}, with
+    :typed-submission-missing present) now flow through the rescue chain
+    that already existed for the exact [:typed-submission-missing] match:
+    (1) the ordinary repair is dispatched as a SUBMIT STEP
+    (:repair/kind :submit-step) whose packet forbids resuming the
+    mathematical work and asks only for the typed submission of the
+    workspace as it stands, including the memory-use account; (2) the
+    typed-submission migration (the fresh extra submission turn) fires for
+    this class; (3) the controller observation remains the final fallback.
+    No budget arithmetic changed."
+   :why
+   "The wrapper-cancellation adds :fresh-session-id-missing to the
+    findings, and every rescue keyed on an EXACT [:typed-submission-missing]
+    match, so f171/f172 bypassed all three rescues and voided. Separately,
+    the ordinary repair packet re-framed the entire attempt ('Attempt the
+    problem independently...'), so f172's repair turn resumed proof work
+    and exhausted its budget before submitting — the packet now says
+    submit-only for this class."
+   :known-limitation
+   "A submit-step turn still costs one model turn; a role that ignores the
+    submit-only instruction and works anyway exhausts as before and parks
+    under amendment 14. The controller observation still cannot recover
+    the role's own memory-use account."
+   :boundary
+   ":repair/kind :submit-step appears on repair requests from this change
+    forward; submission-only exhaustion rates are not poolable across it.
+    Receipts certified via the migration or submit step are ordinary typed
+    receipts and pool normally."
+   :reversal
+   "Restore the exact [:typed-submission-missing] matches at the three
+    trigger sites in live_job_driver.clj and drop the :submit-step clause
+    in terminal-repair-request/repair-instructions/prompt."}]}

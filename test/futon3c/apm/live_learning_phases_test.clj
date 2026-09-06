@@ -457,6 +457,32 @@
     (is (re-find #"scripts/apm-submit-role.py --job-id" packet))
     (is (re-find #"repair budget is exhausted" packet))))
 
+(deftest submit-step-packet-forbids-resuming-the-work
+  ;; Joe (2026-09-06): "we could add another submit step... it's just
+  ;; making the system work as it's intended." The submit step's packet
+  ;; must not re-frame the whole attempt (f172's repair turn resumed
+  ;; proof work and ran out of budget before submitting).
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :dispatch/type :student-attempt
+                 :frame-id "f74" :phase :student-attempt-1
+                 :problem-id "b01A02" :agent-id "f74-student"
+                 :role-card-path "student.md" :role-card-blob "blob"}
+                {:ticket/id "ticket-1"}
+                {:job-id "job-1"}
+                {:error/code :live-job-submission-missing
+                 :findings [:typed-submission-missing]
+                 :repair/kind :submit-step})
+        request (:request repair)
+        packet (sut/prompt request)]
+    (is (:ok repair))
+    (is (= :submit-step (:repair/kind request)))
+    (is (.startsWith packet
+                     "SUBMIT STEP — ONLY THE TYPED SUBMISSION IS MISSING."))
+    (is (re-find #"Do not resume or extend the mathematical work" packet))
+    (is (re-find #"submit-only step" packet))
+    (is (not (re-find #"Attempt the problem independently" packet)))
+    (is (re-find #"scripts/apm-submit-role.py --job-id" packet))))
+
 (deftest repair-refuses-a-finding-without-actionable-instructions
   (let [repair (sut/terminal-repair-request
                 {:dispatch/id "original" :frame-id "f49"}
