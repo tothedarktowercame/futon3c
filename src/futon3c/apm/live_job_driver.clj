@@ -4,7 +4,8 @@
    The canonical Agency job is announced, ticketed, and persisted before it is
    activated. A restart therefore polls the recorded job instead of dispatching
    a duplicate. Terminal evidence is delegated to a phase-specific validator."
-  (:require [futon3c.apm.campaign-machine :as machine]
+  (:require [clojure.string :as str]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.job-state :as job-state]
             [futon3c.apm.typed-role-submission :as submission]))
@@ -562,6 +563,30 @@
                        :error/code :live-job-activation-acceptance-persistence-failed
                        :state next-state})))))))))))))
 
+(def substrate-unavailable-backoff-ms (* 20 60 1000))
+(def substrate-unavailable-max-waits 72)
+
+(defn substrate-unavailable?
+  "Does this terminal say the AGENT SUBSTRATE is unavailable rather than that
+  the work failed?
+
+  On 2026-09-06 the Codex quota ran out and 59 frames terminated with
+  :invoke-error and \"You've hit your usage limit ... try again at Sep 7th,
+  2026 8:33 AM\". Each was treated as a frame fault and parked, so the queue
+  advanced past 80 problems in about half an hour -- roughly one problem every
+  42 seconds -- against an outage that had a published end time. Nothing was
+  wrong with those problems."
+  [job]
+  (let [message (str (:terminal-message job))
+        lowered (str/lower-case message)]
+    (boolean
+     (and (= :invoke-error (:terminal-code job))
+          (or (str/includes? lowered "usage limit")
+              (str/includes? lowered "rate limit")
+              (str/includes? lowered "quota")
+              (str/includes? lowered "purchase more credits")
+              (str/includes? lowered "try again at"))))))
+
 (defn ticket [request response]
   (if-not (and (:ok response) (string? (:job-id response))
                (not-empty (:job-id response)))
@@ -954,6 +979,34 @@
         (and (not terminal?)
              (nil? (:terminal-collection state)))
         {:ok true :status :awaiting-terminal :state state}
+
+        ;; The substrate is unavailable, not the frame at fault. Wait for it
+        ;; instead of consuming a problem: parking here advances the queue,
+        ;; and an outage with a published end time then costs the whole
+        ;; corpus rather than a pause.
+        (and terminal?
+             (not= :done (:state job))
+             (nil? (:terminal-collection state))
+             (substrate-unavailable? job))
+        (let [waits (inc (or (:substrate/waits state) 0))
+              next-state (assoc state :substrate/waits waits)]
+          (if (<= waits substrate-unavailable-max-waits)
+            {:ok true :status :awaiting-substrate
+             :state next-state
+             :substrate/condition
+             {:resume-at-ms (+ (long (now-ms-fn)) substrate-unavailable-backoff-ms)
+              :reason :substrate-unavailable
+              :waits waits
+              :terminal (select-keys job [:job-id :agent-id :terminal-code
+                                          :terminal-message])}}
+            ;; Bounded. A substrate that never returns must surface, not wait
+            ;; silently forever.
+            {:ok false :error/code :live-job-substrate-unavailable-exhausted
+             :decision/bell-required true
+             :finding (assoc (select-keys job [:job-id :agent-id :state
+                                               :terminal-code :terminal-message])
+                             :waits waits
+                             :waited-ms (* waits substrate-unavailable-backoff-ms))}))
 
         (and terminal?
              (not= :done (:state job))

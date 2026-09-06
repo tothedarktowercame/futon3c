@@ -1494,3 +1494,35 @@
         transport? #'futon3c.apm.live-job-driver/transport-failure?]
     (is (true? (transport? own)))
     (is (false? (transport? nested)))))
+
+(deftest substrate-exhaustion-waits-instead-of-consuming-the-queue
+  ;; 2026-09-06: the Codex quota ran out and 59 frames terminated with
+  ;; :invoke-error and "You've hit your usage limit ... try again at Sep 7th,
+  ;; 2026 8:33 AM". Every one was treated as a frame fault and parked, so the
+  ;; queue advanced past 80 problems in about half an hour against an outage
+  ;; with a published end time. The problems were fine.
+  (let [usage-limit-job
+        {:job-id "j1" :agent-id "f110-proctor" :state :failed
+         :terminal-code :invoke-error
+         :terminal-message (str "Exit 1: You've hit your usage limit. Visit "
+                                "https://chatgpt.com/codex/settings/usage to "
+                                "purchase more credits or try again at "
+                                "Sep 7th, 2026 8:33 AM.")}
+        work-failure-job
+        {:job-id "j2" :agent-id "f111-solver" :state :failed
+         :terminal-code :invoke-error
+         :terminal-message "Exit 1: lake build failed, 3 errors"}]
+    (is (true? (sut/substrate-unavailable? usage-limit-job))
+        "the real recorded quota terminal is substrate unavailability")
+    (is (false? (sut/substrate-unavailable? work-failure-job))
+        "a genuine work failure must NOT be mistaken for substrate absence")
+    (is (false? (sut/substrate-unavailable? {}))
+        "an empty terminal is not substrate absence")
+    (is (false? (sut/substrate-unavailable?
+                 {:terminal-code :timeout
+                  :terminal-message "You've hit your usage limit"}))
+        "only :invoke-error terminals qualify")
+    ;; The wait must be bounded: a substrate that never returns has to
+    ;; surface rather than wait silently forever.
+    (is (pos-int? sut/substrate-unavailable-max-waits))
+    (is (pos-int? sut/substrate-unavailable-backoff-ms))))
