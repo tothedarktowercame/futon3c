@@ -1182,10 +1182,20 @@
                                               agent-repairs))))))
                     repair-request (:request repair)
                     declared-repair-origin (:repair/fault-origin repair-request)
+                    ;; Fall back to the PRELIMINARY origin, not the
+                    ;; inferred one. preliminary-repair-origin is what decided
+                    ;; whether to suppress the repair request; if exhaustion is
+                    ;; then judged against a different origin the two can
+                    ;; disagree, and a suppressed request (repair = nil) falls
+                    ;; through to :live-job-terminal-repair-request-invalid
+                    ;; with :finding nil instead of reporting exhaustion.
+                    ;; f86-f104 hit exactly that: cached origin :apparatus with
+                    ;; apparatus-repair-attempts 2 of 2, inferred origin :agent
+                    ;; with terminal-repair-attempts 0 -- 13 consecutive frames.
                     repair-origin (if (contains? #{:agent :apparatus}
                                                  declared-repair-origin)
                                     declared-repair-origin
-                                    inferred-repair-origin)
+                                    preliminary-repair-origin)
                     exhausted? (and (not typed-contract-migration?)
                                     (if (= :apparatus repair-origin)
                                       (>= apparatus-repairs

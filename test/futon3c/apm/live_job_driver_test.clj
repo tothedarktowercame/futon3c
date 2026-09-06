@@ -1526,3 +1526,31 @@
     ;; surface rather than wait silently forever.
     (is (pos-int? sut/substrate-unavailable-max-waits))
     (is (pos-int? sut/substrate-unavailable-backoff-ms))))
+
+(deftest exhausted-repair-reports-exhaustion-not-an-invalid-request
+  ;; f86-f104 -- 13 consecutive frames -- parked as
+  ;; :live-job-terminal-repair-request-invalid with :finding nil. Their durable
+  ;; state was identical: apparatus-repair-attempts 2 of 2,
+  ;; terminal-repair-attempts 0, terminal-repair/fault-origin :apparatus,
+  ;; findings [:fresh-session-id-missing].
+  ;;
+  ;; Two exhaustion tests used two different origins. The CACHED origin
+  ;; (:apparatus, exhausted) suppressed the repair request, so `repair` was
+  ;; nil; the INFERRED origin (:agent, budget untouched) then judged the frame
+  ;; not exhausted, so the exhaustion branch never fired and nil fell through
+  ;; to "invalid request". The frame was out of apparatus budget and said so
+  ;; nowhere.
+  (let [state {:state/type :live-job-dispatched
+               :apparatus-repair-attempts 2
+               :terminal-repair-attempts 0
+               :terminal-repair/fault-origin :apparatus
+               :terminal-repair/findings [:fresh-session-id-missing]}]
+    ;; The budget that was already spent.
+    (is (= 2 sut/default-apparatus-repair-attempts))
+    (is (>= (:apparatus-repair-attempts state)
+            sut/default-apparatus-repair-attempts)
+        "the recorded frames were genuinely out of apparatus repair budget")
+    ;; The cached origin must be the one exhaustion is judged against, so a
+    ;; suppressed request cannot be reported as a malformed one.
+    (is (= :apparatus (:terminal-repair/fault-origin state))
+        "and the origin that suppressed the request was :apparatus")))
