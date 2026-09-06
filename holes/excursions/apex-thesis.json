@@ -1,0 +1,23 @@
+{
+  "schema": "apex-thesis-v1",
+  "as-of": "2026-09-06",
+  "status": "in-force",
+  "provenance": "futon2 holes/labs/library-loop/runs/W2-pushout-sketch.md (pushout sketch + Joe ruling); restatable by operator ruling",
+  "bergson": "What we are doing is discovering problems; a problem stated clearly enough can actually be solved.",
+  "apex": "Can a community of humans and machines doing open-ended work leave an account of itself structured enough that the work can steer itself -- so that activity becomes inference rather than motion?",
+  "clusters": [
+    {"key": "A", "name": "Records carry warrant",
+     "ground": "An assertion severed from its derivation cannot be checked, learned from, or recovered.",
+     "members": ["M-first-flights (records carry their derivations)", "completion prose without execution evidence (P4)", "returns stored trimmed: conclusions retained, warrant discarded (PA11z)", "unqueryable trails block recovery", "undeclared cascades cannot be audited", "silent transport loss (leaf-5)"]},
+    {"key": "B", "name": "One queryable self-account",
+     "ground": "Knowing what exists and its state, with provenance, at stack scale.",
+     "members": ["four evidence vocabularies, one world (leaf-2)", "no provenance-bearing projection of stack state (P2)", "self-observation lags actuation (P1)", "unused infrastructure yields no fitness evidence (leaf-6-4-4)"]},
+    {"key": "C", "name": "Feedback reaches every participant",
+     "ground": "The loop's human and stakeholder edges are where learning silently dies.",
+     "members": ["3 of 7 lifecycle stages are operator turns (Box-12/PA11z)", "agent discoveries do not teach humans", "trainers' equity family (UKRN)", "understanding did not update the argument (leaf-cycle)"]},
+    {"key": "D", "name": "Accountable next-action choice, including goal formation",
+     "ground": "Deciding what to do next, accountably, under uncertainty -- with the goals themselves formable, not given.",
+     "members": ["G over policies; C; find/organise (WM core)", "policy-conditioned EIG (M-aif-policy-conditioned-eig)", "policy-grain compliance", "shared-budget arbitration (R11)", "pre-goal preference C_ser (C537, serendipity)"]}
+  ],
+  "caveats": ["Project-domain problems join through cluster C as instances.", "If the apex is rejected, clusters A-D stand as independent problems."]
+}

@@ -54,6 +54,13 @@
   .wip-field{margin-top:7px}.wip-field b{color:#cdd6e4}.wip-none{color:#ff9c9c;font-weight:800}
   .draw-pile{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
   .draw-pile a{color:#93bdf8}
+  .thesis-apex{font-size:17px;line-height:1.5;color:#eef2f8;max-width:980px;margin:3px 0 8px}
+  .thesis-epigraph{color:var(--dim);font-style:italic;margin:7px 0 11px}
+  .thesis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin-top:11px}
+  .thesis-card{background:#181c23;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .thesis-card h3{font-size:12px;color:#cdd6e4;margin:0 0 4px}
+  .thesis-card p{font-size:11.5px;color:#aeb8c7;margin:0 0 5px}
+  .thesis-card details{color:var(--dim);font-size:10.5px}.thesis-card ul{margin:5px 0 0;padding-left:18px}
 </style>
 </head>
 <body>
@@ -66,6 +73,11 @@
 </header>
 <main>
   <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
+
+  <section class="panel" id="thesis-panel">
+    <h2>The problem being solved — live thesis (re-statable)</h2>
+    <div id="thesis-body"><div class="gap">Loading live-thesis data…</div></div>
+  </section>
 
   <section class="panel" id="section-status-panel" style="display:none">
     <h2>Dimension read status</h2>
@@ -139,6 +151,7 @@
   var EP_GRAPH=BASE+"/api/alpha/cascade-real/graph";
   var EP_FORWARD=BASE+"/api/alpha/forward-model";
   var EP_WIP="wip-cards.json";
+  var EP_THESIS="apex-thesis.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -543,6 +556,26 @@
     });
   }
 
+  function renderThesis(t){
+    var clusters=Array.isArray(t.clusters)?t.clusters:[];
+    var cards=clusters.map(function(c){
+      var members=Array.isArray(c.members)?c.members:[];
+      return "<div class='thesis-card'><h3>"+esc(c.key)+" · "+esc(c.name)+"</h3>"+
+        "<p>"+esc(c.ground)+"</p><details><summary>"+members.length+" members</summary><ul>"+
+        members.map(function(m){return "<li>"+esc(m)+"</li>";}).join("")+"</ul></details></div>";
+    }).join("");
+    el("thesis-body").innerHTML="<div class='thesis-apex'>"+esc(t.apex)+"</div>"+
+      "<div class='sub'>As of "+esc(t["as-of"])+" · "+esc(t.status)+" · "+esc(t.provenance)+"</div>"+
+      "<div class='thesis-epigraph'>"+esc(t.bergson)+"</div>"+
+      "<div class='thesis-grid'>"+cards+"</div>";
+  }
+
+  function loadThesis(){
+    requestJSON("live-thesis data",EP_THESIS).then(renderThesis).catch(function(err){
+      el("thesis-body").innerHTML="<div class='gap'>Live-thesis data unavailable: "+esc(err&&err.message||err)+"</div>";
+    });
+  }
+
   function loadAll(){
     if(loading) return;
     loading=true;
@@ -583,6 +616,7 @@
     });
   }
 
+  loadThesis();
   loadWip();
   loadAll();
   setInterval(loadAll,60000);
