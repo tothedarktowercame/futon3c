@@ -1447,4 +1447,41 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. The frozen statement was not silently "
         "changed, no inconsistent proof was introduced, and no Student receipt, Guide "
-        "decision, promotion, memory publication, or verdict was invented.")} ]}
+        "decision, promotion, memory publication, or verdict was invented.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f108"
+   :problem/id "m02J01"
+   :decision/at "2026-09-06T12:12:26Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solved-frame-retirement-blocked-by-preserved-workspace-dirt
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The read-only retirement audit passed seven of its eight required invariants: "
+        "the frame is terminal, the terminal head and branch ref exist, required artifacts "
+        "are content-addressed, the independent audit passed, and no running/parked job or "
+        "active ledger claim references the workspace. Its sole finding is :workspace-dirty. "
+        "Solver receipt 755f92647346efbacc55f112241db07ac14686240429dbca855fbbcd2bdd5d32 "
+        "certifies statement-preserving head 6923ba12727466f08af103f67ebea97c6ea1fb9d with "
+        "Lean exit 0, zero warnings, zero sorry warnings, zero errors, and only propext, "
+        "Classical.choice, and Quot.sound. The retired Student workspace remains at base head "
+        "9fa428f7a7bb0292e3699c69ccbdc68e65187c14 with a modified "
+        "problems/m02J01/lean/Main.lean (+134/-1) containing substantive partial work, and "
+        "the Student submission history records partial/blocked outcomes. That preserved "
+        "artifact explains the retirement failure; it does not negate the independently "
+        "certified solver result.")
+   :decision/recommended-route
+   (str "Advance f108 as partial while preserving the solver receipt, terminal receipt, "
+        "verification and promotion evidence, authenticated Student submissions, and the "
+        "dirty Student Main.lean. The apparatus must archive or explicitly classify that "
+        "modified workspace artifact without presenting it as a completed proof, then rerun "
+        "the read-only retirement audit. Do not rerun the solved work merely to erase the "
+        "retirement bookkeeping conflict.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The dirty Student artifact was not deleted, "
+        "committed as a proof, or silently cleaned, and no terminal, receipt, deposit, "
+        "promotion, memory publication, or verdict was fabricated.")} ]}
