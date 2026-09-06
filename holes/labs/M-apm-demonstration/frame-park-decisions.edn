@@ -1140,4 +1140,39 @@
    (str "The frame is not voided or forgotten. No weak solution, terminal receipt, "
         "certified Student result, Guide decision, promotion, memory publication, or "
         "verdict was invented. Unrelated pattern-library artifacts were not authored or "
-        "adopted here.")} ]}
+        "adopted here.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f99"
+   :problem/id "m00A05"
+   :decision/at "2026-09-06T00:20:11Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :unreconciled-authenticated-global-ode-construction-gap
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following "
+        ":live-learning-terminal-invalid/:report-not-map. Three authenticated Student "
+        "submissions report partial or boundary-not-closed while the durable collection "
+        "remains :running. They preserve substantive compiling progress: endpoint-safe "
+        "global uniqueness via the delta-to-zero argument and a uniform local-existence "
+        "lemma built from Picard-Lindelof. The genuine residual is global half-line "
+        "existence by mesh gluing, including endpoint compatibility, together with the "
+        "scalar phase-line attraction proof. The nil repair finding is a separate "
+        "apparatus failure, not mathematical closure or a terminal receipt.")
+   :decision/recommended-route
+   (str "Advance f99 as partial while preserving all authenticated submissions, the "
+        "proved uniqueness lemma, the compiling local-existence lemma, and the exact "
+        "residual. Repair typed-report normalization and reconcile authenticated "
+        "incomplete submissions before terminal repair; reject nil repair findings "
+        "before budget consumption. In a fresh frame, finish overlap equality through "
+        "the right endpoint, recursively glue the uniform local solutions, and then "
+        "formalize trapping, monotonicity, and convergence to the unique equilibrium.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No global solution, attraction theorem, "
+        "terminal receipt, certified Student result, Guide decision, promotion, memory "
+        "publication, or verdict was invented. Unrelated pattern-library artifacts were "
+        "not authored or adopted here.")} ]}
