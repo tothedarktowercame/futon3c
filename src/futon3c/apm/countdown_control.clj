@@ -1020,6 +1020,16 @@
            value (read-edn-fn path)]
        (if (map? value) (:campaign/priors value) value)))))
 
+(defn- memory-bearing-frames
+  "Return frames whose own reviewed snapshots may contribute forward memory.
+
+  Frame disposition is not memory evidence. Completed and parked frames both
+  carry durable frame/problem identity; candidate review remains the admission
+  authority."
+  [queue-state]
+  (concat (map #(vector :completed %) (or (:completed queue-state) []))
+          (map #(vector :parked %) (or (:parked queue-state) []))))
+
 (defn campaign-prior-memories
   "Read declared predecessor campaigns followed by the current campaign.
 
@@ -1055,12 +1065,12 @@
                  campaign-names))
          origin-pairs
          (mapcat (fn [{:keys [campaign-id queue-state]}]
-                   (map (fn [frame]
+                   (map (fn [[_ frame]]
                           [(:frame/id frame)
                            {:campaign-id campaign-id
                             :frame-id (:frame/id frame)
                             :problem-id (:problem/id frame)}])
-                        (:completed queue-state)))
+                        (memory-bearing-frames queue-state)))
                  contexts)
          ambiguous-frame-ids
          (->> origin-pairs (group-by first)
@@ -1075,11 +1085,11 @@
          {:ok false :error/code :campaign-memory-lineage-frame-ambiguous
           :lineage campaign-names :frame-ids ambiguous-frame-ids}
          (assoc
-          (reduce
+         (reduce
          (fn [{:keys [dropped] :as acc}
-              [campaign-id root completed-frame]]
-           (let [frame-id (:frame/id completed-frame)
-                 problem-id (:problem/id completed-frame)
+              [campaign-id root disposition frame]]
+           (let [frame-id (:frame/id frame)
+                 problem-id (:problem/id frame)
                  ledger-path (.resolve root
                                        (str campaign-id "-" frame-id
                                             "/ledger.edn"))
@@ -1094,12 +1104,19 @@
              (if (vector? memories)
                (reduce
                 (fn [result memory]
-                  (let [provenance (:provenance memory)
+                  (let [validation (memory-snapshot/validate-candidate memory)
+                        provenance (:provenance memory)
                         depositor-frame
                         (some->> (:depositor memory)
                                  (re-matches #"^(f[0-9]+)-.+$") second)
                         origin (get origins depositor-frame)]
                     (cond
+                      (and (= :parked disposition) (not (:ok validation)))
+                      (update result :dropped conj
+                              {:memory-id (:memory-id memory)
+                               :frame-id frame-id :problem-id problem-id
+                               :finding (:finding validation)})
+
                       (and (map? provenance)
                            (string? (:campaign-id provenance)))
                       (update result :candidates conj memory)
@@ -1124,8 +1141,9 @@
                                         :prior-frame-ledger-unreadable)})))))
            {:candidates [] :dropped []}
            (mapcat (fn [{:keys [campaign-id root queue-state]}]
-                     (map #(vector campaign-id root %)
-                          (or (:completed queue-state) [])))
+                     (map (fn [[disposition frame]]
+                            [campaign-id root disposition frame])
+                          (memory-bearing-frames queue-state)))
                    contexts))
           :lineage campaign-names :ok true))))))
 

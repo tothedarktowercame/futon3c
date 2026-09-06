@@ -188,6 +188,56 @@
     (is (not-any? #(= "rogue" (:memory-id %)) (:candidates result))
         "campaigns outside declared lineage are never discovered")))
 
+(deftest parked-frame-memories-are-admitted-by-review-not-disposition
+  (let [queue-path "/fixture/campaigns/current-v2/queue-state.edn"
+        reviewed {:memory-id "reviewed" :depositor "f21-guide"
+                  :reviewer "f21-scribe" :review-evidence-id "review-21"
+                  :attachment-status :reviewed :pattern-ids ["P1"]}
+        unreviewed (assoc reviewed :memory-id "unreviewed"
+                          :attachment-status :pending)
+        self-reviewed (assoc reviewed :memory-id "self-reviewed"
+                             :reviewer "f21-guide")
+        unresolved (assoc reviewed :memory-id "unresolved"
+                          :depositor "f999-guide")
+        snapshots {"snapshot-f21" {:snapshot/memories
+                                    [reviewed unreviewed self-reviewed unresolved]}}
+        result
+        (sut/campaign-prior-memories
+         queue-path
+         {:read-state-fn
+          (fn [_] {:completed []
+                   :parked [{:frame/id "f21" :problem/id "p21"}]})
+          :read-ledger-fn
+          (fn [_] {:ok true
+                   :events [{:event/body
+                             {:certificate
+                              {:receipt/snapshot-path "snapshot-f21"}}}]})
+          :read-edn-fn
+          (fn [path]
+            (if (str/ends-with? (str path) "/lineage.edn")
+              {:campaign/priors []}
+              (get snapshots (str path))))})]
+    (is (:ok result) (pr-str result))
+    (is (= ["reviewed"] (mapv :memory-id (:candidates result))))
+    (is (= {:campaign-id "current-v2" :frame-id "f21" :problem-id "p21"
+            :provenance/repaired? true}
+           (:provenance (first (:candidates result)))))
+    (is (= #{["unreviewed" :snapshot-attachment-not-reviewed]
+             ["self-reviewed" :snapshot-reviewer-is-depositor]
+             ["unresolved" :prior-provenance-unresolvable]}
+           (set (map (juxt :memory-id :finding) (:dropped result)))))))
+
+(deftest parked-and-completed-frame-id-collision-refuses-lineage
+  (let [result
+        (sut/campaign-prior-memories
+         "/fixture/campaigns/current-v2/queue-state.edn"
+         {:read-state-fn
+          (fn [_] {:completed [{:frame/id "f21" :problem/id "complete-problem"}]
+                   :parked [{:frame/id "f21" :problem/id "parked-problem"}]})
+          :read-edn-fn (fn [_] {:campaign/priors []})})]
+    (is (= :campaign-memory-lineage-frame-ambiguous (:error/code result)))
+    (is (= ["f21"] (:frame-ids result)))))
+
 (deftest jit-gate-uses-captured-one-off-manifest
   (let [one-off {:manifest/id "f46-manifest" :manifest/scope :one-off
                  :units [{:frame/id "f46" :problem/id "a96J08"}]}
