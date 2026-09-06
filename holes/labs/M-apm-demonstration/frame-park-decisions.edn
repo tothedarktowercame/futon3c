@@ -1312,4 +1312,38 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No missing session id, terminal proof, "
         "Student receipt, Guide decision, promotion, memory publication, or verdict was "
-        "invented; the remaining 29 solver rounds were not claimed as consumed.")} ]}
+        "invented; the remaining 29 solver rounds were not claimed as consumed.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f104"
+   :problem/id "m02A02"
+   :decision/at "2026-09-06T07:04:07Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :unreconciled-authenticated-fourier-sobolev-residual
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative park residual is exactly {:ok false, :error/code "
+        ":live-job-terminal-repair-request-invalid, :finding nil}, following an "
+        "authenticated Student collection whose durable state remains :running. Three "
+        "Student submissions report open or partial and preserve substantive progress: "
+        "closedness of m02A02MeanZeroH1 and completeness of its subtype are proved, and "
+        "the finite-part attempts isolate the Poincare estimate to explicit weighted-lp "
+        "summability and tsum transport. The genuine residual comprises density of "
+        "rapid-decay conjugate-symmetric sequences, the Poincare inequality's summability "
+        "bridge, and construction/uniqueness of the Fourier Poisson weak solution. The "
+        "nil repair finding is a separate apparatus failure, not mathematical closure.")
+   :decision/recommended-route
+   (str "Advance f104 as partial while preserving all authenticated submissions and the "
+        "proved closedness/completeness work. Repair typed-report normalization and "
+        "reconcile authenticated incomplete submissions before terminal repair; reject "
+        "nil repair findings before budget consumption. In a fresh frame first package "
+        "the reusable lp-to-summable weighted-multiplier and complex-pair tsum lemmas, "
+        "then use them for finite-support symmetric density, Poincare, and the diagonal "
+        "Fourier solution with weak-to-pointwise equivalence.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No density theorem, Poincare estimate, "
+        "Poisson solution, terminal receipt, Guide decision, promotion, memory publication, "
+        "or verdict was invented. Unrelated pattern-library artifacts were not adopted.")} ]}
