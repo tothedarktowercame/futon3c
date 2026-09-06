@@ -18,7 +18,10 @@
 (defn candidate-id [memory]
   (or (:memory-id memory) (:memory/id memory) (:pattern-id memory)))
 
-(defn- valid-provenance? [memory]
+(defn- shelf-provenance?
+  "Campaign-assembled provenance, as memory-snapshot builds it for shelf
+  entries: the full triple, and a frame that agrees with the depositor seat."
+  [memory]
   (let [p (:provenance memory)
         frame (some->> (:depositor memory)
                        (re-matches #"^(f[0-9]+)-.+$") second)]
@@ -26,6 +29,37 @@
          (every? #(and (string? %) (not (str/blank? %)))
                  ((juxt :campaign-id :frame-id :problem-id) p))
          (= frame (:frame-id p)))))
+
+(defn- evidence-record-provenance?
+  "Depositor facts read from the memory's OWN substrate record --
+  :evidence/author and :evidence/subject, which promotion-candidate-store
+  writes on every deposit.
+
+  This path exists because the cascade offers only NON-shelf memories: it
+  excludes its own seeds, and the seeds are the shelf. Campaign-assembled
+  provenance therefore cannot cover a single cascade offer, so requiring it
+  refused every attempt-1 candidate and the student received nothing at first
+  contact with a new problem -- the one moment cross-problem memory would
+  matter.
+
+  No :campaign-id is required, because the substrate record does not carry one
+  and inventing it would be fabrication. That costs nothing the decision needs:
+  may-serve? decides the same-problem holdout on :problem-id alone. Where a
+  frame IS parseable from the depositor it must still agree, so a record whose
+  author and provenance disagree is refused exactly as before."
+  [memory]
+  (let [p (:provenance memory)
+        frame (some->> (:depositor memory)
+                       (re-matches #"^(f[0-9]+)-.+$") second)]
+    (and (map? p)
+         (= :evidence-record (:provenance/source p))
+         (string? (:problem-id p))
+         (not (str/blank? (:problem-id p)))
+         (or (nil? frame) (= frame (:frame-id p))))))
+
+(defn- valid-provenance? [memory]
+  (or (shelf-provenance? memory)
+      (evidence-record-provenance? memory)))
 
 (defn may-serve?
   "Decide from the memory's persisted depositor provenance. Pattern records

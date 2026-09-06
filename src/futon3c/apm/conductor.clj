@@ -649,6 +649,36 @@
                                 memory-surface-content)]
              (catch Throwable _ [memory-id nil])))
          sibling-selected)
+        ;; Depositor facts for every selected offer, derived from the
+        ;; attachment edges ALREADY walked -- no extra substrate read, because
+        ;; conductor-test pins that props-borne and discarded offers are never
+        ;; read. live-learning-phases reads these as :memory-metadata to build
+        ;; each offer's :provenance, which memory-access-gate gates the
+        ;; attempt-1 same-problem holdout on. Nothing wrote :memory-metadata
+        ;; before this, so every offer carried nil provenance and every
+        ;; attempt-1 candidate was refused :unverifiable-depositor-provenance.
+        ;; attachments-fn is memoized at the top of this fn, so re-walking
+        ;; patterns already visited is a cache hit, not a substrate read.
+        all-edges (concat seed-edges
+                          seed-pattern-edges
+                          (mapcat attachments-fn seed-patterns)
+                          (mapcat attachments-fn (keys why-patterns))
+                          (mapcat attachments-fn (keys coincident-patterns)))
+        memory-metadata
+        (let [selected-ids (set (map first selected))]
+          (into {}
+                (keep (fn [[memory-id problem-ids]]
+                        (when-let [problem-id (first (sort (distinct problem-ids)))]
+                          [memory-id {:provenance
+                                      {:problem-id problem-id
+                                       :provenance/source :evidence-record}}])))
+                (reduce (fn [acc edge]
+                          (let [memory-id (attachment-memory-id edge)]
+                            (if (contains? selected-ids memory-id)
+                              (update acc memory-id (fnil into [])
+                                      (attachment-problems edge))
+                              acc)))
+                        {} all-edges)))
         enrichment-by-memory (into {} (keep (fn [[memory-id content]]
                                                (when content [memory-id content])))
                                          enrichment-results)
@@ -675,7 +705,8 @@
                           [pattern-id surface])))
                 offered-pattern-ids)
           {})]
-    {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
+    {:memory-metadata memory-metadata
+     :routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
                    selected)
      :routes-enabled routes-enabled
      :cascade/enrichment enrichment
