@@ -3188,4 +3188,39 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No preflight success, solver result, terminal "
         "receipt, deposit, promotion, memory publication, or verdict was synthesized, and "
-        "the campaign or any frame workspace was not resumed or altered.")} ]}
+        "the campaign or any frame workspace was not resumed or altered.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f109"
+   :problem/id "m02J02"
+   :decision/at "2026-09-06T14:55:18Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solver-session-provenance-lost-after-authenticated-progress
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative residual is exactly {:ok false, :error/code "
+        ":solver-session-mismatch, :finding {:expected "
+        "\"01a076a3-1d48-71f2-b03d-9d4cd13b15b0\", :actual nil}}. Preflight "
+        "passed cleanly at the pinned revision. Seven authenticated Solver progress rounds "
+        "then produced clean commits through head 88c1eeeca6ca417d84edaf1b637727dd8fc4e8cb, "
+        "reducing the proof to the three explicit graph-norm approximation and density "
+        "bridges recorded by round 7. Round 8 failed while continuing from the expected "
+        "session and left a preserved 38-line uncommitted Main.lean residual. This is an "
+        "apparatus session-provenance loss after valid mathematical progress, not a proof "
+        "terminal and not exhaustion of the declared 50-round budget.")
+   :decision/recommended-route
+   (str "Advance f109 as partial while preserving the preflight receipt, all seven Solver "
+        "reports and commits, head 88c1eeec, the uncommitted round-8 residual, and the exact "
+        "session-mismatch finding. Repair solver continuation so a missing prior session "
+        "becomes a typed orphan/recovery event with an explicitly linked fresh session. In "
+        "a fresh frame, review the round-8 residual before adopting it, then continue the "
+        "three independent compact-support approximation and graph-norm density bridges.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. The uncommitted round-8 edits were neither "
+        "discarded nor certified, no missing session identity or completed proof was "
+        "invented, and no Student receipt, Guide decision, promotion, memory publication, "
+        "or verdict was synthesized.")} ]}
