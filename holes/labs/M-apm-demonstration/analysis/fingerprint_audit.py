@@ -67,6 +67,7 @@ FRAME_VOID_CERTIFICATE = re.compile(r":certificate/type\s+:frame-void")
 VOID_CLASSIFICATION = re.compile(r":classification\s+:([A-Za-z0-9_-]+)")
 ACCESSIBLE_IDS = re.compile(r":accessible-memory-ids\s*\[([^\]]*)\]", re.DOTALL)
 CASCADE_USED_IDS = re.compile(r":used-via-cascade\s*\[([^\]]*)\]", re.DOTALL)
+OFFER_MEMORY_ID = re.compile(r':memory-id\s+"(e-[^"]+)"')
 EVIDENCE_AUTHOR = re.compile(r':evidence/author\s+"([^"]+)"')
 EVIDENCE_SUBJECT = re.compile(
     r':evidence/subject\s+\{[^{}]*:ref/id\s+"([^"]+)"[^{}]*\}')
@@ -126,13 +127,74 @@ def ids_in_block(pattern, receipt):
     return out
 
 
+def vector_values(receipt, key):
+    """Return balanced vector bodies immediately following an EDN key.
+
+    Offer hooks may themselves contain vectors and quoted brackets, so a
+    ``[^]]`` regular expression cannot reliably delimit ``:offers``.  This
+    small reader only locates the vector boundary; field extraction remains
+    deliberately narrow below.
+    """
+    out = []
+    start = 0
+    while True:
+        key_at = receipt.find(key, start)
+        if key_at < 0:
+            return out
+        vector_at = key_at + len(key)
+        while vector_at < len(receipt) and receipt[vector_at].isspace():
+            vector_at += 1
+        if vector_at >= len(receipt) or receipt[vector_at] != "[":
+            start = key_at + len(key)
+            continue
+        depth = 0
+        in_string = False
+        escaped = False
+        for pos in range(vector_at, len(receipt)):
+            char = receipt[pos]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+            elif char == '"':
+                in_string = True
+            elif char == "[":
+                depth += 1
+            elif char == "]":
+                depth -= 1
+                if depth == 0:
+                    out.append(receipt[vector_at + 1:pos])
+                    start = pos + 1
+                    break
+        else:
+            return out
+
+
+def cascade_offer_ids(receipt):
+    """Return ids explicitly named by ``:memory-id`` in ``:offers`` maps."""
+    out = []
+    for block in vector_values(receipt, ":offers"):
+        for mid in OFFER_MEMORY_ID.findall(block):
+            if mid not in out:
+                out.append(mid)
+    return out
+
+
 def durable_delivery_route(receipt, memory_id):
     """Classify only delivery routes carried by the attempt receipt.
 
-    Cascade is more specific than shelf.  Search prose is deliberately ignored:
-    unless a search-result receipt names the id, the report says ``unknown``.
+    Cascade is more specific than shelf.  A used id which is also named by a
+    structured ``:offers`` entry is durable cascade evidence, including for
+    receipts written before ``:used-via-cascade`` existed.  Search prose is
+    deliberately ignored: unless a durable receipt field names the id, the
+    report says ``unknown``.
     """
     if memory_id in ids_in_block(CASCADE_USED_IDS, receipt):
+        return "cascade"
+    if memory_id in cascade_offer_ids(receipt):
         return "cascade"
     if memory_id in ids_in_block(ACCESSIBLE_IDS, receipt):
         return "shelf"

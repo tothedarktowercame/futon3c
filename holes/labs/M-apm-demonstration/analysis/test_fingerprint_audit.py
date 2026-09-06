@@ -76,6 +76,54 @@ class TransferReportTest(unittest.TestCase):
         self.assertEqual("cascade", AUDIT.durable_delivery_route(receipt, "e-both"))
         self.assertEqual("unknown", AUDIT.durable_delivery_route(receipt, "e-search"))
 
+    def test_offer_intersection_is_cascade_but_unrelated_text_is_not(self):
+        receipt = r'''
+          :offers [{:memory-id "e-offered" :offer/name "avoid a diamond"
+                    :offer/hook "try [the direct] route"}]
+          :notes "e-unrelated"
+        '''
+        self.assertEqual(
+            "cascade", AUDIT.durable_delivery_route(receipt, "e-offered"))
+        self.assertEqual(
+            "unknown", AUDIT.durable_delivery_route(receipt, "e-unrelated"))
+
+    def test_f82_attempt_2_offer_intersection_is_attributed_to_cascade(self):
+        memory_id = (
+            "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-"
+            "direct-general-instantiation")
+        path = (pathlib.Path(AUDIT.CAMPAIGNS) / "jit-all-open-v2" /
+                "jit-all-open-v2-f82/live/student-attempt-2.edn")
+        receipt = path.read_text(encoding="utf-8", errors="replace")
+        used = AUDIT.ID_STR.findall(AUDIT.USED_IDS.search(receipt).group(1))
+        self.assertIn(memory_id, used)
+        self.assertIn(memory_id, AUDIT.cascade_offer_ids(receipt))
+        self.assertNotIn(memory_id,
+                         AUDIT.ids_in_block(AUDIT.CASCADE_USED_IDS, receipt))
+        self.assertEqual(
+            "cascade", AUDIT.durable_delivery_route(receipt, memory_id))
+
+    def test_existing_explicit_cascade_routes_remain_cascade(self):
+        root = pathlib.Path(AUDIT.CAMPAIGNS) / "jit-all-open-v2"
+        cases = [
+            ("jit-all-open-v2-f47/live/student-attempt-1.edn",
+             "e-23a2940f-5fa6-444e-948c-74e6e201eb31"),
+            ("jit-all-open-v2-f47/live/student-attempt-2.edn",
+             "e-a97j02-measure-finite-union-closed-grid-cells"),
+            ("jit-all-open-v2-f50/live/student-attempt-2.edn",
+             "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-"
+             "uniform-convergence"),
+        ]
+        for relative_path, memory_id in cases:
+            with self.subTest(path=relative_path):
+                receipt = (root / relative_path).read_text(
+                    encoding="utf-8", errors="replace")
+                self.assertIn(
+                    memory_id,
+                    AUDIT.ids_in_block(AUDIT.CASCADE_USED_IDS, receipt))
+                self.assertEqual(
+                    "cascade",
+                    AUDIT.durable_delivery_route(receipt, memory_id))
+
     def test_f42_f50_f53_f58_receipts_pin_expected_strata_inputs(self):
         root = pathlib.Path(AUDIT.CAMPAIGNS)
         cases = [
