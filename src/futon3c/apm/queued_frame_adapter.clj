@@ -191,8 +191,53 @@
        distinct
        vec))
 
+(defn role-terminal-repair-park
+  "Park a frame whose role turn exhausted live-job terminal repair.
+
+  Replaces the void disposition on this class (Joe, 2026-09-06, restating
+  the post-F32 rejection of void-and-advance): an exhausted repair budget of
+  one is a statement about the apparatus, not a judgement that the role's
+  work is unrecoverable — f172's student had an authenticated submission
+  reporting the theorem proved on disk at the moment its frame voided. The
+  park keeps the live state, workspaces and receipts re-enterable, and
+  carries the same invariants the void certificate would have, so the
+  queue's systematic-streak escalation still sees the signature."
+  [{:keys [frame ledger result role-state-path]}]
+  (let [receipt (last (keep #(get-in % [:event/body :certificate])
+                            (:events ledger)))
+        findings (terminal-repair-findings result)
+        park (awaiting-claude-decision
+              {:state/type :role-terminal-repair-frame-park
+               :frame/id (:frame/id frame)
+               :problem/id (:problem/id frame)
+               :phase (get-in ledger [:projection :active/frame :phase])
+               :role/state-path role-state-path
+               :last-valid-receipt/id (or (:receipt/id receipt)
+                                          (:certificate/id receipt))
+               :error/code (:error/code result)
+               :repair/kind :terminal-submission
+               :repair/attempts (:repair/attempts result)
+               :role/findings (vec (distinct
+                                    (cons :live-job-terminal-repair-exhausted
+                                          findings)))
+               :residual (pr-str findings)})]
+    (if (and (= :live-job-terminal-repair-exhausted (:error/code result))
+             (pos-int? (:repair/attempts result))
+             (seq findings)
+             (keyword? (:phase park))
+             (every? #(and (string? %) (not (str/blank? %)))
+                     ((juxt :frame/id :problem/id :role/state-path
+                            :last-valid-receipt/id :residual) park)))
+      {:ok true :status :frame-parked :frame/park park}
+      result)))
+
 (defn void-exhausted-role-terminal!
   "Disposition one frame whose role turn exhausted terminal repair.
+
+  NO LONGER CALLED by the queue control path: role-terminal-repair-park
+  supersedes it (Joe's 2026-09-06 ruling). Retained because
+  apply-reviewed-void! and the classification remain the correct machinery
+  for an operator-reviewed void.
 
   This is a frame-fatal transition, not evidence that the campaign apparatus
   is unsafe. The queue separately counts identical consecutive dispositions

@@ -906,4 +906,47 @@
     the falsifier across the cap change would let the arm dodge it."
    :reversal
    "Restore :cap 100 in the arm file (read per tick); frames already minted
-    keep their pinned unit."}]}
+    keep their pinned unit."}
+
+  {:amendment 14
+   :at "2026-09-06T21:20Z"
+   :by "claude-3"
+   :authority "Joe, 2026-09-06, in session: 'I do not like these independently
+    running frames voiding my work. This is not cool.' (restating the
+    post-F32 rejection of void-and-advance, 2026-08-25)"
+   :kind :instrument-change
+   :what
+   "Live-job terminal repair exhaustion (:live-job-terminal-repair-exhausted)
+    now PARKS the frame (:role-terminal-repair-frame-park, decision owner
+    :claude-supervisor) instead of voiding it :role-terminal-unrecoverable.
+    The park carries the same failed invariants the void certificate carried.
+    The queue's systematic brake is extended to parks: three consecutive
+    parks with an identical invariant signature stop the queue exactly as
+    three identical voids did, and the streak counts across the void->park
+    transition. Voiding remains available as an operator-reviewed
+    disposition (apply-reviewed-void!)."
+   :why
+   "Every :role-terminal-unrecoverable void audited (f82, f84, f90, f105,
+    f108, f171, f172) recorded an apparatus fault as a role judgement; none
+    was unrecoverable. f172 voided while its student's authenticated
+    submission on disk reported the theorem proved with a clean axiom audit
+    - the report merely failed EDN lint and the repair budget is one. A void
+    excludes the frame from the experimental population and advances past
+    preserved work; a park keeps the work re-enterable behind a decision
+    record."
+   :known-limitation
+   "The root cause (student typed reports failing lint: :report-not-map /
+    :report-edn-lint-failed from the glm student seat) is NOT fixed by this
+    amendment; frames will now park rather than void on it. Parked frames
+    still produce no receipts, so the student-axis measurement remains
+    blocked until the report-normalization defect is repaired separately."
+   :boundary
+   "Void counts are not poolable across this change: frames before it void
+    on repair exhaustion, frames after it park. The fingerprint audit's
+    excluded-void-frame population stops growing from this class; rows from
+    parked frames appear as no-source until adjudicated. Frames already
+    voided keep their certificates - nothing is rewritten."
+   :reversal
+   "Restore the void-exhausted-role-terminal! call at the
+    countdown-control dispatch site (the function is retained); parks
+    already recorded keep their decision records."}]}

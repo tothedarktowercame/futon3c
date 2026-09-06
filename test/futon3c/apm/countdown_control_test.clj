@@ -1097,13 +1097,21 @@
         :manifest manifest :contract contract})
       (is (= booted (:booted @supervised-options))))))
 
-(deftest jit-frame-tick-voids-exhausted-role-terminal-at-production-call-site
+(deftest jit-frame-tick-parks-exhausted-role-terminal-at-production-call-site
+  ;; Park, not void (Joe, 2026-09-06): the production call site must route
+  ;; repair exhaustion to role-terminal-repair-park with the loaded ledger
+  ;; and the failing phase's live state path.
   (let [adapter-config (atom nil)
-        void-request (atom nil)
+        park-request (atom nil)
         exhausted {:ok false
                    :error/code :live-job-terminal-repair-exhausted
                    :repair/attempts 1
-                   :findings [:typed-submission-missing]}]
+                   :findings [:typed-submission-missing]}
+        loaded {:ok true
+                :projection {:campaign/version 9 :ledger/digest "d"
+                             :active/frame {:frame-id "f49" :problem-id "p1"
+                                            :phase :student-attempt-1}}
+                :events []}]
     (with-redefs [queued-frame-adapter/live-effects
                   (fn [config]
                     (reset! adapter-config config)
@@ -1114,12 +1122,13 @@
                   (constantly {:ok false
                                :error/code :queued-frame-terminal-derivation-failed})
                   sut/set-alight! (constantly exhausted)
-                  queued-frame-adapter/void-exhausted-role-terminal!
+                  ledger/read-ledger (constantly loaded)
+                  queued-frame-adapter/role-terminal-repair-park
                   (fn [request]
-                    (reset! void-request request)
-                    {:ok true :status :terminal-collected
-                     :frame/void {:classification
-                                  :role-terminal-unrecoverable}})]
+                    (reset! park-request request)
+                    {:ok true :status :frame-parked
+                     :frame/park {:state/type
+                                  :role-terminal-repair-frame-park}})]
       (sut/set-alight-problem-queue!
        {:problems [{:problem/id "p1" :repository "/repo" :revision "r"
                     :path "p.lean" :blob "b" :classification :non-excluded}]
@@ -1130,11 +1139,12 @@
                     {:state-directory "/tmp"
                      :ledger-path "/tmp/f49-ledger.edn"
                      :preparation-path "/tmp/preparation.edn"})]
-        (is (= :terminal-collected (:status result)))
-        (is (= exhausted (:result @void-request)))
-        (is (= "f49" (get-in @void-request [:frame :frame/id])))
-        (is (.endsWith (str (:ledger-path @void-request))
-                       "f49-ledger.edn"))))))
+        (is (= :frame-parked (:status result)))
+        (is (= exhausted (:result @park-request)))
+        (is (= "f49" (get-in @park-request [:frame :frame/id])))
+        (is (= loaded (:ledger @park-request)))
+        (is (.endsWith (str (:role-state-path @park-request))
+                       "student-attempt-1.edn"))))))
 
 (deftest list-only-entry-point-supplies-all-concrete-jit-services
   (let [captured (atom nil)

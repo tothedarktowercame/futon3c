@@ -327,6 +327,86 @@
     :void/failed-invariants
     [:live-job-terminal-repair-exhausted :typed-submission-missing]}})
 
+(defn role-terminal-park [frame]
+  {:ok true :status :frame-parked
+   :frame/park {:state/type :role-terminal-repair-frame-park
+                :decision/owner :claude-supervisor
+                :decision/status :awaiting-decision
+                :decision/bell-required true
+                :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                :phase :student-attempt-1
+                :role/state-path (str "/campaign/" (:frame/id frame)
+                                      "/live/student-attempt-1.edn")
+                :last-valid-receipt/id "promote-solver-receipt"
+                :error/code :live-job-terminal-repair-exhausted
+                :repair/kind :terminal-submission :repair/attempts 1
+                :role/findings [:live-job-terminal-repair-exhausted
+                                :typed-submission-missing]
+                :residual "[:typed-submission-missing]"}})
+
+(deftest role-terminal-park-records-streak-and-advances
+  (let [{:keys [providers state]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [result (sut/tick! (assoc providers
+                                   :frame-tick-fn role-terminal-park))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= 1 (get-in @state [:consecutive-frame-failures :count])))
+      (is (= {:classification :role-terminal-unrecoverable
+              :failed-invariants [:live-job-terminal-repair-exhausted
+                                  :typed-submission-missing]}
+             (get-in @state [:consecutive-frame-failures :signature])))
+      (is (= 1 (count (:parked @state)))))))
+
+(deftest third-consecutive-identical-role-terminal-park-is-campaign-fatal
+  ;; The systematic brake survives the 2026-09-06 park-not-void ruling:
+  ;; a broken role seat must stop the queue, not drain it frame by frame.
+  (let [{:keys [providers state calls]} (harness)
+        failing (assoc providers :frame-tick-fn role-terminal-park)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (is (= :frame-prepared (:status (sut/tick! failing))))
+    (is (= :frame-prepared (:status (sut/tick! failing))))
+    (let [result (sut/tick! failing)]
+      (is (= :problem-queue-systematic-frame-failure (:error/code result)))
+      (is (= sut/systematic-frame-failure-limit
+             (get-in result [:failure :count])))
+      (is (= :failed-systematic-frame-failure (:status @state)))
+      (is (nil? (:active @state)))
+      (is (= 3 (count (:parked @state)))
+          "the third park is still durably recorded")
+      (is (= 3 (count (filter #(= :mint (first %)) @calls)))
+          "the fourth problem is not minted"))))
+
+(deftest park-streak-continues-a-void-streak-with-the-same-signature
+  (let [{:keys [providers state]} (harness)]
+    (sut/tick! providers)
+    (sut/tick! (assoc providers :frame-tick-fn role-terminal-void))
+    (is (= 1 (get-in @state [:consecutive-frame-failures :count])))
+    (sut/tick! (assoc providers :frame-tick-fn role-terminal-park))
+    (is (= 2 (get-in @state [:consecutive-frame-failures :count]))
+        "identical invariants count across the void->park transition")))
+
+(deftest unrelated-park-leaves-role-terminal-streak-untouched
+  (let [{:keys [providers state]} (harness)
+        fault-park (fn [frame]
+                     {:ok true :status :frame-parked
+                      :frame/park {:state/type :fault-frame-park
+                                   :frame/id (:frame/id frame)
+                                   :problem/id (:problem/id frame)
+                                   :error/code :frame-tick-threw
+                                   :fault/disposition :frame-park
+                                   :fault/result {:ok false}
+                                   :residual "boom"
+                                   :decision/owner :claude-supervisor
+                                   :decision/status :awaiting-decision
+                                   :decision/bell-required true}})]
+    (sut/tick! providers)
+    (sut/tick! (assoc providers :frame-tick-fn role-terminal-park))
+    (is (= 1 (get-in @state [:consecutive-frame-failures :count])))
+    (sut/tick! (assoc providers :frame-tick-fn fault-park))
+    (is (= 1 (get-in @state [:consecutive-frame-failures :count]))
+        "an unrelated fault park neither extends nor resets the streak")))
+
 (deftest isolated-role-terminal-void-advances-and-records-durable-streak
   (let [{:keys [providers state]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))

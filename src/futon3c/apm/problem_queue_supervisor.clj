@@ -461,6 +461,34 @@
                 {:ok false :error/code
                  :problem-queue-state-persistence-failed}))))))))
 
+(defn- park-failure-signature
+  "Streak signature for a park that replaced what was previously a void.
+
+  Role-terminal parks carry the same classification and invariants their
+  void certificate would have carried (Joe's 2026-09-06 park-not-void
+  ruling), so the systematic-failure brake keeps working across the
+  disposition change: three identical parks stop the queue exactly as
+  three identical voids did. Other park types return nil and leave the
+  streak untouched — they are unrelated apparatus faults, not evidence
+  the role-terminal streak ended."
+  [park]
+  (when (and (= :role-terminal-repair-frame-park (:state/type park))
+             (seq (:role/findings park)))
+    {:classification :role-terminal-unrecoverable
+     :failed-invariants (vec (sort (:role/findings park)))}))
+
+(defn- record-park-streak [state frame park]
+  (if-let [signature (park-failure-signature park)]
+    (let [prior (:consecutive-frame-failures state)
+          count (if (= signature (:signature prior))
+                  (inc (:count prior))
+                  1)]
+      (assoc state :consecutive-frame-failures
+             {:signature signature :count count
+              :last-frame-id (:frame/id frame)
+              :last-problem-id (:problem/id frame)}))
+    state))
+
 (defn- park-active-and-advance
   [plan state park {:keys [persist-state-fn] :as providers}]
   (let [active (:active state)]
@@ -470,17 +498,29 @@
       {:ok false :error/code :problem-queue-frame-park-invalid
        :finding park}
       (let [pause? (= :pause-after-active (:status state))
+            streaked (record-park-streak state (:frame active) park)
+            systematic?
+            (>= (get-in streaked [:consecutive-frame-failures :count] 0)
+                systematic-frame-failure-limit)
             cleared (addressed
-                     (-> state
+                     (-> streaked
                          (update :parked (fnil conj []) park)
                          (assoc :active nil)
-                         (cond-> pause? (assoc :status :paused))))
+                         (cond-> pause? (assoc :status :paused)
+                                 systematic?
+                                 (assoc :status
+                                        :failed-systematic-frame-failure))))
             persisted (persist-state-fn cleared)]
         (if-not (:ok persisted)
           {:ok false :error/code :problem-queue-state-persistence-failed}
-          (if pause?
-            {:ok true :status :batch-paused :state cleared}
-            (prepare-next plan cleared providers)))))))
+          (cond
+            systematic?
+            {:ok false
+             :error/code :problem-queue-systematic-frame-failure
+             :failure (:consecutive-frame-failures cleared)
+             :state cleared}
+            pause? {:ok true :status :batch-paused :state cleared}
+            :else (prepare-next plan cleared providers)))))))
 
 (defn- reconcile-decisions!
   [state {:keys [park-decision-records-provider persist-state-fn]}]

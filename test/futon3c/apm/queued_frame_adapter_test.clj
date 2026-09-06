@@ -214,6 +214,61 @@
     (is (= "f30" (:frame-id @void-call)))
     (is (= "p1" (:problem-id @void-call)))))
 
+(deftest exhausted-role-terminal-parks-with-reenterable-record
+  ;; Park, not void (Joe, 2026-09-06): the production disposition for
+  ;; repair exhaustion preserves the role's work behind a decision record.
+  (let [ledger {:ok true
+                :projection {:active/frame {:frame-id (:frame/id frame)
+                                            :phase :student-attempt-1}}
+                :events [{:event/body {:certificate
+                                       {:receipt/id "promote-receipt"}}}]}
+        result (sut/role-terminal-repair-park
+                {:frame frame :ledger ledger
+                 :role-state-path "/campaign/f30/live/student-attempt-1.edn"
+                 :result {:ok false
+                          :error/code :live-job-terminal-repair-exhausted
+                          :repair/attempts 1
+                          :validation {:findings [:fresh-session-id-missing]}
+                          :repair/history
+                          [{:findings [:typed-submission-missing]}]}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :role-terminal-repair-frame-park (:state/type park)))
+    (is (= (:frame/id frame) (:frame/id park)))
+    (is (= :student-attempt-1 (:phase park)))
+    (is (= "promote-receipt" (:last-valid-receipt/id park)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code park)))
+    (is (= [:live-job-terminal-repair-exhausted
+            :fresh-session-id-missing
+            :typed-submission-missing]
+           (:role/findings park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (= :awaiting-decision (:decision/status park)))
+    (is (true? (:decision/bell-required park)))
+    (is (queue/valid-frame-park? park)
+        "the park must satisfy the supervisor's own validation")))
+
+(deftest under-evidenced-role-terminal-exhaustion-is-not-parked
+  (let [ledger {:ok true
+                :projection {:active/frame {:frame-id (:frame/id frame)
+                                            :phase :student-attempt-1}}
+                :events [{:event/body {:certificate
+                                       {:receipt/id "promote-receipt"}}}]}
+        error {:ok false
+               :error/code :live-job-terminal-repair-exhausted
+               :findings [:typed-submission-missing]
+               :repair/attempts 1}
+        complete {:frame frame :ledger ledger
+                  :role-state-path "/campaign/f30/live/student-attempt-1.edn"
+                  :result error}]
+    (doseq [input [(assoc-in complete [:result :findings] [])
+                   (assoc-in complete [:result :repair/attempts] 0)
+                   (dissoc complete :role-state-path)
+                   (assoc-in complete
+                             [:ledger :projection :active/frame :phase] nil)]]
+      (is (= (:result input) (sut/role-terminal-repair-park input))
+          "an under-evidenced park request returns the raw result"))))
+
 (deftest under-evidenced-role-terminal-exhaustion-is-not-voided
   (let [error {:ok false
                :error/code :live-job-terminal-repair-exhausted
