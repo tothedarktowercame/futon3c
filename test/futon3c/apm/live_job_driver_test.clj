@@ -1554,3 +1554,36 @@
     ;; suppressed request cannot be reported as a malformed one.
     (is (= :apparatus (:terminal-repair/fault-origin state))
         "and the origin that suppressed the request was :apparatus")))
+
+(deftest session-identity-survives-our-own-cancellation
+  ;; Measured over jit-all-open-v2's 107 student jobs: 65 reached :done and
+  ;; carry a session id; 18 were cancelled and carry none. The canceller is
+  ;; the typed-submission wrapper reconciliation -- the machine's own. f86's
+  ;; student had executed 12 tool events before its job was cancelled and its
+  ;; session identity vanished, producing :fresh-session-id-missing, two
+  ;; apparatus repairs and a park, on 13 consecutive frames.
+  (let [live {:job-id "j1" :state :running :session-id "codex-abc-123"}
+        cancelled {:job-id "j1" :state :cancelled
+                   :terminal-code :operator-cancelled :session-id nil}
+        fresh {:state/type :live-job-dispatched}
+        carried (assoc fresh :job/session-id "codex-abc-123")]
+    ;; captured while live
+    (is (= "codex-abc-123"
+           (:job/session-id (sut/capture-session-identity fresh live)))
+        "the identity is captured while the job is still live")
+    ;; captured once, not every tick
+    (is (nil? (sut/capture-session-identity carried live))
+        "nothing to record once it is already held, so no needless persist")
+    (is (nil? (sut/capture-session-identity fresh cancelled))
+        "a cancelled job offers nothing to capture")
+    ;; restored after our cancellation erased it
+    (is (= "codex-abc-123"
+           (:session-id (sut/restore-session-identity cancelled carried)))
+        "our own cancellation must not erase the fact a session existed")
+    ;; and never invented where none was ever seen
+    (is (nil? (:session-id (sut/restore-session-identity cancelled fresh)))
+        "with nothing recorded, no identity is fabricated")
+    (is (= "live-wins" (:session-id (sut/restore-session-identity
+                                     (assoc live :session-id "live-wins")
+                                     carried)))
+        "a live id is never overwritten by a stale recorded one")))

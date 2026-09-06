@@ -566,6 +566,27 @@
 (def substrate-unavailable-backoff-ms (* 20 60 1000))
 (def substrate-unavailable-max-waits 72)
 
+(defn restore-session-identity
+  "Put back the session id our own cancellation erased.
+
+  A session id exists while a job is live and is LOST when the job is
+  cancelled, and the canceller is the typed-submission wrapper reconciliation
+  -- the machine's own. Measured over jit-all-open-v2's 107 student jobs: 65
+  reached :done carrying a session id, 18 were cancelled carrying none."
+  [observed-job state]
+  (cond-> observed-job
+    (and (not (string? (:session-id observed-job)))
+         (string? (:job/session-id state)))
+    (assoc :session-id (:job/session-id state))))
+
+(defn capture-session-identity
+  "State carrying the observed job's session id, or nil when there is nothing
+  new to record. Returning nil keeps the caller from persisting every tick."
+  [state observed-job]
+  (when (and (string? (:session-id observed-job))
+             (not= (:session-id observed-job) (:job/session-id state)))
+    (assoc state :job/session-id (:session-id observed-job))))
+
 (defn substrate-unavailable?
   "Does this terminal say the AGENT SUBSTRATE is unavailable rather than that
   the work failed?
@@ -884,7 +905,16 @@
                    (contains? submission-observation :submission))
             (:submission submission-observation)
             submission-observation)
-          job (job-fn (get-in state [:ticket :job-id]))
+          observed-job (job-fn (get-in state [:ticket :job-id]))
+          ;; A session id exists while the job is live and is LOST when the
+          ;; job is cancelled -- and the canceller is our own typed-submission
+          ;; wrapper reconciliation. Measured over jit-all-open-v2's 107
+          ;; student jobs: 65 done carry a session id, 18 cancelled carry
+          ;; none. Requiring an id from a job we ourselves stopped from
+          ;; finishing produced :fresh-session-id-missing, two apparatus
+          ;; repairs, and a park -- on 13 consecutive frames whose students
+          ;; had already done real work.
+          job (restore-session-identity observed-job state)
           terminal? (contains? terminal-states (:state job))
           orphan-observation
           (when (and (nil? observed-submission) (not terminal?))
@@ -978,7 +1008,14 @@
 
         (and (not terminal?)
              (nil? (:terminal-collection state)))
-        {:ok true :status :awaiting-terminal :state state}
+        ;; Capture the session identity WHILE THE JOB IS STILL LIVE. Persisted
+        ;; once, on the tick it first appears, so a later cancellation cannot
+        ;; erase the fact that a fresh session existed and the student ran in
+        ;; it.
+        (let [captured (capture-session-identity state observed-job)]
+          (if (and captured (:ok (persist-fn captured)))
+            {:ok true :status :awaiting-terminal :state captured}
+            {:ok true :status :awaiting-terminal :state state}))
 
         ;; The substrate is unavailable, not the frame at fault. Wait for it
         ;; instead of consuming a problem: parking here advances the queue,
