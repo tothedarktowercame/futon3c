@@ -1277,4 +1277,39 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. The frozen statement was not silently "
         "changed, no inconsistent axiom or proof was introduced, and no Student receipt, "
-        "Guide decision, promotion, memory publication, or verdict was invented.")} ]}
+        "Guide decision, promotion, memory publication, or verdict was invented.")}
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f103"
+   :problem/id "m01J06"
+   :decision/at "2026-09-06T06:00:11Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solver-session-provenance-lost-after-authenticated-progress
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The authoritative residual is exactly {:ok false, :error/code "
+        ":solver-session-mismatch, :finding {:expected "
+        "\"01a0750a-0257-7bc1-8e43-b1966cb85004\", :actual nil}}. The solver "
+        "collected 21 of 50 rounds. Round 21 has no session id but carries an "
+        "authenticated clean committed progress report at head "
+        "9db02bbe7b2e206b2f042c8ab49d916643de42ac; round 22 then failed while "
+        "trying to continue from the missing prior-session provenance. The sole "
+        "sorryAx dependency remains the nonlinear bifurcation clause. The branch has "
+        "already proved quarter-period asymptotics and quarterTime continuity and strict "
+        "monotonicity. This is an apparatus session-provenance loss after valid progress, "
+        "not a proof terminal and not exhaustion of the declared solver budget.")
+   :decision/recommended-route
+   (str "Advance f103 as partial while preserving the last valid receipt, all 21 reports, "
+        "and head 9db02bbe. Repair solver continuation so a missing prior session mints a "
+        "fresh explicitly linked session without discarding authenticated progress or "
+        "redispatching completed work. In a fresh frame continue from 9db02bbe: package "
+        "quarterTime as an interval equivalence, differentiate its inverse, establish the "
+        "energy equation and turning-point regularity, reflect the quarter-wave, then use "
+        "the period limit for the load and amplitude estimates.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No missing session id, terminal proof, "
+        "Student receipt, Guide decision, promotion, memory publication, or verdict was "
+        "invented; the remaining 29 solver rounds were not claimed as consumed.")} ]}
