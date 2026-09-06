@@ -2382,4 +2382,35 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No preflight success, solver result, terminal "
         "receipt, deposit, promotion, memory publication, or verdict was synthesized, and "
+        "the campaign or any frame workspace was not resumed or altered.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v2"
+   :frame/id "f143"
+   :problem/id "m96A06"
+   :decision/at "2026-09-06T14:29:57Z"
+   :decision/by "codex-17"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :preflight-blocked-by-declared-provider-usage-limit
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "d6beeec0d156bce36eaeb969336f53240171e7a5"
+   :decision/frame-voided? false
+   :decision/rationale
+   (str "The preserved terminal is an invoke-error from f143-proctor stating that the "
+        "Codex usage limit has been reached and declaring Sep 7, 2026 08:33 AM as the "
+        "retry time. It failed during read-only preflight before solver work or a "
+        "mathematical receipt existed. The f143 solver workspace remains clean at pinned "
+        "base head 9fa428f7a7bb0292e3699c69ccbdc68e65187c14. Commit d6beeec0 classifies "
+        "this exact typed terminal as bounded :awaiting-substrate rather than consuming the "
+        "queue, directly repairing the apparatus path that produced this park. The recorded "
+        "failure therefore says nothing about m96A06's solvability.")
+   :decision/recommended-route
+   (str "Preserve f143 and its exact preflight refusal as partial. Deploy the committed "
+        "bounded substrate-wait repair through the normal controlled process; do not "
+        "hand-resume this campaign. After the declared reset and confirmed capacity, start "
+        "a fresh bounded preflight attempt from the unchanged pinned head.")
+   :decision/not-done
+   (str "The frame is not voided or forgotten. No preflight success, solver result, terminal "
+        "receipt, deposit, promotion, memory publication, or verdict was synthesized, and "
         "the campaign or any frame workspace was not resumed or altered.")} ]}
