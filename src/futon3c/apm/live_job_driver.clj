@@ -130,6 +130,22 @@
                     (get-in value [:finding :error/component])
                     (get-in value [:finding :error :error/component]))))
 
+(defn- submission-already-collected?
+  "True when STATE already holds a terminal collection carrying an
+  authenticated submission.
+
+  The collection records both an :evidence :submission/available? flag and the
+  submission itself; accept either, but require the :authority, so a bare
+  identifier left by a partial write is not mistaken for a real submission."
+  [state]
+  (let [collection (:terminal-collection state)
+        submission (:submission collection)]
+    (boolean (and (map? collection)
+                  (map? submission)
+                  (some? (:authority submission))
+                  (or (true? (get-in collection [:evidence :submission/available?]))
+                      (some? (:submission/id submission)))))))
+
 (defn- driver-transport-failure? [result]
   (or (= :live-job-announce-failed (:error/code result))
       (transport-failure? result)
@@ -1246,9 +1262,30 @@
 
               :else
               (let [inferred-repair-origin
-                    (if (transport-failure? validated)
+                    (cond
+                      (transport-failure? validated) :apparatus
+                      ;; "The submission is missing" is not a statement about
+                      ;; the role when a submission has ALREADY been collected
+                      ;; and authenticated. f191/b99A02 collected submission
+                      ;; 630f7334 from job fb063e8a -- :submission/available?
+                      ;; true, :command-own-exit 0, an authority naming the
+                      ;; student and its memory snapshot, and an honest
+                      ;; "partial" account -- but the job's durable state never
+                      ;; left :running, so the repair job saw no typed
+                      ;; submission and reported :typed-submission-missing.
+                      ;; That was charged to :agent, which spent the student's
+                      ;; repair budget re-collecting work it had already
+                      ;; delivered, and then parked. The contradiction is the
+                      ;; apparatus signature: we hold the submission and are
+                      ;; simultaneously reporting it absent.
+                      ;;
+                      ;; Deliberately gated on submission-only-failure?: a real
+                      ;; role fault such as :lean-proof-invalid stays the
+                      ;; agent's, collected submission or not.
+                      (and (submission-already-collected? state)
+                           (submission-only-failure? (:findings validated)))
                       :apparatus
-                      (or (:repair/fault-origin validated) :agent))
+                      :else (or (:repair/fault-origin validated) :agent))
                     agent-repairs (or (:terminal-repair-attempts state) 0)
                     apparatus-repairs (or (:apparatus-repair-attempts state) 0)
                     cached-repair-origin

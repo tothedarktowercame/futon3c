@@ -1717,3 +1717,39 @@
     (is (not (sut/submission-only-failure? [:fresh-session-id-missing
                                             :lean-proof-invalid])))
     (is (not (sut/submission-only-failure? [])))))
+
+(deftest a-collected-submission-makes-a-missing-submission-an-apparatus-fault
+  ;; f191/b99A02: job fb063e8a delivered submission 630f7334 -- evidence
+  ;; :submission/available? true, payload :command-own-exit 0, an authority
+  ;; naming the student and its memory snapshot, and an honest "partial"
+  ;; account. The job's durable state never left :running, so the repair job
+  ;; found no typed submission and reported :typed-submission-missing. That was
+  ;; charged to :agent and spent the student's repair budget re-collecting work
+  ;; it had already delivered.
+  (let [collected {:budget {:collection-attempts 1 :repair-attempts 1}
+                   :evidence {:role :student
+                              :terminal-state :running
+                              :submission/available? true
+                              :submission/id "630f7334"}
+                   :submission {:submission/id "630f7334"
+                                :authority {:role :student
+                                            :agent-id "f191-student"
+                                            :attempt-ordinal 2}
+                                :payload {:command-own-exit 0
+                                          :outcome "partial"}}}
+        collected? #'sut/submission-already-collected?]
+    (testing "the f191 collection counts as a delivered submission"
+      (is (true? (collected? {:terminal-collection collected}))))
+    (testing "and its finding is submission-only, so the pair reads apparatus"
+      (is (sut/submission-only-failure? [:typed-submission-missing])))
+    (testing "nothing collected is still the agent's to answer for"
+      (is (false? (collected? {})))
+      (is (false? (collected? {:terminal-collection
+                               {:evidence {:submission/available? false}}}))))
+    (testing "an id with no authority is a partial write, not a submission"
+      (is (false? (collected? {:terminal-collection
+                               {:submission {:submission/id "630f7334"}}}))))
+    (testing "a real role fault stays the agent's even once a submission exists"
+      (is (not (sut/submission-only-failure? [:lean-proof-invalid])))
+      (is (not (sut/submission-only-failure?
+                [:typed-submission-missing :lean-proof-invalid]))))))
