@@ -3440,4 +3440,225 @@
    :decision/not-done
    (str "The frame is not voided or forgotten. No preflight success, solver result, terminal "
         "receipt, deposit, promotion, memory publication, or verdict was synthesized, and "
-        "the campaign or any frame workspace was not resumed or altered.")} ]}
+        "the campaign or any frame workspace was not resumed or altered.")} 
+
+ ;; --- jit-all-open-v3 park adjudication, claude-3, 2026-09-07 (Joe: "please do the remaining W2") ---
+
+ ;; Class A: session-id capture erased by our own wrapper cancellation.
+ ;; Root cause fixed in f4ae8d5a (prereg amendment 17): capture had fired 0/20
+ ;; times campaign-wide; these frames were charged :fresh-session-id-missing for
+ ;; an id the machine nulled at the agency. Solver solved and verified in every
+ ;; case; the student measurement is what died. Preserve as partial, do not void.
+ {:frame/id "f169" :problem/id "a98J03"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Parked :live-job-apparatus-repair-exhausted with findings exactly [:fresh-session-id-missing]. The student ran and submitted real work; capture-session-identity never recorded the session id (0/20 campaign-wide) because the collecting branch cancelled the live job before capture and set :terminal-collection, capture's own guard. f4ae8d5a captures the id on the pre-cancel observation. solve.edn and verify.edn are present: the solver's result stands."
+  :decision/recommended-route "Preserve f169 as a partial frame. Do not void; do not re-queue as part of adjudication (per Joe 2026-09-07: fix the apparatus and let forward frames produce the evidence). The problem may be re-queued as a deliberate operator op later if its student measurement is specifically wanted."
+  :decision/not-done "No void, no re-queue, no synthesized receipt or verdict; the campaign and workspaces were not altered."}
+ {:frame/id "f170" :problem/id "a99J08"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169: [:fresh-session-id-missing] apparatus-repair-exhausted after a real student turn; fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f173" :problem/id "b01A02"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. This frame carries a USE EVENT: its student cited an f70 memory (b93J01) that FINGERPRINTED cross-problem in the archived closing source (blob 19baae56). The student measurement here is real and worth preserving, which the park-not-void disposition already secured."
+  :decision/recommended-route "Preserve as partial WITH its archived student source and fingerprinted cross-problem verdict. No void."
+  :decision/not-done "No void, no re-queue; the archived source and audit verdict stand."}
+ {:frame/id "f174" :problem/id "b01J02"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. f174's student receipt explicitly noted its prior terminal was rejected 'for a missing session id, not for proof content' - the diagnosis in the student's own words. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f175" :problem/id "b93J04"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f179" :problem/id "b96J04"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f180" :problem/id "b97A01"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f181" :problem/id "b97A02"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f182" :problem/id "b97A03"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f183" :problem/id "b97J01"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No void, no adjudication-time re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f184" :problem/id "b97J03"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-session-id-erased
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Same failure as f169, fixed by f4ae8d5a. This frame carries a USE EVENT: its student cited an f34 reference memory (a95J03); the archived source adjudicates already-in-base (no transfer evidence), which is an honest null, not a defect. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial WITH its archived student source and already-in-base verdict. No void."
+  :decision/not-done "No void, no re-queue; the archived source and audit verdict stand."}
+
+ ;; Class B: terminal-repair exhausted at the student turn. park-not-void
+ ;; (amendment 14) and the submit-step chain (amendment 16) behaved AS INTENDED
+ ;; here - these parked rather than voiding. f178 is the campaign's best frame:
+ ;; its attempt-2 cited four promotion memories, one fingerprinted within-frame.
+ ;; Matched by :last-valid-receipt/id (role-terminal-repair-frame-park).
+ {:frame/id "f176" :problem/id "b94A01"
+  :last-valid-receipt/id "1324a1da78b4a886320dc92c2aaa1666701ff6afa07b2c9d7a17e27585f98dbc"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-repair-exhausted-parked-as-intended
+  :decision/apparatus-repair-required? false
+  :decision/frame-voided? false
+  :decision/rationale "Parked :live-job-terminal-repair-exhausted at student-attempt-1 after the submit-step packet (amendment 16) ran. This is the designed disposition: the frame parked instead of voiding (amendment 14), preserving the workspace. No apparatus repair owed - the machinery worked. Solver solved and verified; f176-solver-memory snapshot on disk."
+  :decision/recommended-route "Preserve as partial. The park-not-void behavior is correct; nothing to fix. No re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+ {:frame/id "f178" :problem/id "b96J02"
+  :last-valid-receipt/id "9f015806a16cc278cb06d0206463e2c3676a31718b7bc8a95d1072d8b8964068"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-repair-exhausted-parked-as-intended
+  :decision/apparatus-repair-required? false
+  :decision/frame-voided? false
+  :decision/rationale "The campaign's strongest student frame. Attempt-2 (after a guide intervention) cited four promotion memories, all present in its packet; one (e-apm-promotion-1250c1b7) FINGERPRINTED within-frame in the archived closing source (blob dbfb7196). It then parked :live-job-terminal-repair-exhausted rather than voiding - amendment 14 preserved exactly the frame we most wanted to keep."
+  :decision/recommended-route "Preserve as partial WITH its archived student-attempt-2 source and fingerprinted verdict. This is the frame to cite when demonstrating the fixes work. No void, no re-queue."
+  :decision/not-done "No void, no re-queue; the four-memory citation, archived source, and fingerprint verdict stand."}
+ {:frame/id "f185" :problem/id "b97J04"
+  :last-valid-receipt/id "b54ef1f32bb9f0d96025ac3d31e7413d25874ae9655456a2be013081cd13d110"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :student-terminal-repair-exhausted-parked-as-intended
+  :decision/apparatus-repair-required? false
+  :decision/frame-voided? false
+  :decision/rationale "Parked :live-job-terminal-repair-exhausted at student-attempt-1 after the submit-step packet ran; the designed park-not-void disposition. This frame's failure signature was one of the three that tripped the systematic-frame-failure brake earlier in the day (cleared, cause fixed in 14a250e6/f4ae8d5a). Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. No apparatus repair owed here. No re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+
+ ;; Class C: workspace-retirement-audit refused to retire a DIRTY student
+ ;; worktree - i.e. the audit correctly protected uncommitted student work from
+ ;; being lost. Preserve; the dirty worktree is the evidence, not a fault.
+ {:frame/id "f171" :problem/id "a99J10"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :retirement-audit-preserved-dirty-worktree
+  :decision/apparatus-repair-required? false
+  :decision/frame-voided? false
+  :decision/rationale "Parked :workspace-retirement-audit-invalid with findings [:workspace-dirty :workspace-probe-failed]. The read-only retirement auditor refused to retire the frame because the student worktree held uncommitted work - the audit doing its job, not a new fault. Preceded f4ae8d5a; the underlying student-terminal trouble is the same session-id class. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial with the dirty worktree intact. No void. No re-queue."
+  :decision/not-done "No void, no re-queue; the preserved worktree stands."}
+ {:frame/id "f172" :problem/id "b00J02"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :retirement-audit-preserved-dirty-worktree
+  :decision/apparatus-repair-required? false
+  :decision/frame-voided? false
+  :decision/rationale "Same as f171: :workspace-retirement-audit-invalid on a dirty student worktree; the auditor protected uncommitted work. Solver solved and verified. (The earlier fingerprint audit listed f171/f172 among excluded frames for the transfer population - correct: they carry no adjudicable use event - but they are preserved parks, not destroyed voids.)"
+  :decision/recommended-route "Preserve as partial with the dirty worktree intact. No void. No re-queue."
+  :decision/not-done "No void, no re-queue; the preserved worktree stands."}
+
+ ;; Class D: the live job reached terminal before the wrapper could reconcile
+ ;; (HTTP 409 invoke-job-already-terminal). Same cancellation-timing
+ ;; neighborhood f4ae8d5a repairs.
+ {:frame/id "f177" :problem/id "b96A02"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :wrapper-reconciliation-lost-to-terminal-race
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "f4ae8d5a2e4ba595d676b3095a7c8f63c4ecb915"
+  :decision/frame-voided? false
+  :decision/rationale "Parked :live-job-wrapper-reconciliation-failed: the wrapper's cancel got HTTP 409 invoke-job-already-terminal because the job had already reached :done. This is the same cancellation/observation-timing region f4ae8d5a reworks (capture now happens on the observation before cancel). Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. The timing repair in f4ae8d5a covers this region; watch f188+ for recurrence. No re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+
+ ;; Class E: transport handshake failure during the direct-buffer-exhaustion
+ ;; window. The JVM restart (14:40) plus af7c3df8 (guard the pouch stdout JSON
+ ;; parse) address the environment; nothing frame-specific to repair.
+ {:frame/id "f186" :problem/id "b98A01"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :transport-failure-direct-buffer-window
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "af7c3df8772fe244e43c441b2b10793e544bde32"
+  :decision/frame-voided? false
+  :decision/rationale "Parked :live-job-terminal-failure, terminal-message 'Remote host terminated the handshake' (:invoke-exception) - a transport failure during the JVM's direct-buffer exhaustion window (buffers hit 4095/4096 MB before the 14:40 restart). Not a property of b98A01. The restart plus af7c3df8 address the environment. Solver solved and verified."
+  :decision/recommended-route "Preserve as partial. Environment repaired by restart + af7c3df8; no frame-specific fix. No re-queue."
+  :decision/not-done "No void, no re-queue, no synthesized artifact."}
+
+ ;; Class F: promotion apparatus exhausted under direct-buffer exhaustion.
+ ;; Joe RULED b98A02 not to be re-queued (2026-09-07): solve+verify exist and
+ ;; the promotion still banked 305 memories with matching digests.
+ {:frame/id "f187" :problem/id "b98A02"
+  :last-valid-receipt/id "e08ad4c3283755421e4cc3c7302f90cbf4e902adb6b257f4f7b5dd4b58e9444a"
+  :decision/at "2026-09-07T15:56:00Z" :decision/by "claude-3"
+  :decision/owner :claude-supervisor :decision/status :decided
+  :decision/class :promotion-apparatus-exhausted-direct-buffer
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "af7c3df8772fe244e43c441b2b10793e544bde32"
+  :decision/frame-voided? false
+  :decision/rationale "Parked :promotion-apparatus-repair-exhausted, residual :error/component :transport, :transport/evidence :not-obtained - the direct-buffer exhaustion surfacing in the promotion phase. Despite the park, the promotion certified and BANKED 305 memories into the shared store with persisted-content-digest == read-back-content-digest, and f187-solver-memory is on disk: the solver spend is not lost. Only the student measurement died (the frame ran :memory-cascade-unreachable)."
+  :decision/recommended-route "Do NOT re-queue b98A02 (Joe's ruling 2026-09-07: a Codex solve already exists, solve+verify present, 305 memories banked - re-solving would be redundant). Preserve as partial; keep the 305 banked memories. Treat f187 as outside the experimental population (memory transport was dead)."
+  :decision/not-done "No void, no re-queue; the 305 banked memories and solver snapshot stand. The dead-cascade student turn is not counted as a memory-effect measurement."}
+
+]}
