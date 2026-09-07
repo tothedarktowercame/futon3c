@@ -1829,3 +1829,43 @@
     ;; silently invent guidance it does not have
     (is (nil? (fi :some-finding-nobody-declared)))
     (is (nil? (fi {:ordinal 1})) "an ordinal with no findings is not instructable")))
+
+(deftest cancelled-job-does-not-owe-a-session-id
+  ;; jit-all-open-v3 halted 2026-09-07 at f185/b97J04 with
+  ;; :problem-queue-systematic-frame-failure, signature
+  ;; [:fresh-session-id-missing :live-job-terminal-repair-exhausted
+  ;;  :typed-submission-missing] x3. A session id exists while a job is live
+  ;; and is LOST when it is cancelled -- and the canceller is the machine's
+  ;; own typed-submission wrapper. live-job-driver/restore-session-identity
+  ;; puts the id back when an earlier poll captured one, but a job cancelled
+  ;; before its first live observation has nothing to restore, so the frame
+  ;; was charged for an id the machine itself erased.
+  ;;
+  ;; :job-not-done already records "this job did not finish". The extra
+  ;; :fresh-session-id-missing was a second name for one event, and it is the
+  ;; name that enters the systematic-failure signature.
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f185-student"
+                 :frame-id "f185" :problem-id "b97J04"}
+        ticket {:job-id "j1"}
+        job-with (fn [state session-id]
+                   {:job-id "j1" :agent-id "f185-student"
+                    :state state :session-id session-id
+                    :report {:command-own-exit 0 :frame-id "f185"
+                             :problem-id "b97J04" :memory-use {}}})
+        findings-for (fn [job]
+                       (set (:findings (sut/validate-terminal request ticket job))))]
+    (testing "a job we cancelled is not charged for the id our cancellation erased"
+      (let [f (findings-for (job-with :cancelled nil))]
+        (is (contains? f :job-not-done)
+            "the real fact -- it did not finish -- must still be recorded")
+        (is (not (contains? f :fresh-session-id-missing))
+            "but not a second time under a name that poisons the signature")))
+    (testing "a job that DID finish still owes a session id"
+      (let [f (findings-for (job-with :done nil))]
+        (is (contains? f :fresh-session-id-missing)
+            "the invariant must keep its force where it means something")))
+    (testing "a finished job carrying one is clean on both counts"
+      (let [f (findings-for (job-with :done "s-abc"))]
+        (is (not (contains? f :fresh-session-id-missing)))
+        (is (not (contains? f :job-not-done)))))))

@@ -446,7 +446,20 @@
           (not= 0 (:command-own-exit report)) (conj :command-own-exit-nonzero)
           (not= (:frame-id request) (:frame-id report)) (conj :frame-mismatch)
           (not= (:problem-id request) (:problem-id report)) (conj :problem-mismatch)
+          ;; Only a job that actually FINISHED owes us a session id. A job
+          ;; the machine itself cancelled carries none -- the canceller is our
+          ;; own typed-submission wrapper reconciliation -- and :job-not-done
+          ;; two lines up already records that. Adding
+          ;; :fresh-session-id-missing on top double-counts one event, and it
+          ;; is the second name that does the damage: it enters the frame's
+          ;; failure signature, and three frames sharing that signature trip
+          ;; problem-queue-systematic-frame-failure and stop the campaign.
+          ;; live-job-driver/restore-session-identity already puts the id back
+          ;; whenever a live poll captured one first; this covers the case it
+          ;; cannot -- a job cancelled before any poll observed it live, which
+          ;; is what halted jit-all-open-v3 at f185/b97J04 (2026-09-07).
           (and (= :student-attempt kind)
+               (= :done (:state job))
                (not (string? (:session-id job)))) (conj :fresh-session-id-missing)
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)
