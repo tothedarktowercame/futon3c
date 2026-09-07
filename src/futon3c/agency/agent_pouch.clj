@@ -538,7 +538,20 @@
                           {:agent-id (:agent-id pouch)})))
         (if (str/blank? line)
           (recur)
-          (let [event (json/parse-string line true)]
+          ;; A pouch's stdout is a JSON-event stream, but it is a
+          ;; SUBPROCESS's stdout: whatever the runtime beneath it prints lands
+          ;; here too. On 2026-09-07 the JVM exhausted its 4g direct-buffer
+          ;; limit, and the resulting "Cannot reserve 309 bytes of direct
+          ;; buffer memory" line reached this reader, where an unguarded parse
+          ;; threw JsonParseException, killed the regulator tick
+          ;; (:live-regulator-tick-threw) and stopped the whole
+          ;; jit-all-open-v3 campaign. One stray line must cost one line, not
+          ;; the campaign. An unparseable line becomes an event of unknown
+          ;; :type, which the case below already answers with (recur).
+          ;; Line ~833 of this file has always read its stream this way.
+          (let [event (or (try (json/parse-string line true)
+                               (catch Throwable _ nil))
+                          {:type "pouch/unparseable-line" :raw line})]
             (when on-event
               ;; Observability hook (e.g. surfacing tool activity to the
               ;; registry); a hook failure must never kill the turn.
@@ -621,7 +634,20 @@
                           {:agent-id (:agent-id pouch)})))
         (if (str/blank? line)
           (recur)
-          (let [event (json/parse-string line true)]
+          ;; A pouch's stdout is a JSON-event stream, but it is a
+          ;; SUBPROCESS's stdout: whatever the runtime beneath it prints lands
+          ;; here too. On 2026-09-07 the JVM exhausted its 4g direct-buffer
+          ;; limit, and the resulting "Cannot reserve 309 bytes of direct
+          ;; buffer memory" line reached this reader, where an unguarded parse
+          ;; threw JsonParseException, killed the regulator tick
+          ;; (:live-regulator-tick-threw) and stopped the whole
+          ;; jit-all-open-v3 campaign. One stray line must cost one line, not
+          ;; the campaign. An unparseable line becomes an event of unknown
+          ;; :type, which the case below already answers with (recur).
+          ;; Line ~833 of this file has always read its stream this way.
+          (let [event (or (try (json/parse-string line true)
+                               (catch Throwable _ nil))
+                          {:type "pouch/unparseable-line" :raw line})]
             (when on-event
               (try (on-event event) (catch Throwable _)))
             (when (compact-status-event? event)
