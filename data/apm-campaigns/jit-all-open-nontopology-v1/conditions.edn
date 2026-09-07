@@ -166,4 +166,13 @@
   "futon3c.apm.projection-watchdog"
   "futon3c.apm.countdown-control"],
  :loaded? true}
+{:id "C-15",
+ :at "2026-09-07T18:52Z",
+ :by "claude-4",
+ :kind :reload,
+ :note
+ "ce049d62: classify a solver defect claim on :failure-account, not :residual — f190/b98J04 burned 21 rounds because a defect claim has no residual by definition",
+ :head "ce049d62",
+ :namespaces ["futon3c.apm.live-solver-rounds"],
+ :loaded? true}
 ]
