@@ -3798,4 +3798,108 @@
         "is; this decision withdraws the frame, it does not adjudicate the held-out "
         "problem. No claim is made that f192's student work was correct or incorrect.")}
 
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f191"
+   :problem/id "b99A02"
+   :park/state-type :role-terminal-repair-frame-park
+   :last-valid-receipt/id
+   "33c44e4221a33f2bab0ade3a9c7cd435369a6d81d6efcb3ea1fb3ffa99fcc6bf"
+   :decision/at "2026-09-07T23:00:17Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :completed-submission-unreconciled-by-terminal-repair
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "2feb07e1"
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :decision/rationale
+   (str "The student submitted. Job fb063e8a delivered submission 630f7334 with "
+        ":submission/available? true, :command-own-exit 0, and an :authority naming "
+        "f191-student at attempt-ordinal 2 with memory snapshot 638fbb62, whose "
+        "receipt-id is this park's own :last-valid-receipt/id. The payload reports "
+        "outcome \"partial\" with an honest failure account. The job's durable state "
+        "never left :running, so the repair job fa1c7153 saw no typed submission and "
+        "reported :typed-submission-missing, which was charged :agent -- spending the "
+        "student's repair budget re-collecting work already delivered. Holding a "
+        "submission while reporting it absent is an apparatus contradiction, not a "
+        "role fault. Repaired in 2feb07e1 and reloaded into the running JVM.")
+   :decision/process-finding
+   (str "The submission is a VALID learning measurement and is counted. Its account "
+        "checks out against the pinned base 7672a923: it reports one sorry at line 66 "
+        "in apm_b99a02, and that file at that revision has exactly one executable "
+        "sorry with line 66 reading `theorem apm_b99a02`. Three of four conjuncts "
+        "proved; the residual is Q.toSubgroup.Normal, the order-175 subgroup, and the "
+        "iff. It ran out the 30-minute attempt budget with the plan written and ~60 "
+        "lines of Lean unwritten -- its own environment note records `lake env lean` "
+        "compiling in ~3s, so the blocker was proof volume against budget, not tooling. "
+        "Two memory results worth keeping: query 2, for transporting pairwise-normal "
+        "Sylow subgroups to abelian, returned ZERO candidates -- precisely the residual "
+        "it was stuck on -- and all 20 sibling cascade offers were measure-theory and "
+        "complex-analysis material for a finite-group problem, none used, one memory "
+        "used from query 1.")
+   :decision/recommended-route
+   (str "Preserve f191 as partial, not voided. Do not re-dispatch the student: the "
+        "attempt is measured and its budget expiry is the measurement. b99A02 itself "
+        "is separately proved on master by the solver promoted at 19:35 -- zero "
+        "executable sorries, axioms exactly [propext, Classical.choice, Quot.sound] -- "
+        "which is a different fact from this attempt's outcome and does not make the "
+        "attempt redundant.")
+   :decision/not-done
+   (str "No void, no re-queue, no claim that the student's mathematics was complete: "
+        "it reported partial and partial is what is recorded. This decision corrects "
+        "who was charged for the failed collection, and preserves the measurement.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f190"
+   :problem/id "b98J04"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-07T23:00:17Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :frozen-authority-refuted-by-kernel-checked-counterexample
+   :decision/statement-repair-required? true
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :solver/rounds-completed 29
+   :decision/rationale
+   (str "The park is CORRECT and is not a stale verdict. :solver-defect-review-required "
+        "with findings [:lean-proof-invalid :axioms-not-permitted] is the machine "
+        "refusing to accept the solver's submission as a proof -- and it was not a "
+        "proof, it was a refutation. The registered statement handed to f190 at frozen "
+        "revision 7672a923 is false: it quantifies over R : Type* while demanding the "
+        "Artin-Wedderburn division ring in universe zero, D : Type. Joe repaired it in "
+        "apm-lean 2d82004f at 19:06 (\"Repair b98J04's registered statement: the frozen "
+        "form was refutable\"), whose message records that f190 spent 29 solver rounds "
+        "without closing it because the statement is false, that the solver refuted it "
+        "in Lean, and that it had already done so at f93. The solver branch "
+        "exp/countdown-f190-b98J04-solver carries that work: 6e32b07c formalize "
+        "counterexample to frozen universe, cb00bdd5 refute frozen conclusion without "
+        "circularity, 04b36e30 record axiom-safe counterexample checks.")
+   :decision/process-finding
+   (str "This is a solver SUCCESS recorded as a park. The frame did not fail to prove "
+        "b98J04; it established that the frozen form could not be proved, with a "
+        "kernel-checked counterexample, and that finding is what produced the corrected "
+        "statement now on master. Counting f190 as a solver failure would invert its "
+        "result. Note the branch statement differs from master's precisely because "
+        "master's has been repaired; comparing the two is what makes the refutation "
+        "legible.")
+   :decision/recommended-route
+   (str "Preserve f190 as partial, not voided, and do not re-dispatch its solver -- the "
+        "round budget was spent productively. b98J04 under the REPAIRED statement is a "
+        "different proof obligation from the one f190 was given. Its status.json still "
+        "records sorry_count_total 1 against a Main.lean with 0 executable sorries, so "
+        "derive-queue continues to count it open and it will be re-queued against the "
+        "repaired form. That is the right outcome, but the stale status record should "
+        "be corrected in the same change that re-pins the corpus count, since "
+        "correcting it alone moves open 69 -> 68 and turns the qualification gate red.")
+   :decision/not-done
+   (str "No void. No claim that b98J04 is proved: master carries a repaired statement "
+        "whose proof is a separate matter from this frame. No re-queue is performed "
+        "here; the queue will select it on its own once the status record is corrected.")}
+
 ]}
