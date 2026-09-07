@@ -29,10 +29,22 @@
   extra submission turn, and the controller observation is the final
   fallback. Exact [:typed-submission-missing] matching had let the
   wrapper-cancellation's :fresh-session-id-missing pollution skip all
-  three (f171/f172 voided past every rescue)."
+  three (f171/f172 voided past every rescue).
+
+  Membership in submission-only-findings is the whole test; do not also
+  demand :typed-submission-missing. When the wrapper cancels a student turn
+  before any poll observes it live, the job is cancelled with no session id
+  and NO typed submission was ever expected, so the findings are exactly
+  [:fresh-session-id-missing] -- no :typed-submission-missing to find. That
+  extra conjunct therefore excluded the very case this set names in its own
+  docstring, and the rescue was skipped for the frames it was written for:
+  f188/b98A04, f189/b98J01 and f192/bpm-1-8-1 each burned both apparatus
+  repair attempts and parked with findings exactly [:fresh-session-id-missing]
+  on 2026-09-07, all three AFTER f4ae8d5a had landed. Three frames sharing one
+  signature is also the systematic-frame-failure threshold, so this stops the
+  campaign."
   [findings]
   (and (seq findings)
-       (some #{:typed-submission-missing} findings)
        (every? submission-only-findings findings)))
 ;; Keep one additional apparatus turn available when a repaired terminal reaches
 ;; a later transport boundary.  The agent repair budget remains independent.

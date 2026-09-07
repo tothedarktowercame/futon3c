@@ -1696,3 +1696,24 @@
     (is (= "zai-live-session-77"
            (:session-id (sut/restore-session-identity @live-job (:state result))))
         "so validate-terminal sees the session the student actually ran in")))
+
+(deftest wrapper-cancellation-alone-is-a-submission-only-failure
+  ;; The three parks of 2026-09-07 (f188/b98A04, f189/b98J01, f192/bpm-1-8-1)
+  ;; all carried findings exactly [:fresh-session-id-missing]: the typed-
+  ;; submission wrapper cancelled the student turn before any poll observed it
+  ;; live, so the job ended cancelled with no session id and no typed
+  ;; submission was ever due. Requiring :typed-submission-missing to be present
+  ;; excluded that case from the rescue chain, and each frame burned both
+  ;; apparatus repair attempts and parked instead.
+  (testing "a lone wrapper-cancellation finding still reaches the rescue"
+    (is (sut/submission-only-failure? [:fresh-session-id-missing])))
+  (testing "the previously covered combinations still hold"
+    (is (sut/submission-only-failure? [:typed-submission-missing]))
+    (is (sut/submission-only-failure? [:typed-submission-missing
+                                       :fresh-session-id-missing]))
+    (is (sut/submission-only-failure? [:live-job-terminal-repair-exhausted])))
+  (testing "a real role failure is still not submission-only"
+    (is (not (sut/submission-only-failure? [:lean-proof-invalid])))
+    (is (not (sut/submission-only-failure? [:fresh-session-id-missing
+                                            :lean-proof-invalid])))
+    (is (not (sut/submission-only-failure? [])))))
