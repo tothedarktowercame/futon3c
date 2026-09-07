@@ -175,4 +175,13 @@
  :head "ce049d62",
  :namespaces ["futon3c.apm.live-solver-rounds"],
  :loaded? true}
+{:id "C-16",
+ :at "2026-09-07T19:19Z",
+ :by "claude-4",
+ :kind :reload,
+ :note
+ "auto-void a refuted statement in-flight so the Guide repair path actually runs (f190/b98J04 parked instead of repairing)",
+ :head "19bc072f",
+ :namespaces ["futon3c.apm.queued-frame-adapter"],
+ :loaded? true}
 ]
