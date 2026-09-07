@@ -719,3 +719,86 @@
     (let [in (defect-result substantiated)]
       (is (= in (sut/statement-refuted-void!
                  {:frame frame :ledger-path "/tmp/ledger.edn" :result in}))))))
+
+;; --- a refuted statement must reach the Guide ------------------------------
+;; statement-refuted-void! writes a void certificate and returns :phase-advanced,
+;; on the premise that the queue then observes it and dispatches a repair. That
+;; premise was never exercised: campaign-wide, zero statement-repair jobs had
+;; ever been dispatched, so the whole path downstream of the void is unproven.
+;; These walk it end to end.
+
+(deftest a-statement-refuted-void-reads-as-refuted-not-merely-unsolved
+  ;; The hinge. queued-frame-adapter maps a void to :refuted ONLY when its
+  ;; classification is :statement-refuted; every other void is :unsolved, and
+  ;; :unsolved does not reach the repair path.
+  (let [void-cert {:certificate/type :frame-void
+                   :certificate/id digest
+                   :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                   :classification :statement-refuted
+                   :failed-invariants [:statement-refuted-by-solver]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate void-cert}}]}
+                 ;; Workspace heads are what a real preparation carries; a
+                 ;; void needs no solve or verify receipt, but validate-terminal
+                 ;; still requires the solver identity and both heads.
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f30"
+                                         :terminal-head (apply str (repeat 40 "b"))}
+                                :student {:terminal-head (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :refuted (get-in result [:terminal-receipt :problem/outcome]))
+        "a statement-refuted void must not read as merely unsolved"))
+  ;; Contrast: any other void classification stays :unsolved.
+  (let [other {:certificate/type :frame-void :certificate/id digest
+               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+               :classification :apparatus-invalidated
+               :failed-invariants [:whatever]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate other}}]}
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f30"
+                                         :terminal-head (apply str (repeat 40 "b"))}
+                                :student {:terminal-head (apply str (repeat 40 "c"))}}}})]
+    (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))))
+
+(deftest a-refuted-frame-dispatches-a-statement-repair-to-the-guide
+  (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
+                                :revision "r" :path "Main.lean" :blob "b"
+                                :classification :non-excluded}) (range 3))
+        plan (queue/queue-plan problems)
+        state (atom nil)
+        dispatched (atom [])
+        terminal {:receipt/type :frame-terminal :receipt/id digest
+                  :problem/outcome :refuted
+                  :void/classification :statement-refuted
+                  :void/failed-invariants [:statement-refuted-by-solver]}
+        effects {:mint-frame-fn #(sut/mint (assoc % :frame-number-base 40))
+                 :qualify-frame-fn (fn [_] {:ok true})
+                 :prepare-frame-fn (fn [_] {:ok true :preparation/id digest})
+                 :frame-tick-fn (fn [_] {:ok true :status :frame-complete
+                                         :frame/result :void
+                                         :terminal-receipt terminal})
+                 :retire-frame-fn (fn [_] {:ok true})
+                 :dispatch-statement-repair-fn
+                 (fn [handoff] (swap! dispatched conj handoff)
+                   {:ok true :dispatch/id "statement-repair-1"})
+                 :state-provider #(deref state)
+                 :persist-state-fn #(do (reset! state %) {:ok true})}
+        tick #(queue/tick! (assoc effects :plan plan))]
+    (tick)                              ; prepare the first frame
+    (tick)                              ; frame completes as a refuted void
+    (is (= :voided-slot-awaiting-revision (:status @state))
+        "a refuted frame must void its slot for revision, not advance past it")
+    (tick)                              ; the queue dispatches the repair
+    (is (= 1 (count @dispatched))
+        "the Guide must actually be dispatched; this path had never run")
+    (let [h (first @dispatched)]
+      (is (= :statement-repair (:obligation/type h)))
+      (is (= :guide (:repair/role h)))
+      (is (= :repair-registered-statement-once (:instruction h)))
+      (is (= [:replacement-pinned-problem :guide-receipt] (:required-output h)))
+      (is (= :discard-and-advance (:exhaustion/action h)))
+      (is (= :refuted (get-in h [:diagnostic :problem/outcome]))))))
