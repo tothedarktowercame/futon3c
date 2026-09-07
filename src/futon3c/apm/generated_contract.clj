@@ -129,6 +129,29 @@
    :distinct-continuation-session true :distinct-analyst-session true
    :projection-ledger-binding true})
 
+(def required-runtime-conformance-policy
+  {:role-terminal-repair-exhaustion-action "park-reenterable-frame"
+   :role-terminal-repair-exhaustion-may-void false
+   :role-terminal-repair-exhaustion-may-advance false
+   :solver-defect-outcome-required "claimed-defect"
+   :solver-defect-statement-unchanged-required true
+   :solver-defect-failure-account-required true
+   :solver-defect-residual-required false
+   :substantiated-solver-defect-action "automatic-statement-refuted-void"
+   :authenticated-terminal-outranks-wrapper-cancellation true
+   :cancelled-role-session-lineage-preserved true
+   :repair-charged-to-request-origin true
+   :worker-authored-handoff-verdict-refused true
+   :handoff-reviewer-distinct-from-depositor true
+   :durable-stop-cause-required true
+   :watchdog-action-requires-current-generation true
+   :orphan-recovery-lineage-preserved true
+   :orphan-recovery-bounded true
+   :orphan-authority-before-activation true
+   :unavailable-substrate-action "wait-without-consuming"
+   :reviewed-memory-publication-requires-frame-close false
+   :reviewed-memory-publication-requires-review-receipt true})
+
 (def required-promotion-policy
   {:distinct-promotion-proctor true
    :review-verdicts
@@ -427,6 +450,9 @@
           (conj :generated-contract-memory-policy-invalid)
           (not= required-promotion-policy (:promotion-policy contract))
           (conj :generated-contract-promotion-policy-invalid)
+          (not= required-runtime-conformance-policy
+                (:runtime-conformance-policy contract))
+          (conj :generated-contract-runtime-conformance-policy-invalid)
           (not= required-isolation-policy (:isolation-policy contract))
           (conj :generated-contract-isolation-policy-invalid)
           (not= required-terminal-policy

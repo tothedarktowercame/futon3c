@@ -146,6 +146,24 @@
     (is (some #{:generated-contract-isolation-policy-invalid}
               (:findings isolation-result)))))
 
+(deftest runtime-conformance-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (doseq [[field bad-value]
+            [[:role-terminal-repair-exhaustion-action "void-frame"]
+             [:solver-defect-residual-required true]
+             [:authenticated-terminal-outranks-wrapper-cancellation false]
+             [:watchdog-action-requires-current-generation false]
+             [:orphan-recovery-bounded false]
+             [:unavailable-substrate-action "consume-and-advance"]
+             [:reviewed-memory-publication-requires-frame-close true]]]
+      (let [result (sut/validate
+                    (assoc-in contract
+                              [:runtime-conformance-policy field]
+                              bad-value))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-runtime-conformance-policy-invalid}
+                  (:findings result)) (str field))))))
+
 (deftest f29-open-search-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))
         mutations [[:open-reviewed-corpus-search false]
