@@ -58,26 +58,64 @@
 (defn- evidence-author [entry]
   (some-> (:evidence/author entry) str))
 
+(def ^:private max-evidence-pages
+  "Safety stop for cursor following. 1000 entries a page, so this bounds one
+  session window at 20k entries rather than looping on a pathological cursor."
+  20)
+
 (defn- fetch-session-evidence
+  "Every evidence entry for SESSION-ID in the window, following the cursor.
+
+  The substrate serves ONE BOUNDED PAGE per request and returns :next-cursor
+  when more remain (futon1b `query-evidence-response`: \"Continue with the
+  returned :next-cursor map as cursor-at/cursor-id\"). This ignored it and kept
+  only the first page, so any session with more than `limit` entries in the
+  window was silently truncated -- and truncation here is not a smaller answer
+  but a wrong one, because `session-adaptation` derives its activity window
+  from the first and last entry. A dropped tail moves :to to a time the session
+  did not end at.
+
+  Paging is followed only when the substrate says there is more. Measured
+  2026-09-07 against a 640-entry window: limit=1000 returns all 640 with no
+  cursor, so the ordinary case is exactly one request, as before. That matters
+  because each request costs a fixed ~850ms floor at futon1b regardless of
+  size, and futon1b's permit pool is two -- shared with the promotion's
+  visibility reads, whose per-read bound is 5000ms of wall clock including
+  queue wait. Paging unconditionally at limit=100 would have been ~7 requests
+  and ~4x the gate occupancy for the same rows, which is why the page size
+  stays at the maximum and the cursor is followed only when it appears."
   [http-get-fn substrate-url session-id since-ms before-ms]
   (try
-    (let [url (str (str/replace substrate-url #"/$" "")
-                   "/api/alpha/evidence?session-id=" (encoded session-id)
-                   "&since=" (encoded (iso since-ms))
-                   "&before=" (encoded (iso before-ms))
-                   "&limit=1000")
-          response (http-get-fn url {:headers {"Accept" "application/edn"}
-                                     :throw false})]
-      (when (= 200 (:status response))
-        (let [parsed (when (string? (:body response))
-                       (edn/read-string (:body response)))
-              entries (:entries parsed)]
-          (when (sequential? entries)
-            (->> entries
-                 (filter (fn [entry]
-                           (when-let [at-ms (epoch-ms (:evidence/at entry))]
-                             (<= since-ms at-ms before-ms))))
-                 vec)))))
+    (let [base (str (str/replace substrate-url #"/$" "")
+                    "/api/alpha/evidence?session-id=" (encoded session-id)
+                    "&since=" (encoded (iso since-ms))
+                    "&before=" (encoded (iso before-ms))
+                    "&limit=1000")]
+      (loop [cursor nil pages 0 acc []]
+        (let [url (if cursor
+                    (str base "&cursor-at=" (encoded (:at cursor))
+                         "&cursor-id=" (encoded (:id cursor)))
+                    base)
+              response (http-get-fn url {:headers {"Accept" "application/edn"}
+                                         :throw false})]
+          (if-not (= 200 (:status response))
+            ;; A failed page is not a short answer: return nil so the caller
+            ;; treats it as no evidence rather than as a truncated window.
+            (when (seq acc) nil)
+            (let [parsed (when (string? (:body response))
+                           (edn/read-string (:body response)))
+                  entries (:entries parsed)
+                  next-cursor (:next-cursor parsed)
+                  acc (if (sequential? entries) (into acc entries) acc)]
+              (if (and (map? next-cursor) (:at next-cursor) (:id next-cursor)
+                       (< (inc pages) max-evidence-pages)
+                       (sequential? entries) (seq entries))
+                (recur next-cursor (inc pages) acc)
+                (->> acc
+                     (filter (fn [entry]
+                               (when-let [at-ms (epoch-ms (:evidence/at entry))]
+                                 (<= since-ms at-ms before-ms))))
+                     vec)))))))
     (catch Exception _ nil)))
 
 (defn- session-adaptation

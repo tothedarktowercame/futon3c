@@ -114,3 +114,66 @@
     (is (= [] (:substrate-mentions bundle)))
     (is (= [] (:activity-windows bundle)))
     (is (false? @called?))))
+
+;; --- evidence paging -------------------------------------------------------
+;; The substrate serves one bounded page and returns :next-cursor when more
+;; remain. This ignored it, so a session with more entries than the page limit
+;; was silently truncated -- and the activity window is derived from the FIRST
+;; and LAST entry, so a dropped tail reports a window the session never ended.
+
+(defn- paged-response
+  "A 200 whose body carries ENTRIES and, when CURSOR is given, :next-cursor."
+  [xs cursor]
+  {:status 200
+   :body (pr-str (cond-> {:entries xs} cursor (assoc :next-cursor cursor)))})
+
+(def ^:private page-one
+  [{:evidence/id "p1-a" :evidence/at "2026-08-24T08:22:00.000Z"
+    :evidence/author "claude-3" :evidence/body {:text "first"}}
+   {:evidence/id "p1-b" :evidence/at "2026-08-24T08:30:00.000Z"
+    :evidence/author "claude-3" :evidence/body {:text "second"}}])
+
+(def ^:private page-two
+  [{:evidence/id "p2-a" :evidence/at "2026-08-24T09:45:00.000Z"
+    :evidence/author "claude-3" :evidence/body {:text "last"}}])
+
+(deftest evidence-window-follows-the-cursor-to-its-real-end
+  (let [urls (atom [])
+        cursor {:at "2026-08-24T08:30:00.000Z" :id "p1-b"}
+        http (fn [url _]
+               (swap! urls conj url)
+               (if (str/includes? url "cursor-id=")
+                 (paged-response page-two nil)
+                 (paged-response page-one cursor)))
+        bundle (adapters/build-evidence-bundle path-fact (options http))
+        window (first (:activity-windows bundle))]
+    (is (= 2 (count @urls)) "the cursor must be followed exactly once")
+    (is (str/includes? (second @urls) "cursor-at=")
+        "continuation must pass cursor-at")
+    (is (str/includes? (second @urls) "cursor-id=p1-b")
+        "continuation must pass the cursor's id")
+    (is (= #inst "2026-08-24T09:45:00.000Z" (:to window))
+        "the window must end at page two's last entry, not page one's")
+    (is (= #inst "2026-08-24T08:22:00.000Z" (:from window)))))
+
+(deftest an-unpaged-window-still-costs-exactly-one-request
+  ;; The ordinary case. Each request carries a fixed ~850ms floor at futon1b
+  ;; and the permit pool is two, shared with the promotion's visibility reads,
+  ;; so a page that nobody asked for is real contention.
+  (let [urls (atom [])
+        http (fn [url _] (swap! urls conj url) (paged-response page-one nil))
+        bundle (adapters/build-evidence-bundle path-fact (options http))]
+    (is (= 1 (count @urls)) "no cursor means no second request")
+    (is (= #inst "2026-08-24T08:30:00.000Z"
+           (:to (first (:activity-windows bundle)))))))
+
+(deftest a-cursor-that-never-ends-is-bounded
+  ;; A substrate that always offers another page must not loop forever.
+  (let [calls (atom 0)
+        http (fn [_ _]
+               (swap! calls inc)
+               (paged-response page-one {:at "2026-08-24T08:30:00.000Z"
+                                         :id "always"}))]
+    (adapters/build-evidence-bundle path-fact (options http))
+    (is (<= @calls 20) "paging must stop at the page cap")
+    (is (> @calls 1) "and it must actually have paged")))
