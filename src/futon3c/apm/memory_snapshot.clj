@@ -238,16 +238,51 @@
       provenance-summary
       (assoc :snapshot/provenance-summary provenance-summary))))
 
+(def ^:private visibility-read-retry-delay-ms 1500)
+
+(defn- retry-once-on-miss
+  "Run READ, and if it comes back empty, wait briefly and run it once more.
+
+  futon1b admits two requests at a time and this promotion is not its only
+  tenant. A visibility read is bounded at visibility-read-bound-ms (5s) of WALL
+  CLOCK, queue wait included, so a co-tenant holding a permit longer than that
+  fails the read outright -- and one failed read fails the candidate, then the
+  publication, then the frame. Measured 2026-09-07: the inbox-zero sweeper's
+  session-evidence scans run limit=1000 and take 5.5-6.0s each, longer than
+  this whole bound, in back-to-back runs on a 30-minute cadence.
+
+  A permit held by someone else is transient, so retrying once after a short
+  delay costs one extra read on a miss and converts that class of failure into
+  a pause. It deliberately does NOT distinguish 'timed out' from 'genuinely
+  absent': the bounded read returns nil for both, and a second look at an
+  absent entry is cheap and still returns nil.
+
+  This is a mitigation, not the cure. The cure is for a co-tenant not to hold a
+  shared two-permit gate for longer than another tenant's entire bound."
+  [read]
+  (fn [id]
+    (let [miss? (fn [r] (or (nil? r) (and (coll? r) (empty? r))))
+          first-try (read id)]
+      ;; An empty SEQUENCE is truthy in Clojure, so `or` alone would never
+      ;; retry hyperedges-by-end -- the one read here whose miss is an empty
+      ;; collection rather than nil.
+      (if (miss? first-try)
+        (do (Thread/sleep visibility-read-retry-delay-ms)
+            (read id))
+        first-try))))
+
 (defn candidate-visible?
   "Freshly verify that CANDIDATE describes the current reviewed attachment and
   its independently authored persisted review evidence."
   ([candidate]
    (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
      (candidate-visible? candidate
-                         #(substrate/hyperedges-by-end
-                           % {:limit 10 :timeout-ms 5000 :request-budget 2})
-                         #(f1b/get-entry-bounded
-                           backend % visibility-read-bound-ms))))
+                         (retry-once-on-miss
+                          #(substrate/hyperedges-by-end
+                            % {:limit 10 :timeout-ms 5000 :request-budget 2}))
+                         (retry-once-on-miss
+                          #(f1b/get-entry-bounded
+                            backend % visibility-read-bound-ms)))))
   ([{:keys [memory-id depositor reviewer review-evidence-id
             attachment-status pattern-ids]}
     fetch-hyperedges fetch-entry]
