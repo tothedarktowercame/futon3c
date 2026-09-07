@@ -2252,6 +2252,43 @@
         irc-send-base (some-> (:irc-send-base config) str str/trim not-empty)
         irc-relay-configured? (fn? (:irc-send-fn config))
         queue-hardening (agency-invariants/queue-hardening-status)
+        ;; Cheap JVM memory readout. O(1) MXBean reads, no store access -- see
+        ;; the count* note above for why anything unbounded must not live on
+        ;; this hot path.
+        ;;
+        ;; On 2026-09-07 this JVM silently consumed 4095 MB of its 4096 MB
+        ;; direct-buffer limit over 8.8 days (Arrow/Netty; two forced GCs
+        ;; reclaimed nothing). The first symptom anyone saw was the
+        ;; jit-all-open-v3 campaign halting twice, once through a
+        ;; JsonParseException on "Cannot reserve 309 bytes of direct buffer
+        ;; memory" reaching a JSON reader. Nothing surfaced the exhaustion
+        ;; itself, so it was diagnosed backwards from the crash. This makes the
+        ;; number readable before it becomes an outage.
+        direct-pool (first (filter #(= "direct" (.getName ^java.lang.management.BufferPoolMXBean %))
+                                   (java.lang.management.ManagementFactory/getPlatformMXBeans
+                                    java.lang.management.BufferPoolMXBean)))
+        heap (.getHeapMemoryUsage (java.lang.management.ManagementFactory/getMemoryMXBean))
+        mb (fn [^long b] (long (/ b 1048576)))
+        jvm {"direct-used-mb" (when direct-pool (mb (.getMemoryUsed ^java.lang.management.BufferPoolMXBean direct-pool)))
+             "direct-count" (when direct-pool (.getCount ^java.lang.management.BufferPoolMXBean direct-pool))
+             ;; jdk.internal.misc.VM/maxDirectMemory is not reachable from
+             ;; application code here, so read the cap the JVM was actually
+             ;; started with (e.g. "-XX:MaxDirectMemorySize=4g"). O(1) and
+             ;; always available.
+             "direct-max-mb"
+             (some->> (.getInputArguments
+                       (java.lang.management.ManagementFactory/getRuntimeMXBean))
+                      (keep (fn [a]
+                              (when-let [[_ n u] (re-find #"-XX:MaxDirectMemorySize=(\d+)([kKmMgG]?)" a)]
+                                (let [v (parse-long n)]
+                                  (case (str/lower-case (or u ""))
+                                    "g" (* v 1024)
+                                    "k" (long (/ v 1024))
+                                    v)))))
+                      first)
+             "heap-used-mb" (mb (.getUsed heap))
+             "heap-max-mb" (mb (.getMax heap))
+             "uptime-seconds" uptime-seconds}
         bridge (read-bridge-health)]
     (json-response 200 {"status" "ok"
                          "agents" (max live-count config-count)
@@ -2260,6 +2297,7 @@
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
                          "queue-hardening" queue-hardening
+                         "jvm" jvm
                          "unconsumed-count" (:unconsumed-count inbox-health)
                          "oldest-unconsumed-age-ms" (:oldest-unconsumed-age-ms inbox-health)
                          "oldest-unconsumed-agent-id" (:oldest-unconsumed-agent-id inbox-health)
