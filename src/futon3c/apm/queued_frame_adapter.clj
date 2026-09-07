@@ -124,6 +124,83 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
+(defn statement-refuted-void!
+  "Void the active frame when the Solver has refuted its registered statement.
+
+  The frame-void classification :statement-refuted has existed since 2026-08-26
+  (f45/a96J08) and the whole repair path behind it -- void, slot revision, a
+  Guide repairing the statement once, install-and-remint -- was built and then
+  never fired. Campaign-wide, zero statement-repair jobs had ever been
+  dispatched. The reason was that `apply-reviewed-void!` takes a REVIEWED
+  classification, and no reviewer existed: a refutation could only reach the
+  repair path if a human typed it in, so in practice frames parked instead and
+  waited forever.
+
+  f190/b98J04 is what that costs. The Solver refuted the registered statement in
+  Lean -- the frozen form forces every division ring in every universe to be
+  Small.{0}, and it exhibited one that is not -- having already done so at f93.
+  It then spent 29 rounds redispatching a goal it had proved false, and parked.
+  Joe, 2026-09-07: \"I don't see any point to parking for a human instead. This
+  is meant to be an automated loop.\"
+
+  So the review happens here, on evidence rather than on assertion. Three
+  conditions, all from the Solver's own terminal report:
+
+    :solver/outcome        must be :claimed-defect -- an explicit claim, not an
+                           inference from repeated failure. f189 failed five
+                           rounds with identical findings and then SOLVED its
+                           problem on the sixth; repeated failure is not a
+                           defect.
+    :statement-unchanged?  must be true. A solver that edited the statement and
+                           then called it defective is not reporting a defect,
+                           it is smuggling a rewrite past the freeze.
+    :failure-account       must carry text. The role contract requires it of
+                           every role, and it is what the Guide reads to know
+                           what to repair.
+
+  Anything less falls through to `result` unchanged, so the existing park
+  remains the behaviour for an unsubstantiated claim.
+
+  The blast radius is bounded on the far side too: the contract allows exactly
+  one statement repair per problem (:statement-repair-max-attempts 1,
+  :exhaustion/action :discard-and-advance), and the Guide's output is validated
+  by `observe-statement-repair` before it is installed. A wrong claim costs one
+  repair attempt, not a rewritten corpus.
+
+  Returns :phase-advanced on success: the void certificate is now in the ledger
+  and `terminal-from-ledger` observes it on the next tick, which is the same
+  route a hand-typed void has always taken."
+  [{:keys [frame ledger-path result now actor]}]
+  (let [state (:state result)
+        report (:report (last (:rounds state)))
+        account (:failure-account report)
+        evidence (cond
+                   (string? account) (when-not (str/blank? account) account)
+                   (sequential? account)
+                   (first (filter #(and (string? %) (not (str/blank? %))) account))
+                   :else nil)]
+    (if-not (and (= :solver-defect-review-required (:error/code result))
+                 (= :solver-defect-review-required (:state/type state))
+                 (= :claimed-defect (:solver/outcome report))
+                 (true? (:statement-unchanged? report))
+                 (string? ledger-path)
+                 evidence)
+      result
+      (let [voided (apply-reviewed-void!
+                    {:ledger-path ledger-path
+                     :frame-id (:frame/id frame)
+                     :problem-id (:problem/id frame)
+                     :classification :statement-refuted
+                     :failures [:statement-refuted-by-solver]
+                     :actor (or actor "apm-problem-queue")
+                     :now now})]
+        (if (:ok voided)
+          {:ok true :status :phase-advanced
+           :void/classification :statement-refuted
+           :void/evidence evidence
+           :void/certificate (:certificate voided)}
+          result)))))
+
 (defn scribe-reduce-apparatus-park
   "Park a frame whose completed mining dispatch cannot produce a valid
   deposit.  All prior phase receipts remain authoritative and untouched."
@@ -773,9 +850,15 @@
    :frame-tick-fn
    (fn [frame]
      (let [paths (campaign-paths config frame)
-           manifest (manifest-fn frame paths)]
-       (frame-tick-fn frame (assoc paths :manifest manifest
-                                   :contract contract))))
+           manifest (manifest-fn frame paths)
+           result (frame-tick-fn frame (assoc paths :manifest manifest
+                                              :contract contract))]
+       ;; A refuted statement is voided here rather than parked. Returns
+       ;; `result` untouched unless the Solver's own report substantiates the
+       ;; claim, so every other tick is unaffected.
+       (statement-refuted-void! {:frame frame
+                                 :ledger-path (:ledger-path paths)
+                                 :result result})))
    :retire-frame-fn
    (or retire-frame-fn
        (fn [{:keys [frame terminal-receipt]}]

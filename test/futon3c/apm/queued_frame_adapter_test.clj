@@ -661,3 +661,61 @@
     (is (= :refuted (get-in result [:terminal-receipt :problem/outcome])))
     (is (= :statement-refuted
            (get-in result [:terminal-receipt :void/classification])))))
+
+;; --- statement-refuted-void! ------------------------------------------------
+;; The Solver's refutation must reach the repair path by itself. These pin the
+;; guard, because the cost of getting it wrong is a rewritten statement.
+
+(defn- defect-result
+  "A :solver-defect-review-required tick result, with the Solver's report
+  overridable per case."
+  [report]
+  {:ok false
+   :error/code :solver-defect-review-required
+   :state {:state/type :solver-defect-review-required
+           :rounds [{:outcome :claimed-defect :report report}]}})
+
+(def ^:private substantiated
+  {:solver/outcome :claimed-defect
+   :statement-unchanged? true
+   :failure-account ["Claimed defect with precise compiled falsifying witness."]})
+
+(deftest substantiated-refutation-voids-the-frame-instead-of-parking
+  (let [seen (atom nil)]
+    (with-redefs [sut/apply-reviewed-void!
+                  (fn [opts] (reset! seen opts) {:ok true :certificate {:certificate/id "c1"}})]
+      (let [out (sut/statement-refuted-void!
+                 {:frame frame :ledger-path "/tmp/ledger.edn"
+                  :result (defect-result substantiated)})]
+        (is (:ok out))
+        (is (= :phase-advanced (:status out))
+            "the void is in the ledger; terminal-from-ledger observes it next tick")
+        (is (= :statement-refuted (:void/classification out)))
+        (is (= :statement-refuted (:classification @seen)))
+        (is (= [:statement-refuted-by-solver] (:failures @seen)))
+        (is (= (:frame/id frame) (:frame-id @seen)))))))
+
+(deftest an-unsubstantiated-claim-still-parks
+  ;; Each case drops exactly one of the three conditions. None may void.
+  (doseq [[label report]
+          [["no failure-account" (dissoc substantiated :failure-account)]
+           ["blank failure-account" (assoc substantiated :failure-account ["   "])]
+           ["statement was edited" (assoc substantiated :statement-unchanged? false)]
+           ["not a defect claim" (assoc substantiated :solver/outcome :progress)]]]
+    (let [called (atom false)]
+      (with-redefs [sut/apply-reviewed-void!
+                    (fn [_] (reset! called true) {:ok true})]
+        (let [in (defect-result report)
+              out (sut/statement-refuted-void!
+                   {:frame frame :ledger-path "/tmp/ledger.edn" :result in})]
+          (is (= in out) (str label ": result must pass through untouched"))
+          (is (false? @called) (str label ": must not void")))))))
+
+(deftest a-refused-void-falls-back-to-the-park
+  ;; If the ledger refuses the void -- stale digest, frame no longer active --
+  ;; the frame must park as before rather than advance on a void that is not there.
+  (with-redefs [sut/apply-reviewed-void!
+                (fn [_] {:ok false :error/code :frame-void-frame-not-active})]
+    (let [in (defect-result substantiated)]
+      (is (= in (sut/statement-refuted-void!
+                 {:frame frame :ledger-path "/tmp/ledger.edn" :result in}))))))
