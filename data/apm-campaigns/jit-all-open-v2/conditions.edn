@@ -209,4 +209,21 @@
   :at "2026-09-04T12:00Z",
   :by "claude-7",
   :loaded? true}
+ {:id "C-17",
+  :at "2026-09-05T05:05Z",
+  :by "claude-7",
+  :kind :code,
+  :head "d34a1ceb",
+  :loaded? true,
+  :namespaces
+  ["futon3c.apm.fault-taxonomy"
+   "futon3c.apm.live-job-driver"
+   "futon3c.apm.problem-queue-supervisor"
+   "futon3c.apm.semantic-progress-watchdog"
+   "futon3c.apm.countdown-control"
+   "futon3c.apm.frame-park-decisions"],
+  :expect
+  "A non-corruption tick failure parks its frame and the queue advances, leaving the coordinator enabled; only declared corruption codes in the CURRENT result envelope stop the campaign. Falsifier: any campaign stop whose cause is neither a declared integrity code nor a watchdog timing fault.",
+  :note
+  "Fault taxonomy + self-cancellation repair. Root cause of the 2026-09-04T14:12:53Z stop: the live-job driver cancels its own wrapper job on the SUCCESS path after collecting an authenticated submission (live-learning-phases:1215), then failed to recognise that cancellation because expected-role-terminal-conditions is a three-entry allowlist of :state :failed triples; the resulting :live-job-terminal-failure became :regulator-failed, which was hardcoded :integrity, which durably disabled the campaign. Measured: 4 of 4 stops carrying a structured cause were :integrity, 0 :substrate. Commits db918c8b 84907fad (taxonomy; classification now reads only the current result envelope so stale :repair-attempt-history / :superseded-terminals cannot escalate), b6d6ed83 cf812810 (self-cancellation recognised by durable :wrapper/reconciliation identity, not message prose; speculative mid-tick state refresh removed). 84907fad also moves park-decision reconciliation into the queue tick: the babysitter was its only caller and aa139dce correctly removed that mutation path from the watcher. Verified in the live image: the exact f85 fault now classifies :frame-park, the exact f85 job is recognised as self-cancellation, corruption still :campaign-stop, a foreign cancellation still rejected. 179 tests / 899 assertions green across the affected namespaces. NOTE: 673e0853 (codex-17, 14:14:10Z, 77s after the stop) had already added the :terminal-collection guard; claude-7 initially misread that as evidence of a concurrency defect and must not be cited as such."}
 ]
