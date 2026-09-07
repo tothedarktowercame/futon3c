@@ -561,6 +561,13 @@
                  :window-ms watchdog-rearm-window-ms}}
       (let [updated {:state/type :durable-coordinator-watchdog-rearms
                      :coordinator/id (:coordinator/id entry)
+                     ;; The digest this arming is bound to. arm-watchdog!'s
+                     ;; watch-fn compares its captured digest against the live
+                     ;; registry and returns :superseded -- persisting NOTHING
+                     ;; -- once they differ, so a watchdog outliving its
+                     ;; authority is alive and useless. Recording it lets
+                     ;; ensure-watchdog! tell those apart.
+                     :watchdog/armed-entry-digest (:coordinator/entry-digest entry)
                      :watchdog/rearm-attempts-ms (conj attempts now)}
             saved (persistence/atomic-persist! path updated)]
         (if (:ok saved)
@@ -576,12 +583,29 @@
                    (Path/of (str rearm-path ".lock") (make-array String 0)))]
     (with-lock
       (fn []
-        (if (*watchdog-running-fn* id)
+        ;; Liveness is not enough. A watchdog armed under an older entry
+        ;; digest keeps running and keeps returning :superseded without ever
+        ;; persisting an observation, so the coordinator ticks on unobserved
+        ;; while /apm/status reads the stale file and reports "watchdog silent
+        ;; -- loop supervisor gone". That is what happened on 2026-09-07:
+        ;; resume! ran set-enabled! (changing the digest) while the watchdog
+        ;; armed by an earlier resume! was still alive, so this branch returned
+        ;; :already-running and never re-armed it. Re-arm when the running
+        ;; observer is bound to a digest that is no longer current.
+        (if (and (*watchdog-running-fn* id)
+                 (let [armed (:watchdog/armed-entry-digest
+                              (or (read-edn rearm-path) {}))]
+                   (or (nil? armed)
+                       (= armed (:coordinator/entry-digest entry)))))
           {:ok true :status :already-running :watchdog-id id}
           (let [claimed (claim-watchdog-rearm! entry)]
             (if-not (:ok claimed)
               claimed
-              (let [armed (arm-watchdog! registry-path entry)
+              (let [_ (when (*watchdog-running-fn* id)
+                        ;; superseded observer: stop it so arm-watchdog! is not
+                        ;; short-circuited by start!'s :already-running branch
+                        (*watchdog-stop-fn* id))
+                    armed (arm-watchdog! registry-path entry)
                     running? (and (:ok armed) (*watchdog-running-fn* id))]
                 (if running?
                   {:ok true :status :rearmed :watchdog-id id

@@ -1,6 +1,6 @@
 (ns futon3c.apm.durable-coordinator-test
   (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.apm.durable-coordinator :as sut]
             [futon3c.apm.live-preflight-runtime :as persistence]
             [futon3c.apm.live-regulator :as regulator]
@@ -960,3 +960,65 @@
         (is (nil? (:forbidden/advance state)))
         (is (some? (:coordinator/pending-intent state))))
       (finally (sut/cancel-scheduler! "c:postcondition")))))
+
+(deftest watchdog-rearms-when-its-authority-is-superseded
+  ;; 2026-09-07: jit-all-open-v3's coordinator ticked normally while
+  ;; /apm/status reported "watchdog silent 11m -- loop supervisor gone". The
+  ;; observer was alive; it had simply outlived its authority.
+  ;;
+  ;; arm-watchdog!'s watch-fn captures the entry digest and compares it against
+  ;; the live registry on every observation, returning :superseded -- and
+  ;; persisting NOTHING -- once they differ. resume! calls set-enabled!, which
+  ;; changes the digest, so a second resume! left the first one's watchdog
+  ;; running under a dead digest while ensure-watchdog! returned
+  ;; :already-running on liveness alone and never replaced it.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom [])
+        stopped (atom [])
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-supersede
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:supersede"
+                             :adapter :test/watchdog-supersede :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn* (fn [request]
+                                        (swap! armed conj (:watchdog-id request))
+                                        (reset! running? true)
+                                        {:ok true :status :started})
+              sut/*watchdog-stop-fn* (fn [id]
+                                       (swap! stopped conj id)
+                                       (reset! running? false)
+                                       {:ok true})
+              sut/*watchdog-running-fn* (fn [_] @running?)]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})]
+        (let [entry (registered-entry registry "c:supersede")]
+          (testing "first start arms the observer under the current digest"
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (= ["semantic-progress:c:supersede"] @armed))
+            (is (empty? @stopped)))
+          (testing "a live observer on the CURRENT digest is left alone"
+            (reset! armed []) (reset! stopped [])
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (empty? @armed) "must not churn a healthy observer")
+            (is (empty? @stopped)))
+          (testing "a live observer on a SUPERSEDED digest is stopped and replaced"
+            ;; The entry stays valid and current -- entries are content-
+            ;; validated, so forging a digest on one only makes it invalid.
+            ;; What goes stale in the real failure is the digest the RUNNING
+            ;; observer was armed under, which set-enabled! moves out from
+            ;; under it.
+            (reset! armed []) (reset! stopped [])
+            (persistence/atomic-persist!
+             (#'sut/watchdog-rearm-state-path entry)
+             {:state/type :durable-coordinator-watchdog-rearms
+              :coordinator/id "c:supersede"
+              :watchdog/armed-entry-digest "a-digest-from-an-earlier-generation"
+              :watchdog/rearm-attempts-ms []})
+            (is (:ok (sut/start-entry! registry entry)))
+            (is (= ["semantic-progress:c:supersede"] @stopped)
+                "the stale observer must be stopped, not left running")
+            (is (= ["semantic-progress:c:supersede"] @armed)
+                "and a fresh one armed under the current digest")))))))
