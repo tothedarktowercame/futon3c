@@ -307,6 +307,47 @@
     (is (nil? (get-in result [:state :active])))
     (is (nil? (get-in result [:state :problem/classification])))))
 
+(deftest claimed-defect-without-residual-still-stops-for-review
+  ;; The f190/b98J04 shape, 2026-09-07: :solver/outcome :claimed-defect with NO
+  ;; :residual, because a defect claim is the report that no proof work remains
+  ;; to describe. round-outcome used to demand a residual, so 21 consecutive
+  ;; rounds degraded to :inadequate and the frame redispatched a goal the solver
+  ;; had already diagnosed as ill-typed. The diagnosis rides :failure-account,
+  ;; which the role contract requires of every role.
+  (let [persisted (atom nil)
+        announcements (atom [])
+        result (sut/drive!
+                (assoc (effects persisted)
+                       :announce-fn (fn [request]
+                                      (swap! announcements conj request)
+                                      {:ok true :job-id "must-not-dispatch"})
+                       :job-fn (fn [_]
+                                 {:job-id "job-1" :agent-id "f190-solver"
+                                  :session-id "solver-session" :state :done
+                                  :report
+                                  {:solver/outcome :claimed-defect
+                                   :failure-account
+                                   ["Claimed defect with precise compiled falsifying witness."]}})))]
+    (is (= :solver-defect-review-required (:error/code result)))
+    (is (= :claimed-defect (get-in result [:state :rounds 0 :outcome])))
+    (is (= :solver-defect-review-required (get-in result [:state :state/type])))
+    (is (empty? @announcements)
+        "a defect claim must park before announcing another solver round")))
+
+(deftest claimed-defect-with-no-evidence-at-all-remains-inadequate
+  ;; The guard the fix must not remove: a bare outcome keyword with nothing
+  ;; behind it is not a defect claim, and must not be able to park a frame.
+  (let [persisted (atom nil)
+        result (sut/drive!
+                (assoc (effects persisted)
+                       :announce-fn (fn [_] {:ok true :job-id "next-round"})
+                       :job-fn (fn [_]
+                                 {:job-id "job-1" :agent-id "f190-solver"
+                                  :session-id "solver-session" :state :done
+                                  :report {:solver/outcome :claimed-defect}})))]
+    (is (not= :solver-defect-review-required (:error/code result)))
+    (is (= :inadequate (get-in result [:state :rounds 0 :outcome])))))
+
 (deftest legacy-agent-nested-progress-fields-are-lifted-into-round-record
   (let [persisted (atom nil)
         result (sut/drive!

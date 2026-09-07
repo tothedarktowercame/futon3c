@@ -230,10 +230,43 @@
       (and (nil? (:artifact-commits report)) (prefixed "artifact-commits: "))
       (assoc :artifact-commits (prefixed "artifact-commits: ")))))
 
+(defn- nonblank-text
+  "The text a report offers, whether it arrives as a string or as the vector of
+   strings the role contract uses for :failure-account."
+  [v]
+  (cond
+    (string? v) (when-not (str/blank? v) v)
+    (sequential? v) (first (keep nonblank-text v))
+    :else nil))
+
+(defn- defect-evidence
+  "What a solver offers in support of \"the statement itself is wrong\".
+
+   NOT :residual. A residual is remaining proof work, and a defect claim is
+   precisely the report that there is none to do -- the goal as registered
+   cannot be closed. Requiring one asked the solver to describe progress it had
+   just said it could not make, so every real defect claim degraded to
+   :inadequate below and the round was retried instead of parked.
+
+   f190/b98J04 spent 21 rounds that way on 2026-09-07: :solver/outcome
+   :claimed-defect on every one, :residual absent from all of them, and the
+   frame kept redispatching a goal the solver had already diagnosed as
+   ill-typed (a universe defect: `D : Type` needing `Type u`, or `[Small.{0} R]`).
+   It had even named the two already-compiled replacements. Campaign-wide,
+   :solver-defect-review-required had never once been reached.
+
+   :failure-account is the field that actually carries the diagnosis, and the
+   role contract already requires it of every role (generated-contract
+   required-receipt-fields). :residual is still honoured for reports that
+   supply one."
+  [report]
+  (or (nonblank-text (:residual report))
+      (nonblank-text (:failure-account report))))
+
 (defn- round-outcome [report]
   (cond
     (and (= :claimed-defect (:solver/outcome report))
-         (string? (:residual report)) (not (str/blank? (:residual report))))
+         (defect-evidence report))
     :claimed-defect
 
     (and (= :progress (:solver/outcome report))
