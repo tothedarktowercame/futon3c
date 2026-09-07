@@ -975,7 +975,26 @@
                               :submission observed-submission
                               :budget configured})
                 wrapper-reconciliation
-                (assoc :wrapper/reconciliation wrapper-reconciliation))]
+                (assoc :wrapper/reconciliation wrapper-reconciliation)
+                ;; Capture the session identity HERE, on the one observation
+                ;; that is guaranteed to still carry it.
+                ;;
+                ;; capture-session-identity lives in the (not terminal?) branch
+                ;; below, which this branch preempts the moment a submission
+                ;; appears -- and setting :terminal-collection then disables it
+                ;; permanently, because its guard is
+                ;; (nil? (:terminal-collection state)). Measured over
+                ;; jit-all-open-v3: 0 of 20 student attempts ever captured a
+                ;; session id. restore-session-identity (5182b963) was
+                ;; therefore replaying an id that was never recorded, and
+                ;; frames were charged :fresh-session-id-missing for an
+                ;; identity this very branch had just cancelled away -- ten
+                ;; parks with findings exactly [:fresh-session-id-missing].
+                ;;
+                ;; observed-job is read BEFORE cancel-fn runs, so its
+                ;; :session-id is the live one the agency nulls on cancel.
+                (string? (:session-id observed-job))
+                (assoc :job/session-id (:session-id observed-job)))]
           (if (and wrapper-reconciliation (not (:ok wrapper-reconciliation)))
             {:ok false :error/code :live-job-wrapper-reconciliation-failed
              :finding wrapper-reconciliation :state state}

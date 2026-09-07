@@ -1651,3 +1651,48 @@
                                      (assoc live :session-id "live-wins")
                                      carried)))
         "a live id is never overwritten by a stale recorded one")))
+
+(deftest session-identity-is-captured-on-the-collecting-observation
+  ;; The companion test above proves capture-session-identity and
+  ;; restore-session-identity are each correct in isolation -- and they are.
+  ;; That is exactly why it stayed green while ten frames parked with findings
+  ;; exactly [:fresh-session-id-missing]: capture was never CALLED.
+  ;;
+  ;; Its home was the (not terminal?) branch, which the collecting branch
+  ;; preempts the moment a submission appears; setting :terminal-collection
+  ;; then disables it permanently, since its guard is
+  ;; (nil? (:terminal-collection state)). Measured over jit-all-open-v3: 0 of
+  ;; 20 student attempts ever recorded a session id.
+  ;;
+  ;; This test pins the WIRING rather than the function: drive! must come away
+  ;; holding the identity, on the one observation that still carries it.
+  (let [calls (atom [])
+        live-job (atom {:job-id "job-1" :state :running
+                        :session-id "zai-live-session-77"})
+        cancels (atom [])
+        result (sut/drive!
+                (assoc (effects calls live-job)
+                       :state {:state/type :live-job-dispatched
+                               :request request
+                               :ticket {:job-id "job-1"}
+                               :activation/accepted? true}
+                       :cancel-fn (fn [job-id]
+                                    (swap! cancels conj job-id)
+                                    ;; the agency nulls the id on cancel
+                                    (swap! live-job assoc :session-id nil
+                                           :state :cancelled
+                                           :terminal-code :operator-cancelled)
+                                    {:ok true :job-id job-id
+                                     :response {:state "cancelled"}})
+                       :terminal-submission-provider
+                       (constantly {:submission/id "sub-1" :body "typed"})))]
+    (is (= :terminal-collected (:status result))
+        "a submission still collects as before")
+    (is (= ["job-1"] @cancels)
+        "and the wrapper still cancels the live job")
+    (is (= "zai-live-session-77" (:job/session-id (:state result)))
+        "but the identity is now recorded BEFORE that cancellation erases it")
+    ;; and the recorded identity is what restore replays into the terminal
+    (is (= "zai-live-session-77"
+           (:session-id (sut/restore-session-identity @live-job (:state result))))
+        "so validate-terminal sees the session the student actually ran in")))
