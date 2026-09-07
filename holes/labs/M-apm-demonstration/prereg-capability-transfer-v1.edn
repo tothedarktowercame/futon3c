@@ -1032,4 +1032,42 @@
    :reversal
    "Restore the exact [:typed-submission-missing] matches at the three
     trigger sites in live_job_driver.clj and drop the :submit-step clause
-    in terminal-repair-request/repair-instructions/prompt."}]}
+    in terminal-repair-request/repair-instructions/prompt."}
+
+  {:amendment 17
+   :at "2026-09-07T15:45Z"
+   :by "claude-3"
+   :authority "Joe, 2026-09-07, in session: 'the priority is to do the
+    fixes that are outstanding.' Fix authored by claude-7 (f4ae8d5a),
+    reviewed and recorded by claude-3, who ruled the amendment owed."
+   :kind :instrument-change
+   :what
+   "drive! (live_job_driver.clj) now captures :job/session-id in the
+    collecting branch, from observed-job as read BEFORE cancel-fn runs.
+    Previously capture-session-identity lived only in the (not terminal?)
+    branch, which the collecting branch preempts the moment a submission
+    appears — and that branch sets :terminal-collection, capture's own
+    guard, disabling capture permanently. Measured over jit-all-open-v3:
+    0 of 20 student attempts ever recorded a session id, so
+    restore-session-identity (5182b963) replayed an id never captured,
+    and frames were charged :fresh-session-id-missing for an identity
+    the wrapper's own cancellation had nulled at the agency."
+   :why
+   "Ten frames (f174-f184 excluding f176-f178) parked with findings
+    exactly [:fresh-session-id-missing] after their students did real,
+    submitted work. The invariant was firing on the machine's own
+    artifact, not on any property of the student turn."
+   :known-limitation
+   "Complementary to 14a250e6 (jobs cancelled before :done owe no id);
+    a job whose observation genuinely lacks :session-id still fails the
+    invariant as before."
+   :boundary
+   "Selection-relevant: student turns that would have parked on
+    [:fresh-session-id-missing] now complete into the experimental
+    population. Session-id park rates are not poolable across f4ae8d5a;
+    receipts from surviving frames are ordinary typed receipts and pool
+    normally. The fingerprint audit's per-row apparatus-revision field
+    marks the boundary."
+   :reversal
+   "Drop the (string? (:session-id observed-job)) clause from the
+    collecting branch of drive! in live_job_driver.clj."}]}
