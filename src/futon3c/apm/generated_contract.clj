@@ -141,6 +141,14 @@
    :authenticated-terminal-outranks-wrapper-cancellation true
    :cancelled-role-session-lineage-preserved true
    :repair-charged-to-request-origin true
+   :submission-only-findings
+   ["typed-submission-missing" "fresh-session-id-missing"
+    "live-job-terminal-repair-exhausted"]
+   :submission-only-rescue-requires-typed-submission-missing false
+   :authenticated-collected-submission-only-fault-origin "apparatus"
+   :collected-genuine-role-fault-origin "agent"
+   :authenticated-collection-required-fields
+   ["authority" "evidence.submission-available-or-submission-id"]
    :worker-authored-handoff-verdict-refused true
    :handoff-reviewer-distinct-from-depositor true
    :durable-stop-cause-required true
