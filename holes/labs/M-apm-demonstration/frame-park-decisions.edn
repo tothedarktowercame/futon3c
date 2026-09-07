@@ -3661,4 +3661,141 @@
   :decision/recommended-route "Do NOT re-queue b98A02 (Joe's ruling 2026-09-07: a Codex solve already exists, solve+verify present, 305 memories banked - re-solving would be redundant). Preserve as partial; keep the 305 banked memories. Treat f187 as outside the experimental population (memory transport was dead)."
   :decision/not-done "No void, no re-queue; the 305 banked memories and solver snapshot stand. The dead-cascade student turn is not counted as a memory-effect measurement."}
 
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f188"
+   :problem/id "b98A04"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-07T22:21:39Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :student-terminal-session-id-erased
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "f28523b6"
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :decision/rationale
+   (str "Joe's ruling 2026-09-07: commit as solved. The park residual is exactly "
+        "{:error/code :live-job-apparatus-repair-exhausted, :findings "
+        "[:fresh-session-id-missing], :repair/fault-origin :apparatus, "
+        ":repair/attempts 2}. Both repair jobs ended `cancelled` with terminal-message "
+        "\"Cancelled by http-caller: typed-submission wrapper reconciliation\" and "
+        "session-id nil -- the wrapper cancelled the student turn before any poll "
+        "observed it live, so no session id was ever recorded and no typed submission "
+        "was due. The finding is about the apparatus and says nothing about b98A04. "
+        "b98A04 is proved: problems/b98A04/lean/Main.lean elaborates under "
+        "`lake env lean` with exit 0 and zero executable sorries, and `#print axioms "
+        "apm_b98a04` reports exactly [propext, Classical.choice, Quot.sound] -- no sorryAx. "
+        "That is the campaign's own pin criterion.")
+   :decision/repair-action
+   (str "f28523b6 makes submission-only-failure? test membership in "
+        "submission-only-findings alone, instead of also demanding "
+        ":typed-submission-missing. A lone [:fresh-session-id-missing] -- the exact "
+        "wrapper-cancellation case that set names in its docstring -- was returning "
+        "false, so typed-contract-migration? never fired and the frame spent both "
+        "apparatus repair attempts and parked. f4ae8d5a (15:14) captures the session id "
+        "from an observation that still has it and cannot help a job cancelled before "
+        "the first poll; it was loaded in the running JVM when all three of these parks "
+        "occurred. The predicate had no test; it has one now. Reloaded into the live "
+        "JVM at 22:1x and verified: [:fresh-session-id-missing] -> true, "
+        "[:lean-proof-invalid] -> false.")
+   :decision/recommended-route
+   (str "Do NOT re-queue b98A04: it is proved with permitted axioms only. Preserve "
+        "f188 as partial, not voided. The frame's protocol did not complete, so it "
+        "is not a learning-protocol measurement, but the mathematics is banked.")
+   :decision/not-done
+   (str "No void and no re-queue. This decision does not certify the frame's student "
+        "protocol, only that the problem is solved and the park was an apparatus fault "
+        "which has now been repaired.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f189"
+   :problem/id "b98J01"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-07T22:21:39Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :student-terminal-session-id-erased
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "f28523b6"
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :decision/rationale
+   (str "Joe's ruling 2026-09-07: commit as solved. The park residual is exactly "
+        "{:error/code :live-job-apparatus-repair-exhausted, :findings "
+        "[:fresh-session-id-missing], :repair/fault-origin :apparatus, "
+        ":repair/attempts 2}. Both repair jobs ended `cancelled` with terminal-message "
+        "\"Cancelled by http-caller: typed-submission wrapper reconciliation\" and "
+        "session-id nil -- the wrapper cancelled the student turn before any poll "
+        "observed it live, so no session id was ever recorded and no typed submission "
+        "was due. The finding is about the apparatus and says nothing about b98J01. "
+        "b98J01 is proved: problems/b98J01/lean/Main.lean elaborates under "
+        "`lake env lean` with exit 0 and zero executable sorries, and `#print axioms "
+        "apm_b98j01` reports exactly [propext, Classical.choice, Quot.sound] -- no sorryAx. "
+        "That is the campaign's own pin criterion.")
+   :decision/repair-action
+   (str "f28523b6 makes submission-only-failure? test membership in "
+        "submission-only-findings alone, instead of also demanding "
+        ":typed-submission-missing. A lone [:fresh-session-id-missing] -- the exact "
+        "wrapper-cancellation case that set names in its docstring -- was returning "
+        "false, so typed-contract-migration? never fired and the frame spent both "
+        "apparatus repair attempts and parked. f4ae8d5a (15:14) captures the session id "
+        "from an observation that still has it and cannot help a job cancelled before "
+        "the first poll; it was loaded in the running JVM when all three of these parks "
+        "occurred. The predicate had no test; it has one now. Reloaded into the live "
+        "JVM at 22:1x and verified: [:fresh-session-id-missing] -> true, "
+        "[:lean-proof-invalid] -> false.")
+   :decision/recommended-route
+   (str "Do NOT re-queue b98J01: it is proved with permitted axioms only. Preserve "
+        "f189 as partial, not voided. The frame's protocol did not complete, so it "
+        "is not a learning-protocol measurement, but the mathematics is banked.")
+   :decision/not-done
+   (str "No void and no re-queue. This decision does not certify the frame's student "
+        "protocol, only that the problem is solved and the park was an apparatus fault "
+        "which has now been repaired.")}
+
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f192"
+   :problem/id "bpm-1-8-1"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-07T22:21:39Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :held-out-bundle-never-eligible
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "8e69e744"
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :decision/rationale
+   (str "Joe's ruling 2026-09-07: withdraw this one -- bpm-1-8-1 is quarantined and is "
+        "not to be solved. It should never have been dispatched. All ten bpm-* bundles "
+        "are source.kind \"held-out-transcription\", an evaluation set; solving one "
+        "contaminates the set it exists to measure. Nothing excluded them: they were out "
+        "only as :not-open, because their sorry counts happened to be 0. At this "
+        "campaign's launch revision 7672a923, bpm-1-8-1 carried sorry_count_total 1, so "
+        "derive-queue selected it and f192 dispatched a Solver at it. The park itself is "
+        "the same apparatus fault as f188/f189 (findings exactly "
+        "[:fresh-session-id-missing], both jobs cancelled by the typed-submission wrapper "
+        "with session-id nil), but that is not why this frame is being closed.")
+   :decision/repair-action
+   (str "8e69e744 excludes held-out bundles on provenance, before the sorry count is "
+        "consulted, with its own :held-out reason so the ledger says the problem is "
+        "withheld rather than that it looks finished. not-open 360 -> 350, held-out 0 -> "
+        "10, open unchanged at 69. The test now asserts the whole held-out set by id and "
+        "that no bpm-* reaches :problems, so a held-out bundle that regains a sorry "
+        "cannot quietly become selectable again.")
+   :decision/recommended-route
+   (str "Never re-queue bpm-1-8-1 or any bpm-* bundle. Treat f192 as outside the "
+        "experimental population entirely: it measured nothing, because the problem was "
+        "not eligible to be worked in the first place.")
+   :decision/not-done
+   (str "No void. Whatever proof state bpm-1-8-1's bundle carries is left exactly as it "
+        "is; this decision withdraws the frame, it does not adjudicate the held-out "
+        "problem. No claim is made that f192's student work was correct or incorrect.")}
+
 ]}
