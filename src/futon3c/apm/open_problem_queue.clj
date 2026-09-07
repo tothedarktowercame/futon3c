@@ -68,6 +68,24 @@
                            sorry-count (long (or (get-in status [:lean :sorry_count_total]) 0))
                            path (str "problems/" id "/lean/Main.lean")
                            reason (cond
+                                    ;; Held-out bundles are an evaluation set,
+                                    ;; not work. They must leave the queue on
+                                    ;; their PROVENANCE, before any sorry
+                                    ;; count is consulted -- bpm-1-8-1 carried
+                                    ;; one sorry at the jit-all-open-v3 launch
+                                    ;; revision (7672a923) and was duly
+                                    ;; selected, so f192 dispatched a Solver
+                                    ;; against a held-out problem. That the
+                                    ;; other nine stayed out was luck: their
+                                    ;; sorry counts happened to be 0, which is
+                                    ;; :not-open, not a decision to hold them
+                                    ;; back. Solving a held-out problem
+                                    ;; contaminates the set it exists to
+                                    ;; measure, so the exclusion cannot depend
+                                    ;; on how much of it is already proved.
+                                    (= "held-out-transcription"
+                                       (get-in status [:source :kind]))
+                                    :held-out
                                     (zero? sorry-count) :not-open
                                     (str/starts-with? id "t") :topology
                                     (= "construction-blocked" classification)

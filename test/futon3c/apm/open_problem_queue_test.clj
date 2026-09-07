@@ -7,11 +7,18 @@
         problems (:problems result)
         excluded (:excluded result)]
     (is (:ok result))
-    ;; 69 = 501 corpus - 360 not-open - 66 topology - 4 defective - 2
-    ;; construction-blocked. Note that only the defective and
+    ;; 69 = 501 corpus - 350 not-open - 66 topology - 10 held-out - 4
+    ;; defective - 2 construction-blocked. Note that only the held-out,
+    ;; defective and
     ;; construction-blocked subtrahends are actually asserted below; not-open
     ;; and topology are not, so a move in this count still needs the class
     ;; breakdown read by hand.
+    ;;
+    ;; :held-out arrived 2026-09-07 and took its 10 from :not-open, not from
+    ;; the open count. Those bundles were already out, but only because their
+    ;; sorry counts were 0; nothing held them back on purpose. bpm-1-8-1 had a
+    ;; sorry at this campaign's launch revision and was selected, so f192
+    ;; dispatched a Solver at a held-out problem before anyone noticed.
     ;;
     ;; Was 101 over a 475 corpus until 2026-09-07. Both numbers moved on the
     ;; same day for two independent reasons, which is why the total is no
@@ -82,5 +89,14 @@
     (testing "every problem is either queued or excluded for a stated reason"
       (is (= 501 (+ (count problems) (count excluded))))
       (is (every? #{:not-open :topology :defective-or-invalid-statement
-                    :construction-blocked}
-                  (map :reason excluded))))))
+                    :construction-blocked :held-out}
+                  (map :reason excluded))))
+    (testing "held-out bundles never enter the solve queue"
+      ;; Provenance, not sorry count: assert the whole set, so a held-out
+      ;; problem that regains a sorry cannot quietly become selectable.
+      (is (= #{"bpm-1-1-1" "bpm-1-1-2" "bpm-1-2-2" "bpm-1-3-1" "bpm-1-3-2"
+               "bpm-1-4-1" "bpm-1-5-1" "bpm-1-6-2" "bpm-1-7-1" "bpm-1-8-1"}
+             (set (map :problem/id
+                       (filter #(= :held-out (:reason %)) excluded)))))
+      (is (empty? (filter #(.startsWith ^String (:problem/id %) "bpm-")
+                          problems))))))
