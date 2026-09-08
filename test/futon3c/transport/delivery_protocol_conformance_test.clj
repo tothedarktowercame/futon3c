@@ -13,6 +13,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.job-state :as job-state]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [clojure.set]
             [futon3c.transport.http :as http]))
 
 (def ^:dynamic *ledger-file* nil)
@@ -157,6 +158,90 @@
   (is (= job-state/terminal-states job-port/terminal-states))
   (is (= job-state/settling-states job-port/settling-states))
   (is (= job-state/active-states job-port/active-states)))
+
+(deftest the-consumer-vocabulary-actually-covers-the-producers
+  ;; The test above checks this vocabulary against ITSELF. It passed for the
+  ;; length of the campaign while the producer persisted "delivered", which
+  ;; the consumer did not declare and therefore classified :unknown -- the
+  ;; live job driver's :live-job-state-unclassified fault, for a healthy job.
+  ;; A conformance test named after the producer has to read the producer.
+  (let [produced (into #{} (map keyword) http/known-invoke-job-states)
+        missing (clojure.set/difference produced job-state/known-states)]
+    (is (empty? missing)
+        (str "the Agency emits states futon3c.apm.job-state does not declare: "
+             missing))
+    (doseq [state produced]
+      (is (not= :unknown (job-port/classify-state state)) (name state)))))
+
+(deftest the-vocabulary-covers-what-the-producer-WRITES-not-what-it-declares
+  ;; The first version of this fence compared the consumer vocabulary against
+  ;; the producer's DECLARED sets and passed -- while the producer wrote
+  ;; "deduped", which none of its own predicates declared. Same defect as the
+  ;; test it replaced, one level up: a vocabulary checked against another
+  ;; vocabulary rather than against the world.
+  ;;
+  ;; Live pin: state census of the running Agency's ledger
+  ;; (/tmp/futon3c-invoke-jobs.edn), 2026-09-08T11:19Z, 3973 jobs --
+  ;; done 3157, failed 417, cancelled 278, delivered 106, deduped 13,
+  ;; running 2.
+  (let [observed-in-live-ledger #{"done" "failed" "cancelled"
+                                  "delivered" "deduped" "running"}
+        declared http/known-invoke-job-states]
+    (doseq [state observed-in-live-ledger]
+      (is (contains? declared state)
+          (str "the ledger holds " state " and the producer does not declare it"))
+      (is (not= :unknown (job-port/classify-state (keyword state)))
+          (str "the ledger holds " state " and the APM consumer cannot classify it"))))
+  (testing "every state the finalizer writes counts as finished"
+    ;; Otherwise the invoke skip-guard re-runs a job that already finished.
+    (let [finished? (var-get #'http/terminal-invoke-state?)]
+      (doseq [state http/finalizer-written-states]
+        (is (finished? state)
+            (str state " is written by finalize-invoke-job! but does not read "
+                 "as finished, so the skip-guard would re-run it")))))
+  (testing "classify-terminal cannot invent a state the vocabulary lacks"
+    (let [classify (var-get #'http/classify-terminal)
+          produced (into #{}
+                         (map (fn [[result no-ev?]] (first (classify result no-ev?))))
+                         [[{:ok true} false]
+                          [{:ok true} true]
+                          [{:ok false :error {:error/code :timeout
+                                              :error/message "t"}} false]
+                          [{:ok false :error {:error/code :boom
+                                              :error/message "b"}} false]
+                          [{:ok false :error {:error/code :x
+                                              :error/message "invoke interrupted"}} false]])]
+      (doseq [state produced]
+        (is (contains? http/known-invoke-job-states state) state)))))
+
+(deftest the-two-terminal-predicates-cannot-disagree-on-a-producer-state
+  ;; terminal-invoke-state? allow-lists finished states; invoke-job-terminal-state?
+  ;; deny-lists open ones. Complements over different vocabularies, so a state
+  ;; in neither literal got opposite answers -- "activating" did, and the
+  ;; ledger really does persist it (dispatch sets it before the running
+  ;; transition). The whistle stream answers {:type "done" :ok false} and
+  ;; hangs up on anything the second predicate calls terminal.
+  (let [finished? (var-get #'http/terminal-invoke-state?)
+        nothing-to-wait-for? (var-get #'http/invoke-job-terminal-state?)]
+    (doseq [state http/known-invoke-job-states]
+      (testing state
+        (when (finished? state)
+          (is (nothing-to-wait-for? state)
+              "a finished job must never read as still open"))))
+    (testing "no open state is reported terminal by either predicate"
+      (doseq [state (var-get #'http/active-invoke-job-states)]
+        (is (not (finished? state)) state)
+        (is (not (nothing-to-wait-for? state)) state)))
+    (testing "activating specifically -- the state the deny-list omitted"
+      (is (not (nothing-to-wait-for? "activating")))
+      (is (not (finished? "activating"))))
+    (testing "they are allowed to differ only on settling"
+      (is (= (var-get #'http/settling-invoke-job-states)
+             (into #{} (filter #(and (nothing-to-wait-for? %)
+                                     (not (finished? %)))
+                               http/known-invoke-job-states)))))
+    (testing "an unrecognised state stays fail-closed for the stream"
+      (is (nothing-to-wait-for? "no-such-state")))))
 
 (deftest in-jvm-caller-shape-is-not-a-constructable-production-route
   ;; The producer persists only a caller string. Both names below therefore
