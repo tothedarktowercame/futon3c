@@ -304,6 +304,54 @@ neighborhood as commit X" is how a fault gets marked handled without being
 handled — and the recurrence note in the record shows the author half-knew.
 Candidate for a fourteenth principle; not drafted here.
 
+### The f194 park was destroying evidence, not mislabelling it
+
+**Severity note on S5 slice 1.** The collection branch computes the
+terminal-collection record, *then* cancels, *then* returns on `:ok false` —
+**before `persist-fn`**. So the authenticated submission was not merely filed
+under the wrong name; it was **discarded**. Seven times.
+
+This changes what the seam cost. A mislabelled success is a reporting defect
+and the evidence survives in the record. This was an evidence-loss defect
+wearing a reporting defect's appearance, and the wrapper's own park record is
+what made it look like the milder thing.
+
+**Bearing on P2.** "Success must not resemble failure" reads like a legibility
+principle. Here the resemblance had teeth: the arm that success fell into was
+an early return, so the resemblance itself is what deleted the work.
+
+### P1 x the live-pin rule — resolution by sequencing, not by ranking
+
+**Occasion.** S5 slices 1-2. P1 says the three call sites asking a cancel the
+same question get one authority, which argues for converting all three at
+once. The live-pin rule says a test pins one live record verbatim — and the
+other two sites have **zero** firings campaign-wide, so converting them in
+slice 1 would have bought authored-constant tests, the exact failure mode the
+live-pin rule exists to prevent.
+
+**What it found.** The two did not have to be traded off. Slice 1 fixed the
+site with seven occurrences and a real record; slice 2 introduced the closed
+disposition type, which made the other two adoptions mechanical and
+type-checked rather than speculative. P1 was satisfied one slice later at no
+cost to the pin rule.
+
+**Score.** Both earned. The useful entry is the interaction: when a principle
+of structure and a principle of evidence disagree about *scope*, they often
+disagree only about *order*. Check for a sequencing that satisfies both
+before ranking them.
+
+### Singletons reduce to the join — measured
+
+**Occasion.** The seven-occurrence find. `frame-park-decisions.edn` carried
+f177 and f178 as separate entries in the same class, each adjudicated on its
+own; f194 made a third. All three are one seam, closed by one commit.
+
+**What it found.** The end-to-end note's claim that apparent singletons
+collapse once the join is named now has a measured instance: three
+independently adjudicated frames, one defect, and the class census did not
+move (44 before, 44 after). The census holding steady while three entries
+merge is the shape the claim predicts.
+
 ## Not yet scored
 
 - default-to-the-cheap-error (P4),
