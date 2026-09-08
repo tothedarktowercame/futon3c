@@ -310,6 +310,23 @@
                                 "Atomic memory assertion already exists"
                                 :status status :body parsed)}
 
+          ;; 5xx is the STORE failing, not the caller being refused, so it
+          ;; belongs to the apparatus. Only :transport reaches :apparatus in
+          ;; live-learning-phases/posthoc-fault-origin; everything else is
+          ;; charged to the role. Before futon1b bounded its query-permit wait
+          ;; (d13afa99) an overloaded store held the connection until the
+          ;; 30s client timeout, which surfaced as a client error and did
+          ;; land on :transport. Bounding it turns the same condition into a
+          ;; prompt HTTP 504 :query-deadline-exceeded -- so without this the
+          ;; bound would have quietly started charging roles for an apparatus
+          ;; fault they cannot repair, which is the defect f28523b6 and
+          ;; 2feb07e1 both exist to prevent.
+          (<= 500 (long status) 599)
+          {:ok false
+           :error (social-error :transport :memory-assert-unreachable
+                                (str "Atomic memory assertion returned HTTP " status)
+                                :status status :body parsed)}
+
           :else
           {:ok false
            :error (social-error :E-store :memory-assert-rejected

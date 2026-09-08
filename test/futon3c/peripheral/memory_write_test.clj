@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.dispatch-with-recall :as dispatch]
             [futon3c.evidence.store :as estore]
@@ -458,3 +458,30 @@
           :subjects [{:ref/id "d1606d0" :ref/type "git-commit"}]})]
     (is (true? (:ok receipt)) (pr-str (:error receipt)))
     (is (seq (:entries @store)))))
+
+(deftest store-side-5xx-is-an-apparatus-fault-not-a-role-rejection
+  ;; futon1b bounded its query-permit wait in d13afa99, so an overloaded store
+  ;; now answers HTTP 504 :query-deadline-exceeded promptly instead of holding
+  ;; the connection to the 30s client timeout. Both are the same apparatus
+  ;; condition, but only the old one landed on :transport -- and only
+  ;; :transport reaches :apparatus in posthoc-fault-origin. Without this, the
+  ;; futon1b bound would have started charging roles for a fault they cannot
+  ;; repair, which is exactly what f28523b6 and 2feb07e1 exist to prevent.
+  (let [call (fn [response]
+               (with-redefs [http/post (fn [_ _] (delay response))]
+                 (memory-write/post-memory-assert!
+                  {:evidence-store {:base-url "http://store"}}
+                  {:evidence/id "e"}
+                  {:hx/id "h" :hx/type :memory/assert :hx/endpoints ["e"]})))
+        deadline (call {:status 504
+                        :body "{:error :query-deadline-exceeded :timeout-s 5}"})
+        unavailable (call {:status 503 :body "{:error :expensive-read-busy}"})
+        bad-request (call {:status 400 :body "{:error {:reason :invalid-hyperedge}}"})]
+    (testing "a store deadline is apparatus"
+      (is (= :transport (get-in deadline [:error :error/component])))
+      (is (= 504 (get-in deadline [:error :error/context :status]))))
+    (testing "so is a busy store -- futon1b 503 :expensive-read-busy, seen at f74"
+      (is (= :transport (get-in unavailable [:error :error/component]))))
+    (testing "but a refused request is still the store rejecting the caller"
+      (is (= :E-store (get-in bad-request [:error :error/component])))
+      (is (= :memory-assert-rejected (get-in bad-request [:error :error/code]))))))
