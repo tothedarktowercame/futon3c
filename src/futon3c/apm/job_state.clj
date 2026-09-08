@@ -21,7 +21,9 @@
   ;; on the invoke path uses this recognition to refuse to re-run a job that
   ;; already finished, so deleting it on a grep would trade a dead name for a
   ;; duplicate execution.
-  #{:done :succeeded :failed :error :cancelled :timeout})
+  ;; :deduped is real and recent -- the Agency finalizes a duplicate msg-id
+  ;; that way (13 in the live ledger, most recent 2026-09-08T09:39Z).
+  #{:done :succeeded :failed :error :cancelled :timeout :deduped})
 (def known-states (into #{} (concat active-states settling-states terminal-states)))
 
 (defn classify [state]

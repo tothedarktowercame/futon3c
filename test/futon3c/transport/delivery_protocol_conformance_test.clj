@@ -173,6 +173,47 @@
     (doseq [state produced]
       (is (not= :unknown (job-port/classify-state state)) (name state)))))
 
+(deftest the-vocabulary-covers-what-the-producer-WRITES-not-what-it-declares
+  ;; The first version of this fence compared the consumer vocabulary against
+  ;; the producer's DECLARED sets and passed -- while the producer wrote
+  ;; "deduped", which none of its own predicates declared. Same defect as the
+  ;; test it replaced, one level up: a vocabulary checked against another
+  ;; vocabulary rather than against the world.
+  ;;
+  ;; Live pin: state census of the running Agency's ledger
+  ;; (/tmp/futon3c-invoke-jobs.edn), 2026-09-08T11:19Z, 3973 jobs --
+  ;; done 3157, failed 417, cancelled 278, delivered 106, deduped 13,
+  ;; running 2.
+  (let [observed-in-live-ledger #{"done" "failed" "cancelled"
+                                  "delivered" "deduped" "running"}
+        declared http/known-invoke-job-states]
+    (doseq [state observed-in-live-ledger]
+      (is (contains? declared state)
+          (str "the ledger holds " state " and the producer does not declare it"))
+      (is (not= :unknown (job-port/classify-state (keyword state)))
+          (str "the ledger holds " state " and the APM consumer cannot classify it"))))
+  (testing "every state the finalizer writes counts as finished"
+    ;; Otherwise the invoke skip-guard re-runs a job that already finished.
+    (let [finished? (var-get #'http/terminal-invoke-state?)]
+      (doseq [state http/finalizer-written-states]
+        (is (finished? state)
+            (str state " is written by finalize-invoke-job! but does not read "
+                 "as finished, so the skip-guard would re-run it")))))
+  (testing "classify-terminal cannot invent a state the vocabulary lacks"
+    (let [classify (var-get #'http/classify-terminal)
+          produced (into #{}
+                         (map (fn [[result no-ev?]] (first (classify result no-ev?))))
+                         [[{:ok true} false]
+                          [{:ok true} true]
+                          [{:ok false :error {:error/code :timeout
+                                              :error/message "t"}} false]
+                          [{:ok false :error {:error/code :boom
+                                              :error/message "b"}} false]
+                          [{:ok false :error {:error/code :x
+                                              :error/message "invoke interrupted"}} false]])]
+      (doseq [state produced]
+        (is (contains? http/known-invoke-job-states state) state)))))
+
 (deftest the-two-terminal-predicates-cannot-disagree-on-a-producer-state
   ;; terminal-invoke-state? allow-lists finished states; invoke-job-terminal-state?
   ;; deny-lists open ones. Complements over different vocabularies, so a state

@@ -273,8 +273,23 @@
   #{"queued" "activating" "running" "overrun" "delivered"})
 
 (def ^:private finished-invoke-job-states
-  "The job's own work has ended. Delivery may still be outstanding."
-  #{"done" "succeeded" "failed" "error" "timeout" "cancelled"})
+  "The job's own work has ended. Delivery may still be outstanding.
+
+   Must cover everything finalize-invoke-job! can write, because the invoke
+   skip-guard refuses to re-run a job only when this says it finished.
+   \"deduped\" was missing: 13 jobs carry it in the live ledger, and the guard
+   would have re-run any of them the queue reached."
+  #{"done" "succeeded" "failed" "error" "timeout" "cancelled" "deduped"})
+
+(def finalizer-written-states
+  "The terminal states finalize-invoke-job! is actually called with: the four
+   literal call sites (timeout, failed, deduped, cancelled) plus everything
+   classify-terminal can return (done, cancelled, timeout, failed). Pinned
+   here so the fence can check the vocabulary against what the producer
+   WRITES rather than against what it declares. Public for the same reason
+   known-invoke-job-states is: it is half of a contract another namespace's
+   test checks."
+  #{"done" "failed" "cancelled" "timeout" "deduped"})
 
 (def ^:private settling-invoke-job-states
   "Finished, but the result has not reached its caller yet. Presented by the
