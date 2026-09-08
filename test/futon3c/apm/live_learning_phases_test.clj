@@ -641,6 +641,34 @@
             request request
             {:ok false :error/code :promotion-candidate-invalid})))))
 
+(deftest posthoc-blame-is-invariant-to-transport-status
+  ;; The fence between "status as mechanism" and "status as blame input".
+  ;; Cascade terminal records carry :http/status and distinguish :failed from
+  ;; :failed-503 (conductor 0c46297b) because a 503 is the origin's own
+  ;; declaration of unavailability -- mechanism S8's retry logic should read.
+  ;; ec97a42b's mistake was letting an HTTP status decide apparatus-vs-agent.
+  ;; Without this test that distinction is prose.
+  (let [request {:dispatch/type :guide-intervention :mode :store-mode}
+        transport {:ok false
+                   :error/code :memory-cascade-unreachable
+                   :error/component :transport}
+        agent-fault {:ok false :error/code :promotion-candidate-invalid}
+        statuses [nil 200 429 500 502 503]
+        outcomes [:failed :failed-503]]
+    (doseq [status statuses
+            outcome outcomes]
+      (let [decorate #(cond-> (assoc % :outcome outcome)
+                        status (assoc :http/status status :status status))]
+        (is (= :apparatus
+               (sut/posthoc-fault-origin request request (decorate transport)))
+            (str "transport stayed apparatus at status=" status
+                 " outcome=" outcome))
+        (is (= :agent
+               (sut/posthoc-fault-origin request request
+                                         (decorate agent-fault)))
+            (str "non-transport stayed agent at status=" status
+                 " outcome=" outcome))))))
+
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"
                  :frame-id "f19" :problem-id "a01J05"}
