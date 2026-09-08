@@ -4014,9 +4014,18 @@
        "was lost is the collection record, not the work.")
 
   :decision/not-done
-  (str "No void, no re-queue, no synthesized artifact. The repair is "
-       "committed but NOT yet loaded into the :7070 JVM -- f196 was mid-frame "
-       "with a running solver job -- so this frame's class is not yet "
-       "certified closed against running code.")}
+  (str "No void, no re-queue, no synthesized artifact.")
+
+  :decision/verified-live
+  (str "2026-09-08T11:32Z, during the scheduled repair pause (coordinator "
+       "halted :stopped with a quiescence witness at 11:31:52Z, epoch 12, "
+       "tick 29905). bf695656 loaded into the running :7070 JVM by "
+       "(require ... :reload) from master, then induced against the LOADED "
+       "code with f194's own 409 response verbatim: disposition "
+       ":already-terminal, terminal-state \"done\", :ok true. The full "
+       "collection path returns :terminal-collected with the submission "
+       "PERSISTED and persist-fn reached -- the early return that discarded "
+       "it is gone. A genuine 500 still classifies :failed. This frame's "
+       "class is certified closed against running code (P8).")}
 
 ]}
