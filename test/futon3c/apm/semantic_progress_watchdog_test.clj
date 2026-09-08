@@ -72,6 +72,20 @@
     (is (empty? stops))
     (is (= 900000 (get-in result [:state :watchdog/last-progress-ms])))))
 
+(def f193-transition
+  ;; The frame's last durable transition, verbatim shape from
+  ;; jit-all-open-v3-f193/problem-transitions.edn. This is the cursor's source
+  ;; now: it is appended only when the frame transitions, so it cannot flicker
+  ;; with the coordinator's tick cycle.
+  {:frame-id "f193"
+   :phase :guide-intervention-1
+   :event/id "3f3168efa6afd"
+   :event/sequence 14
+   :ledger/event-count 15
+   :operation {:job-id "apm-role-93e78eacd865"
+               :status :waiting-for-terminal-result
+               :role :guide}})
+
 (def f193-queue-state
   (edn/read-string
    (slurp (io/resource "resources/apm-regressions/f193-semantic-stall/queue-state.edn"))))
@@ -101,20 +115,21 @@
         (coordinator/watchdog-observation
          {:coordinator/enabled? true}
          (f193-coordinator-state "jit-tick-5e07a189-a")
-         f193-queue-state)
+         f193-queue-state f193-transition)
         next-observation
         (coordinator/watchdog-observation
          {:coordinator/enabled? true}
          (f193-coordinator-state "jit-tick-5e07a189-b")
-         f193-queue-state)
+         f193-queue-state f193-transition)
         prior (:state (sut/evaluate nil first-observation 1000))
         next (:state (sut/evaluate prior next-observation 2000))]
     (is (= {:frame-id "f193"
             :phase :guide-intervention-1
             :attempt-ordinal 24
-            :obligation/status :parked
+            :obligation/status :waiting-for-terminal-result
             :active-job-id "apm-role-93e78eacd865"
-            :last-committed-event-id "3f3168efa6afd"}
+            :last-committed-event-id "3f3168efa6afd"
+            :event-sequence 14}
            (sut/progress-cursor first-observation)))
     (is (= (sut/progress-cursor first-observation)
            (sut/progress-cursor next-observation)))
@@ -124,11 +139,12 @@
   (let [before (coordinator/watchdog-observation
                 {:coordinator/enabled? true}
                 (f193-coordinator-state "jit-tick-a")
-                f193-queue-state)
+                f193-queue-state f193-transition)
         progressed (coordinator/watchdog-observation
                     {:coordinator/enabled? true}
                     (f193-coordinator-state "jit-tick-b")
-                    (assoc-in f193-queue-state [:active :frame :frame/id] "f194"))
+                    (assoc-in f193-queue-state [:active :frame :frame/id] "f194")
+                    f193-transition)
         prior (:state (sut/evaluate nil before 1000))
         next (:state (sut/evaluate prior progressed 2000))]
     (is (= "f194" (get-in next [:watchdog/cursor :frame-id])))
@@ -140,14 +156,19 @@
         observed (coordinator/watchdog-observation
                   {:coordinator/enabled? true}
                   running-state
-                  f193-queue-state)
+                  f193-queue-state f193-transition)
         prior (:state (sut/evaluate nil observed 1000))
         [result stops _]
         (run-check prior observed (+ 1000 sut/internal-progress-max-ms))]
     (is (= "f193" (get-in observed [:cursor :frame-id])))
     (is (= "m00A02" (get-in f193-queue-state
                              [:active :frame :problem/id])))
-    (is (= :parked (get-in observed [:cursor :obligation/status])))
+    ;; Was :parked, which was the QUEUE TICK's status read from
+    ;; :regulator/last-result. The cursor now reports the frame's own role
+    ;; operation, verbatim from problem-transitions.edn -- what f193 is
+    ;; actually doing, not what the last tick returned.
+    (is (= :waiting-for-terminal-result
+           (get-in observed [:cursor :obligation/status])))
     (is (= :internal-semantic-progress-stalled
            (get-in result [:reason :code])))
     (is (= :halted (:status result)))

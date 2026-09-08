@@ -6,6 +6,7 @@
    adapter's idempotent reconcile function. Registry entries are typed and
    content-addressed; startup never infers coordinators from directories."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [futon3c.apm.live-preflight-runtime :as persistence]
             [futon3c.apm.live-regulator :as regulator]
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
@@ -472,37 +473,72 @@
                         :error/code :durable-coordinator-intent-clear-failed
                         :finding cleared-write}))))))))))))
 
+(defn- campaign-root [entry]
+  (get-in entry [:coordinator/config :launch :authority :campaign-root]))
+
+(defn- frame-transition
+  "The frame's LAST durable transition record, or nil.
+
+  problem-transitions.edn is an append-only stream of transition maps written
+  when the frame actually transitions and at no other time. That is precisely
+  the property a progress cursor needs, and it is why these fields are read
+  from here rather than from :regulator/last-result.
+
+  :regulator/last-result oscillates by construction: between ticks it holds
+  {:status :intent-persisted} with no :queue/result, and only on a completed
+  tick does it carry the projection. Sourcing the cursor from it made four of
+  six fields flicker real -> nil -> real, and every flicker read as progress.
+  Measured on the live campaign 2026-09-08: the clock aged to 120s, reset to
+  10s at 01:04:52 with the frame provably idle -- no seat had run since
+  23:00:12 -- and so could never reach the five-minute bound. That is the same
+  false-progress defect as the jit-tick id, one level subtler, and it survived
+  the first repair because the halted campaign happened to hold a stable
+  :queue/result and hid it."
+  [entry frame-id]
+  (when-let [root (campaign-root entry)]
+    (when frame-id
+      (let [dir (str (.getFileName (Path/of (str root) (make-array String 0))))
+            file (io/file (str root) (str dir "-" frame-id) "problem-transitions.edn")]
+        (when (.isFile file)
+          (with-open [rdr (java.io.PushbackReader. (io/reader file))]
+            (loop [seen nil]
+              (let [form (edn/read {:eof ::eof :default (fn [_ v] v)} rdr)]
+                (if (= ::eof form) seen (recur form))))))))))
+
 (defn- coordinator-queue-state [entry]
-  (when-let [campaign-root (get-in entry [:coordinator/config :launch
-                                          :authority :campaign-root])]
+  (when-let [root (campaign-root entry)]
     (persistence/read-state
-     (Path/of campaign-root (into-array String ["queue-state.edn"])))))
+     (Path/of (str root) (into-array String ["queue-state.edn"])))))
 
 (defn watchdog-observation
   ([entry state]
-   (watchdog-observation entry state (coordinator-queue-state entry)))
+   (let [queue-state (coordinator-queue-state entry)]
+     (watchdog-observation
+      entry state queue-state
+      (frame-transition entry (get-in queue-state [:active :frame :frame/id])))))
   ([entry state queue-state]
+   (watchdog-observation
+    entry state queue-state
+    (frame-transition entry (get-in queue-state [:active :frame :frame/id]))))
+  ([entry state queue-state transition]
   (let [intent (:coordinator/pending-intent state)
         delayed-retry (:coordinator/delayed-retry state)
         result (:regulator/last-result state)
-        queue-result (:queue/result result)
-        projection-result (:projection queue-result)
-        projection (:projection projection-result)
-        operation (:operation projection)
-        frame (get-in queue-state [:active :frame])]
+        frame (get-in queue-state [:active :frame])
+        operation (:operation transition)]
     (cond->
+     ;; Every field here must come from durable, frame-derived evidence.
+     ;; Anything sourced from :regulator/last-result oscillates with the tick
+     ;; cycle and reads as progress; see frame-transition.
      {:cursor {:frame-id (:frame/id frame)
-               :phase (or (:phase projection)
-                          (get-in projection [:frame :phase])
-                          (:phase queue-result))
+               :phase (:phase transition)
                :attempt-ordinal (:ordinal frame)
-               :obligation/status (:status queue-result)
-               ;; The coordinator intent is a fresh tick id, not frame work.
-               ;; Only the role job named by the frame projection is semantic
-               ;; activity for this cursor.
+               :obligation/status (:status operation)
                :active-job-id (:job-id operation)
-               :last-committed-event-id
-               (get-in projection-result [:transition :event/id])}
+               :last-committed-event-id (:event/id transition)
+               ;; Monotonic, and the cheapest honest progress token the frame
+               ;; has: it advances only when a transition is appended.
+               :event-sequence (:event/sequence transition)}
       :coordinator-enabled? (:coordinator/enabled? entry)
       :regulator state
       :tick-claim (:regulator/tick-claim state)
@@ -517,6 +553,7 @@
       (and (nil? intent) delayed-retry)
       (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
                             :deadline (:not-before-ms delayed-retry)})))))
+
 
 (defn- arm-watchdog! [registry-path entry]
   (let [id (watchdog-id (:coordinator/id entry))

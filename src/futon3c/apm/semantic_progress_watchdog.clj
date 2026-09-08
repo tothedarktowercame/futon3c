@@ -34,8 +34,12 @@
      :stop-cause/reason reason}))
 
 (def cursor-keys
+  ;; :event-sequence is the frame's own monotonic transition counter, read from
+  ;; its durable problem-transitions.edn. It advances only when a transition is
+  ;; appended, so it is the one field here that cannot report progress the
+  ;; frame did not make.
   [:frame-id :phase :attempt-ordinal :obligation/status :active-job-id
-   :last-committed-event-id])
+   :last-committed-event-id :event-sequence])
 
 (defonce ^:private thread-seq (AtomicLong. 0))
 (defonce ^:private runners (atom {}))
