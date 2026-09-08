@@ -1,7 +1,7 @@
 (ns futon3c.apm.semantic-progress-watchdog-test
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is use-fixtures]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.semantic-progress-watchdog :as sut])
   (:import [java.util.concurrent Executors ScheduledExecutorService]))
@@ -362,3 +362,36 @@
         (sut/stop! id)
         (.shutdownNow first-executor)
         (.shutdownNow second-executor)))))
+
+(deftest a-running-role-turn-is-not-an-internal-stall
+  ;; 2026-09-08: the honest cursor exposed a second defect. The internal
+  ;; -progress alarm is suppressed only while something is outstanding, and
+  ;; that test consulted the COORDINATOR's pending intent -- but a role job is
+  ;; not a coordinator intent. With no intent in flight the alarm fired on a
+  ;; frame whose student was mid-turn, halting jit-all-open-v3 at 01:46:31
+  ;; while f193-student was running with 47 events and 28 tool calls.
+  (let [now 1788831628017          ; 2026-09-08T01:40:28.017Z, the transition
+        running (assoc f193-transition
+                       :event/observed-at "2026-09-08T01:40:28.017Z"
+                       :operation {:job-id "apm-role-838eca6c"
+                                   :status :waiting-for-terminal-result
+                                   :role :student})
+        observed (coordinator/watchdog-observation
+                  {:coordinator/enabled? true}
+                  (dissoc (f193-coordinator-state "jit-tick-x")
+                          :coordinator/pending-intent)
+                  f193-queue-state running)]
+    (testing "the running role turn is reported as an outstanding wait"
+      (is (= "apm-role-838eca6c" (get-in observed [:awaiting-job :job-id]))))
+    (testing "no internal stall six minutes in, while the turn is running"
+      (let [prior (:state (sut/evaluate nil observed now))
+            [result _ _] (run-check prior observed
+                                    (+ now (* 6 60 1000)))]
+        (is (not= :halted (:status result)))))
+    (testing "but a turn that never terminates still trips its deadline"
+      (let [prior (:state (sut/evaluate nil observed now))
+            [result _ _] (run-check prior observed
+                                    (+ now coordinator/role-turn-max-ms
+                                       (* 5 60 1000)))]
+        (is (= :halted (:status result)))
+        (is (= :external-job-deadline-exceeded (get-in result [:reason :code])))))))

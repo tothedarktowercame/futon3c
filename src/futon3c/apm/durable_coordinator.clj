@@ -12,6 +12,7 @@
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.charset StandardCharsets]
            [java.nio.file Files LinkOption Path]
+           [java.time Instant]
            [java.security MessageDigest]))
 
 (def registry-type :durable-coordinator-registry)
@@ -510,6 +511,40 @@
     (persistence/read-state
      (Path/of (str root) (into-array String ["queue-state.edn"])))))
 
+(def role-turn-max-ms
+  "Longest a role turn may legitimately hold a frame without a transition.
+
+  Matches the :turn-timeout-ms carried on live role requests (3600000). A role
+  turn that is genuinely running produces NO frame transition while it works --
+  a student attempt runs for tens of minutes by design -- so without this the
+  internal-progress bound fires on a perfectly healthy frame."
+  (* 60 60 1000))
+
+(defn- outstanding-role-wait
+  "The frame's outstanding role turn as an :awaiting-job, or nil.
+
+  The internal-progress alarm is suppressed only while something is genuinely
+  outstanding, and that test previously consulted the COORDINATOR's pending
+  intent. A role job is not a coordinator intent: with no intent in flight the
+  alarm fired on a frame whose student was mid-turn. On 2026-09-08 that halted
+  jit-all-open-v3 at 01:46:31 while f193-student was running with 47 events and
+  28 tool calls, last active nine seconds earlier.
+
+  The deadline keeps this from restoring the old blindness: a turn that never
+  terminates still trips :external-job-deadline-exceeded once it passes
+  role-turn-max-ms, which is what f193's uncollected terminal needed and never
+  got."
+  [transition]
+  (let [operation (:operation transition)
+        observed (:event/observed-at transition)]
+    (when (and (= :waiting-for-terminal-result (:status operation))
+               (:job-id operation)
+               (string? observed))
+      (try
+        {:job-id (:job-id operation)
+         :deadline (+ (.toEpochMilli (Instant/parse observed)) role-turn-max-ms)}
+        (catch Exception _ nil)))))
+
 (defn watchdog-observation
   ([entry state]
    (let [queue-state (coordinator-queue-state entry)]
@@ -552,7 +587,10 @@
                                    :deadline (intent-deadline intent)})
       (and (nil? intent) delayed-retry)
       (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
-                            :deadline (:not-before-ms delayed-retry)})))))
+                            :deadline (:not-before-ms delayed-retry)})
+      (and (nil? intent) (nil? delayed-retry)
+           (outstanding-role-wait transition))
+      (assoc :awaiting-job (outstanding-role-wait transition))))))
 
 
 (defn- arm-watchdog! [registry-path entry]
