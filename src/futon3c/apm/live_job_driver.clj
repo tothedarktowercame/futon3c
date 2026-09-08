@@ -608,7 +608,8 @@
            ticket-register-fn cancellation-observation]}]
   (let [old-ticket (:ticket state)
         cancelled (or cancellation-observation
-                      (cancel-fn (:job-id old-ticket)))]
+                      (cancellation-disposition
+                       (cancel-fn (:job-id old-ticket))))]
     (if-not (:ok cancelled)
       {:ok false :error/code :live-job-unaccepted-cancellation-failed
        :state state :finding cancelled}
@@ -728,6 +729,63 @@
   (let [{:keys [collection-attempts repair-attempts]} (terminal-budget configured)]
     (and (pos-int? collection-attempts) (pos-int? repair-attempts))))
 
+(def collection-process-outcomes
+  "What the job process was doing when the collection was taken."
+  #{:completed :stopped :live :unknown})
+
+(def collection-submission-outcomes
+  "Whether an authenticated typed submission was in hand at that moment."
+  #{:authenticated :absent})
+
+(defn collection-process-outcome
+  "Total over any job map. :completed is reserved for :done -- every other
+   terminal is :stopped, because 'it ended' and 'it finished the work' are
+   different questions and the collection record must not blur them."
+  [job]
+  (let [state (:state job)]
+    (cond
+      (= :done state) :completed
+      (contains? job-state/terminal-states state) :stopped
+      (contains? job-state/known-states state) :live
+      :else :unknown)))
+
+(defn collection-submission-outcome
+  [submission]
+  (if (map? submission) :authenticated :absent))
+
+(def collection-disposition-table
+  "The closed enum, given as the whole product rather than as a cond whose
+   arms can silently fail to cover it. Every cell is named; a cell nothing
+   can reach is a defect the lint reports, not a spare branch (jit-all-open-v3
+   carried :visibility-lag as a declared-but-unreachable outcome for the
+   length of the campaign).
+
+   :delivered-by-submission is the f194 cell: the role delivered an
+   authenticated submission and the job had not yet been observed terminal.
+   It is a success, and naming it is what stops it being read as one of the
+   failure cells."
+  {[:completed :authenticated] :delivered
+   [:completed :absent]        :completed-without-submission
+   [:stopped   :authenticated] :delivered-then-stopped
+   [:stopped   :absent]        :stopped-without-submission
+   [:live      :authenticated] :delivered-by-submission
+   [:live      :absent]        :collected-while-live
+   [:unknown   :authenticated] :delivered-under-unknown-state
+   [:unknown   :absent]        :unknown-without-submission})
+
+(def collection-dispositions
+  (set (vals collection-disposition-table)))
+
+(defn collection-disposition
+  "Construct the disposition ONCE, from the job and the submission, at the
+   moment the collection is taken. Consumers read this; they do not
+   re-derive the product from :terminal-state and :submission/available?,
+   which is how two consumers come to disagree about the same collection."
+  [job submission]
+  (get collection-disposition-table
+       [(collection-process-outcome job)
+        (collection-submission-outcome submission)]))
+
 (defn terminal-collection-record [request ticket job submission attempt]
   (let [body {:collection/type :typed-role-terminal
               :dispatch/id (:dispatch/id request)
@@ -737,7 +795,8 @@
               :terminal-code (:terminal-code job)
               :attempt attempt
               :submission/available? (some? submission)
-              :submission/id (:submission/id submission)}]
+              :submission/id (:submission/id submission)
+              :collection/disposition (collection-disposition job submission)}]
     (assoc body :collection/id (machine/ledger-digest [body]))))
 
 (defn- orphan-recovery-failure!
@@ -770,7 +829,8 @@
         recovery-request (:request planned)
         cancelled (when (and (:ok planned) (map? recovery-request)
                              (fn? cancel-fn))
-                    (cancel-fn (:job-id old-ticket)))]
+                    (cancellation-disposition
+                     (cancel-fn (:job-id old-ticket))))]
     (cond
       (not (and (:ok planned) (map? recovery-request)
                 (string? (:dispatch/id recovery-request))))
