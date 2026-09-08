@@ -54,7 +54,10 @@ MIN_AVAILABLE_PERCENT = float(os.environ.get("APM_FORMAL_ZAI_MIN_AVAILABLE", "50
 MAX_OTHER_INVOKING = int(os.environ.get("APM_FORMAL_ZAI_MAX_OTHER_INVOKING", "1"))
 HTTP_TIMEOUT = float(os.environ.get("APM_FORMAL_ZAI_HTTP_TIMEOUT", "15"))
 
-PROBLEM_ID_RE = re.compile(r"^[a-z][A-Za-z0-9]+$")
+# Hyphens are legitimate in bundle ids (lts-monadic-integration). The dot is
+# what must stay excluded -- the old mirror held `<id>.failed.<timestamp>`
+# debris that is not a problem.
+PROBLEM_ID_RE = re.compile(r"^[a-z][A-Za-z0-9-]+$")
 
 
 class GateClosed(RuntimeError):
@@ -348,14 +351,22 @@ def append_progress_snapshot() -> dict[str, Any]:
 
 
 def canonical_bundle_is_informal_only(problem_id: str) -> bool:
-    """Require the canonical handoff bundle, not only the transient harvest."""
+    """Require the canonical handoff bundle, not only the transient harvest.
+
+    proof-outline.md is deliberately NOT required. For a harvested bundle it is
+    boilerplate written by the importer -- "extract a formalization-oriented
+    proof outline from the informal solution" -- carrying no mathematical
+    content and no evidence that the bundle is ready. Requiring it did not
+    screen for readiness; it screened for which import path the bundle came
+    through, and hid 13 problems with substantive informal solutions
+    (648-1487 bytes) from this pipeline entirely.
+    """
     bundle = APM_LEAN_DIR / "problems" / problem_id
     status_path = bundle / "status.json"
     required = [
         bundle / "problem.tex",
         bundle / "problem.md",
         bundle / "informal-solution.md",
-        bundle / "proof-outline.md",
         status_path,
     ]
     if not all(path.exists() for path in required):
@@ -375,8 +386,17 @@ def claim_path(problem_id: str) -> Path:
 def candidate_problem_ids() -> list[str]:
     unavailable = unavailable_problem_ids()
     candidates = []
-    for informal in sorted(INFORMAL_DIR.glob("apm-*.md")):
-        problem_id = informal.stem.removeprefix("apm-")
+    # Iterate the canonical bundles, not the futon3c mirror. The mirror was a
+    # second store answering the same question ("which problems have an
+    # informal solution") with no comparator, and the two disagreed: 32
+    # bundles had a solution the mirror lacked, so 13 problems with
+    # substantive informal solutions could never be selected here, while the
+    # mirror carried 386 `.failed.<timestamp>` entries that are not problems
+    # at all. The bundle is the authority; read it directly.
+    for informal in sorted(
+        (APM_LEAN_DIR / "problems").glob("*/informal-solution.md")
+    ):
+        problem_id = informal.parent.name
         if not PROBLEM_ID_RE.fullmatch(problem_id):
             continue
         try:
@@ -395,7 +415,7 @@ def candidate_problem_ids() -> list[str]:
 
 
 def make_prompt(problem_id: str) -> str:
-    informal = INFORMAL_DIR / f"apm-{problem_id}.md"
+    informal = APM_LEAN_DIR / "problems" / problem_id / "informal-solution.md"
     tex = APM_LEAN_DIR / "apm" / f"{problem_id}.tex"
     bundle = APM_LEAN_DIR / "problems" / problem_id
     target = bundle / "lean/Main.lean"

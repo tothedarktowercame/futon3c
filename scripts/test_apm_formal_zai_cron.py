@@ -77,9 +77,11 @@ class CandidateTests(unittest.TestCase):
                 (informal / f"apm-{pid}.md").write_text("proof\n" * 30)
                 bundle = apm / "problems" / pid
                 bundle.mkdir(parents=True)
-                for name in ("problem.tex", "problem.md", "informal-solution.md",
-                             "proof-outline.md"):
+                for name in ("problem.tex", "problem.md", "proof-outline.md"):
                     (bundle / name).write_text("present\n")
+                # The bundle's own informal solution is the authority now, and
+                # it must clear the substance threshold.
+                (bundle / "informal-solution.md").write_text("informal proof\n" * 30)
                 (bundle / "status.json").write_text(
                     '{"classification":"informal-only","lean":{"main":null}}\n'
                 )
@@ -96,6 +98,60 @@ class CandidateTests(unittest.TestCase):
                 mock.patch.object(cron, "OVERRIDES_PATH", root / "missing.tsv"),
             ):
                 self.assertEqual(["a00J01"], cron.candidate_problem_ids())
+
+
+class ProofOutlineNotRequiredTests(unittest.TestCase):
+    def test_bundle_without_proof_outline_is_still_a_candidate(self):
+        """proof-outline.md is importer boilerplate, not evidence of readiness.
+
+        Requiring it hid 13 problems with substantive informal solutions from
+        this pipeline -- they were invisible because a content-free stub had
+        never been written, not because anything was wrong with them.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            informal = root / "informal"
+            apm = root / "apm"
+            state = root / "state"
+            informal.mkdir()
+            (state / "claims").mkdir(parents=True)
+            # t99J06-shaped: everything present EXCEPT proof-outline.md
+            pid = "t99J06"
+            (informal / f"apm-{pid}.md").write_text("informal proof\n" * 30)
+            bundle = apm / "problems" / pid
+            bundle.mkdir(parents=True)
+            for name in ("problem.tex", "problem.md"):
+                (bundle / name).write_text("present\n")
+            (bundle / "informal-solution.md").write_text("informal proof\n" * 30)
+            (bundle / "status.json").write_text(
+                '{"classification":"informal-only","lean":{"main":null}}\n'
+            )
+            self.assertFalse((bundle / "proof-outline.md").exists())
+            with (
+                mock.patch.object(cron, "INFORMAL_DIR", informal),
+                mock.patch.object(cron, "APM_LEAN_DIR", apm),
+                mock.patch.object(cron, "STATE_DIR", state),
+                mock.patch.object(cron, "OVERRIDES_PATH", root / "none.tsv"),
+            ):
+                self.assertTrue(cron.canonical_bundle_is_informal_only(pid))
+                self.assertEqual([pid], cron.candidate_problem_ids())
+
+    def test_genuinely_incomplete_bundle_is_still_rejected(self):
+        """Dropping one requirement must not drop the others."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            apm = root / "apm"
+            pid = "t99J06"
+            bundle = apm / "problems" / pid
+            bundle.mkdir(parents=True)
+            # informal-solution.md deliberately absent
+            for name in ("problem.tex", "problem.md"):
+                (bundle / name).write_text("present\n")
+            (bundle / "status.json").write_text(
+                '{"classification":"informal-only","lean":{"main":null}}\n'
+            )
+            with mock.patch.object(cron, "APM_LEAN_DIR", apm):
+                self.assertFalse(cron.canonical_bundle_is_informal_only(pid))
 
 
 class ProgressTests(unittest.TestCase):
