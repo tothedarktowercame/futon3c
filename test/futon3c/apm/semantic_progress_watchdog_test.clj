@@ -1,5 +1,6 @@
 (ns futon3c.apm.semantic-progress-watchdog-test
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.semantic-progress-watchdog :as sut])
@@ -73,11 +74,11 @@
 
 (def f193-queue-state
   (edn/read-string
-   (slurp "data/apm-campaigns/jit-all-open-v3/queue-state.edn")))
+   (slurp (io/resource "resources/apm-regressions/f193-semantic-stall/queue-state.edn"))))
 
 (def f193-durable-coordinator-state
   (edn/read-string
-   (slurp "data/apm-campaigns/jit-all-open-v3/coordinator.edn")))
+   (slurp (io/resource "resources/apm-regressions/f193-semantic-stall/coordinator.edn"))))
 
 (defn f193-coordinator-state [tick-job-id]
   {:state/type :live-regulator
