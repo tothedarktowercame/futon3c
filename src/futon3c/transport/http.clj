@@ -263,7 +263,31 @@
   (atom nil))
 
 (def ^:private active-invoke-job-states
+  "The producer's OWN state vocabulary, declared once. Every predicate below
+   is defined over these sets rather than over its own literal, because the
+   two that were not could not agree: terminal-invoke-state? allow-listed the
+   finished states while invoke-job-terminal-state? deny-listed the open ones,
+   and the deny-list omitted \"activating\" -- a state this ledger really does
+   persist. A job mid-activation therefore read as terminal to the whistle
+   stream, which answers {:type done :ok false} and hangs up."
   #{"queued" "activating" "running" "overrun" "delivered"})
+
+(def ^:private finished-invoke-job-states
+  "The job's own work has ended. Delivery may still be outstanding."
+  #{"done" "succeeded" "failed" "error" "timeout" "cancelled"})
+
+(def ^:private settling-invoke-job-states
+  "Finished, but the result has not reached its caller yet. Presented by the
+   public view, never persisted (see the delivering rewrite in public-job)."
+  #{"delivering"})
+
+(def known-invoke-job-states
+  "Public deliberately: this is the producer half of the vocabulary contract
+   that futon3c.apm.job-state must cover, and the conformance test compares
+   the two directly rather than reaching around a private var."
+  (into #{} (concat active-invoke-job-states
+                    finished-invoke-job-states
+                    settling-invoke-job-states)))
 
 (defn- active-invoke-job?
   [job]
@@ -829,8 +853,10 @@
   (some-> x str str/trim not-empty))
 
 (defn- terminal-invoke-state?
+  "Has the job's own work ended? A job still delivering has, so this is
+   deliberately narrower than invoke-job-terminal-state?."
   [state]
-  (#{"done" "succeeded" "failed" "error" "timeout" "cancelled"} (str state)))
+  (contains? finished-invoke-job-states (str state)))
 
 (defn- auto-bellback-job?
   [job]
@@ -1539,7 +1565,7 @@
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
                          (first-artifact-ref summary))
-        non-terminal-states #{"queued" "running" "overrun" "delivered"}
+        non-terminal-states active-invoke-job-states
         [ledger-before ledger-after]
         (update-invoke-jobs-ledger-vals!
          (fn [ledger]
@@ -1547,10 +1573,11 @@
              ;; First terminal transition wins: if the ceiling reaper already
              ;; force-terminated this job ("timeout"), the interrupted worker's
              ;; own finalize must not overwrite it (no timeout->failed flip,
-             ;; no double delivery). Non-terminal states
-             ;; (queued/running/overrun/delivered)
-             ;; finalize normally.
-             (if (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
+             ;; no double delivery). Open states (active-invoke-job-states)
+             ;; finalize normally -- "activating" among them, which this
+             ;; literal used to omit, silently dropping the finalize of a job
+             ;; that completed before its running transition landed.
+             (if (not (contains? active-invoke-job-states (str (:state job))))
                ledger
                (let [finished-at (str (Instant/now))
                      updated-job (-> job
@@ -5393,8 +5420,15 @@
                         (hk/close channel))))))))})))))))
 
 (defn- invoke-job-terminal-state?
+  "Is there nothing further to wait for? Broader than terminal-invoke-state?:
+   a settling job is done waiting even though its work has ended only just
+   now, and an unrecognised state is treated as terminal so a stream watching
+   a job that has vanished closes rather than heartbeating forever.
+
+   The one state this must NOT call terminal is an open one -- which is the
+   defect it carried while its literal omitted \"activating\"."
   [state]
-  (not (#{"queued" "running" "overrun" "delivered"} (str state))))
+  (not (contains? active-invoke-job-states (str state))))
 
 (defn- stream-flag?
   [payload]
@@ -5935,7 +5969,7 @@
                           :error "invoke-job-not-found"
                           :job-id (str job-id)})
 
-      (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
+      (not (contains? active-invoke-job-states (str (:state job))))
       (json-response 409 {:ok false
                           :error "invoke-job-already-terminal"
                           :job-id (str job-id)

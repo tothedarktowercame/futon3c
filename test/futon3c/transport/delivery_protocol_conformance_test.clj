@@ -13,6 +13,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.job-state :as job-state]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [clojure.set]
             [futon3c.transport.http :as http]))
 
 (def ^:dynamic *ledger-file* nil)
@@ -157,6 +158,49 @@
   (is (= job-state/terminal-states job-port/terminal-states))
   (is (= job-state/settling-states job-port/settling-states))
   (is (= job-state/active-states job-port/active-states)))
+
+(deftest the-consumer-vocabulary-actually-covers-the-producers
+  ;; The test above checks this vocabulary against ITSELF. It passed for the
+  ;; length of the campaign while the producer persisted "delivered", which
+  ;; the consumer did not declare and therefore classified :unknown -- the
+  ;; live job driver's :live-job-state-unclassified fault, for a healthy job.
+  ;; A conformance test named after the producer has to read the producer.
+  (let [produced (into #{} (map keyword) http/known-invoke-job-states)
+        missing (clojure.set/difference produced job-state/known-states)]
+    (is (empty? missing)
+        (str "the Agency emits states futon3c.apm.job-state does not declare: "
+             missing))
+    (doseq [state produced]
+      (is (not= :unknown (job-port/classify-state state)) (name state)))))
+
+(deftest the-two-terminal-predicates-cannot-disagree-on-a-producer-state
+  ;; terminal-invoke-state? allow-lists finished states; invoke-job-terminal-state?
+  ;; deny-lists open ones. Complements over different vocabularies, so a state
+  ;; in neither literal got opposite answers -- "activating" did, and the
+  ;; ledger really does persist it (dispatch sets it before the running
+  ;; transition). The whistle stream answers {:type "done" :ok false} and
+  ;; hangs up on anything the second predicate calls terminal.
+  (let [finished? (var-get #'http/terminal-invoke-state?)
+        nothing-to-wait-for? (var-get #'http/invoke-job-terminal-state?)]
+    (doseq [state http/known-invoke-job-states]
+      (testing state
+        (when (finished? state)
+          (is (nothing-to-wait-for? state)
+              "a finished job must never read as still open"))))
+    (testing "no open state is reported terminal by either predicate"
+      (doseq [state (var-get #'http/active-invoke-job-states)]
+        (is (not (finished? state)) state)
+        (is (not (nothing-to-wait-for? state)) state)))
+    (testing "activating specifically -- the state the deny-list omitted"
+      (is (not (nothing-to-wait-for? "activating")))
+      (is (not (finished? "activating"))))
+    (testing "they are allowed to differ only on settling"
+      (is (= (var-get #'http/settling-invoke-job-states)
+             (into #{} (filter #(and (nothing-to-wait-for? %)
+                                     (not (finished? %)))
+                               http/known-invoke-job-states)))))
+    (testing "an unrecognised state stays fail-closed for the stream"
+      (is (nothing-to-wait-for? "no-such-state")))))
 
 (deftest in-jvm-caller-shape-is-not-a-constructable-production-route
   ;; The producer persists only a caller string. Both names below therefore
