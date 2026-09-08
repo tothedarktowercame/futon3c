@@ -134,6 +134,64 @@ a missing deadline but a retry budget that treats transient visibility lag and
 substrate death identically — which is only distinguishable now that S1/S2
 make errors carry their mechanism.
 
+### 8. done-is-observed-running (P8) — EARNED LIVE, in my own repo
+
+**Occasion.** The S3 strip fix was committed, and the running service still
+served the false text. It had been up since 01:00:48 and never saw the file.
+Caught by querying the live strip after committing rather than assuming the
+commit was the deployment.
+
+**Score.** Earned, minutes after S6 was written up as the comparator for
+exactly this gap. The declared/loaded/running split is not a futon3c
+peculiarity; it is anywhere a process outlives an edit.
+
+### 9. one-authority-per-question (P1) — EARNED AGAIN, against its user
+
+**Occasion.** My first S3 acceptance test re-implemented the strip's branch
+instead of calling `apm_status()`. That is the same signature — a consumer
+reading a copy rather than the authority — that I had logged against the
+strip an hour earlier, committed by the person logging it, while fixing it.
+
+**Score.** Earned. A principle that catches both of us in one night on the
+same signature is discriminating rather than decorative.
+
+### 10. pin-moves-with-the-population (P14) — MISLED, mildly
+
+**Occasion.** 87 absolute-path references across 33 test files looked like
+the reason branch work cannot see a clean gate. Measuring said otherwise: of
+202 failing assertions, 146 sit in files with no absolute path at all, and
+only one of five assertion-shaped pins was a defect.
+
+**Restatement.** Counting occurrences of a pattern is not measuring the
+fault. Only running the thing and attributing the failures is.
+
+### 11. monitors-measure-the-work (P7) — EARNED, and it needed mutation
+
+**Occasion.** S4. The watchdog had twenty tests and was blind through the
+f193 night regardless. Both reasons were structural: the tests handed
+`watchdog-observation` its inputs as literals, so the file-reading arity
+production uses was never touched; and every one checked that the alarm
+FIRES, so nothing measured the healthy case.
+
+**What the principle demanded that a green suite did not.** Commissioning by
+induced failure, both directions, then mutation to prove the commissioning
+itself discriminates:
+
+| mutation | caught by |
+|---|---|
+| role turn not declared an external wait (the shipped 0c0868ed regression) | both role-turn cases |
+| cursor frozen | healthy-progress case |
+| cursor advances every observation | **the stall case stops firing** |
+
+The third is the finding. False progress is precisely what kept the watchdog
+quiet all night, and its signature is an alarm that stays silent — invisible
+to every test that only checks firing. Confirmed against the loaded code in
+:7070, not only in the test JVM.
+
+**Score.** Earned, and it is the strongest entry so far, because the
+principle predicted a specific missing test and that test then caught a
+specific historical failure.
+
 ## Not yet scored
 
 - default-to-the-cheap-error (P4),

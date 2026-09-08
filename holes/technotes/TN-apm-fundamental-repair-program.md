@@ -153,12 +153,35 @@ for; the register is the work queue until the gates pass.
 | S1 unwrap before blaming | P9 | **done** — `0c46297b`, loaded and observed acting in :7070 |
 | S2 carry the class, not just the message | P9 | **done** — same commit |
 | S3 "none served" ≠ "expansion incomplete" | P2 | next — `voxterm/server.py:2165-2169` |
-| S4 commission the watchdog both directions | P7 | owed since the watchdog repair |
+| S4 commission the watchdog both directions | P7 | **done** — `83238093`, mutation-commissioned, both directions observed against the loaded code |
 | S5 terminal-vocabulary migration | P9, P2 | discovery done (codex-17); one consumer group per dispatch |
 | S6 declared-vs-loaded comparator | P8 | closes register A11 and M7 |
 | S7 bound the `:awaiting-substrate` wait | P6 | verifiably absolute deadline, expiry routed to a decision |
 | S8 substrate I/O survives substrate unavailability | P12 | Joe's inversion of our restart rule — see below |
 | S9 scheduled drain points | P13 | design note only, unbriefed build forbidden |
+| S10 test path pins | P8 | **done** — `bc92241f`; scope corrected, 87 pins gave 1 defect |
+| S11 tests reach the live Agency | P1 | registered, discovery only |
+
+### Containment, effective 2026-09-08 03:20Z
+
+**No full-suite test runs against a machine with the Agency live on :7070.**
+Targeted namespaces only (`scripts/apm-test-fast.sh` is the pattern).
+
+Not a style preference. Tonight's worktree gate log contains
+`Agent not registered: codex-1`: a test run from a worktree was dispatching
+real jobs into the production Agency, which other agents share. The tests are
+treating the live registry as their fixture. That is P1's shape — a consumer
+reading the authority — with side effects, and it is also why 146 of 202
+failing assertions in that run sit in files with no path pin at all.
+
+Author's note: the run that produced that log was mine, and I read the
+`codex-1` lines as noise at the time rather than as a report that my test
+suite was writing to production.
+
+S11 (registered, discovery only): classify what machine-global state the 93
+failing tests reach — live Agency, ports, files, registry — and propose an
+isolation design with costs. No implementation until that lands and is
+reviewed; if the answer is big, it goes to Joe.
 
 ### S8 — why it replaced a rule about people
 
