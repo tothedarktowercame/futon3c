@@ -9,6 +9,48 @@ that is the evidence that makes the ledger worth reading.
 
 Reviewer: claude-9. Author of the repair work: claude-5.
 
+**If you are reading this to decide whether to commit the principles:** the
+summary table below is the answer, and *What the trial changed* at the end is
+what the machine does differently now. Everything between them is the
+working. Two of the thirteen principles misled, three had no occasion, and
+both facts are on the table rather than in the prose.
+
+## Summary — what each principle was worth
+
+Twenty-five entries across ten repairs (S1–S10 plus the S5 slices), one
+scheduled pause, and three loads observed against running code. Twenty-one
+score a principle; four record findings no principle covered. "Misled" means
+the principle pointed at the wrong thing and the ledger says so; that is the
+column that makes the rest credible.
+
+| Principle | Occasions | Earned | Partial | Misled | Strongest single exhibit |
+|---|---|---|---|---|---|
+| success-must-not-resemble-failure (P2) | 3 | 3 | – | – | A delivered guide turn filed as a fault, and **discarded before persist** — seven times |
+| done-is-observed-running (P8) | 4 | 3 | 1 | – | Two repairs were committed, green, and **not loaded**; the JVM said `:not-loaded` when asked |
+| one-authority-per-question (P1) | 4 | 3 | 1 | – | Three call sites asked a cancel the same question and all three answered it wrong |
+| evidence-to-disposition-once (P9) | 2 | 2 | – | – | The cascade's own error record erased the mechanism that caused it |
+| monitors-measure-the-work (P7) | 2 | 2 | – | – | The progress watchdog could not fail; mutation showed it silent under an induced stall |
+| every-wait-has-a-deadline (P6) | 2 | – | 2 | – | A wait that looked bounded (attempt count, `:not-before-ms`) with no horizon on the instant itself |
+| new-failure-class-is-a-design-defect (P12) | 1 | misled, then earned on the same occasion | | | Told us to mint no new park class for f193; the census held at **44** through the whole program |
+| the-system-stops-on-schedule (P13) | 1 | 1 | – | – | The pause was cheaper than any of the three live loads it replaced |
+| default-to-the-cheap-error (P4) | 1 | 1 | – | – | Argued successfully *against* a reviewer directive to delete a fallback |
+| pin-moves-with-the-population (P14) | 1 | – | – | 1 | Sent me after 87 "path pins"; measurement found 1 real defect in 5 |
+| loudness-is-conserved (P5) | 0 | – | – | – | no occasion |
+| replayable-not-precious (P10) | 0 | – | – | – | no occasion |
+| model-upstream-and-coupled (P11) | 0 | – | – | – | no occasion |
+
+Two findings had **no principle to file them under**, which is the useful
+kind of gap:
+
+- **A repair citation must name a checkable defect, not a neighbourhood.**
+  f177 was closed as covered by `f4ae8d5a` with the note "watch f188+ for
+  recurrence". It recurred on f178 twice and f194. Three independently
+  adjudicated frames, one defect, park census unmoved at 44.
+- **A fence's own acceptance must be observation against live data.** P8
+  governs repairs and says nothing about the tests that guard them — and a
+  fence is exactly the artifact whose failure is silent. Demonstrated twice
+  in one hour, the second time by me.
+
 ## Scored entries
 
 ### 1. evidence-to-disposition-once (P9) — EARNED, on f193
@@ -449,14 +491,110 @@ could not have been run safely against a live frame. The principle asks for
 observation against running code; the pause is what made the observation
 honest rather than approximate.
 
+### the-system-stops-on-schedule (P13) — EARNED, at the pause itself
+
+**Occasion.** The scheduled repair pause, 2026-09-08. Three repairs were
+finished and could not honestly be called done, because loading them needed
+a stopped machine. Joe authorised a halt; the coordinator drained to
+`:stopped` with a quiescence witness in 19 seconds, the in-flight student
+turn was left to finish, and the campaign resumed on the next epoch with
+that turn intact.
+
+**What it found.** The principle's value here was not the stop, it was
+having decided in advance what the stop was *for*. Three separate live
+loads had been planned around avoiding a pause; the pause turned out to be
+cheaper than any one of them and made checks possible that were otherwise
+unavailable (see the loads entry).
+
+**Score.** Earned. Also the cleanest demonstration in this ledger that a
+halt is an instrument, not an admission.
+
+### default-to-the-cheap-error (P4) — EARNED, by argument against a directive
+
+**Occasion.** S5 slice 3. The brief said to replace `classify`'s
+`:else :unknown` with the closed vocabulary. I kept it.
+
+**What it found.** `:unknown` is the cheap error: callers act on it
+(`campaign-reconcile` filters it, the driver raises
+`:live-job-state-unclassified`), and it is the correct answer for a vanished
+job or a peer running newer code. The hazard was never the fallback — it was
+that a state the producer *writes* and the consumer merely *forgot* was
+indistinguishable from a genuinely foreign one. The fence closes that gap;
+deleting the fallback would have removed a real safety net to satisfy the
+letter of an instruction.
+
+**Score.** Earned, and useful precisely because it argued against what the
+reviewer had asked for.
+
 ## Not yet scored
 
-- default-to-the-cheap-error (P4),
-  replayable-not-precious (P10, blocked on Joe's f193 ruling),
-  new-failure-class-is-a-design-defect (P12, scored by the park-class census
-  once a wave restarts), the-system-stops-on-schedule (P13),
-  pin-moves-with-the-population (P14), loudness-is-conserved (P5),
-  model-upstream-and-coupled (P11).
+Three of the thirteen, with no occasion in this repair that tested them:
+
+- **loudness-is-conserved (P5)** — nothing in this program changed how much
+  the machine says, only what it says.
+- **replayable-not-precious (P10)** — was blocked on the f193 ruling; the
+  ruling came (preserve as partial, no re-run), which settled the frame
+  without exercising the principle.
+- **model-upstream-and-coupled (P11)** — the futon1b failures at 02:30 and
+  02:47 are the natural test and remain unexplained, so scoring it would be
+  guessing.
+
+A principle unscored after fourteen occasions is not thereby weak; it means
+this repair did not touch the kind of failure it is about. That is worth
+saying plainly rather than padding the ledger to thirteen rows.
+
+## Three times I measured with the wrong instrument
+
+Worth its own section because it is one mistake, not three, and it is the
+mistake most likely to survive review — a negative result looks like
+diligence.
+
+1. **The event-log count.** Asked whether any job had ever stranded in
+   `activating`, I counted `activating` in job event logs and got zero. That
+   transition is a bare `assoc-in` and appends no event, so the count could
+   never have been anything but zero.
+2. **The `check-ignore` on a directory.** (claude-9's, reported against
+   himself.) `data/apm-campaigns` answered "not ignored" while the file
+   beneath it was ignored by `data/*`. The instrument was asked about the
+   wrong object.
+3. **The atom deref.** Reading the live ledger I dereferenced the var, got
+   the atom, and keyed into the atom — producing an empty census that looked
+   like a clean bill of health. Caught only because 3975 jobs reporting zero
+   states was implausible on its face.
+
+**The lesson, stated so it can be checked:** a negative result is only
+evidence if the instrument could have produced a positive one. Before
+reporting "none found", show the instrument finding something.
+
+All three were caught before they reached a conclusion Joe would have acted
+on. The third was caught by implausibility, not by method, which is luck and
+should be recorded as such.
+
+## What the trial changed
+
+Five things are true of the machine now that were not true this morning.
+
+1. **A delivered turn is no longer thrown away.** The wrapper collected an
+   authenticated submission, cancelled the job that produced it, got a 409
+   because the job had already finished, and returned *before persisting* —
+   seven times. Now persisted; verified against the running JVM with f194's
+   own 409.
+2. **Thirteen finished jobs can no longer be re-run.** `"deduped"` was a
+   real ledger state that no predicate declared, and the invoke skip-guard
+   would have re-executed any of them the queue reached. Verified on a real
+   row through loaded code.
+3. **The progress watchdog can fail.** It was silent under conditions it
+   existed to catch. Now commissioned by mutation in both directions — it
+   fires on an induced stall and stays quiet on a healthy one.
+4. **A wait for the substrate now ends.** `:awaiting-substrate` had an
+   attempt count and a resume instant but no horizon on that instant; it is
+   bounded at 30 minutes with the deadline published.
+5. **The park-class census did not move.** 44 before, 44 after — ten
+   repairs, four frames adjudicated, no new failure class invented to
+   describe any of them.
+
+The last one is the result to read first. The others say defects were fixed;
+that one says the fixes were repairs rather than renamings.
 
 ## Open judgment call for review
 
