@@ -150,6 +150,113 @@
     (is (= "f194" (get-in next [:watchdog/cursor :frame-id])))
     (is (= 2000 (:watchdog/last-progress-ms next)))))
 
+(defn- commission-tree!
+  "A real campaign root on disk: queue-state.edn plus a frame's append-only
+   problem-transitions.edn. The watchdog reads both through
+   coordinator/watchdog-observation's file-reading arity, which is the path
+   production takes and the one the fixtures above bypass."
+  [transitions]
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "apm-commission" (make-array java.nio.file.attribute.FileAttribute 0)))
+        campaign (.getName root)
+        frame-dir (io/file root (str campaign "-f900"))]
+    (.mkdirs frame-dir)
+    (spit (io/file root "queue-state.edn")
+          (pr-str {:active {:frame {:frame/id "f900" :problem/id "cTEST"
+                                    :ordinal 24}}}))
+    (spit (io/file frame-dir "problem-transitions.edn")
+          (apply str (map #(str (pr-str %) "\n") transitions)))
+    {:root root
+     :frame-transitions (io/file frame-dir "problem-transitions.edn")
+     :entry {:coordinator/enabled? true
+             :coordinator/config {:launch {:authority {:campaign-root (str root)}}}}
+     :state {:state/type :live-regulator :regulator/status :running}}))
+
+(defn- append-transition! [tree transition]
+  (spit (:frame-transitions tree) (str (pr-str transition) "\n") :append true))
+
+(def ^:private t0 1788800000000)
+
+(defn- idle-transition [seq-n]
+  {:phase :solve :event/id (str "event-" seq-n) :event/sequence seq-n
+   :event/observed-at "2026-09-08T02:00:00Z"
+   :operation {:status :phase-advanced}})
+
+(defn- role-turn-transition [seq-n observed-at]
+  {:phase :student-attempt-3 :event/id (str "event-" seq-n)
+   :event/sequence seq-n :event/observed-at observed-at
+   :operation {:status :waiting-for-terminal-result :job-id "apm-role-900"}})
+
+(deftest commissioned-induced-internal-stall-fires
+  ;; DIRECTION 1a. Nothing outstanding, no transition appended: the alarm
+  ;; must fire. A watchdog that has never been seen to fire has proved
+  ;; nothing (register A10: eight green runs against a self-armed watchdog).
+  (let [tree (commission-tree! [(idle-transition 1)])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        prior (:state (sut/evaluate nil observed t0))
+        [result stops _] (run-check prior observed
+                                    (+ t0 sut/internal-progress-max-ms))]
+    (is (= "f900" (get-in observed [:cursor :frame-id]))
+        "the cursor came from the files, not from a literal")
+    (is (= 1 (get-in observed [:cursor :event-sequence])))
+    (is (nil? (:awaiting-job observed)))
+    (is (= :internal-semantic-progress-stalled (get-in result [:reason :code])))
+    (is (= :halted (:status result)))
+    (is (= 1 (count stops)))))
+
+(deftest commissioned-induced-role-turn-overrun-fires
+  ;; DIRECTION 1b. The f193 shape: a role turn outstanding that never
+  ;; terminates. Suppressed until role-turn-max-ms, then it must fire --
+  ;; otherwise outstanding-role-wait would have restored the old blindness.
+  (let [tree (commission-tree!
+              [(role-turn-transition 1 "2026-09-08T02:00:00Z")])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        started (.toEpochMilli (java.time.Instant/parse "2026-09-08T02:00:00Z"))
+        prior (:state (sut/evaluate nil observed started))
+        [result stops _]
+        (run-check prior observed (+ started coordinator/role-turn-max-ms
+                                     sut/external-deadline-grace-ms 1))]
+    (is (= "apm-role-900" (get-in observed [:awaiting-job :job-id]))
+        "a running role turn is declared as an external wait")
+    (is (= :external-job-deadline-exceeded (get-in result [:reason :code])))
+    (is (= 1 (count stops)))))
+
+(deftest commissioned-induced-healthy-transition-stays-silent
+  ;; DIRECTION 2a. The other half of commissioning, and the half that is
+  ;; usually skipped: an induced HEALTHY event must produce silence. Append
+  ;; one real transition and the cursor advances, so the clock resets and the
+  ;; five-minute bound is not reached.
+  (let [tree (commission-tree! [(idle-transition 1)])
+        first-observed (coordinator/watchdog-observation (:entry tree)
+                                                         (:state tree))
+        prior (:state (sut/evaluate nil first-observed t0))
+        _ (append-transition! tree (idle-transition 2))
+        second-observed (coordinator/watchdog-observation (:entry tree)
+                                                          (:state tree))
+        [result stops _] (run-check prior second-observed
+                                    (+ t0 sut/internal-progress-max-ms))]
+    (is (= 2 (get-in second-observed [:cursor :event-sequence]))
+        "the appended transition was actually read back")
+    (is (= :watching (:status result)))
+    (is (empty? stops) "a frame that made progress was halted")))
+
+(deftest commissioned-running-role-turn-stays-silent
+  ;; DIRECTION 2b. The regression that shipped: on 2026-09-08 at 01:46:31 a
+  ;; healthy f193-student turn -- 47 events, 28 tool calls, active nine
+  ;; seconds earlier -- was halted because the alarm consulted the
+  ;; coordinator's pending intent instead of the frame's own role turn.
+  (let [observed-at "2026-09-08T02:00:00Z"
+        tree (commission-tree! [(role-turn-transition 1 observed-at)])
+        observed (coordinator/watchdog-observation (:entry tree) (:state tree))
+        started (.toEpochMilli (java.time.Instant/parse observed-at))
+        prior (:state (sut/evaluate nil observed started))
+        [result stops _]
+        (run-check prior observed (+ started sut/internal-progress-max-ms 1))]
+    (is (some? (:awaiting-job observed)))
+    (is (= :watching (:status result))
+        "a student mid-turn was halted at the internal bound again")
+    (is (empty? stops))))
+
 (deftest f193-stalled-frame-halts-at-the-existing-semantic-progress-bound
   (let [running-state (assoc f193-durable-coordinator-state
                              :regulator/status :running)
