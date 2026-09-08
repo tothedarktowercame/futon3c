@@ -1753,3 +1753,95 @@
       (is (not (sut/submission-only-failure? [:lean-proof-invalid])))
       (is (not (sut/submission-only-failure?
                 [:typed-submission-missing :lean-proof-invalid]))))))
+
+(def f194-already-terminal-cancel-response
+  ;; Live pin, verbatim from data/apm-campaigns/jit-all-open-v3/queue-state.edn
+  ;; -- the f194 :guide-intervention-2 park residual (2026-09-08). The wrapper
+  ;; had already collected an authenticated guide submission when it cancelled
+  ;; the job that produced it, and the Agency answered 409.
+  {:ok false
+   :error "invoke-job-already-terminal"
+   :job-id (str "apm-role-84fea8d7f12375005530575b30fe89ffb8c8c1d79c635"
+                "06394c0befbd07f636c")
+   :state "done"
+   :http/status 409})
+
+(def f194-cancel-result
+  {:ok false
+   :job-id (:job-id f194-already-terminal-cancel-response)
+   :response f194-already-terminal-cancel-response})
+
+(deftest cancellation-disposition-separates-a-late-finish-from-a-failure
+  (testing "a 200 cancel is the job we stopped"
+    (let [d (sut/cancellation-disposition
+             {:ok true :job-id "job-1"
+              :response {:ok true :state "cancelled" :http/status 200}})]
+      (is (true? (:ok d)))
+      (is (= :cancelled (:cancellation/disposition d)))))
+  (testing "f194's 409 answers the cancel's question, and says which terminal"
+    (let [d (sut/cancellation-disposition f194-cancel-result)]
+      (is (true? (:ok d)))
+      (is (= :already-terminal (:cancellation/disposition d)))
+      (is (= "done" (:cancellation/terminal-state d)))
+      (is (= f194-already-terminal-cancel-response (:response d)))))
+  (testing "a transport failure is still a failure"
+    (let [d (sut/cancellation-disposition
+             {:ok false :job-id "job-1"
+              :response {:ok false :error "boom" :http/status 500}})]
+      (is (false? (:ok d)))
+      (is (= :failed (:cancellation/disposition d)))))
+  (testing "a 409 that is not already-terminal is not laundered into success"
+    (let [d (sut/cancellation-disposition
+             {:ok false :job-id "job-1"
+              :response {:ok false :error "invoke-job-locked"
+                         :http/status 409}})]
+      (is (false? (:ok d)))
+      (is (= :failed (:cancellation/disposition d))))))
+
+(defn- f194-shaped-collection
+  "Drive the real collection branch with CANCEL-RESPONSE, in f194's situation:
+   an authenticated submission in hand and a job the driver last observed
+   running."
+  [cancel-result]
+  (let [calls (atom [])
+        running-job (atom {:job-id "job-1" :agent-id "f19-proctor"
+                           :state :running})
+        dispatched (:state (sut/drive! (effects calls running-job)))
+        submission {:schema :apm/role-submission-v1
+                    :request-id "dispatch-1"
+                    :job-id "job-1"
+                    :agent-id "f19-proctor"
+                    :payload {:outcome "complete"}}
+        fx (assoc (effects calls running-job)
+                  :cancel-fn (fn [_] (swap! calls conj :cancel) cancel-result)
+                  :terminal-submission-provider (fn [& _] submission))]
+    {:result (sut/drive! (assoc fx :state dispatched))
+     :calls calls}))
+
+(deftest f194-late-finishing-job-is-collected-not-parked
+  ;; The turn WAS delivered: the submission is in hand before the cancel runs.
+  ;; Filing it as :live-job-wrapper-reconciliation-failed discarded the
+  ;; collection and parked the frame -- seven times on jit-all-open-v3
+  ;; (f177, f178 x2, f194).
+  (let [{:keys [result calls]} (f194-shaped-collection f194-cancel-result)]
+    (is (not= :live-job-wrapper-reconciliation-failed (:error/code result)))
+    (is (= :terminal-collected (:status result)))
+    (is (some? (:collection result)))
+    (is (= :already-terminal
+           (get-in result [:state :wrapper/reconciliation
+                           :cancellation/disposition])))
+    (is (= "done"
+           (get-in result [:state :wrapper/reconciliation
+                           :cancellation/terminal-state])))
+    (testing "the collection is persisted, not merely computed"
+      (is (some? (get-in result [:state :terminal-collection :evidence])))
+      (is (some #(= [:persist :live-job-dispatched] %) @calls)))))
+
+(deftest a-genuine-cancel-failure-still-parks-the-frame
+  (let [{:keys [result]}
+        (f194-shaped-collection
+         {:ok false :job-id "job-1"
+          :response {:ok false :error "connection refused" :http/status 500}})]
+    (is (= :live-job-wrapper-reconciliation-failed (:error/code result)))
+    (is (false? (:ok result)))
+    (is (= :failed (get-in result [:finding :cancellation/disposition])))))

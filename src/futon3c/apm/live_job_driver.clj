@@ -332,6 +332,45 @@
             (select-keys condition [:condition/type])))
         expected-role-terminal-conditions))
 
+(def cancel-already-terminal-error
+  "The Agency's answer when a cancel arrives after the job has finished.
+   Returned for ANY terminal state (see handle-invoke-cancel: the 409 branch
+   is everything outside #{queued running overrun delivered})."
+  "invoke-job-already-terminal")
+
+(defn cancellation-disposition
+  "Classify a cancel! result by what it establishes about the job, not by
+  whether the HTTP call returned 200.
+
+  A cancel asks one question: is this job still running? A 409
+  invoke-job-already-terminal answers no -- the job reached terminal before
+  the cancel arrived. The question is answered, so the disposition is a
+  success; it is named :already-terminal rather than :cancelled because the
+  terminal state is the job's own and not one we imposed, and the state the
+  Agency reported is carried through rather than collapsed into a boolean.
+
+  Measured on jit-all-open-v3: seven wrapper reconciliations (f177, f178 x2,
+  f194) collected an authenticated submission and then discarded it because
+  the job they were cancelling had already finished delivering it."
+  [cancelled]
+  (let [response (:response cancelled)
+        already-terminal? (and (= 409 (:http/status response))
+                               (= cancel-already-terminal-error
+                                  (str (:error response))))
+        reported-state (some-> (:state response) str not-empty)]
+    (cond
+      (:ok cancelled)
+      (assoc cancelled :cancellation/disposition :cancelled)
+
+      already-terminal?
+      (assoc cancelled
+             :ok true
+             :cancellation/disposition :already-terminal
+             :cancellation/terminal-state reported-state)
+
+      :else
+      (assoc cancelled :cancellation/disposition :failed))))
+
 (defn reconciled-self-cancellation
   "Return typed evidence only when a cancelled job is the exact job named by
   this driver's durable cancellation record. Wrapper reconciliation and
@@ -992,7 +1031,12 @@
         (and observed-submission (nil? (:terminal-collection state)))
         (let [wrapper-reconciliation
               (when (and (not terminal?) (fn? cancel-fn))
-                (cancel-fn (:job-id (:ticket state))))
+                ;; Classify HERE, once, at the only place the raw cancel
+                ;; response exists. A job that finished between our read and
+                ;; our cancel is not a reconciliation failure -- it is the
+                ;; reconciliation succeeding a moment late.
+                (cancellation-disposition
+                 (cancel-fn (:job-id (:ticket state)))))
               configured (terminal-budget terminal-budget-config)
               collection (terminal-collection-record
                           active-request (:ticket state) job
