@@ -1,5 +1,6 @@
 (ns futon3c.apm.semantic-progress-watchdog-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.semantic-progress-watchdog :as sut])
   (:import [java.util.concurrent Executors ScheduledExecutorService]))
@@ -71,7 +72,12 @@
     (is (= 900000 (get-in result [:state :watchdog/last-progress-ms])))))
 
 (def f193-queue-state
-  {:active {:frame {:frame/id "f193" :problem/id "m00A02" :ordinal 24}}})
+  (edn/read-string
+   (slurp "data/apm-campaigns/jit-all-open-v3/queue-state.edn")))
+
+(def f193-durable-coordinator-state
+  (edn/read-string
+   (slurp "data/apm-campaigns/jit-all-open-v3/coordinator.edn")))
 
 (defn f193-coordinator-state [tick-job-id]
   {:state/type :live-regulator
@@ -126,6 +132,25 @@
         next (:state (sut/evaluate prior progressed 2000))]
     (is (= "f194" (get-in next [:watchdog/cursor :frame-id])))
     (is (= 2000 (:watchdog/last-progress-ms next)))))
+
+(deftest f193-stalled-frame-halts-at-the-existing-semantic-progress-bound
+  (let [running-state (assoc f193-durable-coordinator-state
+                             :regulator/status :running)
+        observed (coordinator/watchdog-observation
+                  {:coordinator/enabled? true}
+                  running-state
+                  f193-queue-state)
+        prior (:state (sut/evaluate nil observed 1000))
+        [result stops _]
+        (run-check prior observed (+ 1000 sut/internal-progress-max-ms))]
+    (is (= "f193" (get-in observed [:cursor :frame-id])))
+    (is (= "m00A02" (get-in f193-queue-state
+                             [:active :frame :problem/id])))
+    (is (= :parked (get-in observed [:cursor :obligation/status])))
+    (is (= :internal-semantic-progress-stalled
+           (get-in result [:reason :code])))
+    (is (= :halted (:status result)))
+    (is (= 1 (count stops)))))
 
 (deftest external-job-inside-deadline-does-not-halt
   (let [[result stops _]
