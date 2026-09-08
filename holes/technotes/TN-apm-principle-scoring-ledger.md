@@ -404,6 +404,51 @@ exactly this reasoning — the reasoning was right, and I was applying it to
 the harmless half of the problem while the harmful half sat undetected in
 the same set.
 
+### The S5 loads, observed running (P8 discharged)
+
+**Scheduled pause, 2026-09-08.** Joe authorised a halt rather than three
+live swaps. Coordinator `jit-queue:jit-all-open-v3` drained to `:stopped`
+at 11:31:52Z with a quiescence witness (epoch 12, ticks 29905, tick-claim
+nil), verified in the durable state file and not only in the stop! return.
+An f196 student turn dispatched at 11:30:40 was left to finish, which is
+what draining means.
+
+**Slice 1** (`bf695656`). Loaded by `(require … :reload)` from master.
+Induced with f194's own 409 verbatim against the LOADED code:
+`:already-terminal`, terminal-state `"done"`, `:ok true`; a genuine 500
+still `:failed`. Then the whole collection path: `:terminal-collected`,
+submission **persisted**, persist-fn reached — the early return that
+discarded the evidence is gone. f194's decision record flipped from
+`:decision/not-done` to `:decision/verified-live`.
+
+**Slice 2** (`98dc7a8a`). Table 8 cells over an 8-cell product, total, no
+unreachable arm, no nil fall-through, f194's cell `:delivered-by-submission`
+— driven against loaded code over the real state list including `:deduped`
+and `:delivered`.
+
+**Slice 3** (`3a0a2373`). `http.clj` reloaded and routes probed before
+anything else (`/agents`, `/parked`, `/invoke/jobs` 200; compact 409, not
+404). Then measured against the live ledger through loaded code: 3975 jobs,
+**zero states undeclared by the producer, zero unclassifiable by the APM
+consumer**. A real deduped row, `invoke-1788837954677-14476-727fe1c1`, now
+answers `skip-guard-would-skip? true` — the duplicate execution is
+prevented, on a real row rather than a literal.
+
+**Not done:** no live `activating` job was constructed. Building one means
+racing a real dispatch on a live Agency, which is not worth it for a hazard
+with zero observed instances; the predicate and the finalizer guard's
+expression were verified directly instead. Stated rather than glossed.
+
+**Resumed** 11:34:34Z, epoch 12→13, ticks advancing (29906→29916 in ~40s),
+f196 picked up its in-flight student turn as `:live-job-dispatched` with no
+error codes. Park-class census unchanged at 44 across the whole pause.
+
+**Bearing on P8.** Every one of these checks was cheap once the machine was
+stopped, and three of them (routes, the ledger census, the real deduped row)
+could not have been run safely against a live frame. The principle asks for
+observation against running code; the pause is what made the observation
+honest rather than approximate.
+
 ## Not yet scored
 
 - default-to-the-cheap-error (P4),
