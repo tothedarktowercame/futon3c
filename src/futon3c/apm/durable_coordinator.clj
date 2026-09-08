@@ -472,24 +472,37 @@
                         :error/code :durable-coordinator-intent-clear-failed
                         :finding cleared-write}))))))))))))
 
-(defn watchdog-observation [entry state]
+(defn- coordinator-queue-state [entry]
+  (when-let [campaign-root (get-in entry [:coordinator/config :launch
+                                          :authority :campaign-root])]
+    (persistence/read-state
+     (Path/of campaign-root (into-array String ["queue-state.edn"])))))
+
+(defn watchdog-observation
+  ([entry state]
+   (watchdog-observation entry state (coordinator-queue-state entry)))
+  ([entry state queue-state]
   (let [intent (:coordinator/pending-intent state)
         delayed-retry (:coordinator/delayed-retry state)
-        result (:regulator/last-result state)]
+        result (:regulator/last-result state)
+        queue-result (:queue/result result)
+        projection-result (:projection queue-result)
+        projection (:projection projection-result)
+        operation (:operation projection)
+        frame (get-in queue-state [:active :frame])]
     (cond->
-     {:cursor {:frame-id (or (:frame-id state)
-                             (:frame/id state)
-                             (:coordinator/problem-id entry))
-               :phase (:phase state)
-               :attempt-ordinal (or (:attempt-ordinal state)
-                                    (:submission/attempt state))
-               :obligation/status (or (:obligation/status state)
-                                      (:status result))
-               :active-job-id (or (:job-id intent)
-                                  (:retry/id delayed-retry))
+     {:cursor {:frame-id (:frame/id frame)
+               :phase (or (:phase projection)
+                          (get-in projection [:frame :phase])
+                          (:phase queue-result))
+               :attempt-ordinal (:ordinal frame)
+               :obligation/status (:status queue-result)
+               ;; The coordinator intent is a fresh tick id, not frame work.
+               ;; Only the role job named by the frame projection is semantic
+               ;; activity for this cursor.
+               :active-job-id (:job-id operation)
                :last-committed-event-id
-               (or (:last-committed-event-id state)
-                   (:event/id state))}
+               (get-in projection-result [:transition :event/id])}
       :coordinator-enabled? (:coordinator/enabled? entry)
       :regulator state
       :tick-claim (:regulator/tick-claim state)
@@ -503,7 +516,7 @@
                                    :deadline (intent-deadline intent)})
       (and (nil? intent) delayed-retry)
       (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
-                            :deadline (:not-before-ms delayed-retry)}))))
+                            :deadline (:not-before-ms delayed-retry)})))))
 
 (defn- arm-watchdog! [registry-path entry]
   (let [id (watchdog-id (:coordinator/id entry))

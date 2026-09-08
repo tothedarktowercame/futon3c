@@ -1,5 +1,6 @@
 (ns futon3c.apm.semantic-progress-watchdog-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
+            [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.semantic-progress-watchdog :as sut])
   (:import [java.util.concurrent Executors ScheduledExecutorService]))
 
@@ -68,6 +69,63 @@
     (is (= :watching (:status result)))
     (is (empty? stops))
     (is (= 900000 (get-in result [:state :watchdog/last-progress-ms])))))
+
+(def f193-queue-state
+  {:active {:frame {:frame/id "f193" :problem/id "m00A02" :ordinal 24}}})
+
+(defn f193-coordinator-state [tick-job-id]
+  {:state/type :live-regulator
+   :regulator/status :running
+   :coordinator/pending-intent {:job-id tick-job-id}
+   :regulator/last-result
+   {:status :intent-persisted
+    :queue/result
+    {:status :parked
+     :projection
+     {:projection
+      {:frame {:phase :guide-intervention-1}
+       :operation {:status :waiting-for-terminal-result
+                   :role :guide
+                   :job-id "apm-role-93e78eacd865"}}
+      :transition {:event/id "3f3168efa6afd"}}}}})
+
+(deftest coordinator-ticks-do-not-count-as-frame-progress
+  (let [first-observation
+        (coordinator/watchdog-observation
+         {:coordinator/enabled? true}
+         (f193-coordinator-state "jit-tick-5e07a189-a")
+         f193-queue-state)
+        next-observation
+        (coordinator/watchdog-observation
+         {:coordinator/enabled? true}
+         (f193-coordinator-state "jit-tick-5e07a189-b")
+         f193-queue-state)
+        prior (:state (sut/evaluate nil first-observation 1000))
+        next (:state (sut/evaluate prior next-observation 2000))]
+    (is (= {:frame-id "f193"
+            :phase :guide-intervention-1
+            :attempt-ordinal 24
+            :obligation/status :parked
+            :active-job-id "apm-role-93e78eacd865"
+            :last-committed-event-id "3f3168efa6afd"}
+           (sut/progress-cursor first-observation)))
+    (is (= (sut/progress-cursor first-observation)
+           (sut/progress-cursor next-observation)))
+    (is (= 1000 (:watchdog/last-progress-ms next)))))
+
+(deftest genuinely-progressing-frame-resets-progress-clock
+  (let [before (coordinator/watchdog-observation
+                {:coordinator/enabled? true}
+                (f193-coordinator-state "jit-tick-a")
+                f193-queue-state)
+        progressed (coordinator/watchdog-observation
+                    {:coordinator/enabled? true}
+                    (f193-coordinator-state "jit-tick-b")
+                    (assoc-in f193-queue-state [:active :frame :frame/id] "f194"))
+        prior (:state (sut/evaluate nil before 1000))
+        next (:state (sut/evaluate prior progressed 2000))]
+    (is (= "f194" (get-in next [:watchdog/cursor :frame-id])))
+    (is (= 2000 (:watchdog/last-progress-ms next)))))
 
 (deftest external-job-inside-deadline-does-not-halt
   (let [[result stops _]
