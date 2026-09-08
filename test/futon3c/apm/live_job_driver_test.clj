@@ -1,5 +1,7 @@
 (ns futon3c.apm.live-job-driver-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.set]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.job-state]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-job-driver :as sut]))
 
@@ -1845,3 +1847,93 @@
     (is (= :live-job-wrapper-reconciliation-failed (:error/code result)))
     (is (false? (:ok result)))
     (is (= :failed (get-in result [:finding :cancellation/disposition])))))
+
+;; ---------------------------------------------------------------------------
+;; S5 slice 2: the collection disposition enum, and its exhaustiveness lint.
+;;
+;; Clojure will not tell us a cond stopped covering its inputs, so the lint is
+;; the fence. It checks BOTH directions, because each has cost this campaign a
+;; real defect: an uncovered input is how a success reached a failure arm
+;; (f194), and a declared-but-unreachable outcome is how dead code reads as
+;; coverage (:visibility-lag, declared and handled in three places, emitted by
+;; nothing).
+;; ---------------------------------------------------------------------------
+
+(deftest collection-disposition-is-total-over-the-declared-product
+  (doseq [p sut/collection-process-outcomes
+          s sut/collection-submission-outcomes]
+    (let [d (get sut/collection-disposition-table [p s])]
+      (is (some? d) (str "product cell [" p " " s "] names no disposition"))
+      (is (contains? sut/collection-dispositions d))))
+  (testing "the table declares exactly the product, no more"
+    (is (= (set (for [p sut/collection-process-outcomes
+                      s sut/collection-submission-outcomes]
+                  [p s]))
+           (set (keys sut/collection-disposition-table))))))
+
+(deftest every-declared-disposition-is-reachable-from-a-real-job
+  ;; The :visibility-lag lesson as a fence: a name nothing can produce is a
+  ;; defect, not a spare branch.
+  (let [job-states (concat (seq futon3c.apm.job-state/known-states)
+                           [:no-such-state nil])
+        submissions [{:submission/id "s-1"} nil]
+        produced (set (for [st job-states sub submissions]
+                        (sut/collection-disposition {:state st} sub)))]
+    (is (= sut/collection-dispositions produced)
+        (str "unreachable: "
+             (clojure.set/difference sut/collection-dispositions produced)))
+    (is (not (contains? produced nil))
+        "some real job state falls through the table")))
+
+(deftest process-outcome-separates-finishing-from-merely-ending
+  (is (= :completed (sut/collection-process-outcome {:state :done})))
+  (doseq [st [:failed :error :cancelled :timeout]]
+    (is (= :stopped (sut/collection-process-outcome {:state st}))
+        (str st " must not read as completed")))
+  (doseq [st [:queued :activating :running :overrun :delivering]]
+    (is (= :live (sut/collection-process-outcome {:state st}))))
+  (is (= :unknown (sut/collection-process-outcome {:state :invented})))
+  (is (= :unknown (sut/collection-process-outcome {}))))
+
+(deftest f194s-cell-is-a-named-success-not-a-fallthrough
+  (is (= :delivered-by-submission
+         (sut/collection-disposition {:state :running} {:submission/id "s-1"})))
+  (is (= :delivered
+         (sut/collection-disposition {:state :done} {:submission/id "s-1"})))
+  (is (= :stopped-without-submission
+         (sut/collection-disposition {:state :cancelled} nil))))
+
+(deftest the-collection-record-carries-the-disposition-it-was-built-under
+  (let [{:keys [result]} (f194-shaped-collection f194-cancel-result)
+        collection (:collection result)]
+    (is (= :terminal-collected (:status result)))
+    (is (= :delivered-by-submission (:collection/disposition collection)))
+    (testing "the disposition agrees with the loose fields it replaces"
+      (is (true? (:submission/available? collection)))
+      (is (= :running (:terminal-state collection))))))
+
+(deftest collection-authority-still-verifies-a-record-carrying-a-disposition
+  ;; The disposition is inside the digested body, so authority must still
+  ;; recompute cleanly over records minted by this code.
+  (let [{:keys [result]} (f194-shaped-collection f194-cancel-result)
+        stored (get-in result [:state :terminal-collection])]
+    (is (:ok (sut/terminal-collection-authority "job-1" stored)))))
+
+(deftest dormant-cancel-sites-read-a-late-finish-the-same-way
+  (testing "supersession"
+    (let [calls (atom [])
+          job (atom {:job-id "job-1" :state :queued})
+          dispatched (:state (sut/drive! (effects calls job)))
+          state (assoc dispatched
+                       :activation/accepted? false
+                       :typed-submission-migration-attempts 1)
+          result (sut/drive!
+                  (assoc (effects calls job)
+                         :state state
+                         :cancel-fn (fn [_] f194-cancel-result)
+                         :terminal-submission-provider (constantly nil)))]
+      (is (not= :live-job-unaccepted-cancellation-failed (:error/code result)))))
+  (testing "orphan recovery"
+    (let [d (sut/cancellation-disposition f194-cancel-result)]
+      (is (true? (:ok d)))
+      (is (= :already-terminal (:cancellation/disposition d))))))
