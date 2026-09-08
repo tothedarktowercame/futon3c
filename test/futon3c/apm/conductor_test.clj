@@ -74,6 +74,60 @@
             :error/code :expensive-read-busy :http/status 503}
            (:result (second @records))))))
 
+(deftest observed-cascade-record-names-the-transport-fault-not-the-operation
+  ;; f193 (2026-09-08): 249s of expansion against a substrate that went away
+  ;; recorded only :error/code :memory-cascade-failed -- a code naming the
+  ;; operation, not the fault. Cascade reads run inside futures, so `deref`
+  ;; handed the terminal writer an ExecutionException whose ex-data is nil.
+  ;; This exercises the real path: live readers, dead substrate, full wrapper.
+  (let [server (HttpServer/create (java.net.InetSocketAddress. 0) 0)
+        _ (.start server)
+        port (.getPort (.getAddress server))
+        _ (.stop server 0)
+        records (atom [])
+        readers (#'conductor/live-cascade-readers
+                 {:evidence-store-url (str "http://127.0.0.1:" port)})]
+    (is (thrown? Throwable
+                 (binding [conductor/*cascade-connect-timeout-ms* 500
+                           conductor/*cascade-request-timeout-ms* 2000]
+                   (conductor/run-observed-memory-cascade
+                    ["m1"] readers
+                    {:persist-fn #(do (swap! records conj %) {:ok true})
+                     :authority {:frame-id "f193" :problem-id "m00A02"
+                                 :phase :student-attempt-3 :attempt 3}}))))
+    (let [terminal (last @records)
+          result (:result terminal)]
+      (is (= [:running :failed] (mapv :status @records)))
+      (is (not= :memory-cascade-failed (:error/code result))
+          "generic fallback means the record still cannot name the fault")
+      (is (= :memory-cascade-unreachable (:error/code result)))
+      (is (= :transport (:error/component result)))
+      (is (= "/api/alpha/hyperedges" (:path result)))
+      (is (some? (:query-params result)))
+      (is (some? (:error/class result)))
+      (is (some? (:error/message result))))))
+
+(deftest fault-ex-data-reads-through-future-wrapping
+  ;; The precise erasure: `deref` of a failed future wraps in an
+  ;; ExecutionException whose own ex-data is nil.
+  (let [wrapped (try @(future (throw (ex-info "boom" {:error/code :typed
+                                                     :status 503})))
+                     (catch Throwable t t))]
+    (is (instance? java.util.concurrent.ExecutionException wrapped))
+    (is (nil? (ex-data wrapped)) "premise: the wrapper carries no ex-data")
+    (is (= {:error/code :typed :status 503}
+           (#'conductor/fault-ex-data wrapped)))))
+
+(deftest throwable-mechanism-is-never-empty-for-a-nil-message-cause
+  ;; f193 recorded :error/message nil. `.getMessage` is nil for exactly the
+  ;; failures worth distinguishing -- a peer closing an in-flight request --
+  ;; so the class name has to carry the mechanism there.
+  (let [closed (java.nio.channels.ClosedChannelException.)]
+    (is (nil? (.getMessage closed)) "premise: this cause has no message")
+    (is (= {:error/class "java.nio.channels.ClosedChannelException"
+            :error/message "java.nio.channels.ClosedChannelException"}
+           (#'conductor/throwable-mechanism closed)))))
+
 (deftest live-cascade-readers-fetch-each-endpoint-once-per-expansion
   (let [calls (atom [])]
     (with-redefs-fn

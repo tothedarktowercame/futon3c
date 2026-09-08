@@ -30,6 +30,43 @@
 
 (declare expand-memory-cascade)
 
+(defn- fault-ex-data
+  "`ex-data` of the first throwable in T's cause chain that carries any.
+
+   Cascade reads run inside futures (`bounded-parallel-map`), and `deref`
+   wraps the original failure in an `ExecutionException` whose own ex-data is
+   nil. Reading `ex-data` off the caught throwable therefore saw nil for every
+   parallel-path failure: the terminal record fell back to the generic
+   :memory-cascade-failed and the 503 branch below was unreachable. f193
+   (2026-09-08) recorded 249s of expansion ending in a code that named the
+   operation rather than the fault."
+  [t]
+  (loop [e t depth 0]
+    (when (and e (< depth 16))
+      (or (ex-data e)
+          (recur (.getCause ^Throwable e) (inc depth))))))
+
+(defn- throwable-mechanism
+  "Class and message of T, for records that must name the fault.
+
+   `.getMessage` is nil for exactly the connection failures worth
+   distinguishing -- a peer restarted under an in-flight request -- so the
+   class name carries the mechanism when the message is empty."
+  [^Throwable t]
+  (let [class-name (.getName (class t))]
+    {:error/class class-name
+     :error/message (or (.getMessage t) class-name)}))
+
+(defn- fault-mechanism
+  "Mechanism fields a terminal record must carry, taken from DATA.
+
+   A record whose only fault field is a generic code cannot be diagnosed
+   afterwards: it names the operation that failed, not what failed in it."
+  [data]
+  (into {} (remove (comp nil? val))
+        (select-keys data [:error/component :error/class :error/message
+                           :path :query-params :timeout-ms])))
+
 (defn run-observed-memory-cascade
   "Run one cascade expansion while durably publishing its bounded operation.
 
@@ -89,7 +126,7 @@
                            :finding saved})))
         result)
       (catch Throwable t
-        (let [data (ex-data t)
+        (let [data (fault-ex-data t)
               status (:status data)
               finished-ms (long (now-ms-fn))
               outcome (if (= 503 status) :failed-503 :failed)
@@ -98,10 +135,12 @@
                               :finished-at (now-fn)
                               :finished-at-ms finished-ms
                               :result (cond->
-                                      {:outcome outcome
-                                       :elapsed-ms (- finished-ms started-ms)
-                                       :error/code (or (:error/code data)
-                                                       :memory-cascade-failed)}
+                                      (merge
+                                       {:outcome outcome
+                                        :elapsed-ms (- finished-ms started-ms)
+                                        :error/code (or (:error/code data)
+                                                        :memory-cascade-failed)}
+                                       (fault-mechanism data))
                                 status (assoc :http/status status)))]
           ;; Preserve the original failure. If the terminal write also fails,
           ;; its absence remains fail-closed to the watchdog at the deadline.
@@ -350,20 +389,20 @@
       (catch TimeoutException error
         (.cancel future true)
         (throw (ex-info "memory cascade substrate transport timed out"
-                        (assoc context
-                               :error/component :transport
-                               :error/code :memory-cascade-unreachable
-                               :timeout-ms timeout-ms
-                               :error/message (.getMessage error))
+                        (merge context
+                               {:error/component :transport
+                                :error/code :memory-cascade-unreachable
+                                :timeout-ms timeout-ms}
+                               (throwable-mechanism error))
                         error)))
       (catch ExecutionException error
         (let [cause (or (.getCause error) error)]
           (throw (ex-info "memory cascade substrate transport failed"
-                          (assoc context
-                                 :error/component :transport
-                                 :error/code :memory-cascade-unreachable
-                                 :timeout-ms timeout-ms
-                                 :error/message (.getMessage cause))
+                          (merge context
+                                 {:error/component :transport
+                                  :error/code :memory-cascade-unreachable
+                                  :timeout-ms timeout-ms}
+                                 (throwable-mechanism cause))
                           cause)))))))
 
 (defn- cascade-get [base path query-params]
