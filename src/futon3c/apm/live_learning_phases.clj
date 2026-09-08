@@ -458,8 +458,19 @@
           ;; whenever a live poll captured one first; this covers the case it
           ;; cannot -- a job cancelled before any poll observed it live, which
           ;; is what halted jit-all-open-v3 at f185/b97J04 (2026-09-07).
+          ;; ...and :done must mean the WRAPPER finished, not that the driver
+          ;; reconciled a delivery. live-job-driver synthesizes :state :done
+          ;; (with :typed-submission attached) the moment an authenticated
+          ;; submission is collected, for a job the wrapper has just cancelled
+          ;; -- so this guard, written to spare cancelled jobs, was defeated by
+          ;; the reconciliation that recognises delivery. A delivered role was
+          ;; then charged for a session id the wrapper had erased and it could
+          ;; not produce. :typed-submission is exactly the tell, and its
+          ;; absence keeps the finding for a genuinely finished job that
+          ;; delivered nothing.
           (and (= :student-attempt kind)
                (= :done (:state job))
+               (nil? (:typed-submission job))
                (not (string? (:session-id job)))) (conj :fresh-session-id-missing)
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)

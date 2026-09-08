@@ -1869,3 +1869,28 @@
       (let [f (findings-for (job-with :done "s-abc"))]
         (is (not (contains? f :fresh-session-id-missing)))
         (is (not (contains? f :job-not-done)))))))
+
+(deftest delivered-role-does-not-owe-a-session-id-the-wrapper-erased
+  ;; live-job-driver synthesizes :state :done and attaches :typed-submission
+  ;; when an authenticated submission is collected -- for a job the wrapper has
+  ;; just cancelled, whose session id it erased. The :done guard here was
+  ;; written so that only a genuinely finished job owes a session id; the
+  ;; synthesis defeated it, and delivered roles were charged
+  ;; :fresh-session-id-missing for an identity they could not produce. That is
+  ;; the 13 :student-terminal-session-id-erased parks.
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f191-student"
+                 :frame-id "f191" :problem-id "b99A02"}
+        ticket {:job-id "apm-role-fb063e8a"}
+        base {:job-id "apm-role-fb063e8a" :agent-id "f191-student"
+              :state :done :session-id nil
+              :report {:frame-id "f191" :problem-id "b99A02"
+                       :command-own-exit 0 :memory-use {:used-ids []}}}
+        findings (fn [job] (:findings (sut/validate-terminal request ticket job)))]
+    (testing "a delivered submission is not charged for the erased id"
+      (is (not (some #{:fresh-session-id-missing}
+                     (findings (assoc base :typed-submission
+                                      {:submission/id "630f7334"
+                                       :authority {:role :student}}))))))
+    (testing "a genuinely finished job that delivered nothing still owes it"
+      (is (some #{:fresh-session-id-missing} (findings base))))))
