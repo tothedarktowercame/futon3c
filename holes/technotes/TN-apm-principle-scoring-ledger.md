@@ -352,6 +352,58 @@ independently adjudicated frames, one defect, and the class census did not
 move (44 before, 44 after). The census holding steady while three entries
 merge is the shape the claim predicts.
 
+### The activating finalizer hazard — and what the ledger says about it
+
+**Occasion.** S5 slice 3. The single-finalizer guard treated `"activating"`
+as already-terminal, so a job completing before its running transition
+landed would return the ledger unchanged: no terminal state, no result, no
+delivery, no event.
+
+**The queued-forever link, tested rather than assumed.** The proposal was
+that this explains historical accepted-but-never-anything seats. Measured
+against the live ledger (3973 jobs, 2026-09-08T11:19Z): **zero jobs in
+`activating`**. My first check — counting `activating` in job event logs —
+returned 0 and meant nothing, because the activating transition is a bare
+`assoc-in` that appends no event. A negative result from an instrument that
+cannot produce a positive one.
+
+**So the honest statement:** the hazard is real in code, has no observed
+instance, and *this ledger cannot rule it out either*, because a job
+stranded in `activating` leaves no event trace. That last part is the
+finding worth keeping — the state is invisible to the log, so the diagnostic
+that would confirm or refute the link does not exist yet. If a
+queued-forever seat recurs, the check is the job's `:state` field directly,
+not its events.
+
+### A fence that checks a vocabulary against a vocabulary is not checking anything
+
+**Occasion.** S5 slice 3, then one hour later against itself.
+
+I replaced a conformance test that compared `job-state`'s sets *to each
+other* — which is why it stayed green while the producer wrote an
+undeclared state. My replacement compared the consumer's sets to the
+producer's **declared** sets, and passed while the producer wrote
+`"deduped"`, which none of its own predicates declared. The same defect,
+one level up, committed by the person who had just named it.
+
+**What it found.** "Check against the producer" is not a sufficient
+instruction, because the producer has two faces: what it declares and what
+it writes. Only the second is the world. The working fence pins the live
+ledger's state census and the set the finalizer is actually called with.
+
+**Score.** The gap is in P8 (done is observed running). P8 governs repairs;
+nothing said the same of **fences**. A fence's own acceptance should be
+observation against live data, not agreement with a declaration — and a
+fence is exactly the artifact whose failure is silent.
+
+**Cost of the miss.** `terminal-invoke-state?` answered false for
+`"deduped"`, and the invoke skip-guard uses it to refuse re-running a
+finished job. The guard would have re-run a deduped job the queue reached.
+I had declined to delete the `"succeeded"` phantom an hour earlier on
+exactly this reasoning — the reasoning was right, and I was applying it to
+the harmless half of the problem while the harmful half sat undetected in
+the same set.
+
 ## Not yet scored
 
 - default-to-the-cheap-error (P4),
