@@ -35,14 +35,60 @@
      {:status/one-of (vec (sort (phase-status/known-statuses
                                  :jit-queue-postcondition)))}}))
 
+(def substrate-wait-max-ms
+  "Longest the queue may sit in :awaiting-substrate for one scheduled retry.
+
+   The wait already carried :not-before-ms, but nothing bounded how far ahead
+   that instant could be. `nat-int?` accepts any absolute time, and the
+   watchdog reads :not-before-ms AS the wait's deadline -- so a wake far in
+   the future is a wait the watchdog can never find late, because its deadline
+   is never exceeded. That is an unbounded wait wearing a deadline's clothes.
+
+   Bounded against the same injected clock `decide-fn` reads rather than
+   against a fixed epoch, so it means the same thing under a test clock. A
+   wake in the PAST needs no bound: it fires on the next tick, which is the
+   correct behaviour after the coordinator has been stopped for a while."
+  (* 30 60 1000))
+
+(defn- wake-beyond-horizon?
+  "True when WAKE-MS is unusable as a bounded wait: absent, not a time, or
+   further ahead than one retry is allowed to push the queue."
+  [wake-ms now-ms]
+  (or (not (nat-int? wake-ms))
+      (> wake-ms (+ now-ms substrate-wait-max-ms))))
+
+(defn- unbounded-wait-decision
+  "The typed refusal for a retry whose wake cannot bound the wait.
+
+   Reuses the existing :jit-transport-retry-deadline-invalid code rather than
+   minting one: fault-taxonomy routes an unrecognised tick failure to a frame
+   park either way, and a new code for the same fault is the design defect
+   this repair is trying to stop producing."
+  [retry wake-ms now-ms]
+  {:ok false
+   :error/code :jit-transport-retry-deadline-invalid
+   :finding {:retry/id (:retry/id retry)
+             :not-before-ms wake-ms
+             :now-ms now-ms
+             :horizon-ms substrate-wait-max-ms}})
+
 (defn adapter-constructor [config]
   {:decide-fn
    (fn [state]
      (let [retry (:coordinator/delayed-retry state)
-           now-ms (long (*intent-now-fn*))]
-       (if (and retry (< now-ms (:not-before-ms retry)))
+           now-ms (long (*intent-now-fn*))
+           wake-ms (:not-before-ms retry)]
+       (cond
+         (and retry (wake-beyond-horizon? wake-ms now-ms))
+         (unbounded-wait-decision retry wake-ms now-ms)
+
+         (and retry (< now-ms wake-ms))
          {:ok true :status :awaiting-substrate
-          :retry/not-before-ms (:not-before-ms retry)}
+          :retry/not-before-ms wake-ms
+          ;; Absolute, so no reader has to reconstruct the expiry from a
+          ;; duration and no reader can disagree about when this wait ends.
+          :retry/expires-at-ms wake-ms}
+         :else
          {:ok true :coordinator/action :activate
           :coordinator/intent (next-intent config state)
           :regulator/state-updates
@@ -71,10 +117,9 @@
                       :max-attempts
                       (get-in result [:transport-retry :max-attempts])
                       :history (:transport-retry/history result)}]
-           (if-not (nat-int? not-before-ms)
-             {:ok false
-              :error/code :jit-transport-retry-deadline-invalid
-              :finding result}
+           (if (wake-beyond-horizon? not-before-ms (long (*intent-now-fn*)))
+             (unbounded-wait-decision retry not-before-ms
+                                      (long (*intent-now-fn*)))
              {:ok true :status :queue-tick-complete
               :coordinator/clear-intent? true :queue/result result
               :regulator/state-updates

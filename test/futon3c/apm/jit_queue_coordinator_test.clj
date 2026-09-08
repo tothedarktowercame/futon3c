@@ -3,6 +3,7 @@
             [clojure.test :refer [deftest is]]
             [futon3c.apm.countdown-control :as countdown]
             [futon3c.apm.durable-coordinator :as durable]
+            [futon3c.apm.fault-taxonomy :as fault-taxonomy]
             [futon3c.apm.jit-queue-coordinator :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
@@ -73,6 +74,74 @@
            (get-in intent [:dispatch/parameters :permitted-duration-ms])))
     (is (= (+ now (* 30 60 1000))
            (get-in intent [:dispatch/parameters :deadline-ms])))))
+
+(defn- decide-with [state now-ms]
+  (let [decide (:decide-fn
+                (sut/adapter-constructor
+                 {:coordinator-id "jit-queue:q" :queue-name "q"
+                  :queue-id "queue-id" :coordinator/period-ms 500}))]
+    (binding [sut/*intent-now-fn* (constantly now-ms)]
+      (decide state))))
+
+(defn- retry-state [wake-ms]
+  {:state/type :live-regulator :regulator/id "jit-queue:q"
+   :regulator/status :running :regulator/ticks 7
+   :coordinator/delayed-retry {:retry/id "substrate-retry-x" :kind :transport
+                               :not-before-ms wake-ms :scheduled-at-ms 1000
+                               :attempt 1 :max-attempts 3 :history []}})
+
+(deftest awaiting-substrate-publishes-an-absolute-expiry
+  ;; P6: a wait that does not say when it ends is not bounded, it is only
+  ;; quiet. The expiry is absolute so no reader reconstructs it from a
+  ;; duration -- the same footgun the park protocol documents.
+  (let [now 1000
+        wake (+ now (* 10 60 1000))
+        result (decide-with (retry-state wake) now)]
+    (is (= :awaiting-substrate (:status result)))
+    (is (= wake (:retry/expires-at-ms result)))
+    (is (>= (:retry/expires-at-ms result) now)
+        "an expiry already in the past would be a wait nobody can end")))
+
+(deftest a-wake-beyond-the-horizon-is-refused-not-awaited
+  ;; The unbounded wait, and why it was invisible: the watchdog reads
+  ;; :not-before-ms AS the deadline, so a far-future wake is a deadline that
+  ;; can never be exceeded. Nothing was late; the queue simply stopped.
+  (let [now 1000
+        wake (+ now sut/substrate-wait-max-ms 1)
+        result (decide-with (retry-state wake) now)]
+    (is (false? (:ok result)))
+    (is (= :jit-transport-retry-deadline-invalid (:error/code result)))
+    (is (= wake (get-in result [:finding :not-before-ms])))
+    (is (= :frame-park
+           (:fault/disposition
+            (fault-taxonomy/classify result)))
+        "expiry must route to a decision, not to silence")))
+
+(deftest a-wake-at-the-horizon-is-still-awaited
+  ;; The boundary in the permitting direction, so the refusal above is a
+  ;; bound and not a blanket.
+  (let [now 1000
+        result (decide-with (retry-state (+ now sut/substrate-wait-max-ms))
+                            now)]
+    (is (= :awaiting-substrate (:status result)))))
+
+(deftest a-missing-wake-is-refused-rather-than-compared
+  ;; nat-int? was the only guard and it ran at scheduling time, so a retry
+  ;; persisted without one reached (< now-ms nil) and threw inside the tick.
+  (let [result (decide-with (retry-state nil) 1000)]
+    (is (false? (:ok result)))
+    (is (= :jit-transport-retry-deadline-invalid (:error/code result)))))
+
+(deftest an-elapsed-wake-proceeds-and-does-not-expire-the-queue
+  ;; A wake in the past needs no horizon: after the coordinator has been
+  ;; stopped for hours, every pending retry is overdue and must simply fire.
+  ;; Refusing those would turn a clean restart into a park storm.
+  (let [now (+ 1000 (* 6 60 60 1000))
+        result (decide-with (retry-state 1000) now)]
+    (is (true? (:ok result)))
+    (is (= :activate (:coordinator/action result)))
+    (is (nil? (get-in result [:regulator/state-updates
+                              :coordinator/delayed-retry])))))
 
 (deftest delayed-transport-retry-survives-restart-and-wakes-at-deadline
   (let [clock (atom 1000)
