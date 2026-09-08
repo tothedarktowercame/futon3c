@@ -54,6 +54,10 @@
     :phase-advanced :queue-progress
     :terminal-collected :queue-progress
     :claim-recovered :queue-progress
+    ;; A refuted statement voids its slot and dispatches a repair to a guide.
+    ;; While that repair is pending the tick keeps returning this, which is
+    ;; progress -- work is in flight -- not a terminal or waiting state.
+    :guide-statement-repair-dispatched :queue-progress
     :batch-paused :queue-terminal
     :batch-complete :queue-terminal}
    :jit-queue-postcondition
@@ -65,6 +69,13 @@
     :phase-advanced :queue-progress
     :terminal-collected :queue-progress
     :claim-recovered :queue-progress
+    ;; Omitting this stopped the campaign on 2026-09-08: f199's statement was
+    ;; refuted, the queue dispatched a guide repair, and the coordinator
+    ;; rejected its own supervisor's status as a postcondition violation. The
+    ;; status had been emitted by problem-queue-supervisor since it was
+    ;; written and declared in no boundary class, so closure-findings could
+    ;; not see it -- that fence compares declarations to declarations.
+    :guide-statement-repair-dispatched :queue-progress
     :batch-paused :queue-terminal
     :batch-complete :queue-terminal}
    :campaign-stepper-gate
@@ -113,6 +124,8 @@
               :phase-advanced :phase-advanced
               :terminal-collected :terminal-collected
               :claim-recovered :claim-recovered
+              :guide-statement-repair-dispatched
+              :guide-statement-repair-dispatched
               :batch-paused :batch-paused
               :batch-complete :batch-complete}}])
 

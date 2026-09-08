@@ -7,6 +7,26 @@
             [futon3c.apm.fault-taxonomy :as fault-taxonomy]
             [futon3c.apm.phase-status :as phase-status]))
 
+(defn valid-guide-receipt?
+  "Does REPAIR-RECEIPT discharge the statement-repair obligation?
+
+   The single authority on this question. The observer in
+   queued-frame-adapter used to answer a WEAKER version of it -- obligation id
+   only -- so a receipt it called complete could still be rejected here, and
+   that rejection is an :ok false which faults the coordinator on every tick
+   rather than routing to the queue's own :discard-and-advance policy. On
+   2026-09-08 that wedged the campaign on f199: the guide returned a receipt
+   carrying :terminal-receipt/id and no :receipt/id, exactly as its prompt
+   asked, because the prompt required only that the receipt repeat
+   :obligation/id."
+  [obligation-id repair-receipt]
+  (boolean
+   (and (map? repair-receipt)
+        (= :guide (:repair/role repair-receipt))
+        (= obligation-id (:obligation/id repair-receipt))
+        (string? (:receipt/id repair-receipt))
+        (re-matches #"[0-9a-f]{64}" (:receipt/id repair-receipt)))))
+
 (def terminal-results #{:closed :partial :void})
 (def systematic-frame-failure-limit 3)
 
@@ -241,11 +261,9 @@
       {:ok false :error/code :problem-queue-voided-slot-missing}
       (not= (:problem/id current) (:problem/id replacement))
       {:ok false :error/code :problem-queue-slot-problem-id-changed}
-      (not (and (= :guide (:repair/role repair-receipt))
-                (= (get-in state [:statement-repair/handoff :obligation/id])
-                   (:obligation/id repair-receipt))
-                (string? (:receipt/id repair-receipt))
-                (re-matches #"[0-9a-f]{64}" (:receipt/id repair-receipt))))
+      (not (valid-guide-receipt?
+            (get-in state [:statement-repair/handoff :obligation/id])
+            repair-receipt))
       {:ok false :error/code :problem-queue-guide-repair-receipt-invalid}
       (not (zero? attempts))
       {:ok false :error/code :problem-queue-statement-repair-exhausted}

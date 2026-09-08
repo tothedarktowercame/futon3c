@@ -1,5 +1,6 @@
 (ns futon3c.apm.problem-queue-supervisor-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.string]
             [futon3c.apm.problem-queue-supervisor :as sut]))
 
 (def problems
@@ -641,3 +642,40 @@
               (sut/tick! (assoc providers :frame-tick-fn
                                 (constantly {:ok true :status :frame-complete
                                              :frame/result :running})))))))))
+
+(deftest guide-receipt-validity-is-one-question-with-one-answer
+  ;; Live pin: the receipt f199's guide actually returned, 2026-09-08. It
+  ;; carries :terminal-receipt/id and no :receipt/id -- which is exactly what
+  ;; its prompt asked for, since that prompt required only that the receipt
+  ;; repeat :obligation/id. The observer accepted it, the supervisor rejected
+  ;; it, and the rejection faulted the coordinator on every tick.
+  (let [obligation "d731694d1ffb909a8010a4035de81e9382452e2b9bb3df7b573c6bbbf8f506fa"
+        f199-receipt {:obligation/id obligation
+                      :repair/role :guide
+                      :repair/attempt 1
+                      :repair/max-attempts 1
+                      :repair/status :completed
+                      :frame/id "f199"
+                      :problem/id "m01J05"
+                      :terminal-receipt/id
+                      "4bfde3eda1076303649fb9e1d12e58fe6879ac84e4c8ad092b790281a245a75f"
+                      :invariant-repaired :statement-refuted-by-solver}]
+    (is (not (sut/valid-guide-receipt? obligation f199-receipt))
+        "a 64-hex id under :terminal-receipt/id is not a repair receipt")
+    (is (sut/valid-guide-receipt?
+         obligation
+         (assoc f199-receipt :receipt/id
+                "4bfde3eda1076303649fb9e1d12e58fe6879ac84e4c8ad092b790281a245a75f"))
+        "the same receipt discharges the obligation once it carries :receipt/id")
+    (testing "each requirement is load-bearing"
+      (let [good (assoc f199-receipt :receipt/id
+                        "4bfde3eda1076303649fb9e1d12e58fe6879ac84e4c8ad092b790281a245a75f")]
+        (is (not (sut/valid-guide-receipt? obligation (dissoc good :repair/role))))
+        (is (not (sut/valid-guide-receipt? obligation (assoc good :repair/role :solver))))
+        (is (not (sut/valid-guide-receipt? "other-obligation" good)))
+        (is (not (sut/valid-guide-receipt? obligation (assoc good :receipt/id "SHORT"))))
+        (is (not (sut/valid-guide-receipt? obligation (assoc good :receipt/id
+                                                            (clojure.string/upper-case
+                                                             (:receipt/id good)))))
+            "uppercase hex is not the pinned form")
+        (is (not (sut/valid-guide-receipt? obligation nil)))))))

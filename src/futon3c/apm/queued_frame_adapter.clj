@@ -15,6 +15,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.problem-queue-supervisor :as queue-supervisor]
             [futon3c.apm.qualification :as qualification]
             [futon3c.apm.queued-frame-terminal :as terminal]
             [futon3c.apm.workspace-build :as workspace-build]
@@ -730,13 +731,20 @@
       (not (:ok observation)) observation
       (not (:terminal? observation)) {:ok true :status :pending}
       (= :done (:state observation))
+      ;; Ask the supervisor's own question, not a weaker one. This check used
+      ;; to accept a receipt the supervisor would then reject, and that
+      ;; rejection faults the coordinator every tick instead of routing to the
+      ;; queue's :discard-and-advance policy -- a malformed guide reply wedged
+      ;; the whole campaign rather than costing one slot.
       (let [report (:report observation)
             valid? (and (map? (:replacement-pinned-problem report))
-                        (map? (:guide-receipt report))
-                        (= (:obligation/id handoff)
-                           (get-in report [:guide-receipt :obligation/id])))]
+                        (queue-supervisor/valid-guide-receipt?
+                         (:obligation/id handoff)
+                         (:guide-receipt report)))]
         (if-not valid?
-          {:ok false :error/code :guide-statement-repair-report-invalid}
+          ;; Not a hard error: the guide answered and its answer does not
+          ;; discharge the obligation, which is what :failed means here.
+          (do (retire-guide!) {:ok true :status :failed})
           (do (retire-guide!)
               {:ok true :status :complete
                :replacement-pinned-problem (:replacement-pinned-problem report)
@@ -768,8 +776,16 @@
                        "once, without changing its logical problem id.\n"
                        "Authority:\n" (pr-str handoff) "\n"
                        "Return exactly one EDN map containing "
-                       ":replacement-pinned-problem and :guide-receipt. "
-                       "The receipt must repeat :obligation/id. If the repair cannot "
+                       ":replacement-pinned-problem and :guide-receipt.\n"
+                       "The receipt is checked, and must carry ALL THREE of:\n"
+                       "  :obligation/id  - repeated verbatim from the authority above\n"
+                       "  :repair/role    - the keyword :guide\n"
+                       "  :receipt/id     - 64 lowercase hex characters, the id of the\n"
+                       "                    receipt you mint for THIS repair. Not the\n"
+                       "                    frame's :terminal-receipt/id; a receipt under\n"
+                       "                    any other key is not a receipt.\n"
+                       "A receipt missing any of these does not discharge the "
+                       "obligation and the slot is discarded. If the repair cannot "
                        "be completed in this attempt, return {:repair/status :failed}; "
                        "the queue will discard this slot and advance.")
            announced (job-port/announce!
