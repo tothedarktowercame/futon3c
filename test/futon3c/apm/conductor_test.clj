@@ -892,7 +892,11 @@
           (is (= (:cycle-id promoted) (:cycle-id sent-opts)))
           (is (= ["solver-job"] (:solver-job-ids sent-opts)))
           (is (= ["student-job"] (:student-job-ids sent-opts)))
-          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+          ;; Resolved against the repo root, so pinning the canonical
+          ;; checkout made this test unpassable from any worktree and hid
+          ;; whatever else a branch run was trying to show.
+          (is (= (str (System/getProperty "user.dir")
+                      "/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md")
                  (:scribe-card-path sent-opts))))
         (let [unresolved (conductor/dispatch-scribe!
                           (assoc-in promoted
