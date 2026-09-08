@@ -81,6 +81,60 @@
   (boundary/append! (or evidence-store estore/!store)
                     (make-mesh-edge-evidence edge)))
 
+(defn- refuse-scheduled-dispatch!
+  [code message data]
+  (throw (ex-info message
+                  (merge {:error/type :process-assurance-refusal
+                          :error/code code
+                          :node :R10}
+                         data))))
+
+(defn run-scheduled-dispatch!
+  "R10 scheduled-entrypoint boundary: require a named commission, dispatch it,
+   and durably record the receipt joined to that commission. DISPATCH-FN receives
+   the R10-linked commission and must echo both :node and :commission/id in its
+   receipt; an unlinked or missing receipt refuses the scheduled run."
+  [{:keys [commission dispatch-fn evidence-store]}]
+  (let [commission-id (some-> (:commission/id commission) str str/trim not-empty)]
+    (when-not (and commission-id (fn? dispatch-fn))
+      (refuse-scheduled-dispatch!
+       :r10/invalid-commission
+       "R10 scheduled dispatch requires a commission identity and dispatch function"
+       {:commission commission}))
+    (let [linked-commission (assoc commission :node :R10)
+          receipt (dispatch-fn linked-commission)]
+      (when-not (and (map? receipt)
+                     (= :R10 (:node receipt))
+                     (= commission-id (some-> (:commission/id receipt) str))
+                     (some-> (:dispatch/id receipt) str str/trim not-empty))
+        (refuse-scheduled-dispatch!
+         :r10/unlinked-dispatch-receipt
+         "R10 scheduled dispatch receipt must identify its dispatch and commission"
+         {:commission/id commission-id :receipt receipt}))
+      (let [at (now-str)
+            entry {:evidence/id (str "e-" (UUID/randomUUID))
+                   :evidence/subject {:ref/type :task :ref/id commission-id}
+                   :evidence/type :coordination
+                   :evidence/claim-type :step
+                   :evidence/author (normalize-from (:commission/from commission))
+                   :evidence/at at
+                   :evidence/body {:node :R10
+                                   :process/stage :dispatched
+                                   :commission/id commission-id
+                                   :commission linked-commission
+                                   :dispatch/receipt receipt}
+                   :evidence/tags [:coordination :scheduled-dispatch :R10]
+                   :evidence/session-id (str (:dispatch/id receipt))}
+            recorded (boundary/append! (or evidence-store estore/!store) entry)]
+        (when-not (:ok recorded)
+          (refuse-scheduled-dispatch!
+           :r10/recording-failed
+           "R10 scheduled dispatch receipt was not recorded"
+           {:commission/id commission-id :dispatch/receipt receipt
+            :recording-result recorded}))
+        {:ok true :commission linked-commission :receipt receipt
+         :evidence/id (:evidence/id entry)}))))
+
 (defn invoke-with-edge!
   "Invoke an agent and record the social mesh edge around it.
 

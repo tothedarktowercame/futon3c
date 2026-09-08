@@ -54,6 +54,41 @@
     (is (= "unknown" (:evidence/author entry)))
     (is (= "unknown" (get-in entry [:evidence/body :edge/from])))))
 
+(deftest scheduled-entrypoint-requires-and-records-r10-linked-dispatch
+  ;; Live pin: Agency invoke record invoke-1788708049924-13300-38749afe
+  ;; carried this commission identity on 2026-09-06 (PA11z exemplar).
+  (let [commission-id "PA11z-library-annotator-exemplar"
+        dispatch-id "invoke-1788708049924-13300-38749afe"
+        commission {:commission/id commission-id :commission/from "claude-2"
+                    :commission/to "codex-18"}
+        result (ledger/run-scheduled-dispatch!
+                {:commission commission
+                 :dispatch-fn (fn [linked]
+                                {:node (:node linked)
+                                 :commission/id (:commission/id linked)
+                                 :dispatch/id dispatch-id})})
+        [entry] (estore/query {:query/type :coordination
+                               :query/tags [:coordination :scheduled-dispatch :R10]
+                               :query/limit 10})]
+    (is (= :R10 (get-in result [:commission :node])))
+    (is (= dispatch-id (get-in result [:receipt :dispatch/id])))
+    (is (= {:node :R10 :process/stage :dispatched
+            :commission/id commission-id}
+           (select-keys (:evidence/body entry)
+                        [:node :process/stage :commission/id])))
+    (is (= dispatch-id (get-in entry [:evidence/body :dispatch/receipt :dispatch/id])))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"R10 scheduled dispatch receipt"
+         (ledger/run-scheduled-dispatch!
+          {:commission commission
+           :dispatch-fn (constantly {:dispatch/id "unlinked"})})))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"R10 scheduled dispatch receipt"
+         (ledger/run-scheduled-dispatch!
+          {:commission commission :dispatch-fn (constantly nil)})))))
+
 (deftest coordination-edges-http-route-returns-public-view
   (ledger/record-invoke-edge! {:from "claude-1" :to "codex-1" :surface "dispatch"})
   (let [handler (http/make-handler {})
