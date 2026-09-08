@@ -149,6 +149,53 @@
                            :path "/tmp/not-written-invisible-review.edn"
                            :evidence-visible? (constantly false)}))))))
 
+(deftest a-timeout-with-no-message-is-recorded-as-a-timeout
+  ;; The recorded outcome is what the retry ladder reads, what the transport
+  ;; certificate preserves, and what anyone diagnosing the frame afterwards is
+  ;; told happened. It was decided by matching /timeout/ against .getMessage
+  ;; alone -- which is nil for the ordinary TimeoutException, so a timeout was
+  ;; filed as :unavailable. f193's own certificate carries both outcomes across
+  ;; two attempts, and the pair is what the ladder is meant to tell apart.
+  (let [observe #'sut/observe-visibility
+        outcome (fn [t] (:transport/acquired-outcome
+                         (observe (fn [_] (throw t)) candidate)))]
+    (is (nil? (.getMessage (java.util.concurrent.TimeoutException.)))
+        "premise: the ordinary timeout carries no message")
+    (is (= :timeout (outcome (java.util.concurrent.TimeoutException.))))
+    (is (= :timeout (outcome (java.net.SocketTimeoutException.)))
+        "class name carries it when the message does not")
+    (is (= :timeout (outcome (ex-info "wrapped" {}
+                                      (java.util.concurrent.TimeoutException.))))
+        "a timeout behind one wrapper is still a timeout")
+    (is (= :timeout (outcome (RuntimeException. "read TIMEOUT after 5000ms")))
+        "an explicit message still classifies")))
+
+(deftest an-unreachable-substrate-is-not-recorded-as-a-timeout
+  ;; The other direction: the fix must not turn every failure into a timeout.
+  (let [observe #'sut/observe-visibility
+        outcome (fn [t] (:transport/acquired-outcome
+                         (observe (fn [_] (throw t)) candidate)))]
+    (is (= :unavailable (outcome (java.net.ConnectException.))))
+    (is (= :unavailable (outcome (RuntimeException. "connection refused"))))
+    (is (= :unavailable (outcome (java.io.IOException.)))))
+  (testing "an outcome declared in ex-data still wins over inference"
+    (let [observed ((var-get #'sut/observe-visibility)
+                    (fn [_] (throw (ex-info "x" {:transport/acquired-outcome
+                                                 :malformed})))
+                    candidate)]
+      (is (= :malformed (:transport/acquired-outcome observed))))))
+
+(deftest a-visible-candidate-is-still-a-success
+  ;; Silence direction: the classifier only speaks when the probe throws.
+  (let [observed ((var-get #'sut/observe-visibility) (constantly true) candidate)]
+    (is (= :success (:transport/acquired-outcome observed)))
+    (is (= :obtained (:transport/evidence observed)))
+    (is (true? (:visible? observed))))
+  (let [observed ((var-get #'sut/observe-visibility) (constantly false) candidate)]
+    (is (= :success (:transport/acquired-outcome observed))
+        "a record not yet visible is a healthy read, not a transport fault")
+    (is (false? (:visible? observed)))))
+
 (deftest publication-checks-independent-visibility-concurrently
   (let [dir (Files/createTempDirectory "apm-parallel-visibility-test"
                                        (make-array FileAttribute 0))

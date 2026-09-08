@@ -48,6 +48,36 @@
       visibility-reads-per-candidate-bound
       visibility-read-bound-ms)})
 
+(defn- timeout-throwable?
+  "Whether T, or anything in its cause chain, is a timeout.
+
+   Matches the class name as well as the message because `.getMessage` is nil
+   for exactly the failures worth distinguishing -- the same property that made
+   a cascade record say :error/message nil on a dead peer. The JDK's timeout
+   families (TimeoutException, SocketTimeoutException, HttpTimeoutException,
+   HttpConnectTimeoutException) all carry it in the name and often nowhere
+   else."
+  [^Throwable t]
+  (loop [e t depth 0]
+    (if (or (nil? e) (>= depth 16))
+      false
+      (or (instance? java.util.concurrent.TimeoutException e)
+          (boolean (re-find #"(?i)timeout" (.getName (class e))))
+          (boolean (re-find #"(?i)timeout" (or (.getMessage e) "")))
+          (recur (.getCause e) (inc depth))))))
+
+(defn- visibility-failure-outcome
+  "The transport outcome for a visibility read that threw.
+
+   Was decided by matching /timeout/ against `.getMessage` alone, so a
+   TimeoutException carrying no message -- the ordinary case -- was recorded
+   as :unavailable. That outcome is not cosmetic: it is what the retry ladder
+   reads, what the transport certificate preserves, and what anyone diagnosing
+   the frame afterwards is told happened."
+  [^Throwable t]
+  (or (:transport/acquired-outcome (ex-data t))
+      (if (timeout-throwable? t) :timeout :unavailable)))
+
 (defn- observe-visibility
   "Convert a visibility callback into the typed transport observation consumed
   by both direct and cumulative snapshot publication."
@@ -63,9 +93,7 @@
          :transport/evidence :obtained}))
     (catch Throwable t
       (let [message (or (.getMessage t) "")
-            outcome (or (:transport/acquired-outcome (ex-data t))
-                        (if (re-find #"(?i)timeout" message)
-                          :timeout :unavailable))]
+            outcome (visibility-failure-outcome t)]
         {:visible? nil
          :transport/acquired-outcome outcome
          :transport/classified-outcome outcome

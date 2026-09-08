@@ -122,12 +122,19 @@ luck. That is P13 applied to reloads mechanically.
 `:attempt 1`, `:max-attempts 3`, history `:hyperedge-unreachable` (02:30:59)
 then `:memory-snapshot-visibility-not-obtained` (02:47:03).
 
-**What it found.** The wait was bounded — the retry has attempts and a
-`:not-before-ms`, so the unbounded-wait signature is absent here. But bounded
-at 3 attempts with no queue is exactly what Joe's S8 ruling says is too
-little: the substrate answers the identical cascade query in ~1.1s right now
-(three probes, all HTTP 200), so 02:47 was a visibility lag, not death, and
-three strikes spent the frame anyway.
+**What it found.** The wait carried `:not-before-ms` and an attempt count,
+so it looked bounded. S7 later showed it was not: nothing bounded how far
+ahead that instant could be, and the watchdog reads the mover's own field as
+the deadline.
+
+**CORRECTION (entry 12 is the scored version).** I first wrote here that the
+02:47 failure was "a visibility lag, not death", inferring it from the error
+code `:memory-snapshot-visibility-not-obtained` and from three healthy probes
+I ran at 03:00. The durable transport certificate says otherwise:
+`:history [{:attempt 0, :operation :write, :acquired-outcome :timeout}]` and
+the coordinator's own entry records `:transport/acquired-outcome :unavailable`
+for attempt 1. Both attempts were transport failures against a futon1b that
+was up. The code names the STEP the failure happened in, not the fault.
 
 **Score.** Partial. Sharpens S7/S8 rather than settling them: the fault is not
 a missing deadline but a retry budget that treats transient visibility lag and
@@ -191,6 +198,63 @@ to every test that only checks firing. Confirmed against the loaded code in
 **Score.** Earned, and it is the strongest entry so far, because the
 principle predicted a specific missing test and that test then caught a
 specific historical failure.
+
+### 12. evidence-to-disposition-once (P9) — EARNED AGAIN, against me, on the same signature I had just repaired
+
+**Occasion.** I reported to the reviewer, and wrote into this ledger and the
+plan doc, that f193's 02:47 substrate failure was an indexing-visibility lag
+rather than a dead substrate. My whole basis was the error code
+`:memory-snapshot-visibility-not-obtained` plus three healthy probes run
+thirteen minutes later against a different query.
+
+**What the authority said.** The durable transport certificate
+(`live/transport-certificates/1788835623826-1-…edn`, emitted 02:47:03):
+`:history [{:attempt 0, :operation :write, :acquired-outcome :timeout,
+:evidence :not-obtained}]`, and the coordinator records
+`:transport/acquired-outcome :unavailable` for attempt 1. Timeout, then
+unreachable. Not a lag.
+
+**Why it fooled me.** `:memory-snapshot-visibility-not-obtained` names the
+*step* the failure occurred in — the visibility check — not what failed in it.
+That is character-for-character the signature I had spent the night removing
+from `:memory-cascade-failed`, and I read the new one the same wrong way four
+hours later, having written the fix myself.
+
+**Score.** Earned, and it is the entry that most justifies the trial. A
+principle worth promoting has to catch the person who already knows it.
+
+### 13. every-wait-has-a-deadline (P6) — restated by S7
+
+**Occasion.** The `:awaiting-substrate` wait had a deadline and was still
+unbounded: nothing constrained how far ahead `:not-before-ms` could be, and
+the watchdog reads that same field AS the deadline, so a far-future wake is a
+deadline that can never be exceeded.
+
+**Restatement earned.** *A deadline the waiting party can set arbitrarily far
+ahead is not a bound.* Same family as S4's flicker mutation — the monitor
+fooled by the very field the thing it monitors controls.
+
+**Corollary from the deviation.** The reviewer's spec asked for the
+already-past deadline to be caught too. It should not be: after a long stop
+every pending retry is overdue and refusing them turns a restart into a park
+storm, while a past wake's worst case is an immediate retry. *The dangerous
+direction of an unchecked bound is rarely symmetric; bound only the direction
+that hurts.*
+
+### 14. success-must-not-resemble-failure (P2) — EARNED on a vocabulary member nothing can produce
+
+**Occasion.** S8. `:visibility-lag` is a declared member of
+`observation-outcomes`, is handled in `needs-retry?` and `evidence-compatible?`,
+and is checked for in `live_promotion.clj`. **No production path emits it.**
+The only classifier can return `:success`, `:timeout` or `:unavailable`.
+
+**What it found.** The taxonomy declares a distinction the machine cannot
+make, so code that branches on it reads as coverage and is dead. The
+retry ladder appears to treat lag differently from death; it cannot.
+
+**Score.** Earned. Cousin of S5's closed-enum problem from the other side:
+S5 is an enum that quietly reopens, this is an enum with an arm nothing
+reaches.
 
 ## Not yet scored
 

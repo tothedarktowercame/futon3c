@@ -193,12 +193,17 @@ etiquette. A rule a human must remember has a human forgetting as its failure
 mode, which is the catch layer P12 forbids, proposed by the two agents
 applying P12 to everything else that night.
 
-Cascade expansion goes first. The halt state shows why the shape matters: the
-coordinator was in `:awaiting-substrate` with `:attempt 1 :max-attempts 3`,
-history `:hyperedge-unreachable` then `:memory-snapshot-visibility-not-obtained`.
-The substrate answers the identical query in ~1.1s. Three strikes spent a
-frame on an indexing lag. S8 depends on S1/S2: retryable-vs-terminal is only
-decidable once errors carry their mechanism.
+Cascade expansion goes first. The halt state shows the shape: the coordinator
+was in `:awaiting-substrate` with `:attempt 1 :max-attempts 3`, history
+`:hyperedge-unreachable` then `:memory-snapshot-visibility-not-obtained`.
+
+Correction to an earlier reading of that history, which was mine: the second
+entry is NOT an indexing lag. The durable transport certificate records
+attempt 0 as `:acquired-outcome :timeout` and attempt 1 as `:unavailable`.
+Both were transport failures against a futon1b that was running. The code
+names the step, not the fault — the same signature S1 removed from
+`:memory-cascade-failed`. S8 depends on S1/S2 precisely because
+retryable-vs-terminal cannot be decided from a code that names a step.
 
 ### S9 — manufacture the quiet time
 
