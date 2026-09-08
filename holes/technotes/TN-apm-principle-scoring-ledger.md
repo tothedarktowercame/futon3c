@@ -256,6 +256,54 @@ retry ladder appears to treat lag differently from death; it cannot.
 S5 is an enum that quietly reopens, this is an enum with an arm nothing
 reaches.
 
+### success-must-not-resemble-failure (P2) — earned, and it named the fix
+
+**Occasion.** S5 slice 1, f194. The wrapper collected an authenticated guide
+submission, cancelled the job that produced it, and got HTTP 409
+`invoke-job-already-terminal`, state `done`. `job-port/cancel!` reports
+`:ok` only for HTTP 200, so the collection branch read a job that had
+finished *early* as a cancel that had *failed*, returned before `persist-fn`,
+and escalated a delivered turn to an apparatus park.
+
+**What it found.** P2 supplied the fix, not just the diagnosis. The question
+"is this job still running?" has a success answer that arrives as a 4xx. Once
+the disposition is named after what the response establishes
+(`:already-terminal`) rather than after its HTTP shape, the branch is obvious.
+
+**Score.** Earned, strongly — the principle's phrasing was the design.
+
+### one-authority-per-question (P1) — earned, with a scope it did not settle
+
+**Occasion.** Same seam. Three call sites (`supersede-unaccepted!`,
+`recover-orphan-attempt!`, the collection branch) each ask a cancel result the
+same question, each by reading `(:ok ...)`, and each would mis-answer it
+identically.
+
+**What it found.** P1 says the question gets one authority, which argues for
+converting all three. Evidence argues against doing it blind: the other two
+have fired **zero** times campaign-wide, and neither has a live record to pin
+a test against. Fixed the one with seven occurrences; the other two adopt the
+classifier in the enum slice, where the disposition type makes the conversion
+mechanical.
+
+**Score.** Earned for locating the shared question. Silent on how far to
+carry a repair in one step — the live-pin rule decided that, not P1.
+
+### An adjudication is not a repair (no principle covers this)
+
+**Occasion.** f177 was adjudicated as covered by `f4ae8d5a`, with
+"watch f188+ for recurrence". `f4ae8d5a` moved the session-identity capture
+ahead of the cancel — a real repair of a *different* fault in the same
+handful of lines. It never touched how the cancel's answer is read. The
+frame-park record credited it with a region rather than a defect, and the
+class recurred on f178 twice and f194.
+
+**Gap.** The library has no principle saying an apparatus-repair citation
+must name the defect it closes and be checkable against it. "Same
+neighborhood as commit X" is how a fault gets marked handled without being
+handled — and the recurrence note in the record shows the author half-knew.
+Candidate for a fourteenth principle; not drafted here.
+
 ## Not yet scored
 
 - default-to-the-cheap-error (P4),

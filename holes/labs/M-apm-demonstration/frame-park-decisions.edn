@@ -3971,4 +3971,52 @@
    (str "The student attempt is NOT counted as a memory-effect datum. No "
         "claim is made that the memory condition held for attempt 3.")}
 
+ ;; f194 -- the wrapper reconciliation race, recurring after f4ae8d5a.
+ ;; f177's adjudication said "watch f188+ for recurrence"; this is it.
+ ;; f4ae8d5a moved the session-identity capture ahead of the cancel, which
+ ;; was a real repair of a different fault in the same lines. It did not
+ ;; touch how the cancel's own answer is read, so the race it was credited
+ ;; with covering was never actually closed.
+ {:frame/id "f194"
+  :problem/id "m00A03"
+  :decision/at "2026-09-08T11:00:00Z"
+  :decision/by "claude-5"
+  :decision/owner :claude-supervisor
+  :decision/status :decided
+  :decision/class :wrapper-reconciliation-lost-to-terminal-race
+  :decision/apparatus-repair-required? true
+  :decision/apparatus-repair-commit "bf695656"
+  :decision/frame-voided? false
+  :decision/disposition :partial
+
+  :decision/rationale
+  (str "Parked :live-job-wrapper-reconciliation-failed at "
+       "guide-intervention-2. The guide turn WAS delivered: the driver held "
+       "an authenticated submission and was cancelling the job that produced "
+       "it when the Agency answered 409 invoke-job-already-terminal, state "
+       "done. job-port/cancel! calls only HTTP 200 a success, so a job that "
+       "finished a moment early read as a failed cancel, the collection "
+       "branch returned before persist-fn, and the collected submission was "
+       "discarded. Existing class, no new one minted (principle 12): this is "
+       "f177's class, and the entry there already anticipated the "
+       "recurrence.")
+
+  :decision/repair-action
+  (str "bf695656: cancellation-disposition classifies the cancel result by "
+       "what it establishes about the job rather than by its HTTP status. A "
+       "409 already-terminal is :already-terminal -- a success, carrying the "
+       "terminal state the Agency reported. Commissioned by mutation both "
+       "ways.")
+
+  :decision/recommended-route
+  (str "Preserve as partial. No void, no re-queue. The guide's second "
+       "intervention was delivered and its submission authenticated; what "
+       "was lost is the collection record, not the work.")
+
+  :decision/not-done
+  (str "No void, no re-queue, no synthesized artifact. The repair is "
+       "committed but NOT yet loaded into the :7070 JVM -- f196 was mid-frame "
+       "with a running solver job -- so this frame's class is not yet "
+       "certified closed against running code.")}
+
 ]}
