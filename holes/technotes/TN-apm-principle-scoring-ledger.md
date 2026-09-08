@@ -25,7 +25,7 @@ column that makes the rest credible.
 
 | Principle | Occasions | Earned | Partial | Misled | Strongest single exhibit |
 |---|---|---|---|---|---|
-| success-must-not-resemble-failure (P2) | 3 | 3 | – | – | A delivered guide turn filed as a fault, and **discarded before persist** — seven times |
+| success-must-not-resemble-failure (P2) | 3 | 3 | – | – | A delivered guide turn filed as a fault, and **discarded before persist** (f177, f194) |
 | done-is-observed-running (P8) | 4 | 3 | 1 | – | Two repairs were committed, green, and **not loaded**; the JVM said `:not-loaded` when asked |
 | one-authority-per-question (P1) | 4 | 3 | 1 | – | Three call sites asked a cancel the same question and all three answered it wrong |
 | evidence-to-disposition-once (P9) | 2 | 2 | – | – | The cascade's own error record erased the mechanism that caused it |
@@ -44,8 +44,9 @@ kind of gap:
 
 - **A repair citation must name a checkable defect, not a neighbourhood.**
   f177 was closed as covered by `f4ae8d5a` with the note "watch f188+ for
-  recurrence". It recurred on f178 twice and f194. Three independently
-  adjudicated frames, one defect, park census unmoved at 44.
+  recurrence". It recurred once more, on f194, and that recurrence discarded
+  an authenticated submission. Two independently adjudicated frames, one
+  defect, park census unmoved at 44.
 - **A fence's own acceptance must be observation against live data.** P8
   governs repairs and says nothing about the tests that guard them — and a
   fence is exactly the artifact whose failure is silent. Demonstrated twice
@@ -324,7 +325,7 @@ identically.
 **What it found.** P1 says the question gets one authority, which argues for
 converting all three. Evidence argues against doing it blind: the other two
 have fired **zero** times campaign-wide, and neither has a live record to pin
-a test against. Fixed the one with seven occurrences; the other two adopt the
+a test against. Fixed the one with real occurrences; the other two adopt the
 classifier in the enum slice, where the disposition type makes the conversion
 mechanical.
 
@@ -338,7 +339,7 @@ carry a repair in one step — the live-pin rule decided that, not P1.
 ahead of the cancel — a real repair of a *different* fault in the same
 handful of lines. It never touched how the cancel's answer is read. The
 frame-park record credited it with a region rather than a defect, and the
-class recurred on f178 twice and f194.
+class recurred on f194.
 
 **Gap.** The library has no principle saying an apparatus-repair citation
 must name the defect it closes and be checkable against it. "Same
@@ -351,7 +352,7 @@ Candidate for a fourteenth principle; not drafted here.
 **Severity note on S5 slice 1.** The collection branch computes the
 terminal-collection record, *then* cancels, *then* returns on `:ok false` —
 **before `persist-fn`**. So the authenticated submission was not merely filed
-under the wrong name; it was **discarded**. Seven times.
+under the wrong name; it was **discarded**. On both frames it reached.
 
 This changes what the seam cost. A mislabelled success is a reporting defect
 and the evidence survives in the record. This was an evidence-loss defect
@@ -372,7 +373,7 @@ slice 1 would have bought authored-constant tests, the exact failure mode the
 live-pin rule exists to prevent.
 
 **What it found.** The two did not have to be traded off. Slice 1 fixed the
-site with seven occurrences and a real record; slice 2 introduced the closed
+site with real occurrences and a live record; slice 2 introduced the closed
 disposition type, which made the other two adoptions mechanical and
 type-checked rather than speculative. P1 was satisfied one slice later at no
 cost to the pin rule.
@@ -384,15 +385,21 @@ before ranking them.
 
 ### Singletons reduce to the join — measured
 
-**Occasion.** The seven-occurrence find. `frame-park-decisions.edn` carried
-f177 and f178 as separate entries in the same class, each adjudicated on its
-own; f194 made a third. All three are one seam, closed by one commit.
+**Occasion.** `frame-park-decisions.edn` carried f177 and f194 as separate
+entries in the same class, adjudicated a day apart, each on its own. Both are
+one seam, closed by one commit.
 
 **What it found.** The end-to-end note's claim that apparent singletons
-collapse once the join is named now has a measured instance: three
-independently adjudicated frames, one defect, and the class census did not
-move (44 before, 44 after). The census holding steady while three entries
-merge is the shape the claim predicts.
+collapse once the join is named has an instance here — two independently
+adjudicated frames, one defect, census unmoved at 44 — but n=2 is a weak
+instance and should be cited as one. Two entries merging is consistent with
+the claim and also consistent with coincidence. Recorded because the
+temptation was to inflate it: the first version of this entry said "three
+frames" and rested on a miscount (below), and a claim about collapsing
+singletons is exactly the kind that wants its evidence bigger than it is.
+
+**Score.** Weak support, honestly denominated. Not offered as a load-bearing
+exhibit for the promotion.
 
 ### The activating finalizer hazard — and what the ledger says about it
 
@@ -543,7 +550,7 @@ A principle unscored after fourteen occasions is not thereby weak; it means
 this repair did not touch the kind of failure it is about. That is worth
 saying plainly rather than padding the ledger to thirteen rows.
 
-## Three times I measured with the wrong instrument
+## Four times I measured with the wrong instrument
 
 Worth its own section because it is one mistake, not three, and it is the
 mistake most likely to survive review — a negative result looks like
@@ -562,23 +569,42 @@ diligence.
    like a clean bill of health. Caught only because 3975 jobs reporting zero
    states was implausible on its face.
 
-**The lesson, stated so it can be checked:** a negative result is only
-evidence if the instrument could have produced a positive one. Before
-reporting "none found", show the instrument finding something.
+4. **The nearest-match regex.** Asked how often the wrapper-reconciliation
+   fault fired, I counted occurrences of its error code in a 300KB serialized
+   blob and attributed each to the nearest following `:frame/id`. That
+   reported "seven times across f177, f178 and f194". The true figure is
+   **two**: two distinct job ids, two frames (f177, f194), two adjudications.
+   The string repeats because one event is copied into a residual, a decision
+   record and a queue entry; f178 never carried this fault at all. The count
+   was inflated 3.5x and travelled into a reviewer's draft of a promoted
+   pattern before a recount caught it.
 
-All three were caught before they reached a conclusion Joe would have acted
-on. The third was caught by implausibility, not by method, which is luck and
-should be recorded as such.
+**The lesson, stated so it can be checked:** a negative result is only
+evidence if the instrument could have produced a positive one, and a *count*
+is only evidence if you have checked what the thing being counted is. Three
+of these four were about proving absence; the fourth was about proving
+abundance, and it is the one that nearly reached Joe.
+
+**Where it got caught:** not by review. claude-9 accepted the number and
+built it into the pattern's evidence line; I caught it only when redlining
+that line, because the pattern demands checkable claims and I went to check
+its own. The gate that worked was the standard the artifact set for itself.
+
+All four were caught before they reached a conclusion Joe would have acted
+on, but the margins differed sharply. The third was caught by implausibility
+rather than method, and the fourth had already passed a reviewer and been
+written into a pattern file. Both are luck, and are recorded as luck.
 
 ## What the trial changed
 
-Five things are true of the machine now that were not true this morning.
+Six things are true of the machine now that were not true this morning.
+Five I verified myself; the sixth is cited.
 
 1. **A delivered turn is no longer thrown away.** The wrapper collected an
    authenticated submission, cancelled the job that produced it, got a 409
    because the job had already finished, and returned *before persisting* —
-   seven times. Now persisted; verified against the running JVM with f194's
-   own 409.
+   on both frames it reached. Now persisted; verified against the running JVM
+   with f194's own 409.
 2. **Thirteen finished jobs can no longer be re-run.** `"deduped"` was a
    real ledger state that no predicate declared, and the invoke skip-guard
    would have re-executed any of them the queue reached. Verified on a real
@@ -593,8 +619,19 @@ Five things are true of the machine now that were not true this morning.
    repairs, four frames adjudicated, no new failure class invented to
    describe any of them.
 
-The last one is the result to read first. The others say defects were fixed;
-that one says the fixes were repairs rather than renamings.
+6. **Warm substrate reads got about a thousand times faster.** futon1b
+   hyperedge queries: 1.286s cold to 1.2ms/0.75ms warm (omitted-param),
+   1.032s to 0.82ms (type-only); read permits 2 to 4, so four concurrent slow
+   reads now serve together and `/health` stays under 3.2ms where two calls
+   previously timed out past a second. *Not my measurement:* it is codex-2's
+   work under Joe's direction, reviewed and restart-verified by claude-9 —
+   futon1b `796f40d7` (TN-futon1b-cost-profile-2026-09-08.md), `4f456929`,
+   `2ef1886b`, plus claude-9's probes against the restarted server at ~11:08Z.
+   Cited rather than reproduced, and flagged as such because the rest of this
+   document is measurements I took myself.
+
+Item 5 is the result to read first. The others say defects were fixed; that
+one says the fixes were repairs rather than renamings.
 
 ## Open judgment call for review
 
