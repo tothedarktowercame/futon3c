@@ -134,3 +134,53 @@ is a design defect to be eliminated, not a species to be catalogued.
 Every layer of catch-and-park is capitulation to a failure that should have
 been made impossible one layer down. The latch is telling us where that layer
 is.
+
+## The worked plan (2026-09-08, claude-5 drafting / claude-9 reviewing)
+
+The five steps above are the shape. These are the slices, each naming the
+principle it enacts and taking that principle's violation signature made
+absent as its acceptance bar. "The failure I was dispatched about no longer
+occurs" is not an acceptance bar — that bar is what produced patch after
+patch. Scoring lives in `TN-apm-principle-scoring-ledger.md`.
+
+Campaign `jit-all-open-v3` halted 2026-09-08T02:54:34Z on Joe's authorization
+— `stop!` returned `:status :stopped` with a quiescence witness at epoch 11,
+tick 26977, `tick-claim nil`; scheduler and watchdog stopped. The halt is paid
+for; the register is the work queue until the gates pass.
+
+| Slice | Principle | State |
+|---|---|---|
+| S1 unwrap before blaming | P9 | **done** — `0c46297b`, loaded and observed acting in :7070 |
+| S2 carry the class, not just the message | P9 | **done** — same commit |
+| S3 "none served" ≠ "expansion incomplete" | P2 | next — `voxterm/server.py:2165-2169` |
+| S4 commission the watchdog both directions | P7 | owed since the watchdog repair |
+| S5 terminal-vocabulary migration | P9, P2 | discovery done (codex-17); one consumer group per dispatch |
+| S6 declared-vs-loaded comparator | P8 | closes register A11 and M7 |
+| S7 bound the `:awaiting-substrate` wait | P6 | verifiably absolute deadline, expiry routed to a decision |
+| S8 substrate I/O survives substrate unavailability | P12 | Joe's inversion of our restart rule — see below |
+| S9 scheduled drain points | P13 | design note only, unbriefed build forbidden |
+
+### S8 — why it replaced a rule about people
+
+We proposed forbidding a shared-JVM restart while a durable operation is in
+flight. Joe rejected it: "futon1b should be durable enough. Work that's
+getting sent in there should get queued if it's not available, and then sent,
+and then processed." The obligation is client-side durability, not operator
+etiquette. A rule a human must remember has a human forgetting as its failure
+mode, which is the catch layer P12 forbids, proposed by the two agents
+applying P12 to everything else that night.
+
+Cascade expansion goes first. The halt state shows why the shape matters: the
+coordinator was in `:awaiting-substrate` with `:attempt 1 :max-attempts 3`,
+history `:hyperedge-unreachable` then `:memory-snapshot-visibility-not-obtained`.
+The substrate answers the identical query in ~1.1s. Three strikes spent a
+frame on an indexing lag. S8 depends on S1/S2: retryable-vs-terminal is only
+decidable once errors carry their mechanism.
+
+### S9 — manufacture the quiet time
+
+Joe kept the quiet-time requirement for the futon3c JVM and named finding one
+an open problem he has no answer to. Same elimination one level up: if a quiet
+time must be hunted, produce it on a schedule instead. The coordinator exposes
+a bounded quiescent window at frame boundaries and reloads land there. Sketch
+goes to Joe before anything is built.

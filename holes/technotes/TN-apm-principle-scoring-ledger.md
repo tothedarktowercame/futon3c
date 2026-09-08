@@ -89,9 +89,54 @@ restart that killed f193's cascade at 02:04:57.
 implies (needs-Joe #3). Applying our own proposed rule to ourselves first is
 the cheapest possible test of whether it is livable. It was.
 
+### 6. new-failure-class-is-a-design-defect (P12) — MISLED US, then earned
+
+**Occasion.** needs-Joe #3, as claude-9 and claude-5 proposed it: a rule that
+no shared JVM may be restarted while a durable operation is in flight, gated
+on an in-flight check. Joe rejected it and inverted it: "futon1b should be
+durable enough. Work that's getting sent in there should get queued if it's
+not available, and then sent, and then processed."
+
+**What we got wrong.** We proposed a catch layer made of operator discipline
+— a new rule a human must remember, whose failure mode is a human forgetting.
+P12 says a new failure class is a design defect, and we had just spent the
+night applying that to code while proposing its opposite for ourselves. The
+operator did the one-layer-down elimination we were supposed to do: the
+obligation is client-side durability, not restart etiquette. Became S8.
+
+**Score.** The principle earned; its authors did not apply it. Recorded
+because a ledger that only lists successes is not evidence of anything.
+
+**Corollary, still open.** Joe kept the quiet-time requirement for the
+*futon3c* JVM and said quiet times are increasingly hard to find — he named
+it an open problem with no answer. The same elimination applies one level up:
+if a quiet time must be hunted, manufacture it instead. Sketch (design note
+first, nothing built unbriefed): the coordinator exposes a bounded quiescent
+window at frame boundaries, so reloads land on a schedule rather than on
+luck. That is P13 applied to reloads mechanically.
+
+### 7. every-wait-has-a-deadline (P6) — partial, observed at the halt
+
+**Occasion.** The clean halt at 02:54:34 surfaced the coordinator sitting in
+`:status :awaiting-substrate` with a live `:coordinator/delayed-retry`:
+`:attempt 1`, `:max-attempts 3`, history `:hyperedge-unreachable` (02:30:59)
+then `:memory-snapshot-visibility-not-obtained` (02:47:03).
+
+**What it found.** The wait was bounded — the retry has attempts and a
+`:not-before-ms`, so the unbounded-wait signature is absent here. But bounded
+at 3 attempts with no queue is exactly what Joe's S8 ruling says is too
+little: the substrate answers the identical cascade query in ~1.1s right now
+(three probes, all HTTP 200), so 02:47 was a visibility lag, not death, and
+three strikes spent the frame anyway.
+
+**Score.** Partial. Sharpens S7/S8 rather than settling them: the fault is not
+a missing deadline but a retry budget that treats transient visibility lag and
+substrate death identically — which is only distinguishable now that S1/S2
+make errors carry their mechanism.
+
 ## Not yet scored
 
-- default-to-the-cheap-error (P4), every-wait-has-a-deadline (P6, S7),
+- default-to-the-cheap-error (P4),
   replayable-not-precious (P10, blocked on Joe's f193 ruling),
   new-failure-class-is-a-design-defect (P12, scored by the park-class census
   once a wave restarts), the-system-stops-on-schedule (P13),

@@ -3902,4 +3902,73 @@
         "whose proof is a separate matter from this frame. No re-queue is performed "
         "here; the queue will select it on its own once the status record is corrected.")}
 
+  {:frame/id "f193"
+   :problem/id "m00A02"
+   :campaign/id "jit-all-open-v3"
+   :last-valid-receipt/id
+   "f2e2cd44a73b7eafdb647bac3353e48b9dcd377be4f7ef199f586e52f2231e2f"
+   :error/code :memory-cascade-failed
+   :decision/owner :claude-supervisor
+   :decision/by "claude-5"
+   :decision/at "2026-09-08T02:58:00Z"
+   :decision/status :decided
+   :decision/disposition :partial
+   :decision/class :apparatus-fault-already-repaired
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-available? true
+   :decision/apparatus-repair-commit "0c46297b"
+   :decision/frame-voided? false
+   :decision/tier-a-eligible? false
+
+   :apparatus-fault
+   {:symptom
+    (str "student-attempt-3 ran with the 313-id memory snapshot but without "
+         "the cascade expansion over it. The cascade recorded 249s of "
+         ":stage :expanding and terminated :memory-cascade-failed.")
+    :root-cause
+    (str "Two faults, one visible. Proximate: futon1b (:7072/:7073) was "
+         "restarted by claude-5 at 02:04:57 under an in-flight expansion "
+         "that had been running since 02:00:49; the operation record's "
+         ":finished-at is 02:04:58.412. Underlying: the terminal record "
+         "could not name that. Cascade reads run in futures via "
+         "bounded-parallel-map, deref wraps the failure in an "
+         "ExecutionException whose ex-data is nil, and the terminal writer "
+         "read (ex-data t) directly -- so every real cascade failure "
+         "recorded the generic :memory-cascade-failed with :error/component, "
+         ":path and :error/message all absent.")
+    :fix-commit "0c46297b"
+    :fix-landed-at "2026-09-08T02:52:00Z"
+    :fix-verified
+    (str "Induced connection failure in the shared :7070 JVM after reload "
+         "records :memory-cascade-unreachable, :error/component :transport, "
+         ":path /api/alpha/hyperedges, :error/class java.net.ConnectException.")
+    :corrected-report
+    (str "The operator strip read 'frame is running WITHOUT served memory'. "
+         "That is false and the strip is itself a defect (voxterm "
+         "server.py:2165-2169, keys on cascade status alone). The "
+         "attempt-3 packet carries 313 :accessible-memory-ids -- 280 "
+         "promotion, 33 leaf -- the same 313 the cascade recorded as "
+         ":seed-count. Memory was served; the expansion over it was not. "
+         "This is NOT the A10 empty-shelf condition (f51).")}
+
+   :decision/rationale
+   (str "The student attempt completed at 02:23:05 under a memory condition "
+        "the campaign did not intend: seeds served, no expansion. The "
+        "STUDENT work therefore cannot be assessed as the design intended "
+        "and is not policy-compliant as a memory-effect measurement. The "
+        "solver work upstream is unaffected and stands on its own receipts. "
+        "No new park class is minted for this: the shape is f39's -- an "
+        "apparatus fault diagnosed and already repaired -- and inventing a "
+        "class per occurrence is the defect that principle 12 names.")
+
+   :decision/repair-action
+   (str "None. No void, no re-run, no prereg amendment. Joe's ruling "
+        "(2026-09-08): f193 is one trial among many, the committed solver "
+        "work stands, and attention belongs on repairing future frames "
+        "rather than on this special case.")
+
+   :decision/not-done
+   (str "The student attempt is NOT counted as a memory-effect datum. No "
+        "claim is made that the memory condition held for attempt 3.")}
+
 ]}
