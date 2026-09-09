@@ -4174,4 +4174,82 @@
    (str "No void, no re-queue, no merge of the solver branch to master, no "
         "resume dispatched. The remediation record stays as written.")}
 
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f206"
+   :problem/id "m02A06"
+   :phase :student-attempt-2
+   :park/state-type :role-terminal-repair-frame-park
+   :decision/at "2026-09-09T16:00:43Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :student-compile-failure-misclassified-as-fault
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :last-valid-receipt/id
+   "3c6ae60c454658fe2dac59cca99dd835ca11c8da0daa54505fdf983d5831928f"
+   :decision/rationale
+   (str "The proof is finished. f206's solver closed m02A06 on "
+        "exp/countdown-f206-m02A06-solver at head 1edfbcce, the proctor "
+        "verified it at 14:14 with lake exit 0, 0 errors, 0 sorry-warnings, "
+        "axioms within propext/Classical.choice/Quot.sound and the registered "
+        "statement unchanged, and 33c076fd landed exactly that file on "
+        "apm-lean master at 15:07. The frame parked four phases later, in the "
+        "learning arm. What parked it: the Student submitted an attempt whose "
+        "own edits do not elaborate (Main.lean:167 no goals to be solved, "
+        ":196 and :200 unsolved goals, :219 declaration uses sorry). "
+        "preserve-student-candidate! runs the shared workspace validate "
+        "battery and rejects on any finding, so :workspace-probe-failed -- "
+        "which for a Student is the measurement, not a fault -- returned "
+        ":student-candidate-validation-failed. That became a posthoc fault "
+        "attributed :repair/fault-origin :agent, spent the single terminal "
+        "repair attempt, and exhausted the budget. The Student did nothing "
+        "wrong that the apparatus is entitled to charge it for: f206's "
+        "manifest records :eligibility/baseline exit 0, so a Student that "
+        "edits nothing certifies cleanly and a Student that attempts the "
+        "proof and does not finish faults the frame.")
+   :decision/apparatus-defect
+   (str "One rule stated at two layers, both conflating 'the Student's proof "
+        "compiled' with 'the receipt binds an artefact reset and retirement "
+        "cannot erase'. workspace_lifecycle.clj preserve-student-candidate! "
+        "rejects the candidate on :workspace-probe-failed; "
+        "frame_cycle_handlers.clj valid-student-terminal-candidate? requires "
+        "(= 0 (:candidate/lean-exit candidate)) alongside the ref shape and "
+        "persistence marker. Removing only the first moves the rejection to "
+        ":frame-cycle-student-candidate-invalid. Two signs this was never the "
+        "intent: the candidate body already carries :candidate/lean-exit, a "
+        "field that under the current guards can only ever hold 0; and "
+        "frame-cycle-contract-v2.edn already names the graceful outcome for a "
+        "student attempt yielding nothing usable, "
+        ":student-observation-missing.")
+   :decision/work-retained
+   (str "m02A06's proof: exp/countdown-f206-m02A06-solver head 1edfbcce, "
+        "identical to apm-lean master's problems/m02A06/lean/Main.lean after "
+        "33c076fd. The Student's attempt is preserved and re-runnable at "
+        "refs/apm/student-candidates/f206/m02A06/attempt-2/ed5fdeea. All f206 "
+        "receipts, certificates and the live phase records are intact.")
+   :decision/recommended-route
+   (str "Advance f206 as partial. Do not void and do not re-queue m02A06 -- "
+        "the problem is solved and on master, so a re-queue would spend "
+        "solver budget on finished work. What is missing is only the learning "
+        "measurement for attempts 2 and 3, and per Joe's 2026-09-07 standing "
+        "rule the apparatus is repaired and forward frames produce the "
+        "evidence rather than adjudication re-running this one. Repair both "
+        "guard sites so a non-compiling Student candidate is preserved, "
+        "certified, and carried into the receipt as :candidate/lean-exit with "
+        ":candidate/probe-findings, inside the addressed body so the receipt "
+        "still commits to the observation. This is urgent rather than "
+        "housekeeping: the queue holds this park signature at "
+        ":consecutive-frame-failures count 1, and "
+        "problem-queue-supervisor/systematic-frame-failure-limit stops the "
+        "campaign at 3. Two more Students failing to compile is the expected "
+        "case, not an unusual one.")
+   :decision/not-done
+   (str "The frame is not voided. No re-queue, no synthesized receipt, "
+        "verdict or observation, no change to the certified solve, no edit to "
+        "the Student's preserved candidate, and no campaign or workspace "
+        "state altered by this decision.")}
+
+
 ]}
