@@ -313,6 +313,8 @@
         result (sut/drive! (assoc (effects persisted) :state state))]
     (is (= :solver-remediation-required (:error/code result)))
     (is (= :solver-remediation-required (:state/type @persisted)))
+    (is (= "Correct the repeated validator finding in committed state before resuming; identical terminal artifacts must not consume the proof-search budget."
+           (get-in @persisted [:remediation :instruction])))
     (is (= 2 (count (:rounds @persisted))))
     (is (nil? (:active @persisted)))))
 
@@ -520,6 +522,40 @@
     (is (= 35 (:ordinal completed)))
     (is (= :awaiting-terminal (:status result)))
     (is (= "job-36" (:job-id result)))))
+
+(deftest f202-consecutive-apparatus-failures-spend-rounds-without-artifact-remediation
+  ;; Live f202 dispatch pins: created 2026-09-09T02:29:44.887Z and
+  ;; 2026-09-09T02:30:00.920Z respectively, both terminal-code :invoke-error.
+  (let [job-ids ["apm-role-ca1000194250b9388b1ebf2a4c685df00049863b89b5dc7781fa5bf43d57cf7c"
+                 "apm-role-4ee1f31b83817db20f86feca97159227b14bc0992e5125d53f4e546cdb67be14"]
+        persisted (atom nil)
+        ;; Prior rounds are scaffolding, not a transcription of their reports.
+        state {:state/type :solver-rounds :budget/max-rounds 50
+               :base-request base-request
+               :rounds (mapv (fn [ordinal] {:ordinal ordinal}) (range 1 23))
+               :active (-> legacy-state
+                           (assoc :request (sut/round-request base-request 23 nil))
+                           (assoc-in [:ticket :job-id] (first job-ids)))}
+        base (assoc (effects persisted)
+                    :terminal-submission-provider (constantly nil)
+                    :job-fn (fn [id] {:job-id id :state :failed
+                                     :terminal-code :invoke-error :report nil})
+                    :announce-fn (fn [request]
+                                   {:ok true :job-id (if (= 24 (:solver/round request))
+                                                      (second job-ids) "next-round")}))
+        result (reduce (fn [previous _]
+                         (let [collected (sut/drive! (assoc base :state (:state previous)))]
+                           (sut/drive! (assoc base :state (:state collected)))))
+                       {:state state} job-ids)
+        spent (subvec (get-in result [:state :rounds]) 22)]
+    (is (not= :solver-remediation-required (:error/code result)))
+    (is (not= :solver-remediation-required (get-in result [:state :state/type])))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= [23 24] (mapv :ordinal spent)))
+    (is (= job-ids (mapv :job-id spent)))
+    (is (every? #(and (nil? (:report %))
+                     (= :solver-job-terminal-failure
+                        (get-in % [:validation :error/code]))) spent))))
 
 (deftest failed-dispatch-with-a-different-session-still-fails-closed
   (let [persisted (atom nil)

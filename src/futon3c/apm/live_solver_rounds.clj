@@ -492,6 +492,10 @@
                     next-state (assoc state :rounds rounds :active nil)]
                 (cond
                   (and (seq (:rounds state))
+                       ;; Failed jobs without reports are spent rounds, not
+                       ;; repeated solver artifacts. Existing limits still apply.
+                       (some? (:report completed))
+                       (some? (:report (last (:rounds state))))
                        (= (terminal-failure-signature completed)
                           (terminal-failure-signature
                            (last (:rounds state)))))
