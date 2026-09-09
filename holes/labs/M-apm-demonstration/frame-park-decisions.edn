@@ -4028,4 +4028,150 @@
        "it is gone. A genuine 500 still classifies :failed. This frame's "
        "class is certified closed against running code (P8).")}
 
+  {:frame/id "f200"
+   :problem/id "m01J06"
+   :campaign/id "jit-all-open-v3"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-09T11:42:00Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :successor-round-dispatched-into-a-still-running-seat
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "076cbb6e a6967bba 78226361"
+   :decision/statement-repair-required? false
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :solver/rounds-completed 34
+   :decision/disposition :partial
+
+   :decision/rationale
+   (str "The park code is wrong and the park itself is a machine fault, not a "
+        "solver result. Round 35's job "
+        "apm-role-29c48563c4341a293808fa3a545be7808aea84282047b5874cff3635c0d4bfe0 "
+        "was created 2026-09-08T22:27:07.591Z and died 3.9s later with "
+        "execution {executed false, tool-events 0, command-events 0} and "
+        "terminal-message \"thread-store conflict: thread "
+        "01a08287-25de-7dc3-80f8-d6ca7f6c11a6 already has an active writer; "
+        "thread/resume failed (code -32600)\". That thread id is f200's own "
+        "solver session. The job never ran a turn, so it carried no session "
+        "and no typed submission, and the guard at live_solver_rounds ~line "
+        "437 named the result :solver-session-mismatch with finding "
+        "{:expected 01a08287-..., :actual nil} -- a session-bookkeeping code "
+        "for a dispatch that never started.")
+
+   :decision/process-finding
+   (str "Round 35 was dispatched at 22:27:07.591Z while round 34's job was "
+        "still running; that job did not finish until 22:28:03.035Z, 55.4 "
+        "seconds later. A round is treated as terminal when its typed "
+        "submission arrives, but the role writes that submission before the "
+        "Codex process winds down and releases the thread writer. The CLI's "
+        "writer lock was the only overlap check in the system. f202 hit the "
+        "same collision twice sixteen seconds apart and was halted by it; "
+        "f200 hit it once, which is the whole difference between the two "
+        "parks.")
+
+   :decision/repair-action
+   (str "076cbb6e: dispatch-round! observes the prior round's job through the "
+        "job provider and returns :awaiting-prior-job-terminal rather than "
+        "opening a second turn on the same thread; :awaiting-prior-job-terminal "
+        "added to phase_status.clj in both the phase-driver class and the "
+        "propagation route, closure-findings empty. a6967bba: "
+        "resume-solver-remediation-live! now supplies :job-fn, without which "
+        "every resumed siege threw NullPointerException inside the new wait, "
+        "and dispatch-round! answers a missing provider with "
+        ":solver-round-job-provider-missing instead of an NPE. 78226361: a "
+        "failed job with no session is classified :solver-job-terminal-failure, "
+        "not :solver-session-mismatch. All three loaded into the running :7070 "
+        "JVM from master and recorded as campaign conditions; f204, f205 and "
+        "f206 have run since under the wait.")
+
+   :decision/work-retained
+   (str "exp/countdown-f200-m01J06-solver, head d56e06c1, 36 commits ahead of "
+        "master: 2001 lines, 11 declarations, one remaining sorry at line 2001 "
+        "on the target theorem apm_m01j06. Last recorded lake run exit 0, "
+        "errors 0, sorry-warnings 1. All 34 rounds were classified :progress. "
+        "The branch is retained, as partial frames' branches are.")
+
+   :decision/recommended-route
+   (str "Preserve as partial. No void, no re-queue of m01J06 from its pin: a "
+        "fresh frame would start from master's statement and discard 36 "
+        "commits of sound work for a fault that is now fixed. If m01J06 is to "
+        "be finished, the route is to continue this branch, which is a "
+        "decision about spending solver budget and is Joe's, not one this "
+        "record makes.")
+
+   :decision/not-done
+   (str "No void, no re-queue, no merge of the solver branch to master, no "
+        "synthesized terminal receipt. The park code stays as written; the fix "
+        "changes future classification, not records already made.")}
+
+  {:frame/id "f202"
+   :problem/id "m02A03"
+   :campaign/id "jit-all-open-v3"
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-09T11:42:00Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :successor-round-dispatched-into-a-still-running-seat
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-commit "076cbb6e a6967bba 78226361"
+   :decision/statement-repair-required? false
+   :decision/frame-voided? false
+   :decision/redispatch-solver? false
+   :solver/rounds-completed 24
+   :decision/disposition :partial
+
+   :decision/rationale
+   (str "Same class as f200 and the same thread-writer conflict, but it "
+        "landed twice. Round 23 was created 02:29:44.887Z and round 24 at "
+        "02:30:00.920Z, while round 22's job ran until 02:30:21.578Z -- 36.7 "
+        "and 20.7 seconds inside it respectively. Both failed with "
+        "\"thread 01a08383-947f-7b11-be4f-0dc777fe5f6c already has an active "
+        "writer\", f202's own solver session. A failed job carries no report, "
+        "so both rounds produced the identical terminal-failure signature "
+        "{:report nil, :error/code :solver-job-terminal-failure, :findings "
+        "nil, :missing #{}} and the repeated-artifact check halted the siege "
+        "with :solver-remediation-required.")
+
+   :decision/process-finding
+   (str "The remediation instruction the machine wrote -- \"Correct the "
+        "repeated validator finding in committed state before resuming; "
+        "identical terminal artifacts must not consume the proof-search "
+        "budget\" -- is aimed at a solver that keeps resubmitting one rejected "
+        "proof. f202 submitted nothing on either round. A reader following "
+        "that instruction would go hunting for a defect in 1517 lines of "
+        "sound Lean. Two further findings, neither of which halted the frame: "
+        "(1) all 22 reporting rounds carried :solver/outcome :progress and "
+        ":committed? true but no :residual key, and round-outcome requires a "
+        "non-blank :residual, so every one was recorded :inadequate; "
+        "normalize-round-report can recover a residual from :failure-account "
+        "but only behind the exact literal prefix \"residual: \", and this "
+        "solver wrote \"Progress: committed an exact reduction ...\" instead. "
+        "(2) the resulting 22-round :inadequate streak is what my earlier "
+        "reading called a frame spending budget without producing; that "
+        "reading was wrong, and the branch is the evidence.")
+
+   :decision/work-retained
+   (str "exp/countdown-f202-m02A03-solver, head 59043e4f, 22 commits ahead of "
+        "master: 1517 lines, 67 declarations, one remaining sorry at line 1517 "
+        "on the target theorem apm_m02a03. Last recorded lake run exit 0, "
+        "errors 0, sorry-warnings 1. The branch is retained.")
+
+   :decision/recommended-route
+   (str "Preserve as partial. No void. m02A03 is resumable by design -- its "
+        "state is :solver-remediation-required, which "
+        "live-proof-phases/resume-solver-remediation-live! exists to restart, "
+        "and a6967bba is what makes that path work at all. Resuming it spends "
+        "solver budget on a problem already 67 declarations deep, which is a "
+        "judgement for Joe. Do not resume it before the repeated-signature "
+        "check can tell an apparatus failure from a repeated artifact, or the "
+        "next pair of transport failures halts it again with the same "
+        "misleading instruction.")
+
+   :decision/not-done
+   (str "No void, no re-queue, no merge of the solver branch to master, no "
+        "resume dispatched. The remediation record stays as written.")}
+
 ]}
