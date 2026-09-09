@@ -281,9 +281,17 @@
            :state (addressed
                    (-> state
                        (assoc :queue/id (:queue/id revised))
+                       ;; A refuted void restores :next-index to the voided
+                       ;; slot but leaves :frame-ordinal one past the frame it
+                       ;; spent, so a value that is present is already the
+                       ;; retry's number. Incrementing it again skipped a frame
+                       ;; number on every repair, and a hole in the frame series
+                       ;; reads later as a frame that went missing. The fallback
+                       ;; is for campaigns persisted before this field existed:
+                       ;; there the voided slot's own index is all we have, and
+                       ;; the retry is the number after it.
                        (update :frame-ordinal
-                               (fn [ordinal]
-                                 (inc (or ordinal (:next-index state)))))
+                               #(or % (inc (:next-index state))))
                        (assoc-in [:statement-repair-attempts problem-id] 1)
                        (assoc-in [:statement-repair-receipts problem-id]
                                  (:receipt/id repair-receipt))

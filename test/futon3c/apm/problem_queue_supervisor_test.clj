@@ -605,6 +605,36 @@
       (is (= (:blob replacement)
              (get-in prepared [:frame :problem :blob]))))))
 
+(deftest a-repair-does-not-skip-a-frame-number
+  ;; The harness mints "q<ordinal+1>", so slot 0 is q1 and the retry of a
+  ;; repaired slot 0 must be q2. It was q3 until 2026-09-09: the void leaves
+  ;; :frame-ordinal one past the frame it spent, and revise-voided-slot
+  ;; incremented it a second time, so every statement repair burnt a frame
+  ;; number. f204 was the one it burnt.
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        voided-frame-id (get-in @state [:active :frame :frame/id])
+        _ (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly
+                   {:ok true :status :frame-complete :frame/result :void
+                    :terminal-receipt {:receipt/id "void-q1"
+                                       :problem/outcome :refuted}})))
+        handoff (:statement-repair/handoff @state)
+        replacement (assoc (first problems) :revision "rev-2" :blob "blob-2")
+        receipt {:repair/role :guide
+                 :obligation/id (:obligation/id handoff)
+                 :receipt/id (clojure.string/join (repeat 64 "a"))}
+        revised (sut/revise-voided-slot (:plan providers) @state
+                                        replacement receipt)
+        prepared (#'sut/prepare-next (:plan revised) (:state revised)
+                                     (:providers (harness)))]
+    (is (= "q1" voided-frame-id))
+    (is (:ok revised) (pr-str revised))
+    (is (:ok prepared) (pr-str prepared))
+    (is (= "q2" (get-in prepared [:frame :frame/id]))
+        "the retry is the next frame, not the one after next")))
+
 (deftest only-guide-may-author-the-single-statement-repair
   (let [{:keys [providers state]} (harness)
         _ (sut/tick! providers)
