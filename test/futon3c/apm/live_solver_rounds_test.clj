@@ -45,6 +45,84 @@
     (is (= 48 (get-in result [:state :active :request
                               :solver/remaining-rounds])))))
 
+(deftest successor-waits-for-prior-job-to-finish-after-typed-submission
+  ;; f202: round 23 created 02:29:44.887Z, round 22 finished 02:30:21.578Z.
+  ;; The submission had completed the round, but its CLI still held the writer.
+  (let [persisted (atom nil)
+        calls (atom [])
+        base (assoc (effects persisted)
+                    :job-fn (fn [id]
+                              (swap! calls conj [:job id])
+                              {:job-id id :state :running
+                               :session-id "solver-session"})
+                    :terminal-submission-provider
+                    (constantly {:payload {:outcome "progress"
+                                          :evidence {:residual "unfinished"}}})
+                    :announce-fn (fn [_] (swap! calls conj :announce))
+                    :activate-fn (fn [& _] (swap! calls conj :activate)))
+        collected (sut/drive! base)
+        completed (sut/drive! (assoc base :state (:state collected)))
+        state (:state completed)]
+    (is (= :awaiting-prior-job-terminal (:status completed)))
+    (is (= :done (get-in state [:rounds 0 :terminal-state]))
+        "typed completion is not evidence that the raw job released the seat")
+    (is (nil? (:active state)))
+    (reset! calls [])
+    (let [waiting (sut/drive! (assoc base :state state
+                                   :persist-fn
+                                   (fn [_] (swap! calls conj :persist))))]
+      (is (= {:ok true :status :awaiting-prior-job-terminal
+              :job-id "job-1" :state state}
+             waiting))
+      (is (= [[:job "job-1"]] @calls))
+      (is (= state @persisted)))))
+
+(deftest terminal-prior-job-dispatches-the-same-successor
+  (let [persisted (atom nil)
+        ;; Pin the existing legacy continuation result, including request,
+        ;; session, budget, ticket and activation acceptance.
+        expected (sut/drive! (effects persisted))
+        state (assoc (:state expected) :active nil)
+        calls (atom [])
+        base (effects persisted)
+        result (sut/drive!
+                (assoc base :state state
+                       :job-fn (fn [id]
+                                 (swap! calls conj [:job id])
+                                 {:job-id id :state :done})
+                       :announce-fn (fn [request]
+                                      (swap! calls conj :announce)
+                                      ((:announce-fn base) request))
+                       :activate-fn (fn [request ticket]
+                                      (swap! calls conj :activate)
+                                      ((:activate-fn base) request ticket))))]
+    (is (= expected result))
+    (is (= "job-2" (:job-id result)))
+    (is (= [[:job "job-1"] :announce :activate] @calls))))
+
+(deftest first-round-dispatches-without-observing-a-predecessor
+  (let [persisted (atom nil)
+        calls (atom [])
+        base (effects persisted)
+        result (sut/drive!
+                (assoc base :state nil
+                       :job-fn (fn [_] (swap! calls conj :job))
+                       :announce-fn (fn [request]
+                                      (swap! calls conj :announce)
+                                      ((:announce-fn base) request))
+                       :activate-fn (fn [request ticket]
+                                      (swap! calls conj :activate)
+                                      ((:activate-fn base) request ticket))))]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "job-1" (:job-id result)))
+    (is (= [] (get-in result [:state :rounds])))
+    (is (= (sut/round-request base-request 1 nil)
+           (get-in result [:state :active :request])))
+    (is (true? (get-in result [:state :active :activation/accepted?])))
+    (is (= (:state result) @persisted))
+    (is (= [:announce :activate] @calls))))
+
 (deftest checkpoint-round-selects-restrategize-card-and-next-round-restores-regular-card
   (let [checkpoint (sut/round-request base-request 10 nil)
         resumed (sut/round-request base-request 11 nil)]

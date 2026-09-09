@@ -97,7 +97,7 @@
     (if (:ok result) {:ok true :state state}
         {:ok false :error/code :solver-round-state-persistence-failed})))
 
-(defn- dispatch-round!
+(defn- dispatch-ready-round!
   [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]} state]
   (let [ordinal (inc (count (:rounds state)))
         prior (last (:rounds state))
@@ -130,6 +130,19 @@
                    :job-id (get-in accepted [:active :ticket :job-id])
                    :state accepted}
                   saved))))))))))
+
+(defn- dispatch-round!
+  "Wait for the prior job to release the seat before starting another round.
+   A typed submission can complete a round while its CLI still owns the
+   session writer, so only the job provider can establish this boundary."
+  [{:keys [job-fn] :as effects} state]
+  (let [prior (last (:rounds state))]
+    (if (and prior
+             (not= :terminal
+                   (job-state/classify (:state (job-fn (:job-id prior))))))
+      {:ok true :status :awaiting-prior-job-terminal
+       :job-id (:job-id prior) :state state}
+      (dispatch-ready-round! effects state))))
 
 (defn- dispatch-terminal-repair!
   [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]}

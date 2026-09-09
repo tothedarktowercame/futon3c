@@ -10,6 +10,7 @@
 (def boundary-status-classes
   {:phase-driver
    {:awaiting-terminal :waiting-terminal
+    :awaiting-prior-job-terminal :waiting-terminal
     :orphaned :waiting-orphan-recovery
     :awaiting-orphan-recovery :waiting-orphan-recovery
     :awaiting-apparatus-repair :waiting-apparatus-repair
@@ -87,6 +88,7 @@
   [{:producer :phase-driver
     :consumer :live-supervisor-frame
     :mapping {:awaiting-terminal :parked
+              :awaiting-prior-job-terminal :parked
               :orphaned :orphan-recovery-scheduled
               :awaiting-orphan-recovery :orphan-recovery-scheduled
               :awaiting-apparatus-repair :parked

@@ -38,6 +38,22 @@
     (is (= "solve-round-2" (:job-id result)))
     (is (= ["solve-round-2"] (get-in (last @calls) [1 :awaiting])))))
 
+(deftest prior-solver-job-wait-propagates-as-a-parked-frame
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls {:ok true :status :awaiting-prior-job-terminal
+                             :job-id "solve-round-22"
+                             :state {:state/type :solver-rounds :active nil}}))]
+    (is (:ok result))
+    (is (= :parked (:status result)))
+    (is (= "solve-round-22" (:job-id result)))
+    (is (= ["solve-round-22"] (get-in (last @calls) [1 :awaiting])))
+    (is (not-any? #{:advance} @calls))
+    (doseq [boundary [:problem-queue-frame :problem-queue-result
+                      :jit-queue-postcondition]]
+      (is (not= :unknown (phase-status/classify boundary (:status result)))))
+    (is (empty? (phase-status/closure-findings)))))
+
 (deftest awaiting-phase-without-job-id-fails-before-park
   (let [calls (atom [])
         result (sut/tick! (base calls {:ok true :status :awaiting-terminal
@@ -158,7 +174,8 @@
            (get-in (last @calls) [1 :retry/not-before-ms])))))
 
 (deftest phase-status-vocabulary-is-closed-and-unknowns-name-the-gap
-  (is (= #{:awaiting-terminal :orphaned :awaiting-orphan-recovery
+  (is (= #{:awaiting-terminal :awaiting-prior-job-terminal
+           :orphaned :awaiting-orphan-recovery
            :awaiting-apparatus-repair :awaiting-substrate
            :transport-retry-scheduled :terminal-collected :certified}
          (phase-status/known-statuses :phase-driver)))
