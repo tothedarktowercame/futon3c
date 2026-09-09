@@ -57,6 +57,7 @@
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.invoke-activity :as invoke-activity]
             [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.clock-lineage :as clock-lineage]
@@ -3705,7 +3706,8 @@ RESPOND WITH ONLY:
                                                 (when tools
                                                   (update-activity!
                                                    aid-val
-                                                   (str "using " (str/join ", " tools))))
+                                                   (or (invoke-activity/tool-details->activity tool-details)
+                                                       (str "using " (str/join ", " tools)))))
                                                 (when (and (not tools) text (not (str/blank? text)))
                                                   (update-activity! aid-val "composing response")))
                                               ;; Only keep text from the last response turn.
@@ -3962,7 +3964,8 @@ RESPOND WITH ONLY:
                                                                                         'update-invoke-activity!)]
                                                   (update-activity!
                                                    aid-val
-                                                   (str "using " (str/join ", " tools)))))
+                                                   (or (invoke-activity/tool-details->activity tool-details)
+                                                       (str "using " (str/join ", " tools))))))
                                               ;; Emit to the streaming event sink (→ /invoke-stream →
                                               ;; the *claude-repl* buffer), exactly like the cold path —
                                               ;; this is what makes warm turns stream INTO the REPL.
