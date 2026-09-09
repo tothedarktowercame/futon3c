@@ -4299,5 +4299,67 @@
         "change to the round record. The nine outage failures are left in the "
         "history as they occurred rather than being retried into it.")}
 
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f209"
+   :problem/id "m02J03"
+   :phase :preflight
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-09T22:37:10Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :dead-job-pointer-cleared-by-hand-then-id-collision
+   :decision/apparatus-repair-required? true
+   :decision/frame-voided? false
+   :last-valid-receipt/id nil
+   :decision/rationale
+   (str "f209 never got a preflight. Its proctor job "
+        "apm-role-85e051656 was dispatched at 21:05:58 and failed at 21:06:08, "
+        "inside the Codex account quota outage that also stopped both topology "
+        "tracks and forced f208's solver checkpoint. Its live state stayed "
+        ":live-job-dispatched pointing at that dead job, with terminal-collection "
+        "nil, and the job's deadline (22:06:01) was already in the past. That "
+        "combination was self-sustaining: the queue backed off ~19 minutes "
+        "between polls waiting for a terminal result, and the semantic-progress "
+        "watchdog halted on :external-job-deadline-exceeded within about 30 "
+        "seconds of every arm, disabling the coordinator long before a poll "
+        "could collect the failure. Three resume! calls each survived under a "
+        "minute. The whole campaign was stopped by one dead pointer.")
+   :decision/operator-action
+   (str "claude-5 moved the stale live/preflight.edn aside by hand at 22:33Z, "
+        "preserving it in the frame as "
+        "preflight.edn.quota-outage-dead-job-20260909T2233Z rather than "
+        "deleting it, and resumed the coordinator. The campaign has run "
+        "normally since: watchdog :watching, and it has advanced to f210. "
+        "This was a hand repair of campaign state and is recorded as one.")
+   :decision/consequence
+   (str "The re-dispatch produced :live-job-activation-failed and f209 parked. "
+        "The dispatched job id is content-addressed over the request, so "
+        "re-dispatching an unchanged preflight request minted the identical id "
+        "apm-role-85e051656, which the Agency already held in state :failed, "
+        "and activation was refused. Clearing the phase state alone therefore "
+        "cannot recover a phase whose job died; the request must differ, or "
+        "the dead job must be released. That is a real apparatus gap and is "
+        "not m02J03's fault.")
+   :decision/work-retained
+   (str "Nothing of m02J03's was lost, because nothing was produced: the "
+        "proctor job emitted no result and no receipt, and preflight is the "
+        "first phase. The original dispatched state is preserved in the frame "
+        "directory. m02J03 remains unattempted.")
+   :decision/recommended-route
+   (str "Advance f209 as partial. Do not void. m02J03 has had no solver "
+        "attempt at all, so unlike f208 it is a clean re-queue candidate "
+        "rather than a resume, and re-queueing costs only what a first attempt "
+        "would have cost. Before that, repair the gap this exposed: a role "
+        "phase whose job is already terminal must be able to re-dispatch, "
+        "either by including an attempt ordinal in the addressed request or by "
+        "collecting the dead job's terminal state without waiting out a "
+        "backoff the watchdog will not survive.")
+   :decision/not-done
+   (str "The frame is not voided and m02J03 is not re-queued. No synthesized "
+        "receipt, verdict or observation was created, the preserved dispatch "
+        "state was not edited, and no other frame was touched.")}
+
 
 ]}
