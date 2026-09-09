@@ -291,6 +291,19 @@
   probe failure as a hard validation finding."
   #{:workspace-probe-failed})
 
+(defn- student-observation?
+  "Did the probe RUN and reject the Student's file, or fail before it started?
+
+  workspace-build/probe! returns a nonzero exit for both, and retains the
+  typed bootstrap failure under :bootstrap only in the second case. Demoting
+  that one too would file a substrate that could not build as \"the Student
+  did not manage the proof\" -- an apparatus fault recorded as a negative
+  measurement, which is worse than the park it replaced, because nothing
+  surfaces it. A bootstrap failure stays structural and still rejects."
+  [validation finding]
+  (and (contains? student-observation-findings finding)
+       (nil? (:probe/bootstrap validation))))
+
 (defn preserve-student-candidate!
   "Commit and certify the exact Student worktree at a terminal boundary.
 
@@ -354,8 +367,9 @@
           (let [validation (validate lease
                                      (cond-> {:expected-head head}
                                        probe-fn (assoc :probe-fn probe-fn)))
-                probe-findings (filterv student-observation-findings (:findings validation))
-                structural-findings (remove student-observation-findings (:findings validation))]
+                observation? #(student-observation? validation %)
+                probe-findings (filterv observation? (:findings validation))
+                structural-findings (remove observation? (:findings validation))]
             (if (seq structural-findings)
               {:ok false :error/code :student-candidate-validation-failed
                :head head :ref ref :validation validation}

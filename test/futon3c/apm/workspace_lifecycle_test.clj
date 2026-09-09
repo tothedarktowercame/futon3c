@@ -322,6 +322,38 @@
                  (= 1 exit) (conj :workspace-probe-failed))
                (get-in result [:validation :findings])))))))
 
+(deftest student-candidate-rejects-a-probe-that-never-ran
+  ;; A substrate that cannot bootstrap also exits nonzero, and demoting it
+  ;; would record "the Student did not manage the proof" for a failure the
+  ;; Student had no part in. workspace-build/probe! retains the typed
+  ;; bootstrap failure under :bootstrap; that case stays structural.
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        bootstrap-failed {:ok false
+                          :error/code :workspace-bootstrap-failed
+                          :finding {:exit 1 :err "lake: no such package"}}]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease))
+          "theorem p1 : True := by\n  exact False.elim\n")
+    (testing "a bootstrap failure is not a Student observation"
+      (let [result (sut/preserve-student-candidate!
+                    {:lease lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit 1 :out "" :err "lake"
+                                        :bootstrap bootstrap-failed})})]
+        (is (false? (:ok result)) (pr-str result))
+        (is (= :student-candidate-validation-failed (:error/code result)))
+        (is (= [:workspace-probe-failed]
+               (get-in result [:validation :findings])))))
+    (testing "the same exit code with no bootstrap failure is preserved"
+      (let [result (sut/preserve-student-candidate!
+                    {:lease lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit 1 :out "error: type mismatch"})})]
+        (is (:ok result) (pr-str result))
+        (is (= 1 (:candidate/lean-exit (:candidate result))))
+        (is (= [:workspace-probe-failed]
+               (:candidate/probe-findings (:candidate result))))))))
+
 ;; f84, 2026-09-03: retirement failed on exactly one precondition that no
 ;; operator could repair -- a role job the frame owned had not yet left a live
 ;; state. It was classified :workspace-retirement-audit-invalid, the regulator
