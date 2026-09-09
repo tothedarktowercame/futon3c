@@ -1008,7 +1008,7 @@ legacy stream during a rolling upgrade instead of withholding every reply."
 (defun claude-repl--call-claude-streaming (text callback)
   "Send TEXT to Claude via POST /api/alpha/invoke-stream.
 Streams NDJSON events incrementally. Text events are displayed as they
-arrive. Tool-use events update the progress line. The done event
+arrive. Tool-use events enter the transcript even before prose. The done event
 triggers evidence emission and session-id update.
 CALLBACK is called with the final response text on completion."
   (claude-repl--call-claude-streaming-with-retry text callback 0))
@@ -1143,31 +1143,31 @@ CALLBACK is called with the final response text on completion."
                                      (when tid
                                        (push (cons tid d)
                                              claude-repl--pending-tool-uses))))
-                                 (if agent-chat--streaming-started
-                                     (let ((start-pos (and agent-chat--streaming-marker
-                                                           (marker-position agent-chat--streaming-marker))))
-                                       (agent-chat-stream-text tool-text)
-                                       (when (and start-pos agent-chat--streaming-marker)
-                                         (let ((ov (make-overlay start-pos
-                                                                 (marker-position agent-chat--streaming-marker))))
-                                           (overlay-put ov 'face 'agent-chat-tool-line-face)
-                                           (overlay-put ov 'priority 10)
-                                           (overlay-put ov 'agent-chat-tool-details
-                                                        (or details
-                                                            (mapcar (lambda (name)
-                                                                      (list (cons 'name name)))
-                                                                    (append tools nil))))
-                                           (overlay-put ov 'help-echo
-                                                        (format "Tool: %s" tool-names))
-                                           ;; cursor-sensor-functions must be a text property
-                                           (put-text-property
-                                            start-pos
-                                            (marker-position agent-chat--streaming-marker)
-                                            'cursor-sensor-functions
-                                            (list #'claude-repl--tool-overlay-sensor)))))
-                                   (agent-chat-update-progress
-                                    (format "using %s" tool-names)
-                                    'agent-chat-prompt-face)))))))))
+                                 ;; Resumed turns can run many tools before prose.
+                                 ;; Start the transcript on the first tool as well.
+                                 (unless agent-chat--streaming-started
+                                   (agent-chat-begin-streaming-message "claude"))
+                                 (let ((start-pos (and agent-chat--streaming-marker
+                                                       (marker-position agent-chat--streaming-marker))))
+                                   (agent-chat-stream-text tool-text)
+                                   (when (and start-pos agent-chat--streaming-marker)
+                                     (let ((ov (make-overlay start-pos
+                                                             (marker-position agent-chat--streaming-marker))))
+                                       (overlay-put ov 'face 'agent-chat-tool-line-face)
+                                       (overlay-put ov 'priority 10)
+                                       (overlay-put ov 'agent-chat-tool-details
+                                                    (or details
+                                                        (mapcar (lambda (name)
+                                                                  (list (cons 'name name)))
+                                                                (append tools nil))))
+                                       (overlay-put ov 'help-echo
+                                                    (format "Tool: %s" tool-names))
+                                       ;; cursor-sensor-functions must be a text property
+                                       (put-text-property
+                                        start-pos
+                                        (marker-position agent-chat--streaming-marker)
+                                        'cursor-sensor-functions
+                                        (list #'claude-repl--tool-overlay-sensor))))))))))))
                      (error nil))))))
            :sentinel
            (lambda (p _event)
