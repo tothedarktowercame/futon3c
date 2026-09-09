@@ -4251,5 +4251,53 @@
         "the Student's preserved candidate, and no campaign or workspace "
         "state altered by this decision.")}
 
+  {:decision/disposition :partial
+   :campaign/id "jit-all-open-v3"
+   :frame/id "f208"
+   :problem/id "m02J02"
+   :phase :solve
+   :park/state-type :fault-frame-park
+   :decision/at "2026-09-09T22:29:21Z"
+   :decision/by "claude-5"
+   :decision/owner :claude-supervisor
+   :decision/status :decided
+   :decision/class :solver-checkpoint-forced-by-external-quota-outage
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+   :last-valid-receipt/id nil
+   :decision/rationale
+   (str "The checkpoint is an artifact of an external outage, not a judgement "
+        "that the solver had run out of strategy. Of 40 rounds, 31 reached "
+        ":done with outcome :progress and 9 failed with :inadequate. All nine "
+        "failures are :solver-job-terminal-failure with no report and, where "
+        "sampled, ran entirely inside 21:02:39-21:05:17 today -- rounds 35 and "
+        "40 and the recorded invalid observation at round 40 each began and "
+        "died within twenty seconds. That window is the Codex account usage "
+        "limit being exhausted campaign-wide: every Codex seat failed from "
+        "about 21:02 until Joe reset the quota at about 21:09, which also took "
+        "down both topology tracks and f209's proctor job. The solver did not "
+        "fail to make progress; its seat had no capacity to run.")
+   :decision/work-retained
+   (str "exp/countdown-f208-m02J02-solver is 30 commits ahead of master, with "
+        "named results including 'prove sine endpoint vanishing bounds', "
+        "'prove sine boundary layer estimate' and 'bound sine endpoint cutoff "
+        "graph errors' at head 58a1ad4a. Three sorries remain in "
+        "problems/m02J02/lean/Main.lean. All 40 round reports and the frame's "
+        "receipts are intact. Nothing here is discarded.")
+   :decision/recommended-route
+   (str "Advance f208 as partial and retain the branch. No void. No apparatus "
+        "repair is required: the machine behaved correctly given nine "
+        "consecutive terminal failures, and the cause was outside it. "
+        "m02J02 is the strongest resume candidate in the campaign -- 31 "
+        "productive rounds and 30 commits deep with three sorries left -- but "
+        "resuming spends solver budget on a problem already well advanced, "
+        "which is Joe's call, exactly as recorded for f202/m02A03. If it is "
+        "resumed, do so from 58a1ad4a rather than restarting the solve.")
+   :decision/not-done
+   (str "The frame is not voided. No re-queue, no resume dispatched, no "
+        "synthesized receipt or verdict, no edit to the solver branch, and no "
+        "change to the round record. The nine outage failures are left in the "
+        "history as they occurred rather than being retried into it.")}
+
 
 ]}
