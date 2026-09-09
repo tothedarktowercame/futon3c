@@ -1,6 +1,7 @@
 (ns futon3c.apm.queued-frame-adapter-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.problem-queue-supervisor :as queue]
             [futon3c.apm.queued-frame-adapter :as sut]))
@@ -802,3 +803,29 @@
       (is (= [:replacement-pinned-problem :guide-receipt] (:required-output h)))
       (is (= :discard-and-advance (:exhaustion/action h)))
       (is (= :refuted (get-in h [:diagnostic :problem/outcome]))))))
+
+(deftest repair-observer-requires-eligible-pins-for-the-same-problem
+  (let [handoff {:obligation/id "obligation" :problem/id "p1" :frame/id "f205"}
+        receipt {:obligation/id "obligation" :repair/role :guide :receipt/id digest}
+        retired (atom [])
+        observe (fn [replacement]
+                  (with-redefs [job-port/observe
+                                (fn [& _]
+                                  {:ok true :terminal? true :state :done
+                                   :report {:replacement-pinned-problem replacement
+                                            :guide-receipt receipt}})]
+                    (#'sut/observe-statement-repair
+                     {:http-fn (fn [& args] (swap! retired conj args))}
+                     handoff)))]
+    (is (= :complete (:status (observe problem))))
+    ;; f205's real failure shape: a statement and source aliases, no pins.
+    (is (= :failed (:status (observe {:problem/id "p1"
+                                     :source/repository "/repo"
+                                     :source/path "p1.lean"
+                                     :statement "repaired"}))))
+    (doseq [key [:problem/id :repository :revision :path :blob :classification]]
+      (is (= :failed (:status (observe (dissoc problem key))))))
+    (is (= :failed (:status (observe (assoc problem :problem/id "other")))))
+    (is (= :failed (:status (observe (assoc problem :classification :excluded)))))
+    (is (= 10 (count @retired)))
+    (is (every? #(= "DELETE" (first %)) @retired))))

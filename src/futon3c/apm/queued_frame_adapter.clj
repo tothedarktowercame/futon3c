@@ -737,7 +737,10 @@
       ;; queue's :discard-and-advance policy -- a malformed guide reply wedged
       ;; the whole campaign rather than costing one slot.
       (let [report (:report observation)
-            valid? (and (map? (:replacement-pinned-problem report))
+            valid? (and (queue-supervisor/valid-pinned-problem?
+                         (:replacement-pinned-problem report))
+                        (= (:problem/id handoff)
+                           (get-in report [:replacement-pinned-problem :problem/id]))
                         (queue-supervisor/valid-guide-receipt?
                          (:obligation/id handoff)
                          (:guide-receipt report)))]
@@ -777,6 +780,11 @@
                        "Authority:\n" (pr-str handoff) "\n"
                        "Return exactly one EDN map containing "
                        ":replacement-pinned-problem and :guide-receipt.\n"
+                       "Commit the completed repair after validating it. The replacement\n"
+                       "must carry :problem/id (unchanged), :repository, :revision,\n"
+                       ":path, :blob (all strings), and :classification :non-excluded.\n"
+                       "Use the committed revision and git blob of the repaired source;\n"
+                       "a working-tree path or :source/* keys do not pin a replacement.\n"
                        "The receipt is checked, and must carry ALL THREE of:\n"
                        "  :obligation/id  - repeated verbatim from the authority above\n"
                        "  :repair/role    - the keyword :guide\n"

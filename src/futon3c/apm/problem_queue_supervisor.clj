@@ -115,6 +115,13 @@
                               problems)}]
     (assoc body :queue/id (machine/ledger-digest [body]))))
 
+(defn valid-pinned-problem?
+  "The same eligibility shape is required of launch and replacement pins."
+  [problem]
+  (and (map? problem)
+       (every? string? ((juxt :problem/id :repository :revision :path :blob) problem))
+       (= :non-excluded (:classification problem))))
+
 (defn validate-plan [plan]
   (let [problems (:problems plan)
         ids (mapv :problem/id problems)
@@ -128,11 +135,7 @@
                    (empty? problems) (conj :queue-empty)
                    (not= (count ids) (count (distinct ids)))
                    (conj :queue-problem-duplicate)
-                   (some #(or (not (every? string?
-                                           ((juxt :problem/id :repository :revision
-                                                  :path :blob) %)))
-                              (not= :non-excluded (:classification %)))
-                         problems)
+                   (some (complement valid-pinned-problem?) problems)
                    (conj :queue-problem-ineligible))]
     (if (seq findings)
       {:ok false :error/code :problem-queue-invalid :findings findings}
