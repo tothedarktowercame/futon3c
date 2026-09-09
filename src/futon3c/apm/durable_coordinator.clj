@@ -223,6 +223,37 @@
   (or (read-edn registry-path)
       {:state/type registry-type :registry/version registry-version :entries {}}))
 
+(declare valid-registry?)
+
+(defn persist-launch-plan!
+  "Replace the registered JIT launch problem pins with PLAN atomically.
+
+  The registry launch list is the durable plan authority. Its queue id and the
+  entry digest move in the same write, so a subsequent coordinator tick cannot
+  rebuild the old plan against a revised queue state."
+  [registry-path coordinator-id plan]
+  (let [registry (read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-entry-missing}
+
+      :else
+      (let [updated (-> entry
+                        (assoc-in [:coordinator/config :launch :problems]
+                                  (:problems plan))
+                        (assoc-in [:coordinator/config :launch :queue-id]
+                                  (:queue/id plan))
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (entry-digest updated))]
+        (persistence/atomic-persist!
+         (Path/of (str registry-path) (make-array String 0))
+         (assoc-in registry [:entries coordinator-id] updated))))))
+
 (defn- valid-registry? [registry]
   (and (= registry-type (:state/type registry))
        (= registry-version (:registry/version registry))

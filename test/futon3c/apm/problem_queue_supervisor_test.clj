@@ -17,6 +17,7 @@
       :now-fn (constantly 1788921301781)
       :persist-state-fn #(do (reset! state %) (swap! calls conj [:persist])
                              {:ok true})
+      :persist-plan-fn (constantly {:ok true})
       :mint-frame-fn
       (fn [{:keys [problem ordinal]}]
         (swap! calls conj [:mint (:problem/id problem)])
@@ -676,7 +677,10 @@
     (is (= mint-count (count (filter #(= :mint (first %)) @calls))))))
 
 (deftest completed-guide-handoff-installs-repair-and-remints-without-human-step
-  (let [{:keys [providers state]} (harness)
+  (let [{:keys [providers state calls]} (harness)
+        original (assoc (first problems) :problem/id "m02A05")
+        live-plan (sut/queue-plan [original])
+        providers (assoc providers :plan live-plan)
         _ (sut/tick! providers)
         _ (sut/tick!
            (assoc providers :frame-tick-fn
@@ -686,10 +690,21 @@
                                        :problem/outcome :refuted}})))
         obligation-id (get-in @state
                               [:statement-repair/handoff :obligation/id])
-        replacement (assoc (first problems)
-                           :revision "guide-revision" :blob "guide-blob")
+        replacement (assoc original
+                           :revision "9d22c1aba6d65bc9147a67ee5b6c19697fc52e17"
+                           :blob "640eb44b9bcf052931f787825019e6a7e3e3b799")
+        persisted-plans (atom [])
+        live-pre-repair-queue-id
+        "0fdf2a276bf63b89dfd5f31dcfeb236f35aff0853ca43d000345aaa2f67cd797"
+        live-revised-queue-id
+        "35341b2b133d1a4a8eeab351e68234feb417558d9c6789c2ea4aad74ffab862d"
         result (sut/tick!
-                (assoc providers :observe-statement-repair-fn
+                (assoc providers
+                       :persist-plan-fn
+                       #(do (swap! persisted-plans conj %)
+                            (swap! calls conj [:persist-plan])
+                            {:ok true})
+                       :observe-statement-repair-fn
                        (constantly
                         {:ok true :status :complete
                          :replacement-pinned-problem replacement
@@ -697,10 +712,64 @@
                          {:repair/role :guide :obligation/id obligation-id
                           :receipt/id (apply str (repeat 64 "f"))}})))]
     (is (= :frame-prepared (:status result)))
-    (is (= "guide-blob"
+    (is (not= live-pre-repair-queue-id live-revised-queue-id))
+    (is (= "640eb44b9bcf052931f787825019e6a7e3e3b799"
            (get-in result [:frame :problem :blob])))
-    (is (= 1 (get-in @state [:statement-repair-attempts "p1"])))
+    (is (= 1 (count @persisted-plans)))
+    (is (= (get-in result [:state :queue/id])
+           (:queue/id (first @persisted-plans))))
+    (is (= (:revision replacement)
+           (get-in (first @persisted-plans) [:problems 0 :revision])))
+    (is (< (.indexOf @calls [:persist-plan])
+           (.lastIndexOf @calls [:persist])))
+    (is (= 1 (get-in @state [:statement-repair-attempts "m02A05"])))
     (is (nil? (:statement-repair/handoff @state)))))
+
+(deftest failed-revised-plan-persistence-does-not-persist-revised-state
+  (let [{:keys [providers state calls]} (harness)
+        _ (sut/tick! providers)
+        _ (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly
+                   {:ok true :status :frame-complete :frame/result :void
+                    :terminal-receipt {:receipt/id "void-q1"
+                                       :problem/outcome :refuted}})))
+        obligation-id (get-in @state [:statement-repair/handoff :obligation/id])
+        before @state
+        _ (reset! calls [])
+        result (sut/tick!
+                (assoc providers
+                       :persist-plan-fn
+                       (fn [_] (swap! calls conj [:persist-plan]) {:ok false})
+                       :observe-statement-repair-fn
+                       (constantly
+                        {:ok true :status :complete
+                         :replacement-pinned-problem
+                         (assoc (first problems) :revision "replacement"
+                                :blob "replacement-blob")
+                         :guide-receipt
+                         {:repair/role :guide :obligation/id obligation-id
+                          :receipt/id (apply str (repeat 64 "f"))}})))]
+    (is (= :problem-queue-plan-persistence-failed (:error/code result)))
+    (is (= [[:persist-plan]] @calls))
+    (is (= before @state))))
+
+(deftest noncomplete-repair-observations-never-persist-a-plan
+  (doseq [observation [{:ok true :status :pending}
+                       {:ok true :status :failed}]]
+    (let [{:keys [providers]} (harness)
+          plan-calls (atom 0)
+          _ (sut/tick! providers)
+          _ (sut/tick!
+             (assoc providers :frame-tick-fn
+                    (constantly
+                     {:ok true :status :frame-complete :frame/result :void
+                      :terminal-receipt {:receipt/id "void-q1"
+                                         :problem/outcome :refuted}})))]
+      (sut/tick! (assoc providers
+                        :persist-plan-fn #(do (swap! plan-calls inc) {:ok true})
+                        :observe-statement-repair-fn (constantly observation)))
+      (is (zero? @plan-calls) (pr-str observation)))))
 
 (deftest queue-plan-preserves-explicit-retained-branch
   (let [problem (assoc (first problems) :base-branch "exp/retained")]

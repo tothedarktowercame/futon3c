@@ -100,7 +100,11 @@
    (fn [_intent _state]
      (let [step (requiring-resolve
                  'futon3c.apm.countdown-control/autonomous-problem-list-step!)
-           result (step (:launch config))]
+           result (step (assoc (:launch config)
+                               :coordinator-registry-path
+                               (or (:registry-path config)
+                                   default-registry-path)
+                               :coordinator-id (:coordinator-id config)))]
        (cond
          (not (:ok result)) result
          (= :transport-retry-scheduled (:status result))
@@ -143,6 +147,7 @@
     {:ok false :error/code :jit-tick-work-timeout-invalid
      :tick-work-timeout-minutes tick-work-timeout-minutes}
     (let [config {:coordinator-id coordinator-id
+                  :registry-path registry-path
                   :queue-name (:queue-name launch) :queue-id (:queue-id launch)
                   :launch launch
                   :tick-work-timeout-minutes tick-work-timeout-minutes}

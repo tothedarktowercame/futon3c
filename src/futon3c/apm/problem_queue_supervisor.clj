@@ -298,7 +298,8 @@
                        (dissoc :status :statement-repair/handoff)))})))))
 
 (defn- collect-repair [plan state providers]
-  (let [{:keys [observe-statement-repair-fn persist-state-fn]} providers
+  (let [{:keys [observe-statement-repair-fn persist-plan-fn persist-state-fn]}
+        providers
         handoff (:statement-repair/handoff state)]
     (if-not (fn? observe-statement-repair-fn)
       {:ok false :error/code :problem-queue-guide-observation-provider-missing}
@@ -326,9 +327,13 @@
                          (:guide-receipt observed))]
             (if-not (:ok revised)
               revised
-              (if-not (:ok (persist-state-fn (:state revised)))
-                {:ok false :error/code :problem-queue-state-persistence-failed}
-                (prepare-next (:plan revised) (:state revised) providers))))
+              (let [plan-persisted (when (fn? persist-plan-fn)
+                                     (persist-plan-fn (:plan revised)))]
+                (if-not (:ok plan-persisted)
+                  {:ok false :error/code :problem-queue-plan-persistence-failed}
+                  (if-not (:ok (persist-state-fn (:state revised)))
+                    {:ok false :error/code :problem-queue-state-persistence-failed}
+                    (prepare-next (:plan revised) (:state revised) providers))))))
           :else
           {:ok false :error/code :problem-queue-guide-observation-invalid})))))
 

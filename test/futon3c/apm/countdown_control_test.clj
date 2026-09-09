@@ -13,6 +13,7 @@
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
+            [futon3c.apm.durable-coordinator :as durable-coordinator]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-promotion :as live-promotion]
@@ -944,24 +945,35 @@
 
 (deftest problem-list-entry-does-not-preconstruct-frame-resources
   (let [captured (atom nil)
+        persisted (atom nil)
         problems [{:problem/id "p1" :repository "/repo" :revision "r1"
                    :path "p1.lean" :blob "b1"
                    :classification :non-excluded}
                   {:problem/id "p2" :repository "/repo" :revision "r2"
                    :path "p2.lean" :blob "b2"
                    :classification :non-excluded}]]
-    (with-redefs [problem-queue/tick!
+    (with-redefs [durable-coordinator/persist-launch-plan!
+                  (fn [registry-path coordinator-id plan]
+                    (reset! persisted [registry-path coordinator-id plan])
+                    {:ok true})
+                  problem-queue/tick!
                   (fn [options] (reset! captured options)
                     {:ok true :status :frame-prepared})]
       (is (= :frame-prepared
              (:status (sut/set-alight-problem-queue!
-                       {:problems problems}
+                       {:problems problems
+                        :coordinator-registry-path "/tmp/registry.edn"
+                        :coordinator-id "jit-queue:test"}
                        {:mint-frame-fn identity}))))
       (is (= ["p1" "p2"]
              (mapv :problem/id (get-in @captured [:plan :problems]))))
       (is (nil? (get-in @captured [:plan :frames])))
       (is (fn? (:state-provider @captured)))
-      (is (fn? (:persist-state-fn @captured))))))
+      (is (fn? (:persist-state-fn @captured)))
+      (is (fn? (:persist-plan-fn @captured)))
+      (is (:ok ((:persist-plan-fn @captured) (:plan @captured))))
+      (is (= ["/tmp/registry.edn" "jit-queue:test" (:plan @captured)]
+             @persisted)))))
 
 (deftest problem-list-threads-memory-cascade-arm-into-jit-adapter
   (let [adapter-config (atom nil)

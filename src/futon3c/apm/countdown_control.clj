@@ -13,6 +13,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.conductor :as conductor]
+            [futon3c.apm.durable-coordinator :as durable-coordinator]
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.job-port :as job-port]
@@ -1954,7 +1955,8 @@
   qualification, mint/provision, supervised frame tick, and retirement
   adapters. The successor is minted only after the active frame returns a
   certified terminal result."
-  [{:keys [problems campaign-config authority]} effects]
+  [{:keys [problems campaign-config authority coordinator-registry-path
+           coordinator-id]} effects]
   (with-campaign campaign-config
     (let [path (control-path problem-queue-state-path)
           plan (problem-queue/queue-plan problems)
@@ -2090,6 +2092,10 @@
                #(-> (live-preflight-runtime/read-state
                       (control-path frame-park-decisions-path))
                     :decisions)}
+              (when (and coordinator-registry-path coordinator-id)
+                {:persist-plan-fn
+                 #(durable-coordinator/persist-launch-plan!
+                   coordinator-registry-path coordinator-id %)})
               concrete-effects
               (dissoc effects :jit/config))))))
 
@@ -2335,7 +2341,8 @@
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
   [{:keys [problems authority queue-name frame-number-base agency-base autonomous?
-           memory-cascade solver-shelf-canary]
+           memory-cascade solver-shelf-canary coordinator-registry-path
+           coordinator-id]
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
@@ -2471,6 +2478,8 @@
         result
         (set-alight-problem-queue!
          {:problems problems :campaign-config outer-config
+          :coordinator-registry-path coordinator-registry-path
+          :coordinator-id coordinator-id
           ;; launch-audit checks the immutable apparatus pin, while this
           ;; namespace itself remains loaded only from canonical master.
           :authority (assoc authority :control-root apparatus-root)}
