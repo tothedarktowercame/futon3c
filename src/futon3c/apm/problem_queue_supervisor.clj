@@ -221,7 +221,7 @@
               :dispatch/status :pending}]
     (assoc body :obligation/id (machine/ledger-digest [body]))))
 
-(defn- dispatch-repair [state dispatch-fn persist-state-fn]
+(defn- dispatch-repair [state dispatch-fn persist-state-fn now-fn]
   (let [handoff (:statement-repair/handoff state)]
     (if-not (fn? dispatch-fn)
       {:ok false :error/code :problem-queue-guide-dispatch-provider-missing
@@ -235,7 +235,9 @@
           (let [dispatched (addressed
                             (assoc state :statement-repair/handoff
                                    (assoc handoff :dispatch/status :dispatched
-                                          :dispatch/id (:dispatch/id result))))]
+                                          :dispatch/id (:dispatch/id result)
+                                          :dispatch/dispatched-at-ms
+                                          (now-fn))))]
             (if (:ok (persist-state-fn dispatched))
               {:ok true :status :guide-statement-repair-dispatched
                :state dispatched :handoff (:statement-repair/handoff dispatched)}
@@ -580,7 +582,7 @@
   just-in-time creation of its successor."
   [{:keys [plan state-provider persist-state-fn mint-frame-fn
            qualify-frame-fn prepare-frame-fn frame-tick-fn retire-frame-fn
-           dispatch-statement-repair-fn]
+           dispatch-statement-repair-fn now-fn]
     :as providers}]
   (let [plan-check (validate-plan plan)
         initial (or (state-provider) (initial-state plan))
@@ -611,7 +613,8 @@
       (if (= :dispatched
              (get-in state [:statement-repair/handoff :dispatch/status]))
         (collect-repair plan state providers)
-        (dispatch-repair state dispatch-statement-repair-fn persist-state-fn))
+        (dispatch-repair state dispatch-statement-repair-fn persist-state-fn
+                         (or now-fn #(System/currentTimeMillis))))
       (nil? (:active state))
       (prepare-next plan state providers)
       :else
@@ -722,7 +725,8 @@
                      :state cleared}
                     (if (and refuted? (not repair-exhausted?))
                     (dispatch-repair cleared dispatch-statement-repair-fn
-                                     persist-state-fn)
+                                     persist-state-fn
+                                     (or now-fn #(System/currentTimeMillis)))
                     (if pause?
                     {:ok true :status :batch-paused :state cleared}
                     (prepare-next plan cleared providers)))))))))))))

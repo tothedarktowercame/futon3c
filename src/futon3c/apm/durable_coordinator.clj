@@ -520,6 +520,13 @@
   internal-progress bound fires on a perfectly healthy frame."
   (* 60 60 1000))
 
+(def guide-repair-max-ms
+  "Longest a guide statement-repair job may legitimately remain outstanding.
+
+  Matches the :turn-timeout-ms carried by the guide seat's dispatched job
+  (3600000). The deadline preserves detection of a guide that never returns."
+  (* 60 60 1000))
+
 (defn- outstanding-role-wait
   "The frame's outstanding role turn as an :awaiting-job, or nil.
 
@@ -545,6 +552,23 @@
          :deadline (+ (.toEpochMilli (Instant/parse observed)) role-turn-max-ms)}
         (catch Exception _ nil)))))
 
+(defn- statement-repair-wait
+  "A dispatched guide statement repair as an :awaiting-job, or nil.
+
+  Statement repair runs after its frame is terminal, so there is no active
+  frame transition to expose the wait. Its deadline is the guide seat job's
+  :turn-timeout-ms, keeping the internal-progress exemption bounded. A legacy
+  handoff without a dispatch timestamp is deliberately not emitted: a nil
+  deadline would turn a recoverable substrate stall into an integrity fault."
+  [queue-state]
+  (let [handoff (:statement-repair/handoff queue-state)
+        dispatched-at-ms (:dispatch/dispatched-at-ms handoff)]
+    (when (and (= :dispatched (:dispatch/status handoff))
+               (:dispatch/id handoff)
+               (integer? dispatched-at-ms))
+      {:job-id (:dispatch/id handoff)
+       :deadline (+ dispatched-at-ms guide-repair-max-ms)})))
+
 (defn watchdog-observation
   ([entry state]
    (let [queue-state (coordinator-queue-state entry)]
@@ -560,7 +584,9 @@
         delayed-retry (:coordinator/delayed-retry state)
         result (:regulator/last-result state)
         frame (get-in queue-state [:active :frame])
-        operation (:operation transition)]
+        operation (:operation transition)
+        role-wait (outstanding-role-wait transition)
+        repair-wait (statement-repair-wait queue-state)]
     (cond->
      ;; Every field here must come from durable, frame-derived evidence.
      ;; Anything sourced from :regulator/last-result oscillates with the tick
@@ -588,9 +614,10 @@
       (and (nil? intent) delayed-retry)
       (assoc :awaiting-job {:job-id (:retry/id delayed-retry)
                             :deadline (:not-before-ms delayed-retry)})
-      (and (nil? intent) (nil? delayed-retry)
-           (outstanding-role-wait transition))
-      (assoc :awaiting-job (outstanding-role-wait transition))))))
+      (and (nil? intent) (nil? delayed-retry) role-wait)
+      (assoc :awaiting-job role-wait)
+      (and (nil? intent) (nil? delayed-retry) (nil? role-wait) repair-wait)
+      (assoc :awaiting-job repair-wait)))))
 
 
 (defn- arm-watchdog! [registry-path entry]

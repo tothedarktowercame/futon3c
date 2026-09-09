@@ -72,6 +72,66 @@
     (is (empty? stops))
     (is (= 900000 (get-in result [:state :watchdog/last-progress-ms])))))
 
+(def f203-statement-repair-id
+  "statement-repair-d6fd972b4c8b2dd896da1fde27e5ddb5536d78914a38729d0de77935beacb6e6")
+
+(def f203-statement-repair-dispatched-at-ms 1788921301781)
+
+(defn- f203-repair-observation [dispatch-status dispatched-at-ms]
+  (coordinator/watchdog-observation
+   {:coordinator/enabled? true}
+   {:state/type :live-regulator :regulator/status :running}
+   {:active nil
+    :statement-repair/handoff
+    (cond-> {:dispatch/status dispatch-status
+             :dispatch/id f203-statement-repair-id}
+      dispatched-at-ms
+      (assoc :dispatch/dispatched-at-ms dispatched-at-ms))}
+   nil))
+
+(deftest f203-dispatched-statement-repair-is-a-bounded-external-wait
+  ;; Dispatched 2026-09-09T02:35:01.781Z; the guide returned at
+  ;; 2026-09-09T02:49:22.357Z (14m20s), well inside the one-hour seat timeout.
+  (let [observed (f203-repair-observation
+                  :dispatched f203-statement-repair-dispatched-at-ms)
+        prior (:state (sut/evaluate nil observed
+                                    f203-statement-repair-dispatched-at-ms))
+        fresh (sut/evaluate prior observed
+                            (+ f203-statement-repair-dispatched-at-ms
+                               (* 10 60 1000)))
+        overdue (sut/evaluate
+                 prior observed
+                 (+ f203-statement-repair-dispatched-at-ms
+                    coordinator/guide-repair-max-ms
+                    (* 3 60 1000)))]
+    (is (= {:job-id f203-statement-repair-id
+            :deadline (+ f203-statement-repair-dispatched-at-ms
+                         coordinator/guide-repair-max-ms)}
+           (:awaiting-job observed)))
+    (is (= :watching (:status fresh))
+        "this was :halt/:internal-semantic-progress-stalled before the repair wait was observed")
+    (is (= :halt (:status overdue)))
+    (is (= :external-job-deadline-exceeded
+           (get-in overdue [:reason :code])))))
+
+(deftest pending-statement-repair-is-not-an-external-wait
+  (let [observed (f203-repair-observation
+                  :pending f203-statement-repair-dispatched-at-ms)
+        prior (:state (sut/evaluate nil observed
+                                    f203-statement-repair-dispatched-at-ms))
+        stalled (sut/evaluate
+                 prior observed
+                 (+ f203-statement-repair-dispatched-at-ms
+                    sut/internal-progress-max-ms))]
+    (is (nil? (:awaiting-job observed)))
+    (is (= :halt (:status stalled)))
+    (is (= :internal-semantic-progress-stalled
+           (get-in stalled [:reason :code])))))
+
+(deftest dispatched-statement-repair-without-timestamp-is-not-emitted
+  (let [observed (f203-repair-observation :dispatched nil)]
+    (is (nil? (:awaiting-job observed)))))
+
 (def f193-transition
   ;; The frame's last durable transition, verbatim shape from
   ;; jit-all-open-v3-f193/problem-transitions.edn. This is the cursor's source
