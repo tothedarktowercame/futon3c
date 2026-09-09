@@ -448,6 +448,35 @@
     (is (not= :solver-defect-review-required (:error/code result)))
     (is (= :inadequate (get-in result [:state :rounds 0 :outcome])))))
 
+(deftest f202-committed-mutation-is-progress-without-residual
+  ;; Supplied f202 report pin, including its truncated failure-account text.
+  (let [report {:solver/outcome :progress
+                :committed? true
+                :mutations ["problems/m02A03/lean/Main.lean"]
+                :failure-account ["Progress: committed an exact reduction from compactly supported smooth te..."]
+                :axioms ["propext" "sorryAx" "Classical.choice" "Quot.sound"]
+                :lean {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}}
+        round (#'sut/terminal-round legacy-state {:report report} {:ok false} 1)]
+    (is (= :progress (:outcome round)))
+    (is (not (contains? (:report round) :residual)))))
+
+(deftest literal-residual-remains-progress
+  ;; f200-style shape; this text is a test residual, not a live report pin.
+  (let [round (#'sut/terminal-round legacy-state
+                                  {:report {:solver/outcome :progress
+                                            :residual "remaining proof work"}}
+                                  {:ok false} 1)]
+    (is (= :progress (:outcome round)))))
+
+(deftest unsupported-progress-claim-remains-inadequate
+  (doseq [report [{:solver/outcome :progress :committed? false}
+                  {:solver/outcome :progress :committed? true :mutations []}
+                  {:solver/outcome :progress :committed? false
+                   :mutations ["problems/m02A03/lean/Main.lean"]}]]
+    (is (= :inadequate
+           (:outcome (#'sut/terminal-round legacy-state {:report report}
+                                          {:ok false} 1))))))
+
 (deftest legacy-agent-nested-progress-fields-are-lifted-into-round-record
   (let [persisted (atom nil)
         result (sut/drive!

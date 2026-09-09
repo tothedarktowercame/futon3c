@@ -294,7 +294,15 @@
     :claimed-defect
 
     (and (= :progress (:solver/outcome report))
-         (string? (:residual report)) (not (str/blank? (:residual report))))
+         (or (and (string? (:residual report))
+                  (not (str/blank? (:residual report))))
+             ;; A reported committed mutation establishes partial progress
+             ;; without guessing remaining work from failure-account prose.
+             ;; This classification does not discharge the proof validator.
+             (and (true? (:committed? report))
+                  (sequential? (:mutations report))
+                  (some #(and (string? %) (not (str/blank? %)))
+                        (:mutations report)))))
     :progress
 
     :else :inadequate))
