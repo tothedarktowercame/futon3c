@@ -282,6 +282,24 @@ Follow the futonic methodology (see futon3b/AGENTS.md for the full guide):
 - **Evidence-first**: Specific counts and file names, not vague claims
 - **Argument form**: IF/HOWEVER/THEN/BECAUSE for design decisions
 
+### Evaluating a form on the test classpath
+
+`clojure -M:test -e '<form>'` does **not** evaluate the form. The `:test`
+alias sets `:main-opts ["-m" "cognitect.test-runner" "-e" ":slow"]`, and
+alias main-opts win: everything after `-M:test` is passed to the test runner
+as arguments. `-e '<form>'` is read as an exclude-tag, and with no `-n` the
+runner silently runs the **entire suite** — minutes of CPU, no output, and it
+looks exactly like a hung command (2026-09-09: two agents lost ~13 minutes
+between them this way).
+
+```bash
+# Run one namespace's tests (the alias's intended use)
+clojure -M:test -n futon3c.agency.invoke-activity-test
+
+# Evaluate an ad-hoc form against the same classpath
+java -cp "$(clojure -Spath -M:test)" clojure.main -e '<form>'
+```
+
 ## Key Integration Points
 
 1. **Agency → futon3b gates**: When an agent completes work, the result
