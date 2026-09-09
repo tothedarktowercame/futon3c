@@ -327,9 +327,17 @@
                          (:guide-receipt observed))]
             (if-not (:ok revised)
               revised
-              (let [plan-persisted (when (fn? persist-plan-fn)
-                                     (persist-plan-fn (:plan revised)))]
-                (if-not (:ok plan-persisted)
+              ;; Not wired and failed-to-write are different questions, and
+              ;; this branch answered both with :plan-persistence-failed. The
+              ;; file already keeps them apart for the other two repair
+              ;; providers, for the reason prepare-next records about
+              ;; qualification: a regulator that stalls saying the write failed
+              ;; sends the reader to the disk, when the provider was never
+              ;; supplied.
+              (if-not (fn? persist-plan-fn)
+                {:ok false
+                 :error/code :problem-queue-plan-persistence-provider-missing}
+                (if-not (:ok (persist-plan-fn (:plan revised)))
                   {:ok false :error/code :problem-queue-plan-persistence-failed}
                   (if-not (:ok (persist-state-fn (:state revised)))
                     {:ok false :error/code :problem-queue-state-persistence-failed}

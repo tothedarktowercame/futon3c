@@ -754,6 +754,37 @@
     (is (= [[:persist-plan]] @calls))
     (is (= before @state))))
 
+(deftest unwired-plan-persistence-is-not-reported-as-a-failed-write
+  ;; set-alight-problem-queue! supplies :persist-plan-fn only when it was given
+  ;; a coordinator registry path and id, so an unwired caller is reachable. It
+  ;; used to report :problem-queue-plan-persistence-failed, which sends whoever
+  ;; reads the stalled regulator to look at a write that was never attempted.
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        _ (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly
+                   {:ok true :status :frame-complete :frame/result :void
+                    :terminal-receipt {:receipt/id "void-q1"
+                                       :problem/outcome :refuted}})))
+        obligation-id (get-in @state [:statement-repair/handoff :obligation/id])
+        before @state
+        result (sut/tick!
+                (-> providers
+                    (dissoc :persist-plan-fn)
+                    (assoc :observe-statement-repair-fn
+                           (constantly
+                            {:ok true :status :complete
+                             :replacement-pinned-problem
+                             (assoc (first problems) :revision "replacement"
+                                    :blob "replacement-blob")
+                             :guide-receipt
+                             {:repair/role :guide :obligation/id obligation-id
+                              :receipt/id (apply str (repeat 64 "f"))}}))))]
+    (is (= :problem-queue-plan-persistence-provider-missing
+           (:error/code result)))
+    (is (= before @state) "an unwired provider must not move the state")))
+
 (deftest noncomplete-repair-observations-never-persist-a-plan
   (doseq [observation [{:ok true :status :pending}
                        {:ok true :status :failed}]]
