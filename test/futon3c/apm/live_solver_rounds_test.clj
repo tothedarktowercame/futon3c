@@ -123,6 +123,26 @@
     (is (= (:state result) @persisted))
     (is (= [:announce :activate] @calls))))
 
+(deftest resuming-a-halted-siege-without-a-job-provider-names-the-gap
+  ;; live_proof_phases/resume-solver-remediation-live! builds its own effects
+  ;; map, and it had no :job-fn. Every resume of a halted siege -- the path
+  ;; that would restart f202/m02A03 -- threw
+  ;; "Cannot invoke IFn.invoke because job_fn is null" instead of dispatching.
+  (let [state {:state/type :solver-remediation-required
+               :base-request base-request
+               :budget/max-rounds 50
+               :rounds [{:ordinal 1 :job-id "apm-role-prior"
+                         :terminal-state :done :outcome :inadequate :report {}}]}
+        outcome (try
+                  (sut/resume-remediation!
+                   {:state state :request base-request
+                    :announce-fn (fn [_] {:ok true :job-id "next"})
+                    :activate-fn (fn [_ _] {:ok true})
+                    :persist-fn (fn [_] {:ok true})})
+                  (catch Throwable t {:threw (.getName (class t))}))]
+    (is (nil? (:threw outcome)) (pr-str outcome))
+    (is (= :solver-round-job-provider-missing (:error/code outcome)))))
+
 (deftest checkpoint-round-selects-restrategize-card-and-next-round-restores-regular-card
   (let [checkpoint (sut/round-request base-request 10 nil)
         resumed (sut/round-request base-request 11 nil)]

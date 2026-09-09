@@ -137,12 +137,23 @@
    session writer, so only the job provider can establish this boundary."
   [{:keys [job-fn] :as effects} state]
   (let [prior (last (:rounds state))]
-    (if (and prior
-             (not= :terminal
-                   (job-state/classify (:state (job-fn (:job-id prior))))))
+    (cond
+      (nil? prior) (dispatch-ready-round! effects state)
+
+      ;; Only the job provider can answer whether the seat is free, so a
+      ;; caller that did not supply one cannot dispatch. resume-remediation!
+      ;; reached here through resume-solver-remediation-live!, whose effects
+      ;; map has no :job-fn, and the bare (job-fn ...) call threw an NPE on
+      ;; the one path whose whole purpose is restarting a halted siege.
+      (not (fn? job-fn))
+      {:ok false :error/code :solver-round-job-provider-missing :state state}
+
+      (not= :terminal
+            (job-state/classify (:state (job-fn (:job-id prior)))))
       {:ok true :status :awaiting-prior-job-terminal
        :job-id (:job-id prior) :state state}
-      (dispatch-ready-round! effects state))))
+
+      :else (dispatch-ready-round! effects state))))
 
 (defn- dispatch-terminal-repair!
   [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]}

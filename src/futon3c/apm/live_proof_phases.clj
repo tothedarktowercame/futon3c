@@ -403,4 +403,9 @@
     (solver-rounds/resume-remediation!
      {:state state :request request :announce-fn announce-fn
       :activate-fn activate-fn
+      ;; The successor round may not start until the prior round's job has
+      ;; released the seat's session writer, and only the job provider can
+      ;; say so. This map omitted it, so every resume of a halted siege --
+      ;; f202/m02A03 among them -- threw instead of dispatching.
+      :job-fn (fn [job-id] (job-port/observe agency-base job-id))
       :persist-fn #(runtime/atomic-persist! state-path %)})))

@@ -42,6 +42,31 @@
             :axioms '[propext Classical.choice Quot.sound]
             :clean-before? true :clean-after? true :mutations []}})
 
+(deftest resuming-a-halted-siege-supplies-a-job-provider
+  ;; The successor round may not start until the prior round's job has released
+  ;; the seat's session writer, and only the job provider can say so. This map
+  ;; omitted it, so resuming f202/m02A03 threw an NPE inside dispatch-round!.
+  (let [captured (atom nil)
+        state-path (java.nio.file.Path/of
+                    (str (System/getProperty "java.io.tmpdir")
+                         "/live-proof-phases-resume-test.edn")
+                    (make-array String 0))
+        state {:state/type :solver-remediation-required
+               :base-request {:role :solver :agent-id "f19-solver"}
+               :budget/max-rounds 50
+               :rounds [{:ordinal 1 :job-id "apm-role-prior"
+                         :terminal-state :done :outcome :inadequate :report {}}]}]
+    (runtime/atomic-persist! state-path state)
+    (with-redefs [solver-rounds/resume-remediation!
+                  (fn [effects] (reset! captured effects) {:ok true})]
+      (sut/resume-solver-remediation-live!
+       {:request {:role :solver :agent-id "f19-solver" :phase :solve}
+        :state-path state-path}))
+    (is (fn? (:job-fn @captured))
+        "dispatch-round! calls (job-fn prior-job-id) on every resumed round")
+    (is (fn? (:persist-fn @captured)))
+    (is (fn? (:announce-fn @captured)))))
+
 (deftest solve-and-verify-produce-contract-valid-receipts
   (doseq [kind [:solve :verify]]
     (let [req (request kind)
