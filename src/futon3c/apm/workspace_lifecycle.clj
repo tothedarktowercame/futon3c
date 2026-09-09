@@ -285,6 +285,12 @@
               {:ok false :error/code :workspace-source-archive-failed
                :finding {:message (.getMessage t)}})))))))
 
+(def ^:private student-observation-findings
+  "A failed Lean probe measures a Student attempt, not apparatus integrity.
+  This demotion applies only to Student preservation; every other role keeps
+  probe failure as a hard validation finding."
+  #{:workspace-probe-failed})
+
 (defn preserve-student-candidate!
   "Commit and certify the exact Student worktree at a terminal boundary.
 
@@ -347,8 +353,10 @@
           :else
           (let [validation (validate lease
                                      (cond-> {:expected-head head}
-                                       probe-fn (assoc :probe-fn probe-fn)))]
-            (if-not (:valid? validation)
+                                       probe-fn (assoc :probe-fn probe-fn)))
+                probe-findings (filterv student-observation-findings (:findings validation))
+                structural-findings (remove student-observation-findings (:findings validation))]
+            (if (seq structural-findings)
               {:ok false :error/code :student-candidate-validation-failed
                :head head :ref ref :validation validation}
               (let [body {:candidate/type :student-terminal
@@ -358,6 +366,7 @@
                           :candidate/head head :candidate/ref ref
                           :candidate/problem-blob (:problem/blob validation)
                           :candidate/lean-exit (:probe/exit validation)
+                          :candidate/probe-findings probe-findings
                           :candidate/worktree-clean? (:worktree-clean? validation)
                           :candidate/persisted-before-receipt? true}]
                 {:ok true

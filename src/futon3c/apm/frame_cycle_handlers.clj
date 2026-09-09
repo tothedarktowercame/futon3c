@@ -76,8 +76,10 @@
 
 (defn valid-student-terminal-candidate?
   "A Student phase receipt must bind the exact controller-preserved candidate.
-  The candidate id addresses every evidential field; the ref, clean compile,
-  and persistence marker establish that reset/retirement cannot erase it."
+  The candidate id addresses every evidential field; the ref, clean worktree,
+  and persistence marker establish that reset/retirement cannot erase it.
+  In the Student arm, the compile result is carried as an observation, not
+  required to succeed: a non-compiling attempt is equally preserved."
   [receipt]
   (let [candidate (:receipt/candidate receipt)
         body (when (map? candidate) (dissoc candidate :candidate/id))
@@ -96,7 +98,6 @@
             (:candidate/ref candidate))
          (boolean (re-matches #"[0-9a-f]{40}"
                               (or (:candidate/problem-blob candidate) "")))
-         (= 0 (:candidate/lean-exit candidate))
          (true? (:candidate/worktree-clean? candidate))
          (true? (:candidate/persisted-before-receipt? candidate)))))
 

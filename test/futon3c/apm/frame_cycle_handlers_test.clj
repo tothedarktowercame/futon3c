@@ -155,6 +155,43 @@
               :problem-id "a97J07"}
              bad {:preflight preflight}))))))
 
+(deftest student-noncompiling-candidate-is-valid-preserved-evidence
+  (let [body (-> (:receipt/candidate attempt-1)
+                 (dissoc :candidate/id)
+                 (assoc :candidate/lean-exit 1
+                        :candidate/probe-findings [:workspace-probe-failed]))
+        candidate (assoc body :candidate/id (machine/ledger-digest [body]))
+        receipt (addressed (assoc (dissoc attempt-1 :receipt/id)
+                                 :receipt/candidate candidate))
+        result (handlers/validate-completion
+                cycle-contract
+                {:kind :student-attempt :role :student
+                 :phase :student-attempt-1 :frame-id "f18" :problem-id "a97J07"}
+                receipt {:preflight preflight})]
+    (is (handlers/valid-student-terminal-candidate? receipt))
+    (is (:ok result) (pr-str result))
+    (is (not= :frame-cycle-student-candidate-invalid (:error/code result)))))
+
+(deftest student-malformed-candidate-ref-rejects-regardless-of-compile-result
+  (doseq [exit [0 1]]
+    (let [body (-> (:receipt/candidate attempt-1)
+                   (dissoc :candidate/id)
+                   (assoc :candidate/ref "refs/apm/wrong"
+                          :candidate/lean-exit exit
+                          :candidate/probe-findings (if (zero? exit) []
+                                                     [:workspace-probe-failed])))
+          candidate (assoc body :candidate/id (machine/ledger-digest [body]))
+          receipt (addressed (assoc (dissoc attempt-1 :receipt/id)
+                                   :receipt/candidate candidate))]
+      (is (not (handlers/valid-student-terminal-candidate? receipt)))
+      (is (= :frame-cycle-student-candidate-invalid
+             (:error/code
+              (handlers/validate-completion
+               cycle-contract
+               {:kind :student-attempt :role :student
+                :phase :student-attempt-1 :frame-id "f18" :problem-id "a97J07"}
+               receipt {:preflight preflight})))))))
+
 (deftest close-refuses-reused-student-session
   (let [duplicate-attempt (student-receipt 3 "fresh-2")
         prior (assoc prior-through-students :student-attempt-3 duplicate-attempt

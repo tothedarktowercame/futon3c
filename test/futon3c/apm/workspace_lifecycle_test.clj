@@ -1,6 +1,7 @@
 (ns futon3c.apm.workspace-lifecycle-test
   (:require [clojure.java.shell :as shell]
             [clojure.edn :as edn]
+            [clojure.set]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.workspace-lifecycle :as sut])
@@ -260,6 +261,7 @@
       (is (true? (:created-commit? first-result)))
       (is (addressed? candidate :candidate/id))
       (is (= 0 (:candidate/lean-exit candidate)))
+      (is (= [] (:candidate/probe-findings candidate)))
       (is (true? (:candidate/worktree-clean? candidate)))
       (is (true? (:candidate/persisted-before-receipt? candidate)))
       (is (= "preserve the whole attempt\n"
@@ -269,6 +271,56 @@
       (is (false? (:created-commit? second-result)))
       (is (= candidate (:candidate second-result))
           "a crash before receipt persistence reuses the exact candidate"))))
+
+(deftest noncompiling-student-candidate-is-preserved-certified-and-idempotent
+  (let [{:keys [repo workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        source "theorem p1 : True := by\n  exact False.elim\n"
+        probe-fn (fn [_] {:exit 1 :out "Main.lean:2:2: error: type mismatch\n"
+                         :err "probe diagnostic"})]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease)) source)
+    (let [first-result (sut/preserve-student-candidate!
+                        {:lease lease :attempt-ordinal 2 :probe-fn probe-fn})
+          candidate (:candidate first-result)
+          second-result (sut/preserve-student-candidate!
+                         {:lease lease :attempt-ordinal 2 :probe-fn probe-fn})
+          preserved (sh "git" "-C" (str repo) "show"
+                        (str (:candidate/ref candidate) ":" (:problem/path lease)))]
+      (is (:ok first-result) (pr-str first-result))
+      (is (true? (:created-commit? first-result)))
+      (is (= 1 (:candidate/lean-exit candidate)))
+      (is (= [:workspace-probe-failed] (:candidate/probe-findings candidate)))
+      (is (addressed? candidate :candidate/id))
+      (is (not (addressed? (assoc candidate :candidate/lean-exit 0) :candidate/id)))
+      (is (not (addressed? (assoc candidate :candidate/probe-findings []) :candidate/id)))
+      (is (not (contains? candidate :probe/out)))
+      (is (not (contains? candidate :probe/err)))
+      (is (= 0 (:exit preserved)))
+      (is (= source (:out preserved)))
+      (is (:ok second-result) (pr-str second-result))
+      (is (false? (:created-commit? second-result)))
+      (is (= candidate (:candidate second-result))))))
+
+(deftest student-candidate-structural-failure-rejects-with-full-probe-evidence
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        body (assoc (dissoc lease :workspace/id) :branch "wrong-branch")
+        bad-lease (assoc body :workspace/id (machine/ledger-digest [body]))]
+    (spit (str (:workspace/path lease) "/" (:problem/path lease))
+          "theorem p1 : True := by\n  exact False.elim\n")
+    (doseq [exit [0 1]]
+      (let [result (sut/preserve-student-candidate!
+                    {:lease bad-lease :attempt-ordinal 2
+                     :probe-fn (fn [_] {:exit exit :out "Main.lean:2:2: error"})})]
+        (is (false? (:ok result)))
+        (is (= :student-candidate-validation-failed (:error/code result)))
+        (is (= (cond-> [:workspace-branch-mismatch]
+                 (= 1 exit) (conj :workspace-probe-failed))
+               (get-in result [:validation :findings])))))))
 
 ;; f84, 2026-09-03: retirement failed on exactly one precondition that no
 ;; operator could repair -- a role job the frame owned had not yet left a live
