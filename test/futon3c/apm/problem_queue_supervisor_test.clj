@@ -14,6 +14,7 @@
     {:plan plan :state state :calls calls
      :providers
      {:plan plan :state-provider #(deref state)
+      :now-fn (constantly 1788921301781)
       :persist-state-fn #(do (reset! state %) (swap! calls conj [:persist])
                              {:ok true})
       :mint-frame-fn
@@ -531,6 +532,9 @@
     (is (= :guide (get-in @state [:statement-repair/handoff :repair/role])))
     (is (= :dispatched
            (get-in @state [:statement-repair/handoff :dispatch/status])))
+    (is (= 1788921301781
+           (get-in @state
+                   [:statement-repair/handoff :dispatch/dispatched-at-ms])))
     (is (nil? (:active @state)))
     (is (empty? (:completed @state)))
     (is (= 0 (:next-index @state)))
