@@ -478,6 +478,87 @@
     (is (= :solver-session-mismatch (:error/code result)))
     (is (nil? @persisted))))
 
+(def f200-failed-dispatch
+  ;; Created 2026-09-08T22:27:07.591Z; finished 2026-09-08T22:27:11.486Z.
+  ;; execution was {executed: false, tool-events: 0, command-events: 0}.
+  ;; The job port preserves these terminal fields, not the execution counters.
+  {:job-id "apm-role-29c48563c4341a293808fa3a545be7808aea84282047b5874cff3635c0d4bfe0"
+   :agent-id "f200-solver" :state :failed :terminal-code :invoke-error
+   :session-id nil :report nil
+   :terminal-message
+   "Exit 1: thread-store conflict: thread 01a08287-25de-7dc3-80f8-d6ca7f6c11a6 already has an active writer. Error: thread/resume failed (code -32600)"})
+
+(def f200-expected-session "01a08287-25de-7dc3-80f8-d6ca7f6c11a6")
+
+(defn- f200-round-35-state []
+  {:state/type :solver-rounds :budget/max-rounds 50
+   :base-request base-request
+   :rounds (mapv (fn [ordinal]
+                   {:ordinal ordinal :session-id f200-expected-session
+                    :report {:residual "unfinished"}
+                    :validation {:ok false :findings [:prior-progress]}})
+                 (range 1 35))
+   :active (-> legacy-state
+               (assoc :request (sut/round-request base-request 35 nil))
+               (assoc-in [:ticket :job-id] (:job-id f200-failed-dispatch)))})
+
+(deftest f200-failed-dispatch-without-session-records-terminal-failure
+  (let [persisted (atom nil)
+        base (assoc (effects persisted)
+                    :state (f200-round-35-state)
+                    :job-fn (constantly f200-failed-dispatch)
+                    :terminal-submission-provider (constantly nil))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))
+        completed (last (get-in result [:state :rounds]))]
+    (is (= :terminal-collected (:status collected)))
+    (is (not= :solver-session-mismatch (:error/code result)))
+    (is (= :solver-job-terminal-failure
+           (get-in completed [:validation :error/code])))
+    (is (= (:job-id f200-failed-dispatch) (:job-id completed)))
+    (is (= :failed (:terminal-state completed)))
+    (is (= 35 (:ordinal completed)))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "job-36" (:job-id result)))))
+
+(deftest failed-dispatch-with-a-different-session-still-fails-closed
+  (let [persisted (atom nil)
+        result (sut/drive!
+                (assoc (effects persisted)
+                       :state (f200-round-35-state)
+                       :job-fn (constantly (assoc f200-failed-dispatch
+                                                 :session-id "different-session"))))]
+    (is (= :solver-session-mismatch (:error/code result)))
+    (is (= {:expected f200-expected-session :actual "different-session"}
+           (:finding result)))
+    (is (nil? @persisted))))
+
+(deftest done-without-session-and-with-typed-submission-still-certifies
+  (let [persisted (atom nil)
+        base (assoc (effects persisted)
+                    :state (f200-round-35-state)
+                    :job-fn (constantly (assoc f200-failed-dispatch :state :done))
+                    :terminal-submission-provider
+                    (constantly {:payload {:outcome "complete" :command-own-exit 0}})
+                    :validate-solved (fn [_ _ job]
+                                       {:ok (some? (:typed-submission job))})
+                    :provide-receipt
+                    (fn [& _] {:ok true :certificate {:receipt/id "solved"}}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :certified (:status result)))
+    (is (= "solved" (get-in result [:certificate :receipt/id])))))
+
+(deftest done-without-session-or-typed-submission-still-fails-closed
+  (let [persisted (atom nil)
+        result (sut/drive!
+                (assoc (effects persisted)
+                       :state (f200-round-35-state)
+                       :job-fn (constantly (assoc f200-failed-dispatch :state :done))))]
+    (is (= :solver-session-mismatch (:error/code result)))
+    (is (nil? @persisted))))
+
 (deftest every-tenth-round-is-an-addressed-strategy-checkpoint
   (doseq [ordinal [10 20 30 40 50]]
     (is (true? (:solver/strategy-checkpoint?

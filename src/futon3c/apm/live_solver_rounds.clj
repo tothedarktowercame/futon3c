@@ -437,7 +437,11 @@
 
           (and expected-session
                (not= expected-session (:session-id job))
-               (or (some? (:session-id job)) (nil? typed)))
+               ;; A failed dispatch may never establish a session. Keep any
+               ;; concrete drift fatal, but require session evidence for a
+               ;; missing id only when an untyped job claims it completed.
+               (or (some? (:session-id job))
+                   (and (= :done (:state job)) (nil? typed))))
             {:ok false :error/code :solver-session-mismatch
              :finding {:expected expected-session :actual (:session-id job)}}
 
