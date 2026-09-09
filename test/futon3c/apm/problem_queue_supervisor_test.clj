@@ -50,6 +50,7 @@
                     (count (filter #(= :retire (first %)) @calls))))))
     (is (= :batch-complete (:status (sut/tick! providers))))
     (is (= 5 (count (:completed @state))))
+    (is (= (:next-index @state) (:frame-ordinal @state)))
     (is (nil? (:active @state)))
     (is (= ["p1" "p2" "p3" "p4" "p5"]
            (mapv :problem/id (:completed @state))))))
@@ -555,6 +556,50 @@
     (is (= "p2" (get-in @state [:active :frame :problem/id])))
     (is (= 2 (:next-index @state)))
     (is (empty? (:completed @state)))))
+
+(deftest revised-voided-slot-retries-in-a-new-frame
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        _ (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly
+                   {:ok true :status :frame-complete :frame/result :void
+                    :terminal-receipt {:receipt/id "void-q1"
+                                       :problem/outcome :refuted}})))
+        voided-frame-id (get-in @state [:statement-repair/handoff :frame/id])
+        obligation-id
+        "d6fd972b4c8b2dd896da1fde27e5ddb5536d78914a38729d0de77935beacb6e6"
+        live-state (#'sut/addressed
+                    (-> @state
+                        ;; f203 predates :frame-ordinal; exercise the persisted
+                        ;; campaign backfill, not merely a fresh queue.
+                        (dissoc :frame-ordinal)
+                        (assoc-in [:statement-repair/handoff :obligation/id]
+                                  obligation-id)))
+        replacement (assoc (first problems)
+                           :revision
+                           "9d22c1aba6d65bc9147a67ee5b6c19697fc52e17"
+                           :blob
+                           "640eb44b9bcf052931f787825019e6a7e3e3b799")
+        receipt {:repair/role :guide
+                 :obligation/id obligation-id
+                 :receipt/id
+                 "b3c363a9674c1aa4c096d7c68903f09dbfc8f9d3178b72792b5c6d37b0a21926"}
+        revised (sut/revise-voided-slot (:plan providers) live-state
+                                        replacement receipt)]
+    (is (:ok revised) (pr-str revised))
+    (is (= 0 (get-in revised [:state :next-index])))
+    (is (= "p1" (get-in revised [:plan :problems 0 :problem/id])))
+    (let [prepared (#'sut/prepare-next (:plan revised) (:state revised)
+                                       (:providers (assoc (harness)
+                                                          :plan (:plan revised))))]
+      (is (:ok prepared) (pr-str prepared))
+      (is (not= voided-frame-id (get-in prepared [:frame :frame/id])))
+      (is (= "p1" (get-in prepared [:frame :problem/id])))
+      (is (= (:revision replacement)
+             (get-in prepared [:frame :problem :revision])))
+      (is (= (:blob replacement)
+             (get-in prepared [:frame :problem :blob]))))))
 
 (deftest only-guide-may-author-the-single-statement-repair
   (let [{:keys [providers state]} (harness)

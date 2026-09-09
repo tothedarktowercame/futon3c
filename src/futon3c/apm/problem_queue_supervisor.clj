@@ -140,7 +140,7 @@
 
 (defn initial-state [plan]
   (let [body {:state/type :apm-problem-queue :state/version 1
-              :queue/id (:queue/id plan) :next-index 0
+              :queue/id (:queue/id plan) :next-index 0 :frame-ordinal 0
               :active nil :completed []}]
     (assoc body :state/id (machine/ledger-digest [body]))))
 
@@ -159,6 +159,8 @@
 (defn valid-state? [state]
   (and (= :apm-problem-queue (:state/type state))
        (= 1 (:state/version state))
+       (or (nil? (:frame-ordinal state))
+           (nat-int? (:frame-ordinal state)))
        (valid-consecutive-frame-failures?
         (:consecutive-frame-failures state))
        (or (not= :voided-slot-awaiting-revision (:status state))
@@ -277,6 +279,9 @@
            :state (addressed
                    (-> state
                        (assoc :queue/id (:queue/id revised))
+                       (update :frame-ordinal
+                               (fn [ordinal]
+                                 (inc (or ordinal (:next-index state)))))
                        (assoc-in [:statement-repair-attempts problem-id] 1)
                        (assoc-in [:statement-repair-receipts problem-id]
                                  (:receipt/id repair-receipt))
@@ -299,6 +304,8 @@
                           (-> state
                               (assoc-in [:statement-repair-attempts problem-id] 1)
                               (update :next-index inc)
+                              (update :frame-ordinal
+                                      (fnil inc (:next-index state)))
                               (dissoc :status :statement-repair/handoff)))]
             (if-not (:ok (persist-state-fn advanced))
               {:ok false :error/code :problem-queue-state-persistence-failed}
@@ -430,7 +437,9 @@
         {:ok true :status :batch-complete :state complete}
         {:ok false :error/code :problem-queue-state-persistence-failed}))
     (let [problem (nth (:problems plan) (:next-index state))
-          minted (mint-frame-fn {:problem problem :ordinal (:next-index state)
+          minted (mint-frame-fn {:problem problem
+                                 :ordinal (or (:frame-ordinal state)
+                                              (:next-index state))
                                  :queue/id (:queue/id plan)})
           ;; Retain the qualifier's own result. Discarding it left
           ;; :problem-queue-frame-qualification-failed as the only record, so a
@@ -451,7 +460,9 @@
               advanced (addressed
                         (-> state
                             (update :parked (fnil conj []) park)
-                            (update :next-index inc)))
+                            (update :next-index inc)
+                            (update :frame-ordinal
+                                    (fnil inc (:next-index state)))))
               persisted (persist-state-fn advanced)]
           (if-not (:ok persisted)
             {:ok false :error/code :problem-queue-state-persistence-failed}
@@ -471,7 +482,10 @@
                           :preparation/id (:preparation/id prepared)}
                   advanced (addressed (-> state
                                          (assoc :active active)
-                                         (update :next-index inc)))
+                                         (update :next-index inc)
+                                         (update :frame-ordinal
+                                                 (fnil inc
+                                                       (:next-index state)))))
                   persisted (persist-state-fn advanced)]
               (if (:ok persisted)
                 {:ok true :status :frame-prepared :state advanced
