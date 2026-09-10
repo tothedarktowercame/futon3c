@@ -55,6 +55,7 @@
                 :source-root root :source-allowlist (:source-allowlist t)
                 :resolve-mission (:resolve-mission dependencies)
                 :action-admissible? (:action-admissible? dependencies)
+                :acceptance (:reserved-unwired t)
                 :series {:enabled? enabled? :manifest-root root
                          :manifest-ref (get-in t [:manifest :ref])
                          :manifest-allowlist #{(get-in t [:manifest :ref])}

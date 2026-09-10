@@ -26,7 +26,9 @@
           :recordings "/home/joe/run4/U88/recordings"
           :visibility "/home/joe/run4/U88/visibility"}
  :reserved-unwired {:battery "/home/joe/run4/U88/battery"
-                    :reason :no-server-owned-report-durable-caller}
+                    :control-map-root "/home/joe/code/p4ng"
+                    :control-map-ref "empirics-futon/control-map-edges.edn"
+                    :control-map-sha256 "161d0abffd21551078ac2d7a87427e6cacafbfca0695c09a496260be21fafdec"}
  :serving {:route "/api/alpha/wm/run4/series/step"
            :request {:run4-series-ref "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/u88-trial-1/series-pin.edn"}
            :single-flight :existing-runner-service-cas
