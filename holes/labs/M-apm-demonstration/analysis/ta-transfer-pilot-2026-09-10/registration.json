@@ -1,0 +1,20 @@
+[
+  {
+    "ok": true,
+    "action": "registered",
+    "agent-id": "codex-ta-transfer-20260910",
+    "type": "codex",
+    "session-id": null,
+    "session-file": "/tmp/futon-codex-session-id-codex-ta-transfer-20260910",
+    "cwd": "/home/joe/code/futon3c"
+  },
+  {
+    "ok": true,
+    "action": "registered",
+    "agent-id": "zai-student-transfer-20260910",
+    "type": "zai",
+    "session-id": null,
+    "session-file": "/tmp/futon-zai-session-id-zai-student-transfer-20260910",
+    "cwd": "/home/joe/code/futon3c"
+  }
+]

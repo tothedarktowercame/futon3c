@@ -1,0 +1,197 @@
+{
+  "job-id": "invoke-1789059719743-19032-c91b7a34",
+  "kind": "bell",
+  "caller": "codex-16",
+  "to": "codex-ta-transfer-20260910",
+  "codex-ta-transfer-20260910": {
+    "ok": true,
+    "agent-id": "codex-ta-transfer-20260910",
+    "agent": {
+      "running-jobs": 1,
+      "capabilities": [
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": null,
+      "invoke-route": "local",
+      "nonterminal-jobs": 1,
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "invoke-quiet-ms": 952,
+      "type": "codex",
+      "invoke-ws-available?": false,
+      "queued-jobs": 0,
+      "invoke-started-at": "2026-09-10T17:02:02.680330502Z",
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "invoking",
+      "mission-id": "ta-transfer-pilot-2026-09-10",
+      "id": {
+        "id/value": "codex-ta-transfer-20260910",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-09-10T17:01:01.358884061Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "invoke-prompt-preview": "--- CURRENT TURN ---\nSurface: bell\nFrom: codex-16\nTo: codex-ta-transfer-20260910\nOrigin: agent\nEdge: invoke-178905971974",
+      "registered-at": "2026-09-10T17:01:01.358884061Z",
+      "invoke-activity-at": "2026-09-10T17:02:17.286791635Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "require-execution?": true,
+        "session-file": "/tmp/futon-codex-session-id-codex-ta-transfer-20260910",
+        "cwd": "/home/joe/code/futon3c",
+        "mission-id": "ta-transfer-pilot-2026-09-10"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true,
+      "invoke-activity": "using bash (done)"
+    }
+  },
+  "zai-student-transfer-20260910": {
+    "ok": true,
+    "agent-id": "zai-student-transfer-20260910",
+    "agent": {
+      "capabilities": [
+        "explore",
+        "edit",
+        "test",
+        "coordination/execute"
+      ],
+      "session-id": null,
+      "invoke-route": "local",
+      "completion-bell-required?": true,
+      "excursion-id": null,
+      "type": "zai",
+      "invoke-ws-available?": false,
+      "delivery-mode": "push",
+      "invoke-local?": true,
+      "status": "idle",
+      "mission-id": "ta-transfer-pilot-2026-09-10",
+      "id": {
+        "id/value": "zai-student-transfer-20260910",
+        "id/type": "continuity"
+      },
+      "last-active": "2026-09-10T17:01:01.398177639Z",
+      "invoke-diagnostic": "local invoke-fn registered",
+      "registered-at": "2026-09-10T17:01:01.398177639Z",
+      "ttl-ms": null,
+      "metadata": {
+        "agency/contracts": {
+          "bell-on-complete?": true
+        },
+        "auto-registered?": true,
+        "session-file": "/tmp/futon-zai-session-id-zai-student-transfer-20260910",
+        "cwd": "/home/joe/code/futon3c",
+        "mission-id": "ta-transfer-pilot-2026-09-10"
+      },
+      "campaign-id": null,
+      "invoke-ready?": true
+    }
+  },
+  "job": {
+    "ok": true,
+    "job": {
+      "caller": "codex-16",
+      "session-id": null,
+      "execution": {
+        "executed?": false,
+        "tool-events": 0,
+        "command-events": 0
+      },
+      "job-id": "invoke-1789059719743-19032-c91b7a34",
+      "agent-id": "codex-ta-transfer-20260910",
+      "artifact-ref": null,
+      "started-at": "2026-09-10T17:02:01.173270315Z",
+      "events": [
+        {
+          "seq": 1,
+          "type": "accepted",
+          "at": "2026-09-10T17:01:59.743807380Z"
+        },
+        {
+          "seq": 2,
+          "type": "running",
+          "at": "2026-09-10T17:02:01.173281616Z"
+        },
+        {
+          "seq": 3,
+          "type": "prompt",
+          "at": "2026-09-10T17:02:02.679944690Z",
+          "text": "Joe explicitly commissions you as the dedicated Codex TA/owner of a pattern-transfer teaching pilot, with fresh reserved Zai Student zai-student-transfer-20260910. Read and execute /home/joe/code/futon3c/holes/labs/M-apm-demonstration/analysis/ta-transfer-pilot-2026-09-10/COMMISSION.md in full. This is a mathematics workstream, separate from codex-17's F12 tasks. Prepare teaching materials before Student exposure, then run one real cross-problem transfer walkthrough and continue the three-case pilot as specified. You are authorized to bell the reserved Student with bounded tasks/hints after freezing materials; no new Joe task-choice or permission loop. Student queue is currently held with no session and no exposure; you own queue inspection, safe release and cleanup. The hold is not an exclusive scheduler lease; check for unrelated queued jobs before release and report conflicts. No Claude, no sealed holdout, no live role installation or RUN4 changes. Reuse TA prototype b9e09bb5 and prior survey with its limits. Preserve full actual Student/tool receipts and separate retrieval, applicability and proof-use evidence. Report first bounded executed walkthrough, committed artifacts and invocation IDs back to codex-16. Please acknowledge ownership and begin; do not stop at a plan.\n"
+        },
+        {
+          "seq": 4,
+          "type": "text",
+          "at": "2026-09-10T17:02:07.531462718Z",
+          "text": "I\u2019m taking ownership of the transfer pilot. I\u2019ll read the commission, freeze the teaching materials before any Student exposure, and inspect the reserved queue before releasing it."
+        },
+        {
+          "seq": 5,
+          "type": "tool_use",
+          "at": "2026-09-10T17:02:10.400723669Z",
+          "tools": [
+            "bash"
+          ],
+          "previews": [
+            "bash /bin/bash -lc 'cat holes/labs/M-apm-demonstration/analysis/ta-transfer-pilot-2026-09-10/COMMISSION.md'"
+          ],
+          "output": [
+            "# Commission: TA\u2013Student pattern transfer pilot\n\nJoe commissioned a distinct Codex TA and a distinct Zai Student on 2026-09-10.\nCoordinator: codex-16. Dedicated work owner: codex-ta-transfer-20260910.\nReserved Student: zai-student-transfer-20260910. Both are new Agency identities,\nwith initially null sessions and dedicated session files; no prior problem\nconversation was assigned. The Student queue is held until the TA freezes the\nteaching materials. The TA owns release and eventual cleanup of that hold.\n\n# \u2026[trimmed]\u2026 nitial attempt,\nobserved difficulty, TA feedback if needed, and revised proof or documented\nfailure. Continue remaining cases within the same pilot commission, preserving\ncase-specific exposure records. Same-Student learning across cases is intended;\nit is not a fresh independent session per case or a performance comparison.\n\nTA output precedes Student attempts: definitions, top-down obligation cascade,\npattern IDs/revisions, required conditions, explicit mathematical constructions,\nstaged hints and withheld reference solution. Inspect existing canonical patterns\nand reviewed example links; distinguish a bounded search miss from proven absence.\nDo not promote a new pattern on one example or claim memory use without a read.\n\nStudent first receives the task and bounded pattern discovery access, not the\nreference solution or full TA cascade. Use an explicit allowlist of provided\nmaterials and record tool access; shared-filesystem instructions are not a claim\nof technical isolation. If access restrictions cannot be enforced, disclose that\nlimit and any actual exposure. No answer-containing handoff should be sent to the\nStudent before its initial attempt. Hints are delivered one stage at a time.\n\nRecord search results, actual reads, premise checks, attempted construction,\nproof/checker outcomes, hint exposures and revisions. Keep retrieved/read/claimed\nused/proof-supported used distinct. Classify feedback as retrieval miss,\napplicability gap, condition gap, construction gap, library error, verification\nfailure or undetermined, based on evidence. A correct rejection is useful; a\ncitation is not a proof. Report whether a construction transferred, what required\nrepair, and what remains unknown. No causal efficacy or prevalence claim from\nthis pilot; no fabricated Student transcript.\n\n## Concrete starting artifacts\n\n- futon3c b9e09bb5, `analysis/ta-cascade-2026-09-10/`: TA account, Student hints,\n  11-node a93A01 cascade and verifier. Paths relative to this commission's parent.\n- `analysis/pattern-construction-2026-09-10/`: completed structured proof,\n  frozen source patterns and topology population census/candidate methods.\n- `holes/technotes/TN-APM-pattern-first-development-2026-09-10.md`: actual catalog\n  census/consumer trace, retrieval probe and limitations; commit 380a323d.\n- `holes/technotes/TN-pattern-warranted-proof-and-topology-induction-2026-09-10.md`.\n\n## Operating boundaries\n\nUse Agency bells, not Codex internal collaborators. No Claude calls. The TA is\ncommissioned to send bounded Student tasks and follow-up hints; no further Joe\npurpose choice is needed. No unrelated campaign, RUN4, registry schema, live\nrole-prompt or service changes. Committed pilot artifacts and necessary isolated\nproof work are authorized. Follow repository gates; no Lake until canonical\nworkspace/package authority requirements are satisfied. A paper walkthrough is\nallowed but cannot be called a fresh Lean-checked proof.\n\nBefore releasing the reserved Student queue, inspect it for unrelated pending\nwork. A hold prevents execution, not queue admission or an exclusive scheduler\nlease; the known generic Zai selector does not honor mission reservations.\nIf unrelated work appears, report the conflict and preserve the unexposed session;\ndo not drain it into the pilot or silently cancel another owner's job. No runtime\nscheduler was modified by this commission. Use the dedicated role names rather\nthan borrowing a campaign Student.\n\nRelease with `python3 scripts/agency_queue.py release zai-student-transfer-20260910`\nfrom futon3c only when ready and the queue is clear. On pilot completion explicitly\nrelease any remaining hold and report role disposition. Prioritize this mathematics\ncommission; unrelated bells do not silently replace it. Notify codex-16 of a real\nconflicting assignment instead of abandoning the pilot.\n\nCommit path-scoped evidence and report source SHA, Student invocation/job IDs,\nactual exposure and outcome. First report must include executed work, not only a\nplan or catalog search. Registration and dispatch receipts accompany this note.\n"
+          ]
+        },
+        {
+          "seq": 6,
+          "type": "tool_use",
+          "at": "2026-09-10T17:02:17.230326966Z",
+          "tools": [
+            "bash"
+          ],
+          "previews": [
+            "bash /bin/bash -lc \"pwd; git status --short; rg --files -g AGENTS.md -g '*ta*' holes/labs/M-apm-demonstration/analysis/ta-cas"
+          ],
+          "output": [
+            "/home/joe/code/futon3c\n M scripts/compact_session.py\n M src/futon3c/apm/durable_coordinator.clj\n M test/futon3c/apm/durable_coordinator_test.clj\n?? holes/labs/M-apm-demonstration/analysis/ta-transfer-pilot-2026-09-10/\n?? holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f105-m02A03.md\n?? holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f170-a99J08.md\n?? holes/labs/M-apm-demonstration/pattern-library-codex-scribe-f172-b00J02.md\n?? holes/labs/M-apm-demonstration/pattern-library-codex-scri \u2026[trimmed]\u2026 'agent-id']} \u2014 {res.get('pending', 0)} turn(s) waiting; \"\n          f\"the turn in flight (if any) will finish.\"\n          + (f\" Auto-releases in {int(ttl) // 60000}m.\" if ttl else \" No auto-release.\"))\n    print(f\"resume with: scripts/agency_queue.py release {res['agent-id']}\")\n\n\ndef cmd_release(args):\n    res = die_unless_ok(call(\"/api/alpha/agency/queue/release\", {\"agent\": args.agent}))\n    if not res.get(\"released\"):\n        print(f\"{res['agent-id']} was not held; {res.get('pending', 0)} turn(s) pending\")\n        return\n    print(f\"RELEASED {res['agent-id']} \u2014 {res.get('pending', 0)} queued turn(s) resuming\")\n\n\ndef main():\n    p = argparse.ArgumentParser(description=__doc__,\n                                formatter_class=argparse.RawDescriptionHelpFormatter)\n    sub = p.add_subparsers(dest=\"cmd\", required=True)\n\n    s = sub.add_parser(\"status\", help=\"show queued turns, drains in flight, holds\")\n    s.add_argument(\"--all\", action=\"store_true\", help=\"include idle agents\")\n    s.add_argument(\"--json\", action=\"store_true\")\n    s.set_defaults(fn=cmd_status)\n\n    h = sub.add_parser(\"hold\", help=\"pause an agent's queue after the current turn\")\n    h.add_argument(\"agent\")\n    h.add_argument(\"--reason\")\n    h.add_argument(\"--by\", default=\"joe\")\n    h.add_argument(\"--ttl\", type=int, default=30,\n                   help=\"auto-release after N minutes (0 = indefinite; default 30)\")\n    h.set_defaults(fn=cmd_hold)\n\n    r = sub.add_parser(\"release\", help=\"lift a hold and resume the backlog\")\n    r.add_argument(\"agent\")\n    r.set_defaults(fn=cmd_release)\n\n    args = p.parse_args()\n    args.fn(args)\n\n\nif __name__ == \"__main__\":\n    main()\nusage: agency_send.py [-h] --to TO [--from FRM] [--kind {bell,whistle}]\n                      [--base BASE]\n                      [--type {query,answer,assert,challenge,agree,define,retract,suggest,request}]\n                      [--ref REF] [--mission MISSION] [--mode {work,brief}]\n                      [--park] [--park-deadline PARK_DEADLINE]\n                      [--park-payload PARK_PAYLOAD] [--surface SURFACE]\n                      [--timeout-ms TIMEOUT_MS] [--dry-run]\n\noptions:\n  -h, --help            show this help message and exit\n  --to TO               recipient agent-id\n  --from FRM            sender agent-id (recorded as the mesh edge's caller;\n                        enables mesh_trace + auto-bellback routing)\n  --kind {bell,whistle}\n  --base BASE\n  --type {query,answer,assert,challenge,agree,define,retract,suggest,request}\n                        typed-bell performative; server accepts it only when\n                        FUTON3C_TYPED_BELLS is on\n  --ref REF             typed-bell referent, usually an ArSE thread id\n  --mission MISSION     mission-id this dispatch works on; the server clocks\n                        the recipient's session to it (durable lineage,\n                        http.clj clock-dispatch!) so the agent appears on the\n                        live EFE map without a manual clock-in\n  --mode {work,brief}   explicit invoke-job mode; when omitted the server\n                        retains its legacy prompt-text classification fallback\n  --park                after a bell, park the sender's turn on the returned\n                        job-id\n  --park-deadline PARK_DEADLINE\n                        seconds from now before the park deadline fires\n                        (default: 2700)\n  --park-payload PARK_PAYLOAD\n                        continuation payload for /api/alpha/park\n  --surface SURFACE     park surface to resume on (default: emacs-repl)\n  --timeout-ms TIMEOUT_MS\n                        invoke timeout in ms. Defaults to 14400000 (240 min)\n                        for --kind bell, which is deliberately far above the\n                        server's 3600000 (60 min): until the supervised-\n                        overrun fix reaches the codex relay route, a turn\n                        hitting the cap is abandoned as state=failed and its\n                        result is lost. Pass 0 to defer to the server default.\n  --dry-run             print payload, do not send\n"
+          ]
+        },
+        {
+          "seq": 7,
+          "type": "tool_use",
+          "at": "2026-09-10T17:02:17.286567536Z",
+          "tools": [
+            "bash"
+          ],
+          "previews": [
+            "bash /bin/bash -lc 'ls holes/labs/M-apm-demonstration/analysis/ta-cascade-2026-09-10 holes/labs/M-apm-demonstration/analysis/"
+          ],
+          "output": [
+            "holes/labs/M-apm-demonstration/analysis/pattern-construction-2026-09-10:\nREADME.md\n__pycache__\nchecks.txt\nfreeze_prelim.py\nprelim-development.md\nprelim-sources.json\ntopology-census.json\ntopology-induction.json\ntopology-patterns.md\ntopology_census.py\ntopology_induction.py\nworklist_projection.bb\n\nholes/labs/M-apm-demonstration/analysis/ta-cascade-2026-09-10:\nCHECKS.md\nSTUDENT.md\nTA.md\na93A01-ta-cascade.json\nverify.py\n# Pattern-first APM retrieval: existing methods, fragmented descriptions, unchecked fit\n\nCode \u2026[trimmed]\u2026  of an \u201cestablished\u201d label is not a theorem certificate.\n\nDefinitions should be explicit typed source references, not new patterns:\nclosed-interval continuity and its one-sided limit; Lipschitz bound; continuous\ndual versus Hilbert inner-product weak convergence; norm versus weak topology;\nbounded versus totally bounded. Supply a bounded source excerpt and exact\ndeclaration revision when needed, keep any equivalence bridge as a separate\nproof obligation, and record which definition was actually consulted.\n\nFinally bind an attempted proof step or a reasoned rejection to the selected\npattern, consulted originals and artifact diff/checker result. Existing\n`used-ids` remains an honest memory-use account. A new pattern-use observation\nmust record what proof action changed or why no application was attempted.\nDo not reward citation, a search hit or token overlap as successful transfer.\n\n**Prompt-only part:** align the frozen role card with existing authenticated\nsearch authority; ask for at most two candidate methods and the above premise\ncheck, with permission to reject both. This can improve investigation habits,\nbut cannot provide a missing full description, resolve examples, repair a\nreceipt gap or certify use. Keep that intervention separate from endpoint work.\n\n**First later diagnostic, proposed only:** use the already analyst-validated\nm96J04 implication with frozen target prerequisites and a separate negative\npremise case. For fresh sessions, freeze task, corpus revisions, model version,\ntools, token/time budget and reference exclusions before dispatch. Compare\nexisting retrieval, existing retrieval plus condition-check prompt, and the\nsame prompt plus structured pattern/example access. A matched-exposure arm\ngiving the same selected content without discovery separates retrieval from\nadaptation. Count retrieved, exposed, read/considered, premise-checked, claimed\nused and proof-supported used separately; a disconnected resolver must fail.\nThe reference adaptation and source completed proof must not be available in\na memory-only arm. This first deliberately selected case cannot estimate\ntransfer prevalence. No experiment is activated by this proposal.\n\n## Reproduction and checks\n\nFrom futon3c:\n\n```sh\npython3 holes/labs/M-apm-demonstration/analysis/pattern-first-development-2026-09-10/probe.py replay --output /tmp/pattern-first-result.json\ncmp holes/labs/M-apm-demonstration/analysis/pattern-first-development-2026-09-10/result.json /tmp/pattern-first-result.json\nbb holes/labs/M-apm-demonstration/analysis/pattern-first-development-2026-09-10/check_catalog.bb\n```\n\n`replay` uses only the committed frozen JSON and in-memory SQLite. `freeze`\nrebuilds inputs from Git objects (futon3c fixed at `0949acf2`) plus the four\nexplicit retained snapshot paths, checks each snapshot unchanged after reading,\nand passes only whitelisted fields through the sanitizer. It intentionally does\nnot scrape role packets. Other repo revisions and snapshot hashes must match\nthe frozen pins for a historical regeneration claim. The handoff file hash was\nalso checked equal to its `0949acf2` blob. A first attempt to discover snapshots\nin Git returned zero because these retained files are untracked; explicit\nhashed paths corrected the census before any reported population result.\n\nValidation: offline replay agrees byte-for-byte; the pinned production catalog\nscorer, extracted and executed without loading its namespace, agrees with the\nPython port on all six queries. 203 committed source hashes, four retained\nsnapshot hashes, memory-row hashes, ranked source pointers and unique canonical\nIDs checked; negative applicability cases retained. Python compilation,\nboth scripts' clj-kondo (0 errors/warnings),\n`futon4/dev/check-parens.el` and diff whitespace check pass. No production test\nsuite or Lean run was needed for this evidence-only packet. Historical memory\nbodies/reviews were not edited. Concurrent coordinator/session edits, coined\ndrafts and codex-10 RUN4 work were left untouched. The completion response\nauto-routes to codex-17; no duplicate bell is sent.\n"
+          ]
+        }
+      ],
+      "mode": "brief",
+      "delivery": {
+        "status": "pending"
+      },
+      "state": "running",
+      "invocation/model": null,
+      "trace-id": null,
+      "result-summary": null,
+      "terminal-message": null,
+      "finished-at": null,
+      "created-at": "2026-09-10T17:01:59.743493633Z",
+      "terminal-code": null,
+      "surface": "bell"
+    }
+  },
+  "student-hold": {
+    "agent-id": "zai-student-transfer-20260910",
+    "held-at": "2026-09-10T17:01:01.472105195Z",
+    "by": "codex-16",
+    "reason": "Joe-reserved TA transfer pilot; no problem exposure until TA freezes materials; codex-ta-transfer-20260910 owns release after queue check"
+  }
+}
