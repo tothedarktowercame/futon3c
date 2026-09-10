@@ -14,7 +14,15 @@
   (str (pr-str {:schema :wm/run4-pinned-run-config-v1
                 :runner-options {:cohort? false
                                  :accumulate-strategic-habit? false}
-                :c-fold {:enabled? false}}) "\n"))
+                :c-fold {:enabled? false}
+                :serving-declaration
+                {:required-environment
+                 {"FUTON_WM_FPI_DARK" "1" "FUTON_WM_BETA_DARK" "1"
+                  "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+                 :hierarchy {:model :single-level :scope :RUN4}
+                 :recording-requirement
+                 {:contract :wm/realized-recording-v1
+                  :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}}}) "\n"))
 
 (defn pin [overrides]
   (merge {:schema :wm/run4-task-pin-v1
@@ -48,7 +56,15 @@
             (slurp (io/file ".." "futon2" "resources" "run4"
                             "checkpoint-kernel.edn")))
       (spit (io/file root "pin.edn") (pr-str (pin {})))
-      (f {:root root
+      (binding [sut/*attest-effective-environment*
+                (fn [declaration]
+                  {:schema :wm/run4-effective-environment-attestation-v1
+                   :hierarchy (:hierarchy declaration)
+                   :flags [{:flag "FUTON_WM_FPI_DARK" :required "1"
+                            :observed "1" :effective true
+                            :consumer ['fake.ns '*flag*]}]
+                   :recording {:status :not-attested-by-this-component}})]
+        (f {:root root
           :config {:run4 {:enabled? true :bearer-token token :operator "Joe"
                           :casting casting
                           :admission-root (.getPath root)
@@ -59,7 +75,7 @@
                           :resolve-mission #(when (= "M-run4" %) mission)
                           :action-admissible?
                           #(and (= mission %1)
-                                (= {:type :advance-mission :target "M-run4"} %2))}}})
+                                (= {:type :advance-mission :target "M-run4"} %2))}}}))
       (finally (delete-tree! root)))))
 
 (def auth {"authorization" (str "Bearer " token)})
@@ -92,9 +108,11 @@
         (is (thrown? clojure.lang.ExceptionInfo
                      (trust {:pin-digest sha
                              :operator-selection {:operator "Mallory"}})))
-        (is (= sha (:pin-sha256
-                    (trust {:pin-digest sha
-                            :operator-selection {:operator "Joe"}}))))
+        (let [attestation (trust {:pin-digest sha
+                                  :operator-selection {:operator "Joe"}})]
+          (is (= sha (:pin-sha256 attestation)))
+          (is (= :wm/run4-effective-environment-attestation-v1
+                 (get-in attestation [:effective-environment :schema]))))
         (is (thrown? clojure.lang.ExceptionInfo
                      (trust {:pin-digest sha
                              :operator-selection {:operator "Joe"}})))))))

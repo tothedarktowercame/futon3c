@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.run4-task-pin :as task-pin]
+            [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-pinned-run-config :as pinned-config])
   (:import [java.security MessageDigest]
            [java.util UUID]))
@@ -15,6 +16,11 @@
 (def allowed-request-keys
   #{:run4-pin-ref :run4-attempt-id :author :reviewer :repair-reviewer :trigger})
 (def casting-keys [:author :reviewer :repair-reviewer])
+
+(def ^:dynamic *attest-effective-environment*
+  "Test seam only; production reads the current process environment and loaded
+  consumer Vars through run4-effective-environment/attest."
+  effective/attest)
 
 (defn- refuse [code & [data]]
   (merge {:ok false :status 403 :error code} data))
@@ -114,6 +120,11 @@
 
 (defn- prepared-options [cfg pin-text envelope ports runner-opts freshness! attempt-id]
   (let [pin-sha (digest/sha256 pin-text)
+        serving-declaration (:run4/serving-declaration runner-opts)
+        ;; A first current-value check happens before click creation. The
+        ;; callback repeats it at the selector boundary to close prepare/use
+        ;; drift without treating this snapshot as authority.
+        _ (*attest-effective-environment* serving-declaration)
         used? (atom false)
         trust (fn [{:keys [pin-digest operator-selection]}]
                 ;; The task validator below also rereads pin-declared sources.
@@ -125,11 +136,14 @@
                                (compare-and-set! used? false true))
                   (throw (ex-info "RUN4 attestation refused"
                                   {:reason :digest-operator-or-reuse})))
-                {:status :authenticated
-                 :boundary :trusted-serving-context
-                 :principal "Joe"
-                 :pin-sha256 pin-sha
-                 :request-nonce (str (UUID/randomUUID))})]
+                (let [environment (*attest-effective-environment*
+                                   serving-declaration)]
+                  {:status :authenticated
+                   :boundary :trusted-serving-context
+                   :principal "Joe"
+                   :pin-sha256 pin-sha
+                   :request-nonce (str (UUID/randomUUID))
+                   :effective-environment environment}))]
     (cond
       (not= "Joe" (get-in envelope [:operator-selection :operator]))
       (refuse :run4-operator-mismatch)

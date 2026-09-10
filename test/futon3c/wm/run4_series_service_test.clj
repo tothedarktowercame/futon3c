@@ -1,11 +1,13 @@
 (ns futon3c.wm.run4-series-service-test
   (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
+            [futon3c.wm.run4-trusted-entry :as trusted]
             [futon3c.wm.runner-service :as runner]))
 
 (def token (apply str (repeat 64 "c")))
@@ -35,7 +37,17 @@
         config-text (str (pr-str {:schema :wm/run4-pinned-run-config-v1
                                   :runner-options {:cohort? false
                                                    :accumulate-strategic-habit? false}
-                                  :c-fold {:enabled? false}}) "\n")
+                                  :c-fold {:enabled? false}
+                                  :serving-declaration
+                                  {:required-environment
+                                   {"FUTON_WM_FPI_DARK" "1"
+                                    "FUTON_WM_BETA_DARK" "1"
+                                    "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+                                   :hierarchy {:model :single-level :scope :RUN4}
+                                   :recording-requirement
+                                   {:contract :wm/realized-recording-v1
+                                    :environment
+                                    {"FUTON_WM_RECORDING_CONTRACT" "1"}}}}) "\n")
         pin {:schema :wm/run4-task-pin-v1
              :series-id "RUN4-eligible-issues" :trial-id :outer-loop-successor
              :series-order :as-declared
@@ -98,7 +110,15 @@
       (write! root "config.edn" config-text)
       (write! root "pin.edn" pin-text)
       (write! root "series.edn" (pr-str manifest))
-      (f root cfg)
+      (binding [trusted/*attest-effective-environment*
+                (fn [declaration]
+                  {:schema :wm/run4-effective-environment-attestation-v1
+                   :hierarchy (:hierarchy declaration)
+                   :flags [{:flag "FUTON_WM_FPI_DARK" :required "1"
+                            :observed "1" :effective true
+                            :consumer ['fake.ns '*flag*]}]
+                   :recording {:status :not-attested-by-this-component}})]
+        (f root cfg))
       (finally (delete-tree! root)))))
 
 (deftest serving-route-starts-one-explicit-transition-and-resumes-idempotently
@@ -161,6 +181,20 @@
           (is (zero? @clicks))
           (is (not (.exists (io/file root "controller" "eligible-attempt-1")))))))))
 
+(deftest effective-environment-mismatch-refuses-before-click
+  (with-service
+    (fn [_ cfg]
+      (let [clicks (atom 0)]
+        (binding [trusted/*attest-effective-environment*
+                  (fn [_]
+                    (throw (ex-info "effective mismatch"
+                                    {:reason :required-observed-effective-mismatch})))]
+          (with-redefs [runner/click! (fn [_] (swap! clicks inc))]
+            (is (= 500 (:status
+                        ((http/make-handler cfg)
+                         (request {:run4-series-ref "series.edn"} auth)))))
+            (is (zero? @clicks))))))))
+
 (deftest declared-corrupt-terminal-chain-stops-resume-without-redispatch
   (with-service
     (fn [root cfg]
@@ -206,7 +240,9 @@
                  :outcome :grounded-change
                  :checkpoints
                  {:selection {:judgment {:outcome :ok}
-                              :ground {:kind :wm-judgement :run4/task-pin identity}}
+                              :ground {:kind :wm-judgement :run4/task-pin identity
+                                       :run4/operator-selection
+                                       (:provenance selected)}}
                   :construction {:judgment {:run4/task-pin identity}
                                  :ground {:kind :decision-pinned-construction
                                           :run4/task-pin identity}}
@@ -249,6 +285,12 @@
                 (is (.isFile (io/file root "projections"
                                       (str "run4-terminal-projection-" click-id ".edn"))))
                 (is (seq (.listFiles (io/file root "run-records"))))
+                (let [run-record (->> (.listFiles (io/file root "run-records"))
+                                      first slurp edn/read-string)]
+                  (is (= :wm/run4-effective-environment-attestation-v1
+                         (get-in run-record
+                                 [:run4/effective-environment-attestation
+                                  :schema]))))
                 (let [terminal-response (handler (request payload auth))
                       terminal-body (json/parse-string (:body terminal-response) true)]
                   (is (= 200 (:status terminal-response)))

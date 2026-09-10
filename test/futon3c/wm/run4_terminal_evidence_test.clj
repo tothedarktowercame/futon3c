@@ -61,7 +61,12 @@
         run-record {:run/id "run-1" :click/id "click-1" :startedAt (:started-at started)
                     :selectorSeam "live:validated-selection" :traceWritten true
                     :route [{:fromNode "R20" :toNode "R12" :via "observe" :at_ (:started-at started)}]
-                    :run4/task-pin pin}
+                    :run4/task-pin pin
+                    :run4/effective-environment-attestation
+                    {:schema :wm/run4-effective-environment-attestation-v1
+                     :hierarchy {:model :single-level :scope :RUN4}
+                     :flags []
+                     :recording {:status :not-attested-by-this-component}}}
         _ (write! (io/file (:admission roots) "outer-attempt/reservation.edn") reservation)
         _ (write! (io/file (:admission roots) "outer-attempt/click-result.edn") click)
         _ (write! run-file run-record)

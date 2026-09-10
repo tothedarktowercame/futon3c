@@ -149,7 +149,8 @@
                       (get-in projection [:source :run-record-sha256]))
                    (exact-keys? value
                                 #{:run/id :click/id :startedAt :selectorSeam
-                                  :traceWritten :route :run4/task-pin})
+                                  :traceWritten :route :run4/task-pin
+                                  :run4/effective-environment-attestation})
                    (= (:click/id projection) (:click/id value))
                    (= (:run/id projection) (:run/id value))
                    (= (:run4/task-pin projection) (:run4/task-pin value)))
