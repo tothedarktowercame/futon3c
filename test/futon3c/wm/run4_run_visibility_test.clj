@@ -76,6 +76,7 @@
                target (io/file r "run-visibility.json")]
            (sut/publish! target v)
            (is (= ["complete" "passed"] ((juxt :stage :result) v)))
+           (is (= ":outer" (get-in v [:trials 0 :trial_id])))
            (is (not-any? #{"accepted"} (cons (:stage v) (map :stage (:trials v)))))
            (is (= "wm/run-visibility-v1" (:schema (json/parse-string (slurp target) true)))))
          (finally (clean! r)))))
