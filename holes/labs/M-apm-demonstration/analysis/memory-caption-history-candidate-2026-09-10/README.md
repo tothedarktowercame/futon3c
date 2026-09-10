@@ -93,8 +93,9 @@ The generator checks exact 57-member identity against `readback.json`, unique
 IDs, membership in the historical union, retained source-attempt references,
 independent-review fields, and positive caption wording. Generated data is
 deterministic from committed snapshots and audit artifacts. It also checks that
-the proposed searchable text (useful-when plus scope limit) is at most 720
-UTF-8 bytes and refuses oversize records rather than truncating them.
+the serialized searchable projection (useful-when, epistemic status, conditions,
+suggested contexts, and scope limit) is at most 1,024 UTF-8 bytes and refuses
+oversize records rather than truncating them.
 Source-attempt identifiers are retained as identifiers with digest status
 `:unknown`; substrings of IDs and filenames are no longer mislabeled as verified
 content digests. The three enrichment inputs have SHA-256 values recomputed from

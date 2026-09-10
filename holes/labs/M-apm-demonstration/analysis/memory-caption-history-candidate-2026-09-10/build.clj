@@ -192,12 +192,19 @@
 (defn check! [pred message]
   (when-not pred (throw (ex-info message {}))))
 
+(defn searchable-projection-bytes [caption]
+  (count (.getBytes
+          (pr-str (select-keys caption [:useful-when :epistemic-status
+                                        :conditions :suggested-contexts
+                                        :scope-limit]))
+          "UTF-8")))
+
 (def enriched-records
   [{:memory-id "e-apm-promotion-5fdb99169bd788313841375c797c302c"
     :coverage-disposition :source-read-enriched-review-pending
     :six-field-draft
     {:caption/schema :grounded-caption-v1
-     :text "Useful when proving ODE uniqueness from equal initial values although derivative hypotheses hold only inside a half-interval: compare on [δ,t] with Gronwall, then send δ to 0 from the right using continuity."
+     :text "Useful when proving ODE uniqueness from equal initial values although derivative hypotheses hold only inside a half-interval: compare on [δ,t] with Gronwall, then send δ to 0 using continuity."
      :epistemic-status :supported
      :conditions [{:condition "Both trajectories are continuous at the initial endpoint."
                    :status :established
@@ -325,17 +332,16 @@
             "Planted self-review must be detected")
     (check! (every? #(str/starts-with? (:useful-when %) "Useful when ") records)
             "Every caption must use positive useful-when wording")
-    (check! (every? #(<= (count (.getBytes
-                                  (str (:useful-when %) " " (:scope-limit %))
-                                  "UTF-8"))
-                          720)
+    (check! (every? #(<= (searchable-projection-bytes %) 1024)
                     records)
-            "Every proposed searchable projection must fit 720 UTF-8 bytes")
-    (check! (every? #(<= (count (.getBytes
-                                  (get-in % [:six-field-draft :text]) "UTF-8"))
-                          720)
+            "Every proposed searchable projection must fit 1,024 UTF-8 bytes")
+    (check! (every? #(<= (searchable-projection-bytes
+                           (-> (:six-field-draft %)
+                               (assoc :useful-when
+                                      (get-in % [:six-field-draft :text]))))
+                          1024)
                     enriched-records)
-            "Every source-read caption text must fit the implemented 720-byte limit")
+            "Every source-read searchable projection must fit the implemented 1,024-byte limit")
     (check! (every? #(= :supported (get-in % [:independent-review :status])) records)
             "Every cohort memory must retain independent-review evidence")
     (doseq [record enriched-records
