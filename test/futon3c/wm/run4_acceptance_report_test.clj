@@ -11,8 +11,15 @@
 (def control-text (pr-str {:edges [{:from :R20 :to :R12}]
                             :route-measured-drawn [] :decisions {}}))
 (def bundle {:schema :wm/run4-terminal-evidence-bundle-v1
-             :identity {:series-id "RUN4-x" :trial-id :t1}
+             :identity {:series-id "RUN4-x" :trial-id :t1
+                        :casting {:author "zai-2" :reviewer "codex-17"}}
+             :attempt-id "attempt-1"
              :projection-digest sha :run-record-digest sha
+             :terminal-projection
+             {:run/id "run-1" :attempt/id "internal-1"
+              :run4/task-pin {:mission-id "M-run4"}
+              :outcome :grounded-change :checkpoints {}
+              :failure {:kind nil :stage nil} :evidence {}}
              :classification {:task-result :succeeded :infrastructure :safe
                               :evidence-id sha}
              :run-record {:run/id "run-1"

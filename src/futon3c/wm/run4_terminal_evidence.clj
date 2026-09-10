@@ -311,6 +311,9 @@
          (select-keys binding [:click/id :attempt/id :outcome :run-id-observation
                                :recorded-at])
          :projection-digest (get-in binding [:run4/terminal-projection :sha256])
+         :terminal-projection
+         (select-keys projection [:run/id :attempt/id :run4/task-pin :outcome
+                                  :checkpoints :failure :evidence])
          :run-record-digest (get-in projection [:source :run-record-sha256])
          :run-record run-record
          :classification classification}))))
