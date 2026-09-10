@@ -30,6 +30,7 @@
   ([{:keys [required-environment hierarchy] :as declaration}
     {:keys [env-read var-read]}]
    (when-not (and (map? declaration)
+                  (map? required-environment)
                   (= (set (keys flag-spec)) (set (keys required-environment)))
                   (every? #(= "1" %) (vals required-environment))
                   (= required-hierarchy hierarchy)

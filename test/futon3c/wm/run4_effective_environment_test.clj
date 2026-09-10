@@ -38,6 +38,9 @@
 
 (deftest malformed-requirements-and-hierarchy-refuse
   (doseq [d [(assoc declaration :required-environment {})
+             (assoc declaration :required-environment "1")
+             (assoc declaration :required-environment [true])
+             (assoc declaration :required-environment false)
              (assoc-in declaration [:required-environment "FUTON_WM_FPI_DARK"] "0")
              (assoc declaration :hierarchy {:model :hierarchical :scope :RUN4})]]
     (is (= :malformed-declaration
@@ -48,3 +51,9 @@
   (is (= :malformed-declaration
          (reason #(sut/attest {} {:env-read (constantly nil)
                                   :var-read (constantly false)})))))
+
+(deftest production-reader-does-not-load-missing-consumers
+  (let [n 'run4-review.absent-consumer]
+    (is (nil? (find-ns n)))
+    (is (nil? (sut/production-var-read [n '*flag*])))
+    (is (nil? (find-ns n)))))
