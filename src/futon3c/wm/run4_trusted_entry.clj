@@ -12,7 +12,7 @@
            [java.util UUID]))
 
 (def allowed-request-keys
-  #{:run4-pin-ref :author :reviewer :repair-reviewer :trigger})
+  #{:run4-pin-ref :run4-attempt-id :author :reviewer :repair-reviewer :trigger})
 (def casting-keys [:author :reviewer :repair-reviewer])
 
 (defn- refuse [code & [data]]
@@ -51,6 +51,9 @@
     (not (and (file-authority? (:pin-root cfg) (:pin-allowlist cfg))
               (file-authority? (:source-root cfg) (:source-allowlist cfg))))
     :run4-file-authority-invalid
+    (not (and (string? (:admission-root cfg))
+              (.isDirectory (io/file (:admission-root cfg)))))
+    :run4-admission-configuration-invalid
     :else nil))
 
 (defn- authorized-file [root allowlist ref]
@@ -66,6 +69,10 @@
 
 (defn- requested-casting [payload]
   (select-keys payload casting-keys))
+
+(defn- attempt-id? [value]
+  (and (string? value)
+       (boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" value))))
 
 (defn- validate-pin [cfg pin-text]
   (let [read-text (fn [ref]
@@ -87,7 +94,7 @@
         {:refusal (refuse :run4-pin-invalid
                           {:reason :validation-failed})}))))
 
-(defn- prepared-options [cfg pin-text envelope ports]
+(defn- prepared-options [cfg pin-text envelope ports attempt-id]
   (let [pin-sha (digest/sha256 pin-text)
         used? (atom false)
         trust (fn [{:keys [pin-digest operator-selection]}]
@@ -111,7 +118,13 @@
        :opts (merge (:casting cfg)
                     {:run4-task-pin-text pin-text
                      :run4-task-pin-ports ports
-                     :run4-trusted-boundary-fn trust})})))
+                     :run4-trusted-boundary-fn trust})
+       :admission-request
+       {:attempt-id attempt-id
+        :identity {:series-id (get-in envelope [:task-pin :series-id])
+                   :trial-id (get-in envelope [:task-pin :trial-id])
+                   :pin-sha256 pin-sha
+                   :casting (:casting cfg)}}})))
 
 (defn prepare
   "Authenticate and fully validate a RUN4 payload before click creation.
@@ -129,6 +142,8 @@
       (refuse :run4-request-key-forbidden)
       (not (secure= (:bearer-token cfg) (bearer-token headers)))
       (refuse :run4-authentication-failed)
+      (not (attempt-id? (:run4-attempt-id payload)))
+      (refuse :run4-attempt-identity-invalid)
       (and (seq (requested-casting payload))
            (not= (requested-casting payload)
                  (select-keys (:casting cfg) (keys (requested-casting payload)))))
@@ -141,5 +156,6 @@
           (if-let [refusal (:refusal validation)]
             refusal
             (prepared-options cfg pin-text (:envelope validation)
-                              (:ports validation))))
+                              (:ports validation)
+                              (:run4-attempt-id payload))))
         (refuse :run4-pin-reference-refused)))))

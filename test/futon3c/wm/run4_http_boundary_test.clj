@@ -4,6 +4,7 @@
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.transport.http :as http]
+            [futon3c.wm.run4-attempt-admission :as admission]
             [futon3c.wm.runner-service :as service]))
 
 (def token (apply str (repeat 64 "b")))
@@ -34,6 +35,7 @@
                        :action {:type :advance-mission :target "M-run4"}}}
         cfg {:run4 {:enabled? true :bearer-token token :operator "Joe"
                     :casting casting
+                    :admission-root (.getPath root)
                     :pin-root (.getPath root) :pin-allowlist #{"pin.edn"}
                     :source-root (.getPath root)
                     :source-allowlist #{"source.md" "config.edn"}
@@ -60,43 +62,75 @@
   (with-handler
     (fn [handler cfg root pin]
       (let [calls (atom [])
-            cases [[{:run4-pin-ref "pin.edn"} {}]
-                   [{:run4-pin-ref "pin.edn" :authenticated true} auth]
-                   [{:run4-pin-ref "pin.edn" :author "Mallory"} auth]
-                   [{:run4-pin-ref "../pin.edn"} auth]]]
+            base {:run4-pin-ref "pin.edn" :run4-attempt-id "attempt-http"}
+            cases [[base {}]
+                   [(assoc base :authenticated true) auth]
+                   [(assoc base :author "Mallory") auth]
+                   [(assoc base :run4-pin-ref "../pin.edn") auth]]]
         (with-redefs [service/click! #(swap! calls conj %)]
           (doseq [[payload headers] cases]
             (is (= 403 (:status (handler (request payload headers))))))
+          (is (false? (.exists (io/file root "attempt-http"))))
           (spit (io/file root "pin.edn")
                 (pr-str (assoc-in pin [:operator-selection :operator] "Mallory")))
           (is (= 403 (:status (handler
-                               (request {:run4-pin-ref "pin.edn"} auth)))))
+                               (request base auth)))))
           (spit (io/file root "pin.edn")
                 (pr-str (assoc pin :sources
                                [{:path "not-authorized.md"
                                  :sha256 (digest/sha256 "missing")}])))
           (is (= 403 (:status (handler
-                               (request {:run4-pin-ref "pin.edn"} auth)))))
+                               (request base auth)))))
           (spit (io/file root "pin.edn") "{:pin 1}")
           (is (= 403 (:status (handler
-                               (request {:run4-pin-ref "pin.edn"} auth)))))
+                               (request base auth)))))
           (is (empty? @calls))
           (let [disabled (http/make-handler (dissoc cfg :run4))]
             (is (= 403 (:status (disabled
-                                 (request {:run4-pin-ref "pin.edn"} auth)))))
+                                 (request base auth)))))
             (is (empty? @calls))))))))
 
 (deftest valid-run4-propagates-exact-server-derived-options
   (with-handler
     (fn [handler _ _ _]
-      (let [seen (atom nil)]
-        (with-redefs [service/click! (fn [opts] (reset! seen opts) {:started true})]
-          (is (= 200 (:status (handler (request {:run4-pin-ref "pin.edn"} auth)))))
-          (is (= casting (select-keys @seen (keys casting))))
-          (is (string? (:run4-task-pin-text @seen)))
-          (is (fn? (:run4-trusted-boundary-fn @seen)))
+      (let [seen (atom [])]
+        (with-redefs [service/click! (fn [opts] (swap! seen conj opts)
+                                      {:started true :click-id "click-valid"})]
+          (is (= 200 (:status (handler (request {:run4-pin-ref "pin.edn"
+                                                 :run4-attempt-id "attempt-valid"}
+                                                auth)))))
+          (is (= 200 (:status (handler (request {:run4-pin-ref "pin.edn"
+                                                 :run4-attempt-id "attempt-valid"}
+                                                auth)))))
+          (is (= 1 (count @seen)))
+          (is (= casting (select-keys (first @seen) (keys casting))))
+          (is (string? (:run4-task-pin-text (first @seen))))
+          (is (fn? (:run4-trusted-boundary-fn (first @seen))))
           (is (= #{:read-text :resolve-mission :action-admissible?}
-                 (set (keys (:run4-task-pin-ports @seen))))))))))
+                 (set (keys (:run4-task-pin-ports (first @seen)))))))))))
+
+(deftest concurrent-duplicates-and-write-failure-never-double-click
+  (with-handler
+    (fn [handler _ _ _]
+      (let [clicks (atom 0)
+            payload {:run4-pin-ref "pin.edn"
+                     :run4-attempt-id "attempt-concurrent"}
+            start (promise)]
+        (with-redefs [service/click! (fn [_] (swap! clicks inc)
+                                      {:started true :click-id "click-one"})]
+          (let [requests (doall (repeatedly 10
+                                            #(future @start
+                                                     (handler (request payload auth)))))]
+            (deliver start true)
+            (is (every? #{200} (map (comp :status deref) requests)))
+            (is (= 1 @clicks))))
+        (let [before @clicks]
+          (binding [admission/*atomic-write!*
+                    (fn [& _] (throw (ex-info "disk failure" {:committed? false})))]
+            (is (= 500 (:status
+                        (handler (request (assoc payload :run4-attempt-id
+                                                "attempt-write-failure") auth))))))
+          (is (= before @clicks)))))))
 
 (deftest legacy-and-single-flight-responses-are-preserved
   (let [handler (http/make-handler {})

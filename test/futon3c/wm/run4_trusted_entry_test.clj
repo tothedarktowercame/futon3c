@@ -41,6 +41,7 @@
       (f {:root root
           :config {:run4 {:enabled? true :bearer-token token :operator "Joe"
                           :casting casting
+                          :admission-root (.getPath root)
                           :pin-root (.getPath root) :pin-allowlist #{"pin.edn"}
                           :source-root (.getPath root)
                           :source-allowlist #{"source.md" "config.edn"}
@@ -51,11 +52,12 @@
       (finally (delete-tree! root)))))
 
 (def auth {"authorization" (str "Bearer " token)})
+(def request {:run4-pin-ref "pin.edn" :run4-attempt-id "attempt-1"})
 
 (deftest authenticates-validates-and-mints-one-use-digest-context
   (with-fixture
     (fn [{:keys [config]}]
-      (let [result (sut/prepare config auth {:run4-pin-ref "pin.edn"})
+      (let [result (sut/prepare config auth request)
             opts (:opts result)
             trust (:run4-trusted-boundary-fn opts)
             sha (digest/sha256 (:run4-task-pin-text opts))]
@@ -84,32 +86,34 @@
                    (assoc-in config [:run4 :bearer-token] "change-me")
                    (assoc-in config [:run4 :bearer-token] (apply str (repeat 64 "A")))]]
         (is (= :run4-credential-configuration-invalid
-               (:error (sut/prepare bad auth {:run4-pin-ref "pin.edn"})))))
+               (:error (sut/prepare bad auth request)))))
       (doseq [headers [{} {"authorization" token}
                        {"authorization" (str "bearer " token)}
                        {"authorization" 42}]]
         (is (= :run4-authentication-failed
-               (:error (sut/prepare config headers {:run4-pin-ref "pin.edn"}))))))))
+               (:error (sut/prepare config headers request))))))))
 
 (deftest refuses-untrusted-request-and-invalid-server-authority
   (with-fixture
     (fn [{:keys [config]}]
       (is (= :run4-request-key-forbidden
              (:error (sut/prepare config auth
-                                  {:run4-pin-ref "pin.edn" :authenticated true}))))
+                                  (assoc request :authenticated true)))))
       (is (= :run4-pin-reference-refused
-             (:error (sut/prepare config auth {:run4-pin-ref "../pin.edn"}))))
+             (:error (sut/prepare config auth (assoc request :run4-pin-ref "../pin.edn")))))
       (is (= :run4-casting-mismatch
              (:error (sut/prepare config auth
-                                  {:run4-pin-ref "pin.edn" :author "forged"}))))
+                                  (assoc request :author "forged")))))
       (is (= :run4-disabled
-             (:error (sut/prepare {} auth {:run4-pin-ref "pin.edn"}))))
+             (:error (sut/prepare {} auth request))))
       (is (= :run4-port-configuration-invalid
              (:error (sut/prepare (assoc-in config [:run4 :resolve-mission] nil)
-                                  auth {:run4-pin-ref "pin.edn"}))))
+                                  auth request))))
       (is (= :run4-file-authority-invalid
              (:error (sut/prepare (assoc-in config [:run4 :source-allowlist] ["source.md"])
-                                  auth {:run4-pin-ref "pin.edn"})))))))
+                                  auth request))))
+      (is (= :run4-attempt-identity-invalid
+             (:error (sut/prepare config auth (dissoc request :run4-attempt-id))))))))
 
 (deftest refuses-invalid-pin-before-returning-runner-options
   (with-fixture
@@ -119,7 +123,7 @@
               (pr-str (pin {:sources [{:path "source.md"
                                        :sha256 (apply str (repeat 64 "0"))}]})))
         (is (= {:error :run4-pin-invalid :reason :stale-source}
-               (select-keys (sut/prepare config auth {:run4-pin-ref "pin.edn"})
+               (select-keys (sut/prepare config auth request)
                             [:error :reason]))))
       (testing "forged operator"
         (spit (io/file root "pin.edn")
@@ -127,9 +131,9 @@
                             {:mode :operator-selected :operator "Mallory"
                              :authority-ref "forged"}})))
         (is (= :run4-operator-mismatch
-               (:error (sut/prepare config auth {:run4-pin-ref "pin.edn"})))))
+               (:error (sut/prepare config auth request)))))
       (testing "casting differs from server identity"
         (spit (io/file root "pin.edn")
               (pr-str (pin {:casting (assoc casting :author "zai-2")})))
         (is (= :run4-casting-mismatch
-               (:error (sut/prepare config auth {:run4-pin-ref "pin.edn"}))))))))
+               (:error (sut/prepare config auth request))))))))

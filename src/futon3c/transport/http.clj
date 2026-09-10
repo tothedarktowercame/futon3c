@@ -97,6 +97,7 @@
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
+            [futon3c.wm.run4-attempt-admission :as run4-admission]
             [futon3c.wm.run4-trusted-entry :as run4-entry]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
@@ -8225,8 +8226,7 @@
     (if (nil? payload)
       (json-response 400 {:error "invalid-json"})
       (try
-        (let [click! (requiring-resolve 'futon3c.wm.runner-service/click!)
-              legacy-opts (cond-> {}
+        (let [legacy-opts (cond-> {}
                      (nonblank-string? (:author payload))
                      (assoc :author (:author payload))
 
@@ -8242,11 +8242,28 @@
                          (run4-entry/prepare config (:headers request) payload))
               _ (when (and prepared (not (:ok prepared)))
                   (throw (ex-info "RUN4 click refused" prepared)))
-              opts (merge legacy-opts (:opts prepared))
-              result (click! opts)]
-          (if (= :already-running (:rejected result))
-            (json-response 409 result)
-            (json-response 200 result)))
+              admission (when prepared
+                          (run4-admission/reserve!
+                           (get-in config [:run4 :admission-root])
+                           (:admission-request prepared)))
+              _ (when (and admission (not (:ok admission)))
+                  (throw (ex-info "RUN4 attempt admission refused" admission)))]
+          (if (and admission (not (:new? admission)))
+            (json-response 200 {:run4/admission (:admission admission)})
+            (let [click! (requiring-resolve 'futon3c.wm.runner-service/click!)
+                  opts (merge legacy-opts (:opts prepared))
+                  result (click! opts)
+                  admission-status
+                  (when admission
+                    (run4-admission/record-click!
+                     (get-in config [:run4 :admission-root])
+                     (get-in prepared [:admission-request :attempt-id]) result))
+                  response (cond-> result
+                             admission-status
+                             (assoc :run4/admission admission-status))]
+              (if (= :already-running (:rejected result))
+                (json-response 409 response)
+                (json-response 200 response)))))
         (catch Throwable throwable
           (let [data (ex-data throwable)]
             (json-response (or (:status data) 500)
