@@ -1,11 +1,19 @@
 (ns futon3c.wm.run4-acceptance-report-test
   (:require [clojure.test :refer [deftest is]]
+            [futon2.aif.c-fold-config :as digest]
             [futon3c.wm.run4-acceptance-report :as sut]))
 
 (def sha (apply str (repeat 64 "a")))
 (def visibility {:schema "wm/run-visibility-v1" :run_id "RUN4-x"
                  :stage "complete" :result "passed"
                  :trials [{:trial_id "t1" :stage "complete" :result "passed"}]})
+(def control-text (pr-str {:edges [{:from :R20 :to :R12}]
+                            :route-measured-drawn [] :decisions {}}))
+(def bundle {:schema :wm/run4-terminal-evidence-bundle-v1
+             :identity {:series-id "RUN4-x" :trial-id :t1}
+             :projection-digest sha :run-record-digest sha
+             :run-record {:run/id "run-1"
+                          :route [{:fromNode "R20" :toNode "R12" :via "scan"}]}})
 
 (deftest current-durable-results-do-not-invent-preregistration-acceptance
   (let [input {:visibility visibility :expected-series-sha256 sha
@@ -52,3 +60,19 @@
                                      :expected-series-sha256 sha
                                      :observed-series-sha256 sha})
                         [:checks :terminal-task-results])))))
+
+(deftest exact-bundle-route-can-green-route-but-not-acceptance
+  (let [r (sut/report {:visibility visibility :expected-series-id "RUN4-x"
+                       :expected-series-sha256 sha :observed-series-sha256 sha
+                       :terminal-bundles [bundle] :control-map-text control-text
+                       :expected-control-map-sha256
+                       (digest/sha256 control-text)})]
+    (is (true? (get-in r [:checks :route-conformance])))
+    (is (= :missing-acceptance-battery-record (:decision r)))
+    (is (false? (:accepted? r))))
+  (let [r (sut/report {:visibility visibility :expected-series-id "RUN4-x"
+                       :expected-series-sha256 sha :observed-series-sha256 sha
+                       :terminal-bundles [(assoc-in bundle [:run-record :run/id] "foreign")]
+                       :control-map-text control-text
+                       :expected-control-map-sha256 sha})]
+    (is (false? (get-in r [:checks :route-conformance])))))

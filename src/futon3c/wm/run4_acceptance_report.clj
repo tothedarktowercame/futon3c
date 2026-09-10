@@ -1,6 +1,9 @@
 (ns futon3c.wm.run4-acceptance-report
   "Pure, read-only preregistration report.  It never grants RUN4 acceptance."
-  (:require [clojure.string :as str]))
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
+            [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.run4-route-conformance :as route]))
 
 (defn- sha? [x] (and (string? x) (boolean (re-matches #"[0-9a-f]{64}" x))))
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
@@ -19,22 +22,45 @@
                       (contains? #{"passed" "failed" "blocked"} (:result trial))))
                (:trials visibility))))
 
+(defn- control-map [text expected-sha]
+  (when (and (string? text) (sha? expected-sha)
+             (= expected-sha (digest/sha256 text)))
+    (try
+      (with-open [r (java.io.PushbackReader. (java.io.StringReader. text))]
+        (let [v (edn/read {:eof ::empty} r)]
+          (when (and (map? v) (= ::end (edn/read {:eof ::end} r))) v)))
+      (catch Throwable _ nil))))
+
+(defn- joined-route? [visibility bundles cmap]
+  (and cmap (vector? bundles)
+       (= (count bundles) (count (:trials visibility)))
+       (let [by-trial (into {} (map (juxt #(get-in % [:identity :trial-id]) identity)
+                                     bundles))]
+         (and (= (count bundles) (count by-trial))
+              (every?
+               (fn [trial]
+                 (let [bundle (get by-trial (keyword (:trial_id trial)))
+                       record (:run-record bundle)]
+                   (and (= :wm/run4-terminal-evidence-bundle-v1 (:schema bundle))
+                        (= (:run_id visibility) (str (get-in bundle [:identity :series-id])))
+                        (nonblank? (:projection-digest bundle))
+                        (nonblank? (:run-record-digest bundle))
+                        (nonblank? (:run/id record))
+                        (true? (:conforms? (route/verdict cmap record))))))
+               (:trials visibility))))))
+
 (defn report
   "Describe evidence against current RUN4 preregistration criteria. Operator
   acceptance remains a separate action even when every machine check passes."
-  [{:keys [visibility expected-series-id expected-series-sha256 observed-series-sha256]}]
+  [{:keys [visibility expected-series-id expected-series-sha256 observed-series-sha256
+           terminal-bundles control-map-text expected-control-map-sha256]}]
   (let [source-current? (and (sha? expected-series-sha256)
                              (= expected-series-sha256 observed-series-sha256))
         terminal? (and (nonblank? expected-series-id)
                        (= expected-series-id (:run_id visibility))
                        (terminal-visibility? visibility))
-        ;; The current visibility schema binds series/trial IDs but carries no
-        ;; full-loop run ID per trial.  Therefore no run-record route can be
-        ;; joined to a visible trial, and the existing U49 transcriber/battery
-        ;; cannot be invoked as evidence for this series.  Fail closed until
-        ;; that producer join exists; caller-supplied route/battery assertions
-        ;; are deliberately not accepted by this report.
-        route? false
+        cmap (control-map control-map-text expected-control-map-sha256)
+        route? (boolean (and terminal? (joined-route? visibility terminal-bundles cmap)))
         recording? false]
     {:schema :wm/run4-acceptance-report-v1
      :run-id (when (map? visibility) (:run_id visibility))
@@ -51,6 +77,5 @@
      :accepted? false
      :acceptance-authority :operator-reserved
      :missing-evidence
-     [:trial-to-full-loop-run-id
-      :u49-route-transcription-for-exact-run
-      :shared-step-acceptance-battery-record]}))
+     (cond-> [:shared-step-acceptance-battery-record]
+       (not route?) (conj :validated-terminal-bundle-route-conformance))}))

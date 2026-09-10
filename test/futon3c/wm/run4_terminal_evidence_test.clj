@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.run4-route-conformance :as route]
             [futon3c.wm.run4-terminal-evidence :as sut]))
 
 (def pin {:sha256 (apply str (repeat 64 "a")) :series-id "RUN4"
@@ -106,6 +107,16 @@
        (is (= (digest/sha256 (slurp run-file)) (:run-record-digest bundle)))
        (is (= (digest/sha256 (pr-str projection)) (:projection-digest bundle)))
        (is (= :succeeded (get-in bundle [:classification :task-result])))))))
+
+(deftest validated-bundle-feeds-the-shared-u49-route-core
+  (fixture
+   (fn [{:keys [roots]}]
+     (let [bundle (sut/read-terminal-evidence-bundle roots request started)
+           control {:edges [{:from :R20 :to :R12}]
+                    :route-measured-drawn [] :decisions {}}
+           verdict (route/verdict control (:run-record bundle))]
+       (is (true? (:conforms? verdict)))
+       (is (= [["R20" "R12"]] (mapv :hop (:hops verdict))))))))
 
 (deftest read-only-port-is-the-series-controller-boundary
   (fixture
