@@ -75,7 +75,8 @@
           (= :wm/run4-effective-environment-attestation-v1 (:schema attestation))
           (= required-hierarchy (:hierarchy attestation)
              (:hierarchy declaration))
-          (= (set (keys flag-spec)) (set (keys required)) (set (keys by-flag)))
+          (= (zipmap (keys flag-spec) (repeat "1")) required)
+          (= (set (keys flag-spec)) (set (keys by-flag)))
           (= (count rows) (count by-flag))
           (every? (fn [[flag consumer]]
                     (= {:flag flag :required "1" :observed "1"

@@ -66,6 +66,7 @@
                              :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}})})]
     (is (= base (sut/validate-recorded! base pin)))
     (doseq [bad [nil false
+                 (assoc-in base [:provenance :serving-declaration :required-environment "FUTON_WM_FPI_DARK"] "0")
                  (assoc base :flags [])
                  (update base :flags pop)
                  (update base :flags conj (first (:flags base)))
