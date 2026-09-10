@@ -7,6 +7,7 @@
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.string :as str]
+            [futon2.aif.c-fold-config :as digest]
             [futon3c.agency.registry :as reg]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.time Instant]
@@ -217,9 +218,17 @@
                              *run4-terminal-projection-dir* click-id result)
         run-id (:run/id result)
         run-record-path (:run-record result)
-        run-record (when run-record-path
-                     (try (edn/read-string (slurp run-record-path))
+        run-record-text (when run-record-path
+                          (try (slurp run-record-path)
+                               (catch Throwable _ nil)))
+        run-record (when run-record-text
+                     (try (edn/read-string run-record-text)
                           (catch Throwable _ nil)))
+        _ (when (and terminal-projection
+                     (not= (:source-sha256 terminal-projection)
+                           (digest/sha256 run-record-text)))
+            (throw (ex-info "RUN4 run-record changed before binding publication"
+                            {:error :run4-terminal-source-changed})))
         run-record-status
         (cond
           (nil? run-record-path) :absent

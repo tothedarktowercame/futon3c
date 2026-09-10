@@ -14,9 +14,9 @@
   (throw (ex-info "RUN4 terminal projection refused"
                   (merge {:error :run4-terminal-projection-refused :reason reason} data))))
 
-(defn- parse-one [file]
+(defn- parse-one-text [text]
   (try
-    (with-open [reader (java.io.PushbackReader. (io/reader file))]
+    (with-open [reader (java.io.PushbackReader. (java.io.StringReader. text))]
       (let [value (edn/read {:eof ::empty} reader)]
         (when (= ::empty value) (refuse! :empty-source))
         (when-not (= ::end (edn/read {:eof ::end} reader))
@@ -27,6 +27,10 @@
 
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
 (defn- sha? [x] (and (string? x) (boolean (re-matches #"[0-9a-f]{64}" x))))
+
+(defn- contains-in? [m [key & more]]
+  (and (map? m) (contains? m key)
+       (or (empty? more) (contains-in? (get m key) more))))
 
 (defn- pin? [pin]
   (and (map? pin) (sha? (:sha256 pin))
@@ -61,10 +65,18 @@
 (defn projection
   "Return nil for a legacy result, or a strict RUN4 evidence projection."
   [click-id result]
-  (let [selection-pin (get-in result [:checkpoints :selection :ground :run4/task-pin])
+  (let [selection-path [:checkpoints :selection :ground :run4/task-pin]
+        construction-path [:checkpoints :construction :judgment :run4/task-pin]
+        selection-present? (contains-in? result selection-path)
+        construction-present? (contains-in? result construction-path)
+        run4-present? (or selection-present? construction-present?)
+        selection-pin (get-in result selection-path)
         construction-pin (get-in result [:checkpoints :construction :judgment :run4/task-pin])
         pin (or selection-pin construction-pin)]
-    (when pin
+    (when run4-present?
+      (when (or (and selection-present? (not (pin? selection-pin)))
+                (and construction-present? (not (pin? construction-pin))))
+        (refuse! :malformed-returned-evidence))
       (when-not (and (nonblank? click-id) (nonblank? (:run/id result))
                      (nonblank? (:attempt-id result)) (keyword? (:outcome result))
                      (map? (:checkpoints result)) (map? (:data result)) (pin? pin))
@@ -74,8 +86,10 @@
       (let [run-record-path (:run-record result)]
         (when-not (nonblank? run-record-path) (refuse! :missing-run-record))
         (let [run-file (.getCanonicalFile (io/file run-record-path))
-              run-text (try (slurp run-file) (catch Throwable _ (refuse! :unreadable-run-record)))
-              run-record (parse-one run-file)]
+              run-bytes (try (java.nio.file.Files/readAllBytes (.toPath run-file))
+                             (catch Throwable _ (refuse! :unreadable-run-record)))
+              run-text (String. run-bytes java.nio.charset.StandardCharsets/UTF_8)
+              run-record (parse-one-text run-text)]
           (when-not (and (map? run-record)
                          (= click-id (:click/id run-record))
                          (= (:run/id result) (:run/id run-record))
@@ -110,7 +124,8 @@
     (let [file (io/file root (str "run4-terminal-projection-" click-id ".edn"))
           content-sha256 (digest/sha256 (pr-str value))]
       (if (.exists file)
-        (when-not (= value (parse-one file))
+        (when-not (= value (parse-one-text (slurp file)))
           (refuse! :projection-replay-conflict))
         (*atomic-write!* file value))
-      {:path (.getAbsolutePath file) :sha256 content-sha256})))
+      {:path (.getAbsolutePath file) :sha256 content-sha256
+       :source-sha256 (get-in value [:source :run-record-sha256])})))

@@ -13,7 +13,10 @@
                :ground {:kind :policy-selection :run4/task-pin pin}}
    :construction {:judgment {:run4/task-pin pin} :ground {:kind :construction}}
    :dispatch {:judgment {:outcome :done} :ground {:kind :dispatch}}
-   :build {:judgment {:outcome :built :reviewer {:passed? true}}
+   :build {:judgment {:commits ["abc"]
+                      :validation {:approved? true :review-job "reviewer-1"
+                                   :review-gate {:required? true :executed? true
+                                                 :tool-events 2 :passed? true}}}
            :ground {:kind :build}}
    :adjudication {:judgment {:build-match {:review-approved? true}
                              :dial {:moved? true}}
@@ -55,7 +58,12 @@
        (is (= #{:selection :construction :dispatch :build :adjudication}
               (set (keys (:checkpoints value)))))
        (is (= sha256 (digest/sha256 (pr-str value))))
-       (is (= {:kind nil :stage nil} (:failure value)))))))
+       (is (= {:kind nil :stage nil} (:failure value)))
+       (is (= true (get-in value [:checkpoints :build :judgment
+                                  :validation :approved?])))
+       (is (= {:resolved? true :dial-moved? true}
+              (select-keys (get-in value [:evidence :grounding-witness])
+                           [:resolved? :dial-moved?])))))))
 
 (deftest legacy-opt-out-is-byte-and-write-free
   (fixture
@@ -63,6 +71,28 @@
      (let [legacy (assoc result :checkpoints {})]
        (is (nil? (sut/persist! projections "click-1" legacy)))
        (is (empty? (seq (.listFiles (io/file projections)))))))))
+
+(deftest present-malformed-run4-pin-is-not-a-legacy-opt-out
+  (fixture
+   (fn [{:keys [projections result]}]
+     (doseq [bad [nil false {:sha256 "bad"}]]
+       (let [bad-result (assoc-in result
+                                  [:checkpoints :selection :ground :run4/task-pin]
+                                  bad)]
+         (is (= :malformed-returned-evidence
+                (:reason (try (sut/persist! projections "click-1" bad-result) nil
+                              (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+
+(deftest validated-and-hashed-run-record-is-one-byte-snapshot
+  (fixture
+   (fn [{:keys [result run-record]}]
+     (let [actual (slurp run-record)
+           value (with-redefs [clojure.core/slurp
+                               (fn [& _] "{:run/id \"different-second-read\"}")]
+                   (sut/projection "click-1" result))]
+       (is (= "run-1" (:run/id value)))
+       (is (= (digest/sha256 actual)
+              (get-in value [:source :run-record-sha256])))))))
 
 (deftest malformed-mismatched-truncated-and-conflicting-evidence-refuses
   (fixture
@@ -104,10 +134,10 @@
              stored (read-string (slurp (:path binding)))]
          (is (= (:run4/terminal-projection stored)
                 (:run4/terminal-projection binding)))
-         (is (= #{:path :sha256}
+         (is (= #{:path :sha256 :source-sha256}
                 (set (keys (:run4/terminal-projection stored))))))))))
 
-(deftest consumes-result-from-actual-run-opportunity-producer-boundary
+(deftest consumes-actual-run-opportunity-wrapper-result-with-stubbed-core
   (fixture
    (fn [{:keys [root projections]}]
      (let [record-dir (io/file root "actual-run-records")]
