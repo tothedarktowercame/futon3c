@@ -575,7 +575,20 @@
          (timed #(search-evidence
                   query {:limit (min max-limit (* 3 bounded-limit))
                          :trace-id trace-id}))
-         primary-rows (proposal-search-rows search-result bounded-limit)
+         ;; Captions get a separate bounded FTS lane. Otherwise the append-only
+         ;; observation log can occupy the generic overfetch window before the
+         ;; typed row filter sees a current caption.
+         [caption-search-result caption-fts-ms]
+         (timed #(search-evidence
+                  (str query " AND memory-caption")
+                  {:limit (min max-limit (* 3 bounded-limit))
+                   :trace-id trace-id}))
+         caption-rows (->> (:results caption-search-result)
+                           (filter caption-store/caption-row?)
+                           (take bounded-limit) vec)
+         primary-rows (vec (concat (proposal-search-rows
+                                    search-result bounded-limit)
+                                   caption-rows))
          primary-result
          (proposals-from-search-rows
           domain bounded-limit recall-batch-fn primary-rows trace-id
@@ -632,6 +645,7 @@
                         :bounded-token-disjunction)
       :fallback-tokens (vec fallback-tokens)
       :index-as-of (or (:index-as-of selected-search-result)
+                       (:index-as-of caption-search-result)
                        (:index-as-of search-result))
       :lexical-seed (mapv lexical-seed-row selected-rows)
       :validation
@@ -654,6 +668,7 @@
          (get-in fallback-proposal-result [:validation :captions]))}}
       :timing
       {:primary-fts-ms primary-fts-ms
+       :caption-fts-ms caption-fts-ms
        :primary-validation-ms
        (reduce + 0
                (keep :elapsed-ms
