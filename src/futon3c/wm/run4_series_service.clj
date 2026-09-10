@@ -7,6 +7,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.wm.run4-series-controller :as controller]
+            [futon3c.wm.run4-run-visibility :as visibility]
             [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
             [futon3c.wm.runner-service :as runner]))
@@ -61,6 +62,9 @@
                    (set? (:pin-allowlist run4))
                    (set? (:source-allowlist run4)))
       (refuse! :run4-series-authority-invalid))
+    (when (true? (:visibility-enabled? series))
+      (when-not (directory? (:visibility-root series))
+        (refuse! :run4-series-root-invalid {:kind :visibility})))
     {:run4 run4 :series series}))
 
 (defn- source-reader [{:keys [run4]}]
@@ -103,6 +107,9 @@
                         :bindings (:binding-root series)
                         :projections (:projection-root series)
                         :run-records (:run-record-root series)}
+        terminal-port (fn [started]
+                        ((terminal/terminal-evidence-port
+                          evidence-roots @prepared) started))
         result (controller/step!
                 (:controller-root series) manifest-text
                 {:read-text read-text
@@ -118,7 +125,11 @@
                              (runner/click!
                               (assoc opts :run-record-dir
                                      (:run-record-root series)))))
-                 :terminal-evidence (fn [started]
-                                      ((terminal/terminal-evidence-port
-                                        evidence-roots @prepared) started))})]
+                 :terminal-evidence terminal-port})]
+    (when (true? (:visibility-enabled? series))
+      (let [observation (visibility/observe
+                         (:controller-root series) manifest-text terminal-port
+                         (str (java.time.Instant/now)))]
+        (visibility/publish! (io/file (:visibility-root series) "run-visibility.json")
+                             observation)))
     (assoc result :run4/series true)))

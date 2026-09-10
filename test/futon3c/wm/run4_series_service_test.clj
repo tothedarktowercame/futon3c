@@ -67,6 +67,7 @@
         binding-root (io/file root "bindings")
         projection-root (io/file root "projections")
         run-record-root (io/file root "run-records")
+        visibility-root (io/file root "visibility")
         cfg {:run4 {:enabled? true :bearer-token token :operator "Joe"
                     :casting casting
                     :admission-root (.getPath admission-root)
@@ -86,10 +87,12 @@
                              :controller-root (.getPath controller-root)
                              :binding-root (.getPath binding-root)
                              :projection-root (.getPath projection-root)
-                             :run-record-root (.getPath run-record-root)}}}]
+                             :run-record-root (.getPath run-record-root)
+                             :visibility-enabled? true
+                             :visibility-root (.getPath visibility-root)}}}]
     (try
       (doseq [dir [controller-root binding-root projection-root
-                   run-record-root]]
+                   run-record-root visibility-root]]
         (.mkdir dir))
       (write! root "source.md" source-text)
       (write! root "config.edn" config-text)
@@ -117,9 +120,22 @@
             (is (= "awaiting-terminal-evidence"
                    (:status (json/parse-string (:body waiting) true))))
             (is (= 1 (count @clicks)))
+            (is (= "working" (:stage (json/parse-string
+                                       (slurp (io/file root "visibility/run-visibility.json")) true))))
             (is (= casting (select-keys (first @clicks) (keys casting))))
             (is (.isFile (io/file root "controller" "001-started.edn")))
             (is (not (.exists (io/file root "controller" "001-terminal.edn"))))))))))
+
+(deftest visibility-is-disabled-by-absence-without-changing-series-step
+  (with-service
+    (fn [root cfg]
+      (let [cfg (update-in cfg [:run4 :series]
+                           dissoc :visibility-enabled? :visibility-root)]
+        (with-redefs [runner/click! (fn [_] {:click-id "click-no-visibility"
+                                             :started-at "2026-09-10T12:00:00Z"})]
+          (is (= 200 (:status ((http/make-handler cfg)
+                               (request {:run4-series-ref "series.edn"} auth)))))
+          (is (not (.exists (io/file root "visibility/run-visibility.json")))))))))
 
 (deftest disabled-auth-shape-and-source-drift-refuse-before-click
   (with-service
@@ -238,4 +254,8 @@
                   (is (= 200 (:status terminal-response)))
                   (is (= "trial-terminal" (:status terminal-body)))
                   (is (= "succeeded" (:task-result terminal-body)))
+                  (let [visible (json/parse-string
+                                 (slurp (io/file root "visibility/run-visibility.json")) true)]
+                    (is (= "wm/run-visibility-v1" (:schema visible)))
+                    (is (= ["complete" "passed"] ((juxt :stage :result) visible))))
                   (is (.isFile (io/file root "controller" "001-terminal.edn"))))))))))))
