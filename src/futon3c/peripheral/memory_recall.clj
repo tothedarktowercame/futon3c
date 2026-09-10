@@ -586,9 +586,16 @@
          caption-rows (->> (:results caption-search-result)
                            (filter caption-store/caption-row?)
                            (take bounded-limit) vec)
-         primary-rows (vec (concat (proposal-search-rows
-                                    search-result bounded-limit)
-                                   caption-rows))
+         primary-rows
+         (->> (concat (proposal-search-rows search-result bounded-limit)
+                      caption-rows)
+              (reduce (fn [{:keys [seen items] :as acc} row]
+                        (let [id (get-in row [:entry :evidence/id])]
+                          (if (contains? seen id)
+                            acc
+                            {:seen (conj seen id) :items (conj items row)})))
+                      {:seen #{} :items []})
+              :items vec)
          primary-result
          (proposals-from-search-rows
           domain bounded-limit recall-batch-fn primary-rows trace-id
