@@ -154,7 +154,10 @@
                     ((:decide-fn adapter) initial))
         pending (merge initial (:regulator/state-updates requested))
         reconciled
-        (with-redefs [countdown/autonomous-problem-list-step!
+        (with-redefs [durable/read-registry
+                      (constantly {:entries {"jit-queue:q"
+                                             {:coordinator/config {:launch {}}}}})
+                      countdown/autonomous-problem-list-step!
                       (constantly
                        {:ok true :status :transport-retry-scheduled
                         :retry/not-before-ms 601000
@@ -251,3 +254,79 @@
       (is (= "countdown-regulator:durable-jit"
              (get-in @request [:authority :regulator-id])))
       (is (some? (get-in @request [:authority :regulator-capability]))))))
+
+;; Verbatim problem pin read from data/apm-coordinators/registry.edn,
+;; entry "jit-queue:jit-all-open-v3", 2026-09-10. Tests never read live data.
+(def repaired-m03j02
+  {:problem/id "m03J02", :repository "/home/joe/code/apm-lean",
+   :revision "d8d0ca3898168fb314c8e1e87418dadd3fa2eedf",
+   :path "problems/m03J02/lean/Main.lean",
+   :blob "6bc15473d584af6ac614090a5c29c170d7798a75",
+   :classification :non-excluded})
+
+(defn- with-registered-launch [f]
+  (let [root (Files/createTempDirectory "jit-launch-" (make-array FileAttribute 0))
+        registry (str (.resolve root "registry.edn"))
+        id "jit-queue:launch-test"
+        launch {:problems [{:problem/id "old-problem"}]
+                :queue-name "launch-test" :queue-id "queue-A"}
+        config {:registry-path registry :coordinator-id id :launch launch}]
+    (try
+      (is (:ok (durable/register!
+                {:registry-path registry :coordinator-id id
+                 :adapter sut/adapter-key :config config
+                 :state-path (str (.resolve root "state.edn"))})))
+      (f registry id (sut/adapter-constructor
+                      (get-in (durable/read-registry registry)
+                              [:entries id :coordinator/config])))
+      (finally
+        (doseq [file (reverse (file-seq (.toFile root)))]
+          (Files/deleteIfExists (.toPath file)))))))
+
+(deftest reconcile-uses-current-registered-plan-without-rebuilding-adapter
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [observed (atom [])
+            reconcile (:reconcile-fn adapter)
+            plan {:problems [repaired-m03j02] :queue/id "queue-B"}]
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [launch] (swap! observed conj launch)
+                        {:ok true :status :batch-complete})]
+          (is (:ok (reconcile nil {})))
+          (is (= "queue-A" (:queue-id (last @observed))))
+          (is (:ok (durable/persist-launch-plan! registry id plan)))
+          (is (:ok (reconcile nil {})))
+          (is (= [repaired-m03j02] (:problems (last @observed))))
+          (is (= "queue-B" (:queue-id (last @observed))))
+          (is (= registry (:coordinator-registry-path (last @observed))))
+          (is (= id (:coordinator-id (last @observed)))))))))
+
+(deftest reconcile-refuses-removed-entry-without-captured-launch-fallback
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [called (atom false)]
+        (spit registry (pr-str (update (durable/read-registry registry) :entries dissoc id)))
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [_] (reset! called true))]
+          (let [result ((:reconcile-fn adapter) nil {})]
+            (is (false? (:ok result)))
+            (is (= :jit-coordinator-launch-unavailable (:error/code result)))
+            (is (false? @called))))))))
+
+(deftest reconcile-refuses-missing-launch-and-unreadable-registry
+  (with-registered-launch
+    (fn [registry id adapter]
+      (let [registered (durable/read-registry registry)
+            called (atom false)]
+        (with-redefs [countdown/autonomous-problem-list-step!
+                      (fn [_] (reset! called true))]
+          (doseq [[content reason]
+                  [[(pr-str (update-in registered [:entries id :coordinator/config]
+                                       dissoc :launch)) :missing-or-invalid-launch]
+                   ["{:broken" :registry-unreadable]]]
+            (spit registry content)
+            (let [result ((:reconcile-fn adapter) nil {})]
+              (is (false? (:ok result)))
+              (is (= :jit-coordinator-launch-unavailable (:error/code result)))
+              (is (= reason (:reason result)))
+              (is (false? @called)))))))))

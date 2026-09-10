@@ -72,6 +72,20 @@
              :now-ms now-ms
              :horizon-ms substrate-wait-max-ms}})
 
+(defn- current-launch [registry-path coordinator-id]
+  (try
+    (let [launch (get-in (coordinator/read-registry registry-path)
+                         [:entries coordinator-id :coordinator/config :launch])]
+      (if (map? launch)
+        {:ok true :launch launch}
+        {:ok false :error/code :jit-coordinator-launch-unavailable
+         :registry-path registry-path :coordinator-id coordinator-id
+         :reason :missing-or-invalid-launch}))
+    (catch Exception error
+      {:ok false :error/code :jit-coordinator-launch-unavailable
+       :registry-path registry-path :coordinator-id coordinator-id
+       :reason :registry-unreadable :message (.getMessage error)})))
+
 (defn adapter-constructor [config]
   {:decide-fn
    (fn [state]
@@ -98,13 +112,16 @@
              (assoc retry :woken-at-ms now-ms)})})))
    :reconcile-fn
    (fn [_intent _state]
-     (let [step (requiring-resolve
-                 'futon3c.apm.countdown-control/autonomous-problem-list-step!)
-           result (step (assoc (:launch config)
-                               :coordinator-registry-path
-                               (or (:registry-path config)
-                                   default-registry-path)
-                               :coordinator-id (:coordinator-id config)))]
+     (let [registry-path (or (:registry-path config) default-registry-path)
+           coordinator-id (:coordinator-id config)
+           current (current-launch registry-path coordinator-id)
+           result (if (:ok current)
+                    (let [step (requiring-resolve
+                                'futon3c.apm.countdown-control/autonomous-problem-list-step!)]
+                      (step (assoc (:launch current)
+                                   :coordinator-registry-path registry-path
+                                   :coordinator-id coordinator-id)))
+                    current)]
        (cond
          (not (:ok result)) result
          (= :transport-retry-scheduled (:status result))
