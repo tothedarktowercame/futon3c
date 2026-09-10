@@ -20,17 +20,17 @@
   {:schema :wm-run4-terminal-projection-v1 :click/id "click-1" :run/id "run-1"
    :attempt/id "internal-1" :run4/task-pin pin :outcome :grounded-change
    :checkpoints
-   {:selection {:status :present :judgment {:outcome :ok}
-                :ground {:kind :policy-selection :run4/task-pin pin}}
+   {:selection {:status :present :judgment {}
+                :ground {:kind :wm-judgement :run4/task-pin pin}}
     :construction {:status :present :judgment {:run4/task-pin pin}
-                   :ground {:kind :construction}}
-    :dispatch {:status :present :judgment {:outcome :done} :ground {:kind :dispatch}}
+                   :ground {:kind :decision-pinned-construction :run4/task-pin pin}}
+    :dispatch {:status :present :judgment {} :ground {:kind :agency-dispatch}}
     :build {:status :present
             :judgment {:commits ["abc"]
                        :validation {:approved? true :review-job "review-1"
                                     :review-gate {:required? true :executed? true
                                                   :tool-events 2 :passed? true}}}
-            :ground {:kind :build}}
+            :ground {:kind :git-commit-and-independent-review}}
     :adjudication {:status :present
                    :judgment {:build-match {:commit "abc" :review-approved? true}
                               :dial {:moved? true :implementation-id "impl-1"}}
@@ -112,7 +112,10 @@
                                      :sha256 (digest/sha256 (pr-str p))))))]
        (let [failed (-> projection
                         (assoc :outcome :build-failed)
-                        (assoc :failure {:kind :build-failed :stage :build-resolution}))]
+                        (assoc :failure {:kind :build-failed :stage :reviewer-wait})
+                        (assoc-in [:checkpoints :build :judgment :validation :approved?] false)
+                        (assoc-in [:checkpoints :build :judgment :validation
+                                   :review-gate :passed?] false))]
          (install! failed)
          (is (= [:failed :safe]
                 ((juxt :task-result :infrastructure)
@@ -124,6 +127,55 @@
          (is (= [:blocked :unsafe]
                 ((juxt :task-result :infrastructure)
                  (sut/read-terminal-evidence roots request started)))))))))
+
+(deftest grounded-success-requires-every-semantic-ladder-join
+  (fixture
+   (fn [{:keys [roots projection-file binding-file projection binding]}]
+     (doseq [[label mutate]
+             [[:selection-absent
+               #(assoc-in % [:checkpoints :selection]
+                          {:status :absent :reason :checkpoint-not-returned})]
+              [:selection-pin #(assoc-in % [:checkpoints :selection :ground :run4/task-pin]
+                                          (assoc pin :sha256 (apply str (repeat 64 "b"))))]
+              [:construction-pin #(assoc-in % [:checkpoints :construction :judgment
+                                               :run4/task-pin]
+                                             (assoc pin :trial-id :other))]
+              [:dispatch-absent #(assoc-in % [:checkpoints :dispatch]
+                                           {:status :absent :reason :checkpoint-not-returned})]
+              [:review-job #(assoc-in % [:checkpoints :build :judgment :validation
+                                         :review-job] "unrelated-review")]
+              [:build-commit #(assoc-in % [:checkpoints :build :judgment :commits]
+                                         ["unrelated-commit"])]
+              [:adjudicated-commit #(assoc-in % [:checkpoints :adjudication :judgment
+                                                 :build-match :commit]
+                                               "unrelated-commit")]
+              [:implementation-id #(assoc-in % [:checkpoints :adjudication :judgment
+                                                :dial :implementation-id]
+                                              "other-implementation")]
+              [:contradictory-failure #(assoc % :failure
+                                              {:kind :build-failed :stage :reviewer-wait})]]]
+       (testing (name label)
+         (let [modified (mutate projection)]
+           (write! projection-file modified)
+           (write! binding-file
+                   (assoc binding :run4/terminal-projection
+                          (assoc (:run4/terminal-projection binding)
+                                 :sha256 (digest/sha256 (pr-str modified)))))
+           (is (nil? (sut/read-terminal-evidence roots request started)))))))))
+
+(deftest safe-build-failure-rejects-contradictory-success-checkpoint
+  (fixture
+   (fn [{:keys [roots projection-file binding-file projection binding]}]
+     (let [contradictory (-> projection
+                             (assoc :outcome :build-failed)
+                             (assoc :failure {:kind :build-failed :stage :reviewer-wait}))]
+       (write! projection-file contradictory)
+       (write! binding-file
+               (assoc binding :outcome :build-failed
+                      :run4/terminal-projection
+                      (assoc (:run4/terminal-projection binding)
+                             :sha256 (digest/sha256 (pr-str contradictory)))))
+       (is (nil? (sut/read-terminal-evidence roots request started)))))))
 
 (deftest missing-is-indeterminate-and-unknown-does-not-advance
   (fixture
