@@ -39,6 +39,7 @@
    (fn [id] (when (= id "search-1")
               {:job-id "student-job" :result-ids ["memory-1"]}))
    :fetch-memory #(get @entries %)
+   :memory-admissible? #(contains? @entries %)
    :fetch-entry #(get @entries %)
    :append-entry
    (fn [entry]
@@ -215,3 +216,31 @@
                             :caption/schema sut/caption-schema
                             :caption/id "missing" :caption/version 1
                             :memory/id "memory-1"}}}]))))))
+
+(deftest historical-observation-requires-explicit-source-verification
+  (let [root (temp-dir) entries (atom {"memory-1" memory-entry})
+        historical
+        {:schema :apm-memory-applicability-v1
+         :memory-id "memory-1" :memory-content-digest memory-revision
+         :context {:kind :historical-source :problem-id "p1"
+                   :frame-id "f1" :source-attempt-ids ["source-1"]}
+         :useful-when "Useful when an endpoint extension closes uniqueness."
+         :epistemic-status :unknown
+         :conditions [{:condition "continuity" :status :unchecked}]
+         :task-observation {:disposition :unresolved
+                            :reason "This is source derivation, not later use."
+                            :evidence-refs ["source-1"]}
+         :basis [{:source-ref "source-1" :source-digest "digest"
+                  :claim "Pinned source artifact."}]
+         :suggested-contexts []
+         :scope-limit "Historical source only."}
+        authority {:job-id "history-job" :agent-id "historian" :role :scribe}]
+    (binding [sut/*store-root* root]
+      (is (some #{:applicability-historical-source-unverified}
+                (:findings
+                 (sut/admit-observation! authority historical
+                                         (ports entries)))))
+      (is (:ok (sut/admit-observation!
+                authority historical
+                (assoc (ports entries) :verify-source
+                       #(= "source-1" (:source-ref %)))))))))

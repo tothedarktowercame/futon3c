@@ -100,7 +100,10 @@
   (mapv #(update % :status wire-keyword) contexts))
 
 (defn normalize-observation [observation]
-  (-> observation
+  (let [context (:context observation)
+        exposure (:exposure observation)
+        task (:task-observation observation)]
+    (-> observation
       (assoc :applicability/schema
              (wire-keyword (or (:applicability/schema observation)
                                (:schema observation))))
@@ -112,7 +115,26 @@
       (update :conditions normalize-conditions)
       (update :suggested-contexts #(normalize-suggestions (or % [])))
       (update :task-observation
-              #(when % (update % :outcome wire-keyword)))))
+              #(when %
+                 (-> %
+                     (assoc :outcome
+                            (wire-keyword (or (:outcome %) (:disposition %)))))))
+      (cond-> context
+        (assoc :context (update context :kind wire-keyword)))
+      (cond-> (and context (nil? (:problem-id observation)))
+        (assoc :problem-id (:problem-id context)))
+      (cond-> (and context (nil? (:task-id observation)))
+        (assoc :task-id (or (:task-ref context) (name (:kind context)))))
+      (cond-> (and context (nil? (:attempt-id observation)))
+        (assoc :attempt-id (or (:attempt-job-id context)
+                               (first (:source-attempt-ids context)))))
+      (cond-> (and exposure (nil? (:search-receipt-id observation)))
+        (assoc :search-receipt-id (:receipt-id exposure)))
+      (cond-> (and (= :historical-source (wire-keyword (:kind context)))
+                   (nil? (:search-receipt-id observation)))
+        (assoc :search-receipt-id "historical-source"))
+      (cond-> (and task (nil? (:evidence-ids observation)))
+        (assoc :evidence-ids (vec (:evidence-refs task)))))))
 
 (defn normalize-caption [caption]
   (-> caption
@@ -211,7 +233,16 @@
 (defn- default-ports []
   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
     {:append-entry #(boundary/append! backend %)
-     :fetch-entry #(estore/get-entry* backend %)}))
+     :fetch-entry #(estore/get-entry* backend %)
+     :memory-admissible?
+     (fn [memory-id]
+       (some (fn [edge]
+               (and (= :memory/assert (:hx/type edge))
+                    (= memory-id (get-in edge [:hx/props :roles :entry]))
+                    (= :mathematics (get-in edge [:hx/props :domain]))
+                    (= :reviewed (get-in edge [:hx/props :attachment-status]))
+                    (= :current (or (get-in edge [:hx/props :state]) :current))))
+             (substrate/hyperedges-by-end memory-id)))}))
 
 (declare propose-compression)
 
@@ -223,18 +254,31 @@
          author (:agent-id authority)
          receipt ((:fetch-search-receipt ports (constantly nil))
                   (:search-receipt-id observation))
+         historical? (= :historical-source (get-in observation [:context :kind]))
          memory ((:fetch-memory ports (:fetch-entry ports (constantly nil)))
                  (:memory/id observation))
          findings (cond-> (observation-findings observation)
                     (not (contains? #{:student :scribe :zai-scribe}
                                     (:role authority)))
                     (conj :applicability-authority-invalid)
-                    (not= (:job-id authority) (:job-id receipt))
+                    (and (not historical?)
+                         (not= (:job-id authority) (:job-id receipt)))
                     (conj :applicability-search-receipt-invalid)
-                    (not (contains? (set (:result-ids receipt))
-                                    (:memory/id observation)))
+                    (and (not historical?)
+                         (not (contains? (set (:result-ids receipt))
+                                         (:memory/id observation))))
                     (conj :applicability-memory-not-exposed)
+                    (and historical?
+                         (not (and (vector? (:basis observation))
+                                   (seq (:basis observation))
+                                   (every? #((:verify-source ports
+                                                              (constantly false)) %)
+                                           (:basis observation)))))
+                    (conj :applicability-historical-source-unverified)
                     (nil? memory) (conj :applicability-memory-unknown)
+                    (and memory
+                         (not ((:memory-admissible? ports) (:memory/id observation))))
+                    (conj :applicability-memory-not-admissible)
                     (and memory
                          (not= (:memory/revision observation)
                                (machine/ledger-digest [(:evidence/body memory)])))
@@ -273,6 +317,9 @@
                     (conj :caption-authority-invalid)
                     (some nil? observations) (conj :caption-observation-missing)
                     (nil? memory) (conj :caption-memory-unknown)
+                    (and memory
+                         (not ((:memory-admissible? ports) (:memory/id caption))))
+                    (conj :caption-memory-not-admissible)
                     (and memory
                          (not= (:memory/revision caption)
                                (machine/ledger-digest [(:evidence/body memory)])))
