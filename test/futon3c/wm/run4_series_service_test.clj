@@ -8,6 +8,8 @@
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
             [futon3c.wm.run4-effective-environment :as effective]
+            [futon3c.wm.run4-realized-recording :as realized]
+            [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
             [futon3c.wm.runner-service :as runner]))
 
@@ -221,6 +223,25 @@
             (is (= "run4-terminal-evidence-refused" (:error body)))
             (is (= 1 @clicks))
             (is (not (.exists (io/file root "controller" "001-terminal.edn"))))))))))
+
+(deftest recording-publication-failure-prevents-terminal-advancement
+  (with-service
+    (fn [root cfg]
+      (let [handler (http/make-handler cfg)
+            payload {:run4-series-ref "series.edn"}]
+        (with-redefs [runner/click! (fn [_]
+                                      {:click-id "click-recording-fail"
+                                       :started-at "2026-09-10T12:00:00Z"})]
+          (is (= 200 (:status (handler (request payload auth)))))
+          (with-redefs [terminal/read-terminal-evidence-bundle
+                        (fn [& _] {:classification
+                                   {:task-result :succeeded
+                                    :infrastructure :safe
+                                    :evidence-id "evidence-1"}})
+                        realized/persist-bundle!
+                        (fn [& _] (throw (ex-info "injected recording failure" {})))]
+            (is (= 500 (:status (handler (request payload auth))))))
+          (is (not (.exists (io/file root "controller" "001-terminal.edn")))))))))
 
 (deftest async-wrapper-persists-to-reader-roots-and-terminal-roundtrips
   (with-service

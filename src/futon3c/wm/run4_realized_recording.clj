@@ -4,7 +4,11 @@
   unknowns; this adapter never manufactures a previous accepted WM step."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [futon2.aif.realized-recording :as recording]))
+            [futon2.aif.realized-recording :as recording])
+  (:import [java.io FileOutputStream]
+           [java.nio.channels FileChannel]
+           [java.nio.file Files LinkOption StandardCopyOption StandardOpenOption]
+           [java.util UUID]))
 
 (defn- safe-id? [x]
   (and (string? x) (boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" x))))
@@ -12,6 +16,35 @@
 (defn- refuse! [reason]
   (throw (ex-info "RUN4 realized recording refused"
                   {:error :run4-realized-recording-refused :reason reason})))
+
+(defn- atomic-append! [file value]
+  (let [target (.toPath file)
+        parent (.getParent target)
+        temp (.resolve parent (str "." (.getFileName target) "." (UUID/randomUUID) ".tmp"))
+        bytes (.getBytes (str (pr-str value) "\n") "UTF-8")]
+    (if (Files/exists target (make-array LinkOption 0))
+      (let [existing (try (edn/read-string (slurp file))
+                          (catch Throwable _ (refuse! :existing-recording-corrupt)))]
+        (if (= value existing) existing (refuse! :immutable-recording-conflict)))
+      (try
+        (with-open [out (FileOutputStream. (.toFile temp))]
+          (.write out bytes) (.flush out) (.sync (.getFD out)))
+        (try
+          (Files/move temp target
+                      (into-array StandardCopyOption [StandardCopyOption/ATOMIC_MOVE]))
+          (catch java.nio.file.FileAlreadyExistsException _
+            (let [existing (try (edn/read-string (slurp file))
+                                (catch Throwable _
+                                  (refuse! :existing-recording-corrupt)))]
+              (when-not (= value existing) (refuse! :immutable-recording-conflict)))))
+        (with-open [directory (FileChannel/open parent
+                                                (into-array StandardOpenOption
+                                                            [StandardOpenOption/READ]))]
+          (.force directory true))
+        value
+        (finally (Files/deleteIfExists temp))))))
+
+(def ^:dynamic *append-immutable!* atomic-append!)
 
 (defn from-terminal-bundle
   [bundle]
@@ -90,7 +123,18 @@
   (when-not (and (string? root) (.isDirectory (io/file root))
                  (safe-id? (:attempt-id bundle)))
     (refuse! :invalid-recording-authority))
-  (io/file root (str (:attempt-id bundle) ".edn")))
+  (let [base (.getCanonicalFile (io/file root))
+        file (.getAbsoluteFile (io/file base (str (:attempt-id bundle) ".edn")))
+        path (.toPath file)
+        nofollow (into-array LinkOption [LinkOption/NOFOLLOW_LINKS])]
+    (when-not (= (.getCanonicalPath base)
+                 (.getCanonicalPath (.getParentFile file)))
+      (refuse! :recording-outside-authority))
+    (when (and (Files/exists path nofollow)
+               (or (Files/isSymbolicLink path)
+                   (not (Files/isRegularFile path nofollow))))
+      (refuse! :recording-not-regular-file))
+    file))
 
 (defn persist-bundle!
   "Persist one immutable established-contract record. This is deliberately a
@@ -98,8 +142,13 @@
   [root bundle]
   (let [value (from-terminal-bundle bundle)
         file (recording-file root bundle)]
-    (recording/persist! (.getCanonicalPath file) value)
-    {:path (.getCanonicalPath file) :record value}))
+    (*append-immutable!* file value)
+    (let [path (.toPath file)
+          nofollow (into-array LinkOption [LinkOption/NOFOLLOW_LINKS])]
+      (when-not (and (Files/isRegularFile path nofollow)
+                     (not (Files/isSymbolicLink path)))
+        (refuse! :recording-publication-not-regular))
+      {:path (.getAbsolutePath file) :record value})))
 
 (defn read-bundle-recording!
   "Strictly reread one form and require exact equality with the record derived

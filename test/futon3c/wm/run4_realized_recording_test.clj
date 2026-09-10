@@ -66,3 +66,39 @@
                                            (apply str (repeat 64 "b"))))))
       (finally
         (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
+
+(deftest recording-root-refuses-symlink-escape
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-recording-root"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        outside (.toFile (java.nio.file.Files/createTempDirectory
+                          "run4-recording-outside"
+                          (make-array java.nio.file.attribute.FileAttribute 0)))
+        external (io/file outside "record.edn")
+        link (io/file root "attempt-1.edn")]
+    (try
+      (spit external (str (pr-str (sut/from-terminal-bundle bundle)) "\n"))
+      (java.nio.file.Files/createSymbolicLink
+       (.toPath link) (.toPath external)
+       (make-array java.nio.file.attribute.FileAttribute 0))
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (sut/read-bundle-recording! (.getPath root) bundle)))
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (sut/persist-bundle! (.getPath root) bundle)))
+      (finally
+        (io/delete-file link true)
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))
+        (doseq [f (reverse (file-seq outside))] (io/delete-file f true))))))
+
+(deftest publication-failure-leaves-no-admitted-record
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-recording-fail"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (binding [sut/*append-immutable!*
+                (fn [_ _] (throw (ex-info "injected" {})))]
+        (is (thrown? clojure.lang.ExceptionInfo
+                     (sut/persist-bundle! (.getPath root) bundle))))
+      (is (not (.exists (io/file root "attempt-1.edn"))))
+      (finally
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
