@@ -1,0 +1,140 @@
+{
+  "scope": "136 pinned canonical pattern bodies; token substring counts, top 10; bounded analyst search, not live catalog",
+  "results": [
+    {
+      "query": "uniform continuity bounded image",
+      "results": [
+        {
+          "id": "math-formalization-CA/uniform-continuity-boundedness",
+          "score": 4
+        },
+        {
+          "id": "math-formalization-FA/inner-product-space-api",
+          "score": 3
+        },
+        {
+          "id": "math-formalization-FA/lf-map-continuity-via-fixed-support-stages",
+          "score": 3
+        },
+        {
+          "id": "math-formalization-CA/series-evaluation-api",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/complex-liouville-periodicity",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/entire-affine-by-divided-difference",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/entire-and-singularity-api",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/frontier-bound-from-arc-hypotheses",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/holomorphic-disk-api",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-GN/connectedness-component-api",
+          "score": 2
+        }
+      ]
+    },
+    {
+      "query": "dense uniformly continuous extension complete",
+      "results": [
+        {
+          "id": "math-formalization-CV/frontier-bound-from-arc-hypotheses",
+          "score": 3
+        },
+        {
+          "id": "math-formalization-CA/rpow-exponent-limit",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CA/uniform-continuity-boundedness",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-FA/inner-product-space-api",
+          "score": 2
+        },
+        {
+          "id": "math-informal-CT/check-it-on-generators",
+          "score": 2
+        },
+        {
+          "id": "math-informal-NA/numerical-scout",
+          "score": 2
+        },
+        {
+          "id": "proof-search/sorry-boundary-clustering",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CA/continuous-linear-map-composition",
+          "score": 1
+        },
+        {
+          "id": "math-formalization-CA/metric-cauchy-convergence",
+          "score": 1
+        },
+        {
+          "id": "math-formalization-CA/separation-function-from-distance",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "query": "Cauchy sequence independence limit extension",
+      "results": [
+        {
+          "id": "math-formalization-CV/entire-and-singularity-api",
+          "score": 3
+        },
+        {
+          "id": "math-formalization-CA/metric-cauchy-convergence",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/entire-affine-by-divided-difference",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-CV/frontier-bound-from-arc-hypotheses",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-FA/inner-product-space-api",
+          "score": 2
+        },
+        {
+          "id": "math-formalization-FA/weak-convergence-hilbert",
+          "score": 2
+        },
+        {
+          "id": "math-formalization/coercion-bridge",
+          "score": 2
+        },
+        {
+          "id": "math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness",
+          "score": 2
+        },
+        {
+          "id": "math-informal-CA/monotone-approximation",
+          "score": 2
+        },
+        {
+          "id": "math-informal-CA/pass-to-a-subsequence",
+          "score": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "source_revision": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+  "patterns": [
+    {
+      "id": "math-formalization-CA/metric-cauchy-convergence",
+      "path": "library/math-formalization-CA/metric-cauchy-convergence.flexiarg",
+      "sha256": "e9c6b826610b1dc516c5b86bdff78c865e062e323fe6c0543fae5efc3e26f8c1",
+      "fields": {
+        "title": "Cauchy Sequence Convergence in Metric Spaces",
+        "keywords": "Cauchy, convergence, metric, tendsto, triangle-inequality, epsilon-delta",
+        "why": "no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)",
+        "see-also": "",
+        "how": "own mechanism: Prove convergence by showing Cauchy via Metric.cauchySeq_iff + triangle inequality chains. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)",
+        "provenance": ""
+      },
+      "spans": {
+        "IF": {
+          "line": 17,
+          "text": "Goal is Tendsto or convergence of a sequence in a metric/normed space."
+        },
+        "HOWEVER": {
+          "line": 19,
+          "text": "Direct epsilon-delta may require long calc chains."
+        },
+        "THEN": {
+          "line": 21,
+          "text": "Use Metric.cauchySeq_iff to reduce to pairwise distance bounds, then calc + nlinarith.\n    + LEAN:\n      api[Metric.cauchySeq_iff] api[Metric.tendsto_atTop] api[Real.dist_eq]\n      tactic[have \u2192 intro \u2192 calc \u2192 nlinarith \u2192 ring]"
+        },
+        "BECAUSE": {
+          "line": 26,
+          "text": "Cauchy in a complete space gives convergence; the iff lemma handles the quantifiers."
+        }
+      },
+      "text": "@flexiarg math-formalization-CA/metric-cauchy-convergence\n@title Cauchy Sequence Convergence in Metric Spaces\n@sigils [\ud83c\udf00/\u53ce]\n@keywords Cauchy, convergence, metric, tendsto, triangle-inequality, epsilon-delta\n@audience lean-provers, analysis-students\n@tone heuristic\n@difficulty moderate\n@subjects analysis topology\n@instantiates math-informal-CA/estimate-by-bounding\n@examples a97A04\n@why no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)\n@how own mechanism: Prove convergence by showing Cauchy via Metric.cauchySeq_iff + triangle inequality chains. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)\n\n! conclusion: \n  Prove convergence by showing Cauchy via Metric.cauchySeq_iff + triangle inequality chains.\n\n  + IF: Goal is Tendsto or convergence of a sequence in a metric/normed space.\n\n  + HOWEVER: Direct epsilon-delta may require long calc chains.\n\n  + THEN: Use Metric.cauchySeq_iff to reduce to pairwise distance bounds, then calc + nlinarith.\n    + LEAN:\n      api[Metric.cauchySeq_iff] api[Metric.tendsto_atTop] api[Real.dist_eq]\n      tactic[have \u2192 intro \u2192 calc \u2192 nlinarith \u2192 ring]\n\n  + BECAUSE: Cauchy in a complete space gives convergence; the iff lemma handles the quantifiers.\n"
+    },
+    {
+      "id": "math-formalization-CA/uniform-continuity-boundedness",
+      "path": "library/math-formalization-CA/uniform-continuity-boundedness.flexiarg",
+      "sha256": "a24aa6c9c4b485e27a5d5c2144f6f901bc71e46b90ec5599b351dbcba9c7272c",
+      "fields": {
+        "title": "Bound the Image Before Controlling the Quotient",
+        "keywords": "uniform-continuity, boundedness, image, quotient, denominator, api-chain",
+        "why": "math-informal-CA/estimate-by-bounding",
+        "see-also": "math-formalization-CA/metric-cauchy-convergence math-strategy/proof-architecture",
+        "how": "own mechanism: When an estimate involves a quotient of uniformly continuous functions, get the boundedness of the image first as its own lemma; the quotient control depends on it and cannot be obtained alongside it. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)",
+        "provenance": ""
+      },
+      "spans": {
+        "context": {
+          "line": 16,
+          "text": "An analysis obligation where a uniformly continuous function's\n    values appear in a denominator or in a ratio, and the target estimate mixes\n    the continuity modulus with the size of the values."
+        },
+        "IF": {
+          "line": 20,
+          "text": "The domain is bounded \u2014 or totally bounded \u2014 then uniform continuity gives\n      a bounded image through a short chain of library steps, and that bound is\n      the constant every subsequent quotient estimate needs."
+        },
+        "HOWEVER": {
+          "line": 25,
+          "text": "Attempting the quotient bound directly entangles two independent facts: how\n      fast the function varies, and how large it gets. The modulus of continuity\n      says nothing about the latter, so an argument that needs both and has\n      proved neither separately will stall at a point where it is unclear which\n      is missing. The order matters more than the difficulty: the boundedness\n      step is short, and having it in hand makes the quotient step routine."
+        },
+        "THEN": {
+          "line": 33,
+          "text": "State and prove the boundedness of the image as its own lemma, via the\n      uniform-continuity-to-bounded-image chain.\n\n      Only then estimate the quotient, using that bound for the denominator and\n      the modulus for the variation, keeping the two roles visibly distinct."
+        },
+        "BECAUSE": {
+          "line": 40,
+          "text": "Uniform continuity is a hypothesis about differences and boundedness is a\n      conclusion about values, and the step between them is exactly where the\n      domain's boundedness enters. Proving them in one motion hides that entry\n      point, so a proof that fails gives no signal about whether the domain\n      hypothesis was too weak or the estimate was arranged badly. Separated, the\n      failure names itself."
+        },
+        "NEXT-STEPS": {
+          "line": 48,
+          "text": "next[Prove the image is bounded as a standalone lemma from uniform continuity.]\n    next[Identify where the domain's boundedness enters and state it explicitly.]\n    next[Estimate the quotient using the value bound for the denominator and the modulus for the variation.]"
+        }
+      },
+      "text": "@flexiarg math-formalization-CA/uniform-continuity-boundedness\n@title Bound the Image Before Controlling the Quotient\n@keywords uniform-continuity, boundedness, image, quotient, denominator, api-chain\n@audience lean-provers, formalizers, analysts\n@tone procedural\n@difficulty intermediate\n@why math-informal-CA/estimate-by-bounding\n@see-also math-formalization-CA/metric-cauchy-convergence math-strategy/proof-architecture\n@how own mechanism: When an estimate involves a quotient of uniformly continuous functions, get the boundedness of the image first as its own lemma; the quotient control depends on it and cannot be obtained alongside it. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)\n\n! conclusion:\n  When an estimate involves a quotient of uniformly continuous functions, get the\n  boundedness of the image first as its own lemma; the quotient control depends\n  on it and cannot be obtained alongside it.\n\n  + context: An analysis obligation where a uniformly continuous function's\n    values appear in a denominator or in a ratio, and the target estimate mixes\n    the continuity modulus with the size of the values.\n\n  + IF:\n      The domain is bounded \u2014 or totally bounded \u2014 then uniform continuity gives\n      a bounded image through a short chain of library steps, and that bound is\n      the constant every subsequent quotient estimate needs.\n\n  + HOWEVER:\n      Attempting the quotient bound directly entangles two independent facts: how\n      fast the function varies, and how large it gets. The modulus of continuity\n      says nothing about the latter, so an argument that needs both and has\n      proved neither separately will stall at a point where it is unclear which\n      is missing. The order matters more than the difficulty: the boundedness\n      step is short, and having it in hand makes the quotient step routine.\n\n  + THEN:\n      State and prove the boundedness of the image as its own lemma, via the\n      uniform-continuity-to-bounded-image chain.\n\n      Only then estimate the quotient, using that bound for the denominator and\n      the modulus for the variation, keeping the two roles visibly distinct.\n\n  + BECAUSE:\n      Uniform continuity is a hypothesis about differences and boundedness is a\n      conclusion about values, and the step between them is exactly where the\n      domain's boundedness enters. Proving them in one motion hides that entry\n      point, so a proof that fails gives no signal about whether the domain\n      hypothesis was too weak or the estimate was arranged badly. Separated, the\n      failure names itself.\n\n  + NEXT-STEPS:\n    next[Prove the image is bounded as a standalone lemma from uniform continuity.]\n    next[Identify where the domain's boundedness enters and state it explicitly.]\n    next[Estimate the quotient using the value bound for the denominator and the modulus for the variation.]\n"
+    },
+    {
+      "id": "math-informal-CA/estimate-by-bounding",
+      "path": "library/math-informal-CA/estimate-by-bounding.flexiarg",
+      "sha256": "0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e",
+      "fields": {
+        "title": "Estimate by Bounding",
+        "keywords": "bound, estimate, inequality, upper, lower, dominate, majorise, triangle, Cauchy-Schwarz, Jensen",
+        "why": "",
+        "see-also": "",
+        "how": "",
+        "provenance": ""
+      },
+      "spans": {
+        "context": {
+          "line": 12,
+          "text": "You need to control a quantity (an integral, a sum, a probability, a norm) but\n    exact computation is infeasible or unnecessary."
+        },
+        "IF": {
+          "line": 15,
+          "text": "You need an upper bound (or lower bound) rather than an exact value, and standard\n      inequalities (triangle, Cauchy-Schwarz, Jensen, Markov, Chebyshev, AM-GM) are\n      available."
+        },
+        "HOWEVER": {
+          "line": 20,
+          "text": "Bounds lose information. A bound that is too loose is useless. The art is in choosing\n      the tightest bound that remains tractable. Chaining too many inequalities can\n      accumulate slack to the point of triviality."
+        },
+        "THEN": {
+          "line": 25,
+          "text": "Identify which direction you need (upper or lower). Apply the most appropriate\n      standard inequality. Check that the resulting bound is tight enough for your\n      purposes. If not, try a different inequality or a more refined decomposition\n      before bounding."
+        },
+        "BECAUSE": {
+          "line": 31,
+          "text": "Estimation is the engine of analysis and probability. Most theorems in these fields\n      are proved by chains of inequalities, each replacing something complicated with\n      something simpler. Knowing which inequality to reach for is a core skill."
+        },
+        "NEXT-STEPS": {
+          "line": 36,
+          "text": "next[Determine whether you need an upper or lower bound.]\n    next[Identify candidate inequalities from your toolbox.]\n    next[Apply and check tightness \u2014 is the bound strong enough?]"
+        }
+      },
+      "text": "@flexiarg math-informal-CA/estimate-by-bounding\n@title Estimate by Bounding\n@sigils [\ud83d\udd38/\u5c0f]\n@keywords bound, estimate, inequality, upper, lower, dominate, majorise, triangle, Cauchy-Schwarz, Jensen\n@audience mathematicians, analysts, probabilists\n@tone heuristic\n@factor Endurance (khanti)\n\n! conclusion: \n  Replace a complicated quantity with a simpler bound that is good enough.\n\n  + context: You need to control a quantity (an integral, a sum, a probability, a norm) but\n    exact computation is infeasible or unnecessary.\n\n  + IF:\n      You need an upper bound (or lower bound) rather than an exact value, and standard\n      inequalities (triangle, Cauchy-Schwarz, Jensen, Markov, Chebyshev, AM-GM) are\n      available.\n\n  + HOWEVER:\n      Bounds lose information. A bound that is too loose is useless. The art is in choosing\n      the tightest bound that remains tractable. Chaining too many inequalities can\n      accumulate slack to the point of triviality.\n\n  + THEN:\n      Identify which direction you need (upper or lower). Apply the most appropriate\n      standard inequality. Check that the resulting bound is tight enough for your\n      purposes. If not, try a different inequality or a more refined decomposition\n      before bounding.\n\n  + BECAUSE:\n      Estimation is the engine of analysis and probability. Most theorems in these fields\n      are proved by chains of inequalities, each replacing something complicated with\n      something simpler. Knowing which inequality to reach for is a core skill.\n\n  + NEXT-STEPS:\n    next[Determine whether you need an upper or lower bound.]\n    next[Identify candidate inequalities from your toolbox.]\n    next[Apply and check tightness \u2014 is the bound strong enough?]\n"
+    },
+    {
+      "id": "math-informal/local-to-global",
+      "path": "library/math-informal/local-to-global.flexiarg",
+      "sha256": "ac568c2e793843ca8deeda07d731352f15c5c8b7a03b1a8f93660fed79bcfb63",
+      "fields": {
+        "title": "Local-to-Global Argument",
+        "keywords": "local, global, sheaf, patching, gluing, cover, partition-of-unity, extension, localisation",
+        "why": "no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)",
+        "see-also": "",
+        "how": "own mechanism: Prove something locally (on small pieces) and then assemble the local results into a global one. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)",
+        "provenance": ""
+      },
+      "spans": {
+        "context": {
+          "line": 14,
+          "text": "You want to establish a property of a large or complicated object."
+        },
+        "IF": {
+          "line": 16,
+          "text": "The object admits a decomposition into simpler pieces (open cover, partition, filtration,\n      localisation at primes), and the property you want can be checked on pieces."
+        },
+        "HOWEVER": {
+          "line": 20,
+          "text": "Not every property is local. You must verify that local data can be patched: the pieces\n      must be compatible on overlaps, and the patching procedure must not introduce new problems."
+        },
+        "THEN": {
+          "line": 24,
+          "text": "Cover the object with pieces where the property is manageable. Prove it on each piece.\n      Check compatibility on overlaps. Glue the local results into a global one, using\n      partitions of unity, sheaf conditions, or patching lemmas as appropriate."
+        },
+        "BECAUSE": {
+          "line": 29,
+          "text": "Local-to-global is one of the deepest recurring themes in mathematics: sheaf theory,\n      Mayer-Vietoris, local-global principles in number theory, partitions of unity in\n      differential geometry. The power comes from reducing a hard global problem to many\n      easy local ones."
+        },
+        "NEXT-STEPS": {
+          "line": 35,
+          "text": "next[Decompose the object into local pieces.]\n    next[Verify the property on each piece.]\n    next[Check compatibility and assemble the global result.]"
+        }
+      },
+      "text": "@flexiarg math-informal/local-to-global\n@title Local-to-Global Argument\n@sigils [\ud83d\udc49/\u7530]\n@keywords local, global, sheaf, patching, gluing, cover, partition-of-unity, extension, localisation\n@audience mathematicians, researchers\n@tone heuristic\n@factor Discernment (pa\u00f1\u00f1\u0101)\n@why no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)\n@how own mechanism: Prove something locally (on small pieces) and then assemble the local results into a global one. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)\n\n! conclusion: \n  Prove something locally (on small pieces) and then assemble the local results into a global one.\n\n  + context: You want to establish a property of a large or complicated object.\n\n  + IF:\n      The object admits a decomposition into simpler pieces (open cover, partition, filtration,\n      localisation at primes), and the property you want can be checked on pieces.\n\n  + HOWEVER:\n      Not every property is local. You must verify that local data can be patched: the pieces\n      must be compatible on overlaps, and the patching procedure must not introduce new problems.\n\n  + THEN:\n      Cover the object with pieces where the property is manageable. Prove it on each piece.\n      Check compatibility on overlaps. Glue the local results into a global one, using\n      partitions of unity, sheaf conditions, or patching lemmas as appropriate.\n\n  + BECAUSE:\n      Local-to-global is one of the deepest recurring themes in mathematics: sheaf theory,\n      Mayer-Vietoris, local-global principles in number theory, partitions of unity in\n      differential geometry. The power comes from reducing a hard global problem to many\n      easy local ones.\n\n  + NEXT-STEPS:\n    next[Decompose the object into local pieces.]\n    next[Verify the property on each piece.]\n    next[Check compatibility and assemble the global result.]\n"
+    },
+    {
+      "id": "math-informal/unfold-the-definition",
+      "path": "library/math-informal/unfold-the-definition.flexiarg",
+      "sha256": "641cb4452c1ed7e0be21f6df4a48f2e9abc429a86796c5616c9c337b37f7e182",
+      "fields": {
+        "title": "Unfold the Definition",
+        "keywords": "definition, unpack, expand, meaning, translate, rewrite, characterisation, equivalent",
+        "why": "no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)",
+        "see-also": "",
+        "how": "own mechanism: When stuck, go back to the definition and write out exactly what it says. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)",
+        "provenance": ""
+      },
+      "spans": {
+        "context": {
+          "line": 14,
+          "text": "You need to prove or use a property of an object, and the path forward is not clear."
+        },
+        "IF": {
+          "line": 16,
+          "text": "The statement involves a defined concept (compact, continuous, exact, measurable, adjoint)\n      and you are treating it as a black box instead of engaging with its content."
+        },
+        "HOWEVER": {
+          "line": 20,
+          "text": "Definitions can unfold into multiple equivalent characterisations, and not all unfoldings\n      are equally useful. Choosing the wrong characterisation can make the problem harder."
+        },
+        "THEN": {
+          "line": 24,
+          "text": "Write out the definition of every technical term in the statement. Replace defined terms\n      with their meanings. The proof obligation often becomes clear once the definitions are\n      fully expanded. If multiple equivalent definitions exist, try each one."
+        },
+        "BECAUSE": {
+          "line": 29,
+          "text": "Most proofs at the textbook level consist of nothing more than carefully unfolding\n      definitions. \"I don't see how to start\" almost always means \"I haven't written out\n      what the words mean.\""
+        },
+        "NEXT-STEPS": {
+          "line": 34,
+          "text": "next[Identify which terms in the statement are defined concepts.]\n    next[Write out each definition fully.]\n    next[See which unfolding makes the proof obligation match your tools.]"
+        }
+      },
+      "text": "@flexiarg math-informal/unfold-the-definition\n@title Unfold the Definition\n@sigils [\ud83d\udddd\ufe0f/\u95e8]\n@keywords definition, unpack, expand, meaning, translate, rewrite, characterisation, equivalent\n@audience mathematicians, students, proof-writers\n@tone heuristic\n@factor Keen investigation (dhammavicaya)\n@why no problem-corpus source matched (@holds-at absent; holds-token and id-text searches over every node in [problems futon-theory] found no match). Negative claim per the committed check futon2 holes labs library-loop runs l6_no_source_check.py, receipt runs/L8-no-source-check.edn. Rationale not invented (L8 rationale-backfill, zai-1, 2026-09-05)\n@how own mechanism: When stuck, go back to the definition and write out exactly what it says. (source: this pattern's ! conclusion line; L8 rationale-backfill, zai-1, 2026-09-05)\n\n! conclusion: \n  When stuck, go back to the definition and write out exactly what it says.\n\n  + context: You need to prove or use a property of an object, and the path forward is not clear.\n\n  + IF:\n      The statement involves a defined concept (compact, continuous, exact, measurable, adjoint)\n      and you are treating it as a black box instead of engaging with its content.\n\n  + HOWEVER:\n      Definitions can unfold into multiple equivalent characterisations, and not all unfoldings\n      are equally useful. Choosing the wrong characterisation can make the problem harder.\n\n  + THEN:\n      Write out the definition of every technical term in the statement. Replace defined terms\n      with their meanings. The proof obligation often becomes clear once the definitions are\n      fully expanded. If multiple equivalent definitions exist, try each one.\n\n  + BECAUSE:\n      Most proofs at the textbook level consist of nothing more than carefully unfolding\n      definitions. \"I don't see how to start\" almost always means \"I haven't written out\n      what the words mean.\"\n\n  + NEXT-STEPS:\n    next[Identify which terms in the statement are defined concepts.]\n    next[Write out each definition fully.]\n    next[See which unfolding makes the proof obligation match your tools.]\n"
+    }
+  ]
+}
