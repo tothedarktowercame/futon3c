@@ -17,32 +17,49 @@
   (throw (ex-info "RUN4 realized recording refused"
                   {:error :run4-realized-recording-refused :reason reason})))
 
+(defonce ^:private !publication-locks (atom {}))
+
+(defn- read-one! [file]
+  (try
+    (with-open [r (java.io.PushbackReader. (io/reader file))]
+      (let [v (edn/read {:eof ::empty} r)]
+        (when (or (= ::empty v) (not= ::end (edn/read {:eof ::end} r)))
+          (refuse! :existing-recording-corrupt))
+        v))
+    (catch clojure.lang.ExceptionInfo e (throw e))
+    (catch Throwable _ (refuse! :existing-recording-corrupt))))
+
 (defn- atomic-append! [file value]
   (let [target (.toPath file)
         parent (.getParent target)
+        root-key (.toString (.toRealPath parent (make-array LinkOption 0)))
+        mutex (get (swap! !publication-locks
+                          #(if (contains? % root-key) %
+                               (assoc % root-key (Object.)))) root-key)
+        lock-path (.resolve parent ".run4-recording.lock")
         temp (.resolve parent (str "." (.getFileName target) "." (UUID/randomUUID) ".tmp"))
         bytes (.getBytes (str (pr-str value) "\n") "UTF-8")]
-    (if (Files/exists target (make-array LinkOption 0))
-      (let [existing (try (edn/read-string (slurp file))
-                          (catch Throwable _ (refuse! :existing-recording-corrupt)))]
-        (if (= value existing) existing (refuse! :immutable-recording-conflict)))
-      (try
-        (with-open [out (FileOutputStream. (.toFile temp))]
-          (.write out bytes) (.flush out) (.sync (.getFD out)))
-        (try
-          (Files/move temp target
-                      (into-array StandardCopyOption [StandardCopyOption/ATOMIC_MOVE]))
-          (catch java.nio.file.FileAlreadyExistsException _
-            (let [existing (try (edn/read-string (slurp file))
-                                (catch Throwable _
-                                  (refuse! :existing-recording-corrupt)))]
-              (when-not (= value existing) (refuse! :immutable-recording-conflict)))))
-        (with-open [directory (FileChannel/open parent
-                                                (into-array StandardOpenOption
-                                                            [StandardOpenOption/READ]))]
-          (.force directory true))
-        value
-        (finally (Files/deleteIfExists temp))))))
+    (locking mutex
+      (with-open [lock-channel (FileChannel/open
+                                lock-path
+                                (into-array StandardOpenOption
+                                            [StandardOpenOption/CREATE
+                                             StandardOpenOption/WRITE]))
+                  _lock (.lock lock-channel)]
+        (if (Files/exists target (make-array LinkOption 0))
+          (let [existing (read-one! file)]
+            (if (= value existing) existing (refuse! :immutable-recording-conflict)))
+          (try
+            (with-open [out (FileOutputStream. (.toFile temp))]
+              (.write out bytes) (.flush out) (.sync (.getFD out)))
+            (Files/move temp target
+                        (into-array StandardCopyOption [StandardCopyOption/ATOMIC_MOVE]))
+            (with-open [directory (FileChannel/open
+                                   parent (into-array StandardOpenOption
+                                                      [StandardOpenOption/READ]))]
+              (.force directory true))
+            value
+            (finally (Files/deleteIfExists temp))))))))
 
 (def ^:dynamic *append-immutable!* atomic-append!)
 

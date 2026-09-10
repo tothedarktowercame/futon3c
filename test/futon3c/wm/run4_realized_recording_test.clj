@@ -1,5 +1,6 @@
 (ns futon3c.wm.run4-realized-recording-test
   (:require [clojure.java.io :as io]
+            [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon2.aif.realized-recording :as recording]
             [futon3c.wm.run4-realized-recording :as sut]))
@@ -108,5 +109,41 @@
         (is (thrown? clojure.lang.ExceptionInfo
                      (sut/persist-bundle! (.getPath root) bundle))))
       (is (not (.exists (io/file root "attempt-1.edn"))))
+      (finally
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
+
+(deftest competing-conflicting-publishers-never-overwrite
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-recording-race"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        other (assoc bundle :projection-digest (apply str (repeat 64 "b")))
+        gate (promise)
+        publish (fn [b]
+                  (future @gate
+                          (try {:ok (sut/persist-bundle! (.getPath root) b)}
+                               (catch clojure.lang.ExceptionInfo e
+                                 {:error (:reason (ex-data e))}))))
+        a (publish bundle) b (publish other)]
+    (try
+      (deliver gate true)
+      (let [results [@a @b]
+            stored (edn/read-string (slurp (io/file root "attempt-1.edn")))]
+        (is (= 1 (count (filter :ok results))))
+        (is (= [:immutable-recording-conflict]
+               (vec (keep :error results))))
+        (is (some #(= stored (get-in % [:ok :record])) results)))
+      (finally
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
+
+(deftest trailing-existing-form-is-corruption-not-idempotence
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-recording-trailing"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        file (io/file root "attempt-1.edn")]
+    (try
+      (spit file (str (pr-str (sut/from-terminal-bundle bundle)) "\n:extra\n"))
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (sut/persist-bundle! (.getPath root) bundle)))
+      (is (.contains (slurp file) ":extra"))
       (finally
         (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
