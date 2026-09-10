@@ -90,3 +90,31 @@
               :control-map-text control-text
               :expected-control-map-sha256 (digest/sha256 control-text)})]
       (is (false? (get-in r [:checks :route-conformance]))))))
+
+(deftest visible-and-durable-trials-require-an-exact-bijection
+  (let [t2 (assoc-in bundle [:identity :trial-id] :t2)
+        duplicated (assoc visibility :trials [(first (:trials visibility))
+                                               (first (:trials visibility))])]
+    (with-redefs [terminal/read-terminal-evidence-bundle
+                  (fn [_ request _] (if (= :second (:which request)) t2 bundle))]
+      (let [r (sut/report-durable
+               {:roots {} :trials [{:admission-request {:which :first} :started {}}
+                                    {:admission-request {:which :second} :started {}}]
+                :visibility duplicated :expected-series-id "RUN4-x"
+                :expected-series-sha256 sha :observed-series-sha256 sha
+                :control-map-text control-text
+                :expected-control-map-sha256 (digest/sha256 control-text)})]
+        (is (false? (get-in r [:checks :route-conformance]))))))
+  (let [string-id (assoc-in bundle [:identity :trial-id] "t1")
+        both (assoc visibility :trials [{:trial_id ":t1" :stage "complete" :result "passed"}
+                                        {:trial_id "t1" :stage "complete" :result "passed"}])]
+    (with-redefs [terminal/read-terminal-evidence-bundle
+                  (fn [_ request _] (if (= :string (:which request)) string-id bundle))]
+      (let [r (sut/report-durable
+               {:roots {} :trials [{:admission-request {:which :keyword} :started {}}
+                                    {:admission-request {:which :string} :started {}}]
+                :visibility both :expected-series-id "RUN4-x"
+                :expected-series-sha256 sha :observed-series-sha256 sha
+                :control-map-text control-text
+                :expected-control-map-sha256 (digest/sha256 control-text)})]
+        (is (true? (get-in r [:checks :route-conformance])))))))

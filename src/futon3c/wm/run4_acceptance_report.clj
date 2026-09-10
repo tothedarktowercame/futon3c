@@ -35,9 +35,12 @@
 (defn- joined-route? [visibility bundles cmap]
   (and cmap (vector? bundles)
        (= (count bundles) (count (:trials visibility)))
-       (let [by-trial (into {} (map (juxt #(str (get-in % [:identity :trial-id])) identity)
-                                     bundles))]
+       (let [visible-ids (mapv :trial_id (:trials visibility))
+             by-trial (into {} (map (juxt #(str (get-in % [:identity :trial-id])) identity)
+                                    bundles))]
          (and (= (count bundles) (count by-trial))
+              (= (count visible-ids) (count (distinct visible-ids)))
+              (= (set visible-ids) (set (keys by-trial)))
               (every?
                (fn [trial]
                  (let [bundle (get by-trial (:trial_id trial))
