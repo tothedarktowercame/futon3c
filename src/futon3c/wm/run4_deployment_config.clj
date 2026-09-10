@@ -58,6 +58,7 @@
                 :acceptance (:reserved-unwired t)
                 :series {:enabled? enabled? :manifest-root root
                          :manifest-ref (get-in t [:manifest :ref])
+                         :manifest-sha256 (get-in t [:manifest :sha256])
                          :manifest-allowlist #{(get-in t [:manifest :ref])}
                          :controller-root (:controller-and-admission stores)
                          :binding-root (:bindings stores)

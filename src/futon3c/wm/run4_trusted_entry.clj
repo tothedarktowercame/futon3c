@@ -210,3 +210,15 @@
                                     (:freshness! validation)
                                     (:run4-attempt-id payload))))))
         (refuse :run4-pin-reference-refused)))))
+
+(defn authenticate
+  "Authenticate a server-configured RUN4 principal without reading task or
+  evidence files. Intended for read-only historical report endpoints."
+  [server-config headers]
+  (let [cfg (:run4 server-config)]
+    (cond
+      (not (map? cfg)) (refuse :run4-disabled)
+      (config-error cfg) (refuse (config-error cfg))
+      (not (secure= (:bearer-token cfg) (bearer-token headers)))
+      (refuse :run4-authentication-failed)
+      :else {:ok true :principal "Joe" :boundary :trusted-serving-context})))
