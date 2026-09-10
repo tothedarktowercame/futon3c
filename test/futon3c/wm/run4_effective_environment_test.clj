@@ -52,6 +52,31 @@
          (reason #(sut/attest {} {:env-read (constantly nil)
                                   :var-read (constantly false)})))))
 
+(deftest historical-reader-validates-complete-pinned-attestation
+  (let [sha (apply str (repeat 64 "a"))
+        pin {:sha256 sha}
+        base (assoc (sut/attest declaration {:env-read (constantly "1")
+                                             :var-read (constantly true)})
+                    :provenance
+                    {:task-pin-sha256 sha
+                     :config-pin {:path "config.edn" :sha256 sha}
+                     :serving-declaration
+                     (assoc declaration :recording-requirement
+                            {:contract :wm/realized-recording-v1
+                             :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}})})]
+    (is (= base (sut/validate-recorded! base pin)))
+    (doseq [bad [nil false
+                 (assoc base :flags [])
+                 (update base :flags pop)
+                 (update base :flags conj (first (:flags base)))
+                 (assoc-in base [:flags 0 :flag] "FOREIGN")
+                 (assoc-in base [:flags 0 :effective] false)
+                 (assoc-in base [:flags 0 :observed] "0")
+                 (assoc-in base [:provenance :task-pin-sha256]
+                           (apply str (repeat 64 "b")))]]
+      (is (= :invalid-recorded-attestation
+             (reason #(sut/validate-recorded! bad pin)))))))
+
 (deftest production-reader-does-not-load-missing-consumers
   (let [n 'run4-review.absent-consumer]
     (is (nil? (find-ns n)))

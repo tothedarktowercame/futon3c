@@ -7,6 +7,7 @@
             [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
+            [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-trusted-entry :as trusted]
             [futon3c.wm.runner-service :as runner]))
 
@@ -117,10 +118,13 @@
                 (fn [declaration]
                   {:schema :wm/run4-effective-environment-attestation-v1
                    :hierarchy (:hierarchy declaration)
-                   :flags [{:flag "FUTON_WM_FPI_DARK" :required "1"
-                            :observed "1" :effective true
-                            :consumer ['fake.ns '*flag*]}]
-                   :recording {:status :not-attested-by-this-component}})]
+                   :flags (mapv (fn [[flag consumer]]
+                                  {:flag flag :required "1" :observed "1"
+                                   :effective true :consumer consumer})
+                                (sort-by key effective/flag-spec))
+                   :recording
+                   {:status :not-attested-by-this-component
+                    :consumer "holes/labs/wm-contract/wm_step_observe.bb"}})]
         (f root cfg))
       (finally (delete-tree! root)))))
 

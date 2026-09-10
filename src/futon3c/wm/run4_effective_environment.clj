@@ -57,3 +57,40 @@
       :flags rows
       :recording {:status :not-attested-by-this-component
                   :consumer "holes/labs/wm-contract/wm_step_observe.bb"}})))
+
+(defn validate-recorded!
+  "Validate historical attestation bytes against their pinned declaration.
+  This intentionally performs no current environment or Var reads."
+  [attestation task-pin]
+  (let [provenance (:provenance attestation)
+        declaration (:serving-declaration provenance)
+        required (:required-environment declaration)
+        rows (:flags attestation)
+        by-flag (when (vector? rows) (into {} (map (juxt :flag identity) rows)))
+        config-pin (:config-pin provenance)]
+    (when-not
+     (and (map? attestation)
+          (= #{:schema :hierarchy :flags :recording :provenance}
+             (set (keys attestation)))
+          (= :wm/run4-effective-environment-attestation-v1 (:schema attestation))
+          (= required-hierarchy (:hierarchy attestation)
+             (:hierarchy declaration))
+          (= (set (keys flag-spec)) (set (keys required)) (set (keys by-flag)))
+          (= (count rows) (count by-flag))
+          (every? (fn [[flag consumer]]
+                    (= {:flag flag :required "1" :observed "1"
+                        :effective true :consumer consumer}
+                       (get by-flag flag)))
+                  flag-spec)
+          (= {:status :not-attested-by-this-component
+              :consumer "holes/labs/wm-contract/wm_step_observe.bb"}
+             (:recording attestation))
+          (= (:sha256 task-pin) (:task-pin-sha256 provenance))
+          (map? config-pin) (= #{:path :sha256} (set (keys config-pin)))
+          (string? (:path config-pin))
+          (boolean (re-matches #"[0-9a-f]{64}" (:sha256 config-pin)))
+          (= {:contract :wm/realized-recording-v1
+              :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}
+             (:recording-requirement declaration)))
+      (refuse! :invalid-recorded-attestation {:attestation attestation}))
+    attestation))

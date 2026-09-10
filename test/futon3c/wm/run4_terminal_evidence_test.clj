@@ -8,6 +8,29 @@
 (def pin {:sha256 (apply str (repeat 64 "a")) :series-id "RUN4"
           :trial-id :outer-loop :mission-id "M-run4" :action {:type :mission}})
 (def casting {:author "zai-2" :reviewer "codex-17" :repair-reviewer "codex-1"})
+(def recorded-attestation
+  {:schema :wm/run4-effective-environment-attestation-v1
+   :hierarchy {:model :single-level :scope :RUN4}
+   :flags
+   [{:flag "FUTON_WM_BETA_DARK" :required "1" :observed "1" :effective true
+     :consumer ['futon2.report.war-machine '*beta-dark?*]}
+    {:flag "FUTON_WM_FPI_DARK" :required "1" :observed "1" :effective true
+     :consumer ['futon2.report.war-machine '*f-pi-dark?*]}
+    {:flag "FUTON_WM_TRACE_POLICY_DETAILS" :required "1" :observed "1" :effective true
+     :consumer ['futon2.aif.trace '*persist-policy-trace-details?*]}]
+   :recording {:status :not-attested-by-this-component
+               :consumer "holes/labs/wm-contract/wm_step_observe.bb"}
+   :provenance
+   {:task-pin-sha256 (:sha256 pin)
+    :config-pin {:path "config.edn" :sha256 (apply str (repeat 64 "b"))}
+    :serving-declaration
+    {:required-environment
+     {"FUTON_WM_FPI_DARK" "1" "FUTON_WM_BETA_DARK" "1"
+      "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+     :hierarchy {:model :single-level :scope :RUN4}
+     :recording-requirement
+     {:contract :wm/realized-recording-v1
+      :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}}}})
 (def request {:attempt-id "outer-attempt"
               :identity {:series-id "RUN4" :trial-id :outer-loop
                          :pin-sha256 (:sha256 pin) :casting casting}})
@@ -62,11 +85,7 @@
                     :selectorSeam "live:validated-selection" :traceWritten true
                     :route [{:fromNode "R20" :toNode "R12" :via "observe" :at_ (:started-at started)}]
                     :run4/task-pin pin
-                    :run4/effective-environment-attestation
-                    {:schema :wm/run4-effective-environment-attestation-v1
-                     :hierarchy {:model :single-level :scope :RUN4}
-                     :flags []
-                     :recording {:status :not-attested-by-this-component}}}
+                    :run4/effective-environment-attestation recorded-attestation}
         _ (write! (io/file (:admission roots) "outer-attempt/reservation.edn") reservation)
         _ (write! (io/file (:admission roots) "outer-attempt/click-result.edn") click)
         _ (write! run-file run-record)

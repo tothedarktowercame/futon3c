@@ -5,7 +5,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon2.aif.c-fold-config :as digest]))
+            [futon2.aif.c-fold-config :as digest]
+            [futon3c.wm.run4-effective-environment :as effective]))
 
 (defn- refuse! [reason & [data]]
   (throw (ex-info "RUN4 terminal evidence refused"
@@ -153,7 +154,11 @@
                                   :run4/effective-environment-attestation})
                    (= (:click/id projection) (:click/id value))
                    (= (:run/id projection) (:run/id value))
-                   (= (:run4/task-pin projection) (:run4/task-pin value)))
+                   (= (:run4/task-pin projection) (:run4/task-pin value))
+                   (do (effective/validate-recorded!
+                        (:run4/effective-environment-attestation value)
+                        (:run4/task-pin value))
+                       true))
       (refuse! :run-record-binding-mismatch))
     value))
 

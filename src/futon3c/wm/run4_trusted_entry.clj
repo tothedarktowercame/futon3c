@@ -143,7 +143,11 @@
                    :principal "Joe"
                    :pin-sha256 pin-sha
                    :request-nonce (str (UUID/randomUUID))
-                   :effective-environment environment}))]
+                   :effective-environment
+                   (assoc environment :provenance
+                          {:task-pin-sha256 pin-sha
+                           :config-pin (:run4/config-pin runner-opts)
+                           :serving-declaration serving-declaration})}))]
     (cond
       (not= "Joe" (get-in envelope [:operator-selection :operator]))
       (refuse :run4-operator-mismatch)
