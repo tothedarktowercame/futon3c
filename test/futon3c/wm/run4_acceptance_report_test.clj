@@ -25,12 +25,24 @@
          (:decision (sut/report {:visibility (assoc visibility :stage "working")
                                  :expected-series-sha256 sha :observed-series-sha256 sha}))))
   (is (false? (:accepted? (sut/report {:visibility nil}))))
-  (is (false? (:accepted? (sut/report {:visibility visibility
-                                       :expected-series-sha256 sha
-                                       :observed-series-sha256 sha
-                                       :route-evidence {:schema :wm/run4-route-conformance-v1
-                                                        :routes [[{:from :R20 :to :R12}]]
-                                                        :unmapped-hops [] :refutations []}
-                                       :recording-evidence
-                                       {:schema :wm/run4-recording-completeness-v1
-                                        :complete? true :battery-ref "battery-1"}})))))
+  (let [forged (sut/report {:visibility visibility
+                            :expected-series-sha256 sha :observed-series-sha256 sha
+                            :route-evidence {:schema :wm/run4-route-conformance-v1
+                                             :routes ["invented"]}
+                            :recording-evidence
+                            {:schema :wm/run4-recording-completeness-v1
+                             :complete? true :battery-ref "/missing"}})]
+    (is (= false (get-in forged [:checks :route-conformance])))
+    (is (= false (get-in forged [:checks :recording-completeness])))
+    (is (= :missing-route-to-preregistration-bridge (:decision forged)))
+    (is (false? (:accepted? forged)))))
+
+(deftest incomplete-or-foreign-visibility-cannot-green-terminal-check
+  (doseq [v [(dissoc visibility :run_id)
+             (assoc visibility :run_id "")
+             (assoc visibility :trials [{:trial_id "t1" :stage "working"
+                                         :result "pending"}])]]
+    (is (false? (get-in (sut/report {:visibility v
+                                     :expected-series-sha256 sha
+                                     :observed-series-sha256 sha})
+                        [:checks :terminal-task-results])))))
