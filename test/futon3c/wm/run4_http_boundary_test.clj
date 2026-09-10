@@ -109,9 +109,9 @@
           (is (= #{:read-text :resolve-mission :action-admissible?}
                  (set (keys (:run4-task-pin-ports (first @seen)))))))))))
 
-(deftest concurrent-duplicates-and-write-failure-never-double-click
+(deftest concurrent-duplicates-corruption-and-write-failure-never-double-click
   (with-handler
-    (fn [handler _ _ _]
+    (fn [handler _ root _]
       (let [clicks (atom 0)
             payload {:run4-pin-ref "pin.edn"
                      :run4-attempt-id "attempt-concurrent"}
@@ -125,6 +125,12 @@
             (is (every? #{200} (map (comp :status deref) requests)))
             (is (= 1 @clicks))))
         (let [before @clicks]
+          (.mkdir (io/file root "attempt-corrupt"))
+          (spit (io/file root "attempt-corrupt" "reservation.edn") "")
+          (is (= 409 (:status
+                      (handler (request (assoc payload :run4-attempt-id
+                                              "attempt-corrupt") auth)))))
+          (is (= before @clicks))
           (binding [admission/*atomic-write!*
                     (fn [& _] (throw (ex-info "disk failure" {:committed? false})))]
             (is (= 500 (:status

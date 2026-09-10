@@ -63,7 +63,12 @@
         (is (= :click-recorded (:state recorded)))
         (is (= {:started true :click-id "click-1"}
                (get-in duplicate [:admission :result :click])))
-        (is (nil? (get-in duplicate [:admission :result :click :secret])))))))
+        (is (nil? (get-in duplicate [:admission :result :click :secret])))
+        (spit (io/file root "attempt-1" "click-result.edn")
+              "{:schema :wrong}\n{:trailing true}\n")
+        (is (= :run4-attempt-state-corrupt
+               (:error (try (sut/reserve! root request) nil
+                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
 
 (deftest failed-reservation-write-is-not-an-admission
   (with-store
@@ -71,4 +76,36 @@
       (binding [sut/*atomic-write!*
                 (fn [& _] (throw (ex-info "disk failed" {:committed? false})))]
         (is (thrown? clojure.lang.ExceptionInfo (sut/reserve! root request))))
-      (is (:new? (sut/reserve! root request))))))
+      (is (= :run4-attempt-state-corrupt
+             (:error (try (sut/reserve! root request) nil
+                          (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))
+
+(deftest corrupt-existing-state-is-never-overwritten
+  (with-store
+    (fn [root]
+      (sut/reserve! root request)
+      (let [file (io/file root "attempt-1" "reservation.edn")]
+        (spit file "")
+        (is (= :run4-attempt-state-corrupt
+               (:error (try (sut/reserve! root request) nil
+                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (is (= "" (slurp file))))
+      (let [orphan (io/file root "orphan")]
+        (.mkdir orphan)
+        (is (= :run4-attempt-state-corrupt
+               (:error (try (sut/reserve! root (assoc request :attempt-id "orphan")) nil
+                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
+
+(deftest parent-fsync-failure-and-malformed-click-stay-indeterminate
+  (with-store
+    (fn [root]
+      (binding [sut/*fsync-directory!*
+                (fn [_] (throw (ex-info "parent fsync failed" {})))]
+        (is (thrown? clojure.lang.ExceptionInfo
+                     (sut/reserve! root (assoc request :attempt-id "fsync-fail")))))
+      (sut/reserve! root request)
+      (is (= :run4-click-result-invalid
+             (:error (try (sut/record-click! root "attempt-1" {}) nil
+                          (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+      (is (= :reconciliation-required
+             (get-in (sut/reserve! root request) [:admission :state]))))))
