@@ -1,0 +1,61 @@
+{
+  "schema": "apm-memory-audit-summary/v1",
+  "frames": 24,
+  "attempt-records": 35,
+  "certified-attempts": 32,
+  "accepted-use-events": 22,
+  "raw-analyzer-cohort-rows": 26,
+  "accepted-use-verdicts": {
+    "already-in-base": 7,
+    "unwitnessed": 7,
+    "fingerprinted": 6,
+    "not-adjudicable-by-token": 2
+  },
+  "accepted-transfer-verdicts": {
+    "within-frame/already-in-base": 2,
+    "prior-frame-same-problem/already-in-base": 4,
+    "prior-frame-same-problem/unwitnessed": 3,
+    "within-frame/fingerprinted": 5,
+    "cross-problem/already-in-base": 1,
+    "within-frame/unwitnessed": 4,
+    "prior-frame-same-problem/fingerprinted": 1,
+    "within-frame/not-adjudicable-by-token": 2
+  },
+  "diagnostic-only-rows": [
+    {
+      "frame": "f191",
+      "attempt": 2,
+      "memory": "e-apm-promotion-8a3a11a7041044b8ca8776fb86cf8211",
+      "verdict": "no-source"
+    },
+    {
+      "frame": "f192",
+      "attempt": 2,
+      "memory": "e-apm-promotion-ee593ce0dc6cfb0b05b3b86de46668c6",
+      "verdict": "no-source"
+    },
+    {
+      "frame": "f206",
+      "attempt": 2,
+      "memory": "e-apm-promotion-87693595a51aee77dc0fdef39db02b58",
+      "verdict": "no-source"
+    },
+    {
+      "frame": "f206",
+      "attempt": 2,
+      "memory": "e-apm-promotion-4ca1e8109517bf7b072a90dd8080cf9b",
+      "verdict": "no-source"
+    }
+  ],
+  "offered-distinct-ids": 20,
+  "cascade-expansion-median-seconds": 326.568,
+  "searches": 218,
+  "search-roles": {
+    "scribe": 20,
+    "student": 95,
+    "promotion-proctor": 85,
+    "zai-scribe": 18
+  },
+  "source-files-pinned": 396,
+  "certified-attempts-with-use": 13
+}

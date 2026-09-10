@@ -1,0 +1,918 @@
+{
+  "observed-at": "2026-09-10T11:24:08.695802+00:00",
+  "scope": "GET only; existence/identity/author/body presence, not content-digest recomputation or full review validity",
+  "rows": [
+    {
+      "memory-id": "e-apm-promotion-7e99a3e9bbe569b285c12a344b97f316",
+      "review-id": "e-apm-promotion-review-d0d9d10d3b8fd6176aae488351f4fa1e",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a3dcc8c103c65b69b9a32238831dc8c371785b340d804c072121223714be9d15"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "7ab0195a5e1e45f38122747b586ba5f07ed9a44928ba0660d38482b57b690c83"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c6ea2fd625f42496abd08be83f8cda20",
+      "review-id": "e-apm-promotion-review-db7738cd8b1e0d26a4cd26b9c3ab5235",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "5f48d635406caa77b191562b437a19182bf5b20a78afd0f2302a592156a085b4"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "87b2dd60188392d0a1aedbe7cecb662c8b8837e3f65b4ad69b59ef70abddcb46"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c278b8320f0e94cab24e820ce3474d4a",
+      "review-id": "e-apm-promotion-review-ba6390c410f1178433788741173b531d",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "23434bb320c7d3bd4df4c806f4272515e66df98cb1f1ba4ca45be4fda961174b"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "99e1e021e03d7966a96d137e7692bdfda8a559e4a4a27defc2c3a8aad84b1893"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-1de3ecbdd0f23414017b2a5ccbace790",
+      "review-id": "e-apm-promotion-review-13416bd97e3a29d4a38fb8cb2d8fd3c8",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f48544038f6f80f4e65362d6ff555a04ab1b95d165ea41160ae1d0ccf7b8f1b0"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "539944e7341acadd3f5c0104ab440dce8afb988121dde74e6b3618cf99755050"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-822c19bbf3500982ae1ec9297649e26d",
+      "review-id": "e-apm-promotion-review-a1b7a1df477cf01a670492f3ce64ef1e",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "21107fdaba45afcd7255b41f2c40fc28944f3b5f7d7642f3ec5ce5ca742db8d6"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "6e148add2d75c1878327d2254de8fe64161a4e02152af7cf8b803036c881d222"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-8f4563cf103afd642fe1cc35916b90cf",
+      "review-id": "e-apm-promotion-review-623fba709c305c6a414b6882bb0879ec",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "93d9697baa876bd5c40c31b751604a20c3f8069b7bf2179ca28290646b13365a"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "816e7be83ec4da6cb26ebe07df791354b63806e26a7b246510120b103c1f6093"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-98624ca2ae58e961126159d95f6628be",
+      "review-id": "e-apm-promotion-review-3ae4db79ff7df7f131cfe6e0c003bd5e",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "d797675bbfcff21f63d94428f06571baefb56f96f3a5a13902c6cfdefe369eca"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f95c6e16ddeeb458cca34f9ae4a7b055f7632309f3508b9646a866e7f17e8946"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-d63949c31b2432dc40c45edb6cec31cb",
+      "review-id": "e-apm-promotion-review-85d5ef517c544dc07d7497d8b53d4a28",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "cf47c1e2ca6e6c3d5efbf55c6637dc72f227f29fbe553f723811cac82c1c04c5"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "d8441bcfbd6b8b2f47a352fe4b133d27d3c53e41c33b5d0e4259a3f6bdee19f9"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-f6ff4fd718db9c8c54bfe02eadd33067",
+      "review-id": "e-apm-promotion-review-c55ffcb5f1c7cb143e97e163705e7780",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "ff35c2d26b8d985efae42898d5014de5169539bad662c4ae127b9efc89920a66"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "0a49af8f948bb9da57e9054f3194ae1b6a23095e86b181f1e0f9ab0182a2c506"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-6a75602265481dfb46b9dead6655915a",
+      "review-id": "e-apm-promotion-review-a42476b09df1cfe94803979a5ca9e73a",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "837a7099ebe4e6e074aee83c674e08e77b0ffe95b1069172de231e0979e281f7"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "4394265aabaa235c4d5caee7ee8f00a52611db5711cb51305a26a3ce009afd96"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-92d7784478c14d395af80f88f98341b8",
+      "review-id": "e-apm-promotion-review-3a8e3542bf5eb5fb150665b991ad30d4",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "7a1275915deb3e8cc50c89edc4b470f9bf6422c46606dd07c588124dc18b9f82"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "0eb6547bb83917b438bd5fbbaa2175378f9f3825810175171c0d89d27f9677d7"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-9be232ac3734a484153059f06500a040",
+      "review-id": "e-apm-promotion-review-599d4b48cfcbc18922b99a32377279b7",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "7a0f8f57b80ea746d65bba286a346adede4a7499035869a7e38ca321f327a151"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "01a784f93607fcf584ab35dd4378d4d098d92cfd31dbae2333bd02c2ab024971"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-b254bad61a52e24b8af51bf8b7797bf8",
+      "review-id": "e-apm-promotion-review-b05beb0621c98375adced5d11d9989bc",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "6b843f427c48d7f74ab43527231b62c2b9340a8f08754c6e5e4353680c92d6c5"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "64bf08a78d244d06c9f885e1abecd0f380dac7198f8f12e7b2707c0c00e6751b"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-01d9049953518a609da3e8872f490abd",
+      "review-id": "e-apm-promotion-review-19205cdc69350b4852d31f28e30f51d4",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "47807e1255ec00b9e5e7349b6c49bb9ba022d9ad35881e2e1d7fd2a9a83fd748"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "3207bc516a90d22346cc13d49609d9be7318eb88e97afded042c7baace56b1a9"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-7bd4752ebb3e205af1c35bb5c801ddb1",
+      "review-id": "e-apm-promotion-review-9ed9aa755e5345987e844bba190be06b",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "1eb47fddaa4d094d1fa9d004d3e3f018f3fc1a938ac8d301945f95113a7043cb"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f221cf431fabc63c357f06e9df48d030b54b48058600bc06fcde1110618fe7f8"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-a0c0320a9930285ef341917c7288c48c",
+      "review-id": "e-apm-promotion-review-92d07eca581ec7d5444016b89e3e011e",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "1ca048dc16d15a3c5c75d1bff13ebf9a6827971f675d6c88d1b81e238b418e02"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "b5c2c94334145dfc70abc2954edf375a34594a7c3c5a0787ed3970c36497d345"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-a8c54c064a3eb4860038e16ad90c55e4",
+      "review-id": "e-apm-promotion-review-f00e6739393ad3e35432195d2fa31db9",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "c1eebd9030d6aca7cf527efee21ab39664deb03fcda9d3c3175f633d02188aec"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f2a22380ec7cdb07d4dae951f52aac343e6481c1b380c2ecb77aab41fad0f567"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-5fdb99169bd788313841375c797c302c",
+      "review-id": "e-apm-promotion-review-02bee0ac9d6dbd565d46b51fb03696e7",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "00fd89a48fb9b150a98e64eca4b89f37ef880546665918febf29a4587cea35a2"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "ff41db42ec9e5076044c5fd4b49940e916b1fc452a2c43591b92ee43f444d7e5"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-00b29071a7d92441ac7d4533b65888a1",
+      "review-id": "e-apm-promotion-review-c71157bca99df6c65e1cf710b4938094",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "d6f1473ec0d256bf023806a29e2a6865a744fe081f77af3cf63489951c8cc971"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "6676c11333676c912fa86a4e80c99120a42ec8da76ed0080f88375fddd4f5a15"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-184859b9270fa205aed385b7a34a4425",
+      "review-id": "e-apm-promotion-review-fe0e9064114218963f524ffbcd7d6b12",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2b500a14931964b51d7f13a7088e3f8280fdd9eee06ea59a3b9420022e9cb485"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a4bccb71d49bc52783fc555464377269d2ab0878b899c602892073ec77f7354e"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-541db0d84393128fe5eead558396a9c6",
+      "review-id": "e-apm-promotion-review-98717fa321588223a88570ddca24552c",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f1d6f1725380eac922ee439bd9fe185f65c7a8f2f45f7858843bd348a344d6da"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "eb3d20ea72c82f2d9bbdf55c4461f7ef749cebc383d5a87cf837fb8e2f76f7a5"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-756bc65f9b19d1d8ef72d0ec54126997",
+      "review-id": "e-apm-promotion-review-3d8c9229788aa9e13fc8209d20104ef6",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "bd0651c6e1c8bdcd60b1117ad3eb85e666f7336f908777b3d86e3becc519a314"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "70b1f88e750c11683db57ca5084ffa7298dc1949c7a83b890768b0da2208729b"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-e13c7dd92286c0ddd9ac992c65015c1e",
+      "review-id": "e-apm-promotion-review-7a8900728cade1a5d38797efd2b92e95",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "fc10bc8c7cac13de7585edd1277d3e948401e923a7019c7b6069b5d5c4592ff4"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "83d5d736228a9cce9d004a28ea36497a1634c726f3d80f3e9517097543d08b14"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-3cd1a2080b57e8df4ba88f9099560274",
+      "review-id": "e-apm-promotion-review-a1f41fbf1b39bb94b14ee935401ebe2c",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "de652f2671e8899cdba436bf752237fb7b1245bf505827f42d6e1c95a3f84266"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "441301335bfe89c570ffd203f10a738e67819472e91b92394e19fb818ff89e71"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-3eb6f7e412960b2ddc2fe35318e6e24d",
+      "review-id": "e-apm-promotion-review-36750df9635ea38d533e3a783a2dc8ed",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "fff1fe2f27a586fbb4618fc862cd93fe2f5ec45073853eca3b3621023daea343"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f729efd39452285ad51ccd1538d5ce445f8a4e3ec2d500f602edb7a227476d70"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-8c8a7be369174ecdf4073f0a167980c7",
+      "review-id": "e-apm-promotion-review-9b5ac2fd849938eed3c144e7e0ab3967",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "c8287349ada9dd7a7275a7e89dd3974ce824556f8bc168ef09397df16400bb5d"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "ed5e225d58bf963ff729da5e474a97d21f645badb62b004de64986e71d851440"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-a2d325b678926d21bc17f57688212fe1",
+      "review-id": "e-apm-promotion-review-0c3f9b0827ad95f4aa25cac5b2c7bcf3",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "0278c0427713d03b0ec70f551310578b5c8d075965aa1b1f933b43ef3ad4e193"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "6122a9f2643c6500b32c871cc459b5f7940d38f17a063b32b36e6e1893ca20c6"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-e395cd0c4b31f2044686c9720dd7e448",
+      "review-id": "e-apm-promotion-review-3e98a477a385e9b90772a8fbb128d265",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "61ab5d16da3913b5bae0c4cf1f58eaed2d2fe2dbe21087b0faecfec43f95c8f0"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "173018e682429b948f5c80c1884a36ee2bdd960be77353cf731ddb1b8eb65a0e"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-0b922574d527cc4ce06f759c7798cd71",
+      "review-id": "e-apm-promotion-review-37d3575959f059eadf2863ee97529bbf",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "90f6578e1c0383f2cdda5067ecb5e9e0334cb275c66919f779b455beb3145391"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "9b7a2c4b1b139575ca95d995c980ffcacc97efc5edfe9354fa8a59385645f7aa"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-5fd5140d1a84f674c7cf8989dbfbe7ff",
+      "review-id": "e-apm-promotion-review-4136843b2d78ef4669cdc3208c471bd8",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "079a73aaf839785dd54dad1f1416557e514fa576130d2a33fd848d0cd6f1d4cc"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "da394794ba5cbf6a0e3a88e7bd38a4a56671473013cee39193b2a091efea2d90"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-656ea9ee0adc5f03f1ef83c974d27f38",
+      "review-id": "e-apm-promotion-review-bc3b7857ca243f4ba9a48e4bf670a39b",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "14c478b8155fa7f5bb118fc2c502dc5facbeaad4ba2b85cf045a1a25579baa00"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "b58324df33087b6b838279b224d3ecac60aa1d494138ebafbe45ffd18b8a9b48"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-8d4608c586489b72402f43a77fb40f7b",
+      "review-id": "e-apm-promotion-review-b922015551e3c2533252992802426c98",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "6bc0e256f0ade940f4fd8bcfeed8a50f024959015d7b73938bd3eff8f74309c8"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "7f245bfc81d1fce47bd90cb0d4acbfeef1758fd9a0a83dedef894d7957a4d22d"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c6829af28e94c6c4d99bb45b8da12b25",
+      "review-id": "e-apm-promotion-review-ea9aa2ca095d98b2f94246e7ebef217b",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "317a0748362ee9b3812430e81f8e15da17cfed414bcf5fe3caeb55b088ab6f02"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "bd12caef3b7892db9c4039903aa15dddbb1ae18e7431db0f2419eaefece62782"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-dd439641b7ae94b9718b04b911810116",
+      "review-id": "e-apm-promotion-review-3cc32161527e6d0ef904b3c02d8ee7c2",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a0e15a52548209c5203c62f5b2d93d059851517e025ddc72e1bf22347db0e9ce"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2e59d16f1efaa1cb753f869d3ddc618524f6f850c9a0f476e86c53e1e45dbaf9"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-e86cbdf99609170f05ed5e4efad566d0",
+      "review-id": "e-apm-promotion-review-0330de6319d28686ff70bfe0580773cb",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2161ae93716c33dbf6bd75f6f638295d55473eb0346aef9764bf1a6de804f82e"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "c0c7f263ce5905e3f3757b60ab8a9e64c97b909c7bbaf8a7ad4a78d4e7b303de"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-5e409b13ff2b412647e0ea216db92942",
+      "review-id": "e-apm-promotion-review-5f33a8e8815084c20a5e8caec86969e6",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "8ed51f2e24cd37940fd3aa512b30035ee1d4ec7cce3c3724e00d015283ab7817"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "3ba99ba188bb8da5fa8ec6dce70206d55b59eca0d9f42ede3443b5100d42ae16"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-9113e965613995bb0b7cffde3199c09a",
+      "review-id": "e-apm-promotion-review-a30d0c6591148fc538b993cd1ee967ec",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "4b44a0b56342f8fd2b616d5e0a5013c664d09c823887bb58a03c3e700dad72e4"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "c82d60a376e6210eec2bf8da1260d1a808fd4dd07154983c843fbed806460819"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-a5ed78d13c16922c619929addedbb69a",
+      "review-id": "e-apm-promotion-review-f278af6fcd9508cd38ac25a4f7ed3483",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "cefc2cc3bebb22a49e893ea80ff488c78565b4cea8a963d23512c3e588ec4f78"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "28ddf133e1958fece268fe7d6f0e3cf5b75200a64bbd4cc7b9df3289a3119b00"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c190ea66730dda78e6fac0e499491b2a",
+      "review-id": "e-apm-promotion-review-5bb6f5185ceb720449a2f502dc3c788d",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "5bc61ac36b86bba9e3c8b258572a253a20c673f859d1a2945c96ff53fe1ee131"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "dd6a45b68b149de3b0c73895ac628c805a8b335e2e071ae8e9ebb4429bfe4320"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c5059003df137092da1e694879c0c8ad",
+      "review-id": "e-apm-promotion-review-0094c2811998f35fd2d1b6d41215de4a",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "327a2e6f2ebb3db89e40316dbf6bb941f99a2ebeaa7f4c12a5de80f6e5c8160b"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "0e98db185814051e7a2b7ff607b8d3834af746adc4dc5446b7bd8f0653aab4bb"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-4601b53fb1dab7e4656b11410364e7cf",
+      "review-id": "e-apm-promotion-review-965c282e5bf1e09edfc3e42069da4922",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "61a8350d00b8ca9ee20956ffb9d34c830c7b8b38659335338fbee5a50dd96cea"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "83e2e3621753417c9d6e5eed5cc75823072584be42e8bcbb21afe4dbb9574d96"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-4ca1e8109517bf7b072a90dd8080cf9b",
+      "review-id": "e-apm-promotion-review-97b7bbe136dd9c16406b21de09697de3",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "97c23d3957d0c9f3111a9794bb3b523d872c62e2485467c1a0747730366c47ad"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "e88212e0a90da1f3e86590fdfc9592f75ba6673647f8980aa95fae506d2db835"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-87693595a51aee77dc0fdef39db02b58",
+      "review-id": "e-apm-promotion-review-d173642b49c8a4bbbffaba4ffcd5494b",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "1650e7bb6d61d40bf92c8876e3ee9565addb71d1f4e01fb211b1a735c7261431"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "8822c75de8da5cc69afcf629992a58f14e529e553b563f6c2ec70cb8b5471de6"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-c55b3c2b9a28e7fe90b0681a40e97223",
+      "review-id": "e-apm-promotion-review-531a41b6c807b75be4329ddff019a204",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "e78117c5ac3aaea56d2382dd36166548f4b8a6a94d56d03d84543cc9cf5a68e8"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "5d3c4967e01728a2a4c4c7576bc50575b49082d87eec64f15be2cf421ae52a43"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-011cd8483b4a4725a4459fa573b61057",
+      "review-id": "e-apm-promotion-review-437f93c9f332f3c8a042e3224b11fa93",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "b5649caa8379e63501b8fb4db4b4632021c7ff0ee05592190149085d0fb2c031"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a7d0e6128abea9b12922b8042460a8b5f264bb2d5f583d8f5f22281b1ebcc7c3"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-2a4e2e171e4fec989ec62907b08b1c53",
+      "review-id": "e-apm-promotion-review-bcc234f31033bd384541344657a70dc8",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2831d294bb5aeb32793bb19f7b1c19830e5ffe4079cc67b38d6622b517c40d0e"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "fc82c29762caed0886f25e5ab902eb11eb8e772da80eece71851009653710add"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-442f1ab7683c3685e2232135f161830e",
+      "review-id": "e-apm-promotion-review-88c870128e94c1c4514b95686710cd59",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "8afe7d4288a35c39064562eae236758182da6a350cdafdc3737fb0d3410a7ba6"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "52072acb28c42ab3ff78317e70cbfcb5f9e06eaa4829ed410f891dd6d942b947"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-6b404541e14225c7dc186612ed7b8431",
+      "review-id": "e-apm-promotion-review-16e41ea78eb79f8088337d818c3dc511",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "aac67480be4156499cff07d08c4cfe5173e266f13e4abfcc191848b32027d6eb"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "9952002bbcda724a6d5512442993331a1bec674ac50ebe6d16caad6193ce7bb3"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-85dbc00591b826f9e864e698a4175a92",
+      "review-id": "e-apm-promotion-review-0c996094186c197d78e0ea5e4d9b64fc",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a975883066d91f2310f9565c2f67bd317f40b2dfc3dfd2f22b13e14c8ca70288"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a89a21c1fbeee986febd30e4975832643273f74286b36ff71992a801627d3ddd"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-faa280c92bd833ed990672c3b7007a78",
+      "review-id": "e-apm-promotion-review-81028ef93d5b2cb548506853397b60d3",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2563e809218a918cbc9547f29268209dbaa46a66df2fdf8204fdfe09c99a604f"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "138dbad2299e88c0a529e809a5e3a8474d893c2414c670f29ef2a3d8e843cd41"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-088a6beb590d213cf2a82037a2ac91c0",
+      "review-id": "e-apm-promotion-review-bf6d830b8cda685d6245892ff939eecd",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "497bb89953fe02ca953f5b6c0b5003f7562f506678fb425b8a3bf330cadd20b4"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "fbf86d470dcd4bb6ef5fc5deee1c6d30b3b3f513a298a315180f261d2b933eb8"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-2a2d5753d4013b31ff0bb8909d8f350e",
+      "review-id": "e-apm-promotion-review-bc57b6873d91975cfaa9a7a41b7e9233",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "535b48cabb47c89272f3add5fb8f4688194d66a1585ac34558cbc2d69433ea32"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f1c9e13731aeba0f9144b4a62c1c696208c7647d1cd8e400d52e45eda10e7bed"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-a2c13a611d0b62d8d7755fd1ccb27cef",
+      "review-id": "e-apm-promotion-review-0ec7d721bdcef83d3858d827694d6294",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "2f2a8d6c079e64c6940f4e71c7dd3083fb73852ed3fbed2392f3044a3f648a1e"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a782fe25d787461691a7203fc5bb94f3ce85eb75abb37ec6a6be7f64876bba90"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-adce0d81ddd1d90df4d88305db81ff89",
+      "review-id": "e-apm-promotion-review-5f14423a8f4304a7a3c23d5a3136c49b",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "f6e83c407338bd4f2614862aaf600563f3c8d4fdb5daf36fc66618ef22ab4c31"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "65de01c55902303d83860b5579a953d104428bdb652aceff66bfdcb352a12b0a"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-bea39f55407c3c2ddea71ecbafe2954b",
+      "review-id": "e-apm-promotion-review-391164786b29bd823e411c0181088ef1",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a8009751151ab204ef024b6bc281ba6abebb7237ad8db0867a321dcf5f7d4e31"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "cda6702234f512ba6cb5db93064e411311d21228a5462721dc5df7d6bb804a35"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-daf15b1482f39239f5c960a893725c73",
+      "review-id": "e-apm-promotion-review-75b84a40f0824a584cacfedb673b35e1",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "bf33517913d040f091febc092b850c9b0cc4b5bc308297db2c9a80d1b1aab2d1"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "a1ce306ac4c82ddef679260f6ccbf6ceb0c0505320f00ede733dcbf0ea1a76dd"
+      }
+    },
+    {
+      "memory-id": "e-apm-promotion-f5191209ef638b6622c3c6244dbdd61b",
+      "review-id": "e-apm-promotion-review-a0c165ae3ee75680f0480e8f19f8120d",
+      "memory": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "665d91b03fd89c6dbb9bd397abdfcc9d223c81851cee562aae84561006cbcee9"
+      },
+      "review": {
+        "id-matches": true,
+        "author-matches": true,
+        "body-present": true,
+        "response-sha256": "749e0a9b769f11941f494c8290170fb2595a91cf3eddf636a728286371a033a2"
+      }
+    }
+  ]
+}
