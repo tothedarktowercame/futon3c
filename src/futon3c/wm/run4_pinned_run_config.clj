@@ -52,12 +52,13 @@
               (= #{:adapter :path :sha256} (set (keys (:kernel fold)))))
          (= #{:enabled?} (set (keys fold))))))
 
-(defn- normalized-ref [config-ref requested]
+(defn- normalized-ref [requested]
   (when-not (and (string? requested) (not (str/blank? requested))
                  (not (.isAbsolute (io/file requested))))
     (refuse! :config-artifact-reference-invalid))
-  (let [parent (.getParentFile (io/file config-ref))]
-    (.toString (.normalize (.toPath (io/file (or parent (io/file ".")) requested))))))
+  ;; c-fold/resolve-opts has already resolved the config-relative reference.
+  ;; Normalize that reference once; authority checking remains in read-text.
+  (.toString (.normalize (.toPath (io/file requested)))))
 
 (defn load!
   "Load CONFIG-PIN via READ-TEXT and return a finite map of full-loop options."
@@ -77,7 +78,7 @@
     (let [reader (fn [requested]
                    (read-text (if (= requested path)
                                 path
-                                (normalized-ref path requested))))
+                                (normalized-ref requested))))
           materialized (try
                          (c-fold/resolve-opts (:runner-options sheet) path reader)
                          (catch clojure.lang.ExceptionInfo e

@@ -1,25 +1,6 @@
 (ns futon3c.wm.u88-trial-packet-test
-  "Fixture-scope validation of the U88 trial-1 packet's futon3c half.
-
-   Findings encoded here:
-   - GAP (documented, not routed around): pinned-config/load! wraps the
-     injected read-text with a SECOND parent-relative normalization
-     (run4_pinned_run_config.clj normalized-ref), while
-     c-fold-config/resolve-opts ALREADY resolves seed/kernel refs relative to
-     the config path's parent. With a config pin whose path has a directory
-     component, the enabled c-fold path double-resolves and refuses
-     (:c-fold-materialization-refused {:cause :unreadable-source}). The same
-     ruled sheet materializes correctly through resolve-opts directly, so the
-     ruled C-fold-ON flag is supported by the consumer; the strict loader's
-     reader-wrapping is the defect. The existing run4-pinned-run-config tests
-     never exercise :enabled? true with seed/kernel refs, which is why this
-     survived.
-   - The frozen series manifest passes the REAL series-controller preflight
-     with a stubbed prepare-trial built on the futon2 task-pin validator over
-     a disposable OPEN mission copy.
-
-   Nothing here is a live-valid pin, a dispatch, or an activation; no
-   credentials or output runtime stores are involved."
+  "Fixture-scoped U88 packet validation; C-fold references resolve once.
+   No live-valid pin, dispatch, credentials or activation is claimed."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -76,17 +57,15 @@
     (is (:disposition-kernel opts))
     (is (:c-fold-provenance opts))))
 
-(deftest strict-loader-enabled-c-fold-gap-is-typed-not-silent
-  ;; The strict pinned-config loader double-resolves on the enabled path.
-  ;; This asserts the TYPED refusal so the gap is visible until fixed; the
-  ;; ruled flag is NOT dropped from the sheet to make the loader happy.
-  (let [reason (try (pinned-config/load!
-                     {:path run-config-path
-                      :sha256 (c-fold/sha256 (read-text run-config-path))}
-                     read-text)
-                    nil
-                    (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))]
-    (is (= :c-fold-materialization-refused reason))))
+(deftest strict-loader-enabled-c-fold-resolves-once
+  (let [opts (pinned-config/load!
+               {:path run-config-path
+                :sha256 (c-fold/sha256 (read-text run-config-path))}
+               read-text)]
+    (is (true? (:ruled-outcome-c-enabled? opts)))
+    (is (:seeded-c opts))
+    (is (fn? (:disposition-kernel opts)))
+    (is (:c-fold-provenance opts))))
 
 (deftest pinned-config-refuses-drift
   (let [drift (fn [path]
