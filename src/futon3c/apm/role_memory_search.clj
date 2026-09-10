@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.memory-access-gate :as access-gate]
+            [futon3c.apm.memory-caption-store :as caption-store]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.peripheral.memory-recall :as recall])
   (:import (java.nio.file Files StandardCopyOption)
@@ -131,6 +132,37 @@
 (defn receipt [receipt-id]
   (let [file (receipt-path receipt-id)]
     (when (.isFile file) (edn/read-string (slurp file)))))
+
+(defn observe-applicability!
+  "Persist one Student-authored observation tied to an actual search receipt.
+  The observation is append-only and cannot publish a caption revision."
+  ([job-id token observation]
+   (observe-applicability! job-id token observation {}))
+  ([job-id token observation ports]
+   (let [authenticated (submission/authenticate job-id token)]
+     (if-not (:ok authenticated)
+       authenticated
+       (caption-store/admit-observation!
+        (:authority authenticated) observation
+        (assoc ports :fetch-search-receipt receipt))))))
+
+(defn propose-caption!
+  "Persist a Scribe caption proposal; it remains unsearchable until review."
+  ([job-id token caption] (propose-caption! job-id token caption {}))
+  ([job-id token caption ports]
+   (let [authenticated (submission/authenticate job-id token)]
+     (if-not (:ok authenticated)
+       authenticated
+       (caption-store/admit-caption! (:authority authenticated) caption ports)))))
+
+(defn review-caption!
+  "Persist an independent Promotion Proctor caption decision."
+  ([job-id token review] (review-caption! job-id token review {}))
+  ([job-id token review ports]
+   (let [authenticated (submission/authenticate job-id token)]
+     (if-not (:ok authenticated)
+       authenticated
+       (caption-store/review-caption! (:authority authenticated) review ports)))))
 
 (defn recorded-result-ids-for-job
   "Return result ids from content-address-valid receipts recorded for JOB-ID.

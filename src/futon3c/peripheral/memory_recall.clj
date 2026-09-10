@@ -7,6 +7,7 @@
    warrant."
   (:require [clojure.string :as str]
             [futon2.aif.memory-contract :as memory-contract]
+            [futon3c.apm.memory-caption-store :as caption-store]
             [futon3c.evidence.store :as evidence-store]
             [futon3c.substrate.client :as substrate]))
 
@@ -327,7 +328,8 @@
   [search-result limit]
   (->> (:results search-result)
        (filter #(or (= :memory (get-in % [:entry :evidence/type]))
-                    (pattern-description-row? %)))
+                    (pattern-description-row? %)
+                    (caption-store/caption-row? %)))
        (take limit)
        vec))
 
@@ -461,6 +463,30 @@
     {:proposals proposals
      :validation batch}))
 
+(defn- proposals-from-caption-rows
+  [domain bounded-limit recall-batch-fn rows trace-id resolve-caption-rows]
+  (let [resolved (resolve-caption-rows rows)
+        memory-ids (->> resolved (map :memory/id) distinct vec)
+        batch (when (seq memory-ids)
+                (recall-batch-fn {:domain domain} memory-ids
+                                 {:limit bounded-limit :trace-id trace-id}))
+        recall-by-memory (into {} (map (juxt :endpoint identity)) (:recalls batch))
+        matches
+        (->> resolved
+             (keep (fn [caption]
+                     (some-> (first (:memories
+                                     (get recall-by-memory (:memory/id caption))))
+                             (assoc :via :caption-match
+                                    :caption/id (:caption/id caption)
+                                    :caption/version (:caption/version caption)
+                                    :caption/text (:caption/text caption)
+                                    :caption/epistemic-status
+                                    (:caption/epistemic-status caption)
+                                    :caption/review-id (:caption/review-id caption)
+                                    :content-match/score (:fts-score caption)))))
+             (take bounded-limit) vec)]
+    {:content-matches matches :validation batch}))
+
 (defn- merge-proposals
   [& proposal-maps]
   (apply
@@ -472,23 +498,39 @@
    proposal-maps))
 
 (defn- proposals-from-search-rows
-  [domain bounded-limit recall-batch-fn rows trace-id]
+  [domain bounded-limit recall-batch-fn rows trace-id resolve-caption-rows]
   (let [memory-rows
         (filterv #(= :memory (get-in % [:entry :evidence/type])) rows)
         description-rows (filterv pattern-description-row? rows)
+        caption-rows (filterv caption-store/caption-row? rows)
         memory-result
         (proposals-from-rows
          domain bounded-limit recall-batch-fn memory-rows trace-id)
         description-result
         (proposals-from-description-rows
-         domain bounded-limit recall-batch-fn description-rows trace-id)]
+         domain bounded-limit recall-batch-fn description-rows trace-id)
+        caption-result
+        (proposals-from-caption-rows
+         domain bounded-limit recall-batch-fn caption-rows trace-id
+         resolve-caption-rows)]
     {:proposals (merge-proposals (:proposals memory-result)
                                  (:proposals description-result))
-     :content-matches (:content-matches memory-result)
+     :content-matches
+     (->> (concat (:content-matches caption-result)
+                  (:content-matches memory-result))
+          (reduce (fn [{:keys [seen items] :as acc} memory]
+                    (if (contains? seen (:memory/id memory))
+                      acc
+                      {:seen (conj seen (:memory/id memory))
+                       :items (conj items memory)}))
+                  {:seen #{} :items []})
+          :items (take bounded-limit) vec)
      :memory-row-count (count memory-rows)
      :description-row-count (count description-rows)
+     :caption-row-count (count caption-rows)
      :validation {:memories (:validation memory-result)
-                  :descriptions (:validation description-result)}}))
+                  :descriptions (:validation description-result)
+                  :captions (:validation caption-result)}}))
 
 (defn- batch-audit
   [batch]
@@ -510,7 +552,7 @@
   ([ctx query] (propose-patterns-by-query ctx query {}))
   ([{:keys [domain]}
     query
-    {:keys [limit search-evidence recall-batch-fn trace-id]
+    {:keys [limit search-evidence recall-batch-fn trace-id resolve-caption-rows]
      :or {limit 10}}]
    (when-not (and (keyword? domain)
                   (string? query)
@@ -523,6 +565,8 @@
          bounded-limit (long (min max-limit limit))
          search-evidence (or search-evidence substrate/evidence-text-search)
          recall-batch-fn (or recall-batch-fn recall-by-endpoints)
+         resolve-caption-rows (or resolve-caption-rows
+                                  caption-store/resolve-search-rows)
          ;; FTS indexes all evidence, so boundedly overfetch before retaining
          ;; memory or typed pattern-description entries. This avoids spending
          ;; graph reads on transcripts that quote the query while preserving a
@@ -534,7 +578,8 @@
          primary-rows (proposal-search-rows search-result bounded-limit)
          primary-result
          (proposals-from-search-rows
-          domain bounded-limit recall-batch-fn primary-rows trace-id)
+          domain bounded-limit recall-batch-fn primary-rows trace-id
+          resolve-caption-rows)
          primary-proposals (:proposals primary-result)
          primary-content-matches (:content-matches primary-result)
          primary-hit? (or (seq primary-proposals)
@@ -553,7 +598,8 @@
          fallback-proposal-result
          (when fallback-result
            (proposals-from-search-rows
-            domain bounded-limit recall-batch-fn fallback-rows trace-id))
+            domain bounded-limit recall-batch-fn fallback-rows trace-id
+            resolve-caption-rows))
          proposals
          (if primary-hit?
            primary-proposals
@@ -580,6 +626,7 @@
       (or (:description-row-count
            selected-result)
           0)
+      :checked-caption-count (or (:caption-row-count selected-result) 0)
       :query-strategy (if primary-hit?
                         :full-query
                         :bounded-token-disjunction)
@@ -592,14 +639,19 @@
        {:memories
         (batch-audit (get-in primary-result [:validation :memories]))
         :descriptions
-        (batch-audit (get-in primary-result [:validation :descriptions]))}
+        (batch-audit (get-in primary-result [:validation :descriptions]))
+        :captions
+        (batch-audit (get-in primary-result [:validation :captions]))}
        :fallback
        {:memories
         (batch-audit
          (get-in fallback-proposal-result [:validation :memories]))
         :descriptions
         (batch-audit
-         (get-in fallback-proposal-result [:validation :descriptions]))}}
+         (get-in fallback-proposal-result [:validation :descriptions]))
+        :captions
+        (batch-audit
+         (get-in fallback-proposal-result [:validation :captions]))}}
       :timing
       {:primary-fts-ms primary-fts-ms
        :primary-validation-ms
