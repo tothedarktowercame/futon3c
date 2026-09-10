@@ -22,7 +22,9 @@ represented in the upstream census; they do not create synthetic caption rows.
 
 ## Candidate record semantics
 
-`cohort-57.edn` contains one append-only proposal per audited memory. Each row
+`cohort-57.edn` contains one append-only `:apm-memory-caption-v1` proposal per
+audited memory, accompanied by proposed
+`:apm-memory-applicability-observation-v1` records. Each row
 binds:
 
 - the immutable memory ID and original content digest;
@@ -33,12 +35,18 @@ binds:
 - every accepted later-use event in the frozen fingerprint audit that names the
   cohort memory.
 
-The caption is `:supported` only as a description of the original reviewed
+The field names follow the Job A discovery contract in
+`TN-memory-caption-jobA-consumer-trace-2026-09-10.md`. They remain an engineering
+proposal until the reviewed apparatus admits them. The caption is `:supported`
+only as a description of the original reviewed
 memory. It does not say the memory closed its whole source problem. No new
 prerequisite was inferred: the condition record is deliberately `:unknown`
 instead of translating an unchecked condition into a claim that it is absent.
 
-Later-use observations preserve the audit's limits. `:fingerprinted` becomes a
+Conditions are an empty vector with the explicit disposition
+`:none-authored-no-absence-inferred`; this records that this slice did not add
+condition claims and does not assert that prerequisites are absent. Later-use
+observations preserve the audit's limits. `:fingerprinted` becomes a
 `:supported` observation because rare memory tokens occur in retained attempt
 source. `:already-in-base`, `:unwitnessed`, `:no-source`, and
 `:not-adjudicable-by-token` remain `:unknown`, with the original verdict and an
@@ -74,7 +82,9 @@ The upstream evidence authorities are:
 The generator checks exact 57-member identity against `readback.json`, unique
 IDs, membership in the historical union, retained source-attempt references,
 independent-review fields, and positive caption wording. Generated data is
-deterministic from committed snapshots and audit artifacts.
+deterministic from committed snapshots and audit artifacts. It also checks that
+the proposed searchable text (useful-when plus scope limit) is at most 1,024
+UTF-8 bytes and refuses oversize records rather than truncating them.
 
 ## Resume boundary
 
