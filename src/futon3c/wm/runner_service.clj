@@ -7,7 +7,8 @@
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [futon3c.agency.registry :as reg])
+            [futon3c.agency.registry :as reg]
+            [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.time Instant]
            [java.util UUID]
            [java.nio ByteBuffer]
@@ -36,6 +37,9 @@
 
 (def ^:dynamic *click-run-binding-dir*
   "/home/joe/code/futon3c/data/wm-click-run-bindings")
+
+(def ^:dynamic *run4-terminal-projection-dir*
+  "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
 
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
@@ -209,7 +213,9 @@
 
 (defn- persist-click-run-binding!
   [click-id result]
-  (let [run-id (:run/id result)
+  (let [terminal-projection (run4-terminal/persist!
+                             *run4-terminal-projection-dir* click-id result)
+        run-id (:run/id result)
         run-record-path (:run-record result)
         run-record (when run-record-path
                      (try (edn/read-string (slurp run-record-path))
@@ -256,7 +262,10 @@
                           :identity-mismatch :run-record-identity-mismatch))
 
                  (seq duplicate-clicks)
-                 (assoc :duplicate-of-clicks duplicate-clicks))
+                 (assoc :duplicate-of-clicks duplicate-clicks)
+
+                 terminal-projection
+                 (assoc :run4/terminal-projection terminal-projection))
         target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
         tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
         renamed? (volatile! false)]
