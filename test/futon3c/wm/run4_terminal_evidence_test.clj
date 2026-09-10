@@ -93,6 +93,20 @@
                (is (= (digest/sha256 (pr-str projection))
                       (:evidence-id value)))))))
 
+(deftest validated-bundle-retains-exact-run-route-and-source-digests
+  (fixture
+   (fn [{:keys [roots projection run-file]}]
+     (let [bundle (sut/read-terminal-evidence-bundle roots request started)]
+       (is (= :wm/run4-terminal-evidence-bundle-v1 (:schema bundle)))
+       (is (= (:identity request) (:identity bundle)))
+       (is (= "run-1" (get-in bundle [:run-record :run/id])))
+       (is (= [{:fromNode "R20" :toNode "R12" :via "observe"
+                :at_ (:started-at started)}]
+              (get-in bundle [:run-record :route])))
+       (is (= (digest/sha256 (slurp run-file)) (:run-record-digest bundle)))
+       (is (= (digest/sha256 (pr-str projection)) (:projection-digest bundle)))
+       (is (= :succeeded (get-in bundle [:classification :task-result])))))))
+
 (deftest read-only-port-is-the-series-controller-boundary
   (fixture
    (fn [{:keys [roots]}]

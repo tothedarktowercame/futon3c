@@ -277,10 +277,11 @@
 
       :else nil)))
 
-(defn read-terminal-evidence
-  "Read and join the exact durable artifacts for STARTED. Missing terminal
-  producer artifacts return nil; malformed or conflicting artifacts refuse.
-  ROOTS requires :admission, :bindings, :projections and :run-records."
+(defn read-terminal-evidence-bundle
+  "Read the joined durable evidence once and retain its exact run record and
+  captured source identities for conformance/acceptance consumers. Missing
+  terminal producer artifacts return nil; malformed/conflicting artifacts
+  refuse. This function does not itself grant acceptance."
   [{:keys [admission bindings projections run-records] :as roots}
    admission-request started]
   (when-not (and (map? roots) (map? admission-request) (map? started)
@@ -300,8 +301,25 @@
                      (= (:series-id identity) (:series-id pin))
                      (= (:trial-id identity) (:trial-id pin)))
         (refuse! :task-pin-binding-mismatch))
-      (read-run-record! run-records binding projection)
-      (classify projection (:run4/terminal-projection binding)))))
+      (let [run-record (read-run-record! run-records binding projection)
+            classification (classify projection (:run4/terminal-projection binding))]
+        {:schema :wm/run4-terminal-evidence-bundle-v1
+         :identity (:identity admission-request)
+         :attempt-id (:attempt-id admission-request)
+         :started started
+         :click-run-binding
+         (select-keys binding [:click/id :attempt/id :outcome :run-id-observation
+                               :recorded-at])
+         :projection-digest (get-in binding [:run4/terminal-projection :sha256])
+         :run-record-digest (get-in projection [:source :run-record-sha256])
+         :run-record run-record
+         :classification classification}))))
+
+(defn read-terminal-evidence
+  "Backward-compatible classification view of read-terminal-evidence-bundle."
+  [roots admission-request started]
+  (some-> (read-terminal-evidence-bundle roots admission-request started)
+          :classification))
 
 (defn terminal-evidence-port [roots prepared-by-ordinal]
   (fn [started]
