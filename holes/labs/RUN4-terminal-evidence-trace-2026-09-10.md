@@ -78,3 +78,6 @@ terminal states to the series vocabulary (`:succeeded`, `:failed`, `:blocked`,
 and infrastructure `:unsafe`). Until that mapping is commissioned, a consumer
 may prove `:grounded-change -> :succeeded` but must leave all other outcomes
 indeterminate/refused rather than advancing the series.
+
+Trace finalized after rechecking the post-concurrency tree; no consumer or
+producer code was changed in this packet.
