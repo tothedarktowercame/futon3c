@@ -138,9 +138,11 @@
                                      (:run-record-root series)))))
                  :terminal-evidence terminal-port})]
     (when (true? (:visibility-enabled? series))
-      (let [observation (visibility/observe
+      (let [lifecycle (controller/read-lifecycle!
+                       (:controller-root series) manifest-text @prepared)
+            observation (visibility/observe
                          (:controller-root series) manifest-text terminal-port
-                         (str (java.time.Instant/now)))]
+                         (str (java.time.Instant/now)) lifecycle)]
         (visibility/publish! (io/file (:visibility-root series) "run-visibility.json")
                              observation)))
     (assoc result :run4/series true)))

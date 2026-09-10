@@ -98,3 +98,24 @@
                 (:reason (try (sut/observe (.getPath r) text (constantly nil) now) nil
                               (catch clojure.lang.ExceptionInfo e (ex-data e))))))
          (finally (clean! r)))))
+
+(deftest validated-not-attempted-lifecycle-is-visible-and-not-success
+  (let [r (temp-root) text (pr-str manifest)
+        terminal {:schema :wm/run4-series-terminal-v1 :series-id "RUN4-test"
+                  :manifest-sha256 (digest/sha256 text) :ordinal 1 :trial-id :outer
+                  :attempt-id "attempt-1" :pin-sha256 pin :task-result :not-attempted
+                  :infrastructure :unsafe :reason :busy-admission-rejected}
+        lifecycle {:schema :wm/run4-series-lifecycle-view-v1 :series-id "RUN4-test"
+                   :manifest-sha256 (digest/sha256 text)
+                   :trials [{:ordinal 1 :trial (first (:trials manifest))
+                             :started nil :terminal terminal}]}]
+    (try
+      (write! (io/file r "series.edn") (base text))
+      (write! (io/file r "001-terminal.edn") terminal)
+      (let [v (sut/observe (.getPath r) text (constantly nil) now lifecycle)
+            target (io/file r "run-visibility.json")]
+        (sut/publish! target v)
+        (is (= ["blocked" "blocked"] ((juxt :stage :result) v)))
+        (is (= "busy admission rejected" (get-in v [:trials 0 :blocked_reason])))
+        (is (= "blocked" (:stage (json/parse-string (slurp target) true)))))
+      (finally (clean! r)))))

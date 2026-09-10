@@ -26,6 +26,10 @@
 
 (def manifest-text (pr-str manifest))
 
+(defn prepared-map [ports]
+  (into {} (map (fn [trial] [(:ordinal trial) ((:prepare-trial ports) trial)]))
+        (:trials manifest)))
+
 (defn delete-tree! [root]
   (doseq [f (reverse (file-seq root))] (io/delete-file f true)))
 
@@ -75,6 +79,10 @@
       (swap! terminals assoc 1 {:task-result :blocked :infrastructure :unsafe
                                 :evidence-id "infra-stop"})
       (is (= :infrastructure-stopped (:status (sut/step! root manifest-text ports))))
+      (let [view (sut/read-lifecycle! root manifest-text (prepared-map ports))]
+        (is (= :wm/run4-series-lifecycle-view-v1 (:schema view)))
+        (is (= [:blocked :not-attempted :not-attempted :not-attempted]
+               (mapv (comp :task-result :terminal) (:trials view)))))
       (is (= 1 (count @clicks)))
       (is (= :infrastructure-stopped (:status (sut/step! root manifest-text ports))))
       (doseq [ordinal (range 2 5)]
@@ -231,3 +239,20 @@
         (is (= :not-attempted
                (:task-result (read-string
                               (slurp (io/file root "001-terminal.edn"))))))))))
+
+(deftest lifecycle-view-joins-busy-admission-and-refuses-orphan-stop
+  (with-controller
+    (fn [root ports clicks _]
+      (let [busy-ports (assoc ports :click!
+                              (fn [opts] (swap! clicks conj opts)
+                                {:rejected :already-running :click-id "other"}))]
+        (sut/step! root manifest-text busy-ports)
+        (let [view (sut/read-lifecycle! root manifest-text (prepared-map ports))]
+          (is (= :busy-admission-rejected
+                 (get-in view [:trials 0 :terminal :reason])))
+          (is (= :prior-infrastructure-stop
+                 (get-in view [:trials 1 :terminal :reason]))))
+        (io/delete-file (io/file root "001-terminal.edn"))
+        (is (= :orphan-prior-stop-marker
+               (:reason (try (sut/read-lifecycle! root manifest-text (prepared-map ports)) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))

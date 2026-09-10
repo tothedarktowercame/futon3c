@@ -75,22 +75,26 @@
       (refuse! :invalid-terminal {:ordinal (:ordinal trial)}))
     v))
 
-(defn- trial-view [manifest manifest-sha root terminal-evidence observed-at trial]
+(defn- trial-view [manifest manifest-sha root terminal-evidence observed-at trial lifecycle-row]
   (let [prefix (format "%03d" (:ordinal trial))
-        started (some-> (parse-one-file (io/file root (str prefix "-started.edn")) :started)
-                        (started! manifest manifest-sha trial))
-        terminal (some-> (parse-one-file (io/file root (str prefix "-terminal.edn")) :terminal)
-                         (terminal! manifest manifest-sha trial))
+        started (or (:started lifecycle-row)
+                    (some-> (parse-one-file (io/file root (str prefix "-started.edn")) :started)
+                            (started! manifest manifest-sha trial)))
+        terminal (or (:terminal lifecycle-row)
+                     (some-> (parse-one-file (io/file root (str prefix "-terminal.edn")) :terminal)
+                             (terminal! manifest manifest-sha trial)))
         evidence (when started (terminal-evidence started))
         _ (when (and terminal (not= :not-attempted (:task-result terminal))
                      (not= (select-keys terminal [:task-result :infrastructure :evidence-id]) evidence))
             (refuse! :terminal-evidence-conflict {:ordinal (:ordinal trial)}))
         [stage result reason]
         (cond
-          ;; These controller markers need their admission/predecessor lifecycle
-          ;; join.  The terminal consumer currently joins attempted trials only.
-          (= :not-attempted (:task-result terminal))
+          (and (= :not-attempted (:task-result terminal)) (nil? lifecycle-row))
           (refuse! :unsupported-not-attempted-join {:ordinal (:ordinal trial)})
+          (= :busy-admission-rejected (:reason terminal))
+          ["blocked" "blocked" "busy admission rejected"]
+          (= :prior-infrastructure-stop (:reason terminal))
+          ["blocked" "blocked" "prior unsafe infrastructure stop"]
           (= :succeeded (:task-result evidence)) ["complete" "passed" nil]
           (= :failed (:task-result evidence)) ["failed" "failed" nil]
           (= :blocked (:task-result evidence)) ["blocked" "blocked" "unsafe infrastructure"]
@@ -106,7 +110,9 @@
 (defn observe
   "Return nil when no enacted series-open evidence exists. MANIFEST-TEXT and its
   digest are frozen authority; TERMINAL-EVIDENCE must be the strict joined port."
-  [root manifest-text terminal-evidence observed-at]
+  ([root manifest-text terminal-evidence observed-at]
+   (observe root manifest-text terminal-evidence observed-at nil))
+  ([root manifest-text terminal-evidence observed-at lifecycle]
   (when-not (and (string? root) (string? manifest-text) (fn? terminal-evidence)
                  (instant? observed-at))
     (refuse! :invalid-input))
@@ -121,7 +127,13 @@
                      (= (count (:trials manifest)) (:trial-count open))
                      (seq (:trials manifest)))
         (refuse! :series-open-conflict))
-      (let [trials (mapv #(trial-view manifest manifest-sha root terminal-evidence observed-at %)
+      (when (and lifecycle
+                 (not= [(:series-id manifest) manifest-sha]
+                       [(:series-id lifecycle) (:manifest-sha256 lifecycle)]))
+        (refuse! :lifecycle-identity-mismatch))
+      (let [rows (into {} (map (juxt :ordinal identity) (:trials lifecycle)))
+            trials (mapv #(trial-view manifest manifest-sha root terminal-evidence observed-at %
+                                     (get rows (:ordinal %)))
                          (:trials manifest))
             stages (set (map :stage trials))
             [stage result reason]
@@ -137,7 +149,7 @@
                  :worker (get-in manifest [:casting :author])
                  :reviewer (get-in manifest [:casting :reviewer])
                  :result result :trials trials}
-          reason (assoc :blocked_reason reason))))))
+          reason (assoc :blocked_reason reason)))))))
 
 (defn publish!
   "Atomically publish a derived JSON observation. Nil observation writes nothing."

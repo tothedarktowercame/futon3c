@@ -211,6 +211,62 @@
                           {:task-result :not-attempted :infrastructure :unsafe
                            :reason reason}))))
 
+(defn read-lifecycle!
+  "Read and validate the controller's durable lifecycle without advancing it.
+  PREPARED-BY-ORDINAL contains the already trusted/preflighted trial values.
+  Busy and predecessor-stop markers are accepted only through the same joins
+  used by `step!`."
+  [root manifest-text prepared-by-ordinal]
+  (when-not (and (string? root) (map? prepared-by-ordinal))
+    (refuse! :invalid-lifecycle-input))
+  (let [root-file (.getCanonicalFile (io/file root))
+        key (.getPath root-file)
+        manifest (parse-one manifest-text)
+        manifest-sha256 (digest/sha256 manifest-text)
+        open (read-event (io/file root-file "series.edn") :wm/run4-series-open-v1)]
+    (when-not (and open
+                   (= {:schema :wm/run4-series-open-v1
+                       :series-id (:series-id manifest)
+                       :manifest-sha256 manifest-sha256
+                       :trial-count (count (:trials manifest))}
+                      open))
+      (refuse! :series-open-conflict))
+    {:schema :wm/run4-series-lifecycle-view-v1
+     :series-id (:series-id manifest)
+     :manifest-sha256 manifest-sha256
+     :trials
+     (loop [remaining (:trials manifest) unsafe-predecessor? false rows []]
+       (if-let [trial (first remaining)]
+         (let [ordinal (:ordinal trial)
+               prepared-trial (get prepared-by-ordinal ordinal)
+               started (some-> (read-event (event-file root-file ordinal :started)
+                                           :wm/run4-series-started-v1)
+                               (event-identity! trial))
+               terminal (some-> (read-event (event-file root-file ordinal :terminal)
+                                            :wm/run4-series-terminal-v1)
+                                (event-identity! trial))]
+           (when-not prepared-trial
+             (refuse! :missing-prepared-lifecycle-trial {:ordinal ordinal}))
+           (when (and started
+                      (not (started-event? started manifest-sha256 manifest trial)))
+             (refuse! :invalid-persisted-started {:ordinal ordinal}))
+           (when (and terminal
+                      (not (terminal-event? terminal manifest-sha256 manifest trial)))
+             (refuse! :invalid-persisted-terminal {:ordinal ordinal}))
+           (when started (started-admission! key prepared-trial started ordinal))
+           (when terminal
+             (if (= :prior-infrastructure-stop (:reason terminal))
+               (when-not (and unsafe-predecessor? (nil? started))
+                 (refuse! :orphan-prior-stop-marker {:ordinal ordinal}))
+               (terminal-lifecycle! key prepared-trial started terminal ordinal)))
+           (recur (next remaining)
+                  (or unsafe-predecessor?
+                      (and terminal (= :unsafe (:infrastructure terminal))
+                           (not= :prior-infrastructure-stop (:reason terminal))))
+                  (conj rows {:ordinal ordinal :trial trial
+                              :started started :terminal terminal})))
+         rows))}))
+
 (defn step!
   "Advance at most one durable boundary. Never starts a successor in the same call
   that records its predecessor terminal."
