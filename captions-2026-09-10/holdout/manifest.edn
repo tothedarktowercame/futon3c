@@ -1,0 +1,6 @@
+{:schema :apm-caption-holdout-seal/v1
+ :sealed-file-sha256 "cbbda4ffd0604022b9375891add8de0851d9a7e225d0f480b9b05d56b31b34bd"
+ :query-count 32
+ :category-counts {:clear-relevant 24
+                   :suggested-only 4
+                   :irrelevant-control 4}}
