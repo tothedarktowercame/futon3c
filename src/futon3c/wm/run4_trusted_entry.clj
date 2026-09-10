@@ -7,7 +7,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
-            [futon2.aif.run4-task-pin :as task-pin])
+            [futon2.aif.run4-task-pin :as task-pin]
+            [futon3c.wm.run4-pinned-run-config :as pinned-config])
   (:import [java.security MessageDigest]
            [java.util UUID]))
 
@@ -75,13 +76,18 @@
        (boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" value))))
 
 (defn- validate-pin [cfg pin-text]
-  (let [read-text (fn [ref]
-                    (if-let [f (authorized-file (:source-root cfg)
-                                                (:source-allowlist cfg) ref)]
-                      (slurp f)
-                      (throw (ex-info "RUN4 source refused"
-                                      {:reason :source-reference-refused
-                                       :ref ref}))))
+  (let [snapshots (atom {})
+        read-text (fn [ref]
+                    (if (contains? @snapshots ref)
+                      (get @snapshots ref)
+                      (if-let [f (authorized-file (:source-root cfg)
+                                                  (:source-allowlist cfg) ref)]
+                        (let [text (slurp f)]
+                          (swap! snapshots assoc ref text)
+                          text)
+                        (throw (ex-info "RUN4 source refused"
+                                        {:reason :source-reference-refused
+                                         :ref ref})))))
         ports {:read-text read-text
                :resolve-mission (:resolve-mission cfg)
                :action-admissible? (:action-admissible? cfg)}]
@@ -94,7 +100,7 @@
         {:refusal (refuse :run4-pin-invalid
                           {:reason :validation-failed})}))))
 
-(defn- prepared-options [cfg pin-text envelope ports attempt-id]
+(defn- prepared-options [cfg pin-text envelope ports runner-opts attempt-id]
   (let [pin-sha (digest/sha256 pin-text)
         used? (atom false)
         trust (fn [{:keys [pin-digest operator-selection]}]
@@ -115,7 +121,7 @@
       (refuse :run4-casting-mismatch)
       :else
       {:ok true
-       :opts (merge (:casting cfg)
+       :opts (merge runner-opts (:casting cfg)
                     {:run4-task-pin-text pin-text
                      :run4-task-pin-ports ports
                      :run4-trusted-boundary-fn trust})
@@ -155,7 +161,17 @@
               validation (validate-pin cfg pin-text)]
           (if-let [refusal (:refusal validation)]
             refusal
-            (prepared-options cfg pin-text (:envelope validation)
-                              (:ports validation)
-                              (:run4-attempt-id payload))))
+            (let [loaded
+                  (try
+                    {:opts
+                     (pinned-config/load! (get-in validation [:envelope :config-pin])
+                                          (get-in validation [:ports :read-text]))}
+                    (catch clojure.lang.ExceptionInfo e
+                      {:refusal
+                       (refuse :run4-pinned-config-invalid
+                               {:reason (:reason (ex-data e))})}))]
+              (or (:refusal loaded)
+                  (prepared-options cfg pin-text (:envelope validation)
+                                    (:ports validation) (:opts loaded)
+                                    (:run4-attempt-id payload))))))
         (refuse :run4-pin-reference-refused)))))

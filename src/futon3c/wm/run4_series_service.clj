@@ -8,7 +8,8 @@
             [clojure.string :as str]
             [futon3c.wm.run4-series-controller :as controller]
             [futon3c.wm.run4-terminal-evidence :as terminal]
-            [futon3c.wm.run4-trusted-entry :as trusted]))
+            [futon3c.wm.run4-trusted-entry :as trusted]
+            [futon3c.wm.runner-service :as runner]))
 
 (def allowed-request-keys #{:run4-series-ref})
 
@@ -107,7 +108,16 @@
                 {:read-text read-text
                  :prepare-trial prepare-trial
                  :click! (fn [opts]
-                           ((requiring-resolve 'futon3c.wm.runner-service/click!) opts))
+                           ;; click! captures these bindings before its daemon
+                           ;; thread starts, keeping producer and reader roots
+                           ;; identical across the asynchronous boundary.
+                           (binding [runner/*click-run-binding-dir*
+                                     (:binding-root series)
+                                     runner/*run4-terminal-projection-dir*
+                                     (:projection-root series)]
+                             (runner/click!
+                              (assoc opts :run-record-dir
+                                     (:run-record-root series)))))
                  :terminal-evidence (fn [started]
                                       ((terminal/terminal-evidence-port
                                         evidence-roots @prepared) started))})]

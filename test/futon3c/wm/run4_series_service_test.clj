@@ -3,6 +3,8 @@
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-runner :as full-runner]
+            [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
             [futon3c.wm.runner-service :as runner]))
 
@@ -30,7 +32,10 @@
                        "run4-series-service"
                        (make-array java.nio.file.attribute.FileAttribute 0)))
         source-text "eligible outer-loop issue\n"
-        config-text "{:mode :fixture-scoped}\n"
+        config-text (str (pr-str {:schema :wm/run4-pinned-run-config-v1
+                                  :runner-options {:cohort? false
+                                                   :accumulate-strategic-habit? false}
+                                  :c-fold {:enabled? false}}) "\n")
         pin {:schema :wm/run4-task-pin-v1
              :series-id "RUN4-eligible-issues" :trial-id :outer-loop-successor
              :series-order :as-declared
@@ -128,8 +133,15 @@
           (is (= 403 (:status ((http/make-handler cfg) (request payload {})))))
           (is (= 403 (:status ((http/make-handler cfg)
                               (request (assoc payload :ports {}) auth)))))
+          (is (= 403 (:status ((http/make-handler
+                                (assoc-in cfg [:run4 :admission-root]
+                                          (.getPath (io/file root "bindings"))))
+                               (request payload auth)))))
           (write! root "source.md" "drifted\n")
           (is (= 500 (:status ((http/make-handler cfg) (request payload auth)))))
+          (write! root "source.md" "eligible outer-loop issue\n")
+          (write! root "config.edn" "{:schema :mutated}\n")
+          (is (= 403 (:status ((http/make-handler cfg) (request payload auth)))))
           (is (zero? @clicks))
           (is (not (.exists (io/file root "controller" "eligible-attempt-1")))))))))
 
@@ -152,3 +164,78 @@
             (is (= "run4-terminal-evidence-refused" (:error body)))
             (is (= 1 @clicks))
             (is (not (.exists (io/file root "controller" "001-terminal.edn"))))))))))
+
+(deftest async-wrapper-persists-to-reader-roots-and-terminal-roundtrips
+  (with-service
+    (fn [root cfg]
+      (reset! runner/!status runner/initial-status)
+      (registry/reset-registry!)
+      (registry/register-agent!
+       {:agent-id {:id/value "war-machine" :id/type :apparatus}
+        :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}})
+      (let [handler (http/make-handler cfg)
+            payload {:run4-series-ref "series.edn"}
+            seen-opts (atom nil)
+            core
+            (fn [opts]
+              (reset! seen-opts opts)
+              (let [action {:type :advance-mission :target "M-outer-loop-successor"}
+                    judgment {:decision {:action {:type :no-op}}
+                              :ranked-actions [{:rank 1 :action action}]
+                              :admissible-actions [{:rank 1 :action action}]}
+                    selected (full-runner/resolve-pinned-selection
+                              opts judgment (select-keys opts (keys casting)))
+                    identity (:identity selected)]
+                {:attempt-id "worker-internal-attempt"
+                 :outcome :grounded-change
+                 :checkpoints
+                 {:selection {:judgment {:outcome :ok}
+                              :ground {:kind :wm-judgement :run4/task-pin identity}}
+                  :construction {:judgment {:run4/task-pin identity}
+                                 :ground {:kind :decision-pinned-construction
+                                          :run4/task-pin identity}}
+                  :dispatch {:judgment {:agent "codex-10" :availability :invoke-ready
+                                        :job-id "author-job-1"}
+                             :ground {:kind :agency-dispatch}}
+                  :build {:judgment {:commits ["commit-1"]
+                                     :validation
+                                     {:approved? true :review-job "review-job-1"
+                                      :review-gate {:required? true :executed? true
+                                                    :tool-events 2 :passed? true}}}
+                          :ground {:kind :git-commit-and-independent-review}}
+                  :adjudication
+                  {:judgment {:build-match {:commit "commit-1"
+                                            :review-approved? true}
+                              :dial {:moved? true :implementation-id "impl-1"}}
+                   :ground {:kind :authoritative-substrate-discharge}}}
+                 :data {:commit "commit-1"
+                        :author-job {:job-id "author-job-1"}
+                        :review-job {:job-id "review-job-1"}
+                        :witness {:resolved? true :dial-moved? true
+                                  :implementation-id "impl-1"}}
+                 :wm/route [{:node :R20 :via "scan" :at "2026-09-10T12:00:00Z"}
+                            {:node :R12 :via "select" :at "2026-09-10T12:00:01Z"}] }))]
+        (binding [full-runner/*wm-status-reporting?* false]
+          (with-redefs-fn
+            {#'full-runner/run-opportunity-core! core}
+            (fn []
+              (let [started-response (handler (request payload auth))
+                    started-body (json/parse-string (:body started-response) true)
+                    click-id (:click-id started-body)]
+                (is (= "trial-started" (:status started-body)))
+                (is (= :completed (:status (runner/await-click! click-id))))
+                (is (false? (:cohort? @seen-opts)))
+                (is (false? (:ruled-outcome-c-enabled? @seen-opts)))
+                (is (= (.getCanonicalPath (io/file root "run-records"))
+                       (.getCanonicalPath (io/file (:run-record-dir @seen-opts)))))
+                (is (.isFile (io/file root "bindings"
+                                      (str "click-run-binding-" click-id ".edn"))))
+                (is (.isFile (io/file root "projections"
+                                      (str "run4-terminal-projection-" click-id ".edn"))))
+                (is (seq (.listFiles (io/file root "run-records"))))
+                (let [terminal-response (handler (request payload auth))
+                      terminal-body (json/parse-string (:body terminal-response) true)]
+                  (is (= 200 (:status terminal-response)))
+                  (is (= "trial-terminal" (:status terminal-body)))
+                  (is (= "succeeded" (:task-result terminal-body)))
+                  (is (.isFile (io/file root "controller" "001-terminal.edn"))))))))))))

@@ -9,7 +9,11 @@
               :repair-reviewer "codex-1"})
 (def mission {:id "M-run4" :status-class :active})
 (def source-text "bounded task\n")
-(def config-text "{:run :RUN4}\n")
+(def config-text
+  (str (pr-str {:schema :wm/run4-pinned-run-config-v1
+                :runner-options {:cohort? false
+                                 :accumulate-strategic-habit? false}
+                :c-fold {:enabled? false}}) "\n"))
 
 (defn pin [overrides]
   (merge {:schema :wm/run4-task-pin-v1
@@ -63,6 +67,11 @@
             sha (digest/sha256 (:run4-task-pin-text opts))]
         (is (:ok result))
         (is (= casting (select-keys opts (keys casting))))
+        (is (false? (:cohort? opts)))
+        (is (false? (:accumulate-strategic-habit? opts)))
+        (is (false? (:ruled-outcome-c-enabled? opts)))
+        (is (= {:path "config.edn" :sha256 (digest/sha256 config-text)}
+               (:run4/config-pin opts)))
         (is (= source-text ((get-in opts [:run4-task-pin-ports :read-text])
                             "source.md")))
         (is (thrown? clojure.lang.ExceptionInfo
@@ -136,4 +145,12 @@
         (spit (io/file root "pin.edn")
               (pr-str (pin {:casting (assoc casting :author "zai-2")})))
         (is (= :run4-casting-mismatch
-               (:error (sut/prepare config auth request))))))))
+               (:error (sut/prepare config auth request)))))
+      (testing "unsupported but freshly repinned run config"
+        (let [bad "{:schema :invented :runner-options {} :c-fold {:enabled? false}}\n"]
+          (spit (io/file root "config.edn") bad)
+          (spit (io/file root "pin.edn")
+                (pr-str (pin {:config {:path "config.edn"
+                                      :sha256 (digest/sha256 bad)}})))
+          (is (= :run4-pinned-config-invalid
+                 (:error (sut/prepare config auth request)))))))))

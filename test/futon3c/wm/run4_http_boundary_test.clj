@@ -19,7 +19,9 @@
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
                        "run4-http" (make-array java.nio.file.attribute.FileAttribute 0)))
         source "task\n"
-        config-text "{:run :RUN4}\n"
+        config-text (str (pr-str {:schema :wm/run4-pinned-run-config-v1
+                                  :runner-options {:cohort? false}
+                                  :c-fold {:enabled? false}}) "\n")
         pin {:schema :wm/run4-task-pin-v1
              :series-id "RUN4-2026-09-10" :trial-id :outer-loop-successor
              :series-order :as-declared
