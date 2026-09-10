@@ -1,0 +1,27 @@
+2026-09-10, offline evidence packet, codex-16
+
+PASS Python standard-library compilation: probe.py.
+PASS replay result is byte-identical to result.json (two executions).
+PASS actual pinned catalog scorer matches Python port on six queries.
+PASS 203 Git source paths resolve at pinned revisions with matching SHA-256.
+PASS four retained snapshot files match recorded SHA-256 after investigation.
+PASS sanitizer reproduces all four frozen field selections after namespace/file rename.
+PASS 364 deduplicated memory rows have stable content keys; no selected-row conflicts.
+PASS every ranked candidate ID/path/hash resolves to its frozen canonical source.
+PASS canonical IDs unique; frozen full-text hashes match; credential fields absent.
+PASS clj-kondo, sanitize_snapshot.bb and check_catalog.bb: 0 errors, 0 warnings.
+PASS futon4/dev/check-parens.el on both Babashka files: OK.
+PASS staged diff whitespace check after removing an extra final blank line.
+
+Initial failures, corrected before reporting:
+- Git-only discovery found no retained snapshots. These files are untracked;
+  switched census input discovery to the four exact retained paths with hashes,
+  rather than interpreting zero files as zero memories.
+- Linting two entry scripts in the implicit user namespace reported duplicate
+  require. Gave them separate namespaces, then corrected file names to matching
+  underscore spelling. Final combined lint passes; no linter suppression.
+- Corrected draft HTTP path against apm-search-memory.py before publication.
+
+No live endpoint, Student dispatch, namespace reload, production test suite,
+or Lean command ran. Prior Lean success remains attributed to the earlier
+memory-first probe. No fresh theorem-compilation success is claimed.
