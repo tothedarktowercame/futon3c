@@ -80,6 +80,7 @@
         projection-root (io/file root "projections")
         run-record-root (io/file root "run-records")
         visibility-root (io/file root "visibility")
+        recording-root (io/file root "recordings")
         cfg {:run4 {:enabled? true :bearer-token token :operator "Joe"
                     :casting casting
                     :admission-root (.getPath admission-root)
@@ -100,11 +101,13 @@
                              :binding-root (.getPath binding-root)
                              :projection-root (.getPath projection-root)
                              :run-record-root (.getPath run-record-root)
+                             :recording-enabled? true
+                             :recording-root (.getPath recording-root)
                              :visibility-enabled? true
                              :visibility-root (.getPath visibility-root)}}}]
     (try
       (doseq [dir [controller-root binding-root projection-root
-                   run-record-root visibility-root]]
+                   run-record-root visibility-root recording-root]]
         (.mkdir dir))
       (write! root "source.md" source-text)
       (write! root "config.edn" config-text)
@@ -296,6 +299,8 @@
                   (is (= 200 (:status terminal-response)))
                   (is (= "trial-terminal" (:status terminal-body)))
                   (is (= "succeeded" (:task-result terminal-body)))
+                  (is (.isFile (io/file root "recordings"
+                                        "eligible-attempt-1.edn")))
                   (let [visible (json/parse-string
                                  (slurp (io/file root "visibility/run-visibility.json")) true)]
                     (is (= "wm/run-visibility-v1" (:schema visible)))

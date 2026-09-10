@@ -62,7 +62,8 @@
   "Describe evidence against current RUN4 preregistration criteria. Operator
   acceptance remains a separate action even when every machine check passes."
   [{:keys [visibility expected-series-id expected-series-sha256 observed-series-sha256
-           terminal-bundles control-map-text expected-control-map-sha256]}]
+           terminal-bundles realized-recordings control-map-text
+           expected-control-map-sha256]}]
   (let [source-current? (and (sha? expected-series-sha256)
                              (= expected-series-sha256 observed-series-sha256))
         terminal? (and (nonblank? expected-series-id)
@@ -70,8 +71,10 @@
                        (terminal-visibility? visibility))
         cmap (control-map control-map-text expected-control-map-sha256)
         route? (boolean (and terminal? (joined-route? visibility terminal-bundles cmap)))
-        recordings (when route? (mapv realized/from-terminal-bundle terminal-bundles))
-        recording? (boolean (and recordings (= (count recordings) (count terminal-bundles))))
+        recording? (boolean (and route? (vector? realized-recordings)
+                                 (= (count realized-recordings)
+                                    (count terminal-bundles))
+                                 (every? some? realized-recordings)))
         battery-artifact (when recording?
                            (battery/produce expected-series-id expected-series-sha256
                                             expected-control-map-sha256 terminal-bundles cmap))
@@ -106,7 +109,7 @@
 (defn report-durable
   "Read every bundle through the strict durable join before calculating a
   non-authoritative acceptance report."
-  [{:keys [roots trials control-map-text] :as input}]
+  [{:keys [roots trials control-map-text recording-root] :as input}]
   (when-not (and (map? roots) (vector? trials) (seq trials)
                  (string? control-map-text))
     (throw (ex-info "Invalid RUN4 acceptance authority"
@@ -117,5 +120,9 @@
                      roots admission-request started)
                     (throw (ex-info "Missing RUN4 terminal bundle"
                                     {:reason :missing-terminal-bundle}))))
-              trials)]
-    (calculate-report (assoc input :terminal-bundles bundles))))
+              trials)
+        recordings (when recording-root
+                     (mapv #(realized/read-bundle-recording!
+                             recording-root %) bundles))]
+    (calculate-report (assoc input :terminal-bundles bundles
+                             :realized-recordings recordings))))

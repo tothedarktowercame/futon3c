@@ -1,5 +1,6 @@
 (ns futon3c.wm.run4-realized-recording-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.realized-recording :as recording]
             [futon3c.wm.run4-realized-recording :as sut]))
 
@@ -31,3 +32,19 @@
     (is (= r (recording/validate! r)))
     (is (nil? (:outcome r)))
     (is (= :unknown (get-in r [:classification :status])))))
+
+(deftest persisted-record-is-strictly-bound-to-current-bundle
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-recording"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (sut/persist-bundle! (.getPath root) bundle)
+      (is (= :wm/realized-recording-v1
+             (:recording-contract
+              (sut/read-bundle-recording! (.getPath root) bundle))))
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (sut/read-bundle-recording!
+                    (.getPath root) (assoc bundle :projection-digest
+                                           (apply str (repeat 64 "b"))))))
+      (finally
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))

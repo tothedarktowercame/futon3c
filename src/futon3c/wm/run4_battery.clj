@@ -42,7 +42,12 @@
           (= series-id (:series-id battery)) (= series-sha (:series-sha256 battery))
           (= control-sha (:control-map-sha256 battery))
           (seq expected) (= (count actual) (count (distinct actual)))
-          (= expected (set actual)) (every? #(= :green (:row/verdict %)) rows)
-          (do (step/advance-pin {:pin/generation 0 :pin/accepted-steps []}
-                                rows :report-only ::all "read-only" nil "now")
-              true)))))
+          (= expected (set actual))
+          (every? (fn [run-id]
+                    (try
+                      (step/advance-pin {:pin/generation 0 :pin/accepted-steps []}
+                                        rows :report-only run-id "read-only" nil "now")
+                      true
+                      (catch clojure.lang.ExceptionInfo _ false)))
+                  (set (map :row/run-id rows)))
+          (every? #(= :green (:row/verdict %)) rows)))))

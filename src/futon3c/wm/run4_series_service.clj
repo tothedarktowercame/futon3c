@@ -7,6 +7,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.wm.run4-series-controller :as controller]
+            [futon3c.wm.run4-realized-recording :as realized]
             [futon3c.wm.run4-run-visibility :as visibility]
             [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
@@ -65,6 +66,9 @@
     (when (true? (:visibility-enabled? series))
       (when-not (directory? (:visibility-root series))
         (refuse! :run4-series-root-invalid {:kind :visibility})))
+    (when (true? (:recording-enabled? series))
+      (when-not (directory? (:recording-root series))
+        (refuse! :run4-series-root-invalid {:kind :recording})))
     {:run4 run4 :series series}))
 
 (defn- source-reader [{:keys [run4]}]
@@ -107,9 +111,16 @@
                         :bindings (:binding-root series)
                         :projections (:projection-root series)
                         :run-records (:run-record-root series)}
-        terminal-port (fn [started]
-                        ((terminal/terminal-evidence-port
-                          evidence-roots @prepared) started))
+        terminal-port
+        (fn [started]
+          (let [prepared-trial (get @prepared (:ordinal started))
+                _ (when-not prepared-trial
+                    (refuse! :run4-series-prepared-trial-missing))
+                bundle (terminal/read-terminal-evidence-bundle
+                        evidence-roots (:admission-request prepared-trial) started)]
+            (when (and bundle (true? (:recording-enabled? series)))
+              (realized/persist-bundle! (:recording-root series) bundle))
+            (:classification bundle)))
         result (controller/step!
                 (:controller-root series) manifest-text
                 {:read-text read-text

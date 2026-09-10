@@ -2,7 +2,16 @@
   "Construct the existing realized-recording envelope from a strictly joined
   RUN4 terminal bundle. Missing paired-step observations remain explicit
   unknowns; this adapter never manufactures a previous accepted WM step."
-  (:require [futon2.aif.realized-recording :as recording]))
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [futon2.aif.realized-recording :as recording]))
+
+(defn- safe-id? [x]
+  (and (string? x) (boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" x))))
+
+(defn- refuse! [reason]
+  (throw (ex-info "RUN4 realized recording refused"
+                  {:error :run4-realized-recording-refused :reason reason})))
 
 (defn from-terminal-bundle
   [bundle]
@@ -67,3 +76,39 @@
          :review {:state :proposed :scope :attempt :evidence source
                   :designated-reviewer "Joe"}}]
     (recording/envelope {} context)))
+
+(defn- recording-file [root bundle]
+  (when-not (and (string? root) (.isDirectory (io/file root))
+                 (safe-id? (:attempt-id bundle)))
+    (refuse! :invalid-recording-authority))
+  (io/file root (str (:attempt-id bundle) ".edn")))
+
+(defn persist-bundle!
+  "Persist one immutable established-contract record. This is deliberately a
+  producer operation separate from acceptance reporting."
+  [root bundle]
+  (let [value (from-terminal-bundle bundle)
+        file (recording-file root bundle)]
+    (recording/persist! (.getCanonicalPath file) value)
+    {:path (.getCanonicalPath file) :record value}))
+
+(defn read-bundle-recording!
+  "Strictly reread one form and require exact equality with the record derived
+  from the currently validated terminal bundle."
+  [root bundle]
+  (let [file (recording-file root bundle)]
+    (when (.exists file)
+      (let [text (slurp file)
+            value (try
+                    (with-open [r (java.io.PushbackReader.
+                                   (java.io.StringReader. text))]
+                      (let [v (edn/read {:eof ::empty} r)]
+                        (when (or (= ::empty v)
+                                  (not= ::end (edn/read {:eof ::end} r)))
+                          (refuse! :invalid-recording-form))
+                        v))
+                    (catch clojure.lang.ExceptionInfo e (throw e))
+                    (catch Throwable _ (refuse! :invalid-recording-form)))
+            expected (from-terminal-bundle bundle)]
+        (when-not (= expected value) (refuse! :recording-binding-mismatch))
+        (recording/validate! value)))))

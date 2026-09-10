@@ -1,7 +1,9 @@
 (ns futon3c.wm.run4-acceptance-report-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.wm.run4-acceptance-report :as sut]
+            [futon3c.wm.run4-realized-recording :as realized]
             [futon3c.wm.run4-terminal-evidence :as terminal]))
 
 (def sha (apply str (repeat 64 "a")))
@@ -38,7 +40,7 @@
                :observed-series-sha256 sha}
         a (report input) b (report input)]
     (is (= a b))
-    (is (= :operator-decision-required (:decision a)))
+    (is (= :missing-realized-recording (:decision a)))
     (is (false? (:accepted? a)))
     (is (= :operator-reserved (:acceptance-authority a)))))
 
@@ -63,8 +65,8 @@
                              :complete? true :battery-ref "/missing"}})]
     ;; Forged request fields are ignored; the server-read bundle determines it.
     (is (= true (get-in forged [:checks :route-conformance])))
-    (is (= true (get-in forged [:checks :recording-completeness])))
-    (is (= :operator-decision-required (:decision forged)))
+    (is (= false (get-in forged [:checks :recording-completeness])))
+    (is (= :missing-realized-recording (:decision forged)))
     (is (false? (:accepted? forged)))))
 
 (deftest incomplete-or-foreign-visibility-cannot-green-terminal-check
@@ -86,8 +88,8 @@
                        :expected-control-map-sha256
                        (digest/sha256 control-text)})]
     (is (true? (get-in r [:checks :route-conformance])))
-    (is (= :operator-decision-required (:decision r)))
-    (is (= 4 (count (get-in r [:battery :rows]))))
+    (is (= :missing-realized-recording (:decision r)))
+    (is (nil? (:battery r)))
     (is (false? (:accepted? r))))
   (with-redefs [terminal/read-terminal-evidence-bundle
                 (fn [_ _ _] (assoc bundle :classification nil))]
@@ -126,3 +128,19 @@
                 :control-map-text control-text
                 :expected-control-map-sha256 (digest/sha256 control-text)})]
         (is (true? (get-in r [:checks :route-conformance])))))))
+
+(deftest independently-persisted-recording-is-required-before-battery
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-acceptance-recording"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (realized/persist-bundle! (.getPath root) bundle)
+      (let [r (report {:visibility visibility :expected-series-id "RUN4-x"
+                       :expected-series-sha256 sha :observed-series-sha256 sha
+                       :recording-root (.getPath root)})]
+        (is (true? (get-in r [:checks :recording-completeness])))
+        (is (true? (get-in r [:checks :route-battery-complete])))
+        (is (= :operator-decision-required (:decision r)))
+        (is (false? (:accepted? r))))
+      (finally
+        (doseq [f (reverse (file-seq root))] (io/delete-file f true))))))
