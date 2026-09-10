@@ -206,6 +206,7 @@
          (= :decision-pinned-construction (get-in construction [:ground :kind]))
          (contains? #{:agency-dispatch :agency-recovered-completion}
                     (get-in dispatch [:ground :kind]))
+         (= (:author-job-id evidence) (get-in dispatch [:judgment :job-id]))
          (= :git-commit-and-independent-review (get-in build [:ground :kind]))
          (true? (:approved? validation)) (nonblank? (:review-job validation))
          (true? (:required? gate)) (true? (:executed? gate))
@@ -242,6 +243,10 @@
          (= pin (get-in construction [:ground :run4/task-pin]))
          (contains? #{:agency-dispatch :agency-recovered-completion}
                     (get-in dispatch [:ground :kind]))
+         (nonblank? (:author-job-id evidence))
+         (nonblank? (:reviewer-job-id evidence))
+         (not= (:author-job-id evidence) (:reviewer-job-id evidence))
+         (= (:author-job-id evidence) (get-in dispatch [:judgment :job-id]))
          (= :git-commit-and-independent-review (get-in build [:ground :kind]))
          (false? (:approved? validation))
          (true? (get-in validation [:review-gate :required?]))
@@ -249,7 +254,9 @@
          (false? (get-in validation [:review-gate :passed?]))
          (= (:review-job validation) (:reviewer-job-id evidence))
          (nonblank? (:commit evidence))
-         (some #{(:commit evidence)} (get-in build [:judgment :commits])))))
+         (some #{(:commit evidence)} (get-in build [:judgment :commits]))
+         ;; A rejected build never has a successful grounding/adjudication.
+         (= :absent (get-in p [:checkpoints :adjudication :status])))))
 
 (def unsafe-failure-kinds
   #{:agent-unavailable :agent-readiness-failed :substrate-unavailable

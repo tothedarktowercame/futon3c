@@ -24,7 +24,10 @@
                 :ground {:kind :wm-judgement :run4/task-pin pin}}
     :construction {:status :present :judgment {:run4/task-pin pin}
                    :ground {:kind :decision-pinned-construction :run4/task-pin pin}}
-    :dispatch {:status :present :judgment {} :ground {:kind :agency-dispatch}}
+    :dispatch {:status :present
+               :judgment {:agent "zai-2" :availability :invoke-ready
+                          :job-id "author-1"}
+               :ground {:kind :agency-dispatch}}
     :build {:status :present
             :judgment {:commits ["abc"]
                        :validation {:approved? true :review-job "review-1"
@@ -115,7 +118,9 @@
                         (assoc :failure {:kind :build-failed :stage :reviewer-wait})
                         (assoc-in [:checkpoints :build :judgment :validation :approved?] false)
                         (assoc-in [:checkpoints :build :judgment :validation
-                                   :review-gate :passed?] false))]
+                                   :review-gate :passed?] false)
+                        (assoc-in [:checkpoints :adjudication]
+                                  {:status :absent :reason :checkpoint-not-returned}))]
          (install! failed)
          (is (= [:failed :safe]
                 ((juxt :task-result :infrastructure)
@@ -144,6 +149,8 @@
                                            {:status :absent :reason :checkpoint-not-returned})]
               [:review-job #(assoc-in % [:checkpoints :build :judgment :validation
                                          :review-job] "unrelated-review")]
+              [:author-job #(assoc-in % [:checkpoints :dispatch :judgment :job-id]
+                                       "unrelated-author")]
               [:build-commit #(assoc-in % [:checkpoints :build :judgment :commits]
                                          ["unrelated-commit"])]
               [:adjudicated-commit #(assoc-in % [:checkpoints :adjudication :judgment
@@ -168,7 +175,11 @@
    (fn [{:keys [roots projection-file binding-file projection binding]}]
      (let [contradictory (-> projection
                              (assoc :outcome :build-failed)
-                             (assoc :failure {:kind :build-failed :stage :reviewer-wait}))]
+                             (assoc :failure {:kind :build-failed :stage :reviewer-wait})
+                             (assoc-in [:checkpoints :build :judgment :validation :approved?]
+                                       false)
+                             (assoc-in [:checkpoints :build :judgment :validation
+                                        :review-gate :passed?] false))]
        (write! projection-file contradictory)
        (write! binding-file
                (assoc binding :outcome :build-failed

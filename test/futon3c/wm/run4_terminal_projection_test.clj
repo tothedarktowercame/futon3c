@@ -12,7 +12,9 @@
   {:selection {:judgment {:outcome :ok}
                :ground {:kind :policy-selection :run4/task-pin pin}}
    :construction {:judgment {:run4/task-pin pin} :ground {:kind :construction}}
-   :dispatch {:judgment {:outcome :done} :ground {:kind :dispatch}}
+   :dispatch {:judgment {:agent "zai-2" :availability :invoke-ready
+                         :job-id "author-1"}
+              :ground {:kind :agency-dispatch}}
    :build {:judgment {:commits ["abc"]
                       :validation {:approved? true :review-job "reviewer-1"
                                    :review-gate {:required? true :executed? true

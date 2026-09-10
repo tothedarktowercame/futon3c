@@ -19,10 +19,10 @@ run, outer-attempt, and internal-attempt identities must agree.
 Semantic forks intentionally remain open: reviewer rejection versus task block,
 artifact-only outcomes, operator cancellation, guardrail/selection abstention,
 and recovery/discharge outcomes do not yet have an unambiguous series mapping.
-The accepted projection does not retain the dispatch judgment's author job ID,
-so the consumer can require an actual dispatch checkpoint and distinct returned
-author/reviewer IDs but cannot join the author ID back to dispatch. That is the
-remaining producer-field gap; it is not inferred.
+The terminal projection now retains the dispatch judgment's actual author job
+ID, agent, availability and recovery reference. The consumer joins that job ID
+to the returned author evidence, and requires distinct nonblank author/reviewer
+identities on both success and the supported rejected-build path.
 The controller preflight remains the authority for task-pin source freshness:
 it re-reads the manifest, packet, config, and pin sources before invoking this
 port. This consumer independently detects drift of the terminal projection and

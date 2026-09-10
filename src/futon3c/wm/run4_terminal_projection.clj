@@ -38,6 +38,8 @@
 
 (defn- judgment-projection [phase judgment]
   (case phase
+    :dispatch
+    (select-keys judgment [:agent :availability :job-id :recovers])
     :build
     (let [validation (:validation judgment)]
       {:commits (vec (or (:commits judgment) []))
