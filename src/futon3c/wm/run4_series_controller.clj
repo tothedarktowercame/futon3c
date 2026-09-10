@@ -149,13 +149,47 @@
          (and (= #{:schema :series-id :manifest-sha256 :ordinal :trial-id
                    :attempt-id :pin-sha256 :task-result :infrastructure :reason}
                  (set (keys event)))
-              (keyword? (:reason event)))
+              (= :unsafe (:infrastructure event))
+              (contains? #{:busy-admission-rejected :prior-infrastructure-stop}
+                         (:reason event)))
          (and (= #{:schema :series-id :manifest-sha256 :ordinal :trial-id
                    :attempt-id :pin-sha256 :task-result :infrastructure :evidence-id}
                  (set (keys event)))
               (contains? task-results (:task-result event))
               (string? (:evidence-id event))
               (not (str/blank? (:evidence-id event)))))))
+
+(defn- existing-admission! [root prepared-trial ordinal]
+  (let [attempt-id (get-in prepared-trial [:admission-request :attempt-id])]
+    (when-not (.isDirectory (io/file root attempt-id))
+      (refuse! :missing-persisted-admission {:ordinal ordinal}))
+    (let [reservation (admission/reserve! root (:admission-request prepared-trial))]
+      (when-not (:ok reservation)
+        (refuse! :persisted-admission-identity-mismatch {:ordinal ordinal}))
+      (:admission reservation))))
+
+(defn- started-admission! [root prepared-trial started ordinal]
+  (let [status (existing-admission! root prepared-trial ordinal)
+        click (get-in status [:result :click])]
+    (when-not (and (= :click-recorded (:state status))
+                   (= (select-keys started [:click-id :started-at]) click))
+      (refuse! :started-admission-mismatch {:ordinal ordinal}))
+    status))
+
+(defn- terminal-lifecycle! [root prepared-trial started terminal ordinal]
+  (if (= :not-attempted (:task-result terminal))
+    (case (:reason terminal)
+      :busy-admission-rejected
+      (let [status (existing-admission! root prepared-trial ordinal)]
+        (when-not (and (nil? started) (= :busy-rejected (:state status))
+                       (= :already-running (get-in status [:result :click :rejected])))
+          (refuse! :terminal-admission-mismatch {:ordinal ordinal})))
+      :prior-infrastructure-stop
+      ;; A legitimate predecessor stop is encountered and returned before this
+      ;; marker is ever considered as the current trial.
+      (refuse! :orphan-prior-stop-marker {:ordinal ordinal}))
+    (when-not started
+      (refuse! :terminal-without-start {:ordinal ordinal}))))
 
 (defn- event-identity! [event trial]
   (when-not (= (select-keys trial [:ordinal :trial-id :attempt-id])
@@ -221,6 +255,10 @@
               (when (and started
                          (not (started-event? started manifest-sha256 manifest trial)))
                 (refuse! :invalid-persisted-started {:ordinal ordinal}))
+              (when started
+                (started-admission! key prepared-trial started ordinal))
+              (when terminal
+                (terminal-lifecycle! key prepared-trial started terminal ordinal))
               (cond
                 terminal
                 (if (= :unsafe (:infrastructure terminal))

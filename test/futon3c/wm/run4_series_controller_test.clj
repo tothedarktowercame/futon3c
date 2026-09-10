@@ -181,6 +181,43 @@
                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))
       (is (= 1 (count @clicks))))))
 
+(deftest full-looking-terminal-records-require-permitted-state-and-lifecycle
+  (with-controller
+    (fn [root ports clicks _]
+      (let [trial (first (:trials manifest))
+            base {:schema :wm/run4-series-terminal-v1
+                  :series-id (:series-id manifest)
+                  :manifest-sha256 (digest/sha256 manifest-text)
+                  :ordinal 1 :trial-id (:trial-id trial)
+                  :attempt-id (:attempt-id trial) :pin-sha256 (:pin-sha256 trial)}
+            terminal-file (io/file root "001-terminal.edn")]
+        (spit terminal-file
+              (pr-str (merge base {:task-result :not-attempted
+                                   :infrastructure :safe :reason :invented})))
+        (is (= :invalid-persisted-terminal
+               (:reason (try (sut/step! root manifest-text ports) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (io/delete-file terminal-file)
+        (spit terminal-file
+              (pr-str (merge base {:task-result :succeeded :infrastructure :safe
+                                   :evidence-id "unbound"})))
+        (is (= :terminal-without-start
+               (:reason (try (sut/step! root manifest-text ports) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (is (empty? @clicks))))))
+
+(deftest persisted-start-must-join-the-exact-durable-admission-click
+  (with-controller
+    (fn [root ports clicks _]
+      (sut/step! root manifest-text ports)
+      (let [started-file (io/file root "001-started.edn")
+            started (read-string (slurp started-file))]
+        (spit started-file (pr-str (assoc started :click-id "forged-click")))
+        (is (= :started-admission-mismatch
+               (:reason (try (sut/step! root manifest-text ports) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (is (= 1 (count @clicks)))))))
+
 (deftest busy-admission-is-infrastructure-stop-not-success
   (with-controller
     (fn [root ports clicks _]
