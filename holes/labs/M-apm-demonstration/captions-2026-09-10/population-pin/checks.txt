@@ -1,0 +1,33 @@
+APM caption population pin checks — 2026-09-10
+
+Producer, run twice:
+  bb holes/labs/M-apm-demonstration/captions-2026-09-10/population-pin/census.bb > /tmp/apm-population-run1.json
+  bb holes/labs/M-apm-demonstration/captions-2026-09-10/population-pin/census.bb > /tmp/apm-population-run2.json
+  cmp /tmp/apm-population-run1.json /tmp/apm-population-run2.json
+Result: exit 0; byte-identical.
+
+  sha256sum /tmp/apm-population-run1.json /tmp/apm-population-run2.json
+  94050a5b45fd0c33212cf141fe9c649cc3cfe0d3b1072d429da3fa54f00f5e17  /tmp/apm-population-run1.json
+  94050a5b45fd0c33212cf141fe9c649cc3cfe0d3b1072d429da3fa54f00f5e17  /tmp/apm-population-run2.json
+
+Summary readback:
+  population-count: 364
+  audited-subset-count: 57
+  attempt-count: 35
+  shelf-size-range: [304, 361]
+  snapshot-only-excluded: []
+  kind counts: {other 122, substitutive 227, regulative 15}
+  admissibility counts: {admissible 364}
+  maximum attachment-edge-count for any endpoint: 1 (< query limit 1000)
+
+  clj-kondo --lint holes/labs/M-apm-demonstration/captions-2026-09-10/population-pin/census.bb
+  linting took 15ms, errors: 0, warnings: 0
+
+  jq -e '<population=364; rows=364; unique IDs=364; audited subset=57>' population.json
+  true
+
+  cmp <(sorted pinned audited-subset IDs) <(sorted prior readback IDs)
+Result: exit 0; exact 57-ID subset match.
+
+  git diff --check -- holes/labs/M-apm-demonstration/captions-2026-09-10/population-pin
+Result: exit 0.
