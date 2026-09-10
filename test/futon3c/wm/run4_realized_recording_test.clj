@@ -33,6 +33,14 @@
     (is (nil? (:outcome r)))
     (is (= :unknown (get-in r [:classification :status])))))
 
+(deftest absent-selected-action-is-unknown-not-nonselection
+  (let [r (sut/from-terminal-bundle bundle)]
+    (is (= :unknown (get-in r [:policy :status])))
+    (is (= :selected-policy-not-projected (get-in r [:policy :reason])))
+    (is (= :unknown (get-in r [:execution :selected :status])))
+    (is (= :unknown (get-in r [:execution :policy :status])))
+    (is (not= false (get-in r [:execution :selected])))))
+
 (deftest actor-trial-policy-decision-and-tick-are-not-conflated
   (let [action {:type :advance-mission :target "M-run4"}
         with-action (assoc-in bundle

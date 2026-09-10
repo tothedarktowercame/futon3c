@@ -62,13 +62,15 @@
         outcome (:outcome projection)
         selected-action (get-in projection [:checkpoints :selection
                                             :judgment :selected-action])
+        selected-policy (if selected-action selected-action
+                           (unknown :selected-policy-not-projected))
         decision-ref (unknown :decision-identity-not-projected)
         tick (unknown :wm-tick-not-projected)
         context
         {:record/id (str run-id "/" trial-id "/realized/0")
          :revision 0 :supersedes nil
          :run/id run-id :decision/ref decision-ref :attempt/id attempt-id
-         :policy selected-action :tick tick
+         :policy selected-policy :tick tick
          :window {:rule :durable-trial-evidence :version 1 :clock :utc
                   :decision (unknown :prior-accepted-step-not-recorded)
                   :start (unknown :dispatch-time-not-projected)
@@ -77,15 +79,16 @@
          :subject {:mission (get-in projection [:run4/task-pin :mission-id])
                    :before (unknown :prior-revision-not-recorded)
                    :after (unknown :terminal-revision-not-recorded)}
-         :execution {:selected (some? selected-action) :state :terminal
+         :execution {:selected (if selected-action true
+                                  (unknown :selection-state-not-projected))
+                     :state :terminal
                      :evidence source
                      :actor (recording/observed
                              (get-in identity [:casting :author]) :actor-id source)
                      :policy (if selected-action
                                (recording/observed selected-action
                                                    :mission-action source)
-                               {:status :not-applicable
-                                :reason :selected-policy-not-projected})}
+                               (unknown :selected-policy-not-projected))}
          :expected-score nil :realized-score nil :scale :task-result
          :measurement {:id :run4-terminal-result-v1 :quantity :task-result
                        :units :task-result :sign :categorical
