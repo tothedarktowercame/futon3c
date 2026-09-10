@@ -1,0 +1,851 @@
+{
+  "schema": "topology-pattern-induction-v1",
+  "git_pin": "f053ab5936725f2e41c937cfff82277f3a23c868",
+  "method": "full-population census followed by analyst-selected multi-witness comparisons",
+  "candidates": {
+    "T1": [
+      {
+        "path": "problems/t96A03/lean/Main.lean",
+        "sha256": "34d5f16bc6ce927e675750dc8027236668393b38f31add38bb3895d64d1d2057",
+        "anchor": "eqvGen_iff_coordinateEqvGen",
+        "excerpts": [
+          {
+            "first_line": 51,
+            "last_line": 77,
+            "text": "  · exact apm_t96A03_glueRel.glue z\n\nopen ConstructionTargets.T96A03FrozenQuotientRepresentation in\ntheorem apm_t96A03_eqvGen_iff_coordinateEqvGen\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace) (x y) :\n    Relation.EqvGen (apm_t96A03_glueRel h) x y ↔\n      Relation.EqvGen (CoordinateGlueRel h) x y := by\n  constructor\n  · intro hxy\n    induction hxy with\n    | rel a b hab =>\n        exact Relation.EqvGen.rel _ _\n          ((apm_t96A03_glueRel_iff_coordinateGlueRel h a b).mp hab)\n    | refl => exact Relation.EqvGen.refl _\n    | symm _ _ _ ih => exact ih.symm\n    | trans _ _ _ _ _ ih₁ ih₂ => exact Relation.EqvGen.trans _ _ _ ih₁ ih₂\n  · intro hxy\n    induction hxy with\n    | rel a b hab =>\n        exact Relation.EqvGen.rel _ _\n          ((apm_t96A03_glueRel_iff_coordinateGlueRel h a b).mpr hab)\n    | refl => exact Relation.EqvGen.refl _\n    | symm _ _ _ ih => exact ih.symm\n    | trans _ _ _ _ _ ih₁ ih₂ => exact Relation.EqvGen.trans _ _ _ ih₁ ih₂\n\ndef apm_t96A03_X\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace) :="
+          },
+          {
+            "first_line": 91,
+            "last_line": 117,
+            "text": "    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace) :\n    apm_t96A03_X h ≃ₜ CoordinateGluing h where\n  toFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t96A03_eqvGen_iff_coordinateEqvGen h _ _).mp hxy)\n  invFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t96A03_eqvGen_iff_coordinateEqvGen h _ _).mpr hxy)\n  left_inv := by rintro ⟨x⟩; rfl\n  right_inv := by rintro ⟨x⟩; rfl\n  continuous_toFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n  continuous_invFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n\nopen ConstructionTargets.T96A03FrozenQuotientRepresentation in\n@[simp] theorem apm_t96A03_homeomorph_coordinateGluing_mk\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace)\n    (x : Sum apm_t96A03_Sphere2 apm_t96A03_Sphere2) :\n    apm_t96A03_homeomorph_coordinateGluing h (Quotient.mk _ x) =\n      Quotient.mk _ x := rfl\n\nopen ConstructionTargets.T96A03FrozenQuotientRepresentation in\n/-- Frozen-to-reusable quotient representation homeomorphism. -/\ndef apm_t96A03_homeomorph_equatorGluing\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace) :\n    apm_t96A03_X h ≃ₜ"
+          },
+          {
+            "first_line": 93,
+            "last_line": 119,
+            "text": "  toFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t96A03_eqvGen_iff_coordinateEqvGen h _ _).mp hxy)\n  invFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t96A03_eqvGen_iff_coordinateEqvGen h _ _).mpr hxy)\n  left_inv := by rintro ⟨x⟩; rfl\n  right_inv := by rintro ⟨x⟩; rfl\n  continuous_toFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n  continuous_invFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n\nopen ConstructionTargets.T96A03FrozenQuotientRepresentation in\n@[simp] theorem apm_t96A03_homeomorph_coordinateGluing_mk\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace)\n    (x : Sum apm_t96A03_Sphere2 apm_t96A03_Sphere2) :\n    apm_t96A03_homeomorph_coordinateGluing h (Quotient.mk _ x) =\n      Quotient.mk _ x := rfl\n\nopen ConstructionTargets.T96A03FrozenQuotientRepresentation in\n/-- Frozen-to-reusable quotient representation homeomorphism. -/\ndef apm_t96A03_homeomorph_equatorGluing\n    (h : apm_t96A03_EquatorSpace ≃ₜ apm_t96A03_EquatorSpace) :\n    apm_t96A03_X h ≃ₜ\n      ConstructionTargets.SphereEquatorGluingOpenCover.EquatorGluing 2\n        (conjugateEquatorHomeomorph h) :="
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t01J03/lean/Main.lean",
+        "sha256": "cce150853065130d8c45afd008bd09ca44557e69feda429b308f15278a847f56",
+        "anchor": "homeomorph_coordinateGluing",
+        "excerpts": [
+          {
+            "first_line": 97,
+            "last_line": 123,
+            "text": "    | symm _ _ _ ih => exact ih.symm\n    | trans _ _ _ _ _ ih₁ ih₂ => exact Relation.EqvGen.trans _ _ _ ih₁ ih₂\n\ndef apm_t01J03_homeomorph_coordinateGluing\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus) :\n    apm_t01J03_gluedSpace h ≃ₜ CoordinateGluing h where\n  toFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t01J03_eqvGen_iff_coordinateEqvGen h _ _).mp hxy)\n  invFun := Quotient.lift (fun x ↦ Quotient.mk _ x) fun _ _ hxy ↦\n    Quotient.sound ((apm_t01J03_eqvGen_iff_coordinateEqvGen h _ _).mpr hxy)\n  left_inv := by rintro ⟨x⟩; rfl\n  right_inv := by rintro ⟨x⟩; rfl\n  continuous_toFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n  continuous_invFun := by\n    apply Continuous.quotient_lift\n    exact continuous_coinduced_rng\n\ndef apm_t01J03_homeomorph_gluing\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus) :\n    apm_t01J03_gluedSpace h ≃ₜ\n      ConstructionTargets.SolidTorusGluingOpenCover.Gluing\n        (conjugateBoundaryHomeomorph h) :=\n  (apm_t01J03_homeomorph_coordinateGluing h).trans\n    (coordinateGluingHomeomorph h)\n"
+          },
+          {
+            "first_line": 118,
+            "last_line": 144,
+            "text": "    apm_t01J03_gluedSpace h ≃ₜ\n      ConstructionTargets.SolidTorusGluingOpenCover.Gluing\n        (conjugateBoundaryHomeomorph h) :=\n  (apm_t01J03_homeomorph_coordinateGluing h).trans\n    (coordinateGluingHomeomorph h)\n\n@[simp] theorem apm_t01J03_homeomorph_coordinateGluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_coordinateGluing h (Quotient.mk _ x) =\n      Quotient.mk _ x := rfl\n\n@[simp] theorem apm_t01J03_homeomorph_gluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_gluing h (Quotient.mk _ x) = Quotient.mk _ x := rfl\n\ndef apm_t01J03_gluedInl (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inl x)\n\ndef apm_t01J03_gluedInr (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inr x)\n"
+          },
+          {
+            "first_line": 121,
+            "last_line": 147,
+            "text": "  (apm_t01J03_homeomorph_coordinateGluing h).trans\n    (coordinateGluingHomeomorph h)\n\n@[simp] theorem apm_t01J03_homeomorph_coordinateGluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_coordinateGluing h (Quotient.mk _ x) =\n      Quotient.mk _ x := rfl\n\n@[simp] theorem apm_t01J03_homeomorph_gluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_gluing h (Quotient.mk _ x) = Quotient.mk _ x := rfl\n\ndef apm_t01J03_gluedInl (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inl x)\n\ndef apm_t01J03_gluedInr (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inr x)\n\nlemma apm_t01J03_continuous_gluedInl\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus) :\n    Continuous (apm_t01J03_gluedInl h) := by"
+          },
+          {
+            "first_line": 124,
+            "last_line": 150,
+            "text": "@[simp] theorem apm_t01J03_homeomorph_coordinateGluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_coordinateGluing h (Quotient.mk _ x) =\n      Quotient.mk _ x := rfl\n\n@[simp] theorem apm_t01J03_homeomorph_gluing_mk\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus)\n    (x : Sum apm_t01J03_SolidTorus apm_t01J03_SolidTorus) :\n    apm_t01J03_homeomorph_gluing h (Quotient.mk _ x) = Quotient.mk _ x := rfl\n\ndef apm_t01J03_gluedInl (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inl x)\n\ndef apm_t01J03_gluedInr (h : apm_t01J03_BoundaryTorus ≃ₜ\n    apm_t01J03_BoundaryTorus) :\n    apm_t01J03_SolidTorus → apm_t01J03_gluedSpace h :=\n  fun x ↦ Quotient.mk _ (Sum.inr x)\n\nlemma apm_t01J03_continuous_gluedInl\n    (h : apm_t01J03_BoundaryTorus ≃ₜ apm_t01J03_BoundaryTorus) :\n    Continuous (apm_t01J03_gluedInl h) := by\n  exact continuous_coinduced_rng.comp continuous_inl\n\nlemma apm_t01J03_continuous_gluedInr"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t02A03/lean/Main.lean",
+        "sha256": "16e6213908f49e0193e3ea87c31f2320d25bb110e256b70375ff7a6f0815bfed",
+        "anchor": "productionHomeomorph",
+        "excerpts": [
+          {
+            "first_line": 156,
+            "last_line": 182,
+            "text": "      apm_t02a03_WedgeGlue a b := by\n  constructor <;> intro h <;> cases h <;> constructor\n\nnoncomputable def apm_t02a03_productionHomeomorph :\n    ConstructionTargets.TorusCircleWedgeOpenCover.GenericWedge ≃ₜ apm_t02a03_Y :=\n  ConstructionTargets.PointWedgeQuotient.quotientHomeomorphOfRelIff\n    _ _ apm_t02a03_rel_iff_production\n\n@[simp] theorem apm_t02a03_productionHomeomorph_mk\n    (z : Sum apm_t02a03_Torus Circle) :\n    apm_t02a03_productionHomeomorph (Quotient.mk _ z) = Quotient.mk _ z := rfl\n\ntheorem apm_t02a03_productionHomeomorph_base :\n    apm_t02a03_productionHomeomorph\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase =\n        apm_t02a03_ybase := rfl\n\n/-- Why this unblocks `apm_t02a03`: this packages precisely the invariant\npreservation and computation for the compiled torus-circle pushout.  Its five\nconjuncts are the remaining fundamental-group and singular-homology claims for\nthe explicit wedge quotient. -/\ntheorem apm_t02A03_bridge_2 :\n    Nonempty\n      (FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n        Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 0).obj"
+          },
+          {
+            "first_line": 161,
+            "last_line": 187,
+            "text": "  ConstructionTargets.PointWedgeQuotient.quotientHomeomorphOfRelIff\n    _ _ apm_t02a03_rel_iff_production\n\n@[simp] theorem apm_t02a03_productionHomeomorph_mk\n    (z : Sum apm_t02a03_Torus Circle) :\n    apm_t02a03_productionHomeomorph (Quotient.mk _ z) = Quotient.mk _ z := rfl\n\ntheorem apm_t02a03_productionHomeomorph_base :\n    apm_t02a03_productionHomeomorph\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase =\n        apm_t02a03_ybase := rfl\n\n/-- Why this unblocks `apm_t02a03`: this packages precisely the invariant\npreservation and computation for the compiled torus-circle pushout.  Its five\nconjuncts are the remaining fundamental-group and singular-homology claims for\nthe explicit wedge quotient. -/\ntheorem apm_t02A03_bridge_2 :\n    Nonempty\n      (FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n        Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 0).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 1).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅\n        ModuleCat.of ℤ (Fin 3 → ℤ)) ∧"
+          },
+          {
+            "first_line": 163,
+            "last_line": 189,
+            "text": "\n@[simp] theorem apm_t02a03_productionHomeomorph_mk\n    (z : Sum apm_t02a03_Torus Circle) :\n    apm_t02a03_productionHomeomorph (Quotient.mk _ z) = Quotient.mk _ z := rfl\n\ntheorem apm_t02a03_productionHomeomorph_base :\n    apm_t02a03_productionHomeomorph\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase =\n        apm_t02a03_ybase := rfl\n\n/-- Why this unblocks `apm_t02a03`: this packages precisely the invariant\npreservation and computation for the compiled torus-circle pushout.  Its five\nconjuncts are the remaining fundamental-group and singular-homology claims for\nthe explicit wedge quotient. -/\ntheorem apm_t02A03_bridge_2 :\n    Nonempty\n      (FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n        Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 0).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 1).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅\n        ModuleCat.of ℤ (Fin 3 → ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 2).obj"
+          },
+          {
+            "first_line": 165,
+            "last_line": 191,
+            "text": "    (z : Sum apm_t02a03_Torus Circle) :\n    apm_t02a03_productionHomeomorph (Quotient.mk _ z) = Quotient.mk _ z := rfl\n\ntheorem apm_t02a03_productionHomeomorph_base :\n    apm_t02a03_productionHomeomorph\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase =\n        apm_t02a03_ybase := rfl\n\n/-- Why this unblocks `apm_t02a03`: this packages precisely the invariant\npreservation and computation for the compiled torus-circle pushout.  Its five\nconjuncts are the remaining fundamental-group and singular-homology claims for\nthe explicit wedge quotient. -/\ntheorem apm_t02A03_bridge_2 :\n    Nonempty\n      (FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n        Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 0).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 1).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅\n        ModuleCat.of ℤ (Fin 3 → ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 2).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    (∀ n : ℕ, 3 ≤ n →"
+          },
+          {
+            "first_line": 166,
+            "last_line": 192,
+            "text": "    apm_t02a03_productionHomeomorph (Quotient.mk _ z) = Quotient.mk _ z := rfl\n\ntheorem apm_t02a03_productionHomeomorph_base :\n    apm_t02a03_productionHomeomorph\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase =\n        apm_t02a03_ybase := rfl\n\n/-- Why this unblocks `apm_t02a03`: this packages precisely the invariant\npreservation and computation for the compiled torus-circle pushout.  Its five\nconjuncts are the remaining fundamental-group and singular-homology claims for\nthe explicit wedge quotient. -/\ntheorem apm_t02A03_bridge_2 :\n    Nonempty\n      (FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n        Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 0).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 1).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅\n        ModuleCat.of ℤ (Fin 3 → ℤ)) ∧\n    Nonempty\n      (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 2).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y) ≅ ModuleCat.of ℤ ℤ) ∧\n    (∀ n : ℕ, 3 ≤ n →\n      Limits.IsZero"
+          },
+          {
+            "first_line": 192,
+            "last_line": 218,
+            "text": "      Limits.IsZero\n        (((AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) n).obj\n          (ModuleCat.of ℤ ℤ)).obj (TopCat.of apm_t02a03_Y))) := by\n  let e := apm_t02a03_productionHomeomorph\n  let piIso : FundamentalGroup apm_t02a03_Y apm_t02a03_ybase ≃*\n      Monoid.Coprod (Multiplicative (ℤ × ℤ)) (Multiplicative ℤ) :=\n    ((ConstructionTargets.BoundaryTorusHurewiczIsomorphism.fundamentalGroupMulEquivOfHomeomorph e\n        ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeBase).symm.trans\n      ConstructionTargets.GenericTargetNaturalSourceReconstruction.wedgeFundamentalGroupMulEquiv)\n  rcases ConstructionTargets.TorusCircleWedgeMayerVietoris.genericWedge_complete_module_homology with\n    ⟨h0, h1, h2, hh⟩\n  refine ⟨⟨piIso⟩, ?_, ?_, ?_, ?_⟩\n  · rcases h0 with ⟨h0⟩\n    exact ⟨(ConstructionTargets.T00A01MayerVietorisAdapters.moduleHomologyIsoOfHomotopyEquiv\n      e.toHomotopyEquiv 0).symm ≪≫ h0⟩\n  · rcases h1 with ⟨h1⟩\n    exact ⟨(ConstructionTargets.T00A01MayerVietorisAdapters.moduleHomologyIsoOfHomotopyEquiv\n      e.toHomotopyEquiv 1).symm ≪≫ h1⟩\n  · rcases h2 with ⟨h2⟩\n    exact ⟨(ConstructionTargets.T00A01MayerVietorisAdapters.moduleHomologyIsoOfHomotopyEquiv\n      e.toHomotopyEquiv 2).symm ≪≫ h2⟩\n  · intro n hn\n    exact (hh n hn).of_iso\n      (ConstructionTargets.T00A01MayerVietorisAdapters.moduleHomologyIsoOfHomotopyEquiv\n        e.toHomotopyEquiv n).symm\n\ntheorem apm_t02a03 :"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ],
+    "T2": [
+      {
+        "path": "problems/t93A04/lean/Main.lean",
+        "sha256": "5baf0e7d27ecb11934c0862e5955cedca42e307deed38ab569d31a90eb8c2f83",
+        "anchor": "null_critical",
+        "excerpts": [
+          {
+            "first_line": 127,
+            "last_line": 153,
+            "text": "  have hq : ContMDiff (𝓘(ℝ,apm_t93a04_Point)) (𝓘(ℝ,T93A04Closure.P2)) ∞ q :=\n    q.contDiff.contMDiff\n  have hg := hq.comp hf\n  have hn := T93A04ManifoldWork.null_critical (volume : Measure T93A04Closure.P2) (q ∘ f) hg\n  obtain ⟨b,hb⟩ : ∃ b : T93A04Closure.P2, b ∉\n      (q ∘ f) '' {y | ¬ Function.Surjective\n        (mfderiv (apm_t93a04_Model n) (𝓘(ℝ,T93A04Closure.P2)) (q ∘ f) y)} := by\n    by_contra h\n    have he : (q ∘ f) '' {y | ¬ Function.Surjective\n        (mfderiv (apm_t93a04_Model n) (𝓘(ℝ,T93A04Closure.P2)) (q ∘ f) y)} = univ := by\n      apply Set.eq_univ_of_forall\n      simpa using h\n    rw [he] at hn\n    exact (NeZero.ne ((volume : Measure T93A04Closure.P2) univ)) hn\n  obtain ⟨p,hp⟩ := T93A04Closure.proj_surjective b\n  refine ⟨apm_t93a04_line p apm_t93a04_lineDirection, rfl,\n    p,apm_t93a04_lineDirection,apm_t93a04_lineDirection_ne_zero,rfl,?_⟩\n  intro x hx\n  obtain ⟨t,ht⟩ := hx\n  have hv : q apm_t93a04_lineDirection = 0 := by\n    change apm_t93a04_lineDirection ∈ LinearMap.ker T93A04Closure.proj.toLinearMap\n    rw [T93A04Closure.proj_ker]\n    exact Submodule.subset_span (by simp)\n  have hxb : q (f x) = b := by rw [ht,map_add,map_smul,hv,smul_zero,add_zero]; exact hp\n  have hs : Function.Surjective\n      (mfderiv (apm_t93a04_Model n) (𝓘(ℝ,T93A04Closure.P2)) (q ∘ f) x) := by\n    by_contra hh"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t92J07/lean/Main.lean",
+        "sha256": "0e7bf95466e914d03b456449f5605abd35a49df231aa4c6fef4d0edbedc943e3",
+        "anchor": "measure_iUnion_null",
+        "excerpts": [
+          {
+            "first_line": 96,
+            "last_line": 122,
+            "text": "      (n := d i) (m := m) (M := M i) (f i) x := by\n  let C : Set (apm_t92J07_E m) := ⋃ i, apm_t92J07_criticalValues\n    (n := d i) (m := m) (M := M i) (f i)\n  have hC : volume C = 0 := measure_iUnion_null hnull\n  have hCne : C ≠ Set.univ := by\n    intro hCu\n    have huniv : volume (Set.univ : Set (apm_t92J07_E m)) = 0 := by simpa [hCu] using hC\n    have hball : volume (Metric.ball (0 : apm_t92J07_E m) 1) ≠ 0 :=\n      (Metric.isOpen_ball.measure_pos volume (Metric.nonempty_ball.mpr zero_lt_one)).ne'\n    exact hball (measure_mono_null (Set.subset_univ _) huniv)\n  have hex : ∃ x, x ∉ C := by\n    by_contra h\n    push_neg at h\n    exact hCne (Set.eq_univ_of_forall h)\n  obtain ⟨x, hx⟩ := hex\n  refine ⟨x, fun i => ?_⟩\n  have hxi : x ∉ apm_t92J07_criticalValues\n      (n := d i) (m := m) (M := M i) (f i) := by\n    intro hi\n    exact hx (Set.mem_iUnion.2 ⟨i, hi⟩)\n  simpa [apm_t92J07_criticalValues] using hxi\n\n/-- Why this unblocks `apm_t92j07`: this is precisely manifold Sard for the\ncritical-value predicate used in this file.  The compiled countable-union\nlemma consumes one instance of this statement for every family member. -/\ntheorem apm_t92J07_bridge_1\n    {n m : ℕ} (hm : 0 < m) {M : Type*}"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t94J05/lean/Main.lean",
+        "sha256": "87b691642378cc7350496c2308118bf901297536e0e4de5e355278c02314b82b",
+        "anchor": "not_surjective_of_fixedChart_coordinateNull",
+        "excerpts": [
+          {
+            "first_line": 131,
+            "last_line": 136,
+            "text": "    ConstructionTargets.FixedTargetChartDimensionDropNullity.fixed_extChartAt_range_inter_source_null\n        ((𝓡 1).prod (𝓡 1)) (𝓡 3) f hf_one hdim μ apm_t94J05_northPole\n  have hnot :=\n    ConstructionTargets.FixedChartNullForcesNonsurjectivity.not_surjective_of_fixedChart_coordinateNull\n        (𝓡 3) μ f apm_t94J05_northPole hnull\n  exact apm_t94J05_nullhomotopic_of_not_surjective f hnot"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t95J04/lean/Main.lean",
+        "sha256": "81a52f4f97d8d47874c34dd610c8ed500f11e873439b1276b3ca08348e0f6ea6",
+        "anchor": "not_surjective_of_fixedChart_coordinateNull",
+        "excerpts": [
+          {
+            "first_line": 192,
+            "last_line": 198,
+            "text": "  let q : T95J04Sphere n := Classical.choice inferInstance\n  have hc := ConstructionTargets.FixedTargetChartDimensionDropNullity.fixed_extChartAt_range_inter_source_null\n    (T95J04I k) (T95J04I n) f (hf.of_le (by simp)) (by simpa using hkn) volume q\n  have hnot := ConstructionTargets.FixedChartNullForcesNonsurjectivity.not_surjective_of_fixedChart_coordinateNull\n    (T95J04I n) volume f q hc\n  exact ⟨hnull, hnot, t95J04_nullHomotopic_of_not_surjective n f hf.continuous hnot⟩\n#print axioms apm_t95j04"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ],
+    "T3": [
+      {
+        "path": "problems/t01A03/lean/Main.lean",
+        "sha256": "aa488276525446ac7edc99da1d96042cbfdc29d294eac398fa78c47cde26bfee",
+        "anchor": "H1map_injective_of_retraction",
+        "excerpts": [
+          {
+            "first_line": 116,
+            "last_line": 142,
+            "text": "\n/-- Any retraction makes the induced map on first singular homology\ninjective. -/\nlemma apm_t01a03_H1map_injective_of_retraction\n    {A X : Type} [TopologicalSpace A] [TopologicalSpace X]\n    (i : C(A, X)) (h : apm_t01a03_HasRetraction i) :\n    Function.Injective (apm_t01a03_H1map i) := by\n  rcases h with ⟨r, hr⟩\n  have hcomp : r.comp i = ContinuousMap.id A := by\n    ext x\n    exact hr x\n  let F := (AlgebraicTopology.singularHomologyFunctor (ModuleCat ℤ) 1).obj\n    (ModuleCat.of ℤ ℤ)\n  have hfun : apm_t01a03_H1map i ≫ apm_t01a03_H1map r = 𝟙 (apm_t01a03_H1 A) := by\n    change F.map (TopCat.ofHom i) ≫ F.map (TopCat.ofHom r) = 𝟙 _\n    rw [← F.map_comp]\n    change F.map (TopCat.ofHom (r.comp i)) = 𝟙 _\n    rw [hcomp]\n    exact F.map_id (TopCat.of A)\n  intro x y hxy\n  have hxy' := congrArg (fun z ↦ apm_t01a03_H1map r z) hxy\n  have hx := congrArg (fun q : apm_t01a03_H1 A ⟶ apm_t01a03_H1 A ↦ q x) hfun\n  have hy := congrArg (fun q : apm_t01a03_H1 A ⟶ apm_t01a03_H1 A ↦ q y) hfun\n  simpa only [CategoryTheory.comp_apply, CategoryTheory.id_apply] using\n    hx.symm.trans (hxy'.trans hy)\n\n/-- A zero induced `H₁` map from a space with nonzero first homology cannot"
+          },
+          {
+            "first_line": 148,
+            "last_line": 174,
+            "text": "    ¬apm_t01a03_HasRetraction i := by\n  intro hret\n  obtain ⟨x, hx⟩ := hnonzero\n  have hinj := apm_t01a03_H1map_injective_of_retraction i hret\n  apply hx\n  apply hinj\n  rw [hi]\n  simp\n\n/-- The middle-circle obstruction, factored through precisely the missing\nlibrary fact that integral first homology of the circle is nontrivial. -/\nlemma apm_t01a03_noRetraction_circle_of_H1_nontrivial\n    [Nontrivial (apm_t01a03_H1 Circle)]\n    {X : Type} [TopologicalSpace X] (i : C(Circle, X))\n    (hi : apm_t01a03_H1map i = 0) :\n    ¬apm_t01a03_HasRetraction i := by\n  apply apm_t01a03_noRetraction_of_H1map_zero i hi\n  obtain ⟨x, hx⟩ := exists_ne (0 : apm_t01a03_H1 Circle)\n  exact ⟨x, hx⟩\n\ntheorem apm_t01a03 :\n    ∀ (S : Type) [TopologicalSpace S] [T2Space S] [CompactSpace S]\n      [PathConnectedSpace S] [ChartedSpace apm_t01a03_E2 S]\n      [IsManifold apm_t01a03_I2 ∞ S],\n      apm_t01a03_hasGenusTwo S →\n      ∀ (middle : C(Circle, S))\n        (wedgeInTorus : C(apm_t01a03_Wedge, apm_t01a03_Torus))"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t91J02/lean/Main.lean",
+        "sha256": "c670eeecd337064e01fa5252342f04de0d67afd2b816ca9c3ac82291a11a6782",
+        "anchor": "fundamentalGroupMap_injective_of_retract",
+        "excerpts": [
+          {
+            "first_line": 68,
+            "last_line": 94,
+            "text": "\n/-- Reused from the functorial argument in sibling `t91A05`: a left inverse\nmakes the induced fundamental-group map injective. -/\nlemma apm_t91J02_fundamentalGroupMap_injective_of_retract\n    {A X : Type*} [TopologicalSpace A] [TopologicalSpace X]\n    (i : C(A, X)) (a : A) (r : C(X, A))\n    (hr : r.comp i = ContinuousMap.id A) :\n    Function.Injective (FundamentalGroup.map i a) := by\n  intro x y hxy\n  change (FundamentalGroupoid.map i).map x =\n    (FundamentalGroupoid.map i).map y at hxy\n  have hxy' := congrArg (fun z ↦ (FundamentalGroupoid.map r).map z) hxy\n  change ((FundamentalGroupoid.map i ⋙ FundamentalGroupoid.map r).map x) =\n    ((FundamentalGroupoid.map i ⋙ FundamentalGroupoid.map r).map y) at hxy'\n  rw [← FundamentalGroupoid.map_comp, hr, FundamentalGroupoid.map_id] at hxy'\n  exact hxy'\n\n/-- The exact invariant obstruction: a space with trivial fundamental groups\nat every basepoint cannot admit `Circle` as a retract once the circle's group\nis known to be nontrivial. -/\nlemma apm_t91J02_no_circle_retract_of_fundamentalGroup\n    [Nontrivial (FundamentalGroup Circle (1 : Circle))]\n    (hsphere : ∀ x : apm_t91J02_S2,\n      Subsingleton (FundamentalGroup apm_t91J02_S2 x)) :\n    ¬ ∃ i : C(Circle, apm_t91J02_S2),\n      ∃ r : C(apm_t91J02_S2, Circle),\n        r.comp i = ContinuousMap.id Circle := by"
+          },
+          {
+            "first_line": 94,
+            "last_line": 120,
+            "text": "        r.comp i = ContinuousMap.id Circle := by\n  rintro ⟨i, r, hr⟩\n  letI : Subsingleton (FundamentalGroup apm_t91J02_S2 (i 1)) := hsphere (i 1)\n  have hinj := apm_t91J02_fundamentalGroupMap_injective_of_retract i 1 r hr\n  obtain ⟨x, hx⟩ := exists_ne (1 : FundamentalGroup Circle (1 : Circle))\n  apply hx\n  apply hinj\n  exact Subsingleton.elim _ _\n\ntheorem apm_t91j02 :\n    ¬Nonempty (apm_t91J02_Torus ≃ₜ apm_t91J02_S2) := by\n  /- Boundary (closer hop 1): the explicit maps above prove that `Circle` is a\n  retract of the concrete torus.  Thus a hypothesized homeomorphism would\n  transport this to a circle retract of the concrete metric two-sphere.\n\n  I searched `LEMMA-INDEX.md`, Mathlib's fundamental-group, singular-homology,\n  sphere, retract, and separation APIs, all `ConstructionTargets/`, git\n  history, and the nearby topology artifacts.  Mathlib has functoriality but\n  no compiled theorem computing `FundamentalGroup Circle`, the fundamental\n  group or integral homology of this metric sphere, or directly ruling out a\n  circle retract of it.  The partial siblings `t01J03`, `t91A05`, `t02A06`,\n  `t95J04`, and `t01A05` independently stop at those same computations.\n  Consequently the remaining bridge is precisely a no-circle-retract theorem\n  for `apm_t91J02_S2` (obtainable from π₁ or H₁ once either is computed).\n\n  CLOSER HOP 2: the transport assertion is now fully formal rather than only\n  described. `apm_t91J02_circleRetract_of_homeomorph` conjugates the explicit"
+          },
+          {
+            "first_line": 133,
+            "last_line": 154,
+            "text": "\n  CLOSER HOP 3 compiles that invariant obstruction rather than merely naming\n  it. Reusing the categorical pattern from sibling `t91A05`,\n  `apm_t91J02_fundamentalGroupMap_injective_of_retract` proves that a left\n  inverse induces an injection, and\n  `apm_t91J02_no_circle_retract_of_fundamentalGroup` derives the exact\n  no-circle-retract assertion from a nontrivial circle group and subsingleton\n  sphere groups at every basepoint. Thus no functorial or group reasoning\n  remains. Searches of covering/lift, winding-number, sphere, and homology\n  sources still found neither concrete computation. The sole remaining inputs\n  are precisely those foundational instances; the frozen statement is\n  unchanged. -/\n  letI : Nontrivial (FundamentalGroup Circle (1 : Circle)) :=\n    ConstructionTargets.CircleUniversalCover.circleFundamentalGroupMulEquivInt.toEquiv.nontrivial\n  letI : SimplyConnectedSpace apm_t91J02_S2 :=\n    ConstructionTargets.SimplyConnectedSphereProducts.euclideanSphere_simplyConnected\n      2 (by norm_num)\n  apply apm_t91J02_not_homeomorph_of_no_circle_retract\n  apply apm_t91J02_no_circle_retract_of_fundamentalGroup\n  intro x\n  change Subsingleton (Path.Homotopic.Quotient x x)\n  infer_instance"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ],
+    "T4": [
+      {
+        "path": "ConstructionTargets/GenericTargetNaturalSourceReconstruction.lean",
+        "sha256": "22d80007b28e10568b53488d8be1cf969d0db0991e97f4bbab0ae8a00afb0938",
+        "anchor": "forwardRoundTripImageIso",
+        "excerpts": [
+          {
+            "first_line": 38,
+            "last_line": 64,
+            "text": "    ((Functor.whiskeringRight A C D).obj K) :=\n  CatCommSq.vInv _ (E C) (E D) _ (targetSquare E postIso K)\n\ndef forwardRoundTripImageIso :\n    (E A).functor.obj (forwardCandidate E ⋙ inverseCandidate E) ≅\n      (E A).functor.obj (𝟭 A) :=\n  (postIso (inverseCandidate E)).app (forwardCandidate E) ≪≫\n    Functor.isoWhiskerRight ((E B).counitIso.app (𝟭 B)) (inverseCandidate E) ≪≫\n    Functor.leftUnitor (inverseCandidate E)\n\ndef forwardRoundTripIso :\n    forwardCandidate E ⋙ inverseCandidate E ≅ 𝟭 A :=\n  (E A).functor.preimageIso (forwardRoundTripImageIso E postIso)\n\ndef inverseRoundTripImageIso :\n    (E B).inverse.obj (inverseCandidate E ⋙ forwardCandidate E) ≅\n      (E B).inverse.obj (𝟭 B) :=\n  (inverseTargetSquare E postIso (forwardCandidate E)).iso.app (inverseCandidate E) ≪≫\n    Functor.isoWhiskerRight ((E A).unitIso.app (𝟭 A)).symm (forwardCandidate E) ≪≫\n    Functor.leftUnitor (forwardCandidate E)\n\ndef inverseRoundTripIso :\n    inverseCandidate E ⋙ forwardCandidate E ≅ 𝟭 B :=\n  (E B).inverse.preimageIso (inverseRoundTripImageIso E postIso)\n\n/-- Reconstruct the source equivalence from the target-natural family of\nmapping-category equivalences. -/"
+          },
+          {
+            "first_line": 47,
+            "last_line": 73,
+            "text": "\ndef forwardRoundTripIso :\n    forwardCandidate E ⋙ inverseCandidate E ≅ 𝟭 A :=\n  (E A).functor.preimageIso (forwardRoundTripImageIso E postIso)\n\ndef inverseRoundTripImageIso :\n    (E B).inverse.obj (inverseCandidate E ⋙ forwardCandidate E) ≅\n      (E B).inverse.obj (𝟭 B) :=\n  (inverseTargetSquare E postIso (forwardCandidate E)).iso.app (inverseCandidate E) ≪≫\n    Functor.isoWhiskerRight ((E A).unitIso.app (𝟭 A)).symm (forwardCandidate E) ≪≫\n    Functor.leftUnitor (forwardCandidate E)\n\ndef inverseRoundTripIso :\n    inverseCandidate E ⋙ forwardCandidate E ≅ 𝟭 B :=\n  (E B).inverse.preimageIso (inverseRoundTripImageIso E postIso)\n\n/-- Reconstruct the source equivalence from the target-natural family of\nmapping-category equivalences. -/\ndef sourceEquivalence : A ≌ B :=\n  CategoryTheory.Equivalence.mk (forwardCandidate E) (inverseCandidate E)\n    (forwardRoundTripIso E postIso).symm (inverseRoundTripIso E postIso)\n\n@[simp] theorem sourceEquivalence_functor :\n    (sourceEquivalence E postIso).functor = forwardCandidate E := rfl\n\n@[simp] theorem sourceEquivalence_inverse :\n    (sourceEquivalence E postIso).inverse = inverseCandidate E := rfl"
+          }
+        ],
+        "completed_consumers_via_imports": [
+          "t00A01",
+          "t02A03"
+        ],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "ConstructionTargets/TwiceSpiralSourceEquivalence.lean",
+        "sha256": "830d4b3895704136fe6e15d83c2deb0b6829cf40d9eac7408c8c380027b691ce",
+        "anchor": "gluingRoundTripImageIso",
+        "excerpts": [
+          {
+            "first_line": 45,
+            "last_line": 71,
+            "text": "image of the identity.  The first factor is target naturality evaluated at\n`gluingToPushout`; the remaining factors use the mapping equivalence's\ncounit and the left unitor. -/\ndef gluingRoundTripImageIso :\n    (mappingEquivalence B K (gluingGroupoid (h := h))).functor.obj\n        (gluingToPushout B K ⋙ pushoutToGluing B K) ≅\n      (mappingEquivalence B K (gluingGroupoid (h := h))).functor.obj\n        (Functor.id (gluingGroupoid (h := h))) :=\n  (gluingFundamentalGroupoidSingleObjMappingEquivalence_postcomposeIso\n      B K (pushoutToGluing B K)).app (gluingToPushout B K) ≪≫\n    Functor.isoWhiskerRight\n      ((mappingEquivalence B K (pushoutSingleObj (d := d))).counitIso.app\n        (Functor.id (pushoutSingleObj (d := d))))\n      (pushoutToGluing B K) ≪≫\n    Functor.leftUnitor (pushoutToGluing B K)\n\n/-- Full faithfulness of the mapping-equivalence functor reflects the first\nround-trip image isomorphism back to the gluing groupoid. -/\ndef gluingRoundTripIso :\n    gluingToPushout B K ⋙ pushoutToGluing B K ≅\n      Functor.id (gluingGroupoid (h := h)) :=\n  (mappingEquivalence B K (gluingGroupoid (h := h))).functor.preimageIso\n    (gluingRoundTripImageIso B K)\n\n/-- The inverse mapping-equivalence mate, evaluated at `pushoutToGluing`,\nidentifies the image of the other composite with the image of the identity.\nThe unit of the mapping equivalence supplies the middle comparison. -/"
+          },
+          {
+            "first_line": 64,
+            "last_line": 90,
+            "text": "    gluingToPushout B K ⋙ pushoutToGluing B K ≅\n      Functor.id (gluingGroupoid (h := h)) :=\n  (mappingEquivalence B K (gluingGroupoid (h := h))).functor.preimageIso\n    (gluingRoundTripImageIso B K)\n\n/-- The inverse mapping-equivalence mate, evaluated at `pushoutToGluing`,\nidentifies the image of the other composite with the image of the identity.\nThe unit of the mapping equivalence supplies the middle comparison. -/\ndef pushoutRoundTripImageIso :\n    (mappingEquivalence B K (pushoutSingleObj (d := d))).inverse.obj\n        (pushoutToGluing B K ⋙ gluingToPushout B K) ≅\n      (mappingEquivalence B K (pushoutSingleObj (d := d))).inverse.obj\n        (Functor.id (pushoutSingleObj (d := d))) :=\n  (gluingFundamentalGroupoidSingleObjMappingEquivalence_inversePostcomposeIso\n      B K (gluingToPushout B K)).app (pushoutToGluing B K) ≪≫\n    Functor.isoWhiskerRight\n      ((mappingEquivalence B K (gluingGroupoid (h := h))).unitIso.app\n        (Functor.id (gluingGroupoid (h := h)))).symm\n      (gluingToPushout B K) ≪≫\n    Functor.leftUnitor (gluingToPushout B K)\n\n/-- Full faithfulness of the inverse mapping-equivalence functor reflects the\nsecond round-trip image isomorphism back to the one-object pushout category. -/\ndef pushoutRoundTripIso :\n    pushoutToGluing B K ⋙ gluingToPushout B K ≅\n      Functor.id (pushoutSingleObj (d := d)) :=\n  (mappingEquivalence B K (pushoutSingleObj (d := d))).inverse.preimageIso"
+          },
+          {
+            "first_line": 99,
+            "last_line": 108,
+            "text": "    (gluingToPushout B K) (pushoutToGluing B K)\n    (gluingRoundTripIso B K).symm (pushoutRoundTripIso B K)\n\n#print axioms gluingRoundTripImageIso\n#print axioms gluingRoundTripIso\n#print axioms pushoutRoundTripImageIso\n#print axioms pushoutRoundTripIso\n#print axioms gluingFundamentalGroupoidSingleObjEquivalence\n\nend ConstructionTargets.TwiceSpiralSourceEquivalence"
+          }
+        ],
+        "completed_consumers_via_imports": [
+          "t01J03"
+        ],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ],
+    "T5": [
+      {
+        "path": "problems/t92J02/lean/Main.lean",
+        "sha256": "d5fcdad562a5a32c0e839581fce821dfc197ec02bbd02358d78c574cc8fde6af",
+        "anchor": "homeomorph_of_compact_to_T2",
+        "excerpts": [
+          {
+            "first_line": 16,
+            "last_line": 42,
+            "text": "  hK.image hf\n\n/-- A continuous bijection from a compact space to a Hausdorff space is a homeomorphism. -/\ntheorem homeomorph_of_compact_to_T2\n    {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y]\n    [T2Space Y] {f : X → Y}\n    (hcompact : IsCompact (Set.univ : Set X)) (hf : Continuous f)\n    (hbij : Function.Bijective f) :\n    ∃ h : X ≃ₜ Y, h.toContinuousMap = ⟨f, hf⟩ := by\n  classical\n  -- Equip X with the compact-space structure coming from `hcompact`.\n  haveI : CompactSpace X := ⟨⟨by simpa using hcompact⟩⟩\n  -- Continuous images of closed sets are compact and hence closed in a Hausdorff space.\n  have hClosedMap : IsClosedMap f := by\n    intro C hC\n    have hCcompact : IsCompact C := hC.isCompact\n    have : IsCompact (f '' C) := hCcompact.image hf\n    simpa using this.isClosed\n  -- Choose an inverse `g` provided by bijectivity and record its algebraic properties.\n  obtain ⟨g, hg₁, hg₂⟩ := hbij.has_inverse\n  -- Identify the preimage of a closed set under `g` with the closed image under `f`.\n  have hg_preimage_eq : ∀ {C : Set X}, IsClosed C → g ⁻¹' C = f '' C := by\n    intro C hC\n    ext y; constructor\n    · intro hy\n      refine ⟨g y, hy, ?_⟩\n      simpa using hg₂ y"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "problems/t94J02/lean/Main.lean",
+        "sha256": "718bc9a6324ef09671199092e0ec599d5bfbaaebfae9ffab26074f1137c1c7ca",
+        "anchor": "topology_eq_of_compact_to_hausdorff",
+        "excerpts": [
+          {
+            "first_line": 25,
+            "last_line": 44,
+            "text": "    -- Correct maximal-compact/minimal-Hausdorff directions:\n    (∀ τ : TopologicalSpace X, τ < σ → ¬@CompactSpace X τ) ∧\n    (∀ τ : TopologicalSpace X, σ < τ → ¬@T2Space X τ) := by\n  have topology_eq_of_compact_to_hausdorff\n      (source target : TopologicalSpace X)\n      (hc : @CompactSpace X source) (hh : @T2Space X target)\n      (hle : source ≤ target) : target = source := by\n    have homeo : @IsHomeomorph X X source target id :=\n      (@isHomeomorph_iff_continuous_bijective X X source target id hc hh).2\n        ⟨continuous_id_of_le hle, Function.bijective_id⟩\n    apply le_antisymm\n    · exact (@isOpen_implies_isOpen_iff X source target).1 fun s hs ↦ by\n        simpa only [Set.image_id] using\n          (@IsHomeomorph.isOpenMap X X source target id homeo s hs)\n    · exact hle\n  constructor\n  · intro τ hτ hτcompact\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff τ σ hτcompact hhausdorff hτ.le).symm\n  · intro τ hτ hτhausdorff\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff σ τ hcompact hτhausdorff hτ.le).symm"
+          },
+          {
+            "first_line": 39,
+            "last_line": 44,
+            "text": "    · exact hle\n  constructor\n  · intro τ hτ hτcompact\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff τ σ hτcompact hhausdorff hτ.le).symm\n  · intro τ hτ hτhausdorff\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff σ τ hcompact hτhausdorff hτ.le).symm"
+          },
+          {
+            "first_line": 41,
+            "last_line": 44,
+            "text": "  · intro τ hτ hτcompact\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff τ σ hτcompact hhausdorff hτ.le).symm\n  · intro τ hτ hτhausdorff\n    exact hτ.ne (topology_eq_of_compact_to_hausdorff σ τ hcompact hτhausdorff hτ.le).symm"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ],
+    "T6": [
+      {
+        "path": "ConstructionTargets/LocalHomologyNeighborhoodExcision.lean",
+        "sha256": "a9f4488775de93310f82273d66df283cd9ab9cfd362bc149abc7d1766d3c57e3",
+        "anchor": "neighborhoodInclusion_chain_eq",
+        "excerpts": [
+          {
+            "first_line": 35,
+            "last_line": 61,
+            "text": "\n/-- Exact map comparison: the chart-neighborhood inclusion is the production\nexcision map after the canonical subtype identification. -/\ntheorem neighborhoodInclusion_chain_eq (U : Set X) (x : X) :\n    relativeSingularMap (neighborhoodDeletedPoint U x) (deletedPoint x)\n      (neighborhoodInclusion U) (neighborhoodInclusion_mapsTo U x) =\n    relativeSingularMap (neighborhoodDeletedPoint U x) (excisedSubspace (deletedPoint x) Uᶜ)\n      (pairContinuousMap (neighborhoodExcisionHomeomorph U))\n      (pairContinuousMap_mapsTo _ _ _ (neighborhoodExcision_pair_iff U x)) ≫\n      relativeExcisionMap (deletedPoint x) Uᶜ := by\n  let e := pairContinuousMap (neighborhoodExcisionHomeomorph U)\n  have he := pairContinuousMap_mapsTo (neighborhoodExcisionHomeomorph U)\n    (neighborhoodDeletedPoint U x) (excisedSubspace (deletedPoint x) Uᶜ)\n    (neighborhoodExcision_pair_iff U x)\n  have hf := excisionInclusion_mapsTo (deletedPoint x) Uᶜ\n  have hcomp : (excisionInclusion Uᶜ).comp e = neighborhoodInclusion U := by\n    ext u\n    rfl\n  have h := relativeSingularMap_comp (neighborhoodDeletedPoint U x)\n    (excisedSubspace (deletedPoint x) Uᶜ) (deletedPoint x)\n    e (excisionInclusion Uᶜ) he hf (hf.comp he)\n  simpa only [hcomp] using h.symm\n\n/-- Excision makes inclusion of any open neighborhood of a point an\nisomorphism on its local H1. T1 supplies openness of the deleted point. -/\ntheorem neighborhoodInclusion_H1_isIso [T1Space X]\n    (U : Set X) (x : X) (hU : IsOpen U) (hx : x ∈ U) :"
+          },
+          {
+            "first_line": 71,
+            "last_line": 97,
+            "text": "  letI := relativeSingularMap_homeomorphPair_isIso (neighborhoodExcisionHomeomorph U)\n    (neighborhoodDeletedPoint U x) (excisedSubspace (deletedPoint x) Uᶜ)\n    (neighborhoodExcision_pair_iff U x) 1\n  rw [neighborhoodInclusion_chain_eq, HomologicalComplex.homologyMap_comp]\n  infer_instance\n\n/-- Inclusion sends a generator of neighborhood local H1 to a generator of\nambient local H1, through the actual map just compared with excision. -/\ntheorem neighborhoodInclusion_sends_generator [T1Space X]\n    (U : Set X) (x : X) (hU : IsOpen U) (hx : x ∈ U)\n    (g : (RelativeSingularChains (neighborhoodDeletedPoint U x)).homology 1)\n    (hg : ∀ z : (RelativeSingularChains (neighborhoodDeletedPoint U x)).homology 1,\n      ∃ n : ℤ, n • g = z) :\n    ∀ z : (RelativeSingularChains (deletedPoint x)).homology 1, ∃ n : ℤ,\n      n • HomologicalComplex.homologyMap\n        (relativeSingularMap (neighborhoodDeletedPoint U x) (deletedPoint x)\n          (neighborhoodInclusion U) (neighborhoodInclusion_mapsTo U x)) 1 g = z := by\n  let f := HomologicalComplex.homologyMap\n    (relativeSingularMap (neighborhoodDeletedPoint U x) (deletedPoint x)\n      (neighborhoodInclusion U) (neighborhoodInclusion_mapsTo U x)) 1\n  letI := neighborhoodInclusion_H1_isIso U x hU hx\n  intro z\n  obtain ⟨n, hn⟩ := hg ((asIso f).inv z)\n  refine ⟨n, ?_⟩\n  change n • f g = z\n  rw [← map_zsmul, hn]\n  exact ConcreteCategory.congr_hom (asIso f).inv_hom_id z"
+          },
+          {
+            "first_line": 111,
+            "last_line": 119,
+            "text": "  neighborhoodInclusion_H1_isIso _ _ Metric.isOpen_ball (Metric.mem_ball_self (by norm_num))\n\nend ConstructionTargets.LocalHomologyNeighborhoodExcision\n#print axioms ConstructionTargets.LocalHomologyNeighborhoodExcision.neighborhoodInclusion_chain_eq\n#print axioms ConstructionTargets.LocalHomologyNeighborhoodExcision.neighborhoodInclusion_H1_isIso\n#print axioms ConstructionTargets.LocalHomologyNeighborhoodExcision.neighborhoodInclusion_sends_generator\n\n#print axioms ConstructionTargets.LocalHomologyNeighborhoodExcision.lineNeighborhoodInclusion_H1_isIso\n#print axioms ConstructionTargets.LocalHomologyNeighborhoodExcision.circleNeighborhoodInclusion_H1_isIso"
+          }
+        ],
+        "completed_consumers_via_imports": [],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "ConstructionTargets/CoefficientRelativeSmall.lean",
+        "sha256": "8d748371a567aff62b8214d511fb6275fd24832a9544540d21fb5d39c1bbfd79",
+        "anchor": "comparisonIso_hom",
+        "excerpts": [
+          {
+            "first_line": 58,
+            "last_line": 84,
+            "text": "      (restrictedCover_isOpen A U ho) (by rw [restrictedCover_iUnion_eq_univ A U (Set.eq_univ_of_univ_subset hc)]) j)\n    (fun j => CoefficientSmallComparison.inclusion_isIso R U ho hc j) n\n\ntheorem comparisonIso_hom (ho : ∀ a, IsOpen (U a)) (hc : Set.univ ⊆ ⋃ a, U a) (n : ℕ) :\n    (comparisonIso R A U ho hc n).hom = HomologicalComplex.homologyMap (relativeMap R A U) n := rfl\n\n/-- R, X and the arbitrary cover index type are Type 0; A need not be open. -/\ntheorem subspaceMap_eq_postcomposition : subspaceMap R A =\n    CoefficientH0.singularPostcomposition R (⟨Subtype.val, continuous_subtype_val⟩ : C(A, X)) := rfl\n\ntheorem inverse_left (ho : ∀ a, IsOpen (U a)) (hc : Set.univ ⊆ ⋃ a, U a) (n : ℕ) :\n    (comparisonIso R A U ho hc n).inv ≫ HomologicalComplex.homologyMap (relativeMap R A U) n = 𝟙 _ :=\n  (comparisonIso R A U ho hc n).inv_hom_id\n\ntheorem inverse_right (ho : ∀ a, IsOpen (U a)) (hc : Set.univ ⊆ ⋃ a, U a) (n : ℕ) :\n    HomologicalComplex.homologyMap (relativeMap R A U) n ≫ (comparisonIso R A U ho hc n).inv = 𝟙 _ :=\n  (comparisonIso R A U ho hc n).hom_inv_id\n\ndef integral_interval (n : ℕ) := comparisonIso ℤ (Set.Icc (0 : ℝ) 1)\n  CoefficientSmallPath.intervalCover CoefficientSmallPath.intervalCover_open CoefficientSmallPath.intervalCover_covers n\n\ndef rational_interval (n : ℕ) := comparisonIso ℚ (Set.Icc (0 : ℝ) 1)\n  CoefficientSmallPath.intervalCover CoefficientSmallPath.intervalCover_open CoefficientSmallPath.intervalCover_covers n\n\n#print axioms comparisonIso\n#print axioms restrictedMap_mono\n#print axioms inclusion_square"
+          },
+          {
+            "first_line": 83,
+            "last_line": 91,
+            "text": "#print axioms restrictedMap_mono\n#print axioms inclusion_square\n#print axioms restrictedMap_generator\n#print axioms comparisonIso_hom\n#print axioms inverse_left\n#print axioms inverse_right\n#print axioms integral_interval\n#print axioms rational_interval\nend ConstructionTargets.CoefficientRelativeSmall"
+          }
+        ],
+        "completed_consumers_via_imports": [
+          "t94J08"
+        ],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      },
+      {
+        "path": "ConstructionTargets/CoefficientExcision.lean",
+        "sha256": "46da907c33015a2696e2609583fb4d06182317f1ff79cfa05fbd3f182a03ad5a",
+        "anchor": "homologyIso_hom",
+        "excerpts": [
+          {
+            "first_line": 216,
+            "last_line": 242,
+            "text": "  CoefficientRelativeSmall.comparisonIso R A (excisionCover A Z)\n    (excisionCover_isOpen A Z hZ) (by rw [excisionCover_iUnion_eq_univ A Z hZA]) n\n\ntheorem homologyIso_hom (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    (homologyIso R A Z hZ hZA n).hom = HomologicalComplex.homologyMap (excisionMap R A Z) n := by\n  change HomologicalComplex.homologyMap (smallIso R A Z).hom n ≫\n    HomologicalComplex.homologyMap (CoefficientRelativeSmall.relativeMap R A (excisionCover A Z)) n = _\n  exact (HomologicalComplex.homologyMap_comp (smallIso R A Z).hom\n    (CoefficientRelativeSmall.relativeMap R A (excisionCover A Z)) n).symm.trans\n    (congrArg (fun f => HomologicalComplex.homologyMap f n) (composite_eq R A Z))\n\ninstance excision_isIso (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    IsIso (HomologicalComplex.homologyMap (excisionMap R A Z) n) := by\n  rw [← homologyIso_hom R A Z hZ hZA n]\n  infer_instance\n\ntheorem inverse_left (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    (homologyIso R A Z hZ hZA n).inv ≫ HomologicalComplex.homologyMap (excisionMap R A Z) n = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.inv_hom_id _\n\ntheorem inverse_right (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    HomologicalComplex.homologyMap (excisionMap R A Z) n ≫ (homologyIso R A Z hZ hZA n).inv = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.hom_inv_id _\n\ndef integral_interval (n : ℕ) := homologyIso ℤ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n"
+          },
+          {
+            "first_line": 226,
+            "last_line": 252,
+            "text": "\ninstance excision_isIso (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    IsIso (HomologicalComplex.homologyMap (excisionMap R A Z) n) := by\n  rw [← homologyIso_hom R A Z hZ hZA n]\n  infer_instance\n\ntheorem inverse_left (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    (homologyIso R A Z hZ hZA n).inv ≫ HomologicalComplex.homologyMap (excisionMap R A Z) n = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.inv_hom_id _\n\ntheorem inverse_right (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    HomologicalComplex.homologyMap (excisionMap R A Z) n ≫ (homologyIso R A Z hZ hZA n).inv = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.hom_inv_id _\n\ndef integral_interval (n : ℕ) := homologyIso ℤ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\ndef rational_interval (n : ℕ) := homologyIso ℚ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\n#print axioms excisionSourceChain_square\n#print axioms excisionTargetChain_square\n#print axioms smallIso\n#print axioms projection_degree\n#print axioms composite_eq\n#print axioms homologyIso_hom\n#print axioms excision_isIso"
+          },
+          {
+            "first_line": 231,
+            "last_line": 257,
+            "text": "\ntheorem inverse_left (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    (homologyIso R A Z hZ hZA n).inv ≫ HomologicalComplex.homologyMap (excisionMap R A Z) n = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.inv_hom_id _\n\ntheorem inverse_right (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    HomologicalComplex.homologyMap (excisionMap R A Z) n ≫ (homologyIso R A Z hZ hZA n).inv = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.hom_inv_id _\n\ndef integral_interval (n : ℕ) := homologyIso ℤ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\ndef rational_interval (n : ℕ) := homologyIso ℚ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\n#print axioms excisionSourceChain_square\n#print axioms excisionTargetChain_square\n#print axioms smallIso\n#print axioms projection_degree\n#print axioms composite_eq\n#print axioms homologyIso_hom\n#print axioms excision_isIso\n#print axioms inverse_left\n#print axioms inverse_right\n#print axioms integral_interval\n#print axioms rational_interval\nend ConstructionTargets.CoefficientExcision"
+          },
+          {
+            "first_line": 235,
+            "last_line": 257,
+            "text": "\ntheorem inverse_right (hZ : IsClosed Z) (hZA : Z ⊆ interior A) (n : ℕ) :\n    HomologicalComplex.homologyMap (excisionMap R A Z) n ≫ (homologyIso R A Z hZ hZA n).inv = 𝟙 _ := by\n  rw [← homologyIso_hom R A Z hZ hZA n]; exact Iso.hom_inv_id _\n\ndef integral_interval (n : ℕ) := homologyIso ℤ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\ndef rational_interval (n : ℕ) := homologyIso ℚ (Set.Ioo (-2 : ℝ) 2) (Set.Icc (-1 : ℝ) 1)\n  isClosed_Icc (by rw [isOpen_Ioo.interior_eq]; intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2]⟩) n\n\n#print axioms excisionSourceChain_square\n#print axioms excisionTargetChain_square\n#print axioms smallIso\n#print axioms projection_degree\n#print axioms composite_eq\n#print axioms homologyIso_hom\n#print axioms excision_isIso\n#print axioms inverse_left\n#print axioms inverse_right\n#print axioms integral_interval\n#print axioms rational_interval\nend ConstructionTargets.CoefficientExcision"
+          },
+          {
+            "first_line": 248,
+            "last_line": 257,
+            "text": "#print axioms smallIso\n#print axioms projection_degree\n#print axioms composite_eq\n#print axioms homologyIso_hom\n#print axioms excision_isIso\n#print axioms inverse_left\n#print axioms inverse_right\n#print axioms integral_interval\n#print axioms rational_interval\nend ConstructionTargets.CoefficientExcision"
+          }
+        ],
+        "completed_consumers_via_imports": [
+          "t94J08"
+        ],
+        "evidence": "analyst-inspected source construction; imports are availability only"
+      }
+    ]
+  },
+  "all_completed_candidate_coverage": [
+    {
+      "problem": "t00A01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [
+        "T4"
+      ],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t00A04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t00A05",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t00J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t00J04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t00J06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t01A03",
+      "inspected_direct_witness_for": [
+        "T3"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t01A06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t01A07",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t01J02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t01J03",
+      "inspected_direct_witness_for": [
+        "T1"
+      ],
+      "witness_module_available_via_imports": [
+        "T4"
+      ],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t02A01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t02A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t02A03",
+      "inspected_direct_witness_for": [
+        "T1"
+      ],
+      "witness_module_available_via_imports": [
+        "T4"
+      ],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t02A06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t03J06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A05",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A07",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91A08",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91J01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t91J02",
+      "inspected_direct_witness_for": [
+        "T3"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t91J04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t92J01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t92J02",
+      "inspected_direct_witness_for": [
+        "T5"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t92J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t92J04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t92J07",
+      "inspected_direct_witness_for": [
+        "T2"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t92J09",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t93A01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t93A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t93A04",
+      "inspected_direct_witness_for": [
+        "T2"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t93J02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94A05",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94J01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94J02",
+      "inspected_direct_witness_for": [
+        "T5"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t94J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94J05",
+      "inspected_direct_witness_for": [
+        "T2"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t94J06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t94J08",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [
+        "T6"
+      ],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t95A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t95A03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t95J01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t95J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t95J04",
+      "inspected_direct_witness_for": [
+        "T2"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t96A03",
+      "inspected_direct_witness_for": [
+        "T1"
+      ],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": false
+    },
+    {
+      "problem": "t96J04",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t96J07",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t96J08",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t97A02",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t97J01",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t97J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t97J06",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t97J08",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t98A05",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    },
+    {
+      "problem": "t98J03",
+      "inspected_direct_witness_for": [],
+      "witness_module_available_via_imports": [],
+      "no_selected_witness": true
+    }
+  ],
+  "done_dispositions": {
+    "holes/labs/topology-contract/worklist.edn": {
+      "done": 541,
+      "author_outcomes": {
+        "done-unreviewed": 440,
+        "stop": 53,
+        "replan": 48
+      },
+      "review_outcomes": {
+        "pass": 541
+      },
+      "with_commit": 440
+    },
+    "holes/labs/topology-contract/worklist2.edn": {
+      "done": 188,
+      "author_outcomes": {
+        "done-unreviewed": 109,
+        "replan": 50,
+        "stop": 29
+      },
+      "review_outcomes": {
+        "pass": 188
+      },
+      "with_commit": 109
+    }
+  },
+  "unassigned_roots": [
+    "t00A04",
+    "t00A05",
+    "t00J03",
+    "t00J04",
+    "t00J06",
+    "t01A06",
+    "t01A07",
+    "t01J02",
+    "t02A01",
+    "t02A02",
+    "t02A06",
+    "t03J06",
+    "t91A01",
+    "t91A02",
+    "t91A03",
+    "t91A04",
+    "t91A05",
+    "t91A06",
+    "t91A07",
+    "t91A08",
+    "t91J01",
+    "t91J04",
+    "t92J01",
+    "t92J03",
+    "t92J04",
+    "t92J09",
+    "t93A01",
+    "t93A02",
+    "t93J02",
+    "t94A02",
+    "t94A05",
+    "t94J01",
+    "t94J03",
+    "t94J06",
+    "t95A02",
+    "t95A03",
+    "t95J01",
+    "t95J03",
+    "t96J04",
+    "t96J07",
+    "t96J08",
+    "t97A02",
+    "t97J01",
+    "t97J03",
+    "t97J06",
+    "t97J08",
+    "t98A05",
+    "t98J03"
+  ]
+}

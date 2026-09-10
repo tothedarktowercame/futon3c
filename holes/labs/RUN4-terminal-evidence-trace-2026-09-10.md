@@ -16,9 +16,11 @@ Codex-10, 2026-09-10. Build/test preparation only; no live RUN4 invocation.
    not persist a click/run binding (`:357-375`). Service idle therefore cannot
    establish a terminal outcome.
 3. A click/run binding currently stores schema, click ID, the full-loop's
-   internal attempt ID, raw full-loop outcome, an observational run ID,
-   run-record status/path and durability (`runner_service.clj:210-315`). It is
-   atomic-renamed and directory-fsynced (`:263-315`). `:binding-status
+   internal attempt ID, raw full-loop outcome, an observational run ID, and
+   run-record status/path (`runner_service.clj:210-315`). It is atomic-renamed
+   and directory-fsynced (`:263-315`), but the `:durability` field is added only
+   to the function's returned map after that fsync; it is not present in the
+   durable binding bytes (`:292-304`). `:binding-status
    :verified` means only that run ID and click ID agree with the referenced run
    record (`:217-245`); it is not a task-success verdict.
 4. The full-loop durable run record stores run ID, click ID, start time,
@@ -53,7 +55,9 @@ duplicate, mismatched, unavailable or refuted artifacts must yield
 wait/reconciliation or refusal. Click acceptance, worker-thread completion,
 service idle and `await-click! :completed` are never success.
 
-The current durable artifacts are insufficient to classify every non-success
+The current durable artifacts cannot distinguish a confirmed binding fsync
+from the post-rename/fsync-failure case after process restart. They are also
+insufficient to classify every non-success
 as task `:failed`, task `:blocked`, or infrastructure `:unsafe`. The binding
 retains only `:outcome`; it drops the full-loop result's checkpoint judgments,
 failure kind/stage, repair obligation, reviewer/build evidence and grounding

@@ -161,3 +161,21 @@ published patterns:
 These are candidate abstractions of standard mathematics, not claims of novel
 mathematical discovery. Their generality and overlap with existing patterns
 need cross-example review before library promotion.
+
+## Entry 4 — comparison after the proof was committed
+
+The finished argument was committed as `5b53ebd2`, following the initial plan
+in `d15b2e84`, before reading the remainder of the retained Lean proof.
+The comparison source is `apm-lean` at
+`f053ab5936725f2e41c937cfff82277f3a23c868`,
+`problems/a93A01/lean/Main.lean`. Its forward proof obtains boundedness using
+`TotallyBounded.image` on the subtype, then chooses the same kind of threshold
+`2B'/δ` with `B'=max B 1`. Its reverse proof chooses `δ=ε/N` and argues by
+contradiction, where the developed paper proof splits into high and low ratios.
+The elementary finite-net proof above supplies the mathematical content behind
+the library boundedness step. This agreement checks the route against retained
+work; it is not a fresh Lean compilation or an independent review.
+
+This is a familiar development example. The chronology demonstrates actual
+consultation during construction, but cannot establish that retrieval caused a
+success that the agent could not otherwise achieve.
