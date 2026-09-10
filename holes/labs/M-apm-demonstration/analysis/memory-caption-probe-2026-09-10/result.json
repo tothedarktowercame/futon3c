@@ -1,0 +1,27 @@
+{
+  "scope": "isolated lexical matching, not live recall or causal benefit",
+  "sqlite-version": "3.45.1",
+  "cases": [
+    {
+      "query": "ODE uniqueness endpoint",
+      "matches": [
+        "captioned"
+      ]
+    },
+    {
+      "query": "Gronwall",
+      "matches": [
+        "original",
+        "captioned"
+      ]
+    },
+    {
+      "query": "global existence contraction",
+      "matches": []
+    },
+    {
+      "query": "compact operator construction",
+      "matches": []
+    }
+  ]
+}
