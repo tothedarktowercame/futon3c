@@ -1,6 +1,8 @@
 (ns futon3c.wm.run4-deployment-config-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.wm.run4-deployment-config :as sut]))
+            [futon3c.wm.run4-deployment-config :as sut]
+            [futon3c.wm.run4-series-service :as service]
+            [futon3c.wm.runner-service :as runner]))
 
 (def text (slurp "holes/labs/wm-contract/runs/RUN4-U88-deployment-2026-09-10/server-config.disabled.edn"))
 (def deps {:credential (constantly nil) :resolve-mission (constantly nil)
@@ -14,6 +16,16 @@
     (is (not (contains? (:run4 c) :bearer-token)))
     (is (= (get-in c [:run4 :admission-root])
            (get-in c [:run4 :series :controller-root])))))
+
+(deftest actual-materialized-u88-template-is-inert-before-runner
+  (let [calls (atom 0)
+        c (sut/materialize text deps)]
+    (with-redefs [runner/click! (fn [_] (swap! calls inc))]
+      (is (= :run4-series-disabled
+             (:reason (try (service/step! c {} {:run4-series-ref
+                                                (get-in c [:run4 :series :manifest-ref])}) nil
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+      (is (zero? @calls)))))
 
 (deftest malformed-template-and-unprovisioned-enable-refuse
   (is (= :invalid-deployment-contract
