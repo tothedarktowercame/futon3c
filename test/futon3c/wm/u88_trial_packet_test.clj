@@ -117,7 +117,7 @@
                                              :prepare-trial prepare-trial})]
           (is (= :wm/run4-series-pin-v1
                  (:schema (:manifest preflighted))))
-          (is (= "fd203522990a819fe95e04fb7f81fcae98f5f7c4a18d1b1365188ac8a68d13d4"
+          (is (= "ec0555250f116814370eb77810eeb946302b1d50c277a2f30f9cbc3a7e64c9d6"
                  (get-in (first (:prepared preflighted))
                          [:admission-request :identity :pin-sha256])))
           (is (every? :ok (:prepared preflighted))))))))

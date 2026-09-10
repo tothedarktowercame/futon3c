@@ -22,6 +22,7 @@
   (and (map? d)
        (= #{:required-environment :hierarchy :recording-requirement}
           (set (keys d)))
+       (map? (:required-environment d))
        (= serving-flags (set (keys (:required-environment d))))
        (every? #(= "1" %) (vals (:required-environment d)))
        (= {:model :single-level :scope :RUN4} (:hierarchy d))

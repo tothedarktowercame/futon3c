@@ -70,7 +70,9 @@
                           :serving-declaration serving-declaration})]
     (is (= serving-declaration (:run4/serving-declaration opts)))
     (is (nil? (:run4/effective-environment-attestation opts))))
-  (doseq [bad [(dissoc serving-declaration :hierarchy)
+  (doseq [bad [(assoc serving-declaration :required-environment "1")
+               (assoc serving-declaration :required-environment [true])
+               (dissoc serving-declaration :hierarchy)
                (assoc-in serving-declaration
                          [:required-environment "FUTON_WM_FPI_DARK"] "0")
                (assoc serving-declaration :hierarchy
