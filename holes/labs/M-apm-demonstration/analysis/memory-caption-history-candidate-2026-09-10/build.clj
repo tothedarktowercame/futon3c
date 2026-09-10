@@ -203,7 +203,7 @@
   [{:memory-id "e-apm-promotion-5fdb99169bd788313841375c797c302c"
     :coverage-disposition :source-read-enriched-review-pending
     :six-field-draft
-    {:caption/schema :grounded-caption-v1
+    {:caption/schema :apm-memory-caption-v1
      :text "Useful when proving ODE uniqueness from equal initial values although derivative hypotheses hold only inside a half-interval: compare on [δ,t] with Gronwall, then send δ to 0 using continuity."
      :epistemic-status :supported
      :conditions [{:condition "Both trajectories are continuous at the initial endpoint."
@@ -225,7 +225,7 @@
     :coverage-disposition :source-read-enriched-review-pending
     :memory-use/kind :regulative
     :six-field-draft
-    {:caption/schema :grounded-caption-v1
+    {:caption/schema :apm-memory-caption-v1
      :text "Useful when constructing a distributional derivative or primitive and continuity into the test-function LF space is the obstacle: define the result by transposed pairings in the dual, where continuity can be checked on each fixed-support stage."
      :epistemic-status :supported
      :conditions [{:condition "The desired object can be specified by its pairing with compactly supported smooth test functions."
@@ -244,7 +244,7 @@
    {:memory-id "e-apm-promotion-442f1ab7683c3685e2232135f161830e"
     :coverage-disposition :source-read-enriched-review-pending
     :six-field-draft
-    {:caption/schema :grounded-caption-v1
+    {:caption/schema :apm-memory-caption-v1
      :text "Useful when building an operator on Mathlib test functions: first compose packaged derivative, postcomposition, restriction, and stagewise-limit continuous linear maps; reserve manual LF seminorm estimates for operators such as primitives whose support changes with the input."
      :epistemic-status :supported
      :conditions [{:condition "The intended operator factors through Mathlib's packaged TestFunction continuous linear maps."

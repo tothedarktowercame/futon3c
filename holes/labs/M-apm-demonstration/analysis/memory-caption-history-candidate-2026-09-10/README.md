@@ -35,7 +35,7 @@ binds:
   cohort memory.
 
 These bootstrap field names are a lab interchange proposal, not an admission
-claim. The implemented Job A store uses `:grounded-caption-v1`, requires a
+claim. The implemented Job A store uses `:apm-memory-caption-v1`, requires a
 nonempty condition vector and authenticated observation IDs, and currently has
 no historical-import path. `source-read-enrichments.edn` therefore presents the
 three enriched drafts in the store's six descriptive fields without forging
