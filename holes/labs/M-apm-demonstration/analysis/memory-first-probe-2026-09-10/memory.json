@@ -1,0 +1,24 @@
+{
+  "evidence/body": {
+    "kind": "memory",
+    "name": "interior-gronwall-to-endpoint-by-one-sided-limit",
+    "hook": "interior Gronwall estimate on [\u03b4,t]; recover endpoint by Tendsto along \ud835\udcdd[>] 0 and le_of_tendsto_of_tendsto",
+    "body": "To compare two ODE solutions on a closed half-line when the available Gronwall-type distance bound (e.g. dist_le_of_trajectories_ODE with constant K from a proven Lipschitz lemma) is stated on a closed interval [\u03b4,t] strictly inside the half-line: apply the bound on [\u03b4,t] for arbitrary 0<\u03b4<t, then send \u03b4\u21920\u207a along the one-sided filter \ud835\udcdd[>] 0 using le_of_tendsto_of_tendsto; continuity of both solutions at the endpoint makes the distance bound continuous, so the limit inherits the inequality at \u03b4=0. This turns an interior-only estimate into an endpoint-inclusive one without any extension theorem. Leaf (membership of \ud835\udcdd[>] 0): do NOT rewrite with nhdsWithin_eq (it unfolds \ud835\udcdd itself into an infimum and the goal dies); instead prove Ioo 0 t \u2208 \ud835\udcdd[>] 0 via inter_mem (mem_nhdsWithin_of_mem_nhds (Iio_mem_nhds h)) (self_mem_nhdsWithin (s := Ioi 0)) plus an explicit set equality Iio t \u2229 Ioi 0 = Ioo 0 t.",
+    "admission/schema": "typed-memory-use-v1"
+  },
+  "evidence/session-id": "588283285fde0c8936857fea026dc938d7734652e64d564cf5ee4e6dc0dfc8b5",
+  "evidence/tags": [
+    "memory",
+    "memory/assert",
+    "apm/promotion-candidate"
+  ],
+  "evidence/at": "2026-09-08T11:53:47.963852902Z",
+  "evidence/type": "memory",
+  "evidence/subject": {
+    "ref/type": "problem",
+    "ref/id": "m00A05"
+  },
+  "evidence/author": "f196-guide",
+  "evidence/claim-type": "assert",
+  "evidence/id": "e-apm-promotion-5fdb99169bd788313841375c797c302c"
+}

@@ -1,0 +1,3 @@
+'MemoryFirstProbe.endpoint_unique_on_unit' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MemoryFirstProbe.scalar_ode_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'VolterraTarget.eigenvector_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
