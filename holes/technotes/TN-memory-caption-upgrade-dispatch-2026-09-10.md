@@ -124,3 +124,23 @@ applicability observation → reviewed caption revision → observed next retrie
 and use. It does not by itself certify AIF parameter learning or improved solver
 success. Those claims need their own checks; the immediate aim is better grounded
 and more discoverable descriptions without loss of evidence.
+
+## Routing superseded — Joe's Codex-only instruction, 2026-09-10
+
+Joe cancelled both Claude dispatches to conserve his remaining Claude quota.
+Agency confirmed both original jobs cancelled:
+`invoke-1789041080605-18511-5bfabe37` and
+`invoke-1789041101721-18512-74a3206d`.
+
+His replacement instruction, verbatim:
+
+> Ok, so please dispatch them to... Associated Codex agents.
+
+This supersedes the Claude ownership and Claude-review routing above, while
+preserving the work and its acceptance criteria. Job H goes to codex-1; Job A
+goes to codex-12. Codex-17 reviews their independent implementations/products.
+No Claude dispatch, review request or escalation is authorized for these jobs.
+Use Agency bells for coordination; no Codex internal subagents. The two authors
+coordinate their shared schema and report to codex-17, including conflicts that
+would otherwise have gone to a Claude owner. No claim that either job has landed
+is made by this reassignment.
