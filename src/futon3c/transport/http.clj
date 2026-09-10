@@ -98,6 +98,7 @@
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.wm.run4-attempt-admission :as run4-admission]
+            [futon3c.wm.run4-series-service :as run4-series-service]
             [futon3c.wm.run4-trusted-entry :as run4-entry]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
@@ -8282,6 +8283,21 @@
                      {:error "wm-click-status-failed"
                       :message (.getMessage throwable)}))))
 
+(defn- handle-wm-run4-series-step [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:error "invalid-json"})
+      (try
+        (json-response 200
+                       (run4-series-service/step! config (:headers request) payload))
+        (catch Throwable throwable
+          (let [data (ex-data throwable)]
+            (json-response (or (:status data) 500)
+                           {:error (or (some-> (:error data) name)
+                                       "run4-series-step-failed")
+                            :reason (some-> (:reason data) name)
+                            :message (.getMessage throwable)})))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -8515,6 +8531,9 @@
 
       (and (= :post method) (= "/api/alpha/wm/click" uri))
       (handle-wm-click-start request config)
+
+      (and (= :post method) (= "/api/alpha/wm/run4/series/step" uri))
+      (handle-wm-run4-series-step request config)
 
       (and (= :get method) (= "/api/alpha/wm/click" uri))
       (handle-wm-click-status)
