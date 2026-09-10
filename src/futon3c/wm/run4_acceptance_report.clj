@@ -22,10 +22,12 @@
 (defn report
   "Describe evidence against current RUN4 preregistration criteria. Operator
   acceptance remains a separate action even when every machine check passes."
-  [{:keys [visibility expected-series-sha256 observed-series-sha256]}]
+  [{:keys [visibility expected-series-id expected-series-sha256 observed-series-sha256]}]
   (let [source-current? (and (sha? expected-series-sha256)
                              (= expected-series-sha256 observed-series-sha256))
-        terminal? (terminal-visibility? visibility)
+        terminal? (and (nonblank? expected-series-id)
+                       (= expected-series-id (:run_id visibility))
+                       (terminal-visibility? visibility))
         ;; The current visibility schema binds series/trial IDs but carries no
         ;; full-loop run ID per trial.  Therefore no run-record route can be
         ;; joined to a visible trial, and the existing U49 transcriber/battery
