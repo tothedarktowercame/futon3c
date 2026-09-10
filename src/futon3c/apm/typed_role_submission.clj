@@ -458,6 +458,18 @@
                       " --query 'YOUR QUERY'"))]
     (str (or search "")
          (when search "\n")
+         (cond
+           (= :student (:role request))
+           (str "# Optionally record grounded applicability for a memory you "
+                "actually considered; use apm-memory-caption.py observe with "
+                "the search receipt and keep absent distinct from unchecked.\n")
+           (contains? #{:scribe :zai-scribe} (:role request))
+           (str "# Draft versioned grounded captions separately with "
+                "apm-memory-caption.py propose; they require independent review.\n")
+           (= :promotion-proctor (:role request))
+           (str "# Review caption revisions independently with "
+                "apm-memory-caption.py review; do not approve your own draft.\n")
+           :else "")
          base " --init --payload " payload
          "\n# edit " payload ", then submit:\n"
          base " --payload " payload)))

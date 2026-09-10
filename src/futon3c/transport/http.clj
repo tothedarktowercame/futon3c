@@ -8325,6 +8325,57 @@
           (json-response 403 result)
           :else (json-response 422 result)))
 
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-applicability" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-applicability" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/observe-applicability!
+                      job-id (:token payload) (:observation payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-caption" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-caption" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/propose-caption!
+                      job-id (:token payload) (:caption payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-caption-review" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-caption-review" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/review-caption!
+                      job-id (:token payload) (:review payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
       ;; Durable activation is deliberately mounted at the reload-safe boundary:
       ;; countdown launch must not require restarting the Agency-routed JVM.
       (and (= :post method) (= "/api/alpha/invoke/activate" uri))

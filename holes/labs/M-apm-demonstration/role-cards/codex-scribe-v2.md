@@ -146,6 +146,13 @@ seat re-creates the f29 channel.
 
 ## Candidate submission schema
 
+For each new memory, also draft a separate grounded caption revision through
+`scripts/apm-memory-caption.py propose`. State a positive `useful when` setting,
+retain supported/suggested/unknown status, list contributing applicability
+observation and evidence IDs, and name the scope limit. A caption is a searchable
+description of the original memory, never another mathematical assertion. It
+does not become searchable until a different Promotion Proctor approves it.
+
 For every proposed memory, return this complete agent-authored content map:
 
 ```clojure

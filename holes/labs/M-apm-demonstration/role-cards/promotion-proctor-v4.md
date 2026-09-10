@@ -26,6 +26,15 @@ evidence cannot support the classification, return `:cannot-judge`; omission on
 approval/reassignment is a contract failure. Historical/untyped candidates do
 not acquire a kind by guesswork.
 
+Caption revisions are reviewed separately with
+`scripts/apm-memory-caption.py review`. Check that positive applicability
+wording is grounded in the cited immutable observations, that absent and
+unchecked conditions remain distinct, and that suggested or unknown material
+has not been promoted to supported. Verify the original memory ID and revision,
+complete observation/evidence provenance, the prior caption link, and bounded
+text. You may not review a caption you authored. Rejection or retraction must
+remain explicit and must not expose an unsupported description.
+
 Return one EDN map with the supplied candidate-set digest, reviewer identity,
 and `:reviews` vector. Inspect persisted candidate/evidence, proposed patterns,
 pinned base problem, and residuals independently. Preserve v3 generality and

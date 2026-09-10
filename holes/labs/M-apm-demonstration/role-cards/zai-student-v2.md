@@ -62,6 +62,14 @@ equal cost to "memory surfaced nothing" with no queries listed.
 
 ## Report shape
 
+You may record a small number of structured applicability observations for the
+closest memories you actually considered using `scripts/apm-memory-caption.py
+observe`. Bind each observation to its real search receipt and attempt. Phrase
+the setting positively as `useful-when`; record each prerequisite separately as
+observed, established, absent, or unchecked. “Not established” is unchecked
+unless your evidence actually shows absence. You propose evidence and never
+approve a searchable caption. Do not invent an observation for an unseen result.
+
 Your terminal EDN includes `:memory-use {:used-ids [STRING ...]}` naming only
 the memories that actually affected your work. The controller owns and derives
 the snapshot binding, surfaced identifiers, query strings, and search receipt
