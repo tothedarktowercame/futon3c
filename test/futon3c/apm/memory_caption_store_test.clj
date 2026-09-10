@@ -175,7 +175,28 @@
         (is (= "memory-1" (:memory/id match)))
         (is (= :caption-match (:via match)))
         (is (= 1 (:caption/version match)))
-        (is (= 1 (:checked-caption-count result)))))))
+        (is (= 1 (:checked-caption-count result)))
+        (testing "an irrelevant query and a disconnected original return nothing"
+          (let [miss (recall/propose-patterns-by-query
+                      {:domain :mathematics} "unrelated divisor lattice"
+                      {:limit 3
+                       :search-evidence (fn [_ _]
+                                          {:index-as-of "i2" :results []})
+                       :recall-batch-fn
+                       (fn [_ _ _] {:ok true :recalls []})})
+                disconnected
+                (recall/propose-patterns-by-query
+                 {:domain :mathematics} "endpoint uniqueness"
+                 {:limit 3
+                  :search-evidence (fn [_ _]
+                                     {:index-as-of "i3"
+                                      :results [{:score 9 :entry caption-entry}]})
+                  :recall-batch-fn
+                  (fn [_ endpoints _]
+                    {:ok true :recalls
+                     (mapv #(hash-map :endpoint % :memories []) endpoints)})})]
+            (is (empty? (:content-matches miss)))
+            (is (empty? (:content-matches disconnected)))))))))
 
 (deftest unknown-memory-and-absent-caption-fail-closed-compatibly
   (let [root (temp-dir) entries (atom {})]
