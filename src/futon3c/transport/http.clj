@@ -97,6 +97,7 @@
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
+            [futon3c.wm.run4-trusted-entry :as run4-entry]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -8219,13 +8220,13 @@
             :data (ex-data e)}))))))
 
 (defn- handle-wm-click-start
-  [request]
+  [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:error "invalid-json"})
       (try
         (let [click! (requiring-resolve 'futon3c.wm.runner-service/click!)
-              opts (cond-> {}
+              legacy-opts (cond-> {}
                      (nonblank-string? (:author payload))
                      (assoc :author (:author payload))
 
@@ -8237,14 +8238,21 @@
 
                      (nonblank-string? (:trigger payload))
                      (assoc :trigger (keyword (:trigger payload))))
+              prepared (when (contains? payload :run4-pin-ref)
+                         (run4-entry/prepare config (:headers request) payload))
+              _ (when (and prepared (not (:ok prepared)))
+                  (throw (ex-info "RUN4 click refused" prepared)))
+              opts (merge legacy-opts (:opts prepared))
               result (click! opts)]
           (if (= :already-running (:rejected result))
             (json-response 409 result)
             (json-response 200 result)))
         (catch Throwable throwable
-          (json-response 500
-                         {:error "wm-click-start-failed"
-                          :message (.getMessage throwable)}))))))
+          (let [data (ex-data throwable)]
+            (json-response (or (:status data) 500)
+                           {:error (or (some-> (:error data) name)
+                                       "wm-click-start-failed")
+                            :message (.getMessage throwable)})))))))
 
 (defn- handle-wm-click-status
   []
@@ -8489,7 +8497,7 @@
       (handle-wm-strategic-selection request)
 
       (and (= :post method) (= "/api/alpha/wm/click" uri))
-      (handle-wm-click-start request)
+      (handle-wm-click-start request config)
 
       (and (= :get method) (= "/api/alpha/wm/click" uri))
       (handle-wm-click-status)
