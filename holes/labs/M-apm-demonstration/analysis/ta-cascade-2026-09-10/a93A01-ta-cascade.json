@@ -1,0 +1,271 @@
+{
+  "schema": "apm-ta-cascade-prototype-v1",
+  "problem": "a93A01",
+  "kind": "retrospective-teaching-reconstruction",
+  "student_trial": false,
+  "live_role_changed": false,
+  "statement": "For f:(0,1)->R, uniform continuity iff for every epsilon>0 there exists N>0 such that x!=y and |f(x)-f(y)|/|x-y|>N imply |f(x)-f(y)|<epsilon.",
+  "definitions": {
+    "A": "|f(x)-f(y)|",
+    "d": "|x-y|",
+    "uniform-continuity": "forall epsilon>0 exists delta>0 forall x,y in domain, d<delta implies A<epsilon",
+    "total-boundedness": "for every eta>0 a finite set of domain points has eta-balls covering the domain"
+  },
+  "proof_source": {
+    "path": "holes/labs/M-apm-demonstration/analysis/pattern-construction-2026-09-10/prelim-development.md",
+    "sha256": "842e57c0853533fa51a2e8aeb80eb9ab370175b44e9d391c45fc35f2d42da4e2",
+    "limits": "completed paper proof and retained Lean source comparison; no fresh Lean check or independent pedagogical validation"
+  },
+  "nodes": [
+    {
+      "id": "P",
+      "parent": null,
+      "goal": "Prove the equivalence",
+      "teaching_cue": "Separate the two implications before choosing methods.",
+      "methods": [
+        {
+          "id": "math-strategy/proof-architecture",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "bff28c08e0dfd951b86d99391c043fb7ce61743efe688d49b99b614818c1b50e",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [
+        "F",
+        "R"
+      ],
+      "conditions": "Both implications must preserve the epsilon quantifiers.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "F",
+      "parent": "P",
+      "goal": "Uniform continuity implies the quotient condition",
+      "teaching_cue": "A large quotient forces small distance only after its numerator is bounded.",
+      "methods": [
+        {
+          "id": "math-informal-CA/estimate-by-bounding",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [
+        "B",
+        "Q"
+      ],
+      "conditions": "Uniform continuity on the actual domain; global numerator bound still needed.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "B",
+      "parent": "F",
+      "goal": "Obtain M>0 with |f(x)|<M on (0,1)",
+      "teaching_cue": "Use one uniform oscillation tolerance, a finite net and a finite maximum.",
+      "methods": [
+        {
+          "id": "math-informal/local-to-global",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "ac568c2e793843ca8deeda07d731352f15c5c8b7a03b1a8f93660fed79bcfb63",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "conditions": "Total boundedness of the domain, not merely boundedness in a metric space.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "B1",
+      "parent": "B",
+      "goal": "Choose eta>0 giving oscillation <1",
+      "teaching_cue": "Use uniform continuity at epsilon=1.",
+      "methods": [
+        {
+          "id": "math-informal/unfold-the-definition",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "641cb4452c1ed7e0be21f6df4a48f2e9abc429a86796c5616c9c337b37f7e182",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [],
+      "conditions": "Eta is independent of the chosen center and point.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "B2",
+      "parent": "B",
+      "goal": "Construct a finite eta-net in (0,1)",
+      "teaching_cue": "Choose n with 1/n<eta and midpoint centers (i+1/2)/n.",
+      "methods": [],
+      "children": [],
+      "conditions": "Centers lie in the domain; an open interval need not be compact.",
+      "warrant_kind": "ordinary-mathematical-construction",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": [
+        "B1"
+      ]
+    },
+    {
+      "id": "B3",
+      "parent": "B",
+      "goal": "Assemble the global value bound",
+      "teaching_cue": "M=1+max_i |f(c_i)|; apply triangle inequality.",
+      "methods": [
+        {
+          "id": "math-informal-CA/estimate-by-bounding",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [],
+      "conditions": "Finite nonempty set of centers and B1/B2.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": [
+        "B1",
+        "B2"
+      ]
+    },
+    {
+      "id": "Q",
+      "parent": "F",
+      "goal": "Choose a threshold N for arbitrary epsilon",
+      "teaching_cue": "Take UC delta; N=2M/delta. If d>=delta then A/d<=N.",
+      "methods": [
+        {
+          "id": "math-informal-CA/estimate-by-bounding",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [],
+      "conditions": "M>0, delta>0, x!=y, and A<2M.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": [
+        "B"
+      ]
+    },
+    {
+      "id": "R",
+      "parent": "P",
+      "goal": "The quotient condition implies uniform continuity",
+      "teaching_cue": "Obtain its N for epsilon, then split high and low ratios.",
+      "methods": [
+        {
+          "id": "math-informal/split-into-cases",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "ee0728b37aa97d97200be04f46bc8da9323a71925e73fa17ee9f5cc3a3dcd3e3",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "conditions": "N>0 is required. No domain total-boundedness needed in this direction.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "R1",
+      "parent": "R",
+      "goal": "Handle x=y",
+      "teaching_cue": "Then A=0<epsilon.",
+      "methods": [],
+      "children": [],
+      "conditions": "Epsilon>0; do not divide by zero.",
+      "warrant_kind": "ordinary-mathematical-construction",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "R2",
+      "parent": "R",
+      "goal": "Handle x!=y and A/d>N",
+      "teaching_cue": "Apply the supplied quotient hypothesis.",
+      "methods": [
+        {
+          "id": "math-informal/unfold-the-definition",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "641cb4452c1ed7e0be21f6df4a48f2e9abc429a86796c5616c9c337b37f7e182",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [],
+      "conditions": "Same epsilon and the N selected for it.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    },
+    {
+      "id": "R3",
+      "parent": "R",
+      "goal": "Handle x!=y and A/d<=N",
+      "teaching_cue": "Take delta=epsilon/N; A<=Nd<Ndelta=epsilon.",
+      "methods": [
+        {
+          "id": "math-informal-CA/estimate-by-bounding",
+          "git_pin": "a376e4043369167ec8b491a77ddc4f9695a6d991",
+          "sha256": "0d4aa52908e6f84a2a13aee2bc7b0804eda7cd84e9199424a1dffd4f9ea1171e",
+          "role": "method suggestion; not proof certificate"
+        }
+      ],
+      "children": [],
+      "conditions": "d>0, N>0 and strict d<delta.",
+      "warrant_kind": "existing-method-plus-explicit-mathematics",
+      "status": "paper-proof-available",
+      "memory_use": null,
+      "depends_on": []
+    }
+  ],
+  "draft_patterns": [
+    {
+      "id": "draft/finite-net-oscillation-bound",
+      "nodes": [
+        "B",
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "canonical": false
+    },
+    {
+      "id": "draft/threshold-dichotomy-modulus",
+      "nodes": [
+        "R",
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "canonical": false
+    }
+  ],
+  "retrospective_rule": "A solved example supplies one witness, not sufficient evidence for a new canonical reusable pattern."
+}
