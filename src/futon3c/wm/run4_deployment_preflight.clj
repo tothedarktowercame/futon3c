@@ -39,6 +39,10 @@
         pin (one pin-text)
         config-pin (:config pin)
         opts (pinned/load! config-pin read-text)
+        pinned-sources (concat (:source-pins manifest) (:sources pin) [config-pin])
+        all-current? (every? (fn [{:keys [path sha256]}]
+                               (= sha256 (digest/sha256 (read-text path))))
+                             pinned-sources)
         missing-roots (->> (:stores t) (keep (fn [[k p]] (when-not (.isDirectory (io/file p)) k))) vec)
         mission-ref (some #(when (str/includes? % "M-u88-contextual-preferences.md") %) (:source-allowlist t))
         mission-text (read-text mission-ref)]
@@ -47,7 +51,8 @@
                              (false? (get-in t [:serving :automatic-start?])))
      :credential :unprovisioned
      :sources (if (and (= manifest-sha (get-in t [:manifest :sha256]))
-                       (= (digest/sha256 pin-text) (:pin-sha256 trial))) :current :drift)
+                       (= (digest/sha256 pin-text) (:pin-sha256 trial))
+                       all-current?) :current :drift)
      :declaration (if (:run4/serving-declaration opts) :supported :missing)
      :consumer-state :unknown-not-loaded
      :roots (if (empty? missing-roots) :present {:missing missing-roots})
