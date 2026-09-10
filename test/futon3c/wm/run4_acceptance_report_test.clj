@@ -31,7 +31,7 @@
                :observed-series-sha256 sha}
         a (report input) b (report input)]
     (is (= a b))
-    (is (= :missing-acceptance-battery-record (:decision a)))
+    (is (= :operator-decision-required (:decision a)))
     (is (false? (:accepted? a)))
     (is (= :operator-reserved (:acceptance-authority a)))))
 
@@ -56,8 +56,8 @@
                              :complete? true :battery-ref "/missing"}})]
     ;; Forged request fields are ignored; the server-read bundle determines it.
     (is (= true (get-in forged [:checks :route-conformance])))
-    (is (= false (get-in forged [:checks :recording-completeness])))
-    (is (= :missing-acceptance-battery-record (:decision forged)))
+    (is (= true (get-in forged [:checks :recording-completeness])))
+    (is (= :operator-decision-required (:decision forged)))
     (is (false? (:accepted? forged)))))
 
 (deftest incomplete-or-foreign-visibility-cannot-green-terminal-check
@@ -79,7 +79,8 @@
                        :expected-control-map-sha256
                        (digest/sha256 control-text)})]
     (is (true? (get-in r [:checks :route-conformance])))
-    (is (= :missing-acceptance-battery-record (:decision r)))
+    (is (= :operator-decision-required (:decision r)))
+    (is (= 4 (count (get-in r [:battery :rows]))))
     (is (false? (:accepted? r))))
   (with-redefs [terminal/read-terminal-evidence-bundle
                 (fn [_ _ _] (assoc bundle :classification nil))]

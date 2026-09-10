@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.run4-route-conformance :as route]
+            [futon3c.wm.run4-battery :as battery]
             [futon3c.wm.run4-terminal-evidence :as terminal]))
 
 (defn- sha? [x] (and (string? x) (boolean (re-matches #"[0-9a-f]{64}" x))))
@@ -68,7 +69,14 @@
                        (terminal-visibility? visibility))
         cmap (control-map control-map-text expected-control-map-sha256)
         route? (boolean (and terminal? (joined-route? visibility terminal-bundles cmap)))
-        recording? false]
+        battery-artifact (when route?
+                           (battery/produce expected-series-id expected-series-sha256
+                                            expected-control-map-sha256 terminal-bundles cmap))
+        recording? (boolean (and battery-artifact
+                                 (battery/validate battery-artifact expected-series-id
+                                                   expected-series-sha256
+                                                   expected-control-map-sha256
+                                                   terminal-bundles)))]
     {:schema :wm/run4-acceptance-report-v1
      :run-id (when (map? visibility) (:run_id visibility))
      :checks {:source-current source-current?
@@ -83,9 +91,11 @@
                  :else :operator-decision-required)
      :accepted? false
      :acceptance-authority :operator-reserved
+     :battery battery-artifact
      :missing-evidence
-     (cond-> [:shared-step-acceptance-battery-record]
-       (not route?) (conj :validated-terminal-bundle-route-conformance))}))
+     (cond-> []
+       (not route?) (conj :validated-terminal-bundle-route-conformance)
+       (not recording?) (conj :shared-step-acceptance-battery-record))}))
 
 (defn report-durable
   "Read every bundle through the strict durable join before calculating a
