@@ -57,11 +57,12 @@
     (fn [root]
       (sut/reserve! root request)
       (let [recorded (sut/record-click! root "attempt-1"
-                                        {:started true :click-id "click-1"
+                                        {:click-id "click-1"
+                                         :started-at "2026-09-10T00:00:00Z"
                                          :secret "not-persisted"})
             duplicate (sut/reserve! root request)]
         (is (= :click-recorded (:state recorded)))
-        (is (= {:started true :click-id "click-1"}
+        (is (= {:click-id "click-1" :started-at "2026-09-10T00:00:00Z"}
                (get-in duplicate [:admission :result :click])))
         (is (nil? (get-in duplicate [:admission :result :click :secret])))
         (spit (io/file root "attempt-1" "click-result.edn")
@@ -109,3 +110,14 @@
                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
       (is (= :reconciliation-required
              (get-in (sut/reserve! root request) [:admission :state]))))))
+
+(deftest busy-result-is-rejection-not-enacted-click
+  (with-store
+    (fn [root]
+      (sut/reserve! root request)
+      (let [recorded (sut/record-click! root "attempt-1"
+                                        {:rejected :already-running
+                                         :click-id "unrelated-click"})]
+        (is (= :busy-rejected (:state recorded)))
+        (is (= :already-running (get-in recorded [:result :click :rejected])))
+        (is (nil? (get-in recorded [:result :click :started-at])))))))

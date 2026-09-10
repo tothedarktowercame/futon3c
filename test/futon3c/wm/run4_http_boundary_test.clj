@@ -95,7 +95,8 @@
     (fn [handler _ _ _]
       (let [seen (atom [])]
         (with-redefs [service/click! (fn [opts] (swap! seen conj opts)
-                                      {:started true :click-id "click-valid"})]
+                                      {:click-id "click-valid"
+                                       :started-at "2026-09-10T00:00:00Z"})]
           (is (= 200 (:status (handler (request {:run4-pin-ref "pin.edn"
                                                  :run4-attempt-id "attempt-valid"}
                                                 auth)))))
@@ -117,7 +118,8 @@
                      :run4-attempt-id "attempt-concurrent"}
             start (promise)]
         (with-redefs [service/click! (fn [_] (swap! clicks inc)
-                                      {:started true :click-id "click-one"})]
+                                      {:click-id "click-one"
+                                       :started-at "2026-09-10T00:00:00Z"})]
           (let [requests (doall (repeatedly 10
                                             #(future @start
                                                      (handler (request payload auth)))))]

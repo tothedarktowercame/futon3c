@@ -66,13 +66,16 @@
 
 (defn- click-shape? [click]
   (and (map? click)
-       (or (and (true? (:started click))
-                (string? (:click-id click))
+       (or (and (string? (:click-id click))
                 (not (str/blank? (:click-id click)))
+                (string? (:started-at click))
+                (try (java.time.Instant/parse (:started-at click)) true
+                     (catch Throwable _ false))
                 (not (contains? click :rejected)))
            (and (= :already-running (:rejected click))
-                (not (contains? click :started))
-                (not (contains? click :click-id))))))
+                (string? (:click-id click))
+                (not (str/blank? (:click-id click)))
+                (not (contains? click :started-at))))))
 
 (defn- result-valid? [value attempt-id]
   (and (map? value)
@@ -128,7 +131,10 @@
            :identity (:identity reservation)
            :content-sha256 (:content-sha256 reservation)
            :duplicate? duplicate?}
-    result (assoc :state :click-recorded :result result)
+    result (assoc :state (if (= :already-running (get-in result [:click :rejected]))
+                           :busy-rejected
+                           :click-recorded)
+                  :result result)
     (nil? result) (assoc :state :reconciliation-required
                          :reason :reservation-exists-without-durable-click-result)))
 
@@ -169,7 +175,7 @@
   (when-not (safe-id? attempt-id)
     (throw (ex-info "RUN4 attempt id invalid"
                     {:error :run4-attempt-identity-invalid :status 500})))
-  (let [click (select-keys result [:started :rejected :click-id])]
+  (let [click (select-keys result [:click-id :started-at :rejected])]
     (when-not (click-shape? click)
       (throw (ex-info "RUN4 click result malformed"
                       {:error :run4-click-result-invalid :status 500})))
