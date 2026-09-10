@@ -33,6 +33,27 @@
          (is (nil? (sut/publish! target nil))) (is (not (.exists target)))
          (finally (clean! r)))))
 
+(deftest present-falsey-series-artifacts-are-corrupt-not-absent
+  (doseq [bad [nil false]]
+    (let [r (temp-root) text (pr-str manifest)]
+      (try
+        (write! (io/file r "series.edn") bad)
+        (is (= :malformed
+               (:reason (try (sut/observe (.getPath r) text (constantly nil) now) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (finally (clean! r))))))
+
+(deftest present-falsey-start-and-terminal-artifacts-refuse
+  (doseq [phase ["started" "terminal"] bad [nil false]]
+    (let [r (temp-root) text (pr-str manifest)]
+      (try
+        (write! (io/file r "series.edn") (base text))
+        (write! (io/file r (str "001-" phase ".edn")) bad)
+        (is (= :malformed
+               (:reason (try (sut/observe (.getPath r) text (constantly nil) now) nil
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (finally (clean! r))))))
+
 (deftest unknown-is-pending-and-never-success
   (let [r (temp-root) text (pr-str manifest)]
     (try (write! (io/file r "series.edn") (base text))

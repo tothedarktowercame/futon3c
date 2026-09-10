@@ -22,6 +22,7 @@
           (let [v (edn/read {:eof ::empty} r)]
             (when (or (= ::empty v) (not= ::end (edn/read {:eof ::end} r)))
               (refuse! :malformed {:kind kind}))
+            (when-not (map? v) (refuse! :malformed {:kind kind}))
             v))
         (catch clojure.lang.ExceptionInfo e (throw e))
         (catch Throwable _ (refuse! :malformed {:kind kind}))))))
@@ -152,7 +153,9 @@
                                         (into-array StandardOpenOption
                                                     [StandardOpenOption/CREATE_NEW
                                                      StandardOpenOption/WRITE]))]
-          (.write ch (java.nio.ByteBuffer/wrap bytes)) (.force ch true))
+          (let [buffer (java.nio.ByteBuffer/wrap bytes)]
+            (while (.hasRemaining buffer) (.write ch buffer)))
+          (.force ch true))
         (Files/move (.toPath tmp) (.toPath target)
                     (into-array StandardCopyOption
                                 [StandardCopyOption/ATOMIC_MOVE StandardCopyOption/REPLACE_EXISTING]))
