@@ -18,7 +18,7 @@
 (def memory-revision (machine/ledger-digest [(:evidence/body memory-entry)]))
 
 (def observation
-  {:applicability/schema sut/schema
+  {:applicability/schema sut/observation-schema
    :memory/id "memory-1" :memory/revision memory-revision
    :problem-id "p1" :task-id "task-1" :attempt-id "attempt-1"
    :search-receipt-id "search-1"
@@ -119,7 +119,7 @@
 (deftest compression-preserves-suggestions-unknowns-provenance-and-size
   (let [record {:evidence/id "obs"
                 :body (assoc observation :epistemic-status :unknown)}
-        base {:caption/schema sut/schema :caption/version 1
+        base {:caption/schema sut/caption-schema :caption/version 1
               :memory/id "memory-1" :memory/revision memory-revision
               :text "Useful when continuity is established."
               :conditions (:conditions observation)
@@ -136,7 +136,7 @@
                                  :suggested-contexts []) [record]))))
     (is (some #{:caption-size-limit-exceeded}
               (:findings (sut/propose-compression
-                          (assoc base :text (apply str (repeat 721 "x"))
+                          (assoc base :text (apply str (repeat 1100 "x"))
                                  :epistemic-status :unknown
                                  :suggested-contexts
                                  (:suggested-contexts observation)) [record]))))))
@@ -209,9 +209,9 @@
       (is (nil? (sut/current-caption "never-captioned")))
       (is (= [] (sut/resolve-search-rows
                  [{:score 1
-                   :entry {:evidence/type :observation
+                   :entry {:evidence/type :reflection
                            :evidence/body
-                           {:caption/event :revision
-                            :caption/schema sut/schema
+                           {:event :memory-caption
+                            :caption/schema sut/caption-schema
                             :caption/id "missing" :caption/version 1
                             :memory/id "memory-1"}}}]))))))

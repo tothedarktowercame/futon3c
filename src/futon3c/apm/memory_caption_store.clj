@@ -17,12 +17,14 @@
            [java.time Instant]
            [java.util UUID]))
 
-(def schema :grounded-caption-v1)
-(def max-caption-bytes 720)
+(def caption-schema :apm-memory-caption-v1)
+(def observation-schema :apm-memory-applicability-v1)
+(def schema caption-schema)
+(def max-caption-bytes 1024)
 (def epistemic-statuses #{:supported :suggested :unknown})
 (def condition-statuses #{:observed :established :absent :unchecked})
 (def observation-outcomes #{:used :considered :not-used :unresolved})
-(def review-verdicts #{:approve :reject :retract})
+(def review-verdicts #{:approve :reject :retract :cannot-judge})
 (def ^:dynamic *store-root* "data/apm-memory-captions")
 
 (defn- nonblank? [x]
@@ -99,7 +101,13 @@
 
 (defn normalize-observation [observation]
   (-> observation
-      (update :applicability/schema wire-keyword)
+      (assoc :applicability/schema
+             (wire-keyword (or (:applicability/schema observation)
+                               (:schema observation))))
+      (cond-> (:memory-id observation)
+        (assoc :memory/id (:memory-id observation)))
+      (cond-> (:memory-content-digest observation)
+        (assoc :memory/revision (:memory-content-digest observation)))
       (update :epistemic-status wire-keyword)
       (update :conditions normalize-conditions)
       (update :suggested-contexts #(normalize-suggestions (or % [])))
@@ -108,7 +116,13 @@
 
 (defn normalize-caption [caption]
   (-> caption
-      (update :caption/schema wire-keyword)
+      (assoc :caption/schema
+             (wire-keyword (or (:caption/schema caption) (:schema caption))))
+      (cond-> (:memory-id caption) (assoc :memory/id (:memory-id caption)))
+      (cond-> (:memory-content-digest caption)
+        (assoc :memory/revision (:memory-content-digest caption)))
+      (cond-> (:revision caption) (assoc :caption/version (:revision caption)))
+      (cond-> (:useful-when caption) (assoc :text (:useful-when caption)))
       (update :epistemic-status wire-keyword)
       (update :conditions normalize-conditions)
       (update :suggested-contexts #(normalize-suggestions (or % [])))
@@ -117,7 +131,7 @@
 (defn observation-findings [observation]
   (let [task (:task-observation observation)]
     (cond-> []
-      (not= schema (:applicability/schema observation))
+      (not= observation-schema (:applicability/schema observation))
       (conj :applicability-schema-invalid)
       (not (every? nonblank? ((juxt :memory/id :memory/revision :problem-id
                                     :task-id :search-receipt-id :attempt-id
@@ -141,13 +155,18 @@
 (defn caption-findings [caption]
   (let [compression (:compression caption)]
     (cond-> []
-      (not= schema (:caption/schema caption)) (conj :caption-schema-invalid)
+      (not= caption-schema (:caption/schema caption))
+      (conj :caption-schema-invalid)
       (not (every? nonblank? ((juxt :memory/id :memory/revision :text
                                     :scope-limit) caption)))
       (conj :caption-provenance-incomplete)
       (not (pos-int? (:caption/version caption))) (conj :caption-version-invalid)
       (and (string? (:text caption))
-           (> (utf8-size (:text caption)) max-caption-bytes))
+           (> (utf8-size
+               (pr-str
+                (select-keys caption [:text :epistemic-status :conditions
+                                      :suggested-contexts :scope-limit])))
+              max-caption-bytes))
       (conj :caption-size-limit-exceeded)
       (not (contains? epistemic-statuses (:epistemic-status caption)))
       (conj :caption-status-invalid)
@@ -222,12 +241,12 @@
                     (conj :applicability-memory-revision-mismatch))]
      (if (seq findings)
        {:ok false :error/code :applicability-observation-invalid :findings findings}
-       (let [body (assoc observation :applicability/event :observation)
+       (let [body (assoc observation :event :memory-applicability-observation)
              id (str "e-apm-applicability-"
                      (subs (machine/ledger-digest [author body]) 0 32))
              entry (evidence-entry id author (:job-id authority)
                                    {:ref/type :memory :ref/id (:memory/id body)}
-                                   :observation
+                                   :reflection
                                    [:memory :memory/applicability-observation] body)
              written (append-and-read! entry ports)]
          (if-not (:ok written) written
@@ -275,13 +294,13 @@
                     (conj :caption-does-not-supersede-current))]
      (if (seq findings)
        {:ok false :error/code :memory-caption-invalid :findings findings}
-       (let [body (assoc caption :caption/event :revision)
+       (let [body (assoc caption :event :memory-caption)
              id (str "e-apm-caption-"
                      (subs (machine/ledger-digest [author body]) 0 32))
              body (assoc body :caption/id id)
              entry (evidence-entry id author (:job-id authority)
                                    {:ref/type :memory :ref/id (:memory/id body)}
-                                   :observation [:memory :memory/caption :caption/proposed]
+                                   :reflection [:memory :memory/caption :caption/proposed]
                                    body)
              written (append-and-read! entry ports)]
          (if-not (:ok written) written
@@ -298,6 +317,11 @@
                    (read-edn (record-path :captions id)))
          author (:agent-id authority)
          verdict (:verdict review)
+         observation-authors
+         (when caption
+           (->> (get-in caption [:body :observation-ids])
+                (keep #(some-> (record-path :observations %) read-edn :author))
+                set))
          current (when caption
                    (read-edn (current-path (get-in caption [:body :memory/id]))))
          findings (cond-> []
@@ -307,6 +331,8 @@
                     (and caption (not (exact-record? caption)))
                     (conj :caption-review-caption-invalid)
                     (= author (:author caption)) (conj :caption-reviewer-is-author)
+                    (contains? observation-authors author)
+                    (conj :caption-reviewer-authored-observation)
                     (not (contains? review-verdicts verdict))
                     (conj :caption-review-verdict-invalid)
                     (not (nonblank? (:reason review)))
@@ -319,7 +345,7 @@
      (if (seq findings)
        {:ok false :error/code :memory-caption-review-invalid :findings findings}
        (let [body {:caption-review/event :review
-                   :caption-review/schema schema
+                   :caption-review/schema caption-schema
                    :caption/id (:caption/id review)
                    :caption/version (get-in caption [:body :caption/version])
                    :memory/id (get-in caption [:body :memory/id])
@@ -329,7 +355,7 @@
              entry (evidence-entry id author (:job-id authority)
                                    {:ref/type :memory-caption
                                     :ref/id (:caption/id review)}
-                                   :observation [:memory :memory/caption-review] body)
+                                   :reflection [:memory :memory/caption-review] body)
              written (append-and-read! entry ports)
              record-result (when (:ok written)
                              (persist-record! :reviews
@@ -402,9 +428,9 @@
        :caption (:body caption) :review/id (:review/id current)})))
 
 (defn caption-row? [row]
-  (and (= :observation (get-in row [:entry :evidence/type]))
-       (= :revision (get-in row [:entry :evidence/body :caption/event]))
-       (= schema (get-in row [:entry :evidence/body :caption/schema]))))
+  (and (= :reflection (get-in row [:entry :evidence/type]))
+       (= :memory-caption (get-in row [:entry :evidence/body :event]))
+       (= caption-schema (get-in row [:entry :evidence/body :caption/schema]))))
 
 (defn resolve-search-rows
   "Resolve FTS caption rows only when they name the currently reviewed version.
