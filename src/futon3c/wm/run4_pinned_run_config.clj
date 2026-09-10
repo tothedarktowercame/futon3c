@@ -14,6 +14,20 @@
     :beta-habit-in-both? :policy-depth})
 (def materialized-fold-keys
   [:ruled-outcome-c-enabled? :seeded-c :disposition-kernel :c-fold-provenance])
+(def serving-flags
+  #{"FUTON_WM_FPI_DARK" "FUTON_WM_BETA_DARK"
+    "FUTON_WM_TRACE_POLICY_DETAILS"})
+
+(defn- valid-serving-declaration? [d]
+  (and (map? d)
+       (= #{:required-environment :hierarchy :recording-requirement}
+          (set (keys d)))
+       (= serving-flags (set (keys (:required-environment d))))
+       (every? #(= "1" %) (vals (:required-environment d)))
+       (= {:model :single-level :scope :RUN4} (:hierarchy d))
+       (= {:contract :wm/realized-recording-v1
+           :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}
+          (:recording-requirement d))))
 
 (defn- refuse! [reason & [data]]
   (throw (ex-info "RUN4 pinned run config refused"
@@ -70,10 +84,14 @@
         _ (when-not (= sha256 (c-fold/sha256 text)) (refuse! :config-source-drift))
         sheet (parse-one text)]
     (when-not (and (map? sheet)
-                   (= #{:schema :runner-options :c-fold} (set (keys sheet)))
+                   (or (= #{:schema :runner-options :c-fold} (set (keys sheet)))
+                       (= #{:schema :runner-options :c-fold :serving-declaration}
+                          (set (keys sheet))))
                    (= :wm/run4-pinned-run-config-v1 (:schema sheet))
                    (valid-runner-options? (:runner-options sheet))
-                   (valid-c-fold? (:c-fold sheet)))
+                   (valid-c-fold? (:c-fold sheet))
+                   (or (not (contains? sheet :serving-declaration))
+                       (valid-serving-declaration? (:serving-declaration sheet))))
       (refuse! :unsupported-config-shape))
     (let [reader (fn [requested]
                    (read-text (if (= requested path)
@@ -84,6 +102,8 @@
                          (catch clojure.lang.ExceptionInfo e
                            (refuse! :c-fold-materialization-refused
                                     {:cause (:reason (ex-data e))})))]
-      (merge (:runner-options sheet)
-             (select-keys materialized materialized-fold-keys)
-             {:run4/config-pin config-pin}))))
+      (cond-> (merge (:runner-options sheet)
+                     (select-keys materialized materialized-fold-keys)
+                     {:run4/config-pin config-pin})
+        (contains? sheet :serving-declaration)
+        (assoc :run4/serving-declaration (:serving-declaration sheet))))))

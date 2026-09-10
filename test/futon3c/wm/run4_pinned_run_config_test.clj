@@ -53,3 +53,30 @@
                        (constantly "{}"))
             nil
             (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+(def serving-declaration
+  {:required-environment {"FUTON_WM_FPI_DARK" "1"
+                          "FUTON_WM_BETA_DARK" "1"
+                          "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+   :hierarchy {:model :single-level :scope :RUN4}
+   :recording-requirement
+   {:contract :wm/realized-recording-v1
+    :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}})
+
+(deftest serving-declaration-is-strict-data-not-attestation
+  (let [opts (load-sheet {:schema :wm/run4-pinned-run-config-v1
+                          :runner-options {}
+                          :c-fold {:enabled? false}
+                          :serving-declaration serving-declaration})]
+    (is (= serving-declaration (:run4/serving-declaration opts)))
+    (is (nil? (:run4/effective-environment-attestation opts))))
+  (doseq [bad [(dissoc serving-declaration :hierarchy)
+               (assoc-in serving-declaration
+                         [:required-environment "FUTON_WM_FPI_DARK"] "0")
+               (assoc serving-declaration :hierarchy
+                      {:model :hierarchical :scope :RUN4})]]
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (load-sheet {:schema :wm/run4-pinned-run-config-v1
+                              :runner-options {}
+                              :c-fold {:enabled? false}
+                              :serving-declaration bad})))))
