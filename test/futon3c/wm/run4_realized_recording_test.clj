@@ -33,6 +33,24 @@
     (is (nil? (:outcome r)))
     (is (= :unknown (get-in r [:classification :status])))))
 
+(deftest actor-trial-policy-decision-and-tick-are-not-conflated
+  (let [action {:type :advance-mission :target "M-run4"}
+        with-action (assoc-in bundle
+                              [:terminal-projection :checkpoints :selection]
+                              {:status :present
+                               :judgment {:selected-action action}
+                               :ground {}})
+        a (sut/from-terminal-bundle with-action)
+        b (sut/from-terminal-bundle
+           (assoc-in with-action [:identity :casting :author] "codex-99"))]
+    (is (= action (:policy a)))
+    (is (= action (:policy b)))
+    (is (= "zai-2" (get-in a [:execution :actor :value])))
+    (is (= :unknown (get-in a [:decision/ref :status])))
+    (is (= :unknown (get-in a [:tick :status])))
+    (is (not= (:decision/ref a) :t1))
+    (is (not= (:tick a) :t1))))
+
 (deftest persisted-record-is-strictly-bound-to-current-bundle
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
                        "run4-recording"

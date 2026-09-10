@@ -27,11 +27,15 @@
                           :run-record-digest run-record-digest}}
         projection (:terminal-projection bundle)
         outcome (:outcome projection)
+        selected-action (get-in projection [:checkpoints :selection
+                                            :judgment :selected-action])
+        decision-ref (unknown :decision-identity-not-projected)
+        tick (unknown :wm-tick-not-projected)
         context
         {:record/id (str run-id "/" trial-id "/realized/0")
          :revision 0 :supersedes nil
-         :run/id run-id :decision/ref trial-id :attempt/id attempt-id
-         :policy (get-in identity [:casting :author]) :tick trial-id
+         :run/id run-id :decision/ref decision-ref :attempt/id attempt-id
+         :policy selected-action :tick tick
          :window {:rule :durable-trial-evidence :version 1 :clock :utc
                   :decision (unknown :prior-accepted-step-not-recorded)
                   :start (unknown :dispatch-time-not-projected)
@@ -40,10 +44,15 @@
          :subject {:mission (get-in projection [:run4/task-pin :mission-id])
                    :before (unknown :prior-revision-not-recorded)
                    :after (unknown :terminal-revision-not-recorded)}
-         :execution {:selected true :state :terminal :evidence source
-                     :policy (recording/observed
-                              (get-in identity [:casting :author])
-                              :actor-id source)}
+         :execution {:selected (some? selected-action) :state :terminal
+                     :evidence source
+                     :actor (recording/observed
+                             (get-in identity [:casting :author]) :actor-id source)
+                     :policy (if selected-action
+                               (recording/observed selected-action
+                                                   :mission-action source)
+                               {:status :not-applicable
+                                :reason :selected-policy-not-projected})}
          :expected-score nil :realized-score nil :scale :task-result
          :measurement {:id :run4-terminal-result-v1 :quantity :task-result
                        :units :task-result :sign :categorical
@@ -62,7 +71,7 @@
                                   {:classifier :run4-terminal-evidence-v1
                                    :grain :attempt :basis :strict-durable-join}))
          :closure {:state :unknown :reason :operator-acceptance-not-recorded}
-         :observations {:version 1 :attempt/id attempt-id :decision/ref trial-id
+         :observations {:version 1 :attempt/id attempt-id :decision/ref decision-ref
                         :alignment {:rule :single-terminal-bundle :version 1}
                         :checkpoints (unknown :checkpoint-times-not-projected)
                         :channels {:pre (unknown :prior-accepted-step-not-recorded)

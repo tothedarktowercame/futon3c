@@ -51,7 +51,8 @@
     :adjudication
     {:build-match (select-keys (:build-match judgment) [:commit :review-approved?])
      :dial (select-keys (:dial judgment) [:moved? :implementation-id])}
-    (select-keys judgment [:outcome :failure-kind :failure-stage :run4/task-pin])))
+    (select-keys judgment [:outcome :failure-kind :failure-stage :run4/task-pin
+                           :selected-action])))
 
 (defn- checkpoint-projection [checkpoints phase]
   (if (contains? checkpoints phase)
