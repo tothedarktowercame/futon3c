@@ -88,6 +88,32 @@
 (defn- ids-valid? [xs]
   (and (vector? xs) (every? nonblank? xs)))
 
+(defn- wire-keyword [x]
+  (if (string? x) (keyword x) x))
+
+(defn- normalize-conditions [conditions]
+  (mapv #(update % :status wire-keyword) conditions))
+
+(defn- normalize-suggestions [contexts]
+  (mapv #(update % :status wire-keyword) contexts))
+
+(defn normalize-observation [observation]
+  (-> observation
+      (update :applicability/schema wire-keyword)
+      (update :epistemic-status wire-keyword)
+      (update :conditions normalize-conditions)
+      (update :suggested-contexts #(normalize-suggestions (or % [])))
+      (update :task-observation
+              #(when % (update % :outcome wire-keyword)))))
+
+(defn normalize-caption [caption]
+  (-> caption
+      (update :caption/schema wire-keyword)
+      (update :epistemic-status wire-keyword)
+      (update :conditions normalize-conditions)
+      (update :suggested-contexts #(normalize-suggestions (or % [])))
+      (update :compression #(when % (update % :trigger wire-keyword)))))
+
 (defn observation-findings [observation]
   (let [task (:task-observation observation)]
     (cond-> []
@@ -173,7 +199,8 @@
 (defn admit-observation!
   ([authority observation] (admit-observation! authority observation (default-ports)))
   ([authority observation ports]
-   (let [ports (merge (default-ports) ports)
+   (let [observation (normalize-observation observation)
+         ports (merge (default-ports) ports)
          author (:agent-id authority)
          receipt ((:fetch-search-receipt ports (constantly nil))
                   (:search-receipt-id observation))
@@ -211,7 +238,8 @@
 (defn admit-caption!
   ([authority caption] (admit-caption! authority caption (default-ports)))
   ([authority caption ports]
-   (let [ports (merge (default-ports) ports)
+   (let [caption (normalize-caption caption)
+         ports (merge (default-ports) ports)
          author (:agent-id authority)
          memory ((:fetch-memory ports (:fetch-entry ports (constantly nil)))
                  (:memory/id caption))
@@ -264,7 +292,8 @@
 (defn review-caption!
   ([authority review] (review-caption! authority review (default-ports)))
   ([authority review ports]
-   (let [ports (merge (default-ports) ports)
+   (let [review (update review :verdict wire-keyword)
+         ports (merge (default-ports) ports)
          caption (when-let [id (:caption/id review)]
                    (read-edn (record-path :captions id)))
          author (:agent-id authority)
