@@ -9,7 +9,9 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.apm.library-loop-runner :as durable]
-            [futon3c.wm.run4-attempt-admission :as admission]))
+            [futon3c.wm.run4-attempt-admission :as admission])
+  (:import (java.nio.channels FileChannel)
+           (java.nio.file StandardOpenOption)))
 
 (def task-results #{:succeeded :failed :blocked})
 (def stop-rule :attempt-each-once-even-after-fail-or-block)
@@ -115,9 +117,45 @@
     (*atomic-write!* file event)))
 
 (defn- terminal-evidence? [value]
-  (and (map? value) (contains? task-results (:task-result value))
+  (and (map? value)
+       (= #{:task-result :evidence-id :infrastructure} (set (keys value)))
+       (contains? task-results (:task-result value))
        (string? (:evidence-id value)) (not (str/blank? (:evidence-id value)))
        (contains? #{:safe :unsafe} (:infrastructure value))))
+
+(defn- instant? [value]
+  (and (string? value)
+       (try (java.time.Instant/parse value) true (catch Throwable _ false))))
+
+(defn- started-event? [event manifest-sha256 manifest trial]
+  (and (= #{:schema :series-id :manifest-sha256 :ordinal :trial-id :attempt-id
+            :pin-sha256 :click-id :started-at :admission-state}
+          (set (keys event)))
+       (= :wm/run4-series-started-v1 (:schema event))
+       (= (:series-id manifest) (:series-id event))
+       (= manifest-sha256 (:manifest-sha256 event))
+       (= (:pin-sha256 trial) (:pin-sha256 event))
+       (string? (:click-id event)) (not (str/blank? (:click-id event)))
+       (instant? (:started-at event))
+       (= :click-recorded (:admission-state event))))
+
+(defn- terminal-event? [event manifest-sha256 manifest trial]
+  (and (= :wm/run4-series-terminal-v1 (:schema event))
+       (= (:series-id manifest) (:series-id event))
+       (= manifest-sha256 (:manifest-sha256 event))
+       (= (:pin-sha256 trial) (:pin-sha256 event))
+       (contains? #{:safe :unsafe} (:infrastructure event))
+       (if (= :not-attempted (:task-result event))
+         (and (= #{:schema :series-id :manifest-sha256 :ordinal :trial-id
+                   :attempt-id :pin-sha256 :task-result :infrastructure :reason}
+                 (set (keys event)))
+              (keyword? (:reason event)))
+         (and (= #{:schema :series-id :manifest-sha256 :ordinal :trial-id
+                   :attempt-id :pin-sha256 :task-result :infrastructure :evidence-id}
+                 (set (keys event)))
+              (contains? task-results (:task-result event))
+              (string? (:evidence-id event))
+              (not (str/blank? (:evidence-id event)))))))
 
 (defn- event-identity! [event trial]
   (when-not (= (select-keys trial [:ordinal :trial-id :attempt-id])
@@ -125,13 +163,19 @@
     (refuse! :persisted-event-identity-mismatch {:ordinal (:ordinal trial)}))
   event)
 
-(defn- mark-remaining! [root manifest from reason]
-  (doseq [{:keys [ordinal trial-id attempt-id]} (drop from (:trials manifest))]
+(defn- event-base [manifest-sha256 manifest trial schema]
+  {:schema schema :series-id (:series-id manifest)
+   :manifest-sha256 manifest-sha256
+   :ordinal (:ordinal trial) :trial-id (:trial-id trial)
+   :attempt-id (:attempt-id trial) :pin-sha256 (:pin-sha256 trial)})
+
+(defn- mark-remaining! [root manifest-sha256 manifest from reason]
+  (doseq [{:keys [ordinal] :as trial} (drop from (:trials manifest))]
     (append-event! (event-file root ordinal :terminal)
-                   {:schema :wm/run4-series-terminal-v1 :ordinal ordinal
-                    :trial-id trial-id :attempt-id attempt-id
-                    :task-result :not-attempted :infrastructure :unsafe
-                    :reason reason})))
+                   (merge (event-base manifest-sha256 manifest trial
+                                      :wm/run4-series-terminal-v1)
+                          {:task-result :not-attempted :infrastructure :unsafe
+                           :reason reason}))))
 
 (defn step!
   "Advance at most one durable boundary. Never starts a successor in the same call
@@ -145,8 +189,15 @@
     (when-not (.isDirectory root-file)
       (refuse! :invalid-controller-root {:root key}))
     (locking mutex
-      (let [{:keys [manifest manifest-sha256 prepared]}
-            (preflight manifest-text {:read-text read-text :prepare-trial prepare-trial})]
+      (with-open [channel (FileChannel/open
+                           (.toPath (io/file root-file ".series.lock"))
+                           (into-array StandardOpenOption
+                                       [StandardOpenOption/CREATE StandardOpenOption/WRITE]))
+                  series-lock (.lock channel)]
+        (when-not (.isValid series-lock)
+          (refuse! :series-lock-unavailable))
+        (let [{:keys [manifest manifest-sha256 prepared]}
+              (preflight manifest-text {:read-text read-text :prepare-trial prepare-trial})]
         (append-event! (io/file root-file "series.edn")
                        {:schema :wm/run4-series-open-v1
                         :series-id (:series-id manifest)
@@ -164,20 +215,32 @@
                                    (event-identity! trial))
                   started (some-> (read-event started-file :wm/run4-series-started-v1)
                                   (event-identity! trial))]
+              (when (and terminal
+                         (not (terminal-event? terminal manifest-sha256 manifest trial)))
+                (refuse! :invalid-persisted-terminal {:ordinal ordinal}))
+              (when (and started
+                         (not (started-event? started manifest-sha256 manifest trial)))
+                (refuse! :invalid-persisted-started {:ordinal ordinal}))
               (cond
-                terminal (recur (inc index))
+                terminal
+                (if (= :unsafe (:infrastructure terminal))
+                  (do
+                    (mark-remaining! root-file manifest-sha256 manifest (inc index)
+                                     :prior-infrastructure-stop)
+                    {:status :infrastructure-stopped :ordinal ordinal
+                     :reason (or (:reason terminal) :terminal-infrastructure-unsafe)})
+                  (recur (inc index)))
                 started
                 (if-let [evidence (terminal-evidence started)]
                   (do
                     (when-not (terminal-evidence? evidence)
                       (refuse! :invalid-terminal-evidence {:ordinal ordinal}))
                     (append-event! terminal-file
-                                   (merge {:schema :wm/run4-series-terminal-v1
-                                           :ordinal ordinal
-                                           :trial-id (:trial-id trial)
-                                           :attempt-id (:attempt-id trial)} evidence))
+                                   (merge evidence
+                                          (event-base manifest-sha256 manifest trial
+                                                      :wm/run4-series-terminal-v1)))
                     (when (= :unsafe (:infrastructure evidence))
-                      (mark-remaining! root-file manifest (inc index)
+                      (mark-remaining! root-file manifest-sha256 manifest (inc index)
                                        :prior-infrastructure-stop))
                     {:status (if (= :unsafe (:infrastructure evidence))
                                :infrastructure-stopped :trial-terminal)
@@ -202,25 +265,22 @@
                       (if (= :already-running (:rejected click-result))
                         (do
                           (append-event! terminal-file
-                                         {:schema :wm/run4-series-terminal-v1
-                                          :ordinal ordinal :trial-id (:trial-id trial)
-                                          :attempt-id (:attempt-id trial)
-                                          :task-result :not-attempted
-                                          :infrastructure :unsafe
-                                          :reason :busy-admission-rejected})
-                          (mark-remaining! root-file manifest (inc index)
+                                         (merge (event-base
+                                                 manifest-sha256 manifest trial
+                                                 :wm/run4-series-terminal-v1)
+                                                {:task-result :not-attempted
+                                                 :infrastructure :unsafe
+                                                 :reason :busy-admission-rejected}))
+                          (mark-remaining! root-file manifest-sha256 manifest (inc index)
                                            :prior-infrastructure-stop)
                           {:status :infrastructure-stopped :ordinal ordinal
                            :reason :busy-admission-rejected})
-                        (let [event {:schema :wm/run4-series-started-v1
-                                     :series-id (:series-id manifest)
-                                     :manifest-sha256 manifest-sha256
-                                     :ordinal ordinal :trial-id (:trial-id trial)
-                                     :attempt-id (:attempt-id trial)
-                                     :pin-sha256 (:pin-sha256 trial)
-                                     :click-id (:click-id click-result)
-                                     :started-at (:started-at click-result)
-                                     :admission-state (:state admission-status)}]
+                        (let [event (merge
+                                     (event-base manifest-sha256 manifest trial
+                                                 :wm/run4-series-started-v1)
+                                     {:click-id (:click-id click-result)
+                                      :started-at (:started-at click-result)
+                                      :admission-state (:state admission-status)})]
                           (append-event! started-file event)
                           {:status :trial-started :ordinal ordinal
-                           :click-id (:click-id click-result)})))))))))))))
+                           :click-id (:click-id click-result)}))))))))))))))

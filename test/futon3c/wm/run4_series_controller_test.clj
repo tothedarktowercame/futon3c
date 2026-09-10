@@ -76,7 +76,7 @@
                                 :evidence-id "infra-stop"})
       (is (= :infrastructure-stopped (:status (sut/step! root manifest-text ports))))
       (is (= 1 (count @clicks)))
-      (is (= :series-terminal (:status (sut/step! root manifest-text ports))))
+      (is (= :infrastructure-stopped (:status (sut/step! root manifest-text ports))))
       (doseq [ordinal (range 2 5)]
         (is (= :not-attempted
                (:task-result (read-string
@@ -137,6 +137,49 @@
              (:reason (try (sut/step! root manifest-text ports) nil
                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))
       (is (empty? @clicks)))))
+
+(deftest unsafe-terminal-recovers-partial-remainder-marking-without-dispatch
+  (with-controller
+    (fn [root ports clicks terminals]
+      (sut/step! root manifest-text ports)
+      (swap! terminals assoc 1 {:task-result :blocked :infrastructure :unsafe
+                                :evidence-id "unsafe-one"})
+      (let [write! sut/*atomic-write!*
+            failed? (atom false)]
+        (is (thrown? clojure.lang.ExceptionInfo
+                     (binding [sut/*atomic-write!*
+                               (fn [file value]
+                                 (if (and (not @failed?)
+                                          (= "002-terminal.edn" (.getName file)))
+                                   (do (reset! failed? true)
+                                       (throw (ex-info "injected write failure" {})))
+                                   (write! file value)))]
+                       (sut/step! root manifest-text ports)))))
+      (is (= :infrastructure-stopped
+             (:status (sut/step! root manifest-text ports))))
+      (is (= 1 (count @clicks)))
+      (doseq [ordinal (range 2 5)]
+        (is (= :not-attempted
+               (:task-result (read-string
+                              (slurp (io/file root (format "%03d-terminal.edn" ordinal)))))))))))
+
+(deftest incomplete-terminal-and-overwriting-evidence-refuse-before-dispatch
+  (with-controller
+    (fn [root ports clicks terminals]
+      (spit (io/file root "001-terminal.edn")
+            (pr-str {:schema :wm/run4-series-terminal-v1 :ordinal 1
+                     :trial-id (first trial-ids) :attempt-id "attempt-1"}))
+      (is (= :invalid-persisted-terminal
+             (:reason (try (sut/step! root manifest-text ports) nil
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+      (io/delete-file (io/file root "001-terminal.edn"))
+      (sut/step! root manifest-text ports)
+      (swap! terminals assoc 1 {:task-result :succeeded :infrastructure :safe
+                                :evidence-id "one" :trial-id :forged})
+      (is (= :invalid-terminal-evidence
+             (:reason (try (sut/step! root manifest-text ports) nil
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+      (is (= 1 (count @clicks))))))
 
 (deftest busy-admission-is-infrastructure-stop-not-success
   (with-controller
