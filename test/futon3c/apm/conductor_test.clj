@@ -1,5 +1,6 @@
 (ns futon3c.apm.conductor-test
   (:require [clojure.edn :as edn]
+            [babashka.http-client :as http-client]
             [cheshire.core :as json]
             [clojure.test :refer [deftest is]]
             [futon3c.agency.registry :as agency]
@@ -9,9 +10,12 @@
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.tools :as tools]
             [futon3c.transport.http :as http])
-  (:import [java.nio.file Files]
+  (:import [java.io IOException InterruptedIOException]
+           [java.net SocketTimeoutException]
+           [java.net.http HttpTimeoutException]
+           [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]
-           [java.util.concurrent CountDownLatch]
+           [java.util.concurrent CompletableFuture CountDownLatch TimeoutException]
            [com.sun.net.httpserver HttpHandler HttpServer]))
 
 (def ^:private registration-path
@@ -239,6 +243,87 @@
            (is (= :memory-cascade-unreachable (:error/code (ex-data error))))
            (is (= 3 @calls))
            (is (= [100 200] @sleeps)))))))
+
+(defn- cascade-transport-error [cause]
+  (ex-info "memory cascade substrate transport failed"
+           {:error/component :transport
+            :error/code :memory-cascade-unreachable
+            :path "/api/alpha/hyperedges"
+            :query-params {:end "memory/seed" :type "memory/assert" :limit 1000}
+            :error/class (.getName (class cause))
+            :error/message (.getMessage cause)}
+           cause))
+
+(deftest cascade-read-retries-transport-io-and-then-succeeds
+  (let [calls (atom 0)
+        sleeps (atom [])
+        error (cascade-transport-error
+               (IOException. "HTTP/1.1 header parser received no bytes"))]
+    (binding [conductor/*cascade-retry-sleep!* #(swap! sleeps conj %)]
+      (is (= {:hyperedges [:edge]}
+             (#'conductor/cascade-read-edn
+              (fn []
+                (if (= 1 (swap! calls inc))
+                  (throw error)
+                  {:status 200 :body "{:hyperedges [:edge]}"}))
+              {:path "/api/alpha/hyperedges"})))
+      (is (= 2 @calls))
+      (is (= [100] @sleeps)))))
+
+(deftest cascade-read-transport-io-exhaustion-preserves-diagnostics
+  (let [calls (atom 0)
+        sleeps (atom [])
+        error (cascade-transport-error
+               (IOException. "HTTP/1.1 header parser received no bytes"))
+        terminal (binding [conductor/*cascade-admission-retries* 2
+                           conductor/*cascade-retry-sleep!* #(swap! sleeps conj %)]
+                   (try
+                     (#'conductor/cascade-read-edn
+                      (fn [] (swap! calls inc) (throw error)) {})
+                     (catch clojure.lang.ExceptionInfo e e)))]
+    (is (= 3 @calls))
+    (is (= [100 200] @sleeps))
+    (is (identical? error terminal))
+    (is (= (ex-data error) (ex-data terminal)))
+    (is (= :memory-cascade-unreachable (:error/code (ex-data terminal))))
+    (is (= "java.io.IOException" (:error/class (ex-data terminal))))))
+
+(deftest cascade-read-does-not-retry-timeouts-or-non-io-failures
+  (doseq [cause [(TimeoutException. "deadline")
+                 (HttpTimeoutException. "request timed out")
+                 (SocketTimeoutException. "read timed out")
+                 (InterruptedIOException. "interrupted")
+                 (IllegalStateException. "invalid client state")]]
+    (let [calls (atom 0)
+          sleeps (atom [])
+          error (cascade-transport-error cause)
+          terminal (binding [conductor/*cascade-retry-sleep!* #(swap! sleeps conj %)]
+                     (try
+                       (#'conductor/cascade-read-edn
+                        (fn [] (swap! calls inc) (throw error)) {})
+                       (catch clojure.lang.ExceptionInfo e e)))]
+      (is (identical? error terminal))
+      (is (= 1 @calls))
+      (is (empty? @sleeps)))))
+
+(deftest cascade-get-wall-clock-timeout-is-not-retried
+  (let [calls (atom 0)
+        sleeps (atom [])
+        pending (CompletableFuture.)]
+    (with-redefs [http-client/client (constantly nil)
+                  http-client/get (fn [& _] (swap! calls inc) pending)]
+      (let [error (binding [conductor/*cascade-request-timeout-ms* 1
+                            conductor/*cascade-retry-sleep!* #(swap! sleeps conj %)]
+                    (try
+                      (#'conductor/cascade-get "http://substrate.test"
+                                               "/api/alpha/hyperedges" {})
+                      (catch clojure.lang.ExceptionInfo e e)))]
+        (is (= "java.util.concurrent.TimeoutException"
+               (:error/class (ex-data error))))
+        (is (= :memory-cascade-unreachable (:error/code (ex-data error))))
+        (is (= 1 @calls))
+        (is (empty? @sleeps))
+        (is (.isCancelled pending))))))
 
 (deftest minimum-cascade-leaf-only
   (let [edge (cascade-edge "memory/leaf" "pattern/seed" "a01A01")

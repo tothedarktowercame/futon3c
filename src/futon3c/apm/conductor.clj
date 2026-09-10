@@ -16,7 +16,9 @@
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.substrate.client :as substrate])
-  (:import [java.util.concurrent CompletableFuture ExecutionException
+  (:import [java.io IOException InterruptedIOException]
+           [java.net.http HttpTimeoutException]
+           [java.util.concurrent CompletableFuture ExecutionException
             TimeUnit TimeoutException]))
 
 (def ^:private default-memory-cascade-cap 100)
@@ -348,14 +350,26 @@
                              :error/code :memory-cascade-unreachable))))))
 
 (defn- cascade-read-edn
-  "Run one bounded cascade request, honoring futon1b's explicit busy signal.
+  "Retry busy responses and transport IO failures within one shared retry bound.
 
-   Only 503 :expensive-read-busy is retried. The retry count is separate from
-   transport timeouts and the server's retry-after is used when present."
+   Timeouts and interrupted IO are terminal. Busy responses honor retry-after;
+   transport failures use exponential backoff and retain their original error."
   [request-fn context]
   (loop [attempt 0]
-    (let [response (request-fn)]
-      (if (and (expensive-read-busy? response)
+    (let [{:keys [response transport-error]}
+          (try
+            {:response (request-fn)}
+            (catch clojure.lang.ExceptionInfo error
+              (let [data (ex-data error)
+                    cause (.getCause error)]
+                (if (and (= :transport (:error/component data))
+                         (= :memory-cascade-unreachable (:error/code data))
+                         (instance? IOException cause)
+                         (not (instance? HttpTimeoutException cause))
+                         (not (instance? InterruptedIOException cause)))
+                  {:transport-error error}
+                  (throw error)))))]
+      (if (and (or transport-error (expensive-read-busy? response))
                (< attempt *cascade-admission-retries*))
         (let [body (decoded-response-body response)
               retry-after (get body :retry-after-seconds)
@@ -364,7 +378,9 @@
                          (* 100 (bit-shift-left 1 attempt)))]
           (*cascade-retry-sleep!* delay-ms)
           (recur (inc attempt)))
-        (response-edn response context)))))
+        (if transport-error
+          (throw transport-error)
+          (response-edn response context))))))
 
 (defn- bounded-cascade-get
   "GET and decode the complete response body inside one wall-clock bound.
