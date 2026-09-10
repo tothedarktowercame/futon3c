@@ -77,22 +77,34 @@
 
 (defn- validate-pin [cfg pin-text]
   (let [snapshots (atom {})
-        read-text (fn [ref]
+        fresh-read-text
+        (fn [ref]
+          (if-let [f (authorized-file (:source-root cfg)
+                                      (:source-allowlist cfg) ref)]
+            (slurp f)
+            (throw (ex-info "RUN4 source refused"
+                            {:reason :source-reference-refused :ref ref}))))
+        snapshot-read-text (fn [ref]
                     (if (contains? @snapshots ref)
                       (get @snapshots ref)
-                      (if-let [f (authorized-file (:source-root cfg)
-                                                  (:source-allowlist cfg) ref)]
-                        (let [text (slurp f)]
-                          (swap! snapshots assoc ref text)
-                          text)
-                        (throw (ex-info "RUN4 source refused"
-                                        {:reason :source-reference-refused
-                                         :ref ref})))))
-        ports {:read-text read-text
-               :resolve-mission (:resolve-mission cfg)
-               :action-admissible? (:action-admissible? cfg)}]
+                      (let [text (fresh-read-text ref)]
+                        (swap! snapshots assoc ref text)
+                        text)))
+        base-ports {:resolve-mission (:resolve-mission cfg)
+                    :action-admissible? (:action-admissible? cfg)}
+        validation-ports (assoc base-ports :read-text snapshot-read-text)
+        runner-ports (assoc base-ports :read-text fresh-read-text)
+        freshness! (fn []
+                     (doseq [[ref captured] @snapshots]
+                       (when-not (= captured (fresh-read-text ref))
+                         (throw (ex-info "RUN4 captured source changed"
+                                         {:reason :captured-source-changed
+                                          :ref ref})))))]
     (try
-      {:envelope (task-pin/validate pin-text ports) :ports ports}
+      {:envelope (task-pin/validate pin-text validation-ports)
+       :ports runner-ports
+       :snapshot-read-text snapshot-read-text
+       :freshness! freshness!}
       (catch clojure.lang.ExceptionInfo e
         {:refusal (refuse :run4-pin-invalid
                           {:reason (:reason (ex-data e))})})
@@ -100,10 +112,14 @@
         {:refusal (refuse :run4-pin-invalid
                           {:reason :validation-failed})}))))
 
-(defn- prepared-options [cfg pin-text envelope ports runner-opts attempt-id]
+(defn- prepared-options [cfg pin-text envelope ports runner-opts freshness! attempt-id]
   (let [pin-sha (digest/sha256 pin-text)
         used? (atom false)
         trust (fn [{:keys [pin-digest operator-selection]}]
+                ;; The task validator below also rereads pin-declared sources.
+                ;; This check additionally covers materialized config artifacts
+                ;; (for example C-fold seed/kernel bytes) captured at prepare.
+                (freshness!)
                 (when-not (and (= pin-sha pin-digest)
                                (= "Joe" (:operator operator-selection))
                                (compare-and-set! used? false true))
@@ -165,7 +181,7 @@
                   (try
                     {:opts
                      (pinned-config/load! (get-in validation [:envelope :config-pin])
-                                          (get-in validation [:ports :read-text]))}
+                                          (:snapshot-read-text validation))}
                     (catch clojure.lang.ExceptionInfo e
                       {:refusal
                        (refuse :run4-pinned-config-invalid
@@ -173,5 +189,6 @@
               (or (:refusal loaded)
                   (prepared-options cfg pin-text (:envelope validation)
                                     (:ports validation) (:opts loaded)
+                                    (:freshness! validation)
                                     (:run4-attempt-id payload))))))
         (refuse :run4-pin-reference-refused)))))

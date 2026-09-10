@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.wm.run4-trusted-entry :as sut]))
 
 (def token (apply str (repeat 64 "a")))
@@ -41,6 +42,11 @@
     (try
       (spit (io/file root "source.md") source-text)
       (spit (io/file root "config.edn") config-text)
+      (spit (io/file root "seed.edn")
+            (slurp (io/file ".." "futon2" "resources" "run4" "seeded-c.edn")))
+      (spit (io/file root "kernel.edn")
+            (slurp (io/file ".." "futon2" "resources" "run4"
+                            "checkpoint-kernel.edn")))
       (spit (io/file root "pin.edn") (pr-str (pin {})))
       (f {:root root
           :config {:run4 {:enabled? true :bearer-token token :operator "Joe"
@@ -48,7 +54,8 @@
                           :admission-root (.getPath root)
                           :pin-root (.getPath root) :pin-allowlist #{"pin.edn"}
                           :source-root (.getPath root)
-                          :source-allowlist #{"source.md" "config.edn"}
+                          :source-allowlist #{"source.md" "config.edn"
+                                              "seed.edn" "kernel.edn"}
                           :resolve-mission #(when (= "M-run4" %) mission)
                           :action-admissible?
                           #(and (= mission %1)
@@ -57,6 +64,11 @@
 
 (def auth {"authorization" (str "Bearer " token)})
 (def request {:run4-pin-ref "pin.edn" :run4-attempt-id "attempt-1"})
+
+(def action {:type :advance-mission :target "M-run4"})
+(def judgment {:decision {:action {:type :no-op}}
+               :ranked-actions [{:rank 1 :action action}]
+               :admissible-actions [{:rank 1 :action action}]})
 
 (deftest authenticates-validates-and-mints-one-use-digest-context
   (with-fixture
@@ -154,3 +166,57 @@
                                       :sha256 (digest/sha256 bad)}})))
           (is (= :run4-pinned-config-invalid
                  (:error (sut/prepare config auth request)))))))))
+
+(deftest runner-boundary-rereads-source-and-config-after-preparation
+  (with-fixture
+    (fn [{:keys [root config]}]
+      (doseq [[path changed]
+              [["source.md" "changed task\n"]
+               ["config.edn"
+                "{:schema :wm/run4-pinned-run-config-v1 :runner-options {:cohort? true} :c-fold {:enabled? false}}\n"]]]
+        ;; Each case gets a fresh preparation and then changes authoritative
+        ;; bytes before the actual selection boundary consumes the options.
+        (spit (io/file root "source.md") source-text)
+        (spit (io/file root "config.edn") config-text)
+        (let [prepared (sut/prepare config auth request)
+              opts (:opts prepared)]
+          (is (:ok prepared))
+          (spit (io/file root path) changed)
+          (is (= changed ((get-in opts [:run4-task-pin-ports :read-text]) path)))
+          (is (= :invalid-or-stale-task-pin
+                 (:failure-detail
+                  (try
+                    (full-runner/resolve-pinned-selection opts judgment casting)
+                    nil
+                    (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+
+(deftest trusted-attestation-rereads-c-fold-artifacts
+  (with-fixture
+    (fn [{:keys [root config]}]
+      (let [seed (slurp (io/file root "seed.edn"))
+            kernel (slurp (io/file root "kernel.edn"))
+            fold-config
+            (str (pr-str
+                  {:schema :wm/run4-pinned-run-config-v1
+                   :runner-options {:cohort? false}
+                   :c-fold {:enabled? true
+                            :seed {:id :ruled-outcome-c-v1 :path "seed.edn"
+                                   :sha256 (digest/sha256 seed)}
+                            :kernel {:adapter :constant-checkpoint-kernel/v1
+                                     :path "kernel.edn"
+                                     :sha256 (digest/sha256 kernel)}}}) "\n")]
+        (spit (io/file root "config.edn") fold-config)
+        (spit (io/file root "pin.edn")
+              (pr-str (pin {:config {:path "config.edn"
+                                    :sha256 (digest/sha256 fold-config)}})))
+        (let [prepared (sut/prepare config auth request)]
+          (is (:ok prepared))
+          (is (true? (get-in prepared [:opts :ruled-outcome-c-enabled?])))
+          (spit (io/file root "kernel.edn") "{:schema :changed}\n")
+          (is (= :captured-source-changed
+                 (:reason
+                  (try
+                    (full-runner/resolve-pinned-selection
+                     (:opts prepared) judgment casting)
+                    nil
+                    (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
