@@ -3,6 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.wm.run4-deployment-preflight :as preflight]
             [futon3c.wm.run4-historical-action :as historical-action]))
 
@@ -15,6 +16,19 @@
 (def successor-dependency-keys #{:historical-successor})
 
 (defn- refuse [reason] (throw (ex-info "RUN4 deployment refused" {:reason reason})))
+(defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
+(defn- successor-link? [x]
+  (let [successor (:successor x)
+        verification-attempt (:verification-attempt x)]
+    (and (map? x)
+         (= #{:repair-id :verification-id :verification-attempt :successor}
+            (set (keys x)))
+         (nonblank? (:repair-id x)) (nonblank? (:verification-id x))
+         (= #{:kind :id} (set (keys verification-attempt)))
+         (= :runner-execution (:kind verification-attempt))
+         (nonblank? (:id verification-attempt))
+         (= #{:series-id :trial-id :attempt-id} (set (keys successor)))
+         (every? #(or (nonblank? %) (keyword? %)) (vals successor)))))
 (defn- parse [text]
   (try
     (with-open [r (java.io.PushbackReader. (java.io.StringReader. text))]
@@ -60,9 +74,7 @@
                          (catch Throwable _ false)))
                    (or (not (contains? dependencies :historical-successor))
                        (and (contains? dependencies :historical-action)
-                            (= #{:repair-id :series-id :trial-id}
-                               (set (keys (:historical-successor dependencies))))
-                            (every? some? (vals (:historical-successor dependencies)))))
+                            (successor-link? (:historical-successor dependencies))))
                    (boolean? (:enable? dependencies)))
       (refuse :invalid-deployment-contract))
     (let [facts (preflight/inspect template-text)

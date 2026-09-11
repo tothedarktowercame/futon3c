@@ -59,8 +59,10 @@
                    :verification-path (.getPath (java.io.File. root "verification.edn"))
                    :verification-sha256 (apply str (repeat 64 "a"))}
         link {:repair-id "repair-057"
-              :series-id "run4-successor"
-              :trial-id "attempt-002"}
+              :verification-id "verification-057"
+              :verification-attempt {:kind :runner-execution :id "verification-attempt-001"}
+              :successor {:series-id "run4-successor"
+                          :trial-id "trial-002" :attempt-id "attempt-002"}}
         c (sut/materialize text (assoc deps :historical-action authority
                                             :historical-successor link))]
     (is (= link (get-in c [:run4 :historical-successor])))

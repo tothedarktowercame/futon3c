@@ -6,7 +6,6 @@
   boundary; request data cannot supply ports or select a different manifest."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-series-controller :as controller]
             [futon3c.wm.run4-realized-recording :as realized]
             [futon3c.wm.run4-historical-projection :as historical]
@@ -85,6 +84,52 @@
 
       :else (refuse! :run4-series-source-refused {:ref ref}))))
 
+(defn- execution-identity? [x]
+  (and (map? x) (= #{:kind :id} (set (keys x)))
+       (= :runner-execution (:kind x))
+       (string? (:id x)) (not (str/blank? (:id x)))))
+
+(defn- linked-successor! [run4 series manifest-text prepared evidence-roots]
+  (when-let [link (:historical-successor run4)]
+    (let [successor (:successor link)]
+      (when-not (and (= #{:repair-id :verification-id :verification-attempt :successor}
+                         (set (keys link)))
+                     (every? #(and (string? %) (not (str/blank? %)))
+                             ((juxt :repair-id :verification-id) link))
+                     (execution-identity? (:verification-attempt link))
+                     (= #{:series-id :trial-id :attempt-id} (set (keys successor)))
+                     (every? #(or (and (string? %) (not (str/blank? %)))
+                                  (keyword? %))
+                             (vals successor)))
+        (refuse! :historical-successor-link-invalid))
+      (when (.isFile (io/file (:controller-root series) "series.edn"))
+        (let [lifecycle (controller/read-lifecycle!
+                         (:controller-root series) manifest-text prepared)
+              row (some #(when (= (:trial-id successor)
+                                  (get-in % [:trial :trial-id])) %)
+                        (:trials lifecycle))]
+          (when (and row (:terminal row))
+            (let [identity (get-in (get prepared (:ordinal row))
+                                   [:admission-request :identity])
+                  attempt-id (get-in (get prepared (:ordinal row))
+                                     [:admission-request :attempt-id])]
+              (when-not (and (= (:series-id successor) (:series-id identity))
+                             (= (:trial-id successor) (:trial-id identity))
+                             (= (:attempt-id successor) attempt-id)
+                             (:started row))
+                (refuse! :historical-successor-link-mismatch))
+              ;; The strict reader validates task success and all durable joins.
+              ;; Any failure here stops before the controller can advance.
+              (historical-successor/resolve-from-durable!
+               {:repair-root (get-in run4 [:historical-action :repair-root])
+                :evidence-roots evidence-roots
+                :admission-request (:admission-request
+                                    (get prepared (:ordinal row)))
+                :started (:started row)
+                :repair-id (:repair-id link)
+                :verification-id (:verification-id link)
+                :verification-attempt (:verification-attempt link)}))))))))
+
 (defn step!
   "Authenticate all frozen trial pins, then advance at most one boundary.
 
@@ -144,6 +189,12 @@
             ;; Historical admission is deliberately nil to the task controller:
             ;; it remains awaiting evidence and cannot advance the trial.
             (:classification bundle)))
+        ;; Populate the same trusted values used by the controller, without
+        ;; writing an admission or dispatching. This permits persisted-terminal
+        ;; reconciliation to run before the controller considers a successor.
+        _ (controller/preflight manifest-text
+                                {:read-text read-text :prepare-trial prepare-trial})
+        _ (linked-successor! run4 series manifest-text @prepared evidence-roots)
         result (controller/step!
                 (:controller-root series) manifest-text
                 {:read-text read-text
@@ -161,35 +212,9 @@
                              (runner/click!
                               (assoc opts :run-record-dir
                                      (:run-record-root series)))))
-                 :terminal-evidence terminal-port})
-        link (:historical-successor run4)]
-    (when (and (= :trial-terminal (:status result)) link)
-      (let [ordinal (:ordinal result)
-            prepared-trial (get @prepared ordinal)
-            identity (get-in prepared-trial [:admission-request :identity])
-            _ (when-not (and (= #{:repair-id :series-id :trial-id}
-                                 (set (keys link)))
-                             (= (:series-id link) (:series-id identity))
-                             (= (:trial-id link) (:trial-id identity)))
-                (refuse! :historical-successor-link-mismatch))
-            obligation (some #(when (= (:repair-id link) (:repair/id %)) %)
-                             (repair/open-obligations
-                              (get-in run4 [:historical-action :repair-root])))
-            verification (:repair/verification obligation)
-            lifecycle (controller/read-lifecycle!
-                       (:controller-root series) manifest-text @prepared)
-            started (:started (some #(when (= ordinal (:ordinal %)) %) (:trials lifecycle)))]
-        (when-not (and (= :awaiting-validation (:repair/status obligation))
-                       (map? verification) started)
-          (refuse! :historical-successor-authority-missing))
-        (historical-successor/resolve-from-durable!
-         {:repair-root (get-in run4 [:historical-action :repair-root])
-          :evidence-roots evidence-roots
-          :admission-request (:admission-request prepared-trial)
-          :started started
-          :repair-id (:repair/id obligation)
-          :verification-id (:verification-id verification)
-          :verification-attempt (:verification-attempt verification)})))
+                 :terminal-evidence terminal-port})]
+    (when (= :trial-terminal (:status result))
+      (linked-successor! run4 series manifest-text @prepared evidence-roots))
     (when (true? (:visibility-enabled? series))
       (let [lifecycle (controller/read-lifecycle!
                        (:controller-root series) manifest-text @prepared)
