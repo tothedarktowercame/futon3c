@@ -5,11 +5,7 @@ present before the serving JVM starts. It reads only the fixed reviewed
 template and fixed private credential path. The credential value must never be
 printed or copied into shell history.
 
-Before activation, the U88 mission is still DRAFT. An operator must first land
-and independently review the intended OPEN mission change, then regenerate and
-review the task pin, series pin, deployment-template manifest hash, and source
-hashes. Starting with the current DRAFT bytes is expected to fail eligibility;
-that refusal is not a wiring failure.
+The U88 mission is OPEN and the task pin, series pin, deployment-template manifest hash, and source hashes were regenerated on 2026-09-11 under Joe’s explicit activation instruction. Independent review of those exact bytes remains required before enablement.
 
 From a separate shell (not the shell or JVM being served), verify Agency can be
 recovered and record the current status:

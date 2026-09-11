@@ -13,5 +13,6 @@ not-attested-by-this-component. FUTON3C_RUN4_U88_ENABLED remains "false".
 
 This closes the unloaded-consumer gap in 1e882bb3. It does not claim a trial,
 recording deposit, installed RUN4 HTTP configuration or operator acceptance.
-Mission activation/re-pin is queued to Codex12 as Agency job
-invoke-1789088097074-19965-91cbcdeb under Joe's current setup authorization.
+Mission activation and exact source/task/series/template re-pin were completed
+by Codex12 under Joe's current setup authorization. Independent review remains
+required before enablement; RUN4 startup remains false.

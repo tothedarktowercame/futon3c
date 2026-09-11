@@ -33,7 +33,5 @@ loaded by the real consumer path; do not claim effective values from env alone.
 TRACE should be loaded true if its namespace has loaded under this profile.
 Confirm FUTON3C_RUN4_U88_ENABLED=false and FUTON_WM_MISSION_C absent.
 
-This restart prepares the environment and keeps the machine disabled. U88
-mission activation, refreshed pins and the final effective-consumer check still
-precede any enabled series request. No restart, launch or acceptance was
+This restart prepares the environment and keeps the machine disabled. U88 mission activation, refreshed pins, and the effective-consumer check are complete; explicit enablement still precedes any series request. No restart, launch or acceptance was
 performed by Codex17.

@@ -8,11 +8,11 @@
  :casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"}
  :authority-root "/home/joe/code/futon2"
  :manifest {:ref "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/u88-trial-1/series-pin.edn"
-            :sha256 "9b4edafe9c4b997c20c1d2e8fe19aa77ec6fa6293a965fb884c536a058d350cf"}
+            :sha256 "223d0eb87a1d975b9c25ee1b8cdef6be7b16849f97b01e8a6ee6095d18739778"}
  :pin-allowlist
  #{"holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/u88-trial-1/task-pin.edn"}
  :source-allowlist
- #{"holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-u88-contextual-preferences.md"
+ #{"holes/missions/M-u88-contextual-preferences.md"
    "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md"
    "src/futon2/aif/mission_registry.clj"
    "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json"
@@ -33,5 +33,7 @@
            :request {:run4-series-ref "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/u88-trial-1/series-pin.edn"}
            :single-flight :existing-runner-service-cas
            :automatic-start? false}
- :mission {:id "M-u88-contextual-preferences" :state :draft-non-live
-           :activation-permitted? false}}
+ :mission {:id "M-u88-contextual-preferences" :state :open
+           :activated-on "2026-09-11"
+           :activation-authority "Joe explicit mission activation and exact pin freeze"
+           :activation-permitted? true}}

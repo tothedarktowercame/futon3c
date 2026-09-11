@@ -1,18 +1,16 @@
 (ns futon3c.wm.u88-trial-packet-test
-  "Fixture-scoped U88 packet validation; C-fold references resolve once.
-   No live-valid pin, dispatch, credentials or activation is claimed."
+  "Activated U88 packet validation. The production mission resolver accepts the
+   exact pinned action; C-fold references resolve once. No dispatch or
+   credential access occurs."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as c-fold]
             [futon2.aif.mission-registry :as missions]
             [futon2.aif.run4-task-pin :as task-pin]
             [futon3c.wm.run4-pinned-run-config :as pinned-config]
-            [futon3c.wm.run4-series-controller :as series])
-  (:import (java.io File)
-           (java.nio.file Files)
-           (java.nio.file.attribute FileAttribute)))
+            [futon3c.wm.run4-series-controller :as series]))
+
 
 (def f2 "../futon2")
 (def packet-dir
@@ -20,8 +18,7 @@
 (def run-config-path (str packet-dir "/run-config.edn"))
 (def task-pin-path (str packet-dir "/task-pin.edn"))
 (def series-pin-path (str packet-dir "/series-pin.edn"))
-(def mission-path
-  (str f2 "/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/draft-missions/M-u88-contextual-preferences.md"))
+(def mission-path (str f2 "/holes/missions/M-u88-contextual-preferences.md"))
 (def mission-id "M-u88-contextual-preferences")
 
 (defn- read-text
@@ -35,15 +32,6 @@
                     (str (.normalize (.toPath (io/file (str f2 "/" path)))))]
         found (some #(when (.isFile (io/file %)) %) candidates)]
     (if found (slurp found) (throw (ex-info "stub miss" {:path path})))))
-
-(defn- with-temp-code-root [f]
-  (let [root (Files/createTempDirectory "u88-f3c-packet"
-                                        (into-array FileAttribute []))]
-    (try
-      (f (str root))
-      (finally
-        (doseq [^File child (reverse (file-seq (io/file (str root))))]
-          (.delete child))))))
 
 (deftest ruled-flags-materialize-through-the-underlying-consumer
   ;; Single-resolution path: resolve-opts resolves seed/kernel refs relative
@@ -80,44 +68,35 @@
                     (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))]
     (is (= :config-source-drift reason))))
 
-(deftest frozen-series-passes-real-preflight-with-open-copy-identity
-  (with-temp-code-root
-    (fn [root]
-      (let [target (io/file root "futon2/holes/missions"
-                            (str mission-id ".md"))]
-        (io/make-parents target)
-        (spit target (str/replace
-                      (read-text mission-path)
-                      "DRAFT — NON-LIVE; independent review and explicit activation required"
-                      "OPEN — fixture episode milestone pending"))
-        (let [open (into {} (map (juxt :id identity)
-                                 (missions/open-missions
-                                  {:missions (:missions (missions/load-missions root))})))
-              pin-ports {:read-text read-text
-                         :resolve-mission (fn [id] (get open id))
-                         ;; DELIBERATE FIXTURE STUB, not the serving rule.
-                         :action-admissible? (fn [mission action]
-                                               (and (= :open (:status-class mission))
-                                                    (= :advance-mission (:type action))))}
-              prepare-trial (fn [trial]
-                              (let [value (task-pin/validate
-                                           (read-text (get-in trial [:packet :path]))
-                                           pin-ports)]
-                                {:ok (:valid? value)
-                                 :admission-request
-                                 {:identity {:series-id "run4-inner-loop-u88-2026-09-10"
-                                             :trial-id (:trial-id trial)
-                                             :pin-sha256 (:pin-sha256 trial)
-                                             :casting {:author "zai-2"
-                                                       :reviewer "codex-12"
-                                                       :repair-reviewer "codex-17"}}
-                                  :attempt-id (:attempt-id trial)}}))
-              preflighted (series/preflight (read-text series-pin-path)
-                                            {:read-text read-text
-                                             :prepare-trial prepare-trial})]
-          (is (= :wm/run4-series-pin-v1
-                 (:schema (:manifest preflighted))))
-          (is (= "ec0555250f116814370eb77810eeb946302b1d50c277a2f30f9cbc3a7e64c9d6"
-                 (get-in (first (:prepared preflighted))
-                         [:admission-request :identity :pin-sha256])))
-          (is (every? :ok (:prepared preflighted))))))))
+(deftest frozen-series-passes-real-preflight-with-production-open-identity
+  (let [open (into {} (map (juxt :id identity) (missions/open-missions)))
+        mission (get open mission-id)
+        pin-ports {:read-text read-text
+                   :resolve-mission (fn [id] (get open id))
+                   :action-admissible? (fn [m action]
+                                         (and (= mission-id (:id m))
+                                              (= {:type :advance-mission
+                                                  :target mission-id}
+                                                 action)))}
+        prepare-trial (fn [trial]
+                        (let [value (task-pin/validate
+                                     (read-text (get-in trial [:packet :path]))
+                                     pin-ports)]
+                          {:ok (:valid? value)
+                           :admission-request
+                           {:identity {:series-id "run4-inner-loop-u88-2026-09-10"
+                                       :trial-id (:trial-id trial)
+                                       :pin-sha256 (:pin-sha256 trial)
+                                       :casting {:author "zai-2"
+                                                 :reviewer "codex-12"
+                                                 :repair-reviewer "codex-17"}}
+                            :attempt-id (:attempt-id trial)}}))
+        preflighted (series/preflight (read-text series-pin-path)
+                                      {:read-text read-text
+                                       :prepare-trial prepare-trial})]
+    (is (= :open (:status-class mission)))
+    (is (= :wm/run4-series-pin-v1 (:schema (:manifest preflighted))))
+    (is (= "9cf34ffcff3a78bbe2b60e5c8cbfa674887ff3c34de5a41c49ea57315b63b717"
+           (get-in (first (:prepared preflighted))
+                   [:admission-request :identity :pin-sha256])))
+    (is (every? :ok (:prepared preflighted)))))

@@ -11,5 +11,5 @@
     (is (= :current (:sources r)))
     (is (= :supported (:declaration r)))
     (is (= :unknown-not-loaded (:consumer-state r)))
-    (is (= :expected-draft-eligibility-refusal (:mission r)))
+    (is (= :open-activated (:mission r)))
     (is (false? (:eligible-to-launch? r)))))

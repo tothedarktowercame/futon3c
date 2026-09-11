@@ -45,7 +45,7 @@
               nil
               (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))
 
-(deftest production-mission-and-guardrail-ports-refuse-current-nonlive-draft
+(deftest production-mission-and-guardrail-ports-accept-only-exact-activated-action
   ;; The only substituted boot dependencies are the secret read and current
   ;; environment attestation. Mission parsing and admissibility are production.
   (let [cfg (sut/materialize true {:read-secret (constantly token)
@@ -53,8 +53,10 @@
         resolve-mission (get-in cfg [:run4 :resolve-mission])
         admissible? (get-in cfg [:run4 :action-admissible?])
         mission (resolve-mission "M-u88-contextual-preferences")]
-    ;; The reviewed draft is intentionally outside live mission discovery.
-    (is (nil? mission))
-    (is (false? (admissible? mission
+    (is (= :open (:status-class mission)))
+    (is (true? (admissible? mission
                             {:type :advance-mission
-                             :target "M-u88-contextual-preferences"})))))
+                             :target "M-u88-contextual-preferences"})))
+    (is (false? (admissible? mission
+                             {:type :advance-mission
+                              :target "futon2-d/mission/u88-contextual-preferences"})))))

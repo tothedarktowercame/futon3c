@@ -21,7 +21,7 @@ permitted. A separately approved restart from a separate shell/session with
 the required startup environment is needed before enabled production serving.
 It must preserve/recover Agency; this seat must not restart its own transport.
 
-Read-only preflight now reports roots present, sources current, DRAFT mission,
+Read-only preflight now reports roots present, sources current, OPEN activated mission,
 disabled template and launch false. Its credential result is template metadata
 (unprovisioned), not a filesystem credential probe; the private file is created
 but not installed. Its consumer unknown result is not the live inspection above.
@@ -29,5 +29,5 @@ but not installed. Its consumer unknown result is not the live inspection above.
 Bootstrap start-futon3c! currently passes patterns/IRC/evidence options to the
 HTTP handler, not the new run4 service configuration. Installing that actual
 boot/configuration path is remaining implementation work. Keep it disabled
-until explicit activation. Mission remains DRAFT and current pins unchanged.
+until explicit activation. Mission activation and refreshed pins are now complete; RUN4 remains disabled.
 No live namespace load, restart, handler change, launch or acceptance occurred.

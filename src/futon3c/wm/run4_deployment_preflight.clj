@@ -56,8 +56,8 @@
      :declaration (if (:run4/serving-declaration opts) :supported :missing)
      :consumer-state :unknown-not-loaded
      :roots (if (empty? missing-roots) :present {:missing missing-roots})
-     :mission (if (str/includes? mission-text "DRAFT — NON-LIVE")
-                :expected-draft-eligibility-refusal :unexpected-state)
+     :mission (if (str/includes? mission-text "Status: OPEN")
+                :open-activated :unexpected-state)
      :route (get-in t [:serving :route])
      :eligible-to-launch? false}))
 
