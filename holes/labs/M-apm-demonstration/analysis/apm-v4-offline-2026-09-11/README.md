@@ -67,3 +67,61 @@ Historical reconstruction supplied three draft gaps, including a discoverability
 example-link gap rather than a genuinely new method. Review those against existing
 patterns before minting entries. Batching library reads and tuning HTTP capacity
 are separate implementation questions; neither is changed by this packet.
+
+## Outer library learning loop (implemented follow-on)
+
+`library_loop.py` now supplies an executable, offline revision lifecycle:
+
+1. `proposal_from_obligation` attaches a TA diagnosis to an existing cascade node,
+   its goal and the exact cascade digest. A proposal names the current pattern
+   revision, triggering evidence, intended behavioral change and a bounded patch.
+2. `review` accepts or rejects the exact candidate content hash. The supplied
+   reviewer identity must differ from the author. Rejected/unreviewed proposals
+   cannot publish.
+3. `publish` changes the versioned **prototype library** only if its base still
+   matches. The earlier version and every event remain in the replay history.
+   Publication records `not-yet-observed`, not usefulness.
+4. `begin-use` provides a different problem's attempt with the exact current
+   published entry and revision. It records the attempt after publication;
+   a superseded revision cannot be silently supplied as current.
+5. `observe` joins the attempt, problem, Student and exact revision. It separates
+   retrieval, reading, applicability, proof use and reviewed usefulness. A
+   usefulness witness requires actual proof-use fields and a supplied review
+   identity distinct from Student and patch author, plus review evidence.
+   A citation alone cannot count. Failed uses remain in the audit history.
+
+Patch categories are constrained: retrieval changes caption/example links;
+applicability changes conditions/failure contrasts; execution changes the
+construction/example links. A new problem or plan can trigger the next revision
+through the same proposal function. Minting entirely new canonical patterns is
+not implemented; unknown targets are refused rather than admitted implicitly.
+
+Run the example (from futon3c):
+
+```sh
+python3 holes/labs/M-apm-demonstration/analysis/apm-v4-offline-2026-09-11/library_loop.py holes/labs/M-apm-demonstration/analysis/apm-v4-offline-2026-09-11/library-loop-example.json
+```
+
+The example applies a finite-net prerequisite correction to a deliberately flawed
+**demo** entry, anchored to B2 in the actual retained a93A01 cascade. It publishes
+that revision and supplies it to a later attempt; it ends with usefulness still
+unobserved. All reviewer/Student identities and acceptance events in this example
+are explicitly simulated. `library-loop-result.json` retains its output. It is
+not a retroactive claim that the earlier pilot used this publication mechanism.
+
+The module is a pure state machine with a replay CLI; the printed state can be
+saved locally. It has no model calls, live-store writes, canonical publication,
+queue integration or role dispatch. Supplied identities/evidence are attestations,
+not authenticated signatures or machine-verified mathematics. A live adapter must
+bind those fields to real Agency/review receipts and serialize publication against
+the authoritative store. Arbitrary prose and asserted booleans cannot establish
+causality or proof correctness. `reviewed-useful-example` means a supplied reviewed
+witness, not demonstrated population-level teaching effectiveness.
+
+Validation: all 15 prototype tests pass (seven plan-review tests and eight outer-loop
+controls). They cover independent revision-bound review, publication conflicts,
+rejection, immutable input state, exported revision identity, later-use matching,
+citation-only non-success, wrong revisions and obligation provenance. The positive
+usefulness cases are unit-test controls, not real Student observations. The earlier
+"next slice" section describes the remaining live teaching experiment; the local
+revision state machine described here is now implemented.

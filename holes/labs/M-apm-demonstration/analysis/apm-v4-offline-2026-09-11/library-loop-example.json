@@ -1,0 +1,54 @@
+{
+  "scope": "Synthetic transition demonstration over a real retained cascade node. No actual reviewer, Student dispatch, or transfer success. Local demo library only.",
+  "library": {
+    "demo/finite-net-bound": {
+      "caption": "Bound a uniformly continuous image using finitely many centers",
+      "conditions": "bounded metric domain; uniformly continuous map into a normed space",
+      "construction": "Choose a common oscillation scale, a finite net, and a maximum over its centers.",
+      "failure_contrasts": [],
+      "example_links": []
+    }
+  },
+  "events": [
+    {
+      "type": "propose",
+      "author": "SIMULATED-TA",
+      "pattern": "demo/finite-net-bound",
+      "base_revision": "7f76d61d39aba9c9131fa1fea7e70cfd1911dc51f2eb26d8ad1e755d393350a3",
+      "category": "applicability",
+      "patch": {
+        "conditions": "nonempty totally bounded metric domain; uniformly continuous map into a normed space",
+        "failure_contrasts": [
+          "Infinite discrete N has bounded metric diameter and uniformly continuous f(n)=n, but no finite half-unit net and an unbounded image."
+        ]
+      },
+      "expected_change": "Reject application when only metric boundedness is known; require the finite-net obligation.",
+      "trigger": {
+        "problem": "a93A01",
+        "node": "B2",
+        "cascade_digest": "6c52bf8a8749cc6fb39b39ba8374e72e38e62b4a58c337fbfb993f8b9a11e9c8",
+        "goal": "Construct a finite eta-net in (0,1)",
+        "evidence": "DEMONSTRATION: correction motivated by historical C2; this is not a new Student observation."
+      }
+    },
+    {
+      "type": "review",
+      "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+      "revision": "1f87cddd3bdd4c22bd8fedbd55b7d4f3781f0df7f22eb08067782d091fc3a3cc",
+      "reviewer": "SIMULATED-INDEPENDENT-REVIEWER",
+      "verdict": "accept",
+      "evidence": "SIMULATED acceptance for executable demonstration, not a real independent review."
+    },
+    {
+      "type": "publish",
+      "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f"
+    },
+    {
+      "type": "begin-use",
+      "proposal_id": "8aaa1356e2e35f142841ed29a8a634ecfaf6921aea15358c9b6312adfc74778f",
+      "attempt_id": "demo-next-attempt",
+      "student": "SIMULATED-STUDENT",
+      "problem": "demo-unseen-family-bound"
+    }
+  ]
+}

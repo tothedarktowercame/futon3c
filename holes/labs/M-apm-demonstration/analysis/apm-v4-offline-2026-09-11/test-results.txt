@@ -1,3 +1,11 @@
+test_begin_use_exports_exact_entry_and_reviewed_use_is_distinct (test_library_loop.LibraryLoopTest.test_begin_use_exports_exact_entry_and_reviewed_use_is_distinct) ... ok
+test_category_and_real_obligation_binding (test_library_loop.LibraryLoopTest.test_category_and_real_obligation_binding) ... ok
+test_citation_only_is_not_usefulness (test_library_loop.LibraryLoopTest.test_citation_only_is_not_usefulness) ... ok
+test_publication_changes_library_but_does_not_claim_use (test_library_loop.LibraryLoopTest.test_publication_changes_library_but_does_not_claim_use) ... ok
+test_rejected_revision_cannot_publish (test_library_loop.LibraryLoopTest.test_rejected_revision_cannot_publish) ... ok
+test_review_binds_revision_and_author_separation (test_library_loop.LibraryLoopTest.test_review_binds_revision_and_author_separation) ... ok
+test_stale_publication_cannot_overwrite_another_revision (test_library_loop.LibraryLoopTest.test_stale_publication_cannot_overwrite_another_revision) ... ok
+test_wrong_problem_revision_unstarted_and_self_review_refused (test_library_loop.LibraryLoopTest.test_wrong_problem_revision_unstarted_and_self_review_refused) ... ok
 test_bounded_discrete_contrast_keeps_condition_refuted (test_plan_review.ReviewControls.test_bounded_discrete_contrast_keeps_condition_refuted) ... ok
 test_child_and_parent_must_agree (test_plan_review.ReviewControls.test_child_and_parent_must_agree) ... ok
 test_citation_and_old_status_do_not_close_obligation (test_plan_review.ReviewControls.test_citation_and_old_status_do_not_close_obligation) ... ok
@@ -7,6 +15,6 @@ test_disconnected_cycle_is_not_ignored (test_plan_review.ReviewControls.test_dis
 test_unknown_dependency_duplicate_and_unpinned (test_plan_review.ReviewControls.test_unknown_dependency_duplicate_and_unpinned) ... ok
 
 ----------------------------------------------------------------------
-Ran 7 tests in 0.000s
+Ran 15 tests in 0.002s
 
 OK
