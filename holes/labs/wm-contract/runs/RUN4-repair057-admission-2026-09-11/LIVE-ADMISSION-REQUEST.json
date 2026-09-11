@@ -1,0 +1,37 @@
+{
+  "schema": "wm/run4-live-admission-request-receipt-v1",
+  "authority": "Joe direct live-loading and trial authorization; 1b4be869",
+  "pre-admission-refusal": {
+    "http-status": 500,
+    "body": {
+      "error": "run4-series-step-failed",
+      "reason": null,
+      "message": "Wrong number of args (3) passed to: futon3c.wm.run4-execution-cohort/validate-and-preflight!"
+    }
+  },
+  "repair": "Canonical reload of run4-execution-cohort restored reviewed 2- and 3-argument signatures; no admission/click/cohort attempt existed before resubmission.",
+  "request": {
+    "run4-series-ref": "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/series-pin.edn"
+  },
+  "response": {
+    "http-status": 200,
+    "body": {
+      "status": "trial-started",
+      "ordinal": 1,
+      "click-id": "wm-click-da355286-dd65-4a28-9ce6-cc5fcbc14787",
+      "run4/series": true
+    }
+  },
+  "staffing": {
+    "author": "codex-10",
+    "reviewer": "codex-12",
+    "repair-reviewer": "codex-12",
+    "fresh-before-request": "both idle and invoke-ready"
+  },
+  "state": "running-at-observation",
+  "cohort-attempt": "attempt-001",
+  "observed-phase": "selection",
+  "task-verdict": "unknown",
+  "reset": false,
+  "old-history": "preserved"
+}
