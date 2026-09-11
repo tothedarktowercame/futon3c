@@ -55,16 +55,20 @@
         data (doto (io/file root (str (name cohort-id) "-data")) .mkdir)
         prereg-path (.getCanonicalPath prereg)
         data-path (.getCanonicalPath data)
+        binding {:preregistration prereg-path :data-root data-path
+                 :cohort-id cohort-id :sha256 sha}
         term (fn [judgment] {:judgment judgment :ground {:kind :test-witness}})]
     (cohort/activate! prereg-path data-path)
-    (let [started (cohort/start-attempt!
+    (let [authority (cohort/execution-authority binding)
+          started (cohort/start-attempt!
                    prereg-path data-path
                    (term {:opportunity-id (str (name cohort-id) "/1")
                           :trigger :wallclock-cron :machine-state {:tick 1}
                           :agent-roster [] :semantic-epoch :test
                           :code-state {:git-sha "abc" :git-dirty? false
                                        :resolved-mode-flags {}
-                                       :configuration-digest "test"}}))]
+                                       :configuration-digest "test"}
+                          :execution-authority authority}))]
       (is (= attempt-id (:attempt/id started)))
       (doseq [checkpoint [:selection :construction :dispatch :build :adjudication]]
         (cohort/append-checkpoint! prereg-path data-path attempt-id checkpoint
@@ -75,8 +79,7 @@
               :artifact-only? false :duration-ms 1 :resource-use {:agent-turns 0}
               :witness (when (= :grounded-change outcome)
                          {:before "a" :after "b" :resolved? true :dial-moved? true})})))
-    {:preregistration (.getCanonicalPath prereg)
-     :data-root (.getCanonicalPath data) :cohort-id cohort-id :sha256 sha}))
+    binding))
 
 (defn- grounded-projection [run-path]
   {:schema :wm-run4-terminal-projection-v1 :click/id "click-1" :run/id "run-1"
@@ -199,19 +202,21 @@
                          :implementation {:first "9ab503bd" :last "3bdc381e"
                                           :source-head "8bf149c5"}}
            _ (write! verification-file verification)
-           _ (repair/commit-historical-verification!
-              (.getPath store) {:kind :runner-execution :id "attempt-001"}
-              {:verification-root (.getPath verification-root)
-               :path (.getPath verification-file)
-               :sha256 (digest/sha256 (slurp verification-file))})
            verification-cohort (closed-cohort! store :verification-cohort
                                                 "attempt-001"
                                                 :historical-verification-awaiting-validation)
+           verification-execution (cohort/closed-execution verification-cohort
+                                                             "attempt-001")
+           verification-attempt (select-keys verification-execution [:kind :id])
+           _ (repair/commit-historical-verification!
+              (.getPath store) verification-attempt
+              {:verification-root (.getPath verification-root)
+               :path (.getPath verification-file)
+               :sha256 (digest/sha256 (slurp verification-file))})
            config {:repair-root (.getPath store) :evidence-roots roots
                    :admission-request request :started started :repair-id "repair-057"
                    :verification-id "verification-057"
-                   :verification-attempt {:kind :runner-execution
-                                          :id "attempt-001"}
+                   :verification-attempt verification-attempt
                    :verification-cohort verification-cohort
                    :historical-evidence {:roots {} :admission-request {} :started {}}
                    :successor-cohort execution-cohort}]
@@ -221,10 +226,11 @@
                          {:projection {:repair {:id "repair-057"
                                                 :verification-id "verification-057"}
                                        :execution-attempt {:kind :runner-execution
-                                                           :id "attempt-001"}
+                                                           :id (:id verification-attempt)}
                                        :runner-attempt/id "attempt-001"
                                        :cohort {:cohort-id :verification-cohort
-                                                :sha256 (:sha256 verification-cohort)}}})]
+                                                :sha256 (:sha256 verification-cohort)}}
+                          :closed-execution verification-execution})]
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (dissoc config :verification-cohort))))
@@ -264,12 +270,11 @@
                  "store must independently reject verification as its own successor")))
          (let [resolution (successor/resolve-from-durable! config)]
            (is (= :resolved (:repair/status resolution)))
-           (is (= {:kind :runner-execution
-                   :id "successor-cohort--attempt-001"}
+           (is (= (select-keys (cohort/closed-execution execution-cohort "attempt-001")
+                               [:kind :id])
                   (:validation-attempt resolution)))
-           (is (= {:cohort-id :successor-cohort
-                   :cohort-sha256 (:sha256 execution-cohort)
-                   :attempt-id "attempt-001"}
+           (is (= (dissoc (cohort/closed-execution execution-cohort "attempt-001")
+                          :outcome)
                   (:validation-execution resolution)))
            (is (empty? (repair/open-obligations (.getPath store))))))
          (finally (delete-tree! store)))))))

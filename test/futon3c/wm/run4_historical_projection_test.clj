@@ -16,16 +16,24 @@
         checkpoints {:selection {:ground {:run4/requested-pin requested
                                           :run4/enacted-action enacted}}
                      :adjudication {:judgment {:repair-resolved? false}}}
+        execution {:kind :runner-execution :id "qualified-attempt-2"}
+        provenance (merge execution {:identity-version 1 :cohort-id :cohort
+                                     :cohort-sha256 (apply str (repeat 64 "d"))
+                                     :data-root-sha256 (apply str (repeat 64 "e"))
+                                     :authority-id (apply str (repeat 64 "f"))
+                                     :attempt-id "attempt-2"})
         transition {:schema :wm/historical-repair-admission-v1
                     :repair/id "repair-057" :repair/status :awaiting-validation
                     :verification-id "verification-057"
-                    :verification-attempt {:kind :runner-execution :id "attempt-2"}
+                    :verification-attempt execution
                     :verification-source {:path "/evidence/source"
                                           :sha256 (apply str (repeat 64 "b"))}
                     :verification-artifact {:path "/evidence/store"
                                             :sha256 (apply str (repeat 64 "c"))}}
         record {:click/id "click-1" :run/id "run-1"
                 :runner-attempt/id "attempt-2"
+                :runner-execution/identity execution
+                :runner-execution/provenance provenance
                 :run4/controller-attempt-id "controller-attempt-2"
                 :run4/requested-pin requested :run4/enacted-action enacted
                 :historical-verification transition
@@ -33,6 +41,7 @@
         path (io/file root "run.edn")
         _ (spit path (str (pr-str record) "\n"))
         result {:run/id "run-1" :attempt-id "attempt-2"
+                :execution-identity execution :execution-provenance provenance
                 :outcome :historical-verification-awaiting-validation
                 :run-record (.getPath path) :checkpoints checkpoints
                 :data {:repair-obligation transition}}]
@@ -42,7 +51,7 @@
   (let [{:keys [root result]} (fixture)
         ref (sut/persist! (.getPath root) "click-1" result)
         value (read-string (slurp (:path ref)))]
-    (is (= :wm/run4-historical-admission-projection-v1 (:schema value)))
+    (is (= :wm/run4-historical-admission-projection-v2 (:schema value)))
     (is (= :awaiting-validation (get-in value [:repair :status])))
     (is (false? (get-in value [:repair :resolved?])))
     (is (true? (get-in value [:repair :production-successor-required?])))

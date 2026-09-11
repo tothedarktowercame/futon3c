@@ -46,23 +46,29 @@
             text (String. bytes java.nio.charset.StandardCharsets/UTF_8)
             record (parse-one text)
             transition (get-in result [:data :repair-obligation])
-            adjudication (get-in result [:checkpoints :adjudication])]
+            adjudication (get-in result [:checkpoints :adjudication])
+            execution-identity (:runner-execution/identity record)
+            execution-provenance (:runner-execution/provenance record)]
         (when-not (and (= click-id (:click/id record))
                        (= (:run/id result) (:run/id record))
                        (= (:attempt-id result) (:runner-attempt/id record))
                        (= requested (:run4/requested-pin record))
                        (= enacted (:run4/enacted-action record))
+                       (= execution-identity (:execution-identity result))
+                       (= execution-provenance (:execution-provenance result))
+                       (= execution-identity (:verification-attempt transition))
                        (nonblank? (:run4/controller-attempt-id record))
                        (= transition (:historical-verification record))
                        (= :wm/historical-repair-admission-v1 (:schema transition))
                        (= :awaiting-validation (:repair/status transition))
                        (= false (get-in adjudication [:judgment :repair-resolved?])))
           (refuse! :historical-run-record-binding-mismatch))
-        {:schema :wm/run4-historical-admission-projection-v1
+        {:schema :wm/run4-historical-admission-projection-v2
          :click/id click-id :run/id (:run/id result)
          :controller-attempt/id (:run4/controller-attempt-id record)
          :runner-attempt/id (:attempt-id result)
          :execution-attempt (:verification-attempt transition)
+         :execution-provenance execution-provenance
          :requested-pin requested :enacted-action enacted
          :repair {:id (:repair/id transition)
                   :status :awaiting-validation
@@ -118,13 +124,25 @@
         (refuse! :missing-historical-projection-reference))
       (let [file (confined-file projections (:path ref))
             text (slurp file)
-            value (parse-one text)]
-        (when-not (and (= #{:schema :click/id :run/id :controller-attempt/id
-                            :runner-attempt/id :execution-attempt :requested-pin
-                            :enacted-action :repair :repair-transition :cohort :source}
-                          (set (keys value)))
+            value (parse-one text)
+            version (:schema value)
+            authority? (= :wm/run4-historical-admission-projection-v2 version)
+            expected-keys (cond-> #{:schema :click/id :run/id :controller-attempt/id
+                                    :runner-attempt/id :execution-attempt :requested-pin
+                                    :enacted-action :repair :repair-transition :cohort :source}
+                            authority? (conj :execution-provenance))
+            cohort-binding {:preregistration cohort-preregistration
+                            :data-root cohort-data-root
+                            :cohort-id (get-in value [:cohort :cohort-id])
+                            :sha256 (get-in value [:cohort :sha256])}
+            closed (try (cohort/closed-execution cohort-binding
+                                                 (:runner-attempt/id value))
+                        (catch Throwable _
+                          (refuse! :historical-cohort-binding-mismatch)))]
+        (when-not (and (= expected-keys (set (keys value)))
                        (= (:sha256 ref) (digest/sha256 (pr-str value)))
-                       (= :wm/run4-historical-admission-projection-v1 (:schema value))
+                       (contains? #{:wm/run4-historical-admission-projection-v1
+                                    :wm/run4-historical-admission-projection-v2} version)
                        (= (:click-id started) (:click/id value))
                        (= :historical-verification-awaiting-validation
                           (:outcome binding))
@@ -153,8 +171,11 @@
                        (true? (get-in value [:repair :production-successor-required?]))
                        (= (:execution-attempt value)
                           (get-in value [:repair-transition :verification-attempt]))
-                       (= (:runner-attempt/id value)
-                          (get-in value [:execution-attempt :id]))
+                       (if authority?
+                         (= (:execution-attempt value)
+                            (select-keys (:execution-provenance value) [:kind :id]))
+                         (= (:runner-attempt/id value)
+                            (get-in value [:execution-attempt :id])))
                        (= (get-in value [:repair :id])
                           (get-in value [:repair-transition :repair/id]))
                        (= (get-in value [:repair :verification-id])
@@ -186,7 +207,15 @@
                          (= (get-in value [:cohort :cohort-id]) (:cohort/id ledger))
                          (:closed? attempt)
                          (= :historical-verification-awaiting-validation
-                            (:outcome attempt)))
+                            (:outcome attempt))
+                         (if authority?
+                           (= (:execution-provenance value) (dissoc closed :outcome))
+                           (= 0 (:identity-version closed)))
+                         (= (:execution-attempt value)
+                            (if authority?
+                              (select-keys closed [:kind :id])
+                              {:kind :runner-execution
+                               :id (:runner-attempt/id value)})))
             (refuse! :historical-cohort-binding-mismatch)))
         (let [run-file (confined-file run-records (get-in value [:source :run-record]))
               run-text (slurp run-file)
@@ -197,13 +226,21 @@
                          (= (:run/id value) (:run/id run-record))
                          (= (:click/id value) (:click/id run-record))
                          (= (:controller-attempt/id value)
-                            (:run4/controller-attempt-id run-record)))
+                            (:run4/controller-attempt-id run-record))
+                         (if authority?
+                           (and (= (:execution-attempt value)
+                                   (:runner-execution/identity run-record))
+                                (= (:execution-provenance value)
+                                   (:runner-execution/provenance run-record)))
+                           (and (not (contains? run-record :runner-execution/identity))
+                                (not (contains? run-record :runner-execution/provenance)))))
             (refuse! :historical-run-record-source-mismatch))
           {:schema :wm/run4-historical-admission-bundle-v1
            :identity (:identity admission-request)
            :attempt-id (:attempt-id admission-request)
            :started started :click-run-binding binding
            :projection value :run-record run-record
+           :closed-execution closed
            :classification {:task-result :unknown
                             :repair-status :awaiting-validation
                             :infrastructure :unknown

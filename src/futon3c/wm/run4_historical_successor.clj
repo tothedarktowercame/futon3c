@@ -32,8 +32,11 @@
         local-attempt (get-in projection [:attempt/id])
         cohort-id (:cohort-id cohort)
         cohort-sha (:sha256 cohort)
-        historical-execution (cohort/closed-execution
-                              verification-cohort (:id verification-attempt))
+        historical-execution (:closed-execution historical-bundle)
+        configured-historical-execution
+        (cohort/closed-execution
+         verification-cohort
+         (get-in historical-bundle [:projection :runner-attempt/id]))
         successor-execution (cohort/closed-execution successor-cohort local-attempt)
         successor-attempt (select-keys successor-execution [:kind :id])]
     (when-not (and historical-bundle
@@ -42,6 +45,9 @@
                       (get-in historical-bundle [:projection :repair :verification-id]))
                    (= verification-attempt
                       (get-in historical-bundle [:projection :execution-attempt]))
+                   (= verification-attempt
+                      (select-keys historical-execution [:kind :id]))
+                   (= historical-execution configured-historical-execution)
                    (= (:cohort-id historical-execution)
                       (get-in historical-bundle [:projection :cohort :cohort-id]))
                    (= (:cohort-sha256 historical-execution)
@@ -55,27 +61,24 @@
                    (string? local-attempt) (not (str/blank? local-attempt))
                    (= cohort-id (:cohort-id successor-execution))
                    (= cohort-sha (:cohort-sha256 successor-execution))
-                   (= (:id verification-attempt) (:attempt-id historical-execution))
                    (= :historical-verification-awaiting-validation
                       (:outcome historical-execution))
                    (= :grounded-change (:outcome successor-execution))
-                   (not= (select-keys successor-execution [:cohort-id :attempt-id])
-                         (select-keys historical-execution [:cohort-id :attempt-id]))
+                   (not= (select-keys successor-execution [:kind :id])
+                         (select-keys historical-execution [:kind :id]))
                    (= :grounded-change (:outcome projection)))
       (throw (ex-info "Historical production successor is absent or unqualified" {})))
     (repair/commit-historical-resolution!
      repair-root repair-id
      (TerminalSuccessorAuthority.
-      {:schema :wm/historical-repair-resolution-v1
+      {:schema :wm/historical-repair-resolution-v2
        :repair/id repair-id :repair/status :resolved
        :verification-id verification-id
        :verification-attempt verification-attempt
        :verification-execution
-       (select-keys historical-execution [:cohort-id :cohort-sha256 :attempt-id])
+       (dissoc historical-execution :outcome)
        :validation-attempt successor-attempt
-       :validation-execution {:cohort-id cohort-id
-                              :cohort-sha256 cohort-sha
-                              :attempt-id local-attempt}
+       :validation-execution (dissoc successor-execution :outcome)
        :controller-attempt (:attempt-id bundle)
        :click-id (get-in bundle [:started :click-id])
        :run-id (get-in bundle [:terminal-projection :run/id])
