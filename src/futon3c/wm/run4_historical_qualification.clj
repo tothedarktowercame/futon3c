@@ -45,7 +45,9 @@
         v))
     (catch Exception _ (refuse! :invalid-manifest))))
 
-(defn- validate! [m]
+(defn validate-plan!
+  "Validate the exact preregistered plan shape shared by producer and reader."
+  [m]
   (when-not
    (and (map? m)
         (= #{:schema :verification-id :repair-id :sources :checks} (set (keys m)))
@@ -106,7 +108,7 @@
   (when-not (pin? manifest-sha256) (refuse! :invalid-manifest-pin))
   (let [c (captured! source-root manifest-path)
         _ (when-not (= manifest-sha256 (sha (:bytes c))) (refuse! :manifest-drift))
-        m (validate! (one-form! (:bytes c)))
+        m (validate-plan! (one-form! (:bytes c)))
         before (sources! source-root (:sources m))
         base (.getCanonicalFile (io/file output-root))
         target (io/file base (str (:verification-id m) ".qualification.edn"))]

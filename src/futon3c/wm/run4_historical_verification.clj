@@ -4,7 +4,8 @@
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as runner]
-            [futon3c.wm.run4-realized-recording :as recording]))
+            [futon3c.wm.run4-realized-recording :as recording]
+            [futon3c.wm.run4-historical-qualification :as qualification]))
 
 (defn- refuse! [reason] (throw (ex-info "Historical verification refused" {:reason reason})))
 (defn- pin? [x] (and (string? x) (re-matches #"[0-9a-f]{64}" x)))
@@ -23,8 +24,8 @@
 (defn- ancestor? [repo a b]
   (zero? (:exit (shell/sh "git" "-C" repo "merge-base" "--is-ancestor" a b))))
 (defn- head [repo] (str/trim (:out (shell/sh "git" "-C" repo "rev-parse" "HEAD"))))
-(defn- output-valid? [{:keys [sha256 utf8]}]
-  (and (pin? sha256) (string? utf8) (= sha256 (digest/sha256 utf8))))
+(defn- output-valid? [{:keys [sha256 utf8] :as output}]
+  (and (= #{:sha256 :utf8} (set (keys output))) (pin? sha256) (string? utf8) (= sha256 (digest/sha256 utf8))))
 
 (defn admit!
   [{:keys [finding-root qualification-root qualification-source-root output-root source-repo finding-path
@@ -48,12 +49,19 @@
         finding (one! (:text finding-cap)) q (one! (:text qcap))
         plan-cap (capture! qualification-source-root (get-in q [:manifest :path])
                            (get-in q [:manifest :sha256]))
-        plan (one! (:text plan-cap)) rows (:checks q) ids (mapv :id rows)
+        plan (qualification/validate-plan! (one! (:text plan-cap))) rows (:checks q) ids (mapv :id rows)
         job (review-job-reader review-job-id)
         reviewed (runner/independent-review-evidence [finding-path qualification-path] job)
         marker-re #"(?m)^HISTORICAL_VERIFICATION_SHA256: ([0-9a-f]{64})$"
         markers (mapv second (re-seq marker-re (str (:result job))))]
-    (when-not (and (= :wm/historical-qualification-output-v1 (:schema q))
+    (when-not (and (= #{:schema :verification-id :repair-id :manifest :sources :checks
+                           :qualification-passed? :independent-review :repair-admitted?}
+                        (set (keys q)))
+                   (= #{:path :sha256} (set (keys (:manifest q))))
+                   (vector? rows)
+                   (every? #(= #{:id :argv :timeout-ms :timed-out? :exit :stdout :stderr}
+                                (set (keys %))) rows)
+                   (= :wm/historical-qualification-output-v1 (:schema q))
                    (= :wm/historical-qualification-plan-v1 (:schema plan))
                    (= verification-id (:verification-id q) (:verification-id plan))
                    (= (:repair/id finding) (:repair-id q))
@@ -90,6 +98,10 @@
                   :implementation {:first first-commit :last last-commit :source-head source-head}}]
       (capture! finding-root finding-path finding-sha256)
       (capture! qualification-root qualification-path qualification-sha256)
+      (capture! qualification-source-root (:path plan-cap) (:sha256 plan-cap))
+      (doseq [{:keys [path sha256]} (:sources plan)]
+        (capture! qualification-source-root path sha256))
+      (when-not (= source-head (head source-repo)) (refuse! :source-head-drift))
       (let [base (.getCanonicalFile (io/file output-root))
             target (io/file base (str verification-id ".verification.edn"))]
         (when-not (and (.isDirectory base)
