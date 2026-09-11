@@ -1,4 +1,4 @@
-(require '[clojure.edn :as edn] '[clojure.java.io :as io])
+(require '[clojure.edn :as edn])
 (def base "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair058-revalidation-2026-09-11/")
 (defn sha [s] (format "%064x" (java.math.BigInteger. 1 (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes s "UTF-8")))))
 (defn one [text] (with-open [r (java.io.PushbackReader. (java.io.StringReader. text))] (let [v (edn/read r)] (assert (= ::end (edn/read {:eof ::end} r))) v)))
