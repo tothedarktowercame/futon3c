@@ -19,6 +19,8 @@
                    :await-timeout-ms :entries})
 (def entry-keys #{:entry-id :series-id :server-config :headers :request
                   :manifest-sha256 :cohort-id :cohort-sha256})
+(def state-keys #{:schema :queue-id :config-sha256 :status :cursor
+                  :completed-entry-ids :in-flight :reason :updated-at})
 (defonce ^:private !runtimes (atom {}))
 (defonce ^:private queue-monitor (Object.))
 
@@ -47,6 +49,23 @@
 (defn- public-entry [entry]
   (select-keys entry [:entry-id :series-id :manifest-sha256
                       :cohort-id :cohort-sha256]))
+
+(def ^:private secret-keys
+  #{:headers :authorization :credential :credentials :secret :token})
+(defn- authority-form [x]
+  (cond
+    (fn? x) :server-owned-port
+    (instance? java.io.File x) (.getCanonicalPath ^java.io.File x)
+    (map? x) (into (sorted-map-by #(compare (pr-str %1) (pr-str %2)))
+                   (keep (fn [[k v]] (when-not (secret-keys k)
+                                      [k (authority-form v)]))) x)
+    (set? x) [:set (vec (sort-by pr-str (map authority-form x)))]
+    (sequential? x) (mapv authority-form x)
+    :else x))
+(defn- entry-authority [entry]
+  (assoc (public-entry entry)
+         :request (authority-form (:request entry))
+         :server-config (authority-form (:server-config entry))))
 
 (defn validate-config!
   "Validate server-owned runtime configuration without retaining secrets in
@@ -97,28 +116,42 @@
    (pr-str {:queue-id (:queue-id config)
             :interval-ms (:interval-ms config)
             :await-timeout-ms (:await-timeout-ms config)
-            :entries (mapv public-entry (:entries config))})))
+            :state-root (.getCanonicalPath (io/file (:state-root config)))
+            :visibility-file (.getCanonicalPath (io/file (:visibility-file config)))
+            :entries (mapv entry-authority (:entries config))})))
 (defn- state-file [config] (io/file (:state-root config) "queue-state.edn"))
 (defn- lock-file [config] (io/file (:state-root config) ".queue.lock"))
 (defn- initial-state [config]
   {:schema schema :queue-id (:queue-id config) :config-sha256 (config-digest config)
-   :status :stopped :cursor 0 :in-flight nil :reason :not-started
+   :status :stopped :cursor 0 :completed-entry-ids [] :in-flight nil :reason :not-started
    :updated-at (str (java.time.Instant/now))})
+(defn- instant? [x]
+  (and (nonblank? x) (try (java.time.Instant/parse x) true (catch Throwable _ false))))
+(defn- valid-in-flight? [config cursor x]
+  (or (nil? x)
+      (and (map? x) (= #{:entry-id :click-id} (set (keys x)))
+           (= (:entry-id (get (:entries config) cursor)) (:entry-id x))
+           (nonblank? (:click-id x)))))
 (defn- valid-state? [config x]
-  (and (map? x) (= schema (:schema x)) (= (:queue-id config) (:queue-id x))
+  (and (map? x) (= state-keys (set (keys x)))
+       (= schema (:schema x)) (= (:queue-id config) (:queue-id x))
        (= (config-digest config) (:config-sha256 x))
        (contains? #{:running :held :stopped} (:status x))
        (nat-int? (:cursor x)) (<= (:cursor x) (count (:entries config)))
-       (or (nil? (:in-flight x)) (map? (:in-flight x)))
+       (= (:completed-entry-ids x)
+          (mapv :entry-id (take (:cursor x) (:entries config))))
+       (valid-in-flight? config (:cursor x) (:in-flight x))
        (or (nil? (:reason x)) (keyword? (:reason x)))
-       (nonblank? (:updated-at x))))
-(defn read-state! [config]
-  (validate-config! config)
+       (instant? (:updated-at x))))
+(defn- read-state* [config validate-sources?]
+  (when validate-sources? (validate-config! config))
   (let [f (state-file config)
-        state (if (.isFile f) (parse-one (slurp f) :state-corrupt)
-                  (initial-state config))]
+        state (cond (.isFile f) (parse-one (slurp f) :state-corrupt)
+                    (.exists f) (refuse! :state-not-regular-file)
+                    :else (initial-state config))]
     (when-not (valid-state? config state) (refuse! :state-invalid))
     state))
+(defn read-state! [config] (read-state* config true))
 
 (defn- visibility [config state]
   (let [entry (get (:entries config) (:cursor state))
@@ -139,123 +172,165 @@
     state))
 (defn status [config] (visibility config (read-state! config)))
 (defn- hold! [config state reason details]
-  (persist! config (assoc state :status :held :reason reason
-                          :in-flight (merge (:in-flight state) details))))
+  (let [new-flight (when (and (nil? (:in-flight state))
+                              (nonblank? (:click-id details))
+                              (nonblank? (:entry-id details)))
+                     (select-keys details [:entry-id :click-id]))]
+    (persist! config (assoc state :status :held :reason reason
+                            :in-flight (or (:in-flight state) new-flight)))))
+
+(defn- with-lifecycle-lock [config f]
+  (locking queue-monitor
+    (with-open [ch (FileChannel/open (.toPath (lock-file config))
+                                    (into-array StandardOpenOption
+                                                [StandardOpenOption/CREATE
+                                                 StandardOpenOption/WRITE]))
+                _lock (.lock ch)]
+      (f))))
+
+(defn- terminal-response [config entry state]
+  (if-let [click-id (get-in state [:in-flight :click-id])]
+    (let [awaited (runner/await-click! click-id (:await-timeout-ms config))]
+      (if (= :completed (:status awaited))
+        (series/step! (:server-config entry) (:headers entry) (:request entry))
+        (reduced (hold! config state :click-incomplete
+                        {:await-status (:status awaited)}))))
+    (let [response (series/step! (:server-config entry) (:headers entry) (:request entry))]
+      (if (= :trial-started (:status response))
+        (let [started (persist! config
+                                (assoc state :in-flight {:entry-id (:entry-id entry)
+                                                        :click-id (:click-id response)}))]
+          (terminal-response config entry started))
+        response))))
 
 (defn tick!
   "Perform at most one queue entry through the existing series service. A
   started click is awaited once; missing/unknown evidence holds the queue."
   [config]
-  (validate-config! config)
-  (locking queue-monitor
-    (with-open [ch (FileChannel/open (.toPath (lock-file config))
-                                    (into-array StandardOpenOption
-                                                [StandardOpenOption/CREATE
-                                                 StandardOpenOption/WRITE]))
-                _lock (.lock ch)]
-      (let [state (read-state! config)]
-        (if (not= :running (:status state))
-          state
-          (if-let [entry (get (:entries config) (:cursor state))]
-            (try
-              (let [response (series/step! (:server-config entry) (:headers entry)
-                                           (:request entry))
-                    response (if (= :trial-started (:status response))
-                               (let [started (persist! config
-                                                       (assoc state :in-flight
-                                                              {:entry-id (:entry-id entry)
-                                                               :click-id (:click-id response)}))
-                                     awaited (runner/await-click! (:click-id response)
-                                                                 (:await-timeout-ms config))]
-                                 (if (= :completed (:status awaited))
-                                   (series/step! (:server-config entry) (:headers entry)
-                                                 (:request entry))
-                                   (reduced (hold! config started :click-incomplete
-                                                   {:await-status (:status awaited)}))))
-                               response)]
-                (if (reduced? response)
-                  @response
-                  (case (:status response)
-                    :series-terminal
-                    (persist! config (assoc state :cursor (inc (:cursor state))
-                                            :in-flight nil :reason nil))
-                    :trial-terminal
-                    (persist! config (assoc state :in-flight nil :reason nil))
-                    :awaiting-terminal-evidence
-                    (hold! config state :terminal-evidence-incomplete
-                           {:entry-id (:entry-id entry) :click-id (:click-id response)})
-                    :infrastructure-stopped
-                    (hold! config state :infrastructure-unsafe {:entry-id (:entry-id entry)})
-                    :reconciliation-required
-                    (hold! config state :reconciliation-required {:entry-id (:entry-id entry)})
-                    (hold! config state :unknown-series-state {:entry-id (:entry-id entry)}))))
-              (catch Throwable e
-                (hold! config state :series-step-refused
-                       {:entry-id (:entry-id entry)
-                        :refusal (or (:reason (ex-data e)) :exception)})))
-            (persist! config (assoc state :status :stopped :reason :queue-complete
-                                    :in-flight nil))))))))
+  (with-lifecycle-lock
+   config
+   (fn []
+     (validate-config! config)
+     (let [state (read-state! config)
+           entry (get (:entries config) (:cursor state))]
+       (cond
+         (not= :running (:status state)) state
+         (nil? entry) (persist! config (assoc state :status :stopped
+                                              :reason :queue-complete :in-flight nil))
+         :else
+         (try
+           (let [response (terminal-response config entry state)]
+             (if (reduced? response)
+               @response
+               (case (:status response)
+                 :series-terminal
+                 (persist! config
+                           (assoc state :cursor (inc (:cursor state))
+                                  :completed-entry-ids
+                                  (conj (:completed-entry-ids state) (:entry-id entry))
+                                  :in-flight nil :reason nil))
+                 :trial-terminal
+                 (persist! config (assoc state :in-flight nil :reason nil))
+                 :awaiting-terminal-evidence
+                 (hold! config state :terminal-evidence-incomplete
+                        {:entry-id (:entry-id entry) :click-id (:click-id response)})
+                 :infrastructure-stopped
+                 (hold! config state :infrastructure-unsafe
+                        {:entry-id (:entry-id entry)})
+                 :reconciliation-required
+                 (hold! config state :reconciliation-required
+                        {:entry-id (:entry-id entry)})
+                 (hold! config state :unknown-series-state
+                        {:entry-id (:entry-id entry)}))))
+           (catch Throwable e
+             (let [latest (try (read-state* config false) (catch Throwable _ state))]
+               (hold! config latest :series-step-refused
+                      {:entry-id (:entry-id entry)
+                       :refusal (or (:reason (ex-data e)) :exception)})))))))))
 
 (defn- schedule! [config]
   (let [id (:queue-id config)
         executor (Executors/newSingleThreadScheduledExecutor)
-        handle (.scheduleWithFixedDelay
-                ^ScheduledExecutorService executor
-                ^Runnable (fn [] (try (tick! config) (catch Throwable _ nil)))
-                (:interval-ms config) (:interval-ms config) TimeUnit/MILLISECONDS)]
-    (swap! !runtimes assoc id {:executor executor :handle handle})
-    (status config)))
+        task (fn []
+               (try (tick! config)
+                    (catch Throwable e
+                      (try
+                        (with-lifecycle-lock
+                          config
+                          #(hold! config (read-state* config false) :scheduler-failed
+                                  {:refusal (or (:reason (ex-data e)) :exception)}))
+                        (catch Throwable _ nil)))))]
+    (try
+      (let [handle (.scheduleWithFixedDelay
+                    ^ScheduledExecutorService executor ^Runnable task
+                    (:interval-ms config) (:interval-ms config) TimeUnit/MILLISECONDS)]
+        (swap! !runtimes assoc id {:executor executor :handle handle})
+        (status config))
+      (catch Throwable e
+        (.shutdownNow executor)
+        (swap! !runtimes dissoc id)
+        (hold! config (read-state* config false) :scheduler-failed
+               {:refusal (or (:reason (ex-data e)) :exception)})))))
 
 (defn start!
   "Explicitly start a validated queue. The first tick occurs after INTERVAL-MS."
   [config]
-  (validate-config! config)
-  (locking !runtimes
+  (with-lifecycle-lock
+   config
+   (fn []
+    (validate-config! config)
     (let [id (:queue-id config)]
       (when (get @!runtimes id) (refuse! :already-started))
       (let [state (read-state! config)]
         (when (= :held (:status state)) (refuse! :held-requires-explicit-resume))
         (persist! config (assoc state :status :running :reason nil))
-        (schedule! config)))))
+        (schedule! config))))))
 
 (defn recover!
   "Recover process-local scheduling from durable state. Only a durable
   :running queue is rescheduled; held and stopped queues remain passive."
   [config]
-  (validate-config! config)
-  (locking !runtimes
+  (with-lifecycle-lock
+   config
+   (fn []
+    (validate-config! config)
     (if (get @!runtimes (:queue-id config))
       (status config)
       (let [state (read-state! config)]
         (if (= :running (:status state))
           (schedule! config)
-          (visibility config state))))))
+          (visibility config state)))))))
 
 (defn stop!
   "Stop without invoking the series boundary or dispatching new work."
   [config]
-  (validate-config! config)
-  (let [runtime (get @!runtimes (:queue-id config))]
-    (swap! !runtimes dissoc (:queue-id config))
-    (when-let [{:keys [^ScheduledExecutorService executor handle]} runtime]
-      (.cancel ^java.util.concurrent.ScheduledFuture handle false)
-      (.shutdown executor)))
-  ;; Serialize behind an already-running tick so it cannot later overwrite the
-  ;; durable stop with a stale :running state.
-  (locking queue-monitor
-    (with-open [ch (FileChannel/open (.toPath (lock-file config))
-                                    (into-array StandardOpenOption
-                                                [StandardOpenOption/CREATE
-                                                 StandardOpenOption/WRITE]))
-                _lock (.lock ch)]
-      (persist! config (assoc (read-state! config) :status :stopped
-                              :reason :operator-stopped)))))
+  (with-lifecycle-lock
+   config
+   (fn []
+     (let [runtime (get @!runtimes (:queue-id config))]
+       (swap! !runtimes dissoc (:queue-id config))
+       (when-let [{:keys [^ScheduledExecutorService executor handle]} runtime]
+         (.cancel ^java.util.concurrent.ScheduledFuture handle false)
+         (.shutdown executor)))
+     ;; Deliberately avoids mutable source revalidation so an operator can stop
+     ;; a locally scheduled queue after authority drift.
+     (persist! config (assoc (read-state* config false) :status :stopped
+                             :reason :operator-stopped)))))
 
 (defn resume!
   "Explicit recovery from a held durable state; never retries by itself."
   [config]
-  (validate-config! config)
-  (let [state (read-state! config)]
-    (when-not (= :held (:status state)) (refuse! :queue-not-held))
-    (persist! config (assoc state :status :stopped :reason :operator-resume-required))
-    (start! config)))
+  (with-lifecycle-lock
+   config
+   (fn []
+     (validate-config! config)
+     (let [state (read-state! config)
+           id (:queue-id config)
+           runtime (get @!runtimes id)]
+       (when-not (= :held (:status state)) (refuse! :queue-not-held))
+       (when-let [{:keys [^ScheduledExecutorService executor handle]} runtime]
+         (.cancel ^java.util.concurrent.ScheduledFuture handle false)
+         (.shutdown executor)
+         (swap! !runtimes dissoc id))
+       (persist! config (assoc state :status :running :reason nil))
+       (schedule! config)))))

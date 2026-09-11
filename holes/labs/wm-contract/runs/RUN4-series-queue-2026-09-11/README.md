@@ -29,6 +29,15 @@ behind any current tick; it never calls the series service itself.
 No production queue, root, manifest, cohort, credential, or capacity was
 created or activated by this change.
 
+The durable state schema also binds canonical state/visibility locations and
+the complete non-secret server authority (functions are represented only as
+server-owned ports; credentials and authorization headers are excluded). A
+cursor is valid only with the exact completed-entry prefix. An in-flight value
+is either absent or the exact current entry/click pair. Existing non-regular,
+malformed, or schema-mismatched state refuses rather than becoming a new queue.
+On restart, a retained click is awaited before the series service is consulted
+again.
+
 ## Current eligibility boundary
 
 The read-only repair-store audit on 2026-09-11 shows the first open
