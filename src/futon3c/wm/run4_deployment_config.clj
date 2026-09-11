@@ -17,6 +17,11 @@
 
 (defn- refuse [reason] (throw (ex-info "RUN4 deployment refused" {:reason reason})))
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
+(defn- casting? [x]
+  (and (map? x) (= #{:author :reviewer :repair-reviewer} (set (keys x)))
+       (every? nonblank? (vals x))
+       (not= (:author x) (:reviewer x))
+       (not= (:author x) (:repair-reviewer x))))
 (defn- successor-link? [x]
   (let [successor (:successor x)
         verification-attempt (:verification-attempt x)]
@@ -58,8 +63,7 @@
                    (= :wm/run4-disabled-deployment-template-v1 (:schema t))
                    (false? (:enabled? t))
                    (= "/api/alpha/wm/run4/series/step" (get-in t [:serving :route]))
-                   (= {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"}
-                      (:casting t))
+                   (casting? (:casting t))
                    (fn? (:credential dependencies))
                    (fn? (:resolve-mission dependencies))
                    (fn? (:action-admissible? dependencies))

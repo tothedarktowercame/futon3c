@@ -1,5 +1,6 @@
 (ns futon3c.wm.run4-deployment-config-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.edn :as edn]
             [futon3c.wm.run4-deployment-config :as sut]
             [futon3c.wm.run4-series-service :as service]
             [futon3c.wm.runner-service :as runner]))
@@ -89,3 +90,17 @@
   (is (= :credential-unprovisioned
          (:reason (try (sut/materialize text (assoc deps :enable? true)) nil
                        (catch Throwable e (ex-data e)))))))
+
+(deftest independently-reviewed-historical-casting-is-materializable
+  (let [template (edn/read-string text)
+        casting {:author "codex-10" :reviewer "codex-12"
+                 :repair-reviewer "codex-12"}
+        materialized (sut/materialize (pr-str (assoc template :casting casting)) deps)]
+    (is (= casting (get-in materialized [:run4 :casting])))
+    (is (= :invalid-deployment-contract
+           (:reason (try
+                      (sut/materialize
+                       (pr-str (assoc template :casting
+                                      (assoc casting :repair-reviewer "codex-10"))) deps)
+                      nil
+                      (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
