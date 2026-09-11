@@ -78,3 +78,24 @@ Run each test namespace with `clojure -M:test -n <namespace>` individually.
 Deployment and exact hold release/resume receipts will be retained separately.
 The repair is deployed only by reloading the two canonical futon3c namespaces.
 No JVM, V2, topology or completed proof restart is required.
+
+## Executed deployment and queue release
+
+Repair commit `17dca50e3ec80850cc71b1a2f0ccbb5c95804d7a` was loaded at
+20:31:38Z from the two canonical classpath files. `live-validation.edn` records
+both exact candidates passing full visibility in 219/186 ms, without warnings.
+`release.edn` records successful release of the exact commissioned hold through
+`release-store-read-hold!`, with no independent pause restored.
+
+One `durable-coordinator/resume!` call returned `:started`. Its printed result
+included a live promise and the full coordinator history, so it is not readable
+EDN; the exact bytes are retained in the local path with SHA256 identified in
+`resume-summary.json`. The summary extracts only the observed start acknowledgement;
+no second resume call was made to obtain a different receipt.
+
+`resumed-observation.edn`, read from durable files at 20:33:06Z, confirms F226 /
+m93J06 active, coordinator running at tick 78,335 (previously 78,322), hold absent,
+and exact warning and hold identity retained in `:store-read/repairs`. F225's
+original terminal receipt remains the most recent completed record. This confirms
+queue resumption, not completion of the next frame or elimination of every store
+performance risk. No JVM, V2 or topology loop was restarted.

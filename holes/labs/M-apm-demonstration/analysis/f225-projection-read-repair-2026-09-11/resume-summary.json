@@ -1,0 +1,8 @@
+{
+  "at": "2026-09-11T20:32:09.549814940Z",
+  "ok": true,
+  "status": "started",
+  "raw_path": "/home/joe/code/futon3c/data/operator-receipts/f225-projection-read-repair-2026-09-11/resume-raw.edn.txt",
+  "raw_sha256": "680c768afa18869df455437a796af1b32e7896dd086518f7641ded0e06592fbc",
+  "raw_format": "Clojure printed result includes a live promise; not readable EDN. No second resume call performed."
+}
