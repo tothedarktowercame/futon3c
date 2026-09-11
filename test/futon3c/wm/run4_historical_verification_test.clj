@@ -8,11 +8,11 @@
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- write! [f x] (spit f (str (pr-str x) "\n")) f)
 (deftest qualification-to-reviewed-awaiting-validation
-  (let [root (tmp) findings (doto (io/file root "f") .mkdir) quals (doto (io/file root "q") .mkdir)
+  (let [root (tmp) store (doto (io/file root "store") .mkdir)
+        findings (doto (io/file store "findings") .mkdir) quals (doto (io/file root "q") .mkdir)
         out (doto (io/file root "o") .mkdir)
-        store (doto (io/file root "store") .mkdir)
         source (write! (io/file root "source.edn") {:source :pinned})
-        finding (write! (io/file findings "057.edn")
+        finding (write! (io/file findings "repair-057.edn")
                         {:repair/id "repair-057" :repair/status :open
                          :repair/class :machine-failure :repair/schema-version 3
                          :attempt-id "repair-attempt-057-untyped-failure"})
@@ -49,10 +49,8 @@
     (is (false? (:repair-resolved? (v/admit! opts))))
     (let [verification-file (io/file out "verify-1.verification.edn")
           obligation (read-string (slurp finding))
-          _ (doto (io/file store "findings") .mkdir)
-          _ (spit (io/file store "findings/repair-057.edn") (slurp finding))
-          admission (repair/record-historical-verification!
-                     (.getPath store) obligation
+          admission (repair/commit-historical-verification!
+                     (.getPath store)
                      {:verification-root (.getPath out)
                       :path (.getPath verification-file)
                       :sha256 (digest/sha256 (slurp verification-file))})]
