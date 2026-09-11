@@ -40,13 +40,14 @@
   (cond-> {"Accept" "application/edn"}
     trace-id (assoc "X-Trace-Id" trace-id)))
 
-(defn- raw-get-edn!
-  [url timeout-ms trace-id]
+(defn- raw-read-edn!
+  [request! url timeout-ms trace-id extra-options]
    (let [started (System/nanoTime)]
      (try
        (let [future ^CompletableFuture
-             (http/get url {:headers (request-headers trace-id)
-                            :timeout timeout-ms :async true :throw false})
+             (request! url (merge {:headers (request-headers trace-id)
+                                  :timeout timeout-ms :async true :throw false}
+                                 extra-options))
              response (try
                         (.get future timeout-ms TimeUnit/MILLISECONDS)
                         (catch TimeoutException error
@@ -73,21 +74,20 @@
    (let [trace-id (or trace-id (str "substrate-read:" (UUID/randomUUID)))
          bound (read-health/timeout-ms timeout-ms)]
      (read-health/observe! {:url url :trace-id trace-id :timeout-ms bound}
-                          #(raw-get-edn! url bound trace-id)))))
+                          #(raw-read-edn! http/get url bound trace-id {})))))
 
 (defn- post-edn!
   [url payload timeout-ms trace-id]
-  (let [response (http/post url
-                            {:headers (assoc (request-headers trace-id)
-                                             "Content-Type" "application/edn")
-                             :body (pr-str payload)
-                             :timeout timeout-ms
-                             :throw false})
-        body (response-body response)]
-    (if (= 200 (:status response))
-      body
-      (throw (ex-info "authoritative substrate read failed"
-                      {:url url :status (:status response) :body body})))))
+  ;; This POST is a read-only structured query. It has exactly the same
+  ;; warning observation and whole-response deadline as a GET read.
+  (let [trace-id (or trace-id (str "substrate-read:" (UUID/randomUUID)))
+        bound (read-health/timeout-ms timeout-ms)]
+    (read-health/observe!
+     {:url url :trace-id trace-id :timeout-ms bound}
+     #(raw-read-edn! http/post url bound trace-id
+                     {:headers (assoc (request-headers trace-id)
+                                      "Content-Type" "application/edn")
+                      :body (pr-str payload)}))))
 
 ;; Keep one page comfortably inside short live-view deadlines. The substrate
 ;; permits 1,000, but several 1,000-row hydrations measured at 4-5 seconds,
@@ -239,3 +239,31 @@
       valid-as-of (assoc :valid-as-of valid-as-of)
       system-as-of (assoc :system-as-of system-as-of))
     timeout-ms trace-id)))
+
+(defn memory-assertions-by-end
+  "Read current memory attachments from the maintained substrate projection.
+  Reject malformed or potentially truncated results; never certify absence
+  from a partial projection. Full evidence is still fetched by the caller."
+  ([endpoint] (memory-assertions-by-end endpoint {}))
+  ([endpoint options]
+   (let [limit 100
+         response (memory-projection [endpoint] (assoc options :limit limit))
+         groups (:groups response)
+         group (first groups)
+         components (:components group)
+         edges (mapv :edge components)]
+     (when-not (and (true? (:ok response))
+                    (= [endpoint] (:endpoints response))
+                    (= :current (get-in response [:temporal-basis :mode]))
+                    (integer? (get-in response [:temporal-basis :projection-revision]))
+                    (integer? (get-in response [:temporal-basis :projection-generation]))
+                    (= 1 (count groups)) (= endpoint (:endpoint group))
+                    (vector? components) (< (count components) limit)
+                    (every? #(and (string? (:hx/id %))
+                                  (= :memory/assert (:hx/type %))
+                                  (some #{endpoint} (:hx/endpoints %))
+                                  (map? (:hx/props %))) edges))
+       (throw (ex-info "current memory projection is invalid or incomplete"
+                       {:error :memory-projection-invalid-or-incomplete
+                        :endpoint endpoint :limit limit})))
+     edges)))

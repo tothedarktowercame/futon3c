@@ -1,0 +1,12 @@
+{:operation :generic-endpoint, :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b", :elapsed-ms 1506, :result [#:hx{:id "hx-mem-apm-promotion-1d12442254ef2337685e79dfe079120b", :type :memory/assert}]}
+{:operation :projection-endpoint, :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b", :elapsed-ms 45, :result [#:hx{:id "hx-mem-apm-promotion-1d12442254ef2337685e79dfe079120b", :type :memory/assert}]}
+{:operation :generic-endpoint, :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :elapsed-ms 1460, :result [#:hx{:id "hx-mem-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :type :memory/assert}]}
+{:operation :projection-endpoint, :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :elapsed-ms 42, :result [#:hx{:id "hx-mem-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :type :memory/assert}]}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b", :elapsed-ms 168, :result true}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :elapsed-ms 168, :result true}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b", :elapsed-ms 182, :result true}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :elapsed-ms 213, :result true}
+{{:operation :full-candidate-visibility:operation, :memory-id :full-candidate-visibility , ":memory-id e-apm-pr"omotion-e18eb-9apm-pro59d7fad5124eaf7dff7e872ba0d"m, oti:elapsed-mso n-1d3031, 2:result4422 54ef233true7}685
+e79dfe079120b", :elapsed-ms 303, :result true}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-1d12442254ef2337685e79dfe079120b", :elapsed-ms 345, :result true}
+{:operation :full-candidate-visibility, :memory-id "e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d", :elapsed-ms 346, :result true}

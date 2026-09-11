@@ -1,0 +1,31 @@
+{
+  "namespaces": [
+    {
+      "name": "futon3c.substrate.client-test",
+      "tests": 5,
+      "assertions": 30
+    },
+    {
+      "name": "futon3c.substrate.read-health-test",
+      "tests": 5,
+      "assertions": 46
+    },
+    {
+      "name": "futon3c.apm.memory-snapshot-test",
+      "tests": 24,
+      "assertions": 112
+    },
+    {
+      "name": "futon3c.peripheral.memory-recall-test",
+      "tests": 17,
+      "assertions": 70
+    }
+  ],
+  "failures": 0,
+  "errors": 0,
+  "disposable_store_freshness_assertions": 10,
+  "lint": "pass",
+  "parens": "pass",
+  "diff_check": "pass",
+  "live_proof_execution": false
+}

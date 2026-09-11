@@ -309,8 +309,8 @@
    (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
      (candidate-visible? candidate
                          (retry-once-on-miss
-                          #(substrate/hyperedges-by-end
-                            % {:limit 10 :timeout-ms 5000 :request-budget 2}))
+                          #(substrate/memory-assertions-by-end
+                            % {:timeout-ms 5000}))
                          (retry-once-on-miss
                           #(f1b/get-entry-bounded
                             backend % visibility-read-bound-ms)))))

@@ -72,3 +72,29 @@
                       ((ns-resolve 'futon3c.substrate.client 'get-edn!)
                        "http://test/stalled" 5000)))
          (is (.isCancelled pending))))))
+
+(deftest structured-projection-read-preserves-warning-and-hard-bound
+  (doseq [status [200 503]]
+    (let [warnings (atom []) options (atom nil)]
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'post)
+         (fn [_ opts]
+           (reset! options opts)
+           (CompletableFuture/completedFuture
+            {:status status :body "{:observed true}"}))}
+        #(binding [sut/*context* {:frame/id "f1" :problem/id "p1"}
+                   sut/*nano-time* (clock 5600)
+                   sut/*record-warning!* (fn [w] (swap! warnings conj w))]
+           (if (= 200 status)
+             (is (= {:observed true}
+                    (futon3c.substrate.client/memory-projection ["memory"])))
+             (is (thrown? clojure.lang.ExceptionInfo
+                          (futon3c.substrate.client/memory-projection ["memory"]))))))
+      (is (= 30000 (:timeout @options)))
+      (is (:async @options))
+      (is (= 1 (count @warnings)))
+      (is (= 5600 (:elapsed-ms (first @warnings))))
+      (is (= (if (= 200 status) :returned :failed)
+             (:read/outcome (first @warnings))))
+      (is (= (get-in @options [:headers "X-Trace-Id"])
+             (:trace-id (first @warnings)))))))

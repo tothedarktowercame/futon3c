@@ -1,7 +1,7 @@
 (ns futon3c.apm.memory-snapshot-test
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.apm.memory-snapshot :as sut]
-            [futon3c.evidence.store :as estore]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
@@ -251,14 +251,14 @@
 
 (deftest default-visibility-check-bounds-substrate-edge-reads
   (let [observed (atom nil)]
-    (with-redefs [substrate/hyperedges-by-end
+    (with-redefs [substrate/memory-assertions-by-end
                   (fn [memory-id options]
                     (reset! observed [memory-id options])
-                    [])
-                  estore/get-entry* (fn [_ _] nil)]
+                    [{:hx/type :memory/assert :hx/props {:state :superseded}}])
+                  f1b/get-entry-bounded (fn [_ _ _] {})]
       (is (not (sut/candidate-visible? candidate)))
       (is (= ["e-solver-1"
-              {:limit 10 :timeout-ms 5000 :request-budget 2}]
+              {:timeout-ms 5000}]
              @observed)))))
 
 (deftest cumulative-publication-drops-stale-priors-but-fails-closed-on-own
@@ -503,3 +503,34 @@
     (is (= (:memory-id candidate) (:memory-id read)))
     (is (re-find #"request-123" log))
     (is (not (re-find #"do-not-log|private response" log)))))
+
+(deftest projected-visibility-keeps-independent-review-and-current-state-gates
+  (let [edge {:hx/type :memory/assert
+              :hx/props {:state :current :attachment-status :reviewed
+                         :roles {:patterns ["math-formalization/example"]}
+                         :review {:evidence-id "e-review-1"}}}
+        memory {:evidence/author "solver"}
+        review {:evidence/author "scribe"
+                :evidence/body {:review/reason "exact API" :review/residual "Main.lean:12"}
+                :evidence/subject {:ref/id "e-solver-1"}}
+        current (atom edge)
+        fetched (atom [])]
+    (with-redefs [substrate/memory-assertions-by-end (fn [_ _] [@current])
+                  f1b/get-entry-bounded (fn [_ id _]
+                                     (swap! fetched conj id)
+                                     (get {"e-solver-1" memory "e-review-1" review} id))]
+      (is (true? (sut/candidate-visible? candidate)))
+      (is (= ["e-solver-1" "e-review-1"] @fetched))
+      (doseq [bad [(assoc-in edge [:hx/props :state] :superseded)
+                   (assoc-in edge [:hx/props :attachment-status] :proposed)
+                   (assoc-in edge [:hx/props :roles :patterns] ["wrong"])
+                   (assoc-in edge [:hx/props :review :evidence-id] "other-review")]]
+        (reset! current bad)
+        (is (not (sut/candidate-visible? candidate)))))
+    (doseq [bad [(assoc review :evidence/author "solver")
+                 (assoc-in review [:evidence/body :review/reason] "")
+                 (assoc-in review [:evidence/body :review/residual] "")
+                 (assoc-in review [:evidence/subject :ref/id] "wrong")
+                 nil]]
+      (is (not (sut/candidate-visible? candidate (constantly [edge])
+                                      {"e-solver-1" memory "e-review-1" bad}))))))

@@ -1,0 +1,60 @@
+[futon1b-request-queue] rejected task-id= 487229 capacity-exhausted=true
+[futon1b-request] start method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-1d12442254ef2337685e79dfe079120b&limit=10&include-total=false trace-id=substrate-read:8f2c2f7d-8906-405b-8b08-0c74b29fe652 admission={:request-task/id 487230, :queue-wait-ms 0}
+[futon1b-expensive-read] start id=30138 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=substrate-read:8f2c2f7d-8906-405b-8b08-0c74b29fe652 holders=1
+[futon1b-expensive-read] end id=30138 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=substrate-read:8f2c2f7d-8906-405b-8b08-0c74b29fe652 elapsed-ms=1385 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-1d12442254ef2337685e79dfe079120b&limit=10&include-total=false trace-id=substrate-read:8f2c2f7d-8906-405b-8b08-0c74b29fe652 elapsed-ms=1386 outcome=ok
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f40997de-2f1d-4b20-96bc-46c316eafd61 admission={:request-task/id 487231, :queue-wait-ms 0}
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f40997de-2f1d-4b20-96bc-46c316eafd61 elapsed-ms=0 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d&limit=10&include-total=false trace-id=substrate-read:1ec27418-a7cd-4360-b19d-ec17c69cdf12 admission={:request-task/id 487232, :queue-wait-ms 0}
+[futon1b-expensive-read] start id=30139 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=substrate-read:1ec27418-a7cd-4360-b19d-ec17c69cdf12 holders=1
+[futon1b-expensive-read] end id=30139 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=substrate-read:1ec27418-a7cd-4360-b19d-ec17c69cdf12 elapsed-ms=1419 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d&limit=10&include-total=false trace-id=substrate-read:1ec27418-a7cd-4360-b19d-ec17c69cdf12 elapsed-ms=1418 outcome=ok
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f96218d1-bd9c-4e7e-9d36-a6ee275ce94d admission={:request-task/id 487233, :queue-wait-ms 0}
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f96218d1-bd9c-4e7e-9d36-a6ee275ce94d elapsed-ms=0 outcome=ok
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:8bff8f41-427e-46f9-9ece-7daceeca163b admission={:request-task/id 487234, :queue-wait-ms 0}
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:2fb5aea6-2fa1-46d2-8986-ab692d17e5d4 admission={:request-task/id 487236, :queue-wait-ms 0}
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:509d91b4-583a-4a23-b958-a4ac25deb220 admission={:request-task/id 487235, :queue-wait-ms 0}
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:8bff8f41-427e-46f9-9ece-7daceeca163b elapsed-ms=0 outcome=ok
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:e1ef0e1a-63e5-44bb-b8de-a1ee24e8252d admission={:request-task/id 487237, :queue-wait-ms 0}
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:2fb5aea6-2fa1-46d2-8986-ab692d17e5d4 elapsed-ms=0 outcome=ok
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:509d91b4-583a-4a23-b958-a4ac25deb220 elapsed-ms=0 outcome=ok
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:e1ef0e1a-63e5-44bb-b8de-a1ee24e8252d elapsed-ms=0 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:4eb3684e-586a-4cfc-bce4-7e613b4cad8e admission={:request-task/id 487238, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:fdb6b9a8-417c-427e-859c-68e55ccfc1d7 admission={:request-task/id 487239, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:180d44bc-d1e8-4be9-a201-af24d67723b7 admission={:request-task/id 487240, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:6c8cb422-2802-440b-9bf2-ace3047fb8c4 admission={:request-task/id 487241, :queue-wait-ms 0}
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:fdb6b9a8-417c-427e-859c-68e55ccfc1d7 elapsed-ms=60 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:4eb3684e-586a-4cfc-bce4-7e613b4cad8e elapsed-ms=61 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:180d44bc-d1e8-4be9-a201-af24d67723b7 elapsed-ms=61 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:6189b824-d89f-45b8-8d7c-7516671ea08f admission={:request-task/id 487242, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:d9391773-9db0-41f6-b0d6-bf845972a2ea admission={:request-task/id 487243, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:69410461-9fa1-41b3-98c7-35c2f428d3ef admission={:request-task/id 487244, :queue-wait-ms 0}
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:6c8cb422-2802-440b-9bf2-ace3047fb8c4 elapsed-ms=77 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:ea81245c-572f-4b89-b89f-6ce24f434195 admission={:request-task/id 487245, :queue-wait-ms 0}
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:d9391773-9db0-41f6-b0d6-bf845972a2ea elapsed-ms=54 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:6189b824-d89f-45b8-8d7c-7516671ea08f elapsed-ms=54 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:69410461-9fa1-41b3-98c7-35c2f428d3ef elapsed-ms=69 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:ea81245c-572f-4b89-b89f-6ce24f434195 elapsed-ms=50 outcome=ok
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:04595944-e281-4dee-b61c-6f396b2a7b95 admission={:request-task/id 487248, :queue-wait-ms 0}
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f1103546-1d6b-40d2-bc20-62c30f3a1a33 admission={:request-task/id 487247, :queue-wait-ms 0}
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:7fef6e51-5af6-44ae-86db-ad4025403eca admission={:request-task/id 487249, :queue-wait-ms 0}
+[futon1b-request] start method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:7fbc6426-031e-427a-a356-6df77c86e5e7 admission={:request-task/id 487246, :queue-wait-ms 0}
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:04595944-e281-4dee-b61c-6f396b2a7b95 elapsed-ms=0 outcome=ok
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:7fef6e51-5af6-44ae-86db-ad4025403eca elapsed-ms=0 outcome=ok
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:f1103546-1d6b-40d2-bc20-62c30f3a1a33 elapsed-ms=0 outcome=ok
+[futon1b-request] end method=POST uri=/api/alpha/memory/projection trace-id=substrate-read:7fbc6426-031e-427a-a356-6df77c86e5e7 elapsed-ms=0 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:8edea4db-2602-4d23-a6a9-93f945dd9c69 admission={:request-task/id 487250, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:d21725e9-1fbb-41c8-9ed6-ca1e4efe1383 admission={:request-task/id 487252, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:fba358e0-b9f5-45f7-be12-1ad7d808dddf admission={:request-task/id 487251, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:4894beea-ec2b-47f9-ad2e-238425f437ed admission={:request-task/id 487253, :queue-wait-ms 0}
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:8edea4db-2602-4d23-a6a9-93f945dd9c69 elapsed-ms=208 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-1d12442254ef2337685e79dfe079120b trace-id=evidence-read:d21725e9-1fbb-41c8-9ed6-ca1e4efe1383 elapsed-ms=208 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:fba358e0-b9f5-45f7-be12-1ad7d808dddf elapsed-ms=208 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-e18b959d7fad5124eaf7dff7e872ba0d trace-id=evidence-read:4894beea-ec2b-47f9-ad2e-238425f437ed elapsed-ms=209 outcome=ok
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:5eef0bca-36c4-4a13-8720-84c9a443960e admission={:request-task/id 487254, :queue-wait-ms 0}[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:9681c220-d04c-4eaf-a81e-307298f2a94a admission={:request-task/id 487255, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:497af5be-1fcf-49d2-b1f1-0140bb8f591d admission={:request-task/id 487256, :queue-wait-ms 0}
+[futon1b-request] start method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:180eca28-5ce2-4f5a-9eb3-991c5b38d54b admission={:request-task/id 487257, :queue-wait-ms 0}
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:9681c220-d04c-4eaf-a81e-307298f2a94a elapsed-ms=48 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:5eef0bca-36c4-4a13-8720-84c9a443960e elapsed-ms=48 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-ba42f34acd4f01b65d900afb2ebd42b9 trace-id=evidence-read:180eca28-5ce2-4f5a-9eb3-991c5b38d54b elapsed-ms=51 outcome=ok
+[futon1b-request] end method=GET uri=/api/alpha/evidence/e-apm-promotion-review-fed17c3f8c1dd2d973747c0bff40e91d trace-id=evidence-read:497af5be-1fcf-49d2-b1f1-0140bb8f591d elapsed-ms=51 outcome=ok
