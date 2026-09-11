@@ -48,7 +48,6 @@
     (is (= :awaiting-validation (:state (v/admit! opts))))
     (is (false? (:repair-resolved? (v/admit! opts))))
     (let [verification-file (io/file out "verify-1.verification.edn")
-          obligation (read-string (slurp finding))
           admission (repair/commit-historical-verification!
                      (.getPath store)
                      "verification-attempt-001"
