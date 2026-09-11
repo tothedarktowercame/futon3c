@@ -1,10 +1,10 @@
 (require '[clojure.java.io :as io] '[clojure.edn :as edn]
          '[futon2.aif.full-loop-cohort :as cohort]
-         '[futon3c.wm.run4-terminal-evidence-test :as fixture])
+         'futon3c.wm.run4-terminal-evidence-test)
 (let [root (.toFile (java.nio.file.Files/createTempDirectory
                      "closed-execution-review" (make-array java.nio.file.attribute.FileAttribute 0)))]
   (try
-    (let [binding (#'fixture/closed-cohort! root :claimed-cohort "attempt-001" :grounded-change)
+    (let [binding ((ns-resolve 'futon3c.wm.run4-terminal-evidence-test 'closed-cohort!) root :claimed-cohort "attempt-001" :grounded-change)
           close (io/file (:data-root binding) "claimed-cohort/attempt-001/002-closed.edn")
           value (edn/read-string (slurp close))]
       ;; Existing positive fixture has only time-step and closed, no required middle checkpoints.
