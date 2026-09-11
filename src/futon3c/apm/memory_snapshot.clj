@@ -93,8 +93,22 @@
          :transport/evidence :obtained}))
     (catch Throwable t
       (let [message (or (.getMessage t) "")
-            outcome (visibility-failure-outcome t)]
+            outcome (visibility-failure-outcome t)
+            causes (take 8 (take-while some? (iterate #(.getCause ^Throwable %) t)))
+            context (apply merge
+                           (map #(select-keys (ex-data %)
+                                              [:url :trace-id :timeout-ms :elapsed-ms
+                                               :status :http/status])
+                                (reverse causes)))
+            diagnostic (assoc context :memory-id (:memory-id candidate)
+                              :at (str (java.time.Instant/now))
+                              :outcome outcome
+                              :exception-classes (mapv #(.getName (class %)) causes))]
+        ;; A retry replaces the checkpoint later. Keep this bounded correlation
+        ;; record in the service journal as well as in the returned evidence.
+        (println (str "[apm-store-read-failure] " (pr-str diagnostic)))
         {:visible? nil
+         :transport/read diagnostic
          :transport/acquired-outcome outcome
          :transport/classified-outcome outcome
          :transport/evidence :not-obtained

@@ -7,6 +7,7 @@
             [clojure.edn :as edn]
             [clojure.string :as str])
   (:import [java.net URLEncoder]
+           [java.util UUID]
            [java.util.concurrent CompletableFuture ExecutionException
             TimeUnit TimeoutException]))
 
@@ -41,23 +42,31 @@
 (defn- get-edn!
   ([url timeout-ms] (get-edn! url timeout-ms nil))
   ([url timeout-ms trace-id]
-   (let [future ^CompletableFuture
-         (http/get url {:headers (request-headers trace-id)
-                        :timeout timeout-ms :async true :throw false})
-         response (try
-                    (.get future timeout-ms TimeUnit/MILLISECONDS)
-                    (catch TimeoutException error
-                      (.cancel future true)
-                      (throw (ex-info "authoritative substrate read timed out"
-                                      {:url url :timeout-ms timeout-ms}
-                                      error)))
-                    (catch ExecutionException error
-                      (throw (or (.getCause error) error))))
-         body (response-body response)]
-     (if (= 200 (:status response))
-       body
-       (throw (ex-info "authoritative substrate read failed"
-                       {:url url :status (:status response) :body body}))))))
+   (let [trace-id (or trace-id (str "substrate-read:" (UUID/randomUUID)))
+         started (System/nanoTime)]
+     (try
+       (let [future ^CompletableFuture
+             (http/get url {:headers (request-headers trace-id)
+                            :timeout timeout-ms :async true :throw false})
+             response (try
+                        (.get future timeout-ms TimeUnit/MILLISECONDS)
+                        (catch TimeoutException error
+                          (.cancel future true)
+                          (throw (ex-info "authoritative substrate read timed out"
+                                          {:url url :timeout-ms timeout-ms} error)))
+                        (catch ExecutionException error
+                          (throw (or (.getCause error) error))))
+             body (response-body response)]
+         (if (= 200 (:status response))
+           body
+           (throw (ex-info "authoritative substrate read failed"
+                           {:url url :status (:status response) :body body}))))
+       (catch Exception error
+         (throw (ex-info (or (.getMessage error) "authoritative substrate read failed")
+                         (merge (ex-data error)
+                                {:url url :trace-id trace-id :timeout-ms timeout-ms
+                                 :elapsed-ms (quot (- (System/nanoTime) started) 1000000)})
+                         error)))))))
 
 (defn- post-edn!
   [url payload timeout-ms trace-id]

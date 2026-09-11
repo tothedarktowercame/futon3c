@@ -485,3 +485,21 @@
     (is (:ok result) result)
     (is (= origin
            (get-in result [:snapshot :snapshot/memories 0 :provenance])))))
+
+(deftest visibility-failure-retains-bounded-request-correlation
+  (let [result (atom nil)
+        error (ex-info "wrapped" {:secret "do-not-log"}
+                       (ex-info "read timed out"
+                                {:url "http://store/api/alpha/hyperedges?end=m"
+                                 :trace-id "request-123" :timeout-ms 5000 :elapsed-ms 5001
+                                 :body "private response"}
+                                (java.util.concurrent.TimeoutException.)))
+        log (with-out-str
+              (reset! result (#'sut/observe-visibility (fn [_] (throw error)) candidate)))
+        read (:transport/read @result)]
+    (is (= :timeout (:transport/acquired-outcome @result)))
+    (is (= "request-123" (:trace-id read)))
+    (is (= 5001 (:elapsed-ms read)))
+    (is (= (:memory-id candidate) (:memory-id read)))
+    (is (re-find #"request-123" log))
+    (is (not (re-find #"do-not-log|private response" log)))))

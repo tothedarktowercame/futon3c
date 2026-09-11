@@ -7,10 +7,12 @@
 (deftest substrate-get-has-a-wall-clock-body-timeout
   (let [get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)
         http-get-var (ns-resolve 'babashka.http-client 'get)
-        pending (CompletableFuture.)]
+        pending (CompletableFuture.)
+        trace (atom nil)]
     (with-redefs-fn
       {http-get-var (fn [_url options]
                       (is (:async options))
+                      (reset! trace (get-in options [:headers "X-Trace-Id"]))
                       pending)}
       #(let [error (try (get-edn-var "http://substrate.test/stalled" 10)
                         nil
@@ -18,6 +20,9 @@
          (is (= "authoritative substrate read timed out"
                 (some-> error .getMessage)))
          (is (= 10 (:timeout-ms (ex-data error))))
+         (is (= @trace (:trace-id (ex-data error))))
+         (is (str/starts-with? @trace "substrate-read:"))
+         (is (<= 0 (:elapsed-ms (ex-data error))))
          (is (.isCancelled pending))))))
 
 (deftest hyperedge-read-follows-server-cursor
