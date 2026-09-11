@@ -49,10 +49,10 @@
     (is (= :awaiting-validation (:state (v/admit! opts))))
     (is (false? (:repair-resolved? (v/admit! opts))))
     (let [verification-file (io/file out "verify-1.verification.edn")
-          ports (action/runner-ports
-                 {:repair-root (.getPath store) :verification-root (.getPath out)
-                  :verification-path (.getPath verification-file)
-                  :verification-sha256 (digest/sha256 (slurp verification-file))})
+          action-config {:repair-root (.getPath store) :verification-root (.getPath out)
+                         :verification-path (.getPath verification-file)
+                         :verification-sha256 (digest/sha256 (slurp verification-file))}
+          ports (action/runner-ports action-config)
           obligation (first (repair/open-obligations (.getPath store)))
           candidate ((:historical-verification-candidate-fn ports) obligation)
           admission ((:historical-verification-execute-fn ports)
@@ -61,7 +61,14 @@
                       :obligation obligation :candidate candidate})]
       (is (= :wm/historical-repair-admission-v1 (:schema admission)))
       (is (= :awaiting-validation (:repair/status admission)))
-      (is (nil? (:repair/resolution admission))))
+      (is (nil? (:repair/resolution admission)))
+      (write! (io/file findings "repair-058.edn")
+              {:repair/id "repair-058" :repair/status :open
+               :repair/class :machine-failure :repair/schema-version 3
+               :attempt-id "repair-attempt-058-untyped-failure"})
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"another stop-line"
+                            (action/validate-applicable! action-config))))
     (doseq [bad [(assoc opts :expected-check-ids [:recovery])
                  (assoc opts :expected-check-ids [:recovery :recovery])
                  (assoc opts :expected-check-ids [:recovery :foreign])

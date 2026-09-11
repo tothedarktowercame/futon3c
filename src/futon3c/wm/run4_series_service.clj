@@ -124,7 +124,7 @@
               ;; The strict reader validates task success and all durable joins.
               ;; Any failure here stops before the controller can advance.
               (historical-successor/resolve-from-durable!
-               {:repair-root (get-in run4 [:historical-action :repair-root])
+               {:repair-root (get-in link [:historical-evidence :roots :repair-root])
                 :evidence-roots evidence-roots
                 :admission-request (:admission-request
                                     (get prepared (:ordinal row)))
@@ -150,7 +150,7 @@
                        (= prepared-trial (get prepared (:ordinal trial))))
           (refuse! :historical-successor-link-mismatch))
         (historical-successor/resolve-from-durable!
-         {:repair-root (get-in run4 [:historical-action :repair-root])
+         {:repair-root (get-in link [:historical-evidence :roots :repair-root])
           :evidence-roots evidence-roots
           :admission-request (:admission-request prepared-trial)
           :started started
@@ -196,7 +196,10 @@
                         :bindings (:binding-root series)
                         :projections (:projection-root series)
                         :run-records (:run-record-root series)
-                        :repair-root (get-in run4 [:historical-action :repair-root])
+                        :repair-root (or (get-in run4 [:historical-action :repair-root])
+                                         (get-in run4 [:historical-successor
+                                                       :historical-evidence :roots
+                                                       :repair-root]))
                         :cohort-preregistration
                         (get-in run4 [:execution-cohort :preregistration])
                         :cohort-data-root

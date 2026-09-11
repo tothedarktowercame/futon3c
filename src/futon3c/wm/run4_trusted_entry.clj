@@ -225,7 +225,14 @@
                        (refuse :run4-pinned-config-invalid
                                {:reason (:reason (ex-data e))})}))]
               (or (:refusal loaded)
-                  (let [cohort (when (contains? cfg :execution-cohort)
+                  (let [applicable (when-let [historical (:historical-action cfg)]
+                                     (try
+                                       (historical-action/validate-applicable! historical)
+                                       true
+                                       (catch clojure.lang.ExceptionInfo _ false)))
+                        cohort (when (and (or (not (contains? cfg :historical-action))
+                                              applicable)
+                                          (contains? cfg :execution-cohort))
                                  (try
                                    (execution-cohort/validate-and-preflight!
                                     (:execution-cohort cfg)
@@ -235,7 +242,9 @@
                                      {:refusal
                                       (refuse :run4-execution-cohort-invalid
                                               {:reason (:reason (ex-data e))})})))]
-                    (if-let [refusal (:refusal cohort)]
+                    (if (false? applicable)
+                      (refuse :run4-historical-action-not-applicable)
+                      (if-let [refusal (:refusal cohort)]
                       refusal
                       (let [prepared (prepared-options
                                       cfg pin-text (:envelope validation)
@@ -244,7 +253,7 @@
                                       (:run4-attempt-id payload))]
                         (if (and (:ok prepared) cohort)
                           (assoc-in prepared [:opts :execution-cohort] cohort)
-                          prepared))))))))
+                          prepared)))))))))
         (refuse :run4-pin-reference-refused))))))
 
 (defn authenticate

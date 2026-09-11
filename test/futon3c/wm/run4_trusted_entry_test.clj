@@ -4,6 +4,7 @@
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.wm.run4-effective-environment :as effective]
+            [futon3c.wm.run4-historical-action :as historical-action]
             [futon3c.wm.run4-trusted-entry :as sut]))
 
 (def token (apply str (repeat 64 "a")))
@@ -104,12 +105,32 @@
                                   :verification-root (.getPath root)
                                   :verification-path (.getPath (io/file root "verification.edn"))
                                   :verification-sha256 (apply str (repeat 64 "b"))})
-            prepared (sut/prepare configured auth request)]
+            prepared (with-redefs [historical-action/validate-applicable!
+                                   (constantly {:repair-id "repair-test"})]
+                       (sut/prepare configured auth request))]
         (is (:ok prepared))
         (is (fn? (get-in prepared [:opts :historical-verification-candidate-fn])))
         (is (= :authenticated-not-enacted
                (get-in prepared [:opts :run4/requested-pin :status])))
         (is (nil? (get-in prepared [:opts :run4/enacted-action])))))))
+
+(deftest inapplicable-historical-action-refuses-before-cohort-preflight
+  (with-fixture
+    (fn [{:keys [root config]}]
+      (let [cohort-called (atom 0)
+            configured (-> config
+                           (assoc-in [:run4 :historical-action]
+                                     {:repair-root (.getPath root)
+                                      :verification-root (.getPath root)
+                                      :verification-path (.getPath (io/file root "verification.edn"))
+                                      :verification-sha256 (apply str (repeat 64 "b"))})
+                           (assoc-in [:run4 :cohort-preflight!]
+                                     (fn [_] (swap! cohort-called inc))))]
+        (with-redefs [historical-action/validate-applicable!
+                      (fn [_] (throw (ex-info "wrong stop-line" {})))]
+          (is (= :run4-historical-action-not-applicable
+                 (:error (sut/prepare configured auth request))))
+          (is (zero? @cohort-called)))))))
 
 (def action {:type :advance-mission :target "M-run4"})
 (def judgment {:decision {:action {:type :no-op}}

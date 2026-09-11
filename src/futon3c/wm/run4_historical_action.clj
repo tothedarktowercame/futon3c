@@ -33,3 +33,18 @@
            (throw (ex-info "Historical candidate changed before execution" {})))
          (repair/commit-historical-verification!
           repair-root execution-identity evidence)))}))
+
+(defn validate-applicable!
+  "Read the actual first open stop-line and require this pinned historical
+  action to target it. This is read-only and must run before admission."
+  [config]
+  (let [ports (runner-ports config)
+        obligation (first (filter #(and (= :open (:repair/status %))
+                                        (not= :environmental-hold
+                                              (:repair/class %)))
+                                  (repair/open-obligations
+                                   (:repair-root config))))]
+    (when-not obligation
+      (throw (ex-info "Historical action has no open stop-line" {})))
+    ((:historical-verification-candidate-fn ports) obligation)
+    {:repair-id (:repair/id obligation)}))

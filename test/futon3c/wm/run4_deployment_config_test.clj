@@ -71,9 +71,9 @@
         c (sut/materialize text (assoc deps :historical-action authority
                                             :historical-successor link))]
     (is (= link (get-in c [:run4 :historical-successor])))
-    (is (= :invalid-deployment-contract
-           (:reason (try (sut/materialize text (assoc deps :historical-successor link)) nil
-                         (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+    (let [successor-only (sut/materialize text (assoc deps :historical-successor link))]
+      (is (= link (get-in successor-only [:run4 :historical-successor])))
+      (is (not (contains? (:run4 successor-only) :historical-action))))
     (is (= :invalid-deployment-contract
            (:reason (try (sut/materialize
                           text (assoc deps :historical-action authority

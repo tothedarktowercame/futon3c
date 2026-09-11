@@ -80,8 +80,7 @@
                          true
                          (catch Throwable _ false)))
                    (or (not (contains? dependencies :historical-successor))
-                       (and (contains? dependencies :historical-action)
-                            (successor-link? (:historical-successor dependencies))))
+                       (successor-link? (:historical-successor dependencies)))
                    (boolean? (:enable? dependencies)))
       (refuse :invalid-deployment-contract))
     (let [facts (preflight/inspect template-text)
