@@ -1,0 +1,1 @@
+{:ok true, :value {:loaded-namespace futon2.aif.full-loop-runner, :source "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj", :source-sha256 "41adb4ab9654329b02d52a4ebd24c809ed013cbf8698afc81994e71cc80611f2", :runner-idle-before true, :refusal-classification :guardrail-refusal, :trial-submitted? false}}
