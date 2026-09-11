@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-cohort :as cohort]
             [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
@@ -359,3 +360,65 @@
                     (is (= "wm/run-visibility-v1" (:schema visible)))
                     (is (= ["complete" "passed"] ((juxt :stage :result) visible))))
                   (is (.isFile (io/file root "controller" "001-terminal.edn"))))))))))))
+
+(deftest actual-full-core-consumes-explicit-cohort-before-no-author-close
+  (with-service
+    (fn [root cfg]
+      (reset! runner/!status runner/initial-status)
+      (registry/reset-registry!)
+      (registry/register-agent!
+       {:agent-id {:id/value "war-machine" :id/type :apparatus}
+        :type :wm :invoke-fn nil :capabilities [] :metadata {:apparatus? true}})
+      (let [source (io/file "../futon2/holes/labs/wm-contract/runs"
+                            "RUN4-U88-cohort-2026-09-11/cohort.edn")
+            prereg (io/file root "actual-cohort.edn")
+            cohort-root (io/file root "actual-cohort-data")
+            raw (slurp source)
+            parsed (edn/read-string raw)
+            binding {:preregistration (.getCanonicalPath prereg)
+                     :data-root (.getCanonicalPath cohort-root)
+                     :cohort-id (:cohort/id parsed)
+                     :sha256 (digest/sha256 raw)}
+            cfg (-> cfg
+                    (assoc-in [:run4 :execution-cohort] binding)
+                    (assoc-in [:run4 :cohort-preflight!]
+                              cohort/execution-preflight))
+            handler (http/make-handler cfg)]
+        (.mkdir cohort-root)
+        (spit prereg raw)
+        (cohort/activate! (.getCanonicalPath prereg)
+                          (.getCanonicalPath cohort-root))
+        (let [prepared (atom nil)]
+          (with-redefs [runner/click!
+                        (fn [opts]
+                          (reset! prepared opts)
+                          {:click-id "isolated-full-core"
+                           :started-at "2026-09-11T00:00:00Z"})]
+            (let [response (handler (request {:run4-series-ref "series.edn"} auth))
+                  body (json/parse-string (:body response) true)]
+                (is (= 200 (:status response)))
+                (is (= "trial-started" (:status body)))
+                (let [result
+                      (binding [full-runner/*wm-status-reporting?* false]
+                        (full-runner/run-opportunity!
+                         (assoc @prepared
+                                :roster-fn
+                                (fn [_]
+                                  (throw (ex-info "isolated Agency unavailable" {})))
+                                :code-state-fn
+                                (fn [] {:repo "/isolated/futon2" :git-sha "fixture"
+                                        :git-dirty? false :repo-heads {}})
+                                :repair-system-record-fn
+                                (fn [finding]
+                                  (assoc finding :repair/id "isolated-repair"))
+                                :queue-fn identity)))]
+                  (is (= :agent-unavailable (:outcome result))))
+                (let [state (cohort/ledger (.getCanonicalPath prereg)
+                                           (.getCanonicalPath cohort-root))]
+                  (is (= (:cohort/id parsed) (:cohort/id state)))
+                  (is (= 1 (:attempt-count state)))
+                  (is (= 1 (:closed-count state)))
+                  (is (= cohort/checkpoint-order
+                         (get-in state [:attempts 0 :checkpoints])))
+                  (is (= :agent-unavailable
+                         (get-in state [:attempts 0 :outcome])))))))))))
