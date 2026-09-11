@@ -4,7 +4,7 @@
  :verification-id "repair-057-revalidation-20260911-v1"
  :qualification-plan
  {:path "/home/joe/code/futon2/holes/labs/wm-contract/runs/RUN4-repair057-revalidation-2026-09-11/qualification-plan.disabled.edn"
-  :sha256 "c1aa6d1b6c44a02bda1760af4eea41e5eaff6cc95602fd92404ed2a3ff2bb4bf"}
+  :sha256 "23cea4e01492e412a4e2f76416fb8e91b9ae6a32f63b75d5133adf2d8692f9ce"}
  :expected-checks [:full-runner-regression :repair-store-regression]
  :execution {:status :not-performed}
  :historical-successor-link {:status :unmaterialized

@@ -33,6 +33,9 @@
 
 
 
+(def ^:dynamic *expected-terminal-response*
+  {:status "trial-terminal" :task-result "succeeded"})
+
 (def token (apply str (repeat 64 "c")))
 (def auth {"authorization" (str "Bearer " token)})
 (def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-17"})
@@ -161,8 +164,8 @@
                 (let [terminal-response (handler (request payload auth))
                       terminal-body (json/parse-string (:body terminal-response) true)]
                   (is (= 200 (:status terminal-response)))
-                  (is (= "trial-terminal" (:status terminal-body)))
-                  (is (= "succeeded" (:task-result terminal-body)))
+                  (is (= (:status *expected-terminal-response*) (:status terminal-body)))
+                  (is (= (:task-result *expected-terminal-response*) (:task-result terminal-body)))
                   (is (.isFile (io/file root "store-recordings"
                                         "u88-trial-1-attempt-1.edn")))
                   (let [visible (json/parse-string
