@@ -18,7 +18,8 @@
   (let [bundle (terminal/read-terminal-evidence-bundle
                 evidence-roots admission-request started)
         class (:classification bundle)
-        successor-attempt (:attempt-id bundle)
+        successor-attempt {:kind :runner-execution
+                           :id (get-in bundle [:terminal-projection :attempt/id])}
         projection (:terminal-projection bundle)]
     (when-not (and bundle (= {:task-result :succeeded :infrastructure :safe
                               :evidence-id (:projection-digest bundle)} class)
@@ -33,6 +34,7 @@
        :verification-id verification-id
        :verification-attempt verification-attempt
        :validation-attempt successor-attempt
+       :controller-attempt (:attempt-id bundle)
        :click-id (get-in bundle [:started :click-id])
        :run-id (get-in bundle [:terminal-projection :run/id])
        :task-result :succeeded :infrastructure :safe

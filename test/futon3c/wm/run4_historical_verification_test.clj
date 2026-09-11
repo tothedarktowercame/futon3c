@@ -3,6 +3,7 @@
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.repair-obligation :as repair]
+            [futon3c.wm.run4-historical-action :as action]
             [futon3c.wm.run4-historical-qualification :as qualification]
             [futon3c.wm.run4-historical-verification :as v]))
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
@@ -48,12 +49,16 @@
     (is (= :awaiting-validation (:state (v/admit! opts))))
     (is (false? (:repair-resolved? (v/admit! opts))))
     (let [verification-file (io/file out "verify-1.verification.edn")
-          admission (repair/commit-historical-verification!
-                     (.getPath store)
-                     "verification-attempt-001"
-                     {:verification-root (.getPath out)
-                      :path (.getPath verification-file)
-                      :sha256 (digest/sha256 (slurp verification-file))})]
+          ports (action/runner-ports
+                 {:repair-root (.getPath store) :verification-root (.getPath out)
+                  :verification-path (.getPath verification-file)
+                  :verification-sha256 (digest/sha256 (slurp verification-file))})
+          obligation (first (repair/open-obligations (.getPath store)))
+          candidate ((:historical-verification-candidate-fn ports) obligation)
+          admission ((:historical-verification-execute-fn ports)
+                     {:execution-identity {:kind :runner-execution
+                                           :id "verification-attempt-001"}
+                      :obligation obligation :candidate candidate})]
       (is (= :wm/historical-repair-admission-v1 (:schema admission)))
       (is (= :awaiting-validation (:repair/status admission)))
       (is (nil? (:repair/resolution admission))))

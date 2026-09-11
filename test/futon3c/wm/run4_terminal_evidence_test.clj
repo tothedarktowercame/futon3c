@@ -160,18 +160,20 @@
                                           :source-head "8bf149c5"}}
            _ (write! verification-file verification)
            _ (repair/commit-historical-verification!
-              (.getPath store) "verification-attempt-001"
+              (.getPath store) {:kind :runner-execution :id "verification-attempt-001"}
               {:verification-root (.getPath verification-root)
                :path (.getPath verification-file)
                :sha256 (digest/sha256 (slurp verification-file))})
            config {:repair-root (.getPath store) :evidence-roots roots
                    :admission-request request :started started :repair-id "repair-057"
                    :verification-id "verification-057"
-                   :verification-attempt "verification-attempt-001"}]
+                   :verification-attempt {:kind :runner-execution
+                                          :id "verification-attempt-001"}}]
        (try
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
-                       (assoc config :verification-attempt "outer-attempt"))))
+                       (assoc config :verification-attempt
+                              {:kind :runner-execution :id "internal-1"}))))
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-id "foreign-verification"))))
@@ -190,7 +192,8 @@
                  "store must independently reject verification as its own successor")))
          (let [resolution (successor/resolve-from-durable! config)]
            (is (= :resolved (:repair/status resolution)))
-           (is (= "outer-attempt" (:validation-attempt resolution)))
+           (is (= {:kind :runner-execution :id "internal-1"}
+                  (:validation-attempt resolution)))
            (is (empty? (repair/open-obligations (.getPath store)))))
          (finally (delete-tree! store)))))))
 
