@@ -1,0 +1,22 @@
+{:schema :wm/historical-implementation-candidates-v1
+ :repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure"
+ :verification-id "repair-successor-v2-selection-revalidation-20260911-v1"
+ :source-repository "/home/joe/code/futon3c"
+ :qualified-futon2-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
+ :first-commit "1cf69c80fb29c39119a3b944e1ce94b5ca8fbc0f"
+ :last-commit "12b9c82d31d84eac776e91b072fb089fc46a6477"
+ :candidate-roles
+ [{:commit "1cf69c80fb29c39119a3b944e1ce94b5ca8fbc0f"
+   :role :pre-admission-historical-action-applicability}
+  {:commit "652ba19f4e0ba1150c9b691fbc2a9103de4d1dff"
+   :role :existing-admission-observation-replay}
+  {:commit "5e96f370066958a3b789ef598a3fcf78aaad8891"
+   :role :controller-locked-existing-start-replay}
+  {:commit "12b9c82d31d84eac776e91b072fb089fc46a6477"
+   :role :exact-trial-inspection-scope}]
+ :ancestry {:linear true :head-descends-from-last true}
+ :claim-boundary
+ {:qualification-only true
+  :independent-review-performed false
+  :repair-admitted false
+  :production-successor-performed false}}
