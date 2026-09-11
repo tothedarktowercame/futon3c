@@ -270,8 +270,11 @@
 (defn step!
   "Advance at most one durable boundary. Never starts a successor in the same call
   that records its predecessor terminal."
-  [root manifest-text {:keys [read-text prepare-trial click! terminal-evidence]}]
-  (when-not (and (string? root) (fn? click!) (fn? terminal-evidence))
+  [root manifest-text {:keys [read-text prepare-trial click! terminal-evidence
+                              before-terminal-advance]}]
+  (when-not (and (string? root) (fn? click!) (fn? terminal-evidence)
+                 (or (nil? before-terminal-advance)
+                     (fn? before-terminal-advance)))
     (refuse! :missing-controller-port))
   (let [root-file (.getCanonicalFile (io/file root))
         key (.getPath root-file)
@@ -315,6 +318,8 @@
                 (started-admission! key prepared-trial started ordinal))
               (when terminal
                 (terminal-lifecycle! key prepared-trial started terminal ordinal))
+              (when (and terminal before-terminal-advance)
+                (before-terminal-advance trial prepared-trial started terminal))
               (cond
                 terminal
                 (if (= :unsafe (:infrastructure terminal))

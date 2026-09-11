@@ -130,6 +130,28 @@
                 :verification-id (:verification-id link)
                 :verification-attempt (:verification-attempt link)}))))))))
 
+(defn- reconcile-linked-row!
+  [run4 prepared evidence-roots trial prepared-trial started terminal]
+  (when-let [link (:historical-successor run4)]
+    (let [successor (:successor link)
+          identity (get-in prepared-trial [:admission-request :identity])
+          attempt-id (get-in prepared-trial [:admission-request :attempt-id])]
+      (when (= (:trial-id successor) (:trial-id trial))
+        (when-not (and terminal started
+                       (= (:series-id successor) (:series-id identity))
+                       (= (:trial-id successor) (:trial-id identity))
+                       (= (:attempt-id successor) attempt-id)
+                       (= prepared-trial (get prepared (:ordinal trial))))
+          (refuse! :historical-successor-link-mismatch))
+        (historical-successor/resolve-from-durable!
+         {:repair-root (get-in run4 [:historical-action :repair-root])
+          :evidence-roots evidence-roots
+          :admission-request (:admission-request prepared-trial)
+          :started started
+          :repair-id (:repair-id link)
+          :verification-id (:verification-id link)
+          :verification-attempt (:verification-attempt link)})))))
+
 (defn step!
   "Authenticate all frozen trial pins, then advance at most one boundary.
 
@@ -210,9 +232,13 @@
                                      runner/*run4-historical-projection-dir*
                                      (:projection-root series)]
                              (runner/click!
-                              (assoc opts :run-record-dir
+                             (assoc opts :run-record-dir
                                      (:run-record-root series)))))
-                 :terminal-evidence terminal-port})]
+                 :terminal-evidence terminal-port
+                 :before-terminal-advance
+                 (fn [trial prepared-trial started terminal]
+                   (reconcile-linked-row! run4 @prepared evidence-roots
+                                          trial prepared-trial started terminal))})]
     (when (= :trial-terminal (:status result))
       (linked-successor! run4 series manifest-text @prepared evidence-roots))
     (when (true? (:visibility-enabled? series))
