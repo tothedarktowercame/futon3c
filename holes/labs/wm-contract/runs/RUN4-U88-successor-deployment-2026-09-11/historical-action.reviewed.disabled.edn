@@ -1,6 +1,7 @@
 {:schema :wm/run4-historical-action-configuration-v1
  :enabled? false
- :casting {:author "codex-10" :reviewer "codex-12"}
+ :casting {:author "codex-10" :reviewer "codex-12"
+           :repair-reviewer "codex-12"}
  :repair-id "repair-attempt-057-untyped-failure"
  :verification-id "repair-057-revalidation-20260911-v1"
  :authority
