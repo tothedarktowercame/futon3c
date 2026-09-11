@@ -1,0 +1,86 @@
+[
+  {
+    "namespace": "futon3c.apm.teaching-exchange-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.teaching-exchange-test"
+    ],
+    "exit": 0,
+    "counts": [
+      10,
+      87
+    ]
+  },
+  {
+    "namespace": "futon3c.apm.typed-role-submission-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.typed-role-submission-test"
+    ],
+    "exit": 0,
+    "counts": [
+      19,
+      90
+    ]
+  },
+  {
+    "namespace": "futon3c.apm.live-learning-phases-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.live-learning-phases-test"
+    ],
+    "exit": 0,
+    "counts": [
+      70,
+      374
+    ]
+  },
+  {
+    "namespace": "futon3c.apm.role-memory-search-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.role-memory-search-test"
+    ],
+    "exit": 0,
+    "counts": [
+      8,
+      42
+    ]
+  },
+  {
+    "namespace": "futon3c.apm.memory-access-gate-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.memory-access-gate-test"
+    ],
+    "exit": 0,
+    "counts": [
+      1,
+      7
+    ]
+  },
+  {
+    "namespace": "futon3c.apm.countdown-control-test",
+    "command": [
+      "clojure",
+      "-M:test",
+      "-n",
+      "futon3c.apm.countdown-control-test"
+    ],
+    "exit": 0,
+    "counts": [
+      54,
+      210
+    ]
+  }
+]

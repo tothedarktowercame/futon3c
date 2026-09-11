@@ -10,6 +10,7 @@
   {:search {:channel :search :purpose :role-memory-search}
    :cascade {:channel :cascade :purpose :memory-cascade}
    :shelf-materialization {:channel :shelf :purpose :snapshot-materialization}
+   :teaching-replay {:channel :teaching :purpose :reviewed-plan-replay}
    :inherited-repair {:channel :repair :purpose :inherited-repair-results}
    :prompt-assembly {:channel :prompt :purpose :role-prompt-assembly}})
 

@@ -9,6 +9,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.teaching-plan :as teaching]
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.promotion-pipeline :as pipeline])
   (:import (java.nio.file Files StandardCopyOption)
@@ -80,13 +81,13 @@
     ;; later observation may say which authorized ids were used, never add ids.
     :solver-shelf-canary
     ;; V4 outer-loop reviews bind exact candidate bytes before activation.
-    :v4/revision-review})
+    :v4/revision-review :v4/teaching :v4/teaching-receipt})
 
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
 
 (def memory-search-capable-roles
-  #{:student :scribe :zai-scribe :promotion-proctor})
+  #{:student :pattern-ta :scribe :zai-scribe :promotion-proctor})
 
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
@@ -102,6 +103,9 @@
    ;; The downstream promotion validators distinguish the Solver-mining and
    ;; deposit forms; the common wrapper is deterministic for both.
    :promote-solver {}
+   :pattern-plan {:plan nil :memory-use {:used-ids nil}}
+   :pattern-plan-revision {:plan nil :memory-use {:used-ids nil}}
+   :pattern-plan-review {:plan-review nil}
    :pattern-revision-review {:revision-review {:proposal/id nil :candidate/sha256 nil
                                                :verdict nil :reason nil :residual nil}}
    :promotion-review {:candidate-set-digest nil :base-problem-blob nil
@@ -155,6 +159,8 @@
 
 (defn evidence-shape [auth]
   (cond-> (get evidence-shape-by-phase (:phase auth))
+    (some? (:v4/teaching-receipt auth))
+    (assoc :plan-use {:plan-digest nil :nodes nil})
     (and (= :scribe-reduce (:phase auth))
          (= :zai-scribe (:role auth)))
     (assoc :memory-candidates nil)
@@ -319,6 +325,16 @@
          (contains? #{:accept :reject :cannot-judge} (wire-keyword (:verdict review)))
          (text? (:reason review)) (text? (:residual review)))))
 
+(defn- teaching-memory-valid? [auth payload]
+  (let [receipts ((requiring-resolve
+                   'futon3c.apm.role-memory-search/recorded-receipts-for-job) (:job-id auth))
+        ids-fn (requiring-resolve 'futon3c.apm.role-memory-search/receipt-surfaced-ids)
+        surfaced (into (set (get-in auth [:memory-snapshot :accessible-memory-ids]))
+                       (mapcat ids-fn receipts))
+        used (get-in payload [:evidence :memory-use :used-ids])]
+    (and (seq receipts) (vector? used) (every? surfaced used)
+         (not-any? (set (:shelf/withheld-ids auth)) used))))
+
 (defn validate-payload [auth payload]
   (if-not (map? payload)
     {:ok false :error/code :role-submission-payload-invalid
@@ -352,6 +368,15 @@
         (->> generated-contract/required-submission-schemas
              :student-memory-use :role-authored-fields (map keyword) set)
         findings (cond-> []
+                   (and (contains? #{:pattern-plan :pattern-plan-revision} (:phase auth))
+                        (not (teaching-memory-valid? auth payload)))
+                   (conj :teaching-search-or-memory-use-invalid)
+                   (and (contains? teaching/phases (:phase auth))
+                        (not (teaching/payload-valid? auth payload)))
+                   (conj :teaching-payload-invalid)
+                   (and (:v4/teaching-receipt auth)
+                        (not (teaching/use-valid? auth (get-in payload [:evidence :plan-use]))))
+                   (conj :teaching-use-invalid)
                    (and (= :pattern-revision-review (:phase auth))
                         (not (revision-review-valid? auth payload)))
                    (conj :pattern-revision-review-invalid)

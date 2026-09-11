@@ -12,6 +12,7 @@
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]
+            [futon3c.apm.teaching-exchange :as teaching]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
   (:import [java.nio.charset StandardCharsets]
            [java.nio.file CopyOption Files OpenOption Path StandardCopyOption
@@ -261,6 +262,8 @@
                           :input-receipt-ids input-ids
                           :terminal-budget terminal-budget
                           :turn-timeout-ms turn-timeout-ms}
+                   (and (= :student-attempt kind) (:v4/teaching-config unit))
+                   (assoc :v4/teaching-config (:v4/teaching-config unit))
                    (= :student-attempt kind)
                    (assoc :attempt-ordinal attempt-ordinal
                           :workspace (:workspace/path workspace)
@@ -381,16 +384,23 @@
                       (every? pos-int? (:attempt-ordinals entry))))
                audit)))
 
+(defn- teaching-search-receipts [request]
+  (mapcat #(role-memory/recorded-receipts-for-job (:job-id %))
+          (filter #(= :student (:role %))
+                  (get-in request [:v4/teaching-receipt :history]))))
+
 (defn- controller-memory-use
   [request ticket used-ids]
   (let [predecessor-receipts
         (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
         current-receipts
         (role-memory/recorded-receipts-for-job (:job-id ticket))
-        search-receipts (vec (concat predecessor-receipts current-receipts))
+        teaching-receipts (teaching-search-receipts request)
+        search-receipts (vec (concat predecessor-receipts current-receipts teaching-receipts))
         surfaced-ids
         (into (set (get-in request [:memory-snapshot :accessible-memory-ids]))
               (concat
+               (mapcat #(role-memory/gated-receipt-surfaced-ids request :teaching-replay %) teaching-receipts)
                (mapcat #(role-memory/gated-receipt-surfaced-ids
                          request :inherited-repair %)
                        predecessor-receipts)
@@ -414,6 +424,8 @@
         (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
         searched-memory-ids
         (set (concat
+              (mapcat #(role-memory/gated-receipt-surfaced-ids request :teaching-replay %)
+                      (teaching-search-receipts request))
               (mapcat #(role-memory/gated-receipt-surfaced-ids
                         request :inherited-repair %)
                       predecessor-search-receipts)
@@ -627,6 +639,9 @@
                                                       % [:memory-id :route
                                                          :pattern])))))
                               cascade)))
+                   (:v4/teaching-receipt request)
+                   (assoc :receipt/teaching (:v4/teaching-receipt request)
+                          :receipt/plan-use (:plan-use report))
                    (map? (:source validated))
                    (assoc :receipt/source (:source validated))
                    (map? (:candidate validated))
@@ -1124,7 +1139,9 @@
               "even on success.")
          (case (:dispatch/type request)
          :student-attempt
-         (str "Attempt the problem independently. The :memory-snapshot map is "
+         (str (when (:v4/teaching-receipt request)
+                "Construct from the reviewed plan in :v4/teaching-receipt. It is not a proof certificate. Return :plan-use {:plan-digest SHA :nodes [{:node-id ID :status used|changed|unused|unknown :reason TEXT}]} covering every plan node. Explain departures; keep unknown use explicit. ")
+              "Attempt the problem independently. The :memory-snapshot map is "
               "the reviewed starting shelf. You may also use the controller-owned "
               "open mathematics search command; any additionally surfaced memory "
               "is recorded automatically in a job-bound typed receipt. "
@@ -1269,7 +1286,7 @@
 
 (declare guide-promotion-step!)
 
-(defn run-live!
+(defn run-construction!
   [{:keys [contract action receipts request fresh-request state-path agency-base
            snapshot-publish-fn workspace-reset-fn source-archive-fn
            student-candidate-fn preparation guide-promotion]
@@ -1470,3 +1487,35 @@
                                   :persist-candidates-fn persist-candidates-fn}
                                  request report)
           stepped)))))
+
+(defn run-live!
+  "V4 planning is an explicit prelude, not a changed V3 Guide channel."
+  [{:keys [request state-path agency-base workspace-reset-fn] :as options}]
+  (if-not (:v4/teaching-config request)
+    (run-construction! options)
+    (let [base (or (teaching/saved-request state-path) request)
+          protected-keys [:frame-id :problem-id :agent-id :phase :role :attempt-ordinal
+                          :memory-snapshot :shelf/holdout :shelf/withheld-ids :workspace
+                          :base-revision :problem-path :v4/teaching-config]
+          result (if (not= (select-keys base protected-keys) (select-keys request protected-keys))
+                   {:ok false :error/code :teaching-base-authority-conflict}
+                   (teaching/step!
+                  {:request base :phase-path state-path
+                   :agency-base (or agency-base "http://127.0.0.1:7070")
+                   :prepare-fn
+                   (fn [req]
+                     (let [prepared (prepare-student-workspace!
+                                     req (or workspace-reset-fn workspace-lifecycle/reset-to-base!))]
+                       (if-not (:ok prepared) prepared
+                         (let [reset (runtime/http-json
+                                      "POST" (str (or agency-base "http://127.0.0.1:7070")
+                                                  "/api/alpha/agents/" (:agent-id req) "/reset-session") {})]
+                           {:ok (and (= 200 (:http/status reset)) (:ok reset))}))))}))]
+      (if (= :ready (:status result))
+        (let [construction (teaching/construction-request base (:receipt result))]
+          (if (and (:v4/teaching-receipt request)
+                   (not= (:v4/teaching-receipt request) (:receipt result)))
+            {:ok false :error/code :teaching-construction-authority-conflict}
+            (run-construction! (assoc options :fresh-request construction :request
+                                      (if (:v4/teaching-receipt request) request construction)))))
+        result))))

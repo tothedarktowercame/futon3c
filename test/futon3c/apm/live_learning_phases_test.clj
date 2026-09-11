@@ -188,9 +188,10 @@
              :snapshot-digest "digest" :accessible-memory-ids []}
             :fresh-session-nonce (:fresh-session-nonce request)
             :dispatch/id (:dispatch/id request)
-            :submission/token (:submission/token request)}
+            :submission/token (:submission/token request)
+            :submission/authority-version 2}
            request)
-        "the arm-off request is exactly the pre-change request")
+        "the arm-off request retains current typed authority and has no teaching/cascade additions")
     (let [certificate (:certificate result)]
       (is (= {:receipt/type :student-attempt :receipt/frame-id "f19"
               :receipt/problem-id "a01J05" :receipt/attempt-ordinal 1

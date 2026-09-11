@@ -1,13 +1,25 @@
 (ns futon3c.apm.typed-role-submission-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.apm.typed-role-submission :as sut]))
+            [futon3c.apm.typed-role-submission :as sut]
+            [futon3c.apm.teaching-plan :as teaching]
+            [futon3c.apm.role-memory-search :as memory]))
+
+(def teaching-plan
+  {:version 1 :problem-id "m00A00" :revision 0 :parent-digest nil :responses []
+   :nodes [{:id "root" :parent nil :goal "test goal" :definitions [] :conditions []
+            :depends-on [] :warrant {:kind "ordinary" :explanation "definition"}}]})
 
 (defn authority [phase]
   {:job-id (str "job-" (name phase))
    :dispatch/id (str "dispatch-" (name phase))
    :agent-id "f30-role" :frame-id "f30" :problem-id "m00A00"
-   :phase phase :role :controller :submission/token "secret"
+   :phase phase :role (case phase (:pattern-plan :pattern-plan-revision) :student
+                                       :pattern-plan-review :pattern-ta :controller)
+   :submission/token "secret"
+   :v4/teaching (cond-> {:version 1 :exchange-id (teaching/digest "fixture") :revision 0}
+                  (= phase :pattern-plan-review) (assoc :plan teaching-plan)
+                  (= phase :pattern-plan-revision) (assoc :revision 1 :prior-plan teaching-plan))
    :v4/revision-review {:proposal/id (apply str (repeat 64 "a"))
                         :candidate {:sha256 (apply str (repeat 64 "b"))}}})
 
@@ -16,17 +28,26 @@
    :evidence (cond-> (zipmap (sut/evidence-required-by-phase phase)
                              (repeat true))
                (contains? #{:student-attempt-1 :student-attempt-2
-                            :student-attempt-3} phase)
+                            :student-attempt-3 :pattern-plan :pattern-plan-revision} phase)
                (assoc :memory-use {:used-ids []})
+               (= :pattern-plan phase) (assoc :plan teaching-plan)
+               (= :pattern-plan-revision phase)
+               (assoc :plan (assoc teaching-plan :revision 1 :parent-digest (teaching/digest teaching-plan)
+                                   :responses [{:node-id "root" :action "changed" :response "test"}]))
+               (= :pattern-plan-review phase)
+               (assoc :plan-review {:plan-digest (teaching/digest teaching-plan) :verdict "accept" :reason "test"
+                                    :nodes [{:node-id "root" :verdict "suitable" :diagnosis "none"
+                                             :reason "test" :instruction "construct"}]})
                (= :pattern-revision-review phase)
                (assoc :revision-review {:proposal/id (apply str (repeat 64 "a"))
                                         :candidate/sha256 (apply str (repeat 64 "b"))
                                         :verdict :accept :reason "test" :residual "test"}))})
 
 (deftest every-modelled-live-phase-has-an-executable-schema
-  (doseq [phase (keys sut/evidence-required-by-phase)]
-    (is (:ok (sut/validate-payload (authority phase) (payload phase)))
-        (name phase))))
+  (with-redefs [memory/recorded-receipts-for-job (constantly [{:content-matches [] :candidates []}])]
+    (doseq [phase (keys sut/evidence-required-by-phase)]
+      (is (:ok (sut/validate-payload (authority phase) (payload phase)))
+          (name phase)))))
 
 (deftest schema-materializes-nested-null-leaf-evidence-from-validation-authority
   (let [root (.toString (java.nio.file.Files/createTempDirectory

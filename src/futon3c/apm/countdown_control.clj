@@ -19,6 +19,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
+            [futon3c.apm.teaching-exchange :as teaching-exchange]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.live-batch-supervisor :as live-batch-supervisor]
@@ -828,7 +829,9 @@
                :zai-scribe
                (get live-learning-phases/role-for-kind kind))
         state-path (state-path-for (:frame/id unit) phase)
-        existing (live-preflight-runtime/read-state state-path)
+        existing (or (live-preflight-runtime/read-state state-path)
+                     (when-let [saved (teaching-exchange/saved-request state-path)]
+                       {:request saved}))
         response (live-preflight-runtime/http-json
                   "GET" (str "http://localhost:7070/api/alpha/agents/"
                              (:frame/id unit) "-"

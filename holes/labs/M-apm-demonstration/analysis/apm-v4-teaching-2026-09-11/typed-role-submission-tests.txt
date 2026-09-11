@@ -1,0 +1,8 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.apm.typed-role-submission-test
+
+Ran 19 tests containing 90 assertions.
+0 failures, 0 errors.
