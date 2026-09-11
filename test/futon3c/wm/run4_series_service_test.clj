@@ -12,9 +12,55 @@
             [futon3c.transport.http :as http]
             [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-realized-recording :as realized]
+            [futon3c.wm.run4-historical-successor :as historical-successor]
+            [futon3c.wm.run4-series-controller :as controller]
+            [futon3c.wm.run4-series-service :as service]
             [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
             [futon3c.wm.runner-service :as runner]))
+
+(declare delete-tree!)
+
+(deftest persisted-linked-terminal-is-a-blocking-reconciliation-gate
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "linked-reconciliation"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        controller-root (doto (io/file root "controller") .mkdir)
+        _ (spit (io/file controller-root "series.edn") "persisted")
+        link {:repair-id "repair-057" :verification-id "verification-057"
+              :verification-attempt {:kind :runner-execution :id "verify-1"}
+              :successor {:series-id "series-2" :trial-id :trial-2
+                          :attempt-id "attempt-2"}}
+        request {:attempt-id "attempt-2"
+                 :identity {:series-id "series-2" :trial-id :trial-2}}
+        prepared {1 {:admission-request request}}
+        started {:ordinal 1 :click-id "click-2"}
+        calls (atom 0)]
+    (try
+      (with-redefs [controller/read-lifecycle!
+                    (fn [& _] {:trials [{:ordinal 1
+                                         :trial {:trial-id :trial-2}
+                                         :started started
+                                         :terminal {:task-result :succeeded}}]})
+                    historical-successor/resolve-from-durable!
+                    (fn [_]
+                      (if (= 1 (swap! calls inc))
+                        (throw (ex-info "injected publication failure" {}))
+                        {:repair/status :resolved}))]
+        (is (thrown? clojure.lang.ExceptionInfo
+                     (#'service/linked-successor!
+                      {:historical-successor link
+                       :historical-action {:repair-root (.getPath root)}}
+                      {:controller-root (.getPath controller-root)}
+                      "manifest" prepared {})))
+        (is (= {:repair/status :resolved}
+               (#'service/linked-successor!
+                {:historical-successor link
+                 :historical-action {:repair-root (.getPath root)}}
+                {:controller-root (.getPath controller-root)}
+                "manifest" prepared {})))
+        (is (= 2 @calls)))
+      (finally (delete-tree! root)))))
 
 (def token (apply str (repeat 64 "c")))
 (def casting {:author "codex-10" :reviewer "codex-17"
