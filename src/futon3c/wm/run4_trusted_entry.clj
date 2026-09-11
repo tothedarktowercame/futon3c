@@ -227,7 +227,12 @@
               (or (:refusal loaded)
                   (let [applicable (when-let [historical (:historical-action cfg)]
                                      (try
-                                       (historical-action/validate-applicable! historical)
+                                       ;; Existing-start inspection cannot require a fresh action:
+                                       ;; successful admission already changed its disposition.
+                                       ;; The controller rechecks the inspection-only lifecycle
+                                       ;; under its admission lock before any transition.
+                                       (when require-cohort-capacity?
+                                         (historical-action/validate-applicable! historical))
                                        true
                                        (catch clojure.lang.ExceptionInfo _ false)))
                         cohort (when (and (or (not (contains? cfg :historical-action))

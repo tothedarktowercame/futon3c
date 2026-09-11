@@ -290,3 +290,26 @@
                      (:opts prepared) judgment casting)
                     nil
                     (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+
+(deftest existing-inspection-does-not-require-a-new-historical-action
+  ;; The series service sets this internal mode only for an existing start;
+  ;; the controller's inspection-only capability rechecks that lifecycle under lock.
+  ;; A completed admission has moved from open to awaiting-validation.
+  (with-fixture
+    (fn [{:keys [root config]}]
+      (let [calls (atom 0)
+            configured (assoc-in (assoc-in config [:run4 :cohort-preflight!]
+                                             (fn [_ require-capacity?]
+                                               (is (false? require-capacity?))
+                                               {:cohort-id :run4-test :target 2 :remaining 0}))
+                                 [:run4 :historical-action]
+                                 {:repair-root (.getPath root)
+                                  :verification-root (.getPath root)
+                                  :verification-path (.getPath (io/file root "verification.edn"))
+                                  :verification-sha256 (apply str (repeat 64 "b"))})]
+        (with-redefs [historical-action/validate-applicable!
+                      (fn [_] (swap! calls inc)
+                        (throw (ex-info "Previously admitted; no longer open" {})))]
+          (is (:ok (sut/prepare configured auth request
+                                {:require-cohort-capacity? false})))
+          (is (zero? @calls)))))))
