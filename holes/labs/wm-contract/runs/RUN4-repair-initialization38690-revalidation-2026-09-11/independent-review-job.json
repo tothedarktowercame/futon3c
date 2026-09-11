@@ -1,0 +1,118 @@
+{
+  "ok": true,
+  "job": {
+    "caller": "codex-17",
+    "session-id": "zai-local-20260905T105054-280840",
+    "execution": {
+      "executed": true,
+      "tool-events": 2,
+      "command-events": 0
+    },
+    "job-id": "invoke-1789152780470-20240-9bf4213d",
+    "agent-id": "zai-1",
+    "artifact-ref": null,
+    "started-at": "2026-09-11T18:53:01.748158143Z",
+    "events": [
+      {
+        "seq": 1,
+        "type": "accepted",
+        "at": "2026-09-11T18:53:00.470402014Z"
+      },
+      {
+        "seq": 2,
+        "type": "running",
+        "at": "2026-09-11T18:53:01.748176548Z"
+      },
+      {
+        "seq": 3,
+        "type": "prompt",
+        "at": "2026-09-11T18:53:03.075141088Z",
+        "text": "Follow-up to your accepted source review 8b06a821. One question: does the actual captured qualification receipt below support the narrowly reviewed initialization38690 collision claim? NO TEST RUNS, no other agents, no source edits, no searching. Finish within this turn, <=150 words.\n\nDirectory /home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11\nRead qualification-plan.edn and audit-receipt.clj. Run ONLY this exact audit command (it parses/hashes retained output, executes no tests, normally <1 second):\ncd /home/joe/code/futon3c && clojure -M holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/audit-receipt.clj\nThe authoritative producer already ran the single real two-root runner regression, 1 test/12 assertions exit0, no timeout. Six sources pinned, exact finding38690, current F2 HEAD810be2a9. Receipt SHA 05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921. This review is distinct from producing it (author codex-17, reviewer zai-1).\n\nCoordinator also closed your missing excerpt: repair_obligation.clj:216-221 obligation-id prefixes supplied attempt-id; :279-280 record-system-failure! uses it absent explicit repair-id; :297 write-new-or-identical! creates confined <id>.edn. Runner2531 supplies external ID and no repair-id override. Prior source claim remains narrow.\n\nIf the audit and scope are sound, return FULL_LOOP_REVIEW: APPROVE and exactly one line HISTORICAL_VERIFICATION_S \u2026[trimmed]"
+      },
+      {
+        "seq": 4,
+        "type": "tool_use",
+        "at": "2026-09-11T18:53:10.753907066Z",
+        "tools": [
+          "read_file",
+          "read_file"
+        ],
+        "previews": [
+          "read_file /home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/qualification",
+          "read_file /home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/audit-receipt"
+        ],
+        "output": [
+          "{\"ok\":true,\"result\":\"{:schema :wm/historical-qualification-plan-v1\\n :verification-id \\\"repair-initialization38690-revalidation-20260911-v1\\\"\\n :repair-id \\\"repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed\\\"\\n :sources [{:path \\\"/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed.edn\\\" :sha256 \\\"89a55521db658dc04499e4c43f7fde5af49fca632aad8c6311639ccdc16df68e\\\"}\\n{:path \\\"/home/joe/code/futon2/src/futon2/aif/full_loop_cohort.clj\\\" :sha256 \\\"7819b2da811344979355ed9188ccfb2a181d94882bb58cd3c560de282bf4cda7\\\"}\\n{:path \\\"/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj\\\" :sha256 \\\"0b2a8ddc3f3e16b1e7e522c0b818a4ad3627c32734b9005e8419afff4a5a3ea2\\\"}\\n{:path \\\"/home/joe/code/futon2/src/futon2/aif/repair_obligation.clj\\\" :sha256 \\\"7bc42ed3be4bdccf99bb88e485d86e71cef2a781683dbea6c518d4ab91c49dff\\\"}\\n{:path \\\"/home/joe/code/futon2/src/futon2/aif/tripwire.clj\\\" :sha256 \\\"4a1e3424655d7a3aed624c1710a0177edd55ef6acb854a9846103e42c93ddac3\\\"}\\n{:path \\\"/home/joe/code/futon2/test/futon2/aif/full_loop_runner_test.clj\\\" :sha256 \\\"ca173724b82c601964ddabd9dced0637220cf7b2f2593235160b1ccad374b619\\\"}]\\n :checks [{:id :distinct-root-runner-regression :argv [\\\"bash\\\" \\\"-lc\\\" \\\"cd /home/joe/code/futon2 && exec clojure -M:test -m cognitect.test-runner -n futon2.aif.full-loop-runner-test -v futon2.aif.full-loop-runner-test/same-declared-cohort-in-distinct-authority-roots-cannot-alias-findings\\\"] :timeout-ms 120000}]}\"}",
+          "{\"ok\":true,\"result\":\"(require '[clojure.edn :as edn] '[clojure.java.io :as io])\\n(defn sha [s] (format \\\"%064x\\\" (java.math.BigInteger. 1 (.digest (java.security.MessageDigest/getInstance \\\"SHA-256\\\") (.getBytes s \\\"UTF-8\\\")))))\\n(defn read-one [p] (with-open [r (java.io.PushbackReader. (io/reader p))] (let [v (edn/read r)] (assert (= ::end (edn/read {:eof ::end} r))) v)))\\n(def receipt \\\"/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/offline-evidence/repair-initialization38690-revalidation-20260911-v1.qualification.edn\\\")\\n(assert (= \\\"05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921\\\" (sha (slurp receipt))))\\n(let [q (read-one receipt) plan (read-one (get-in q [:manifest :path])) row (first (:checks q))]\\n (assert (= :wm/historical-qualification-output-v1 (:schema q)))\\n (assert (= \\\"repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed\\\" (:repair-id q) (:repair-id plan)))\\n (assert (= (:verification-id q) (:verification-id plan)))\\n (assert (= (get-in q [:manifest :sha256]) (sha (slurp (get-in q [:manifest :path])))))\\n (assert (= (:sources q) (:sources plan)))\\n (doseq [{:keys [path sha256]} (:sources q)] (assert (= sha256 (sha (slurp path)))))\\n (assert (= 1 (count (:checks q))))\\n (assert (= (:checks plan) (mapv #(select-keys % [:id :argv :timeout-ms]) (:checks q))))\\n (assert (= :distinct-root-runner-regression (:id row)))\\n (assert (= 0 (:exit row))) (assert (false? (:timed-out? row)))\\n (doseq [stream [(:stdout row) (:stderr row)]] (assert (= (:sha256 stream) (sha (:utf8 stream)))))\\n (assert (re-find #\\\"Ran 1 tests containing 12 assertions\\\" (get-in row [:stdout :utf8])))\\n (assert (re-find #\\\"0 failures, 0 errors\\\" (get-in row [:stdout :utf8])))\\n (assert (true? (:qualification-passed? q)))\\n (assert (= :not-performed (:independent-review q))) (assert (false? (:repair-admitted? q)))\\n (prn {:audit :passed :sources (count (:sources q)) :checks 1 :tests 1 :assertions 12 :argv (:argv row) :receipt-sha \\\"05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921\\\"}))\"}"
+        ]
+      },
+      {
+        "seq": 5,
+        "type": "tool_use",
+        "at": "2026-09-11T18:53:14.514599075Z",
+        "tools": [
+          "run_shell"
+        ],
+        "previews": [
+          "run_shell cd /home/joe/code/futon3c && clojure -M holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09"
+        ],
+        "output": [
+          "{\"ok\":true,\"result\":{\"exit\":0,\"out\":\"{:audit :passed, :sources 6, :checks 1, :tests 1, :assertions 12, :argv [\\\"bash\\\" \\\"-lc\\\" \\\"cd /home/joe/code/futon2 && exec clojure -M:test -m cognitect.test-runner -n futon2.aif.full-loop-runner-test -v futon2.aif.full-loop-runner-test/same-declared-cohort-in-distinct-authority-roots-cannot-alias-findings\\\"], :receipt-sha \\\"05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921\\\"}\\n\",\"err\":\"\"}}"
+        ]
+      },
+      {
+        "seq": 6,
+        "type": "text",
+        "at": "2026-09-11T18:53:25.655465329Z",
+        "text": "Yes \u2014 the receipt supports the narrowly reviewed claim. Audit executed (exit 0): receipt SHA matches; schema/verification-id/repair-id = exact finding38690; all 6 source pins recompute against current bytes (runner/cohort/repair_obligation shas identical to those I source-reviewed); the single check is the exact two-root runner regression argv, exit 0, not timed out, pinned stdout/stderr hash-consistent showing 1 test / 12 assertions, 0 failures; `:qualification-passed? true`, review `:not-performed`, `:repair-admitted? false` \u2014 matching scope (review distinct from production; I ran no tests). The coordinator's closed excerpt confirms the filename path I flagged as missing: obligation-id prefixes the supplied attempt-id, `record-system-failure!` uses it absent override, and `write-new-or-identical!` writes the confined `<id>.edn`. No defect.\n\nFULL_LOOP_REVIEW: APPROVE\nHISTORICAL_VERIFICATION_SHA256: 05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921"
+      },
+      {
+        "seq": 7,
+        "type": "done",
+        "at": "2026-09-11T18:53:31.049722563Z",
+        "code": null,
+        "message": null
+      },
+      {
+        "seq": 8,
+        "type": "delivery-recorded",
+        "at": "2026-09-11T18:53:34.807124421Z",
+        "status": "delivered",
+        "surface": "bell",
+        "destination": "caller codex-17 via /api/alpha/invoke/jobs/invoke-1789152780470-20240-9bf4213d",
+        "recorded-at": "2026-09-11T18:53:34.805576805Z",
+        "note": "bell-job-ready"
+      }
+    ],
+    "mode": "work",
+    "delivery": {
+      "status": "delivered",
+      "surface": "bell",
+      "destination": "caller codex-17 via /api/alpha/invoke/jobs/invoke-1789152780470-20240-9bf4213d",
+      "recorded-at": "2026-09-11T18:53:34.805576805Z",
+      "note": "bell-job-ready"
+    },
+    "state": "done",
+    "invocation/model": null,
+    "trace/delivery-observation": {
+      "terminal-job-id": "invoke-1789152780470-20240-9bf4213d",
+      "delivery-status": "delivered",
+      "inbox-file-created?": false,
+      "registered-push-performed?": true,
+      "polling-available?": true
+    },
+    "trace-id": null,
+    "result-summary": "Yes \u2014 the receipt supports the narrowly reviewed claim. Audit executed (exit 0): receipt SHA matches; schema/verification-id/repair-id = exact finding38690; all 6 source pins recompute against current bytes (runner/co...",
+    "result": "Yes \u2014 the receipt supports the narrowly reviewed claim. Audit executed (exit 0): receipt SHA matches; schema/verification-id/repair-id = exact finding38690; all 6 source pins recompute against current bytes (runner/cohort/repair_obligation shas identical to those I source-reviewed); the single check is the exact two-root runner regression argv, exit 0, not timed out, pinned stdout/stderr hash-consistent showing 1 test / 12 assertions, 0 failures; `:qualification-passed? true`, review `:not-performed`, `:repair-admitted? false` \u2014 matching scope (review distinct from production; I ran no tests). The coordinator's closed excerpt confirms the filename path I flagged as missing: obligation-id prefixes the supplied attempt-id, `record-system-failure!` uses it absent override, and `write-new-or-identical!` writes the confined `<id>.edn`. No defect.\n\nFULL_LOOP_REVIEW: APPROVE\nHISTORICAL_VERIFICATION_SHA256: 05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921",
+    "auto-bellback": {
+      "sent?": true,
+      "bell-job-id": "auto-bellback-invoke-1789152780470-20240-9bf4213d",
+      "at": "2026-09-11T18:53:31.049690493Z"
+    },
+    "terminal-message": null,
+    "finished-at": "2026-09-11T18:53:31.049690493Z",
+    "created-at": "2026-09-11T18:53:00.470047130Z",
+    "terminal-code": null,
+    "surface": "bell"
+  }
+}

@@ -1,0 +1,37 @@
+{:schema :wm/run4-initialization38690-admission-preparation-v1
+ :status :disabled-awaiting-independent-packet-review :enabled? false
+ :source-provenance {:futon2-head "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
+                     :futon3c-packet-base "351534baa4fe6563f30cd66f26f7af542cb204af"
+                     :verification-source-head "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
+                     :runtime-source-pins
+                     [{:repo :futon2 :path "src/futon2/aif/full_loop_runner.clj" :sha256 "0b2a8ddc3f3e16b1e7e522c0b818a4ad3627c32734b9005e8419afff4a5a3ea2"}
+                     {:repo :futon2 :path "src/futon2/aif/full_loop_cohort.clj" :sha256 "7819b2da811344979355ed9188ccfb2a181d94882bb58cd3c560de282bf4cda7"}
+                     {:repo :futon2 :path "src/futon2/aif/repair_obligation.clj" :sha256 "7bc42ed3be4bdccf99bb88e485d86e71cef2a781683dbea6c518d4ab91c49dff"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_deployment_config.clj" :sha256 "4958fbcf28bc11fce6c41ffca8c68dd50be73110c2c7cb3ea56fd7f8215c5c48"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_historical_action.clj" :sha256 "9048f039fcbdfe55bb6f5010b302b218aed3e5518eee9a4f2c93d149438e2c97"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_historical_verification.clj" :sha256 "903ad022c480a79d959401128da0993c1b5681d58be16a6b164bda3658c84443"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_terminal_evidence.clj" :sha256 "a28a43c4640594eadc836be587af34ece228985e94834013adf0620be584788c"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_historical_successor.clj" :sha256 "71104d450b5996eb3a2d3b62023d484c0321d9d38e97175bac5cd5514e120e92"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_series_queue.clj" :sha256 "e21bc12245d850e319add23b0234ebe0d52349e097efab06be49f1e0c5e359e9"}
+                     {:repo :futon3c :path "src/futon3c/wm/run4_series_controller.clj" :sha256 "0bf68363286328f279fbb9bf7d41d39a5b4ea008072122b07f9c5dbf1c133acd"}
+                     {:repo :futon3c :path "src/futon3c/wm/runner_service.clj" :sha256 "67e66b4ad4028a985057e77eb5701e8ea1e10798ea06cb9f8c4f50f4811885e7"}
+                     {:repo :futon3c :path "test/futon3c/wm/run4_u88_roundtrip_test.clj" :sha256 "6f2f158152be03cc70feedd06787224d06ac9e291085cef2a23d47789881b3a6"}]}
+ :casting {:author "codex-17" :reviewer "zai-1" :repair-reviewer "zai-1"}
+ :repair-id "repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed"
+ :verification {:id "repair-initialization38690-revalidation-20260911-v1"
+                :sha256 "5ecd38dd99fa442e0e45e8995c1ca4d668e60b8a447bb052eab05ff3967ce455"}
+ :packet {:server-config-sha256 "ef99597e5cc9605286c7c9a95fd57bae8dc10f3411dd837fc4324912dd6a00d2"
+          :historical-action-sha256 "3743d4ef95a057ceeb9a196b54fb1ded3e377dc809e389796f338aa191a8e522"
+          :execution-cohort-sha256 "e785a8c04c5dba4009f8891c0e658608bb714bacc982e4ebe2da47754f30ec77"
+          :queue-sha256 "3a8d928262d1eebc08b050ebfdc29371b03cd4bbf8ad67b494a23234eb1556e4"
+          :series-pin-sha256 "e2efe83f21a3dbfbfa29b8fb02a2857d42ed4ae1a3873c3edf8b738ff3c1e505"
+          :task-pin-sha256 "28fbe21400f6f9a79424f2eed828c4854565ef4a15edda0b5c0cf805e9fd2ca4"
+          :run-config-sha256 "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"
+          :cohort-sha256 "9021a90de193945efcf1738b8d38b9c02cee8602f1558ee92a453c058c1bf4e4"}
+ :identities {:series "run4-initialization38690-admission-20260911-v1"
+              :controller-attempt "initialization38690-historical-admission-001"
+              :cohort :run4-initialization38690-admission-20260911-v1 :target 1}
+ :queue {:id "run4-initialization38690-queue-20260911-v1"
+         :visibility-file "/home/joe/run4/initialization38690-admission/queue/visibility.json"}
+ :execution {:status :not-performed :identity nil}
+ :successor-link {:status :unmaterialized} :live-effects :none}

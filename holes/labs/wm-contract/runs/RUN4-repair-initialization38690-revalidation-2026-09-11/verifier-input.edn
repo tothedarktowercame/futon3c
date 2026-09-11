@@ -1,0 +1,28 @@
+{:options
+ {:qualification-sha256
+  "05b65e2b339ca039452c2d47d70c2de459da4c286325c50e5b3229623324f921",
+  :expected-check-ids [:distinct-root-runner-regression],
+  :review-job-id "invoke-1789152780470-20240-9bf4213d",
+  :finding-path
+  "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed.edn",
+  :output-root
+  "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/offline-verification",
+  :verification-id
+  "repair-initialization38690-revalidation-20260911-v1",
+  :source-head "810be2a9a19d70b054d9ef7ceb43a2349b7a923d",
+  :author "codex-17",
+  :last-commit "810be2a9a19d70b054d9ef7ceb43a2349b7a923d",
+  :finding-sha256
+  "89a55521db658dc04499e4c43f7fde5af49fca632aad8c6311639ccdc16df68e",
+  :qualification-root
+  "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/offline-evidence",
+  :qualification-path
+  "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization38690-revalidation-2026-09-11/offline-evidence/repair-initialization38690-revalidation-20260911-v1.qualification.edn",
+  :finding-root
+  "/home/joe/code/futon2/data/wm-repair-obligations/findings",
+  :reviewer "zai-1",
+  :source-repo "/home/joe/code/futon2",
+  :first-commit "8788443d7cf0c806261933e2c68009d84f57819d",
+  :qualification-source-root "/home/joe/code"},
+ :review-sha256
+ "3a8df6590f008b8ae27a48c54bb3d842b625e000c73089108fcc9494c6fb7e31"}
