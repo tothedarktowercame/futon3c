@@ -8,3 +8,23 @@ Run from Futon2: `clojure -M:test ../futon3c/holes/labs/wm-contract/runs/RUN4-qu
 2. Publish a real system finding, move identical bytes to an external disposable file and replace the finding with a symlink. The new identical replay branch accepts it. Strict replay must validate canonical root, parent directories, regular non-symlink file and strict bytes before acknowledgment. No external artifact can authorize a finding in the configured store.
 
 Both reproductions touched disposable roots only. No live repair, capacity, history or runtime changed. Authority repair is not yet accepted; deployment packet repinning remains pending the corrected implementation and independent gates.
+
+## Corrected candidate
+
+Futon2 `3fb144a4` distinguishes key absence with `contains?`: a genuinely
+legacy time-step with no authority key remains version 0, while present nil,
+false, malformed, or foreign authority refuses as
+`:closed-execution-unavailable`. This does not claim that erasing every trace
+of provenance from old-schema evidence is detectable.
+
+System-finding replay now requires a canonical nonsymlink root and findings
+directory, a regular nonsymlink target, exact bytes, and serialized JVM/OS
+publication locking. New publication uses `CREATE_NEW`, forces the file and
+parent directory, and never replaces a conflict. Root, parent-directory, and
+target symlink controls refuse; two concurrent identical publishers both
+return the one immutable record.
+
+The retained reproduction now reports both original cases as typed refusals.
+Focused results: cohort 14/59, repair store 11/43, runner 131/625, tripwire
+33/71, and clj-kondo 0/0. Independent review is still required before live
+loading or packet repinning.
