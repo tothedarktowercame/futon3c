@@ -1,0 +1,129 @@
+{
+  "command": [
+    "journalctl",
+    "--user",
+    "-u",
+    "futon1b-zone.service",
+    "--since",
+    "2026-09-11 04:08:45 UTC",
+    "--until",
+    "2026-09-11 04:15:45 UTC",
+    "--no-pager",
+    "-o",
+    "cat"
+  ],
+  "journal_sha256": "baf78a51bea5cb1d7bcaeda832a16fe79d371eac6f85969a367cda1ed7230eca",
+  "matching_requests": [
+    {
+      "subject_type": "problem",
+      "elapsed_ms": 3176,
+      "trace_id": "evidence-read:21720726-8521-4cb8-90ab-eae06f835b1a"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 35084,
+      "trace_id": "evidence-read:f2340cb9-8518-42b3-a25f-436eedbab226"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 30988,
+      "trace_id": "evidence-read:b379ac3b-a5f9-4c30-90f2-9bce7e150ed2"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 30687,
+      "trace_id": "evidence-read:14a18684-bca6-4663-b5fb-32b5dbca8c57"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 25372,
+      "trace_id": "evidence-read:840eb4f0-ab7a-49b2-83b4-9113edf264ce"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 21703,
+      "trace_id": "evidence-read:f74b4223-1c7c-4832-9c6f-b5e90788578e"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 19859,
+      "trace_id": "evidence-read:fc1afabc-bd53-421c-8326-f90edb21dd45"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 19138,
+      "trace_id": "evidence-read:29c9a723-dab8-4190-8cbf-6d521fb81cde"
+    },
+    {
+      "subject_type": "apm-problem",
+      "elapsed_ms": 18503,
+      "trace_id": "evidence-read:5b130451-f161-43d4-a478-339eb6601001"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 31102,
+      "trace_id": "evidence-read:48f91908-adb3-429c-870e-28e1dcc953d1"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 28632,
+      "trace_id": "evidence-read:ce2d833e-11d7-4cfc-82a6-26c3e50d174d"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 27646,
+      "trace_id": "evidence-read:4b72d2fc-162b-4e2c-9309-4c667de64a16"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 22793,
+      "trace_id": "evidence-read:8ce410a1-7df2-4d31-a501-dc1f8effd1fd"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 22678,
+      "trace_id": "evidence-read:57a35b2d-2e59-41cd-a9c8-eba9735518c4"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 19787,
+      "trace_id": "evidence-read:1fe9e615-d935-4080-aa6e-f67c8dbd5fd7"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 19600,
+      "trace_id": "evidence-read:c5f6b1f0-d351-498a-89a7-60a9452856c6"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 18850,
+      "trace_id": "evidence-read:be9cb608-fae2-4acc-ad76-1f0693f63076"
+    },
+    {
+      "subject_type": "bpm-problem",
+      "elapsed_ms": 10583,
+      "trace_id": "evidence-read:baf8caa8-f302-44e8-b4ef-0919cc9d1f4f"
+    }
+  ],
+  "sum_handler_ms": 406181,
+  "queue_wait_ms": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}
