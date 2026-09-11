@@ -34,11 +34,15 @@
 (defn- make-request [state phase revision previous judgment]
   (let [base (:base-request state) ta? (= phase :pattern-plan-review)
         actor (if ta? (:ta state) (:student state))
-        teaching (cond-> {:version 1 :exchange-id (:exchange-id state) :revision revision}
+        teaching (cond-> {:version 2 :exchange-id (:exchange-id state) :revision revision}
                    (and (not ta?) (nil? (:session-id actor)))
                    (assoc :session-policy :fresh-after-reset
                           :prior-session-id (:student-prior-session state)
                           :other-session-id (get-in state [:ta :session-id]))
+                   (and (not ta?) previous)
+                   (assoc :prior-student-exposure
+                          (mapv #(select-keys % [:job-id :role :session-id :submission-id :search-receipt-ids])
+                                (filter #(= :student (:role %)) (:history state))))
                    previous (assoc (if ta? :plan :prior-plan) previous)
                    judgment (assoc :judgment judgment))
         ;; Only Student-visible inputs travel. No Solver final head, trace or solution.
@@ -91,13 +95,18 @@
                                 (machine/ledger-digest [(dissoc typed :submission/id)]))
                 (plan/payload-valid? request (:payload typed))) :teaching-submission-invalid)
     (when (= :student (:role request))
-      (let [searches (memory/recorded-receipts-for-job job-id)
+      (let [inherited (memory/teaching-inherited-receipts request)
+            _ (need! (:ok inherited) :teaching-exposure-authority-invalid)
+            searches (memory/recorded-receipts-for-job job-id)
             surfaced (into (set (get-in request [:memory-snapshot :accessible-memory-ids]))
-                           (mapcat memory/receipt-surfaced-ids searches))
+                           (concat (mapcat memory/receipt-surfaced-ids searches)
+                                   (mapcat #(memory/gated-receipt-surfaced-ids request :teaching-replay %)
+                                           (:receipts inherited))))
             used (get-in typed [:payload :evidence :memory-use :used-ids])]
         (need! (and (vector? used) (every? surfaced used)
                     (not-any? (set (:shelf/withheld-ids request)) used)) :teaching-memory-use-invalid)))
     {:job-id job-id :role (:role request) :agent-id (:agent-id observed) :session-id (:session-id observed)
+     :search-receipt-ids (mapv :receipt/id (memory/recorded-receipts-for-job job-id))
      :submission-id (:submission/id typed) :evidence (get-in typed [:payload :evidence])}))
 
 (defn- advance [state observation]
@@ -112,7 +121,7 @@
             current (get-in request [:v4/teaching :plan])]
         (cond
           (= "accept" verdict)
-          (let [body {:receipt/type :apm-teaching-exchange :exchange-id (:exchange-id state)
+          (let [body {:receipt/type :apm-teaching-exchange :receipt/version 2 :exchange-id (:exchange-id state)
                       :plan current :plan-digest (plan/digest current)
                       :history (:history state) :mathematics/verified? false}]
             (assoc state :stage :ready :receipt (assoc body :receipt/id (plan/digest body))))
@@ -128,6 +137,7 @@
               :or {http-fn runtime/http-json agency-base "http://127.0.0.1:7070"}}]
   (let [path (state-path phase-path) old (runtime/read-state path)
         config (:v4/teaching-config request)
+        _ (when old (need! (= 2 (:version old)) :teaching-exchange-retirement-required))
         _ (need! (= 1 (:version config)) :teaching-config-invalid)
         _ (need! (and (int? (:max-revisions config)) (<= 0 (:max-revisions config) 2)
                       (pos-int? (:job-budget-ms config)) (<= (:job-budget-ms config) 900000))
@@ -140,12 +150,12 @@
                     (not= (:session-id prior) (:session-id ta))) :teaching-review-not-independent)
         ;; Write the intent BEFORE reset. An interrupted reset needs explicit
         ;; reconciliation; it must never silently reset a new session on replay.
-        (persist! path {:version 1 :stage :initializing :base-request request})
+        (persist! path {:version 2 :stage :initializing :base-request request})
         (need! (fn? prepare-fn) :teaching-preparation-missing)
         (need! (:ok (prepare-fn request)) :teaching-preparation-failed)
         (let [student (actor! http-fn agency-base (:agent-id request) true)]
           (need! (nil? (:session-id student)) :teaching-session-reset-not-observed)
-          (let [state {:version 1 :stage :prepared :base-request request
+          (let [state {:version 2 :stage :prepared :base-request request
                        :exchange-id (plan/digest [(:dispatch/id request) config student ta])
                        :student student :student-prior-session (:session-id prior) :ta ta :history []
                        :max-revisions (:max-revisions config)}
@@ -198,7 +208,20 @@
     (catch Exception e {:ok false :error/code (or (:error/code (ex-data e)) :teaching-io-failed)})))
 
 (defn construction-request [base receipt]
-  (let [body (-> base
+  (let [student (last (filter #(= :student (:role %)) (:history receipt)))
+        _ (need! (= 2 (:receipt/version receipt)) :teaching-exchange-retirement-required)
+        _ (need! (and (= (:agent-id base) (:agent-id student))
+                      (plan/text? (:session-id student))) :teaching-construction-session-missing)
+        body (-> base
                  (dissoc :submission/token :submission/job-id :dispatch/id)
-                 (assoc :v4/teaching-receipt receipt))]
+                 (assoc :v4/teaching-receipt receipt :fresh-session? false
+                        :session-id (:session-id student)))]
     (-> (assoc body :dispatch/id (plan/digest body)) submission/prepare-request)))
+
+(defn construction-session-valid? [request]
+  (let [student (last (filter #(= :student (:role %))
+                             (get-in request [:v4/teaching-receipt :history])))]
+    (and (false? (:fresh-session? request))
+         (plan/text? (:session-id request))
+         (= (:agent-id request) (:agent-id student))
+         (= (:session-id request) (:session-id student)))))

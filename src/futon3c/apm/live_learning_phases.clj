@@ -385,9 +385,7 @@
                audit)))
 
 (defn- teaching-search-receipts [request]
-  (mapcat #(role-memory/recorded-receipts-for-job (:job-id %))
-          (filter #(= :student (:role %))
-                  (get-in request [:v4/teaching-receipt :history]))))
+  (:receipts (role-memory/teaching-inherited-receipts request)))
 
 (defn- controller-memory-use
   [request ticket used-ids]
@@ -500,6 +498,13 @@
                (= :done (:state job))
                (nil? (:typed-submission job))
                (not (string? (:session-id job)))) (conj :fresh-session-id-missing)
+          (and (:v4/teaching-receipt request)
+               (not (and (teaching/construction-session-valid? request)
+                         (= (:session-id request) (:session-id job)))))
+          (conj :teaching-construction-session-mismatch)
+          (and (:v4/teaching-receipt request)
+               (not (:ok (role-memory/teaching-inherited-receipts request))))
+          (conj :teaching-exposure-authority-invalid)
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)
           (and (= :student-attempt kind)
@@ -1306,7 +1311,16 @@
         announced))
     :activate-fn
     (fn [req ticket]
-      (let [prepared (prepare-student-workspace! req workspace-reset-fn)
+      (let [session-check (when (:v4/teaching-receipt req)
+                            (runtime/http-json "GET" (str agency-base "/api/alpha/agents/" (:agent-id req)) nil))
+            preserved? (or (nil? (:v4/teaching-receipt req))
+                           (and (teaching/construction-session-valid? req)
+                                (= 200 (:http/status session-check)) (:ok session-check)
+                                (= (:agent-id req) (:agent-id session-check))
+                                (= (:session-id req) (get-in session-check [:agent :session-id]))))
+            prepared (if preserved?
+                       (prepare-student-workspace! req workspace-reset-fn)
+                       {:ok false :error/code :teaching-construction-session-mismatch})
             reset-response (when (and (:ok prepared) (:fresh-session? req))
                              (runtime/http-json
                               "POST" (str agency-base "/api/alpha/agents/"

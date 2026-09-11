@@ -7,7 +7,9 @@
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-learning-phases :as learning]
-            [futon3c.apm.role-memory-search :as memory])
+            [futon3c.apm.role-memory-search :as memory]
+            [futon3c.apm.live-job-driver :as driver]
+            [futon3c.apm.job-port :as port])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -179,7 +181,8 @@
   (let [called (atom []) base {:dispatch/type :student-attempt :agent-id "student"
                                :frame-id "f" :problem-id "p" :phase :student-attempt-1
                                :v4/teaching-config {:version 1}}
-        receipt {:plan initial-plan :receipt/id "fixture-receipt"}]
+        receipt {:plan initial-plan :receipt/version 2 :receipt/id "fixture-receipt"
+                 :history [{:role :student :agent-id "student" :session-id "s"}]}]
     (with-redefs [sut/saved-request (constantly base)
                   sut/step! (constantly {:ok true :status :awaiting-terminal})
                   learning/run-construction! #(do (swap! called conj %) {:ok true :status :fixture-construction})]
@@ -202,7 +205,8 @@
 (deftest plan-use-is-required-before-construction-submission-is-immutable
   (with-fixture
     (fn [{:keys [opts]}]
-      (let [r (-> (sut/construction-request (:request opts) {:plan initial-plan}) submission/with-job-authority)
+      (let [r (-> (sut/construction-request (:request opts) {:plan initial-plan :receipt/version 2
+                                                       :history [{:role :student :agent-id "student" :session-id "s"}]}) submission/with-job-authority)
             id (:submission/job-id r)
             payload {:command-own-exit 0 :outcome "complete" :failure-account []
                      :evidence {:memory-use {:used-ids []}}}]
@@ -222,3 +226,83 @@
         (is (= :teaching-io-failed (:error/code (sut/step! failed))))
         (is (= :teaching-initialization-reconciliation-required (:error/code (sut/step! opts))))
         (is (= 1 @prepares))))))
+
+(defn planning-search! [opts path jobs]
+  (sut/step! opts) (dispatch! opts)
+  (let [r (:request (current path))]
+    (binding [memory/*search-fn* (fn [& _] {:content-matches [{:memory/id "plan-only" :memory/body "planning body"}]
+                                          :candidates [] :index-as-of "fixture"})]
+      (is (:ok (memory/search! (:submission/job-id r) (:submission/token r) "planning-only query" 5)))))
+  (submit! path jobs {:plan initial-plan :memory-use {:used-ids ["plan-only"]}})
+  (is (:ok (sut/step! opts)))
+  (dispatch! opts))
+
+(deftest actual-construction-activation-preserves-session-and-refuses-drift-before-effects
+  (with-fixture
+    (fn [{:keys [opts path jobs sessions]}]
+      (let [opts (update opts :request assoc :fresh-session? true :shelf/holdout nil :shelf/withheld-ids [])]
+        (planning-search! opts path jobs)
+        (submit! path jobs {:plan-review (judgment initial-plan "accept")})
+        (sut/step! opts)
+        (let [construction (sut/construction-request (:request opts) (:receipt (sut/step! opts)))
+              resets (atom 0) workspace-resets (atom 0) activations (atom 0)
+              activate (fn [r]
+                         (learning/run-construction! {:request r :state-path path
+                           :workspace-reset-fn (fn [_] (swap! workspace-resets inc) {:ok true})}))]
+          (is (= "fresh-student-session" (:session-id construction)))
+          (is (false? (:fresh-session? construction)))
+          (with-redefs [driver/drive! (fn [inputs] ((:activate-fn inputs) (:request inputs) {:job-id "construction"}))
+                        runtime/http-json (fn [method _ _]
+                                            (if (= "GET" method)
+                                              {:ok true :http/status 200 :agent-id "student"
+                                               :agent {:session-id (@sessions "student")}}
+                                              (do (swap! resets inc) {:ok true :http/status 200})))
+                        port/activate! (fn [_ _] (swap! activations inc) {:ok true})]
+            (is (:ok (activate construction)))
+            (is (= :teaching-construction-session-mismatch
+                   (:error/code (activate (assoc construction :fresh-session? true)))))
+            (swap! sessions assoc "student" "different-session")
+            (is (= :teaching-construction-session-mismatch (:error/code (activate construction))))
+            (is (= [0 0 1] [@resets @workspace-resets @activations])))
+          (let [job {:job-id "construction" :agent-id "student" :session-id "fresh-student-session" :state :done
+                     :report {:frame-id (:frame-id construction) :problem-id (:problem-id construction)
+                              :command-own-exit 0 :memory-use {:used-ids ["plan-only"]}}}]
+            (is (:ok (learning/validate-terminal construction {:job-id "construction"} job)))
+            (is (some #{:teaching-construction-session-mismatch}
+                      (:findings (learning/validate-terminal construction {:job-id "construction"}
+                                                             (assoc job :session-id "different-session")))))))))))
+
+(deftest revision-inherits-only-authenticated-prior-student-reads-and-reapplies-gates
+  (with-fixture
+    (fn [{:keys [opts path jobs]}]
+      (let [opts (update opts :request assoc :shelf/holdout nil :shelf/withheld-ids [])]
+        (planning-search! opts path jobs)
+        (submit! path jobs {:plan-review (judgment initial-plan "revise")})
+        (sut/step! opts) (dispatch! opts)
+        (let [r (:request (current path))
+              revised (assoc initial-plan :revision 1 :parent-digest (plan/digest initial-plan)
+                             :responses [{:node-id "root" :action "changed" :response "Refined"}])
+              payload {:command-own-exit 0 :outcome "complete" :failure-account []
+                       :evidence {:plan revised :memory-use {:used-ids ["plan-only"]}}}
+              auth (submission/authority r {:job-id (:submission/job-id r)})]
+          (is (:ok (submission/validate-payload auth payload)))
+          (is (false? (:ok (submission/validate-payload (assoc auth :shelf/holdout :same-problem
+                                                                  :shelf/withheld-ids ["plan-only"]) payload))))
+          (doseq [bad [(assoc auth :session-id "other-session")
+                       (assoc-in auth [:v4/teaching :prior-student-exposure 0 :submission-id] "forged")
+                       (assoc-in auth [:v4/teaching :prior-student-exposure 0 :search-receipt-ids]
+                                 [(apply str (repeat 64 "a"))])]]
+            (is (false? (:ok (submission/validate-payload bad payload)))))
+          (submit! path jobs (:evidence payload))
+          (is (:ok (sut/step! opts)))
+          (is (= :pattern-plan-review (get-in (current path) [:request :phase]))))))))
+
+(deftest old-exchange-journal-requires-explicit-retirement-without-effects
+  (with-fixture
+    (fn [{:keys [opts path prepares calls]}]
+      (let [old {:version 1 :stage :ready :base-request (:request opts) :receipt {:historical true}}]
+        (runtime/atomic-persist! (sut/state-path path) old)
+        (is (= :teaching-exchange-retirement-required (:error/code (sut/step! opts))))
+        (is (= old (current path)))
+        (is (zero? @prepares))
+        (is (empty? @calls))))))

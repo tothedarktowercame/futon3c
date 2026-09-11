@@ -329,10 +329,13 @@
   (let [receipts ((requiring-resolve
                    'futon3c.apm.role-memory-search/recorded-receipts-for-job) (:job-id auth))
         ids-fn (requiring-resolve 'futon3c.apm.role-memory-search/receipt-surfaced-ids)
+        inherited ((requiring-resolve 'futon3c.apm.role-memory-search/teaching-inherited-receipts) auth)
+        gated-ids (requiring-resolve 'futon3c.apm.role-memory-search/gated-receipt-surfaced-ids)
         surfaced (into (set (get-in auth [:memory-snapshot :accessible-memory-ids]))
-                       (mapcat ids-fn receipts))
+                       (concat (mapcat ids-fn receipts)
+                               (mapcat #(gated-ids auth :teaching-replay %) (:receipts inherited))))
         used (get-in payload [:evidence :memory-use :used-ids])]
-    (and (seq receipts) (vector? used) (every? surfaced used)
+    (and (:ok inherited) (seq receipts) (vector? used) (every? surfaced used)
          (not-any? (set (:shelf/withheld-ids auth)) used))))
 
 (defn validate-payload [auth payload]

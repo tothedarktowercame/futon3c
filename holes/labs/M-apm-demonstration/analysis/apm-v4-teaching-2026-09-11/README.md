@@ -102,3 +102,40 @@ particular `coined_pattern/publish!` publishes **proposed** entities; it is not 
 compare-and-publish operation for reviewed file revisions and is not substituted
 for one here. The canonical library owner and all mutation paths need a common
 revision boundary before automatic replacement is safe.
+
+## Independent review repairs: session continuity and prior exposure
+
+Review job `invoke-1789157187595-20274-b5588f36` found that construction reset the
+Student while crediting planning-session searches (P1), and that revisions did
+not inherit earlier searches from their retained session (P2).
+
+Construction now sets `:fresh-session? false` and binds `:session-id` to the
+last executed Student planning turn. The actual construction activation callback
+checks that exact registered session before any workspace reset or activation.
+Terminal validation also checks the executed session. A repair requesting a
+fresh session is refused under this authority: it needs explicit redelivery and
+new authority, rather than credit for material the new session did not receive.
+
+Each collected planning turn now captures exact search-receipt IDs. The next
+revision's immutable authority names prior Student jobs, executed sessions,
+submission digests and those receipt IDs. Resolution checks the actual registered
+submission, content digest, same actor/frame/problem/exchange/session, and exact
+search records. Depositor/holdout gates are reapplied. TA-private searches and
+searches added to an old job after its capture are not inherited. Both typed
+admission and terminal collection use this verified ancestry.
+
+The teaching exchange journal and authority are now version 2 (plan schema and
+configuration remain version 1). Old version-1 journals require explicit
+retirement; they are not silently upgraded to exposure guarantees they never
+recorded. The regression verifies refusal before effects with the old journal
+unchanged. This is a retirement requirement, not an automatic retirement action.
+
+The new tests call the real construction activation callback and verify zero
+workspace/session resets, refusal before activation on drift, and terminal
+rejection of old-memory use from another session. Revision tests admit an
+actually served prior memory after a new empty search, and reject changed
+sessions, forged submissions, missing search receipts and withheld content.
+
+Executed validation now passes 165 tests / 851 assertions across the six
+namespaces in `validation.json`. Independent confirmation of these repairs is
+pending. No V4 code has been loaded into a shared JVM or used for a live trial.

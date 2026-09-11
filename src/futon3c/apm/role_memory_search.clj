@@ -343,3 +343,53 @@
        :unaccounted-pattern-ids unaccounted}
       {:ok true :discovered-pattern-ids discovered
        :proposed-pattern-ids proposed})))
+
+(defn teaching-inherited-receipts
+  "Resolve only controller-bound prior Student reads from the same executed
+  session and exchange. Later searches and TA-private searches are not inherited."
+  [auth]
+  (try
+    (let [exchange (or (get-in auth [:v4/teaching :exchange-id])
+                       (get-in auth [:v4/teaching-receipt :exchange-id]))
+          refs (or (get-in auth [:v4/teaching :prior-student-exposure])
+                   (when (:v4/teaching-receipt auth)
+                     (filterv #(= :student (:role %))
+                              (get-in auth [:v4/teaching-receipt :history])))
+                   [])
+          session (:session-id auth)
+          receipts
+          (mapcat
+           (fn [ref]
+             (let [job-id (:job-id ref) typed (submission/submitted job-id)
+                   prior (:authority typed)
+                   checked (submission/authenticated-completion prior {:job-id job-id})
+                   ids (:search-receipt-ids ref)]
+               (when-not (and (string? session) (seq session)
+                              (= session (:session-id ref)) (= :student (:role prior))
+                              (= (:agent-id auth) (:agent-id prior))
+                              (= (:frame-id auth) (:frame-id prior))
+                              (= (:problem-id auth) (:problem-id prior))
+                              (= 2 (get-in prior [:v4/teaching :version]))
+                              (= exchange (get-in prior [:v4/teaching :exchange-id]))
+                              (or (= session (:session-id prior))
+                                  (and (= :fresh-after-reset (get-in prior [:v4/teaching :session-policy]))
+                                       (not= session (get-in prior [:v4/teaching :prior-session-id]))
+                                       (not= session (get-in prior [:v4/teaching :other-session-id]))))
+                              (:ok checked) (= typed (:submission checked))
+                              (= (:submission-id ref) (:submission/id typed)
+                                 (machine/ledger-digest [(dissoc typed :submission/id)]))
+                              (vector? ids) (= (count ids) (count (set ids))))
+                 (throw (ex-info "Teaching ancestry mismatch" {})))
+               (mapv (fn [id]
+                       (when-not (and (string? id) (re-matches #"[0-9a-f]{64}" id))
+                         (throw (ex-info "Invalid search receipt ID" {})))
+                       (let [r (edn/read-string (slurp (receipt-path id)))]
+                         (when-not (and (= id (:receipt/id r)
+                                          (machine/ledger-digest [(dissoc r :receipt/id)]))
+                                        (= job-id (:job-id r))
+                                        (= (:dispatch/id prior) (:dispatch/id r))
+                                        (= (:agent-id prior) (:agent-id r)))
+                           (throw (ex-info "Teaching search receipt mismatch" {})))
+                         r)) ids))) refs)]
+      {:ok true :receipts (vec receipts)})
+    (catch Exception _ {:ok false :error/code :teaching-exposure-authority-invalid})))

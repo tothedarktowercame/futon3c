@@ -101,7 +101,7 @@
                        (text? (:reason %))) nodes))))
 
 (defn payload-valid? [auth payload]
-  (and (= 1 (get-in auth [:v4/teaching :version]))
+  (and (= 2 (get-in auth [:v4/teaching :version]))
        (sha? (get-in auth [:v4/teaching :exchange-id]))
        (= (if (= :pattern-plan-review (:phase auth)) :pattern-ta :student) (:role auth))
        (= 0 (:command-own-exit payload))

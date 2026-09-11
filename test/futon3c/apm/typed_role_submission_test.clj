@@ -17,7 +17,7 @@
    :phase phase :role (case phase (:pattern-plan :pattern-plan-revision) :student
                                        :pattern-plan-review :pattern-ta :controller)
    :submission/token "secret"
-   :v4/teaching (cond-> {:version 1 :exchange-id (teaching/digest "fixture") :revision 0}
+   :v4/teaching (cond-> {:version 2 :exchange-id (teaching/digest "fixture") :revision 0}
                   (= phase :pattern-plan-review) (assoc :plan teaching-plan)
                   (= phase :pattern-plan-revision) (assoc :revision 1 :prior-plan teaching-plan))
    :v4/revision-review {:proposal/id (apply str (repeat 64 "a"))
