@@ -1,0 +1,6 @@
+{:schema :wm/run4-execution-cohort-binding-v1 :enabled? false
+ :preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/authority/holes/labs/wm-contract/runs/RUN4-U88-codex20-v2-2026-09-11/cohort.edn"
+ :data-root "/home/joe/run4/U88-codex20-v2-20260911/cohort"
+ :cohort-id :run4-u88-codex20-20260911-v2
+ :sha256 "98dd187b1f2ff840926fabcb071205bb798aa5b4885fa7636a64609028747d93"
+ :target 1 :activation :not-performed}

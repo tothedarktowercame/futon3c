@@ -1,0 +1,83 @@
+{:machine-evolution
+ {:allowed? true,
+  :rule
+  "Normal machine development may continue during collection; it never permits dropping, replacing, or relabelling an opportunity.",
+  :per-attempt-provenance
+  [:semantic-epoch
+   :git-sha
+   :git-dirty?
+   :resolved-mode-flags
+   :configuration-digest],
+  :epoch-boundary
+  "Fresh U88 task cohort: Codex-20 author and Zai-1 reviewer. No pooling with prior failed attempts or historical admissions.",
+  :analysis
+  "Report attempts chronologically and stratified by semantic epoch; do not pool across an undocumented semantic boundary."},
+ :protocol/version 4,
+ :purpose
+ "One U88 task opportunity with Codex-20 author and Zai-1 independent reviewer. Preserve stop-line precedence; task success requires actual ordinary build, review, grounding and terminal evidence.",
+ :authority
+ "Joe explicitly authorized the next mission with Codex-20 inside the run. This template remains disabled until server installation; prior capacities and receipts remain unchanged.",
+ :checkpoint-contract
+ {:closed
+  [:outcome :grounded? :artifact-only? :duration-ms :resource-use],
+  :adjudication [:before :after :witness :build-match :dial],
+  :construction
+  [:mission :cascade :sorries :wiring :patterns :deposit],
+  :cell-shape
+  "Every checkpoint payload is either {:judgment ... :ground ...} or {:sorry {:kind keyword ...}}.",
+  :time-step
+  [:opportunity-id
+   :trigger
+   :machine-state
+   :agent-roster
+   :code-state
+   :semantic-epoch],
+  :dispatch [:agent :availability :job-id :prompt-ref],
+  :build
+  [:artifacts
+   :generated-code
+   :commits
+   :patterns-used
+   :inline-improvements
+   :validation],
+  :selection
+  [:selected-mission
+   :selected-action
+   :ranked-candidates
+   :selection-reasons],
+  :revision-note
+  "A revision round nests inside the :build payload as :revision {:round 2 :commits [...] :review {...}} with both review records under :reviews; checkpoint order and schema unchanged from protocol 4."},
+ :casting
+ {:author "codex-20", :reviewer "zai-1", :repair-reviewer "zai-1"},
+ :grounded-success
+ {:outcome :grounded-change,
+  :requires
+  [:independent-before-witness
+   :independent-after-witness
+   :resolved-adjudication
+   :dial-moved],
+  :artifact-only-counts? false},
+ :required-before-close
+ #{:adjudication :construction :dispatch :build :selection},
+ :analysis
+ {:claim
+  "Observe actual U88 task execution and retain its outcome. Historical repair resolution requires a separate strict durable successor join.",
+  :denominator
+  "Every admitted opportunity in this cohort, including unsuccessful outcomes."},
+ :status :draft,
+ :checkpoint-order
+ [:time-step
+  :selection
+  :construction
+  :dispatch
+  :build
+  :adjudication
+  :closed],
+ :predecessor-evidence
+ {:repair-id "repair-initialization-38690d22-879c-47ab-a72a-6aaf2cce85fa-initialization-failed",
+  :counts-in-this-cohort? false,
+  :reason "Immutable open stop-line qualified independently; no prior execution counts in this cohort."},
+ :allowed-triggers #{:duree-click-continuous :duree-click-on-demand},
+ :stopping-rule {:kind :fixed-attempt-count, :target 1},
+ :registered-on "2026-09-11",
+ :cohort/id :run4-u88-codex20-20260911-v2}
