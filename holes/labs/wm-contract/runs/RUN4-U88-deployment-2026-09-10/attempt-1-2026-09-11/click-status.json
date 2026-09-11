@@ -1,0 +1,33 @@
+{
+  "running?": false,
+  "click-id": "wm-click-560a7b67-0f29-4696-b062-66a84ea049a7",
+  "phase": null,
+  "attempt-id": "cohort-complete-c09ceee2-6477-401c-917c-154c35226304",
+  "started-at": "2026-09-11T01:47:54.292367962Z",
+  "last-result": {
+    "run-binding": "/home/joe/run4/U88/bindings/click-run-binding-wm-click-560a7b67-0f29-4696-b062-66a84ea049a7.edn",
+    "click-id": "wm-click-560a7b67-0f29-4696-b062-66a84ea049a7",
+    "attempt-id": "cohort-complete-c09ceee2-6477-401c-917c-154c35226304",
+    "outcome": "cohort-complete",
+    "binding-durability": "confirmed",
+    "binding-status": "unavailable",
+    "run-record-absence": "runner-did-not-observe-topology-route",
+    "run-id-observation": {
+      "status": "present",
+      "source": "runner-return",
+      "value": "a0f966a3-08ac-4991-961f-3494b2736306"
+    },
+    "run-record-status": "absent"
+  },
+  "registry-publication": {
+    "status": "published",
+    "stage": "close"
+  },
+  "serving-runner-code": {
+    "schema": 1,
+    "required-file": "src/futon2/aif/full_loop_runner.clj",
+    "availability": "unavailable",
+    "reason": "not-recorded-in-this-process-image",
+    "identity": null
+  }
+}
