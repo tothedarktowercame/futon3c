@@ -78,7 +78,9 @@
     :shelf/holdout :shelf/withheld-ids
     ;; Preregistered Solver exposure is immutable dispatch authority. The
     ;; later observation may say which authorized ids were used, never add ids.
-    :solver-shelf-canary})
+    :solver-shelf-canary
+    ;; V4 outer-loop reviews bind exact candidate bytes before activation.
+    :v4/revision-review})
 
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
@@ -100,6 +102,8 @@
    ;; The downstream promotion validators distinguish the Solver-mining and
    ;; deposit forms; the common wrapper is deterministic for both.
    :promote-solver {}
+   :pattern-revision-review {:revision-review {:proposal/id nil :candidate/sha256 nil
+                                               :verdict nil :reason nil :residual nil}}
    :promotion-review {:candidate-set-digest nil :base-problem-blob nil
                       :open-residuals nil :reviews nil}
    :student-attempt-1 {:memory-use {:used-ids nil}}
@@ -295,6 +299,19 @@
         (atomic-write! (record-path job-id) record)
         {:ok true :status :registered :authority auth}))))
 
+(defn- revision-review-valid? [auth payload]
+  (let [review (get-in payload [:evidence :revision-review])
+        pin (:v4/revision-review auth)
+        sha? #(and (string? %) (re-matches #"[0-9a-f]{64}" %))
+        text? #(and (string? %) (not (str/blank? %)))]
+    (and (map? review)
+         (sha? (:proposal/id review))
+         (= (:proposal/id pin) (:proposal/id review))
+         (sha? (:candidate/sha256 review))
+         (= (get-in pin [:candidate :sha256]) (:candidate/sha256 review))
+         (contains? #{:accept :reject :cannot-judge} (wire-keyword (:verdict review)))
+         (text? (:reason review)) (text? (:residual review)))))
+
 (defn validate-payload [auth payload]
   (if-not (map? payload)
     {:ok false :error/code :role-submission-payload-invalid
@@ -328,6 +345,9 @@
         (->> generated-contract/required-submission-schemas
              :student-memory-use :role-authored-fields (map keyword) set)
         findings (cond-> []
+                   (and (= :pattern-revision-review (:phase auth))
+                        (not (revision-review-valid? auth payload)))
+                   (conj :pattern-revision-review-invalid)
                    (nil? evidence-required) (conj :phase-schema-unknown)
                    (seq (set/intersection authority-fields (set (keys payload))))
                    (conj :authority-field-supplied-by-agent)
