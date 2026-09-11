@@ -252,7 +252,14 @@
                        (:controller-root series) manifest-text @prepared)
             observation (visibility/observe
                          (:controller-root series) manifest-text terminal-port
-                         (str (java.time.Instant/now)) lifecycle)]
+                         (str (java.time.Instant/now)) lifecycle
+                         (fn [started]
+                           (let [prepared-trial (get @prepared (:ordinal started))]
+                             (when-not prepared-trial
+                               (refuse! :run4-series-prepared-trial-missing))
+                             (historical/read-bundle!
+                              evidence-roots (:admission-request prepared-trial)
+                              started))))]
         (visibility/publish! (io/file (:visibility-root series) "run-visibility.json")
                              observation)))
     (assoc result :run4/series true)))

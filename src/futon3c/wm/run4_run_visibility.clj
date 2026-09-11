@@ -75,7 +75,61 @@
       (refuse! :invalid-terminal {:ordinal (:ordinal trial)}))
     v))
 
-(defn- trial-view [manifest manifest-sha root terminal-evidence observed-at trial lifecycle-row]
+(defn- historical-view!
+  [bundle manifest trial started]
+  (let [projection (:projection bundle)
+        requested (:requested-pin projection)
+        repair (:repair projection)
+        casting (get-in bundle [:identity :casting])]
+    (when-not
+     (and (= :wm/run4-historical-admission-bundle-v1 (:schema bundle))
+          (= {:task-result :unknown :repair-status :awaiting-validation
+              :infrastructure :unknown :production-successor-required? true}
+             (:classification bundle))
+          (= (select-keys (:identity bundle) [:series-id :trial-id :pin-sha256])
+             {:series-id (:series-id manifest) :trial-id (:trial-id trial)
+              :pin-sha256 (:pin-sha256 trial)})
+          (= (:casting manifest) casting)
+          (= :authenticated-not-enacted (:status requested))
+          (= (:identity bundle) (:identity requested))
+          (= (:click-id started) (:click/id projection))
+          (= (:click-id started) (get-in bundle [:started :click-id]))
+          (nonblank? (:run/id projection))
+          (nonblank? (:controller-attempt/id projection))
+          (nonblank? (:runner-attempt/id projection))
+          (some? (get-in projection [:cohort :cohort-id]))
+          (nonblank? (:id repair))
+          (= :awaiting-validation (:status repair))
+          (nonblank? (:verification-id repair))
+          (false? (:resolved? repair))
+          (true? (:production-successor-required? repair))
+          (every? nonblank? ((juxt :author :reviewer :repair-reviewer) casting))
+          (not= (:author casting) (:reviewer casting))
+          (not= (:author casting) (:repair-reviewer casting)))
+      (refuse! :invalid-historical-evidence {:ordinal (:ordinal trial)}))
+    {:stage "review" :result "pending"
+     :historical_execution
+     {:kind "historical-repair-verification"
+      :status "completed"
+      :resolution_status "awaiting-successor-validation"
+      :click_id (:click/id projection)
+      :run_id (:run/id projection)
+      :controller_attempt_id (:controller-attempt/id projection)
+      :runner_attempt_id (:runner-attempt/id projection)
+      :cohort_id (str (get-in projection [:cohort :cohort-id]))
+      :repair_id (:id repair)
+      :verification_id (:verification-id repair)}
+     :requested_task {:trial_id (str (:trial-id trial))
+                      :status "authenticated-not-enacted"}
+     :actual_action {:type "revalidate-historical-repair"
+                     :repair_id (:id repair)}
+     :assigned_roles {:author (:author casting)
+                      :reviewer (:reviewer casting)
+                      :repair_reviewer (:repair-reviewer casting)
+                      :active_workers []}}))
+
+(defn- trial-view [manifest manifest-sha root terminal-evidence historical-evidence
+                   observed-at trial lifecycle-row]
   (let [prefix (format "%03d" (:ordinal trial))
         started (or (:started lifecycle-row)
                     (some-> (parse-one-file (io/file root (str prefix "-started.edn")) :started)
@@ -83,7 +137,10 @@
         terminal (or (:terminal lifecycle-row)
                      (some-> (parse-one-file (io/file root (str prefix "-terminal.edn")) :terminal)
                              (terminal! manifest manifest-sha trial)))
-        evidence (when started (terminal-evidence started))
+        historical (when (and started historical-evidence)
+                     (some-> (historical-evidence started)
+                             (historical-view! manifest trial started)))
+        evidence (when (and started (nil? historical)) (terminal-evidence started))
         _ (when (and terminal (not= :not-attempted (:task-result terminal))
                      (not= (select-keys terminal [:task-result :infrastructure :evidence-id]) evidence))
             (refuse! :terminal-evidence-conflict {:ordinal (:ordinal trial)}))
@@ -99,21 +156,27 @@
           (= :failed (:task-result evidence)) ["failed" "failed" nil]
           (= :blocked (:task-result evidence)) ["blocked" "blocked" "unsafe infrastructure"]
           terminal (refuse! :terminal-without-authoritative-evidence {:ordinal (:ordinal trial)})
+          historical ["review" "pending" nil]
           evidence ["review" "pending" nil]
           started ["working" "pending" nil]
           :else ["planned" "pending" nil])]
     (cond-> {:trial_id (str (:trial-id trial)) :stage stage :updated_at observed-at
-             :worker (get-in manifest [:casting :author])
-             :reviewer (get-in manifest [:casting :reviewer]) :result result}
+             :result result}
+      (nil? historical) (assoc :worker (get-in manifest [:casting :author])
+                               :reviewer (get-in manifest [:casting :reviewer]))
+      historical (merge historical)
       reason (assoc :blocked_reason reason))))
 
 (defn observe
   "Return nil when no enacted series-open evidence exists. MANIFEST-TEXT and its
   digest are frozen authority; TERMINAL-EVIDENCE must be the strict joined port."
   ([root manifest-text terminal-evidence observed-at]
-   (observe root manifest-text terminal-evidence observed-at nil))
+   (observe root manifest-text terminal-evidence observed-at nil nil))
   ([root manifest-text terminal-evidence observed-at lifecycle]
+   (observe root manifest-text terminal-evidence observed-at lifecycle nil))
+  ([root manifest-text terminal-evidence observed-at lifecycle historical-evidence]
   (when-not (and (string? root) (string? manifest-text) (fn? terminal-evidence)
+                 (or (nil? historical-evidence) (fn? historical-evidence))
                  (instant? observed-at))
     (refuse! :invalid-input))
   (let [manifest (parse-one-text manifest-text :manifest)
@@ -132,7 +195,8 @@
                        [(:series-id lifecycle) (:manifest-sha256 lifecycle)]))
         (refuse! :lifecycle-identity-mismatch))
       (let [rows (into {} (map (juxt :ordinal identity) (:trials lifecycle)))
-            trials (mapv #(trial-view manifest manifest-sha root terminal-evidence observed-at %
+            trials (mapv #(trial-view manifest manifest-sha root terminal-evidence
+                                     historical-evidence observed-at %
                                      (get rows (:ordinal %)))
                          (:trials manifest))
             stages (set (map :stage trials))
@@ -149,6 +213,10 @@
                  :worker (get-in manifest [:casting :author])
                  :reviewer (get-in manifest [:casting :reviewer])
                  :result result :trials trials}
+          (some :historical_execution trials)
+          (-> (dissoc :worker :reviewer)
+              (assoc :assigned_roles (get-in (first (filter :historical_execution trials))
+                                             [:assigned_roles])))
           reason (assoc :blocked_reason reason)))))))
 
 (defn publish!
