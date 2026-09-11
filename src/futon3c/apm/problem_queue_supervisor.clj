@@ -463,12 +463,70 @@
   (cond
     (not (valid-state? state))
     {:ok false :error/code :problem-queue-state-invalid}
+    (:store-read/hold state)
+    {:ok false :error/code :store-read-repair-required}
     (not= :paused (:status state))
     {:ok false :error/code :problem-queue-not-paused}
     (some? (:active state))
     {:ok false :error/code :problem-queue-paused-active-frame-invalid}
     :else
     {:ok true :state (addressed (dissoc state :status))}))
+
+(defn release-store-read-hold
+  "Trusted operator boundary after inspecting repair and validation artifacts.
+  Records the operator's evidence; does not authenticate a claimed review or
+  infer repair from a successful bell. Normal resume-paused cannot bypass it."
+  [state receipt]
+  (let [hold (:store-read/hold state)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (not (and hold (= :paused (:status state)) (nil? (:active state))))
+      {:ok false :error/code :store-read-hold-required}
+      (not (and (= (:hold/id hold) (:hold/id receipt))
+                (= :verified (:repair/status receipt))
+                (string? (:repair/commit receipt))
+                (re-matches #"[0-9a-f]{40}" (:repair/commit receipt))
+                (seq (:validation/evidence receipt))
+                (every? #(and (string? %) (seq %)) (:validation/evidence receipt))))
+      {:ok false :error/code :store-read-repair-receipt-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (dissoc :store-read/hold)
+                   (assoc :status (:resume/status hold))
+                   (update :store-read/repairs (fnil conj [])
+                           {:hold hold :repair receipt})))})))
+
+(defn- dispatch-store-repair [state providers]
+  (let [hold (:store-read/hold state)]
+    (if (:dispatch/id hold)
+      {:ok true :status :batch-paused :state state :pause/reason :store-read-warnings}
+      (let [dispatch (:dispatch-store-repair-fn providers)
+            result (if dispatch (dispatch hold)
+                       {:ok false :error/code :store-repair-provider-missing})]
+        (if-not (:ok result)
+          (assoc result :state state :pause/reason :store-read-warnings)
+          (let [updated (addressed
+                         (update state :store-read/hold merge
+                                 (select-keys result [:dispatch/id :repair/agent-id])))
+                persisted ((:persist-state-fn providers) updated)]
+            (if (:ok persisted)
+              {:ok true :status :batch-paused :state updated
+               :pause/reason :store-read-warnings}
+              {:ok false :error/code :problem-queue-state-persistence-failed})))))))
+
+(defn- hold-for-store-warnings [state frame receipt warnings]
+  (if-not (seq warnings)
+    state
+    (let [body {:frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                :queue/id (:queue/id state)
+                :terminal-receipt/id (:receipt/id receipt)
+                :resume/status (:status state)
+                :warnings (vec warnings)}
+          hold (assoc body :hold/id (machine/ledger-digest [body]))]
+      (addressed (assoc state :status :paused :store-read/hold hold)))))
 
 (defn complete-active-without-successor
   "Record a retryable terminal frame without preparing the queue's next item.
@@ -682,6 +740,8 @@
       (and decision-sync (not (:ok decision-sync))) decision-sync
       (= :complete (:status state))
       {:ok true :status :batch-complete :state state}
+      (:store-read/hold state)
+      (dispatch-store-repair state providers)
       (= :paused (:status state))
       {:ok true :status :batch-paused :state state}
       (= :failed-systematic-frame-failure (:status state))
@@ -792,11 +852,17 @@
                                systematic?
                                (assoc :status
                                       :failed-systematic-frame-failure)))
+                    warnings (when-let [read-warnings (:store-read-warnings-fn providers)]
+                               (read-warnings (:frame active)))
+                    cleared (hold-for-store-warnings
+                             cleared (:frame active) (:terminal-receipt result) warnings)
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
-                  (if systematic?
+                  (if (:store-read/hold cleared)
+                    (dispatch-store-repair cleared providers)
+                    (if systematic?
                     {:ok false
                      :error/code :problem-queue-systematic-frame-failure
                      :failure (:consecutive-frame-failures cleared)
@@ -807,4 +873,4 @@
                                      (or now-fn #(System/currentTimeMillis)))
                     (if pause?
                     {:ok true :status :batch-paused :state cleared}
-                    (prepare-next plan cleared providers)))))))))))))
+                    (prepare-next plan cleared providers))))))))))))))

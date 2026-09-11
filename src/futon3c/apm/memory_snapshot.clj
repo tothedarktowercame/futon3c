@@ -9,7 +9,8 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as estore]
-            [futon3c.substrate.client :as substrate])
+            [futon3c.substrate.client :as substrate]
+            [futon3c.substrate.read-health :as read-health])
   (:import [java.nio.file Files Path StandardCopyOption]
            [java.nio.file.attribute FileAttribute]))
 
@@ -40,13 +41,14 @@
   {:visibility/candidate-count candidate-count
    :visibility/execution :bounded-parallel
    :visibility/concurrency-bound visibility-concurrency-bound
-   :visibility/per-read-bound-ms visibility-read-bound-ms
+   :visibility/per-read-bound-ms (read-health/timeout-ms visibility-read-bound-ms)
+   :visibility/slow-read-warning-ms read-health/warning-ms
    :visibility/reads-per-candidate-bound visibility-reads-per-candidate-bound
    :visibility/aggregate-bound-ms
    (* (quot (+ candidate-count (dec visibility-concurrency-bound))
             visibility-concurrency-bound)
       visibility-reads-per-candidate-bound
-      visibility-read-bound-ms)})
+      (read-health/timeout-ms visibility-read-bound-ms))})
 
 (defn- timeout-throwable?
   "Whether T, or anything in its cause chain, is a timeout.
@@ -285,22 +287,9 @@
 (defn- retry-once-on-miss
   "Run READ, and if it comes back empty, wait briefly and run it once more.
 
-  futon1b admits two requests at a time and this promotion is not its only
-  tenant. A visibility read is bounded at visibility-read-bound-ms (5s) of WALL
-  CLOCK, queue wait included, so a co-tenant holding a permit longer than that
-  fails the read outright -- and one failed read fails the candidate, then the
-  publication, then the frame. Measured 2026-09-07: the inbox-zero sweeper's
-  session-evidence scans run limit=1000 and take 5.5-6.0s each, longer than
-  this whole bound, in back-to-back runs on a 30-minute cadence.
-
-  A permit held by someone else is transient, so retrying once after a short
-  delay costs one extra read on a miss and converts that class of failure into
-  a pause. It deliberately does NOT distinguish 'timed out' from 'genuinely
-  absent': the bounded read returns nil for both, and a second look at an
-  absent entry is cheap and still returns nil.
-
-  This is a mitigation, not the cure. The cure is for a co-tenant not to hold a
-  shared two-permit gate for longer than another tenant's entire bound."
+  Only a returned nil or empty collection gets this retry. Transport exceptions
+  propagate. The frame read-health policy controls the hard deadline; a slow
+  successful read is recorded separately and still must pass every check."
   [read]
   (fn [id]
     (let [miss? (fn [r] (or (nil? r) (and (coll? r) (empty? r))))

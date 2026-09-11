@@ -1,0 +1,63 @@
+{
+  "tests": [
+    {
+      "namespace": "futon3c.substrate.read-health-test",
+      "tests": 4,
+      "assertions": 32,
+      "result": "passed"
+    },
+    {
+      "namespace": "futon3c.apm.store-read-hold-test",
+      "tests": 3,
+      "assertions": 17,
+      "result": "passed"
+    },
+    {
+      "namespace": "futon3c.apm.problem-queue-supervisor-test",
+      "tests": 41,
+      "assertions": 258,
+      "result": "passed"
+    },
+    {
+      "namespace": "futon3c.apm.queued-frame-adapter-test",
+      "tests": 37,
+      "assertions": 178,
+      "result": "passed"
+    },
+    {
+      "namespace": "futon3c.apm.jit-queue-coordinator-test",
+      "tests": 14,
+      "assertions": 65,
+      "result": "passed"
+    },
+    {
+      "namespace": "countdown-control",
+      "tests": 54,
+      "assertions": 210,
+      "result": "passed"
+    },
+    {
+      "namespace": "memory-snapshot",
+      "tests": 23,
+      "assertions": 101,
+      "result": "passed"
+    },
+    {
+      "namespace": "client",
+      "tests": 3,
+      "assertions": 15,
+      "result": "passed"
+    },
+    {
+      "namespace": "futon1b-backend",
+      "tests": 22,
+      "assertions": 94,
+      "result": "passed"
+    }
+  ],
+  "latency_tests": "injected clock; real client boundaries with mocked HTTP",
+  "live_stress_test": false,
+  "lint": "zero errors, zero warnings",
+  "parens": "passed",
+  "diff_check": "passed"
+}

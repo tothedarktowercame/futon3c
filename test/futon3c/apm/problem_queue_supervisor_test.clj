@@ -907,3 +907,61 @@
       (sut/tick! providers)
       (is (= "q4" (get-in @state [:active :frame :frame/id])))
       (is (= [[:mint "p4"]] (filter #(= :mint (first %)) @calls))))))
+
+(deftest slow-read-warning-finishes-frame-then-holds-and-dispatches-once
+  (let [{:keys [providers state calls]} (harness)
+        dispatches (atom [])
+        providers (assoc providers
+                         :store-read-warnings-fn
+                         (constantly [{:trace-id "slow-read" :elapsed-ms 5600}])
+                         :dispatch-store-repair-fn
+                         (fn [hold]
+                           (is (= (:hold/id hold) (get-in @state [:store-read/hold :hold/id]))
+                               "hold must be durable before dispatch")
+                           (swap! dispatches conj hold)
+                           {:ok true :dispatch/id "repair-job"}))]
+    (sut/tick! providers)
+    (is (= :batch-paused (:status (sut/tick! providers))))
+    (is (= ["q1"] (mapv :frame/id (:completed @state))))
+    (is (nil? (:active @state)))
+    (is (= ["p1"] (mapv second (filter #(= :mint (first %)) @calls))))
+    (is (= 1 (:next-index @state)))
+    (is (= :batch-paused (:status (sut/tick! providers))))
+    (is (= 1 (count @dispatches)))
+    (is (= :store-read-repair-required (:error/code (sut/resume-paused @state))))
+    (is (false? (:ok (sut/release-store-read-hold @state {}))))
+    (let [receipt {:hold/id (get-in @state [:store-read/hold :hold/id])
+                   :repair/status :verified :repair/commit (apply str (repeat 40 "a"))
+                   :validation/evidence ["/committed/validation.edn"]}
+          released (sut/release-store-read-hold @state receipt)]
+      (is (:ok released))
+      (reset! state (:state released))
+      (is (= :frame-prepared (:status (sut/tick! providers))))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= 1 (count (:store-read/repairs @state)))))))
+
+(deftest failed-repair-dispatch-retains-hold-without-rerunning-proof
+  (let [{:keys [providers state calls]} (harness)
+        providers (assoc providers :store-read-warnings-fn (constantly [{:elapsed-ms 5600}])
+                         :dispatch-store-repair-fn (constantly {:ok false :error/code :offline}))]
+    (sut/tick! providers)
+    (is (= :offline (:error/code (sut/tick! providers))))
+    (is (= :paused (:status @state)))
+    (is (= 1 (count (:completed @state))))
+    (is (= :offline (:error/code (sut/tick! providers))))
+    (is (= 1 (count (filter #(= :tick (first %)) @calls))))))
+
+(deftest store-repair-release-preserves-independent-manual-pause
+  (let [{:keys [providers state]} (harness)
+        providers (assoc providers :store-read-warnings-fn (constantly [{:elapsed-ms 5600}])
+                         :dispatch-store-repair-fn (constantly {:ok true :dispatch/id "job"}))]
+    (sut/tick! providers)
+    (reset! state (:state (sut/pause-after-active @state)))
+    (sut/tick! providers)
+    (let [released (sut/release-store-read-hold
+                    @state {:hold/id (get-in @state [:store-read/hold :hold/id])
+                            :repair/status :verified
+                            :repair/commit (apply str (repeat 40 "b"))
+                            :validation/evidence ["/evidence"]})]
+      (is (:ok released))
+      (is (= :paused (get-in released [:state :status]))))))

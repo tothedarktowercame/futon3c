@@ -2405,6 +2405,10 @@
            (load-contract)))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
+         :store-read-health
+         (or (:store-read-health authority)
+             (let [path (java.io.File. (str campaign-root) "store-read-health.edn")]
+               (when (.isFile path) (edn/read-string (slurp path)))))
          :memory-cascade memory-cascade
          :solver-shelf-canary solver-shelf-canary
          :conditions conditions
