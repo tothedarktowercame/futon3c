@@ -9,6 +9,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.agency.registry :as reg]
+            [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.time Instant]
            [java.util UUID]
@@ -41,6 +42,9 @@
 
 (def ^:dynamic *run4-terminal-projection-dir*
   "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
+
+(def ^:dynamic *run4-historical-projection-dir*
+  "/home/joe/code/futon3c/data/wm-run4-historical-projections")
 
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
@@ -216,6 +220,8 @@
   [click-id result]
   (let [terminal-projection (run4-terminal/persist!
                              *run4-terminal-projection-dir* click-id result)
+        historical-projection (run4-historical/persist!
+                               *run4-historical-projection-dir* click-id result)
         run-id (:run/id result)
         run-record-path (:run-record result)
         run-record-text (when run-record-path
@@ -229,6 +235,11 @@
                            (digest/sha256 run-record-text)))
             (throw (ex-info "RUN4 run-record changed before binding publication"
                             {:error :run4-terminal-source-changed})))
+        _ (when (and historical-projection
+                     (not= (:source-sha256 historical-projection)
+                           (digest/sha256 run-record-text)))
+            (throw (ex-info "RUN4 historical run-record changed before binding publication"
+                            {:error :run4-historical-source-changed})))
         run-record-status
         (cond
           (nil? run-record-path) :absent
@@ -274,7 +285,10 @@
                  (assoc :duplicate-of-clicks duplicate-clicks)
 
                  terminal-projection
-                 (assoc :run4/terminal-projection terminal-projection))
+                 (assoc :run4/terminal-projection terminal-projection)
+
+                 historical-projection
+                 (assoc :run4/historical-projection historical-projection))
         target (io/file dir (str "click-run-binding-" (safe-id click-id) ".edn"))
         tmp (io/file dir (str "." (.getName target) "." (UUID/randomUUID) ".tmp"))
         renamed? (volatile! false)]
