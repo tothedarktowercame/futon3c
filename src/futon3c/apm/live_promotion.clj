@@ -679,13 +679,16 @@
                         :transport-retry/attempt transport-attempt
                         :transport-retry/max-attempts transport-max
                         :transport-retry/history transport-history
-                        :repair/attempts (:repair/max-attempts hold))))]
-    (persist-fn hold)
-    {:ok true :status (if retryable-transport?
-                        :transport-retry-scheduled
-                        :awaiting-apparatus-repair)
-     :state hold :findings (:findings checked)
-     :transport-retry/escalation escalation}))
+                        :repair/attempts (:repair/max-attempts hold))))
+        saved (persist-fn hold)]
+      (if (false? (:ok saved))
+        {:ok false :error/code :promotion-hold-persistence-failed
+         :finding saved :state state}
+        {:ok true :status (if retryable-transport?
+                           :transport-retry-scheduled
+                           :awaiting-apparatus-repair)
+         :state hold :findings (:findings checked)
+         :transport-retry/escalation escalation})))
 
 (defn- publish-completed-pass!
   [state action promotion-policy contract-digest publish-fn persist-fn
@@ -1192,7 +1195,41 @@
   at each `(:ok ...)` branch, so every stage gets the same treatment."
   [{:keys [state promotion-policy contract-digest persist-fn now-ms-fn]
     :as inputs}]
-  (let [result (drive-step! inputs)]
+  (let [retry-due? (and (= :awaiting-transport-retry (:stage state))
+                        (>= (long ((or now-ms-fn #(System/currentTimeMillis))))
+                            (:transport-retry/not-before-ms state)))
+        checkpoint (atom (if retry-due?
+                           (assoc (:last-valid-state state)
+                                  :transport-retry/attempt
+                                  (inc (:transport-retry/attempt state))
+                                  :transport-retry/history (:transport-retry/history state))
+                           state))
+        persist-checkpoint! (when persist-fn
+                              (fn [next-state]
+                                (let [saved (persist-fn next-state)]
+                                  (when-not (false? (:ok saved))
+                                    (reset! checkpoint next-state))
+                                  saved)))
+        result (try
+                 (drive-step! (cond-> inputs
+                                persist-checkpoint!
+                                (assoc :persist-fn persist-checkpoint!)))
+                 (catch clojure.lang.ExceptionInfo error
+                   ;; A timed-out observation is not an observed absence.
+                   ;; Preserve the last checkpoint reached in this step, not
+                   ;; the caller's older state (which could repeat a review).
+                   ;; Only explicitly typed transport failures enter retry;
+                   ;; integrity/programming exceptions still escape unchanged.
+                   (if (= :transport (:error/component (ex-data error)))
+                     (merge (select-keys (ex-data error)
+                                         [:error/component :error/code :trace-id
+                                          :transport/operation
+                                          :transport/acquired-outcome
+                                          :transport/evidence])
+                            {:ok false
+                             :transport/evidence :not-obtained
+                             :exception/class (.getName (class error))})
+                     (throw error))))]
     (if (and persist-fn
              (map? result)
              (false? (:ok result))
@@ -1200,7 +1237,7 @@
                    (:error/code result))
              (transport-failure? result))
       (hold-incomplete-pass!
-       state
+       @checkpoint
        (-> result
            (update :repair/kind #(or % :promotion-transport))
            (update :findings #(if (seq %) (vec %) [result])))

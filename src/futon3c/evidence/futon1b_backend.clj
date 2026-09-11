@@ -35,6 +35,7 @@
             [clojure.string :as str]
             [org.httpkit.client :as http])
   (:import [java.net URLEncoder]
+           [java.util UUID]
            [java.time Instant]))
 
 (def default-url
@@ -224,18 +225,41 @@
    ;; http-kit's :timeout can expire after headers while its response promise
    ;; remains blocked on a stalled body.  Bound the promise dereference itself
    ;; so evidence reads cannot monopolize a regulator tick indefinitely.
-   (let [pending (future @(http/get url {:timeout request-timeout-ms :as :text}))
+   (let [trace-id (str "evidence-read:" (UUID/randomUUID))
+         pending (future @(http/get url {:timeout request-timeout-ms :as :text
+                                        :headers {"x-trace-id" trace-id}}))
          timed-out (Object.)
          response (deref pending request-timeout-ms timed-out)]
      (when (identical? timed-out response)
        (future-cancel pending)
        (throw (ex-info "futon1b read timed out"
-                       {:url url :timeout-ms request-timeout-ms
+                       {:url url :timeout-ms request-timeout-ms :trace-id trace-id
                         :error/component :transport
+                        :transport/operation :read
+                        :transport/acquired-outcome :timeout
+                        :transport/evidence :not-obtained
                         :error/code :futon1b-read-timeout})))
      (let [{:keys [status body error]} response]
        (when error
-         (throw (ex-info "futon1b unreachable" {:url url} error)))
+         (throw (ex-info "futon1b unreachable"
+                         {:url url :trace-id trace-id
+                          :error/component :transport
+                          :error/code :futon1b-unreachable
+                          :transport/operation :read
+                          :transport/acquired-outcome
+                          (if (timeout-error? error) :timeout :unavailable)
+                          :transport/evidence :not-obtained} error)))
+       (when-not (contains? #{200 404} status)
+         (let [unavailable? (contains? #{429 502 503 504} status)]
+           (throw (ex-info "futon1b read did not obtain evidence"
+                           {:url url :trace-id trace-id :http/status status
+                            :error/component (if unavailable? :transport :evidence)
+                            :error/code (if unavailable? :futon1b-read-unavailable
+                                            :futon1b-read-rejected)
+                            :transport/operation :read
+                            :transport/acquired-outcome
+                            (if (= status 504) :timeout :unavailable)
+                            :transport/evidence :not-obtained}))))
        {:status status :body (read-edn body)}))))
 
 (defn- query-string

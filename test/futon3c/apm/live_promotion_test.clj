@@ -1397,3 +1397,76 @@
                  :now-ms-fn (constantly 1000)})]
     (is (false? (:ok result)))
     (is (= :promotion-candidate-id-conflict (:error/code result)))))
+
+(deftest thrown-read-timeout-preserves-job-and-exhausts-transport-budget
+  (let [saved (atom nil)
+        calls (atom [])
+        now (atom 1000)
+        base {:state/type :promotion :stage :deposit :job "accepted-deposit"}
+        inputs {:state base
+                :deposit-fn (fn [job] (swap! calls conj job)
+                              {:ok true :report {:candidates []}})
+                :persist-candidates-fn
+                (fn [_] (throw (ex-info "timed out"
+                                        {:error/component :transport
+                                         :error/code :futon1b-read-timeout
+                                         :transport/operation :read
+                                         :transport/acquired-outcome :timeout})))
+                :persist-fn #(do (reset! saved (edn/read-string (pr-str %))) {:ok true})
+                :promotion-policy {:transport-retry-max-attempts 2
+                                   :transport-retry-delay-ms 10}
+                :contract-digest "digest" :now-ms-fn #(deref now)}]
+    (is (= :transport-retry-scheduled (:status (sut/drive! inputs))))
+    (is (= base (:last-valid-state @saved)))
+    (is (= ["accepted-deposit"] @calls))
+    ;; A process restart can reload exactly the held EDN state. Before wake,
+    ;; no role collection or store operation runs again.
+    (is (= :transport-retry-scheduled
+           (:status (sut/drive! (assoc inputs :state @saved)))))
+    (is (= 1 (count @calls)))
+    (reset! now 1010)
+    (is (= :awaiting-apparatus-repair
+           (:status (sut/drive! (assoc inputs :state @saved)))))
+    (is (= :promotion-substrate-retry-exhausted (:error/code @saved)))
+    (is (= 1 (:transport-retry/attempt @saved)))
+    (is (= :deposit (get-in @saved [:last-valid-state :stage])))
+    (is (= ["accepted-deposit" "accepted-deposit"] @calls))))
+
+(deftest thrown-integrity-failure-never-becomes-transport-retry
+  (let [saved (atom nil)]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"identity conflict"
+          (sut/drive! {:state {:stage :deposit :job "accepted"}
+                       :deposit-fn (fn [_] (throw (ex-info "identity conflict"
+                                                  {:error/code :identity-conflict})))
+                       :persist-fn #(reset! saved %)})))
+    (is (nil? @saved))))
+
+(deftest transport-exception-preserves-the-newest-durable-checkpoint
+  (let [saved (atom nil)
+        checkpoint {:state/type :promotion :stage :independent-review
+                    :job "already-dispatched-review"}]
+    (with-redefs-fn
+      {#'sut/drive-step!
+       (fn [{:keys [persist-fn]}]
+         (persist-fn checkpoint)
+         (throw (ex-info "later observation unavailable"
+                         {:error/component :transport :error/code :futon1b-read-timeout})))}
+      #(let [result (sut/drive! {:state {:stage :deposit :job "old-deposit"}
+                                :persist-fn (fn [s] (reset! saved (edn/read-string (pr-str s)))
+                                              {:ok true})
+                                :now-ms-fn (constantly 0)})]
+         (is (= :transport-retry-scheduled (:status result)))
+         (is (= checkpoint (:last-valid-state @saved)))))))
+
+(deftest a-retry-is-not-scheduled-until-its-hold-is-durable
+  (let [state {:state/type :promotion :stage :deposit :job "accepted"}
+        result (sut/drive!
+                {:state state
+                 :deposit-fn (fn [_] (throw (ex-info "store down"
+                                                    {:error/component :transport
+                                                     :error/code :futon1b-unreachable})))
+                 :persist-fn (constantly {:ok false :error/code :disk-full})
+                 :now-ms-fn (constantly 0)})]
+    (is (false? (:ok result)))
+    (is (= :promotion-hold-persistence-failed (:error/code result)))
+    (is (= state (:state result)))))

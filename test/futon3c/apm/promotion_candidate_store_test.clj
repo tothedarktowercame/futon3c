@@ -381,3 +381,24 @@
     (is (false? (:ok seeded)) "seeding leaves the edge missing")
     (is (:ok result) "the orphaned entry gets its edge and the deposit completes")
     (is (= 1 @edge-writes) "repaired by exactly one edge-only write")))
+
+(deftest lost-write-response-reconciles-persisted-pair-without-duplicate-effects
+  (let [entries (atom {}) edges (atom {}) writes (atom 0)
+        ports {:fetch-entry #(get @entries %)
+               :post-memory-assert
+               (fn [entry edge]
+                 (swap! writes inc)
+                 (swap! entries assoc (:evidence/id entry) entry)
+                 (swap! edges assoc (:hx/id edge) edge)
+                 ;; The transaction landed, but its response was lost.
+                 (throw (ex-info "response lost"
+                                 {:error/component :transport
+                                  :error/code :memory-assert-unreachable})))
+               :fetch-hyperedges
+               (fn [end]
+                 (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))}]
+    (is (thrown? clojure.lang.ExceptionInfo (sut/persist! deposit deposit-request ports)))
+    (is (:ok (sut/persist! deposit deposit-request ports)))
+    (is (= 1 @writes))
+    (is (= 1 (count @entries)))
+    (is (= 1 (count @edges)))))

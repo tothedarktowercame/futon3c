@@ -161,7 +161,8 @@
                                                "read timed out")}))]
       (is (= :store-timeout
              (:error/code (backend/-append store entry)))))
-    (with-redefs [http/get (fn [_ _] (delay {:status 404 :body "{}"}))
+    (with-redefs [sut/append-retry-ms 0
+                  http/get (fn [_ _] (delay {:status 404 :body "{}"}))
                   http/post (fn [_ _]
                               (delay {:error (java.net.ConnectException.
                                                "connection refused")}))]
@@ -171,8 +172,9 @@
 (deftest evidence-get-bounds-the-response-promise-by-wall-clock
   (let [get-edn (ns-resolve 'futon3c.evidence.futon1b-backend 'get-edn)
         never (promise)
+        options (atom nil)
         started (System/nanoTime)]
-    (with-redefs [http/get (fn [_ _] never)]
+    (with-redefs [http/get (fn [_ opts] (reset! options opts) never)]
       (let [error (try
                     (get-edn "http://stalled-store.test/evidence/e-1" 20)
                     nil
@@ -180,6 +182,11 @@
             elapsed-ms (quot (- (System/nanoTime) started) 1000000)]
         (is (= :futon1b-read-timeout (:error/code (ex-data error))))
         (is (= 20 (:timeout-ms (ex-data error))))
+        (is (= (get-in @options [:headers "x-trace-id"])
+               (:trace-id (ex-data error))))
+        (is (string? (:trace-id (ex-data error))))
+        (is (= :not-obtained (:transport/evidence (ex-data error))))
+        (is (= :read (:transport/operation (ex-data error))))
         (is (< elapsed-ms 1000) (str "elapsed=" elapsed-ms "ms"))))))
 
 (deftest append-retries-connection-refusal-then-succeeds
@@ -423,3 +430,17 @@
                     http/post (fn [_ _]
                                 (delay {:status 409 :body "{:error :duplicate-id}"}))]
         (is (= :duplicate-id (:error/code (backend/-append store entry))))))))
+
+(deftest read-availability-is-not-evidence-absence
+  (let [store (sut/make-futon1b-backend "http://store.test")]
+    (doseq [status [429 502 503 504 401 500]]
+      (with-redefs [http/get (fn [_ _] (delay {:status status :body "{}"}))]
+        (let [error (try (backend/-get store "e-absent-or-unavailable") nil
+                         (catch clojure.lang.ExceptionInfo e e))]
+          (is (some? error))
+          (is (= status (:http/status (ex-data error))))
+          (is (= :not-obtained (:transport/evidence (ex-data error))))
+          (is (= (if (contains? #{429 502 503 504} status) :transport :evidence)
+                 (:error/component (ex-data error)))))))
+    (with-redefs [http/get (fn [_ _] (delay {:status 404 :body "{}"}))]
+      (is (nil? (backend/-get store "actually-absent"))))))
