@@ -12,7 +12,8 @@ Successor-v2 offline verification is already complete at dc0aceeb; independent a
 
 ## Structural repair candidate
 
-Futon2 `8788443d` adds `:wm/cohort-execution-authority-v1`. Its authority ID
+Futon2 `8788443d` plus capture correction `2185297c` add
+`:wm/cohort-execution-authority-v1`. Its authority ID
 is deterministic over the declared cohort ID, pinned preregistration SHA-256,
 and SHA-256 of the canonical cohort data-root path. The final execution ID also
 binds the local attempt ID. New runner time-step judgments retain the authority
@@ -41,5 +42,5 @@ Focused gates at this commit:
 This source change is deliberately separate from the already executed
 successor-v2 qualification and verifier artifact. Those artifacts remain
 truthful for their pinned pre-change Futon2 HEAD, but they do not qualify or
-review `8788443d`; any future packet claiming this collision repair must run a
+review `8788443d`/`2185297c`; any future packet claiming this collision repair must run a
 fresh qualification and independent review rather than silently repinning.
