@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-successor-v2-selection-zai-queue-20260911-v1"
+ :state-root "/home/joe/run4/successor-v2-selection-zai-admission/queue"
+ :visibility-file "/home/joe/run4/successor-v2-selection-zai-admission/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "successor-v2-selection-zai-historical-admission"
+         :series-id "run4-successor-v2-selection-zai-admission-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-zai-admission-2026-09-11/series-pin.edn"
+         :manifest-sha256 "9de274f6b8a54de99641ce72a67776fa95d625a739b74caf424a43b2abc9f7d0"
+         :cohort-id :run4-successor-v2-selection-zai-admission-20260911-v1
+         :cohort-sha256 "b4e06f7396e8c595f1dab7849b8b02f683f45abb39be626798831be665ac7eb6"}
+ :activation :not-performed}
