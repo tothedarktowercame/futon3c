@@ -1,0 +1,8 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.run4-terminal-evidence-test
+
+Ran 11 tests containing 62 assertions.
+0 failures, 0 errors.

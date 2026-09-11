@@ -1,10 +1,11 @@
 (ns futon3c.wm.run4-real-paired-test
   "Uses relocated historical evidence and frozen successor packet. Only ordinary task
   execution/environment are fixtures; durable readers and resolver are actual."
-  (:require [clojure.test :refer [deftest is]] [clojure.edn :as edn]
+  (:require [clojure.test :refer [deftest is use-fixtures]] [clojure.edn :as edn]
             [clojure.java.io :as io] [clojure.string :as str]
             [cheshire.core :as json]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.hermetic-repair-fixture :as hermetic]
             [futon2.aif.full-loop-cohort :as cohort]
             [futon2.aif.full-loop-runner :as full-runner]
             [futon2.aif.full-loop-runner-test :as ft]
@@ -17,6 +18,7 @@
             [futon3c.wm.runner-service :as runner]
             [futon3c.wm.run4-u88-roundtrip-test :as u]
             [futon3c.agency.registry :as registry]))
+(use-fixtures :once hermetic/with-hermetic-stores)
 (def base "holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/")
 (def casting {:author "zai-2" :reviewer "codex-12" :repair-reviewer "codex-12"})
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "paired-history-" (make-array java.nio.file.attribute.FileAttribute 0))))
