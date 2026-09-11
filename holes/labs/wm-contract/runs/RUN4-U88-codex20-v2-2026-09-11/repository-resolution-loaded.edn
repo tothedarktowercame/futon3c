@@ -1,0 +1,1 @@
+{:ok true, :value {:source-sha256 "f38c0f9dd81b056d881cb7ad2b77096f7fb5609dee29e77e165dc24cf8307509", :resolved-build {:repo "/home/joe/code/futon2", :files ["holes/missions/M-u88-contextual-preferences.md" "src/futon2/aif/contextual_preferences.clj" "test/futon2/aif/contextual_preferences_test.clj"]}, :operation :read-only-commit-resolution, :new-attempt? false}}
