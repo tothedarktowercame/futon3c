@@ -191,8 +191,13 @@
 (defn- terminal-response [config entry state]
   (if-let [click-id (get-in state [:in-flight :click-id])]
     (let [awaited (runner/await-click! click-id (:await-timeout-ms config))]
-      (if (= :completed (:status awaited))
+      (cond
+        (= :completed (:status awaited))
         (series/step! (:server-config entry) (:headers entry) (:request entry))
+        (= :not-tracked (:status awaited))
+        (series/inspect-started! (:server-config entry) (:headers entry)
+                                 (:request entry) click-id)
+        :else
         (reduced (hold! config state :click-incomplete
                         {:await-status (:status awaited)}))))
     (let [response (series/step! (:server-config entry) (:headers entry) (:request entry))]

@@ -170,6 +170,26 @@
         (is (= 1 @calls)))
       (finally (queue/stop! config) (delete-tree! root)))))
 
+(deftest lost-process-promise-uses-exact-existing-inspection
+  (let [root (temp-root) config (fixture root "lost-promise-queue")
+        inspected (atom [])]
+    (try
+      (queue/start! config)
+      (#'queue/persist! config
+                         (assoc (queue/read-state! config) :in-flight
+                                {:entry-id "entry-1" :click-id "lost-click"}))
+      (reset! (var-get #'runner/!completion) nil)
+      (with-redefs [series/step! (fn [& _]
+                                   (throw (ex-info "must not admit" {})))
+                    series/inspect-started! (fn [& args]
+                                              (swap! inspected conj args)
+                                              {:status :trial-terminal})]
+        (is (= :running (:status (queue/tick! config))))
+        (is (= 1 (count @inspected)))
+        (is (= "lost-click" (last (first @inspected))))
+        (is (nil? (:in-flight (queue/read-state! config)))))
+      (finally (queue/stop! config) (delete-tree! root)))))
+
 (deftest strict-authority-and-finite-series-advancement
   (let [root (temp-root) config (fixture root "advance-queue") calls (atom 0)]
     (try
@@ -261,14 +281,11 @@
                       :build {:judgment {:commits ["queue-commit"]
                                          :validation {:approved? true
                                                       :review-job "queue-review-job"
-                                                      :review-gate {:required? true
-                                                                    :executed? true
-                                                                    :tool-events 2
-                                                                    :passed? true}}}
+                                                      :review-gate {:required? true :executed? true
+                                                                    :tool-events 2 :passed? true}}}
                               :ground {:kind :git-commit-and-independent-review}}
-                      :adjudication {:judgment {:build-match
-                                                {:commit "queue-commit"
-                                                 :review-approved? true}
+                      :adjudication {:judgment {:build-match {:commit "queue-commit"
+                                                              :review-approved? true}
                                                 :dial {:moved? true
                                                        :implementation-id "queue-impl"}}
                                      :ground {:kind :authoritative-substrate-discharge}}}
@@ -283,6 +300,18 @@
          (with-redefs-fn {#'full-runner/run-opportunity-core! core}
            (fn []
              (queue/start! config)
+             ;; Start through the actual service, let the async producer finish,
+             ;; then discard only its process-local promise. Queue recovery must
+             ;; finish through the exact durable started/evidence path.
+             (let [started (series/step! cfg u/auth {:run4-series-ref manifest-ref})
+                   click-id (:click-id started)]
+               (is (= :trial-started (:status started)))
+               (#'queue/persist! config
+                                  (assoc (queue/read-state! config) :in-flight
+                                         {:entry-id "materialized-entry"
+                                          :click-id click-id}))
+               (is (= :completed (:status (runner/await-click! click-id))))
+               (reset! (var-get #'runner/!completion) nil))
              (is (= :running (:status (queue/tick! config))))
              (is (= 0 (:cursor (queue/read-state! config))))
              (is (= :running (:status (queue/tick! config))))

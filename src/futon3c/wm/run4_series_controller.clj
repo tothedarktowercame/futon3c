@@ -316,6 +316,11 @@
                 (refuse! :invalid-persisted-started {:ordinal ordinal}))
               (when started
                 (started-admission! key prepared-trial started ordinal))
+              (when (and (:run4/existing-click-id prepared-trial)
+                         (not= (:run4/existing-click-id prepared-trial)
+                               (:click-id started)))
+                (refuse! :existing-start-disappeared-or-changed
+                         {:ordinal ordinal}))
               (when terminal
                 (terminal-lifecycle! key prepared-trial started terminal ordinal))
               (when (and terminal before-terminal-advance)

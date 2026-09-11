@@ -161,12 +161,12 @@
           :historical-evidence (:historical-evidence link)
           :successor-cohort (:execution-cohort run4)})))))
 
-(defn step!
+(defn- step*
   "Authenticate all frozen trial pins, then advance at most one boundary.
 
   Missing configuration is a refusal.  There is no timer or import hook: the
   caller must explicitly invoke this function through the serving route."
-  [config headers payload]
+  [config headers payload required-existing-click-id]
   (let [{:keys [series] :as cfg} (serving-config! config payload)
         run4 (:run4 cfg)
         manifest-file (exact-file (:manifest-root series)
@@ -180,6 +180,8 @@
           (let [existing-start? (.isFile
                                  (io/file (:controller-root series)
                                           (format "%03d-started.edn" (:ordinal trial))))
+                _ (when (and required-existing-click-id (not existing-start?))
+                    (refuse! :existing-start-required))
                 value (trusted/prepare
                        config headers
                        {:run4-pin-ref (get-in trial [:packet :path])
@@ -188,8 +190,10 @@
             (when-not (:ok value)
               (refuse! :run4-series-trial-refused
                        {:ordinal (:ordinal trial) :cause (:error value)}))
-            (let [value (cond-> value existing-start?
-                          (assoc :run4/existing-inspection-only? true))]
+            (let [value (cond-> value
+                          existing-start? (assoc :run4/existing-inspection-only? true)
+                          required-existing-click-id
+                          (assoc :run4/existing-click-id required-existing-click-id))]
               (swap! prepared assoc (:ordinal trial) value)
               value)))
         evidence-roots {:admission (:admission-root run4)
@@ -263,3 +267,17 @@
         (visibility/publish! (io/file (:visibility-root series) "run-visibility.json")
                              observation)))
     (assoc result :run4/series true)))
+
+(defn step!
+  "Authenticate frozen pins and advance at most one normal series boundary."
+  [config headers payload]
+  (step* config headers payload nil))
+
+(defn inspect-started!
+  "Inspect one exact already-started click through the normal controller and
+  evidence readers. Missing or changed start evidence can never become a new
+  admission. This is an in-process server capability, not an HTTP option."
+  [config headers payload click-id]
+  (when-not (and (string? click-id) (not (str/blank? click-id)))
+    (refuse! :invalid-existing-click-id))
+  (step* config headers payload click-id))

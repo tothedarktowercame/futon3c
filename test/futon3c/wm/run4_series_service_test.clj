@@ -224,6 +224,28 @@
             (is (.isFile (io/file root "controller" "001-started.edn")))
             (is (not (.exists (io/file root "controller" "001-terminal.edn"))))))))))
 
+(deftest exact-existing-start-inspection-cannot-become-admission
+  (with-service
+    (fn [root cfg]
+      (let [clicks (atom 0)
+            payload {:run4-series-ref "series.edn"}]
+        (with-redefs [runner/click! (fn [_]
+                                      (swap! clicks inc)
+                                      {:click-id "inspect-click"
+                                       :started-at "2026-09-11T12:00:00Z"})]
+          (is (= :trial-started (:status (service/step! cfg auth payload))))
+          (is (= :awaiting-terminal-evidence
+                 (:status (service/inspect-started! cfg auth payload "inspect-click"))))
+          (is (= 1 @clicks))
+          (is (= :existing-start-disappeared-or-changed
+                 (try (service/inspect-started! cfg auth payload "foreign-click") nil
+                      (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+          (io/delete-file (io/file root "controller" "001-started.edn"))
+          (is (= :existing-start-required
+                 (try (service/inspect-started! cfg auth payload "inspect-click") nil
+                      (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+          (is (= 1 @clicks)))))))
+
 (deftest visibility-is-disabled-by-absence-without-changing-series-step
   (with-service
     (fn [root cfg]
