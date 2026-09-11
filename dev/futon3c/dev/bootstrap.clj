@@ -23,6 +23,7 @@
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
+            [futon3c.wm.run4-boot :as run4-boot]
             [futon3c.watcher.multi :as multi-watcher]
             [futon3c.watcher.roots :as watch-roots]
             [clojure.java.io :as io]
@@ -181,9 +182,12 @@
       (let [pattern-ids (if-let [s (config/env "FUTON3C_PATTERNS")]
                           (mapv keyword (remove empty? (.split s ",")))
                           [])
-            opts (cond-> {:patterns {:patterns/ids pattern-ids}
-                          :irc-send-fn irc-send-fn
-                          :irc-send-base irc-send-base}
+            run4-config (run4-boot/materialize
+                         (config/env-bool "FUTON3C_RUN4_U88_ENABLED" false))
+            opts (cond-> (merge {:patterns {:patterns/ids pattern-ids}
+                                 :irc-send-fn irc-send-fn
+                                 :irc-send-base irc-send-base}
+                                run4-config)
                    xtdb-node (assoc :xtdb-node xtdb-node)
                    evidence-store (assoc :evidence-store evidence-store))
             http-handler (make-http-handler opts)
