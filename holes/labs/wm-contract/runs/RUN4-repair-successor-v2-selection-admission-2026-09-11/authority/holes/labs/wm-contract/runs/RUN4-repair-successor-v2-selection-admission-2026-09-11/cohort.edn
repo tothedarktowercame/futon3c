@@ -1,0 +1,83 @@
+{:machine-evolution
+ {:allowed? true,
+  :rule
+  "Normal machine development may continue during collection; it never permits dropping, replacing, or relabelling an opportunity.",
+  :per-attempt-provenance
+  [:semantic-epoch
+   :git-sha
+   :git-dirty?
+   :resolved-mode-flags
+   :configuration-digest],
+  :epoch-boundary
+  "Successor-v2-selection historical verification admission under a separate RUN4 cohort; Codex-17 qualification author and Codex-12 independent reviewer; no pooling with repair 057, repair 058, or successor cohorts.",
+  :analysis
+  "Report attempts chronologically and stratified by semantic epoch; do not pool across an undocumented semantic boundary."},
+ :protocol/version 4,
+ :purpose
+ "One successor-v2-selection historical repair-verification admission. U88 is the authenticated requested task, not the enacted task when the open repair stop-line takes precedence. Admission does not resolve the repair or establish U88 success.",
+ :authority
+ "Joe-authorized successor-v2-selection offline preparation. This frozen disabled packet authorizes no live capacity or execution; repair 057, repair 058, and prior failed cohorts remain unchanged.",
+ :checkpoint-contract
+ {:closed
+  [:outcome :grounded? :artifact-only? :duration-ms :resource-use],
+  :adjudication [:before :after :witness :build-match :dial],
+  :construction
+  [:mission :cascade :sorries :wiring :patterns :deposit],
+  :cell-shape
+  "Every checkpoint payload is either {:judgment ... :ground ...} or {:sorry {:kind keyword ...}}.",
+  :time-step
+  [:opportunity-id
+   :trigger
+   :machine-state
+   :agent-roster
+   :code-state
+   :semantic-epoch],
+  :dispatch [:agent :availability :job-id :prompt-ref],
+  :build
+  [:artifacts
+   :generated-code
+   :commits
+   :patterns-used
+   :inline-improvements
+   :validation],
+  :selection
+  [:selected-mission
+   :selected-action
+   :ranked-candidates
+   :selection-reasons],
+  :revision-note
+  "A revision round nests inside the :build payload as :revision {:round 2 :commits [...] :review {...}} with both review records under :reviews; checkpoint order and schema unchanged from protocol 4."},
+ :casting
+ {:author "codex-10", :reviewer "codex-12", :repair-reviewer "codex-12"},
+ :grounded-success
+ {:outcome :grounded-change,
+  :requires
+  [:independent-before-witness
+   :independent-after-witness
+   :resolved-adjudication
+   :dial-moved],
+  :artifact-only-counts? false},
+ :required-before-close
+ #{:adjudication :construction :dispatch :build :selection},
+ :analysis
+ {:claim
+  "Observe one successor-v2-selection historical verification execution and its awaiting-validation outcome; a distinct production successor remains mandatory.",
+  :denominator
+  "Every admitted opportunity in this cohort, including unsuccessful outcomes."},
+ :status :draft,
+ :checkpoint-order
+ [:time-step
+  :selection
+  :construction
+  :dispatch
+  :build
+  :adjudication
+  :closed],
+ :predecessor-evidence
+ {:repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure",
+  :counts-in-this-cohort? false,
+  :reason "Immutable open stop-line qualified independently; no prior execution counts in this cohort."},
+ :allowed-triggers #{:duree-click-continuous :duree-click-on-demand},
+ :stopping-rule {:kind :fixed-attempt-count, :target 1},
+ :registered-on "2026-09-11",
+ :cohort/id :run4-successor-v2-selection-admission-20260911-v1}

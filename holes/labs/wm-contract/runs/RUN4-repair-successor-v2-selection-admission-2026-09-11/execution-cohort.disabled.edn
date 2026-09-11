@@ -1,0 +1,6 @@
+{:schema :wm/run4-execution-cohort-binding-v1 :enabled? false
+ :preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/authority/holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/cohort.edn"
+ :data-root "/home/joe/run4/successor-v2-selection-admission/cohort"
+ :cohort-id :run4-successor-v2-selection-admission-20260911-v1
+ :sha256 "6e93b1268ec174a8faea69fe76671b44ea754b9a6b2165f0dc3264e53627be11"
+ :target 1 :activation :not-performed}

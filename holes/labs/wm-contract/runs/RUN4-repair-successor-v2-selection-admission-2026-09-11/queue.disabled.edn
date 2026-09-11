@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-successor-v2-selection-queue-20260911-v1"
+ :state-root "/home/joe/run4/successor-v2-selection-admission/queue"
+ :visibility-file "/home/joe/run4/successor-v2-selection-admission/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "successor-v2-selection-historical-admission"
+         :series-id "run4-successor-v2-selection-admission-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/series-pin.edn"
+         :manifest-sha256 "b72856231564af876847028c66c817be11873ed804e4a40a6a7dca5d2b4827cc"
+         :cohort-id :run4-successor-v2-selection-admission-20260911-v1
+         :cohort-sha256 "6e93b1268ec174a8faea69fe76671b44ea754b9a6b2165f0dc3264e53627be11"}
+ :activation :not-performed}
