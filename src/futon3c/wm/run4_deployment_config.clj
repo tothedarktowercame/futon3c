@@ -2,13 +2,15 @@
   "Closed conversion from reviewed deployment data to the production service map."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [futon3c.wm.run4-deployment-preflight :as preflight]))
+            [futon3c.wm.run4-deployment-preflight :as preflight]
+            [futon3c.wm.run4-historical-action :as historical-action]))
 
 (def template-keys
   #{:schema :enabled? :activation :credential :casting :authority-root :manifest
     :pin-allowlist :source-allowlist :stores :reserved-unwired :serving :mission})
 (def dependency-keys #{:credential :resolve-mission :action-admissible? :enable?})
 (def cohort-dependency-keys #{:execution-cohort :cohort-preflight!})
+(def historical-dependency-keys #{:historical-action})
 
 (defn- refuse [reason] (throw (ex-info "RUN4 deployment refused" {:reason reason})))
 (defn- parse [text]
@@ -28,7 +30,11 @@
   (let [t (parse template-text)]
     (when-not (and (map? t) (= template-keys (set (keys t)))
                    (contains? #{dependency-keys
-                                (into dependency-keys cohort-dependency-keys)}
+                                (into dependency-keys cohort-dependency-keys)
+                                (into dependency-keys historical-dependency-keys)
+                                (into dependency-keys
+                                      (into cohort-dependency-keys
+                                            historical-dependency-keys))}
                               (set (keys dependencies)))
                    (= :wm/run4-disabled-deployment-template-v1 (:schema t))
                    (false? (:enabled? t))
@@ -41,6 +47,12 @@
                    (or (not (contains? dependencies :execution-cohort))
                        (and (map? (:execution-cohort dependencies))
                             (fn? (:cohort-preflight! dependencies))))
+                   (or (not (contains? dependencies :historical-action))
+                       (try
+                         (historical-action/runner-ports
+                          (:historical-action dependencies))
+                         true
+                         (catch Throwable _ false)))
                    (boolean? (:enable? dependencies)))
       (refuse :invalid-deployment-contract))
     (let [facts (preflight/inspect template-text)
@@ -75,4 +87,6 @@
          (contains? dependencies :execution-cohort)
          (assoc :execution-cohort (:execution-cohort dependencies)
                 :cohort-preflight! (:cohort-preflight! dependencies))
+         (contains? dependencies :historical-action)
+         (assoc :historical-action (:historical-action dependencies))
          enabled? (assoc :bearer-token token))})))
