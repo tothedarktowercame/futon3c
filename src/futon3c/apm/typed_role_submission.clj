@@ -7,6 +7,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.promotion-pipeline :as pipeline])
@@ -445,9 +446,11 @@
 (defn command
   "Exact client command placed into the activated role prompt."
   [request ticket]
-  (let [base (str "/home/joe/code/futon3c/scripts/apm-submit-role.py"
+  (let [agency-base (or (:agency-base request) "http://localhost:7070")
+        endpoint-option (str " --agency-base '" (str/replace agency-base "'" "'\"'\"'") "'")
+        base (str "/home/joe/code/futon3c/scripts/apm-submit-role.py"
                   " --job-id " (:job-id ticket)
-                  " --token " (:submission/token request))
+                  " --token " (:submission/token request) endpoint-option)
         payload (str "/tmp/apm-role-" (:job-id ticket) ".json")
         search (when (contains? memory-search-capable-roles (:role request))
                  (str "\n# Search the open reviewed mathematics memory corpus; "
@@ -455,9 +458,10 @@
                       "/home/joe/code/futon3c/scripts/apm-search-memory.py"
                       " --job-id " (:job-id ticket)
                       " --token " (:submission/token request)
-                      " --query 'YOUR QUERY'"))]
+                      endpoint-option " --query 'YOUR QUERY'"))]
     (str "# Read source job traces through Agency (not the evidence store):\n"
-         "python3 /home/joe/code/futon3c/scripts/apm-read-job.py --job-id SOURCE_JOB_ID\n"
+         "python3 /home/joe/code/futon3c/scripts/apm-read-job.py"
+         endpoint-option " --job-id SOURCE_JOB_ID\n"
          "# This checks response identity; inspect the events before claiming support.\n"
          (or search "")
          (when search "\n")

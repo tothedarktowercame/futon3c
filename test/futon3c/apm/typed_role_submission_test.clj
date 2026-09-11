@@ -214,3 +214,12 @@
                 [:direct-student-contact?])]
     (is (= :wire-predicate-key-conflict (:error/code result)))
     (is (= [:wire-predicate-key-conflict] (:findings result)))))
+
+(deftest role-commands-use-the-controller-service-address
+  (let [command (sut/command {:role :student :submission/token "token"
+                              :agency-base "http://agency.example:9999"}
+                             {:job-id "job"})]
+    (is (= 4 (count (re-seq #"--agency-base 'http://agency.example:9999'" command))))
+    (is (not (.contains command "localhost:7070")))
+    (is (.contains command "apm-read-job.py"))
+    (is (.contains command "apm-search-memory.py"))))

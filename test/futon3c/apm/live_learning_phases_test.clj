@@ -1092,7 +1092,8 @@
         action {:kind :student-attempt :phase :student-attempt-2}
         activated (atom nil)
         job-id (submission/canonical-job-id request)
-        expected (sut/prompt (submission/with-job-authority request))]
+        expected (sut/prompt (assoc (submission/with-job-authority request)
+                                    :agency-base "http://agency.test:7777"))]
     (with-redefs [job-port/announce!
                   (fn [_ payload]
                     (is (= expected (:prompt payload)))
@@ -1105,6 +1106,7 @@
                   (fn [_ _] {:ok true})]
       (let [result (sut/run-live!
                     {:contract contract :action action :receipts {}
+                     :agency-base "http://agency.test:7777"
                      :request request :state-path state-path
                      :preparation {}})
             packet-path (sut/packet-archive-path

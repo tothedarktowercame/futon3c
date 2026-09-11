@@ -1281,7 +1281,7 @@
       (let [req (submission/with-job-authority req)
             announced (job-port/announce!
                        agency-base
-                       {:agent-id (:agent-id req) :prompt (prompt req)
+                       {:agent-id (:agent-id req) :prompt (prompt (assoc req :agency-base agency-base))
                         :job-id (:submission/job-id req)})]
         announced))
     :activate-fn
@@ -1299,7 +1299,7 @@
           (not reset-ok?)
           {:ok false :error/code :student-session-reset-failed}
           :else
-          (let [packet (prompt (submission/with-job-authority req))
+          (let [packet (prompt (assoc (submission/with-job-authority req) :agency-base agency-base))
                 archived (archive-rendered-packet! state-path (:phase req)
                                                    packet)
                 _ (when-not (:ok archived)

@@ -340,7 +340,7 @@
       (let [req (submission/with-job-authority req)
             announced (job-port/announce!
                        agency-base
-                       {:agent-id (:agent-id req) :prompt (prompt req)
+                       {:agent-id (:agent-id req) :prompt (prompt (assoc req :agency-base agency-base))
                         :mode (if (= :solve kind) "work" "brief")
                         :job-id (:submission/job-id req)})]
         announced))
@@ -349,7 +349,7 @@
       (job-port/activate!
        agency-base
        {:agent-id (:agent-id req)
-        :prompt (prompt (submission/with-job-authority req))
+        :prompt (prompt (assoc (submission/with-job-authority req) :agency-base agency-base))
         :mode (if (= :solve kind) "work" "brief")
         :job-id (:job-id ticket)}))
     :job-fn
@@ -393,12 +393,12 @@
         announce-fn
         (fn [req]
           (job-port/announce!
-           agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+           agency-base {:agent-id (:agent-id req) :prompt (prompt (assoc req :agency-base agency-base))
                         :mode "work"}))
         activate-fn
         (fn [req ticket]
           (job-port/activate!
-           agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+           agency-base {:agent-id (:agent-id req) :prompt (prompt (assoc req :agency-base agency-base))
                         :mode "work" :job-id (:job-id ticket)}))]
     (solver-rounds/resume-remediation!
      {:state state :request request :announce-fn announce-fn

@@ -294,8 +294,11 @@
                         (let [review (by-id (:memory-id candidate))]
                           (when-let [finding
                                      (disposition-finding candidate review)]
-                            {:finding finding
-                             :memory-id (:memory-id candidate)})))
+                            (cond-> {:finding finding
+                                     :memory-id (:memory-id candidate)}
+                              (:verdict review) (assoc :review/verdict (:verdict review))
+                              (:reason review) (assoc :review/reason (:reason review))
+                              (:residual review) (assoc :review/residual (:residual review))))))
                       candidates)))]
     (if (seq findings)
       {:ok false :error/code :promotion-pass-incomplete

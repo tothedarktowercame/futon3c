@@ -140,6 +140,108 @@
                  (assoc % :successor-announced-id (str successor-id)
                         :successor-activated-id (str successor-id))))))
 
+(defn prepare-review-recovery
+  "Validate a trusted operator recovery decision against an exact checkpoint.
+  This is an operator port, never a field accepted from a role submission.
+  The caller must serialize checkpoint read/write with the frame driver."
+  [state authorization]
+  (let [prior (:last-valid-state state)
+        identity (transport-implementation-identity)
+        collection (job-driver/terminal-collection-authority
+                    (:job prior) (:terminal-collection prior))
+        required [:recovery/id :operator :reason :repair/evidence-ref
+                  :expected-state-digest :predecessor-job-id :implementation-id]
+        valid-text? #(and (string? %) (not (str/blank? %)))
+        attempt (inc (or (:review-successor-attempt prior) 0))]
+    (cond
+      (not-every? #(valid-text? (get authorization %)) required)
+      {:ok false :error/code :promotion-recovery-authorization-incomplete}
+      (not= (:source-id identity) (:loaded-runtime-id identity))
+      {:ok false :error/code :promotion-recovery-runtime-drift}
+      (not= (:implementation-id authorization) (:source-id identity))
+      {:ok false :error/code :promotion-recovery-implementation-mismatch}
+      (not= (:expected-state-digest authorization) (machine/ledger-digest [state]))
+      {:ok false :error/code :promotion-recovery-stale-checkpoint}
+      (not (and (= :awaiting-apparatus-repair (:stage state))
+                (= :promotion-pass (:repair/kind state))
+                (nat-int? (:repair/attempts state))
+                (pos-int? (:repair/max-attempts state))
+                (>= (:repair/attempts state) (:repair/max-attempts state))
+                (= :independent-review (:stage prior))
+                (seq (:candidates prior))
+                (string? (get-in prior [:request :dispatch/id]))
+                (string? (get-in prior [:request :agent-id]))))
+      {:ok false :error/code :promotion-recovery-state-ineligible}
+      (not= (:predecessor-job-id authorization) (:job prior))
+      {:ok false :error/code :promotion-recovery-predecessor-mismatch}
+      (some #(= (:recovery/id authorization) (:recovery/id %))
+            (:recovery/history prior))
+      {:ok false :error/code :promotion-recovery-already-consumed}
+      (not (:ok collection)) collection
+      :else
+      {:ok true
+       :state {:state/type :promotion :stage :review-successor-pending
+               :recovery/authorization authorization
+               :recovery/origin state
+               :successor/attempt attempt
+               :successor/job-id
+               (submission/canonical-job-id
+                (assoc (:request prior) :submission/attempt attempt))}})))
+
+(defn authorize-review-recovery!
+  "Persist a checked one-successor decision before any dispatch. No counter reset."
+  [{:keys [state authorization persist-fn]}]
+  (let [prepared (prepare-review-recovery state authorization)]
+    (if-not (:ok prepared) prepared
+      (let [saved (persist-fn (:state prepared))]
+        (if (:ok saved) prepared
+          {:ok false :error/code :promotion-recovery-authorization-persistence-failed
+           :persistence saved})))))
+
+(defn- resume-review-recovery!
+  [state review-fn persist-fn]
+  (let [origin (:recovery/origin state)
+        authorization (:recovery/authorization state)
+        checked (prepare-review-recovery origin authorization)]
+    (if-not (and (:ok checked) (= state (:state checked)))
+      {:ok false :error/code :promotion-recovery-pending-invalid
+       :finding (dissoc checked :state)}
+      (let [prior (:last-valid-state origin)
+            ;; Repeated ticks use the same canonical job id/attempt. Agency
+            ;; announce/activate owns idempotence if the final write fails.
+            successor (review-fn (:candidates prior) (:job prior)
+                                 (:successor/attempt state))]
+        (cond
+          (not (:ok successor)) successor
+          (not= (:successor/job-id state) (:job successor))
+          {:ok false :error/code :promotion-recovery-successor-identity-mismatch}
+          :else
+          (let [predecessor {:job {:job-id (:job prior) :state :done
+                                  :report (:persisted-review-result origin)}
+                             :ticket (:ticket prior)
+                             :terminal-collection (:terminal-collection prior)
+                             :findings (:findings origin)
+                             :trace/successor-observation
+                             (successor-observation (:job prior)
+                                                    (:terminal-collection prior)
+                                                    (:findings origin))}
+                next-state (-> prior
+                               (update :superseded-terminals (fnil conj []) predecessor)
+                               (bind-last-successor (:job successor))
+                               (dissoc :terminal-collection)
+                               (update :recovery/history (fnil conj []) authorization)
+                               (assoc :job (:job successor)
+                                      :ticket {:job-id (:job successor)}
+                                      :predecessor-job-id (:job prior)
+                                      :review-successor-attempt (:successor/attempt state)
+                                      :projection-repair-attempt (:repair/attempts origin)))
+                saved (persist-fn next-state)]
+            (if (:ok saved)
+              {:ok true :status :awaiting-terminal :job-id (:job successor)
+               :state next-state}
+              {:ok false :error/code :promotion-recovery-successor-persistence-failed
+               :state state :persistence saved})))))))
+
 (defn- transport-failure? [value]
   (boolean
    (some #(and (map? %) (= :transport (:error/component %)))
@@ -296,7 +398,7 @@
                              (pr-str submission/completion-contract) ". "
                              "Run the template command, fill every null in its "
                              "evidence object, then run the submit command:\n"
-                             (submission/command request
+                             (submission/command (assoc request :agency-base agency-base)
                                                  {:job-id (:submission/job-id request)}))
            announced (job-port/announce!
                       agency-base
@@ -324,8 +426,14 @@
            report (when typed (submitted-report typed))]
        (case (job-port/classify-state (:state job))
          :terminal
-         (if (and (= :done (:state job)) (map? report))
-           {:ok true :job job-id :report report}
+         (if (and (:ok job) (= job-id (:job-id job))
+                  (= :done (:state job)) (map? report)
+                  (= job-id (get-in typed [:authority :job-id])))
+           {:ok true :job job-id :report report
+            :terminal-collection
+            {:evidence (job-driver/terminal-collection-record
+                        (:authority typed) {:job-id job-id} job typed
+                        (or (get-in typed [:authority :submission/attempt]) 1))}}
            {:ok false :error/code :promotion-stage-terminal-invalid :job job
             :report/error (if (= :done (:state job))
                             {:error/code :typed-submission-missing}
@@ -343,6 +451,11 @@
     :or {agency-base "http://localhost:7070"}}]
   (let [persist-fn #(runtime/atomic-persist! state-path %)
         stored-state (runtime/read-state state-path)
+        reviewer-request (if (= :review-successor-pending (:stage stored-state))
+                           (dissoc (get-in stored-state
+                                           [:recovery/origin :last-valid-state :request])
+                                   :submission/job-id :submission/token)
+                           reviewer-request)
         deposit-request (or (:deposit-request stored-state) deposit-request)
         state-request (when (= :promotion (:state/type stored-state))
                         (if (= :independent-review (:stage stored-state))
@@ -814,6 +927,9 @@
       (:transport-certificate-emission state)
       (assoc :transport-certificate (:transport-certificate-emission state)))
 
+    (= :review-successor-pending (:stage state))
+    (resume-review-recovery! state review-fn persist-fn)
+
     (nil? state)
     (let [r (deposit-fn)]
       (if-not (:ok r) r
@@ -969,9 +1085,19 @@
                              :memory-id (:memory-id candidate)})
                           invisible)}
          deposit-fn persist-fn)
-        (let [r (review-fn (:job state) (:candidates state))]
-          (if (= :awaiting-terminal (:status r))
+        (let [r (review-fn (:job state) (:candidates state))
+              state (cond-> state
+                      (:terminal-collection r)
+                      (assoc :terminal-collection (:terminal-collection r)))
+              collected (when (:terminal-collection r) (persist-fn state))]
+          (cond
+            (and (:terminal-collection r) (not (:ok collected)))
+            {:ok false :error/code :promotion-review-collection-persistence-failed
+             :persistence collected}
+            (false? (:ok r)) r
+            (= :awaiting-terminal (:status r))
             (assoc r :job-id (:job state))
+            :else
             (let [checked (pipeline/validate-returned-review*
                            (:candidates state)
                            (:depositor (:deposit state))
