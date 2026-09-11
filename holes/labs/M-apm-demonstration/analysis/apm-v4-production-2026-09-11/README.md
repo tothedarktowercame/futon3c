@@ -120,7 +120,7 @@ V3 to the prototype to accomplish these gates.
 
 The independent Codex TA review of `af3b3b26` (Agency job
 `invoke-1789154561592-20249-20b68a57`) reproduced three P2 defects. This follow-up
-repairs them; independent confirmation of the repairs is still pending.
+repairs them; the subsequent independent reviews below confirmed the repairs.
 
 1. Revision-review submission now validates the completion envelope as well as
    nested fields: the supported successful outcome and zero own-command exit
@@ -195,4 +195,6 @@ python3 holes/labs/M-apm-demonstration/analysis/apm-v4-production-2026-09-11/his
 `historical-replay/result.edn` retains the actual result; `pin-schema-tests.txt`
 retains the native test output. Lint, check-parens and diff checks pass. No live
 service load, production request migration or publication was performed.
-Independent confirmation of this last repair is pending.
+Independent confirmation passed in job `invoke-1789155598109-20260-627f042b`
+at `67eed81e`. See `canonical-integration.json` for canonical integration and
+fresh local validation; V4 remains inactive and production readiness remains false.
