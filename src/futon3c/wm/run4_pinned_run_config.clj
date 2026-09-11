@@ -10,7 +10,7 @@
             [futon2.aif.c-fold-config :as c-fold]))
 
 (def runner-option-keys
-  #{:cohort? :window-days :accumulate-strategic-habit?
+  #{:window-days :accumulate-strategic-habit?
     :beta-habit-in-both? :policy-depth})
 (def materialized-fold-keys
   [:ruled-outcome-c-enabled? :seeded-c :disposition-kernel :c-fold-provenance])
@@ -51,7 +51,7 @@
   (and (map? opts)
        (every? runner-option-keys (keys opts))
        (every? #(or (not (contains? opts %)) (boolean? (get opts %)))
-               [:cohort? :accumulate-strategic-habit? :beta-habit-in-both?])
+               [:accumulate-strategic-habit? :beta-habit-in-both?])
        (or (not (contains? opts :window-days)) (pos-int? (:window-days opts)))
        (or (not (contains? opts :policy-depth))
            (let [depth (:policy-depth opts)]

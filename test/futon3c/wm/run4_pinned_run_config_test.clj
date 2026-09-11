@@ -17,13 +17,12 @@
 (deftest explicit-false-reaches-house-scorer-without-coercing-absence
   (let [opts (load-sheet
               {:schema :wm/run4-pinned-run-config-v1
-               :runner-options {:cohort? false
-                                :accumulate-strategic-habit? false}
+               :runner-options {:accumulate-strategic-habit? false}
                :c-fold {:enabled? false}})
         scored-opts (#'wm/configured-fold-efe-opts {} opts)
         legacy (efe/compute-efe state action {})
         scored (efe/compute-efe state action scored-opts)]
-    (is (false? (:cohort? opts)))
+    (is (not (contains? opts :cohort?)))
     (is (false? (:accumulate-strategic-habit? opts)))
     (is (false? (:ruled-outcome-c-enabled? opts)))
     (is (not (contains? opts :beta-habit-in-both?)))

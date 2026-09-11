@@ -27,6 +27,18 @@
                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))
       (is (zero? @calls)))))
 
+(deftest materializes-server-owned-execution-cohort-ports
+  (let [cohort {:preregistration "/tmp/reviewed-cohort.edn"
+                :data-root "/tmp/reviewed-cohort-data"
+                :cohort-id :run4-successor
+                :sha256 (apply str (repeat 64 "a"))}
+        preflight (fn [_] nil)
+        c (sut/materialize text
+                           (assoc deps :execution-cohort cohort
+                                       :cohort-preflight! preflight))]
+    (is (= cohort (get-in c [:run4 :execution-cohort])))
+    (is (identical? preflight (get-in c [:run4 :cohort-preflight!])))))
+
 (deftest malformed-template-and-unprovisioned-enable-refuse
   (is (= :invalid-deployment-contract
          (:reason (try (sut/materialize (str text "\n{:foreign true}") deps) nil

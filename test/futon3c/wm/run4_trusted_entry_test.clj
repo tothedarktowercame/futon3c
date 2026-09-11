@@ -13,8 +13,7 @@
 (def source-text "bounded task\n")
 (def config-text
   (str (pr-str {:schema :wm/run4-pinned-run-config-v1
-                :runner-options {:cohort? false
-                                 :accumulate-strategic-habit? false}
+                :runner-options {:accumulate-strategic-habit? false}
                 :c-fold {:enabled? false}
                 :serving-declaration
                 {:required-environment
@@ -51,6 +50,8 @@
     (try
       (spit (io/file root "source.md") source-text)
       (spit (io/file root "config.edn") config-text)
+      (spit (io/file root "cohort.edn")
+            "{:cohort/id :run4-test :target 2}\n")
       (spit (io/file root "seed.edn")
             (slurp (io/file ".." "futon2" "resources" "run4" "seeded-c.edn")))
       (spit (io/file root "kernel.edn")
@@ -68,6 +69,11 @@
                    :recording
                    {:status :not-attested-by-this-component
                     :consumer "holes/labs/wm-contract/wm_step_observe.bb"}})]
+        (let [cohort-file (io/file root "cohort.edn")
+              cohort {:preregistration (.getCanonicalPath cohort-file)
+                      :data-root (.getCanonicalPath root)
+                      :cohort-id :run4-test
+                      :sha256 (digest/sha256 (slurp cohort-file))}]
         (f {:root root
           :config {:run4 {:enabled? true :bearer-token token :operator "Joe"
                           :casting casting
@@ -77,9 +83,14 @@
                           :source-allowlist #{"source.md" "config.edn"
                                               "seed.edn" "kernel.edn"}
                           :resolve-mission #(when (= "M-run4" %) mission)
+                          :execution-cohort cohort
+                          :cohort-preflight!
+                          (fn [requested]
+                            {:snapshot {:value {:cohort/id (:cohort-id requested)}}
+                             :remaining 2})
                           :action-admissible?
                           #(and (= mission %1)
-                                (= {:type :advance-mission :target "M-run4"} %2))}}}))
+                                (= {:type :advance-mission :target "M-run4"} %2))}}})))
       (finally (delete-tree! root)))))
 
 (def auth {"authorization" (str "Bearer " token)})
@@ -99,7 +110,8 @@
             sha (digest/sha256 (:run4-task-pin-text opts))]
         (is (:ok result))
         (is (= casting (select-keys opts (keys casting))))
-        (is (false? (:cohort? opts)))
+        (is (not (contains? opts :cohort?)))
+        (is (= :run4-test (get-in opts [:execution-cohort :cohort-id])))
         (is (false? (:accumulate-strategic-habit? opts)))
         (is (false? (:ruled-outcome-c-enabled? opts)))
         (is (= {:path "config.edn" :sha256 (digest/sha256 config-text)}
@@ -220,7 +232,7 @@
             fold-config
             (str (pr-str
                   {:schema :wm/run4-pinned-run-config-v1
-                   :runner-options {:cohort? false}
+                   :runner-options {}
                    :c-fold {:enabled? true
                             :seed {:id :ruled-outcome-c-v1 :path "seed.edn"
                                    :sha256 (digest/sha256 seed)}

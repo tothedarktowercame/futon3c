@@ -7,6 +7,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon2.aif.full-loop-cohort :as full-loop-cohort]
             [futon2.aif.mission-registry :as missions]
             [futon3c.wm.guardrails :as guardrails]
             [futon3c.wm.run4-deployment-config :as deployment]
@@ -107,7 +108,8 @@
   compatible with the old handler options and performs no template, secret or
   mission reads."
   ([enabled?] (materialize enabled? {}))
-  ([enabled? {:keys [read-template read-secret resolve-mission admissible? attest!]
+  ([enabled? {:keys [read-template read-secret resolve-mission admissible? attest!
+                     execution-cohort cohort-preflight!]
               :or {read-template #(slurp template-path)
                    read-secret production-secret
                    admissible? action-admissible
@@ -116,11 +118,18 @@
    (if-not enabled?
      {}
      (let [resolver (or resolve-mission (mission-resolver))
+           dependencies (cond->
+                         {:credential read-secret
+                          :resolve-mission resolver
+                          :action-admissible? admissible?
+                          :enable? true}
+                          execution-cohort
+                          (assoc :execution-cohort execution-cohort
+                                 :cohort-preflight!
+                                 (or cohort-preflight!
+                                     full-loop-cohort/execution-preflight)))
            config (deployment/materialize
                    (read-template)
-                   {:credential read-secret
-                    :resolve-mission resolver
-                    :action-admissible? admissible?
-                    :enable? true})]
+                   dependencies)]
        (attest!)
        config))))

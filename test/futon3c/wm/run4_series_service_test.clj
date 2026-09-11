@@ -38,8 +38,7 @@
                        (make-array java.nio.file.attribute.FileAttribute 0)))
         source-text "eligible outer-loop issue\n"
         config-text (str (pr-str {:schema :wm/run4-pinned-run-config-v1
-                                  :runner-options {:cohort? false
-                                                   :accumulate-strategic-habit? false}
+                                  :runner-options {:accumulate-strategic-habit? false}
                                   :c-fold {:enabled? false}
                                   :serving-declaration
                                   {:required-environment
@@ -84,6 +83,12 @@
         run-record-root (io/file root "run-records")
         visibility-root (io/file root "visibility")
         recording-root (io/file root "recordings")
+        cohort-text "{:cohort/id :run4-test :target 9}\n"
+        cohort-file (io/file root "cohort.edn")
+        execution-cohort {:preregistration (.getCanonicalPath cohort-file)
+                          :data-root (.getCanonicalPath root)
+                          :cohort-id :run4-test
+                          :sha256 (digest/sha256 cohort-text)}
         cfg {:run4 {:enabled? true :bearer-token token :operator "Joe"
                     :casting casting
                     :admission-root (.getPath admission-root)
@@ -91,6 +96,11 @@
                     :source-root (.getPath root)
                     :source-allowlist #{"source.md" "config.edn"}
                     :resolve-mission #(when (= "M-outer-loop-successor" %) mission)
+                    :execution-cohort execution-cohort
+                    :cohort-preflight!
+                    (fn [requested]
+                      {:snapshot {:value {:cohort/id (:cohort-id requested)}}
+                       :remaining 9})
                     :action-admissible? (fn [m action]
                                           (and (= mission m)
                                                (= {:type :advance-mission
@@ -113,6 +123,7 @@
                    run-record-root visibility-root recording-root]]
         (.mkdir dir))
       (write! root "source.md" source-text)
+      (write! root "cohort.edn" cohort-text)
       (write! root "config.edn" config-text)
       (write! root "pin.edn" pin-text)
       (write! root "series.edn" (pr-str manifest))
@@ -203,6 +214,22 @@
                         ((http/make-handler cfg)
                          (request {:run4-series-ref "series.edn"} auth)))))
             (is (zero? @clicks))))))))
+
+(deftest exhausted-explicit-cohort-refuses-before-admission-and-click
+  (with-service
+    (fn [root cfg]
+      (let [clicks (atom 0)
+            cfg (assoc-in cfg [:run4 :cohort-preflight!]
+                          (fn [requested]
+                            {:snapshot {:value {:cohort/id (:cohort-id requested)}}
+                             :remaining 0}))
+            handler (http/make-handler cfg)]
+        (with-redefs [runner/click! (fn [_] (swap! clicks inc))]
+          (let [response (handler (request {:run4-series-ref "series.edn"} auth))]
+            (is (= 403 (:status response)))
+            (is (zero? @clicks))
+            (is (not (.exists (io/file root "controller"
+                                       "eligible-attempt-1"))))))))))
 
 (deftest declared-corrupt-terminal-chain-stops-resume-without-redispatch
   (with-service
@@ -304,7 +331,8 @@
                     click-id (:click-id started-body)]
                 (is (= "trial-started" (:status started-body)))
                 (is (= :completed (:status (runner/await-click! click-id))))
-                (is (false? (:cohort? @seen-opts)))
+                (is (= (get-in cfg [:run4 :execution-cohort])
+                       (:execution-cohort @seen-opts)))
                 (is (false? (:ruled-outcome-c-enabled? @seen-opts)))
                 (is (= (.getCanonicalPath (io/file root "run-records"))
                        (.getCanonicalPath (io/file (:run-record-dir @seen-opts)))))

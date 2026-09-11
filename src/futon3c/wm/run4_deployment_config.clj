@@ -8,6 +8,7 @@
   #{:schema :enabled? :activation :credential :casting :authority-root :manifest
     :pin-allowlist :source-allowlist :stores :reserved-unwired :serving :mission})
 (def dependency-keys #{:credential :resolve-mission :action-admissible? :enable?})
+(def cohort-dependency-keys #{:execution-cohort :cohort-preflight!})
 
 (defn- refuse [reason] (throw (ex-info "RUN4 deployment refused" {:reason reason})))
 (defn- parse [text]
@@ -26,7 +27,9 @@
   [template-text dependencies]
   (let [t (parse template-text)]
     (when-not (and (map? t) (= template-keys (set (keys t)))
-                   (= dependency-keys (set (keys dependencies)))
+                   (contains? #{dependency-keys
+                                (into dependency-keys cohort-dependency-keys)}
+                              (set (keys dependencies)))
                    (= :wm/run4-disabled-deployment-template-v1 (:schema t))
                    (false? (:enabled? t))
                    (= "/api/alpha/wm/run4/series/step" (get-in t [:serving :route]))
@@ -35,6 +38,9 @@
                    (fn? (:credential dependencies))
                    (fn? (:resolve-mission dependencies))
                    (fn? (:action-admissible? dependencies))
+                   (or (not (contains? dependencies :execution-cohort))
+                       (and (map? (:execution-cohort dependencies))
+                            (fn? (:cohort-preflight! dependencies))))
                    (boolean? (:enable? dependencies)))
       (refuse :invalid-deployment-contract))
     (let [facts (preflight/inspect template-text)
@@ -66,4 +72,7 @@
                          :run-record-root (:run-records stores)
                          :recording-enabled? enabled? :recording-root (:recordings stores)
                          :visibility-enabled? enabled? :visibility-root (:visibility stores)}}
+         (contains? dependencies :execution-cohort)
+         (assoc :execution-cohort (:execution-cohort dependencies)
+                :cohort-preflight! (:cohort-preflight! dependencies))
          enabled? (assoc :bearer-token token))})))

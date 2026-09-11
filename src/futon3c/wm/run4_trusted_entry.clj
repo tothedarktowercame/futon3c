@@ -9,6 +9,7 @@
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.run4-task-pin :as task-pin]
             [futon3c.wm.run4-effective-environment :as effective]
+            [futon3c.wm.run4-execution-cohort :as execution-cohort]
             [futon3c.wm.run4-pinned-run-config :as pinned-config])
   (:import [java.security MessageDigest]
            [java.util UUID]))
@@ -55,6 +56,8 @@
     (not (casting? (:casting cfg))) :run4-casting-configuration-invalid
     (not (and (fn? (:resolve-mission cfg))
               (fn? (:action-admissible? cfg)))) :run4-port-configuration-invalid
+    (not= (contains? cfg :execution-cohort)
+          (contains? cfg :cohort-preflight!)) :run4-execution-cohort-invalid
     (not (and (file-authority? (:pin-root cfg) (:pin-allowlist cfg))
               (file-authority? (:source-root cfg) (:source-allowlist cfg))))
     :run4-file-authority-invalid
@@ -205,10 +208,25 @@
                        (refuse :run4-pinned-config-invalid
                                {:reason (:reason (ex-data e))})}))]
               (or (:refusal loaded)
-                  (prepared-options cfg pin-text (:envelope validation)
-                                    (:ports validation) (:opts loaded)
-                                    (:freshness! validation)
-                                    (:run4-attempt-id payload))))))
+                  (let [cohort (when (contains? cfg :execution-cohort)
+                                 (try
+                                   (execution-cohort/validate-and-preflight!
+                                    (:execution-cohort cfg)
+                                    (:cohort-preflight! cfg))
+                                   (catch clojure.lang.ExceptionInfo e
+                                     {:refusal
+                                      (refuse :run4-execution-cohort-invalid
+                                              {:reason (:reason (ex-data e))})})))]
+                    (if-let [refusal (:refusal cohort)]
+                      refusal
+                      (let [prepared (prepared-options
+                                      cfg pin-text (:envelope validation)
+                                      (:ports validation) (:opts loaded)
+                                      (:freshness! validation)
+                                      (:run4-attempt-id payload))]
+                        (if (and (:ok prepared) cohort)
+                          (assoc-in prepared [:opts :execution-cohort] cohort)
+                          prepared))))))))
         (refuse :run4-pin-reference-refused)))))
 
 (defn authenticate
