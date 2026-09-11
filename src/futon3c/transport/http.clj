@@ -8645,6 +8645,28 @@
 
 (declare make-handler)
 
+(defn compose-http-websocket-handler
+  "Retain the existing WebSocket handler while rebuilding only HTTP config.
+
+  The factory is captured by the composed handler, so reconfiguration and
+  subsequent rebuilds preserve the same WebSocket connections and callbacks."
+  [http-handler websocket-handler]
+  (let [config (::handler-config (meta http-handler))
+        factory (or (::config-builder (meta http-handler)) #(make-handler %))]
+    (when-not (and (map? config) (fn? websocket-handler))
+      (throw (ex-info "HTTP/WebSocket composition requires captured HTTP config"
+                      {:reason :composition-config-unavailable})))
+    (letfn [(build [updated]
+              (compose-http-websocket-handler (factory updated) websocket-handler))]
+      (with-meta
+        (fn [request]
+          (if (:websocket? request)
+            (websocket-handler request)
+            (http-handler request)))
+        {::handler-config config
+         ::config-builder build
+         ::rebuild-fn #(build config)}))))
+
 (defn- installed-handler
   [request]
   (if-let [handler @!installed-handler]
@@ -8691,7 +8713,8 @@
         (when-not (map? updated)
           (throw (ex-info "config transform must return a map"
                           {:reason :handler-config-invalid})))
-        (let [handler (make-handler updated)]
+        (let [factory (or (::config-builder (meta @!installed-handler)) make-handler)
+              handler (factory updated)]
           (reset! !installed-handler handler)
           (reset! !handler-builder (::rebuild-fn (meta handler)))
           (reset! !handler-config updated)

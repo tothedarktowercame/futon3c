@@ -194,10 +194,7 @@
             ws-opts (cond-> opts
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
             {:keys [handler connections]} (make-ws-handler ws-opts)
-            app (fn [request]
-                  (if (:websocket? request)
-                    (handler request)
-                    (http-handler request)))
+            app (http/compose-http-websocket-handler http-handler handler)
             result (http/start-server! app port)
             restore-report (roster-store/restore-on-boot!
                             #(restore-agent-via-handler! http-handler %))

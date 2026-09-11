@@ -170,7 +170,7 @@
   [opts]
   (http/make-handler
    (merge (runtime-config opts)
-          (select-keys opts [:irc-send-fn]))))
+          (select-keys opts [:irc-send-fn :run4]))))
 
 (defn make-ws-callbacks
   "Create WS callbacks from live runtime state."

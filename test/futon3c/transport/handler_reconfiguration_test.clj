@@ -1,7 +1,8 @@
 (ns futon3c.transport.handler-reconfiguration-test
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.transport.http :as http]))
+            [futon3c.transport.http :as http]
+            [futon3c.runtime.agents :as runtime]))
 
 (defn- installed-request [request]
   ((var-get (ns-resolve 'futon3c.transport.http 'installed-handler)) request))
@@ -49,3 +50,35 @@
     (is (= "retained" (:irc-send-base (health)))))
   (http/rebuild-handler!)
   (is (= "retained" (:irc-send-base (health)))))
+
+(deftest composed-handler-preserves-websocket-routing
+  (let [calls (atom [])
+        ws (fn [request] (swap! calls conj request) {:status 101})
+        app (http/compose-http-websocket-handler
+             (http/make-handler {:irc-send-base "original"}) ws)]
+    (http/rebuild-handler! app)
+    (is (= "original" (:irc-send-base (health))))
+    (is (= 101 (:status (installed-request {:websocket? true :id 1}))))
+    (http/reconfigure-handler! #(assoc % :irc-send-base "updated"))
+    (is (= "updated" (:irc-send-base (health))))
+    (is (= 101 (:status (installed-request {:websocket? true :id 2}))))
+    (with-redefs [http/make-handler
+                  (fn [_] (throw (ex-info "construction refused" {})))]
+      (is (thrown? clojure.lang.ExceptionInfo
+                   (http/reconfigure-handler! #(assoc % :irc-send-base "bad")))))
+    (is (= "updated" (:irc-send-base (health))))
+    (http/rebuild-handler!)
+    (is (= "updated" (:irc-send-base (health))))
+    (is (= 101 (:status (installed-request {:websocket? true :id 3}))))
+    (is (= [1 2 3] (mapv :id @calls)))))
+
+(deftest runtime-forwards-explicit-run4-configuration
+  (let [captured (atom nil)]
+    (with-redefs [runtime/runtime-config (constantly {:patterns {:patterns/ids []}})
+                  http/make-handler (fn [config]
+                                      (reset! captured config)
+                                      (fn [_] {:status 200}))]
+      (runtime/make-http-handler {:run4 {:enabled? false}})
+      (is (= {:enabled? false} (:run4 @captured)))
+      (runtime/make-http-handler {})
+      (is (not (contains? @captured :run4))))))
