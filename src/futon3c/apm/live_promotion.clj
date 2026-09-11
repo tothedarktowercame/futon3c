@@ -414,13 +414,17 @@
            ticket {:job-id job-id}
            registered (when (and (:ok announced) job-id)
                         (submission/register! request ticket))
-           activated (when (:ok registered)
+           already-terminal? (and (:ok announced) (:ok registered)
+                                  (= job-id (:submission/job-id request))
+                                  (= :terminal (job-port/classify-state (:state announced))))
+           activated (when (and (:ok registered) (not already-terminal?))
                        (job-port/activate!
                         agency-base
                         {:agent-id (:agent-id request)
                          :prompt typed-prompt
                          :mode "work" :job-id job-id}))]
-       (if (and (:ok announced) (:ok activated))
+       (if (and (:ok announced) (:ok registered)
+                (or already-terminal? (:ok activated)))
          {:ok true :job job-id}
          {:ok false :error/code :promotion-stage-dispatch-failed
           :dispatch {:announced announced

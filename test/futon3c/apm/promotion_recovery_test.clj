@@ -160,3 +160,19 @@
       (is (= actual-id (:successor/job-id pending)))
       (is (= :awaiting-terminal (:status result)))
       (is (= actual-id (:job @saved))))))
+
+(deftest terminal-successor-replay-reuses-registered-job-without-reactivation
+  (let [request {:dispatch/id "dispatch" :agent-id "reviewer"
+                 :phase :promotion-review :role :promotion-proctor}
+        prepared (submission/prepare-request request)
+        job-id (submission/canonical-job-id prepared)]
+    (with-redefs [job-port/announce! (fn [& _] {:ok true :job-id job-id :state :done})
+                  submission/register! (fn [_ _] {:ok true :status :already-registered})
+                  job-port/activate! (fn [& _] (throw (ex-info "terminal must not reactivate" {})))]
+      (is (= {:ok true :job job-id} ((#'sut/agency-stage "http://agency" request "prompt"))))
+    (with-redefs [job-port/announce! (fn [& _] {:ok true :job-id job-id :state :done})
+                  submission/register! (fn [_ _] {:ok false :error/code :authority-mismatch})
+                  job-port/activate! (fn [& _] (throw (ex-info "mismatch must not activate" {})))]
+      (is (= :promotion-stage-dispatch-failed
+             (:error/code ((#'sut/agency-stage "http://agency" request "prompt"))))))))
+)
