@@ -109,7 +109,8 @@
   mission reads."
   ([enabled?] (materialize enabled? {}))
   ([enabled? {:keys [read-template read-secret resolve-mission admissible? attest!
-                     execution-cohort cohort-preflight! historical-action]
+                     execution-cohort cohort-preflight! historical-action
+                     historical-successor]
               :or {read-template #(slurp template-path)
                    read-secret production-secret
                    admissible? action-admissible
@@ -129,7 +130,9 @@
                                  (or cohort-preflight!
                                      full-loop-cohort/execution-preflight))
                           historical-action
-                          (assoc :historical-action historical-action))
+                          (assoc :historical-action historical-action)
+                          historical-successor
+                          (assoc :historical-successor historical-successor))
            config (deployment/materialize
                    (read-template)
                    dependencies)]

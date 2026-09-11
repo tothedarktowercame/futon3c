@@ -1,6 +1,7 @@
 (ns futon3c.wm.run4-boot-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.wm.run4-boot :as sut]))
+            [futon3c.wm.run4-boot :as sut]
+            [futon3c.wm.run4-deployment-config :as deployment]))
 
 (def token (apply str (repeat 64 "a")))
 
@@ -44,6 +45,18 @@
                                 :attest! (constantly true)})
               nil
               (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))
+
+(deftest successor-authority-reaches-the-deployment-materializer
+  (let [captured (atom nil) link {:server-owned :link}]
+    (with-redefs [deployment/materialize
+                  (fn [_ dependencies] (reset! captured dependencies) {:run4 {}})]
+      (sut/materialize true {:read-template (constantly "ignored")
+                             :read-secret (constantly token)
+                             :resolve-mission (constantly nil)
+                             :admissible? (constantly false)
+                             :attest! (constantly true)
+                             :historical-successor link})
+      (is (= link (:historical-successor @captured))))))
 
 (deftest production-mission-and-guardrail-ports-accept-only-exact-activated-action
   ;; The only substituted boot dependencies are the secret read and current
