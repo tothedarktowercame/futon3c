@@ -1,0 +1,39 @@
+{
+  "schema": "wm/successor-live-start-review-v1",
+  "at": "2026-09-11T11:28:09.343540+00:00",
+  "response": {
+    "http-status": 200,
+    "body": {
+      "status": "trial-started",
+      "ordinal": 1,
+      "click-id": "wm-click-9526b317-e016-4865-aed1-9a0812c38db3",
+      "run4/series": true
+    }
+  },
+  "boot-review": {
+    "tests": 5,
+    "assertions": 12,
+    "failures": 0,
+    "errors": 0
+  },
+  "sources": [
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/controller/series.edn",
+      "sha256": "a3b9d33564c782ecbc4024059c4272a636c02eafe0f0746be160962dcca46677"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/controller/001-started.edn",
+      "sha256": "ffba010c30c0b9db3a5336efa21a0fce9e90d7424ba1399f95ea41cbb384a372"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/controller/u88-production-successor-20260911-v2-attempt-001/reservation.edn",
+      "sha256": "f89c5995fa5dc19b12465dc85c70ebfb8e19b26129ce226952a360c7d9ca6f7e"
+    },
+    {
+      "path": "/home/joe/run4/U88-production-successor-20260911-v2/controller/u88-production-successor-20260911-v2-attempt-001/click-result.edn",
+      "sha256": "775f7fd9cab196a269168ca7c3f017ac60d5018f3c18a9a5e2600a5768000d14"
+    }
+  ],
+  "result": "pending",
+  "acceptance": false
+}
