@@ -118,7 +118,7 @@
                         (actual (merge opts (ft/isolated-runner-opts)
                                        {:cohort? true :roster-fn (fn [_] {:codex-10 {:status "idle" :invoke-ready? true}
                                                             :codex-12 {:status "idle" :invoke-ready? true}})
-                                        :repair-open-fn #(repair/open-obligations (get-in deps [:historical-action :repair-root]))}))]
+                                        :repair-open-fn #(repair/open-obligations (get-in deps [:historical-action :repair-root]))})))]
           (#'u/with-service
            (fn [root cfg]
              (reset! runner/!status runner/initial-status)
