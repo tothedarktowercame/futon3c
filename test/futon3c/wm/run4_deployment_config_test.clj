@@ -65,6 +65,7 @@
               :verification-cohort {:preregistration "/authority/historical.edn"
                                     :data-root "/authority/historical"
                                     :cohort-id :historical :sha256 (apply str (repeat 64 "a"))}
+              :historical-evidence {:roots {} :admission-request {} :started {}}
               :successor {:series-id "run4-successor"
                           :trial-id "trial-002" :attempt-id "attempt-002"}}
         c (sut/materialize text (assoc deps :historical-action authority

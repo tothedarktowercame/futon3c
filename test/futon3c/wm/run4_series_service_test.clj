@@ -32,6 +32,7 @@
               :verification-cohort {:preregistration "/authority/historical.edn"
                                     :data-root "/authority/historical"
                                     :cohort-id :historical :sha256 (apply str (repeat 64 "a"))}
+              :historical-evidence {:roots {} :admission-request {} :started {}}
               :successor {:series-id "series-2" :trial-id :trial-2
                           :attempt-id "attempt-2"}}
         request {:attempt-id "attempt-2"

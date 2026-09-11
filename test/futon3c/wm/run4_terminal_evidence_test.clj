@@ -6,6 +6,7 @@
             [futon2.aif.run4-route-conformance :as route]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-terminal-evidence :as sut]
+            [futon3c.wm.run4-historical-projection :as historical]
             [futon3c.wm.run4-historical-successor :as successor]))
 
 (def pin {:sha256 (apply str (repeat 64 "a")) :series-id "RUN4"
@@ -52,20 +53,28 @@
         _ (write! prereg value)
         sha (digest/sha256 (slurp prereg))
         data (doto (io/file root (str (name cohort-id) "-data")) .mkdir)
-        dir (doto (io/file data (name cohort-id)) .mkdir)
-        attempt (doto (io/file dir attempt-id) .mkdir)
-        activation {:cohort/id cohort-id :activated-at "2026-09-11T00:00:00Z"
-                    :preregistration-path (.getCanonicalPath prereg)
-                    :preregistration-sha256 sha :stopping-target 1}
-        base {:event/schema-version 1 :cohort/id cohort-id :attempt/id attempt-id
-              :attempt/ordinal 1 :recorded-at "2026-09-11T00:00:00Z"}]
-    (write! (io/file dir "activation.edn") activation)
-    (write! (io/file attempt "001-time-step.edn")
-            (assoc base :event/sequence 1 :checkpoint/type :time-step
-                   :payload {:judgment {:opportunity-id (str (name cohort-id) "/1")}}))
-    (write! (io/file attempt "002-closed.edn")
-            (assoc base :event/sequence 2 :checkpoint/type :closed
-                   :payload {:judgment {:outcome outcome}}))
+        prereg-path (.getCanonicalPath prereg)
+        data-path (.getCanonicalPath data)
+        term (fn [judgment] {:judgment judgment :ground {:kind :test-witness}})]
+    (cohort/activate! prereg-path data-path)
+    (let [started (cohort/start-attempt!
+                   prereg-path data-path
+                   (term {:opportunity-id (str (name cohort-id) "/1")
+                          :trigger :wallclock-cron :machine-state {:tick 1}
+                          :agent-roster [] :semantic-epoch :test
+                          :code-state {:git-sha "abc" :git-dirty? false
+                                       :resolved-mode-flags {}
+                                       :configuration-digest "test"}}))]
+      (is (= attempt-id (:attempt/id started)))
+      (doseq [checkpoint [:selection :construction :dispatch :build :adjudication]]
+        (cohort/append-checkpoint! prereg-path data-path attempt-id checkpoint
+                                   {:sorry {:kind (keyword (str "test-" (name checkpoint)))}}))
+      (cohort/close-attempt!
+       prereg-path data-path attempt-id
+       (term {:outcome outcome :grounded? (= :grounded-change outcome)
+              :artifact-only? false :duration-ms 1 :resource-use {:agent-turns 0}
+              :witness (when (= :grounded-change outcome)
+                         {:before "a" :after "b" :resolved? true :dial-moved? true})})))
     {:preregistration (.getCanonicalPath prereg)
      :data-root (.getCanonicalPath data) :cohort-id cohort-id :sha256 sha}))
 
@@ -204,8 +213,18 @@
                    :verification-attempt {:kind :runner-execution
                                           :id "attempt-001"}
                    :verification-cohort verification-cohort
+                   :historical-evidence {:roots {} :admission-request {} :started {}}
                    :successor-cohort execution-cohort}]
        (try
+         (with-redefs [historical/read-bundle!
+                       (fn [& _]
+                         {:projection {:repair {:id "repair-057"
+                                                :verification-id "verification-057"}
+                                       :execution-attempt {:kind :runner-execution
+                                                           :id "attempt-001"}
+                                       :runner-attempt/id "attempt-001"
+                                       :cohort {:cohort-id :verification-cohort
+                                                :sha256 (:sha256 verification-cohort)}}})]
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (dissoc config :verification-cohort))))
@@ -252,7 +271,7 @@
                    :cohort-sha256 (:sha256 execution-cohort)
                    :attempt-id "attempt-001"}
                   (:validation-execution resolution)))
-           (is (empty? (repair/open-obligations (.getPath store)))))
+           (is (empty? (repair/open-obligations (.getPath store))))))
          (finally (delete-tree! store)))))))
 
 (deftest validated-bundle-feeds-the-shared-u49-route-core

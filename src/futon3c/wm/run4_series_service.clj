@@ -93,12 +93,13 @@
   (when-let [link (:historical-successor run4)]
     (let [successor (:successor link)]
       (when-not (and (= #{:repair-id :verification-id :verification-attempt
-                          :verification-cohort :successor}
+                          :verification-cohort :historical-evidence :successor}
                          (set (keys link)))
                      (every? #(and (string? %) (not (str/blank? %)))
                              ((juxt :repair-id :verification-id) link))
                      (execution-identity? (:verification-attempt link))
                      (map? (:verification-cohort link))
+                     (map? (:historical-evidence link))
                      (= #{:series-id :trial-id :attempt-id} (set (keys successor)))
                      (every? #(or (and (string? %) (not (str/blank? %)))
                                   (keyword? %))
@@ -132,6 +133,7 @@
                 :verification-id (:verification-id link)
                 :verification-attempt (:verification-attempt link)
                 :verification-cohort (:verification-cohort link)
+                :historical-evidence (:historical-evidence link)
                 :successor-cohort (:execution-cohort run4)}))))))))
 
 (defn- reconcile-linked-row!
@@ -156,6 +158,7 @@
           :verification-id (:verification-id link)
           :verification-attempt (:verification-attempt link)
           :verification-cohort (:verification-cohort link)
+          :historical-evidence (:historical-evidence link)
           :successor-cohort (:execution-cohort run4)})))))
 
 (defn step!

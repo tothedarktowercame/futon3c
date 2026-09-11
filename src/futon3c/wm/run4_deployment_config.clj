@@ -27,13 +27,14 @@
         verification-attempt (:verification-attempt x)]
     (and (map? x)
          (= #{:repair-id :verification-id :verification-attempt
-              :verification-cohort :successor}
+              :verification-cohort :historical-evidence :successor}
             (set (keys x)))
          (nonblank? (:repair-id x)) (nonblank? (:verification-id x))
          (= #{:kind :id} (set (keys verification-attempt)))
          (= :runner-execution (:kind verification-attempt))
          (nonblank? (:id verification-attempt))
          (map? (:verification-cohort x))
+         (map? (:historical-evidence x))
          (= #{:series-id :trial-id :attempt-id} (set (keys successor)))
          (every? #(or (nonblank? %) (keyword? %)) (vals successor)))))
 (defn- parse [text]

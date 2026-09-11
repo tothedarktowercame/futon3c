@@ -4,6 +4,7 @@
   (:require [clojure.string :as str]
             [futon2.aif.repair-obligation :as repair]
             [futon2.aif.full-loop-cohort :as cohort]
+            [futon3c.wm.run4-historical-projection :as historical]
             [futon3c.wm.run4-terminal-evidence :as terminal]))
 
 (deftype TerminalSuccessorAuthority [record]
@@ -13,13 +14,17 @@
 (defn resolve-from-durable!
   [{:keys [repair-root evidence-roots admission-request started repair-id
            verification-id verification-attempt verification-cohort
-           successor-cohort] :as server-config}]
+           successor-cohort historical-evidence] :as server-config}]
   (when-not (= #{:repair-root :evidence-roots :admission-request :started
                  :repair-id :verification-id :verification-attempt
-                 :verification-cohort :successor-cohort}
+                 :verification-cohort :successor-cohort :historical-evidence}
                (set (keys server-config)))
     (throw (ex-info "Historical successor server configuration invalid" {})))
-  (let [bundle (terminal/read-terminal-evidence-bundle
+  (let [historical-bundle (historical/read-bundle!
+                           (:roots historical-evidence)
+                           (:admission-request historical-evidence)
+                           (:started historical-evidence))
+        bundle (terminal/read-terminal-evidence-bundle
                 evidence-roots admission-request started)
         class (:classification bundle)
         projection (:terminal-projection bundle)
@@ -31,7 +36,19 @@
                               verification-cohort (:id verification-attempt))
         successor-execution (cohort/closed-execution successor-cohort local-attempt)
         successor-attempt (select-keys successor-execution [:kind :id])]
-    (when-not (and bundle (= {:task-result :succeeded :infrastructure :safe
+    (when-not (and historical-bundle
+                   (= repair-id (get-in historical-bundle [:projection :repair :id]))
+                   (= verification-id
+                      (get-in historical-bundle [:projection :repair :verification-id]))
+                   (= verification-attempt
+                      (get-in historical-bundle [:projection :execution-attempt]))
+                   (= (:cohort-id historical-execution)
+                      (get-in historical-bundle [:projection :cohort :cohort-id]))
+                   (= (:cohort-sha256 historical-execution)
+                      (get-in historical-bundle [:projection :cohort :sha256]))
+                   (= (:attempt-id historical-execution)
+                      (get-in historical-bundle [:projection :runner-attempt/id]))
+                   bundle (= {:task-result :succeeded :infrastructure :safe
                               :evidence-id (:projection-digest bundle)} class)
                    (keyword? cohort-id)
                    (string? cohort-sha) (re-matches #"[0-9a-f]{64}" cohort-sha)
