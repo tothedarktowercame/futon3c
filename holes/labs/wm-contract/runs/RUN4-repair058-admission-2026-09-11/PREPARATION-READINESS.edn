@@ -1,0 +1,26 @@
+{:schema :wm/run4-repair058-admission-preparation-v1
+ :status :disabled-reviewed-input-awaiting-independent-packet-review
+ :enabled? false
+ :futon2-head "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+ :casting {:author "codex-10" :reviewer "codex-12"
+           :repair-reviewer "codex-12"}
+ :repair-id "repair-attempt-058-untyped-failure"
+ :verification
+ {:id "repair-058-revalidation-20260911-v1"
+  :sha256 "1367dc2c1e4fdf25c287003c3fbee35f409856fa3b8a940002d301c9132a12f3"}
+ :packet
+ {:server-config-sha256 "0f31e4abd3340c6df431105f4c937651e2e708cd21b104692d7ca1c7d9de0065"
+  :historical-action-sha256 "e9622d9d40be4e88178c734056c241291ac5e41bd6e62978f3d714891926c34c"
+  :execution-cohort-sha256 "cce2355ea3ca0e1bf2e0714ddc113096792295520e72bb1897717a83abc6b439"
+  :series-pin-sha256 "343ed84b83bf5df898939886967d1e91edd0826e0070b692773794bacd985b77"
+  :task-pin-sha256 "cff1f65d853afca6ad5005de424690f1e163425ee52d975f64701059c26ddaf7"
+  :run-config-sha256 "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"
+  :cohort-sha256 "3b490316ae2006dac365088674d804670bb2f9adb539db1ec6b95e0a9adff1b3"}
+ :identities
+ {:series "run4-repair058-admission-20260911-v1"
+  :controller-attempt "repair058-historical-verification-admission-001"
+  :cohort :run4-repair058-admission-20260911-v1
+  :target 1}
+ :execution {:status :not-performed :identity nil}
+ :successor-link {:status :unmaterialized}
+ :live-effects :none}
