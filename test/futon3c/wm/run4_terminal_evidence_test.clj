@@ -175,6 +175,19 @@
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-id "foreign-verification"))))
+         (let [commit-resolution repair/commit-historical-resolution!]
+           (with-redefs [repair/commit-historical-resolution!
+                         (fn [root repair-id authority]
+                           (let [record (repair/historical-successor-record authority)]
+                             (commit-resolution
+                              root repair-id
+                              (reify repair/HistoricalSuccessorAuthority
+                                (historical-successor-record [_]
+                                  (assoc record :validation-attempt
+                                         (:verification-attempt record)))))))]
+             (is (thrown? clojure.lang.ExceptionInfo
+                          (successor/resolve-from-durable! config))
+                 "store must independently reject verification as its own successor")))
          (let [resolution (successor/resolve-from-durable! config)]
            (is (= :resolved (:repair/status resolution)))
            (is (= "outer-attempt" (:validation-attempt resolution)))
