@@ -1,0 +1,17 @@
+{:schema :wm/historical-admission-preparation-v1
+ :enabled? false
+ :repair-id "repair-run4-u88-production-successor-20260911-v2--attempt-001-untyped-failure"
+ :verification
+ {:id "repair-successor-v2-selection-revalidation-20260911-v1"
+  :path "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification/repair-successor-v2-selection-revalidation-20260911-v1.verification.edn"
+  :sha256 "99b0fed181c7142a4d498abd08e9bb7dcf6247ec4decf3f41d6434a1724c31c6"
+  :state :awaiting-validation
+  :repair-resolved? false}
+ :actors {:qualification-author "codex-10" :reviewer "codex-12"
+          :repair-reviewer "codex-12"}
+ :stop-line {:precedence :required :status :open
+             :distinct-production-successor-required? true}
+ :execution {:status :not-performed :identity nil}
+ :capacity :not-allocated
+ :repair-store-admission :not-performed
+ :production-successor :not-performed}
