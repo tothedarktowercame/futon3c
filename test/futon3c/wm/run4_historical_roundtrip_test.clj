@@ -18,6 +18,9 @@
 (use-fixtures :once hermetic/with-hermetic-stores)
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- write! [f x] (spit f (str (pr-str x) "\n")) f)
+(defn- delete-tree! [root]
+  (doseq [file (reverse (file-seq root))]
+    (io/delete-file file true)))
 (defn with-authority [f]
   (let [root (tmp) store (doto (io/file root "store") .mkdir)
         findings (doto (io/file store "findings") .mkdir) quals (doto (io/file root "q") .mkdir)
@@ -64,14 +67,16 @@
                          (assoc-in [:stopping-rule :target] 1)))]
       (spit cp raw)
       (cohort/activate! (.getPath cp) (.getPath root))
-      (f {:historical-action {:repair-root (.getPath store)
-                              :verification-root (.getPath out)
-                              :verification-path (.getPath vf)
-                              :verification-sha256 (digest/sha256 (slurp vf))}
-          :execution-cohort {:preregistration (.getCanonicalPath cp)
-                             :data-root (.getCanonicalPath root)
-                             :cohort-id :historical-roundtrip :sha256 (digest/sha256 raw)}
-          :cohort-preflight! cohort/execution-preflight}))))
+      (try
+        (f {:historical-action {:repair-root (.getPath store)
+                                :verification-root (.getPath out)
+                                :verification-path (.getPath vf)
+                                :verification-sha256 (digest/sha256 (slurp vf))}
+            :execution-cohort {:preregistration (.getCanonicalPath cp)
+                               :data-root (.getCanonicalPath root)
+                               :cohort-id :historical-roundtrip :sha256 (digest/sha256 raw)}
+            :cohort-preflight! cohort/execution-preflight})
+        (finally (delete-tree! root)))))))
 
 (deftest ^:slow materialized-historical-async-roundtrip
   (with-authority
