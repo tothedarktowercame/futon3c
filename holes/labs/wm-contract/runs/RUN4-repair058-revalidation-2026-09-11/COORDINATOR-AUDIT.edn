@@ -1,0 +1,1 @@
+{:receipt-sha256 "5ca7d6118610fd97c200482e3ecafb762ab81a099e6b9c591b82ac9019acdfad", :strict-forms true, :source-pins 6, :ordered-checks [:timeout-fault-probe :full-runner-regression :repair-store-regression], :all-exits-zero true, :output-digests-current true, :independent-review :not-performed, :repair-admitted? false}
