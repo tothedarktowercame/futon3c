@@ -117,7 +117,12 @@
         evidence-roots {:admission (:admission-root run4)
                         :bindings (:binding-root series)
                         :projections (:projection-root series)
-                        :run-records (:run-record-root series)}
+                        :run-records (:run-record-root series)
+                        :repair-root (get-in run4 [:historical-action :repair-root])
+                        :cohort-preregistration
+                        (get-in run4 [:execution-cohort :preregistration])
+                        :cohort-data-root
+                        (get-in run4 [:execution-cohort :data-root])}
         terminal-port
         (fn [started]
           (let [prepared-trial (get @prepared (:ordinal started))

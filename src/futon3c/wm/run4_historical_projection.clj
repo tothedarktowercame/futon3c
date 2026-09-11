@@ -5,6 +5,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-cohort :as cohort]
+            [futon2.aif.repair-obligation :as repair-store]
             [futon3c.wm.run4-realized-recording :as recording]
             [futon3c.wm.run4-terminal-evidence :as evidence]))
 
@@ -68,6 +70,7 @@
                   :verification-source (:verification-source transition)
                   :verification-artifact (:verification-artifact transition)
                   :resolved? false :production-successor-required? true}
+         :repair-transition transition
          :cohort (:execution-cohort record)
          :source {:run-record (.getPath file)
                   :run-record-sha256 (digest/sha256 text)}}))))
@@ -104,7 +107,8 @@
 (defn read-bundle!
   "Read an admitted historical outcome through the shared strict admission and
   click-binding join. Returns nil only before binding publication."
-  [{:keys [projections run-records] :as roots} admission-request started]
+  [{:keys [projections run-records repair-root cohort-preregistration
+           cohort-data-root] :as roots} admission-request started]
   (when-let [binding (evidence/read-admission-click-binding!
                       roots admission-request started)]
     (when (contains? binding :run4/historical-projection)
@@ -115,16 +119,54 @@
       (let [file (confined-file projections (:path ref))
             text (slurp file)
             value (parse-one text)]
-        (when-not (and (= (:sha256 ref) (digest/sha256 (pr-str value)))
+        (when-not (and (= #{:schema :click/id :run/id :controller-attempt/id
+                            :runner-attempt/id :execution-attempt :requested-pin
+                            :enacted-action :repair :repair-transition :cohort :source}
+                          (set (keys value)))
+                       (= (:sha256 ref) (digest/sha256 (pr-str value)))
                        (= :wm/run4-historical-admission-projection-v1 (:schema value))
                        (= (:click-id started) (:click/id value))
+                       (= :historical-verification-awaiting-validation
+                          (:outcome binding))
+                       (= (:runner-attempt/id value) (:attempt/id binding))
+                       (= (:run/id value) (get-in binding [:run-id-observation :value]))
                        (= (:attempt-id admission-request)
                           (:controller-attempt/id value))
-                       (= (get-in admission-request [:identity :pin-sha256])
-                          (get-in value [:requested-pin :identity :pin-sha256]))
+                       (= :authenticated-not-enacted
+                          (get-in value [:requested-pin :status]))
+                       (= #{:status :identity :operator-selection}
+                          (set (keys (:requested-pin value))))
+                       (= (:identity admission-request)
+                          (get-in value [:requested-pin :identity]))
+                       (= #{:series-id :trial-id :pin-sha256 :casting}
+                          (set (keys (get-in value [:requested-pin :identity]))))
+                       (= :revalidate-historical-repair
+                          (get-in value [:enacted-action :type]))
+                       (= (get-in value [:repair :id])
+                          (get-in value [:enacted-action :repair-obligation :repair/id]))
                        (= :awaiting-validation (get-in value [:repair :status]))
+                       (= #{:id :status :verification-id :verification-source
+                            :verification-artifact :resolved?
+                            :production-successor-required?}
+                          (set (keys (:repair value))))
                        (false? (get-in value [:repair :resolved?])))
           (refuse! :historical-projection-binding-mismatch))
+        (when-not (and (nonblank? repair-root)
+                       (= (:repair-transition value)
+                          (some->> (repair-store/open-obligations repair-root)
+                                   (filter #(= (get-in value [:repair :id])
+                                               (:repair/id %))) first
+                                   :repair/verification)))
+          (refuse! :historical-verification-store-mismatch))
+        (let [ledger (try (cohort/ledger cohort-preregistration cohort-data-root)
+                          (catch Throwable _ (refuse! :historical-cohort-unreadable)))
+              attempt (some #(when (= (:runner-attempt/id value) (:attempt/id %)) %)
+                            (:attempts ledger))]
+          (when-not (and (= (get-in value [:cohort :cohort-id]) (:cohort/id ledger))
+                         (:closed? attempt)
+                         (= :historical-verification-awaiting-validation
+                            (:outcome attempt)))
+            (refuse! :historical-cohort-binding-mismatch)))
         (let [run-file (confined-file run-records (get-in value [:source :run-record]))
               run-text (slurp run-file)
               run-record (parse-one run-text)]
@@ -143,7 +185,7 @@
            :projection value :run-record run-record
            :classification {:task-result :unknown
                             :repair-status :awaiting-validation
-                            :infrastructure :safe
+                            :infrastructure :unknown
                             :production-successor-required? true}}))))))
 
 (defn persist-observation!
