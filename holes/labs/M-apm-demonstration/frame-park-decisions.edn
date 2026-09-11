@@ -4362,4 +4362,19 @@
         "state was not edited, and no other frame was touched.")}
 
 
+
+ {:frame/id "f220"
+  :problem/id "m03J05"
+  :last-valid-receipt/id "a28fd032f06b54ba321e38a6f3983f90e9d60d01940ab48faeff998eccbb719a"
+  :decision/status :decided
+  :decision/by "codex-16"
+  :decision/authority :joe-explicit-direction
+  :decision/class :mathematical-infrastructure-transfer
+  :decision/at "2026-09-11"
+  :decision/topology-intake-commit "6a3650b8"
+  :decision/destination "/home/joe/code/apm-lean/holes/labs/topology-contract/worklist.edn"
+  :decision/work-items [:m03j05-f220-infrastructure-intake :m03j05-f220-infrastructure-strategy]
+  :decision/rationale "Joe directed transfer after 50 solver rounds with three frozen infrastructure bridges remaining. Actual open probe and blocked strategy rows added and full worklist validated."
+  :decision/recommended-route "Topology infrastructure assessment, reviewed dependency DAG, then bounded implementation. Preserve frozen statements and original solver branch."
+  :decision/not-done "No mathematical completion, no APM requeue, no topology supervisor restart; original parked frame and receipts retained."}
 ]}
