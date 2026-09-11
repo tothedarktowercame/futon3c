@@ -178,7 +178,7 @@
             verification (:repair/verification obligation)
             lifecycle (controller/read-lifecycle!
                        (:controller-root series) manifest-text @prepared)
-            started (:started (some #(when (= ordinal (:ordinal %)) %) lifecycle))]
+            started (:started (some #(when (= ordinal (:ordinal %)) %) (:trials lifecycle)))]
         (when-not (and (= :awaiting-validation (:repair/status obligation))
                        (map? verification) started)
           (refuse! :historical-successor-authority-missing))
