@@ -7,7 +7,9 @@
   {:job-id (str "job-" (name phase))
    :dispatch/id (str "dispatch-" (name phase))
    :agent-id "f30-role" :frame-id "f30" :problem-id "m00A00"
-   :phase phase :role :controller :submission/token "secret"})
+   :phase phase :role :controller :submission/token "secret"
+   :v4/revision-review {:proposal/id (apply str (repeat 64 "a"))
+                        :candidate {:sha256 (apply str (repeat 64 "b"))}}})
 
 (defn payload [phase]
   {:command-own-exit 0 :outcome "complete" :failure-account []
@@ -15,7 +17,11 @@
                              (repeat true))
                (contains? #{:student-attempt-1 :student-attempt-2
                             :student-attempt-3} phase)
-               (assoc :memory-use {:used-ids []}))})
+               (assoc :memory-use {:used-ids []})
+               (= :pattern-revision-review phase)
+               (assoc :revision-review {:proposal/id (apply str (repeat 64 "a"))
+                                        :candidate/sha256 (apply str (repeat 64 "b"))
+                                        :verdict :accept :reason "test" :residual "test"}))})
 
 (deftest every-modelled-live-phase-has-an-executable-schema
   (doseq [phase (keys sut/evidence-required-by-phase)]
@@ -223,3 +229,11 @@
     (is (not (.contains command "localhost:7070")))
     (is (.contains command "apm-read-job.py"))
     (is (.contains command "apm-search-memory.py"))))
+
+(deftest pattern-review-wrong-bytes-are-refused-before-immutable-submission
+  (let [auth (authority :pattern-revision-review) valid (payload :pattern-revision-review)]
+    (is (:ok (sut/validate-payload auth valid)))
+    (doseq [bad [(assoc-in valid [:evidence :revision-review] true)
+                 (assoc-in valid [:evidence :revision-review :candidate/sha256] "wrong")
+                 (assoc-in valid [:evidence :revision-review :proposal/id] (apply str (repeat 64 "c")))]]
+      (is (false? (:ok (sut/validate-payload auth bad)))))))

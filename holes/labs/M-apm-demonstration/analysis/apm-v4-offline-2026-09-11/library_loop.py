@@ -111,17 +111,18 @@ def apply(state, event):
             require(not any(x['attempt_id'] == event['attempt_id'] for x in state['observations']),
                     'attempt observation already recorded')
             for field in ['retrieved', 'read', 'applicable', 'proof_used', 'useful']:
-                require(type(event[field]) is bool, 'observation fields must be explicit booleans')
-            require(not event['read'] or event['retrieved'], 'read without retrieval')
-            require(not event['proof_used'] or (event['read'] and event['applicable']),
+                require(type(event[field]) is bool or event[field] == 'unknown',
+                        'observation fields must be booleans or explicit unknown')
+            require(event['read'] is not True or event['retrieved'] is True, 'read without retrieval')
+            require(event['proof_used'] is not True or (event['read'] is True and event['applicable'] is True),
                     'proof use without read/applicability')
-            if event['useful']:
-                require(event['proof_used'] and text(event.get('reviewer')) and
+            if event['useful'] is True:
+                require(event['proof_used'] is True and text(event.get('reviewer')) and
                         event['reviewer'] not in [event['student'], p['proposal']['author']] and
                         text(event.get('review_evidence')), 'usefulness requires independent reviewed proof use')
             state['observations'].append(copy.deepcopy(event))
             # A later failed use is retained; it does not erase an earlier witness.
-            useful = any(x['proposal_id'] == proposal_id and x['useful'] for x in state['observations'])
+            useful = any(x['proposal_id'] == proposal_id and x['useful'] is True for x in state['observations'])
             p['next_use'] = 'reviewed-useful-example' if useful else 'observed-without-usefulness-witness'
         else:
             raise ValueError('unknown transition')

@@ -76,5 +76,17 @@ class LibraryLoopTest(unittest.TestCase):
         with self.assertRaises(ValueError): proposal_from_obligation(self.base, self.cascade, 'absent',
             author='ta', pattern='finite-net', category='applicability', patch={'conditions':'x'}, evidence='x', expected_change='x')
 
+    def test_unknown_use_stays_unknown_and_never_establishes_usefulness(self):
+        o = self.observation()
+        o.update(read='unknown', applicable='unknown', proof_used='unknown', useful='unknown')
+        s = apply(self.started(), o)
+        self.assertEqual('unknown', s['observations'][0]['proof_used'])
+        self.assertEqual('observed-without-usefulness-witness', s['proposals'][self.pid]['next_use'])
+        for field in ['proof_used', 'useful']:
+            with self.assertRaises(ValueError):
+                apply(self.started(), {**o, field: True})
+        with self.assertRaises(ValueError):
+            apply(self.started(), {**o, 'read': None})
+
 if __name__ == '__main__':
     unittest.main()
