@@ -1,0 +1,26 @@
+{:schema :wm/historical-qualification-plan-v1
+ :verification-id "repair-058-revalidation-20260911-v1"
+ :repair-id "repair-attempt-058-untyped-failure"
+ :sources
+ [{:path "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-attempt-058-untyped-failure.edn"
+   :sha256 "941a09f6b801bd6647b534563cbb59a21f57f066a4f2c297dc14a9f257de0c5e"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj"
+   :sha256 "1431e8f684cdaa30e1f13654c3d016c072f293e6e1440b20f9dd9b490217e0b3"}
+  {:path "/home/joe/code/futon2/src/futon2/aif/repair_obligation.clj"
+   :sha256 "4c432d6c449945c2107caf05a5cc00f54d4bf9aaf7d24cc426d7b108795c96fd"}
+  {:path "/home/joe/code/futon2/test/futon2/aif/full_loop_runner_test.clj"
+   :sha256 "ce12668770bc5560de66851e367060311d13ada33c2c750c4bb745402a81a6a1"}
+  {:path "/home/joe/code/futon2/test/futon2/aif/repair_obligation_test.clj"
+   :sha256 "8d53ba851aa2a1f49115179eaf4ba79b48fea78462ff930e6242742abe9ecbd2"}
+  {:path "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/repair058-timeout-probe.clj"
+   :sha256 "abdebaa2798862256a9a5ada46775ddde1a94b9e9525165052d1f680b131917f"}]
+ :checks
+ [{:id :timeout-fault-probe
+   :argv ["bash" "-lc" "cd /home/joe/code/futon2 && clojure -M /home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-U88-production-successor-2026-09-11-v2/repair058-timeout-probe.clj"]
+   :timeout-ms 120000}
+  {:id :full-runner-regression
+   :argv ["bash" "-lc" "cd /home/joe/code/futon2 && clojure -M:test -m cognitect.test-runner -n futon2.aif.full-loop-runner-test"]
+   :timeout-ms 600000}
+  {:id :repair-store-regression
+   :argv ["bash" "-lc" "cd /home/joe/code/futon2 && clojure -M:test -m cognitect.test-runner -n futon2.aif.repair-obligation-test"]
+   :timeout-ms 600000}]}

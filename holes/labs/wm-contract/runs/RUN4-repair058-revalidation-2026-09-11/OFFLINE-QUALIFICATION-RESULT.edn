@@ -1,0 +1,35 @@
+{:schema :wm/historical-qualification-preparation-v1
+ :repair-id "repair-attempt-058-untyped-failure"
+ :verification-id "repair-058-revalidation-20260911-v1"
+ :plan {:path "qualification-plan.disabled.edn"
+        :sha256 "0c55c13a51c34b76f6c79d64fd0f2883e130ff0e13cc8e86cb0fec509c931371"}
+ :receipt {:path "offline-evidence/repair-058-revalidation-20260911-v1.qualification.edn"
+           :sha256 "5ca7d6118610fd97c200482e3ecafb762ab81a099e6b9c591b82ac9019acdfad"
+           :bytes 560594
+           :check-count 3
+           :passed-count 3
+           :timed-out-count 0}
+ :checks
+ [{:id :timeout-fault-probe
+   :exit 0 :timed-out? false :timeout-ms 120000
+   :stdout-sha256 "2a73d33996ef4df974c4446f4f29e5ea34879cd17108844ab65f86b841fd30c7"
+   :observed {:recovery-calls 2 :recovery-sleeps [5000]
+              :recovery-status :verified-live-selection
+              :exhaustion-calls 3 :exhaustion-sleeps [5000 5000]
+              :exhaustion-kind :strategic-selection-unavailable
+              :exhaustion-detail :transient-exhausted
+              :attempt-evidence-count 3}}
+  {:id :full-runner-regression
+   :exit 0 :timed-out? false :timeout-ms 600000
+   :tests 130 :assertions 617
+   :stdout-sha256 "777057c2b468fbcc1e4330a8e5b3f7daca06059b0b2a95dc11ddd4203e600cb5"}
+  {:id :repair-store-regression
+   :exit 0 :timed-out? false :timeout-ms 600000
+   :tests 9 :assertions 36
+   :stdout-sha256 "8c206e2918ca20e593d18c464ca4252727418e019a39ef6e1efe3ca36a394e1f"}]
+ :source-head "c9c6d6ce341cb8bb5751aeff908435a552e1c25d"
+ :finding-sha256 "941a09f6b801bd6647b534563cbb59a21f57f066a4f2c297dc14a9f257de0c5e"
+ :qualification-passed? true
+ :independent-review :not-performed
+ :repair-admitted? false
+ :live-attempt? false}
