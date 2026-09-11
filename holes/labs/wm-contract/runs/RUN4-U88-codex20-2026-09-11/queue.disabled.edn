@@ -1,0 +1,12 @@
+{:schema :wm/run4-series-queue-install-v1 :enabled? false
+ :queue-id "run4-u88-codex20-queue-20260911-v1"
+ :state-root "/home/joe/run4/U88-codex20-20260911/queue"
+ :visibility-file "/home/joe/run4/U88-codex20-20260911/queue/visibility.json"
+ :interval-ms 60000 :await-timeout-ms 900000
+ :entry {:entry-id "u88-codex20-task"
+         :series-id "run4-u88-codex20-20260911-v1"
+         :manifest-ref "holes/labs/wm-contract/runs/RUN4-U88-codex20-2026-09-11/series-pin.edn"
+         :manifest-sha256 "44e8ee799708775a5dfa8fbc39406be00e65ab3d86012b7850c2ee3ad40beb14"
+         :cohort-id :run4-u88-codex20-20260911-v1
+         :cohort-sha256 "4c635a5b3391479a28d207f870a162d2e25fa383b10030f1924d72594b5cfcc3"}
+ :activation :not-performed}
