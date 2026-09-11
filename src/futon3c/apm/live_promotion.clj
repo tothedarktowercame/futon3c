@@ -140,6 +140,15 @@
                  (assoc % :successor-announced-id (str successor-id)
                         :successor-activated-id (str successor-id))))))
 
+(defn- reviewer-authority
+  [reviewer-request candidates candidate-evidence]
+  (assoc reviewer-request
+         :candidates candidates
+         :candidate-evidence candidate-evidence
+         :phase :promotion-review
+         :role :promotion-proctor
+         :candidate-set-digest (machine/ledger-digest [candidates])))
+
 (defn prepare-review-recovery
   "Validate a trusted operator recovery decision against an exact checkpoint.
   This is an operator port, never a field accepted from a role submission.
@@ -186,7 +195,8 @@
                :successor/attempt attempt
                :successor/job-id
                (submission/canonical-job-id
-                (assoc (:request prior) :submission/attempt attempt))}})))
+                (assoc (reviewer-authority (:request prior) (:candidates prior) nil)
+                       :submission/attempt attempt))}})))
 
 (defn authorize-review-recovery!
   "Persist a checked one-successor decision before any dispatch. No counter reset."
@@ -349,15 +359,6 @@
       {:ok false :error/code :promotion-review-attribution-ambiguous}
 
       :else {:ok true :reviewer reviewer :reviews reviews})))
-
-(defn- reviewer-authority
-  [reviewer-request candidates candidate-evidence]
-  (assoc reviewer-request
-         :candidates candidates
-         :candidate-evidence candidate-evidence
-         :phase :promotion-review
-         :role :promotion-proctor
-         :candidate-set-digest (machine/ledger-digest [candidates])))
 
 (defn- review-read-instruction
   ([agency-base candidates] (review-read-instruction agency-base candidates []))

@@ -141,3 +141,22 @@
     (is (false? (:ok result)))
     (is (= :review-evidence-not-materialized (get-in result [:findings 0 :finding])))
     (is (= "Trace endpoint returned HTTP 404" (get-in result [:findings 0 :review/reason])))))
+
+
+(deftest recovery-identity-matches-dispatch-for-producer-phase-requests
+  ;; Persisted requests retain producer phases; actual review dispatch normalizes
+  ;; those phases. Compare with that real authority constructor, not pending itself.
+  (doseq [phase [:promote-solver :guide-intervention-1 :guide-intervention-2]]
+    (let [state (assoc-in (checkpoint) [:last-valid-state :request :phase] phase)
+          prior (:last-valid-state state)
+          pending (:state (sut/prepare-review-recovery state (authorization state)))
+          dispatched (#'sut/reviewer-authority (:request prior) (:candidates prior) [])
+          actual-id (submission/canonical-job-id
+                     (assoc dispatched :submission/attempt (:successor/attempt pending)))
+          saved (atom nil)
+          result (sut/drive! {:state pending
+                              :review-fn (fn [_ _ _] {:ok true :job actual-id})
+                              :persist-fn #(do (reset! saved %) {:ok true})})]
+      (is (= actual-id (:successor/job-id pending)))
+      (is (= :awaiting-terminal (:status result)))
+      (is (= actual-id (:job @saved))))))
