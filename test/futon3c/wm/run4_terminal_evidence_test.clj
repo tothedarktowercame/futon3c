@@ -224,6 +224,9 @@
      (let [store (.toFile (java.nio.file.Files/createTempDirectory
                            "historical-successor"
                            (make-array java.nio.file.attribute.FileAttribute 0)))
+           foreign-root (.toFile (java.nio.file.Files/createTempDirectory
+                                  "historical-successor-foreign"
+                                  (make-array java.nio.file.attribute.FileAttribute 0)))
            finding-file (io/file store "findings/repair-057.edn")
            obligation {:repair/id "repair-057" :repair/status :open
                        :repair/class :machine-failure :attempt-id "failed-057"}
@@ -246,6 +249,8 @@
            verification-cohort (closed-cohort! store :verification-cohort
                                                 "attempt-001"
                                                 :historical-verification-awaiting-validation)
+           foreign-successor (closed-cohort! foreign-root :successor-cohort
+                                              "attempt-001" :grounded-change)
            verification-execution (cohort/closed-execution verification-cohort
                                                              "attempt-001")
            verification-attempt (select-keys verification-execution [:kind :id])
@@ -286,6 +291,10 @@
                               (assoc execution-cohort :cohort-id :foreign-cohort)))))
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
+                       (assoc config :successor-cohort foreign-successor)))
+             "same cohort/preregistration/local attempt in another root is foreign")
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
                        (assoc config :verification-cohort execution-cohort)))
              "different controller labels cannot distinguish one physical execution")
          (is (thrown? clojure.lang.ExceptionInfo
@@ -318,7 +327,7 @@
                           :outcome)
                   (:validation-execution resolution)))
            (is (empty? (repair/open-obligations (.getPath store))))))
-         (finally (delete-tree! store)))))))
+         (finally (delete-tree! store) (delete-tree! foreign-root)))))))
 
 (deftest validated-bundle-feeds-the-shared-u49-route-core
   (fixture
