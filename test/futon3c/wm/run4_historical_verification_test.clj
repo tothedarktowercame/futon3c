@@ -45,6 +45,8 @@
     (is (= :awaiting-validation (:state (v/admit! opts))))
     (is (false? (:repair-resolved? (v/admit! opts))))
     (doseq [bad [(assoc opts :expected-check-ids [:recovery])
+                 (assoc opts :expected-check-ids [:recovery :recovery])
+                 (assoc opts :expected-check-ids [:recovery :foreign])
                  (assoc opts :review-job-reader (fn [_] (assoc job :state "running")))
                  (assoc opts :review-job-reader (fn [_] (assoc job :agent-id "zai-2")))
                  (assoc opts :reviewer "zai-2")]]
