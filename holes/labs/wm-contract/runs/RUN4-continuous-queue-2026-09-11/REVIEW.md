@@ -48,3 +48,22 @@ count is asserted. Strengthen the actual cohort lifecycle gate rather than
 claiming activation alone proves cohort consumption. Also cover recovery after
 terminal publication and loss of the completion promise, plus unknown-incomplete
 refusal with no new click.
+
+## Review of 70a28055
+
+Independent queue fast7/48 and materialized lost-promise1/11 pass. Recovery now
+uses inspect-started! and exact-click checking under the controller lock; the
+single-trial lost-promise correction is accepted within that scope.
+
+Multi-trial inspection still needs correction. step*'s prepare-trial closure
+requires a started file and attaches the same required-existing-click-id to
+EVERY trial during controller preflight. An unstarted later trial therefore
+refuses even when the requested earlier click is valid; two different started
+clicks cannot both match one required click. Scope inspection to the matched
+trial while preserving all manifest authority and prohibiting later dispatch.
+An actual two-trial test is required, not a single-trial configuration exception.
+
+The current materialized positive fixture still isolates the complete task core;
+its real cohort activation does not itself establish core checkpoint consumption.
+Keep the separate real full-core cohort gate explicit until those are composed.
+No live activation accepted by this review.
