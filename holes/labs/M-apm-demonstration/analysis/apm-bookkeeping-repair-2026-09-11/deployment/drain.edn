@@ -1,0 +1,1 @@
+{:ok true, :status :draining, :coordinator/id "jit-queue:jit-all-open-v3", :durably-disabled? true, :in-flight-tick {:state/type :live-regulator-tick-claim, :regulator/id "jit-queue:jit-all-open-v3", :tick/epoch 31, :tick/ordinal 75290, :tick/id "jit-queue:jit-all-open-v3:31:75290", :tick/claimed-at "2026-09-11T15:11:32.724991588Z"}, :at "2026-09-11T15:14:20.190408555Z"}

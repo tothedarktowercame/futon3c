@@ -95,3 +95,39 @@ identity, failed authorization and collection writes, failed final successor
 write with stable replay identity, runtime drift, tampered pending state, and
 reuse of a consumed recovery ID. See validation.txt for final counts and gates.
 Deployment is separately receipted; source commit alone is not evidence of load.
+
+## Live deployment wait observation
+
+At 15:10:23Z the canonical JVM's regulator was waiting in
+`memory-snapshot/bounded-visibility-mapv`, reached from
+`countdown-control/publish-guide-promotion!`. Two workers were waiting in
+substrate hyperedge reads via `memory-snapshot/candidate-visible?`. The sanitized
+thread stacks are in deployment/wait-observation.edn. Inspection confirms Guide
+publication validates the union of prior memories and new candidates; validation
+runs in waves of two. This explains the observed deployment lock wait, but does
+not measure database queue position or establish the cause of the store latency.
+No read bounds or visibility checks were weakened to make reload proceed.
+
+## Deployment outcome
+
+The sources in commit 17720cc6 were loaded from canonical master at
+15:17:43Z, holding the V3 tick lock with no tick claim. After ordinary gap
+sampling did not obtain that boundary, the standard coordinator stop API
+requested a graceful drain; it cancelled future scheduling, not the current
+job. A quiescence witness was recorded and the standard resume API started V3
+at 15:18:00Z. Post-resume observation at 15:18:23Z confirms enabled/running,
+epoch 32, tick 75291, active F224/m93J02 and matching promotion source/runtime
+identities. Latest park remains F223. See deployment/applied.edn, drain.edn,
+resumed.edn and post-resume.edn; source-pins.json records the exact bytes.
+
+While awaiting reload, F224 correctly held on source/runtime identity mismatch.
+This was a deployment effect of editing a source-checked live checkout, not a
+new mathematical failure. Future patches to these guarded modules should be
+staged/tested outside the live checkout, then installed and reloaded within the
+same drained boundary, avoiding that interval. No identity gate was bypassed.
+
+The F224 prior snapshot contains 406 memories. The observed Guide publication
+revalidates that prior set plus its new candidate in two-wide waves. Its long
+store wait remains a measured operational concern, not something fixed by the
+routing/recovery patch. The resumed frame still needs its ordinary checks; a
+successful reload and running tick are not a completed-frame claim.
