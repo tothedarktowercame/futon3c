@@ -67,3 +67,21 @@ The current materialized positive fixture still isolates the complete task core;
 its real cohort activation does not itself establish core checkpoint consumption.
 Keep the separate real full-core cohort gate explicit until those are composed.
 No live activation accepted by this review.
+
+## Acceptance of 12b9c82d inspection scope
+
+Codex-17 independently ran series-service14/81 (including real two-trial
+inspection and the separate actual full-core cohort boundary), all passing.
+Read the exact-start lookup, all-trial preflight and locked target-ordinal checks.
+Prior trials must be terminal; target admission/click is rechecked under lock;
+inspection returns at the target without reaching later dispatch. Foreign or
+missing target refuses. This corrects the multi-trial applicability defect.
+
+Accept this bounded implementation for concrete disabled packet construction.
+The materialized queue's external task core remains a fixture; its async writers
+and readers are real. Do not call that a real external worker success. Queue
+activation still requires the actual selected packet and configuration review.
+
+Initialization artifact acceptance is in e36053c5 / Codex12 review30156dd3;
+coordinator input pins/casting checked in2b91b2b1. Those are now available inputs,
+not a missing permission or missing independent review.
