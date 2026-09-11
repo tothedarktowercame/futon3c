@@ -96,6 +96,21 @@
 (def auth {"authorization" (str "Bearer " token)})
 (def request {:run4-pin-ref "pin.edn" :run4-attempt-id "attempt-1"})
 
+(deftest prepared-options-retain-requested-pin-without-enacting-it
+  (with-fixture
+    (fn [{:keys [root config]}]
+      (let [configured (assoc-in config [:run4 :historical-action]
+                                 {:repair-root (.getPath root)
+                                  :verification-root (.getPath root)
+                                  :verification-path (.getPath (io/file root "verification.edn"))
+                                  :verification-sha256 (apply str (repeat 64 "b"))})
+            prepared (sut/prepare configured auth request)]
+        (is (:ok prepared))
+        (is (fn? (get-in prepared [:opts :historical-verification-candidate-fn])))
+        (is (= :authenticated-not-enacted
+               (get-in prepared [:opts :run4/requested-pin :status])))
+        (is (nil? (get-in prepared [:opts :run4/enacted-action])))))))
+
 (def action {:type :advance-mission :target "M-run4"})
 (def judgment {:decision {:action {:type :no-op}}
                :ranked-actions [{:rank 1 :action action}]

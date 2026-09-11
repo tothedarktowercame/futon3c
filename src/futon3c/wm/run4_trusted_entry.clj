@@ -10,6 +10,7 @@
             [futon2.aif.run4-task-pin :as task-pin]
             [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-execution-cohort :as execution-cohort]
+            [futon3c.wm.run4-historical-action :as historical-action]
             [futon3c.wm.run4-pinned-run-config :as pinned-config])
   (:import [java.security MessageDigest]
            [java.util UUID]))
@@ -64,6 +65,10 @@
     (not (and (string? (:admission-root cfg))
               (.isDirectory (io/file (:admission-root cfg)))))
     :run4-admission-configuration-invalid
+    (and (contains? cfg :historical-action)
+         (try (historical-action/runner-ports (:historical-action cfg)) false
+              (catch Throwable _ true)))
+    :run4-historical-action-configuration-invalid
     :else nil))
 
 (defn- authorized-file [root allowlist ref]
@@ -159,9 +164,18 @@
       :else
       {:ok true
        :opts (merge runner-opts (:casting cfg)
+                    (when-let [historical (:historical-action cfg)]
+                      (historical-action/runner-ports historical))
                     {:run4-task-pin-text pin-text
                      :run4-task-pin-ports ports
-                     :run4-trusted-boundary-fn trust})
+                     :run4-trusted-boundary-fn trust
+                     :run4/requested-pin
+                     {:status :authenticated-not-enacted
+                      :identity {:series-id (get-in envelope [:task-pin :series-id])
+                                 :trial-id (get-in envelope [:task-pin :trial-id])
+                                 :pin-sha256 pin-sha
+                                 :casting (:casting cfg)}
+                      :operator-selection (:operator-selection envelope)}})
        :admission-request
        {:attempt-id attempt-id
         :identity {:series-id (get-in envelope [:task-pin :series-id])
