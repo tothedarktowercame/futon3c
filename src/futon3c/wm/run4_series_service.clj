@@ -6,9 +6,11 @@
   boundary; request data cannot supply ports or select a different manifest."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-series-controller :as controller]
             [futon3c.wm.run4-realized-recording :as realized]
             [futon3c.wm.run4-historical-projection :as historical]
+            [futon3c.wm.run4-historical-successor :as historical-successor]
             [futon3c.wm.run4-run-visibility :as visibility]
             [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
@@ -159,7 +161,35 @@
                              (runner/click!
                               (assoc opts :run-record-dir
                                      (:run-record-root series)))))
-                 :terminal-evidence terminal-port})]
+                 :terminal-evidence terminal-port})
+        link (:historical-successor run4)]
+    (when (and (= :trial-terminal (:status result)) link)
+      (let [ordinal (:ordinal result)
+            prepared-trial (get @prepared ordinal)
+            identity (get-in prepared-trial [:admission-request :identity])
+            _ (when-not (and (= #{:repair-id :series-id :trial-id}
+                                 (set (keys link)))
+                             (= (:series-id link) (:series-id identity))
+                             (= (:trial-id link) (:trial-id identity)))
+                (refuse! :historical-successor-link-mismatch))
+            obligation (some #(when (= (:repair-id link) (:repair/id %)) %)
+                             (repair/open-obligations
+                              (get-in run4 [:historical-action :repair-root])))
+            verification (:repair/verification obligation)
+            lifecycle (controller/read-lifecycle!
+                       (:controller-root series) manifest-text @prepared)
+            started (:started (some #(when (= ordinal (:ordinal %)) %) lifecycle))]
+        (when-not (and (= :awaiting-validation (:repair/status obligation))
+                       (map? verification) started)
+          (refuse! :historical-successor-authority-missing))
+        (historical-successor/resolve-from-durable!
+         {:repair-root (get-in run4 [:historical-action :repair-root])
+          :evidence-roots evidence-roots
+          :admission-request (:admission-request prepared-trial)
+          :started started
+          :repair-id (:repair/id obligation)
+          :verification-id (:verification-id verification)
+          :verification-attempt (:verification-attempt verification)})))
     (when (true? (:visibility-enabled? series))
       (let [lifecycle (controller/read-lifecycle!
                        (:controller-root series) manifest-text @prepared)

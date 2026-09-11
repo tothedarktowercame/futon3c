@@ -50,6 +50,30 @@
         c (sut/materialize text (assoc deps :historical-action authority))]
     (is (= authority (get-in c [:run4 :historical-action])))))
 
+(deftest materializes-linked-historical-successor-only-with-store-authority
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "run4-historical-successor"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+        authority {:repair-root (.getPath root)
+                   :verification-root (.getPath root)
+                   :verification-path (.getPath (java.io.File. root "verification.edn"))
+                   :verification-sha256 (apply str (repeat 64 "a"))}
+        link {:repair-id "repair-057"
+              :series-id "run4-successor"
+              :trial-id "attempt-002"}
+        c (sut/materialize text (assoc deps :historical-action authority
+                                            :historical-successor link))]
+    (is (= link (get-in c [:run4 :historical-successor])))
+    (is (= :invalid-deployment-contract
+           (:reason (try (sut/materialize text (assoc deps :historical-successor link)) nil
+                         (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+    (is (= :invalid-deployment-contract
+           (:reason (try (sut/materialize
+                          text (assoc deps :historical-action authority
+                                           :historical-successor (assoc link :foreign true)))
+                         nil
+                         (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
+
 (deftest malformed-template-and-unprovisioned-enable-refuse
   (is (= :invalid-deployment-contract
          (:reason (try (sut/materialize (str text "\n{:foreign true}") deps) nil
