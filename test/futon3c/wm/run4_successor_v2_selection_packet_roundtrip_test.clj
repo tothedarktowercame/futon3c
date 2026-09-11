@@ -110,13 +110,18 @@
 (deftest ^:slow materialized-historical-async-roundtrip
   (with-authority
     (fn [deps]
-      (let [materialize deployment/materialize actual full/run-opportunity!]
+      (let [materialize deployment/materialize actual full/run-opportunity!
+            dispatches (atom 0)]
         (with-redefs [u/template-path (str packet-root "server-config.disabled.edn")
                       deployment/materialize (fn [text dependencies] (materialize text (merge dependencies deps)))
                       full/run-opportunity!
                       (fn [opts]
                         (actual (merge opts (ft/isolated-runner-opts)
-                                       {:cohort? true :roster-fn (fn [_] {:codex-10 {:status "idle" :invoke-ready? true}
+                                       {:cohort? true
+                                        :dispatch-fn (fn [& _]
+                                                       (swap! dispatches inc)
+                                                       (throw (ex-info "Historical admission must not dispatch an agent" {})))
+                                        :roster-fn (fn [_] {:codex-10 {:status "idle" :invoke-ready? true}
                                                             :codex-12 {:status "idle" :invoke-ready? true}})
                                         :repair-open-fn #(repair/open-obligations (get-in deps [:historical-action :repair-root]))})))]
           (#'u/with-service
@@ -144,6 +149,7 @@
                  (queue/start! queue-config)
                  (let [observed (queue/tick! queue-config)
                        click-id (get-in observed [:in-flight :click-id])]
+                   (is (zero? @dispatches) "Recorded review actors do not incur a new agent invocation")
                    (is (= :held (:status observed)))
                    (is (= :terminal-evidence-incomplete (:reason observed)))
                    (is (string? click-id))
