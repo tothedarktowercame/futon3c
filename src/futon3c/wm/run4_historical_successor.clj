@@ -39,6 +39,9 @@
                    (= cohort-id (:cohort-id successor-execution))
                    (= cohort-sha (:cohort-sha256 successor-execution))
                    (= (:id verification-attempt) (:attempt-id historical-execution))
+                   (= :historical-verification-awaiting-validation
+                      (:outcome historical-execution))
+                   (= :grounded-change (:outcome successor-execution))
                    (not= (select-keys successor-execution [:cohort-id :attempt-id])
                          (select-keys historical-execution [:cohort-id :attempt-id]))
                    (= :grounded-change (:outcome projection)))
