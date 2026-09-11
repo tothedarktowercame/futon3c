@@ -1,0 +1,85 @@
+{:machine-evolution
+ {:allowed? true,
+  :rule
+  "Normal machine development may continue during collection; it never permits dropping, replacing, or relabelling an opportunity.",
+  :per-attempt-provenance
+  [:semantic-epoch
+   :git-sha
+   :git-dirty?
+   :resolved-mode-flags
+   :configuration-digest],
+  :epoch-boundary
+  "RUN4 pinned system task, explicit cohort identity, Zai/Codex casting; no pooling with historical cohorts.",
+  :analysis
+  "Report attempts chronologically and stratified by semantic epoch; do not pool across an undocumented semantic boundary."},
+ :protocol/version 4,
+ :purpose
+ "One explicitly pinned U88 inner-loop task with Zai author and Codex reviewer; separate from the exhausted historical cohort.",
+ :authority
+ "Joe: Please do that — repair explicit RUN4 cohort bookkeeping after first live click, retained as futon3c 6b14743d.",
+ :checkpoint-contract
+ {:closed
+  [:outcome :grounded? :artifact-only? :duration-ms :resource-use],
+  :adjudication [:before :after :witness :build-match :dial],
+  :construction
+  [:mission :cascade :sorries :wiring :patterns :deposit],
+  :cell-shape
+  "Every checkpoint payload is either {:judgment ... :ground ...} or {:sorry {:kind keyword ...}}.",
+  :time-step
+  [:opportunity-id
+   :trigger
+   :machine-state
+   :agent-roster
+   :code-state
+   :semantic-epoch],
+  :dispatch [:agent :availability :job-id :prompt-ref],
+  :build
+  [:artifacts
+   :generated-code
+   :commits
+   :patterns-used
+   :inline-improvements
+   :validation],
+  :selection
+  [:selected-mission
+   :selected-action
+   :ranked-candidates
+   :selection-reasons],
+  :revision-note
+  "A revision round nests inside the :build payload as :revision {:round 2 :commits [...] :review {...}} with both review records under :reviews; checkpoint order and schema unchanged from protocol 4."},
+ :casting
+ {:author "codex-10", :reviewer "codex-12", :repair-reviewer "codex-12"},
+ :grounded-success
+ {:outcome :grounded-change,
+  :requires
+  [:independent-before-witness
+   :independent-after-witness
+   :resolved-adjudication
+   :dial-moved],
+  :artifact-only-counts? false},
+ :required-before-close
+ #{:adjudication :construction :dispatch :build :selection},
+ :analysis
+ {:claim
+  "One deliberately selected system-build trial; outcome unknown until observed.",
+  :denominator
+  "Every admitted opportunity in this cohort, including unsuccessful outcomes."},
+ :status :draft,
+ :checkpoint-order
+ [:time-step
+  :selection
+  :construction
+  :dispatch
+  :build
+  :adjudication
+  :closed],
+ :predecessor-evidence
+ {:click-id "wm-click-560a7b67-0f29-4696-b062-66a84ea049a7",
+  :outcome :cohort-complete,
+  :counts-in-this-cohort? false,
+  :reason
+  "Stopped before task execution against exhausted legacy cohort; evidence remains retained."},
+ :allowed-triggers #{:duree-click-continuous :duree-click-on-demand},
+ :stopping-rule {:kind :fixed-attempt-count, :target 1},
+ :registered-on "2026-09-11",
+ :cohort/id :run4-repair057-admission-20260911-v1}

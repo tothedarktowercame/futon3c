@@ -105,6 +105,15 @@
                       nil
                       (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
 
+(deftest frozen-repair057-packet-materializes-disabled
+  (let [path "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/server-config.disabled.edn"
+        c (sut/materialize (slurp path) deps)]
+    (is (false? (get-in c [:run4 :enabled?])))
+    (is (= {:author "codex-10" :reviewer "codex-12" :repair-reviewer "codex-12"}
+           (get-in c [:run4 :casting])))
+    (is (= "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/series-pin.edn"
+           (get-in c [:run4 :series :manifest-ref])))))
+
 (deftest casting-structure-and-separation-refuse-before-materialization
   (let [template (edn/read-string text)
         good {:author "codex-10" :reviewer "codex-12" :repair-reviewer "codex-12"}]
