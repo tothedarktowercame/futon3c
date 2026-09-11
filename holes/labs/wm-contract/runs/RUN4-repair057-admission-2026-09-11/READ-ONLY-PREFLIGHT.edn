@@ -1,0 +1,1 @@
+{:schema :wm/run4-deployment-preflight-v1, :eligible-to-launch? false, :template-disabled true, :sources :current, :mission :open-activated, :credential :unprovisioned, :route "/api/alpha/wm/run4/series/step", :roots {:missing [:controller-and-admission :bindings :projections :run-records :recordings :visibility]}, :declaration :supported, :consumer-state :unknown-not-loaded}
