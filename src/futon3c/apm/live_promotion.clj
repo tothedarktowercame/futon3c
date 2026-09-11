@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-promotion
   "Durable two-seat promotion dispatcher."
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-trace :as campaign-trace]
             [futon3c.apm.coined-pattern :as coined-pattern]
@@ -256,12 +257,27 @@
          :role :promotion-proctor
          :candidate-set-digest (machine/ledger-digest [candidates])))
 
-(defn- review-read-instruction []
+(defn- review-read-instruction [agency-base candidates]
   (str "\nThe controller freshly read each complete persisted EvidenceEntry "
        "into :candidate-evidence. Treat its :entry :evidence/body as the "
        "authoritative body and its :read-ref as the dedicated full-entry "
        "read endpoint. A hyperedge-neighborhood projection intentionally "
-       "embeds only an envelope-grade hook and is not a body read."))
+       "embeds only an envelope-grade hook and is not a body read."
+       "\nSource job traces use Agency, a separate service from candidate evidence. "
+       "GET " (str/replace agency-base #"/+$" "")
+       "/api/alpha/invoke/jobs/<job-id>. Do not send invoke-job requests to "
+       "the evidence-store address. Controller source-attempt lookup URLs:\n"
+       (pr-str (mapv (fn [id]
+                       {:source-attempt-id id
+                        :job-lookup-url
+                        (str (str/replace agency-base #"/+$" "")
+                             "/api/alpha/invoke/jobs/"
+                             (java.net.URLEncoder/encode (str id) "UTF-8"))})
+                     (distinct (mapcat :source-attempts candidates))))
+       "\nA lookup URL does not establish that a trace exists or supports a claim. "
+       "Check the returned job-id and actual events. If retrieval fails, report "
+       "the exact URL, HTTP status and response diagnostic; preserve cannot-judge "
+       "when the required witness remains unavailable."))
 
 (defn- review-output-instruction []
   (str " The complete report MUST include :candidate-set-digest and "
@@ -403,7 +419,7 @@
                               (:candidate-evidence inputs))
                      prompt (str "Independently review this exact candidate set. Authority:\n"
                                  (pr-str request)
-                                 (review-read-instruction)
+                                 (review-read-instruction agency-base candidates)
                                  "\nRead and follow the frozen role card at "
                                  (resolved-role-card-path control-root request)
                                  " (blob " (:role-card-blob request) ")."
@@ -428,6 +444,7 @@
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)
+                             (review-read-instruction agency-base candidates)
                              "\nRead and follow the frozen role card at "
                              (resolved-role-card-path control-root request)
                              " (blob " (:role-card-blob request) "). "
@@ -463,7 +480,7 @@
                                  "append-only successor to terminal job "
                                  predecessor-job-id ". Authority:\n"
                                  (pr-str request)
-                                 (review-read-instruction)
+                                 (review-read-instruction agency-base candidates)
                                  "\nRead and follow the frozen role card at "
                                  (resolved-role-card-path control-root request)
                                  " (blob " (:role-card-blob request) ")."

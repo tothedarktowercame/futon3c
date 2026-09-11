@@ -1,0 +1,64 @@
+{
+  "observed-at": "2026-09-11T14:42:18.842823+00:00",
+  "review-session": "rollout-2026-09-11T12-59-39-01a0908d-6175-76d0-bf68-0f94aab642f2.jsonl",
+  "historical-commands": [
+    {
+      "timestamp": "2026-09-11T14:07:00.121Z",
+      "command": [
+        "/bin/bash",
+        "-lc",
+        "for id in apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194 apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a; do curl -fsS \"http://127.0.0.1:7073/api/alpha/evidence/$id\" | head -c 500; echo; done"
+      ],
+      "exit-code": 0,
+      "output": "curl: (22) The requested URL returned error: 404\n\ncurl: (22) The requested URL returned error: 404\n\n"
+    },
+    {
+      "timestamp": "2026-09-11T14:07:14.454Z",
+      "command": [
+        "/bin/bash",
+        "-lc",
+        "for id in apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194 apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a; do curl -fsS \"http://127.0.0.1:7073/api/alpha/invoke/jobs/$id\"; done"
+      ],
+      "exit-code": 22,
+      "output": "curl: (22) The requested URL returned error: 404\ncurl: (22) The requested URL returned error: 404\n"
+    },
+    {
+      "timestamp": "2026-09-11T14:09:24.880Z",
+      "command": [
+        "/bin/bash",
+        "-lc",
+        "sed -n '1,240p' holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v4.md; for id in apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194 apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a; do curl -sS -w '\\nHTTP:%{http_code}\\n' \"http://127.0.0.1:7073/api/alpha/invoke/jobs/$id\"; done"
+      ],
+      "exit-code": 0,
+      "output": "# Role card \u2014 promotion proctor v4\n\nThis card preserves the independent review, evidence, generality, and failure\ndiscipline of promotion-proctor v3 and makes the typed memory-use decision part\nof the frozen contract.\n\nFor every candidate, return exactly one review in controller-bound candidate\norder. Each review contains `:memory-id`, `:verdict`, `:reason`, and `:residual`.\nVerdict is exactly `:approve`, `:reassign`, `:reject`, or `:cannot-judge`.\nReasons and residuals are nonblank and agree with persisted review evidence.\n\nEvery `:approve` or `:reassign` of a candidate with\n`:admission/schema :typed-memory-use-v1` must additionally contain:\n\n```clojure\n:memory-use/kind :substitutive ; or :regulative\n```\n\n- `:substitutive` is reusable mathematical/formal content that replaces work\n  the solver would otherwise derive: a fact, construction, API fact, or proof move.\n- `:regulative` is process guidance changing how work is searched, checked,\n  ordered, diagnosed, or controlled without supplying that content.\n\nNever infer this field from prose or use legacy `:kind` spellings. If persisted\nevidence cannot support the classification, return `:cannot-judge`; omission on\napproval/reassignment is a contract failure. Historical/untyped candidates do\nnot acquire a kind by guesswork.\n\nCaption revisions are reviewed separately with\n`scripts/apm-memory-caption.py review`. Check that positive applicability\nwording is grounded in the cited immutable observations, that absent and\nunchecked conditions remain distinct, and that suggested or unknown material\nhas not been promoted to supported. Verify the original memory ID and revision,\ncomplete observation/evidence provenance, the prior caption link, and bounded\ntext. You may not review a caption you authored. Rejection or retraction must\nremain explicit and must not expose an unsupported description.\n\nReturn one EDN map with the supplied candidate-set digest, reviewer identity,\nand `:reviews` vector. Inspect persisted candidate/evidence, proposed patterns,\npinned base problem, and residuals independently. Preserve v3 generality and\nrejection rules. Missing pinned inputs require `:cannot-judge`, never fabricated\nsuccess. Once pinned by blob this card is immutable; it is for new frames from\nf61 onward and does not amend earlier pins.\n<h1>404 Not Found</h1>No context found for request\nHTTP:404\n<h1>404 Not Found</h1>No context found for request\nHTTP:404\n"
+    }
+  ],
+  "read-only-probes": [
+    {
+      "url": "http://127.0.0.1:7070/api/alpha/invoke/jobs/apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194",
+      "status": 200,
+      "job-id": "apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194",
+      "state": "cancelled",
+      "event-count": 84,
+      "response-sha256": "d89891e80ec2ead7a01c51aad47dc2babef8f5267b7d9e118f437cf199b30da3"
+    },
+    {
+      "url": "http://127.0.0.1:7073/api/alpha/invoke/jobs/apm-role-699a87eeb3968235ddc53c4a11be9a555e1bd602f2f27d1d7f79c927969dc194",
+      "status": 404,
+      "body": "<h1>404 Not Found</h1>No context found for request"
+    },
+    {
+      "url": "http://127.0.0.1:7070/api/alpha/invoke/jobs/apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a",
+      "status": 200,
+      "job-id": "apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a",
+      "state": "cancelled",
+      "event-count": 63,
+      "response-sha256": "ea4c87871be9ec7b376d67d69bc2aa7a076022f6a6e7a6de0dd14b934ad37b42"
+    },
+    {
+      "url": "http://127.0.0.1:7073/api/alpha/invoke/jobs/apm-role-7f89b449c063e8b81d2c8afe481e4b0a063aedf322ef982322319272fedd533a",
+      "status": 404,
+      "body": "<h1>404 Not Found</h1>No context found for request"
+    }
+  ]
+}
