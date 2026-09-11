@@ -1,0 +1,22 @@
+{:schema :wm/run4-initialization-collision-admission-preparation-v1
+ :status :disabled-awaiting-independent-packet-review :enabled? false
+ :futon2-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
+ :casting {:author "codex-17" :reviewer "codex-12" :repair-reviewer "codex-12"}
+ :repair-id "repair-initialization-b076e0f8-dbc2-4368-80a0-073d243951a0-initialization-failed"
+ :verification {:id "repair-initialization-collision-revalidation-20260911-v1"
+                :sha256 "e6255ae4ade33a8c96f33acbbeff5d51077348e490f777357d7744b78026ece0"}
+ :packet {:server-config-sha256 "22c66716a4ec5204d80ef1ed33fe1056748fc8c1dba056924f700cf663776fd2"
+          :historical-action-sha256 "1ac31abc3bcc92428880ca3b48f2cb2809e047188c4150296c9bf8501680442c"
+          :execution-cohort-sha256 "62cea543a6cddcc0e7a087eec00c751d8dd5f0655e70f3a2c172dd59609a5f18"
+          :queue-sha256 "702aa5c7c9c80f3e484b7182fa91c5db644efafd463e36910436e582025a6c4e"
+          :series-pin-sha256 "7fcdd23315f767e5e33c4b0b6935b30f70321a6566f4feb607624c0972d47a01"
+          :task-pin-sha256 "f3a6550a463ca1f5707cd412682122b4a4f678f88f376cc9b7756a36c85ae6a0"
+          :run-config-sha256 "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"
+          :cohort-sha256 "6418b1fbd5dadd36a4a3ce4efffb344461a3f25e6d6eeced975fa0c7d0abfeb4"}
+ :identities {:series "run4-initialization-collision-admission-20260911-v1"
+              :controller-attempt "initialization-collision-historical-admission-001"
+              :cohort :run4-initialization-collision-admission-20260911-v1 :target 1}
+ :queue {:id "run4-initialization-collision-queue-20260911-v1"
+         :visibility-file "/home/joe/run4/initialization-collision-admission/queue/visibility.json"}
+ :execution {:status :not-performed :identity nil}
+ :successor-link {:status :unmaterialized} :live-effects :none}
