@@ -153,3 +153,46 @@ revision review, typed submission, existing V3 proof phases and promotion.
 with mocked transport, not a live review, Student trial, restart trial or proof
 of concurrent immutable-write safety. No shared namespace reload, canonical
 library change or V3 loop operation was performed.
+
+## Pin-schema compatibility repair
+
+The second independent review (`invoke-1789155164067-20256-6681e637`) resolved
+the original three P2 findings and found one historical replay defect: old
+resolved-only pins were reported as filesystem drift by whole-map comparison.
+
+New pins now explicitly carry `:pin/version 2`. Expanded unversioned pins
+created by `1f5a56bc` preserve both path identities and remain replayable without
+rewriting their registered authority. The original three-field pins from
+`af3b3b26` cannot establish the originally supplied root/path resolution. They
+now produce `:status :review-request-retirement-required` with
+`:error/code :pattern-review-legacy-pin-schema`, exact job ID, pin side and
+`:action/required :prepare-new-review`. Unknown pin schemas are rejected as
+unsupported, not reported as filesystem drift. Both pin schemas are inspected
+before filesystem reads or Agency effects.
+
+This is an explicit refusal to admit that old request under the stronger
+protocol, **not** a claim that a retirement has been persisted or an Agency job
+cancelled. Retain the original request, submission and verdict. Inspect its
+actual job state; finish or explicitly cancel active old work before launching
+a successor. Prepare a new review under current configured roots and pinned
+bytes. If source bytes changed, obtain a new author proposal rather than edit
+old authority. No migration, cancellation, new dispatch or publication happens
+automatically. Existing old judgments remain historical evidence and are not
+promoted to stronger guarantees.
+
+Validation: native review tests now pass 12 tests / 111 assertions. A standalone
+historical replay runner additionally loads actual source from `af3b3b26` in
+an isolated test JVM, prepares/dispatches/submits/collects a review with mocked
+Agency, then loads the repaired source. Both replay entry points return the
+explicit retirement requirement, the old authority/submission remain byte-value
+identical, and no further Agency calls occur. The runner also avoids relying
+on transient reviewer files in `/tmp`:
+
+```sh
+python3 holes/labs/M-apm-demonstration/analysis/apm-v4-production-2026-09-11/historical-replay/run.py
+```
+
+`historical-replay/result.edn` retains the actual result; `pin-schema-tests.txt`
+retains the native test output. Lint, check-parens and diff checks pass. No live
+service load, production request migration or publication was performed.
+Independent confirmation of this last repair is pending.

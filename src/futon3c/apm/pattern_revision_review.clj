@@ -16,7 +16,9 @@
 (defn- guarded [f]
   (try (f)
        (catch Exception e
-         {:ok false :error/code (or (:error/code (ex-data e)) :pattern-review-read-failed)})))
+         (merge {:ok false :error/code (or (:error/code (ex-data e)) :pattern-review-read-failed)}
+                (select-keys (ex-data e) [:status :action/required :pin/side
+                                         :pin/schema :job-id])))))
 
 (defn file-pin
   "Retain the supplied root/path AND resolved target. Every recheck traverses
@@ -30,7 +32,7 @@
     (need! (Files/isRegularFile path (make-array LinkOption 0)) :pattern-review-not-file)
     (let [bytes (Files/readAllBytes path)
           hash (.digest (MessageDigest/getInstance "SHA-256") bytes)]
-      {:root (str supplied-root) :path relative-path
+      {:pin/version 2 :root (str supplied-root) :path relative-path
        :resolved/root (str base) :resolved/path (str path)
        :sha256 (apply str (map #(format "%02x" (bit-and 255 %)) hash))})))
 
@@ -124,6 +126,17 @@
                          submission/prepare-request submission/with-job-authority)]
          {:ok true :request request})))))
 
+(defn- pin-schema [pin]
+  (let [keys-present (set (keys pin))
+        legacy #{:root :path :sha256}
+        expanded (into legacy [:resolved/root :resolved/path])]
+    (cond
+      (= legacy keys-present) :legacy-resolved-only
+      (= expanded keys-present) :expanded-unversioned
+      (and (= 2 (:pin/version pin))
+           (= (conj expanded :pin/version) keys-present)) :v2
+      :else :unsupported)))
+
 (defn- pins-current! [request]
   (need! (and (= :pattern-revision-review (:phase request))
               (= :pattern-reviewer (:role request))
@@ -131,8 +144,27 @@
                  (machine/ledger-digest [(:v4/revision-review request) (:agent-id request)]))
               (= (:submission/job-id request) (submission/canonical-job-id request)))
          :pattern-review-request-invalid)
+  ;; Classify both schemas before performing any filesystem or Agency effect.
+  ;; Missing historical path identity cannot be reconstructed from today's FS.
+  (doseq [side [:source :candidate]
+          :let [schema (pin-schema (get-in request [:v4/revision-review side]))]]
+    (case schema
+      :legacy-resolved-only
+      (throw (ex-info "Legacy pin lacks supplied-path identity; explicit retirement required"
+                      {:error/code :pattern-review-legacy-pin-schema
+                       :status :review-request-retirement-required
+                       :action/required :prepare-new-review
+                       :pin/side side :pin/schema schema
+                       :job-id (:submission/job-id request)}))
+      :unsupported (fail! :pattern-review-pin-schema-unsupported)
+      nil))
   (doseq [pin ((juxt :source :candidate) (:v4/revision-review request))]
-    (need! (= pin (file-pin (:root pin) (:path pin))) :pattern-review-source-drift)))
+    (let [observed (file-pin (:root pin) (:path pin))
+          ;; 1f5a56bc already retained both identities but had no version tag.
+          ;; Interpret that schema without rewriting its immutable authority.
+          observed (if (= :expanded-unversioned (pin-schema pin))
+                     (dissoc observed :pin/version) observed)]
+      (need! (= pin observed) :pattern-review-source-drift))))
 
 (defn dispatch!
   "Announce, register immutable authority, then activate through V3 ports.

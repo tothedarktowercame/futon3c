@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.pattern-revision-review :as sut]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.typed-role-submission :as submission])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
@@ -216,3 +217,44 @@
           (Files/createSymbolicLink alias (.toPath replacement) (make-array FileAttribute 0))
           (is (= :pattern-review-source-drift
                  (:error/code (sut/dispatch! (assoc opts :request request))))))))))
+
+(defn request-with-pin-shape [request transform]
+  (let [request (-> request
+                    (update-in [:v4/revision-review :source] transform)
+                    (update-in [:v4/revision-review :candidate] transform))]
+    (-> request
+        (assoc :dispatch/id
+               (machine/ledger-digest
+                [(:v4/revision-review request) (:agent-id request)]))
+        (dissoc :submission/job-id :submission/token)
+        submission/prepare-request submission/with-job-authority)))
+
+(deftest legacy-resolved-only-pins-request-explicit-retirement-without-effects
+  (with-fixture
+    (fn [{:keys [options calls library]}]
+      (let [request (request-with-pin-shape
+                     (:request (sut/prepare! options))
+                     #(select-keys % [:root :path :sha256]))
+            before @calls opts (assoc options :request request)]
+        ;; Schema diagnosis must precede filesystem errors too.
+        (.delete (io/file library "method.flexiarg"))
+        (doseq [operation [sut/dispatch! sut/collect!]]
+          (let [result (operation opts)]
+            (is (= :pattern-review-legacy-pin-schema (:error/code result)))
+            (is (= :review-request-retirement-required (:status result)))
+            (is (= :prepare-new-review (:action/required result)))
+            (is (= (:submission/job-id request) (:job-id result)))))
+        (is (= before @calls))))))
+
+(deftest expanded-unversioned-pins-replay-without-changing-registered-authority
+  (with-fixture
+    (fn [{:keys [options jobs]}]
+      (let [request (request-with-pin-shape (:request (sut/prepare! options))
+                                           #(dissoc % :pin/version))
+            opts (assoc options :request request)]
+        (is (:ok (sut/dispatch! opts)))
+        (submit-review! request jobs {})
+        (let [before (submission/submitted (:submission/job-id request))]
+          (is (:ok (sut/collect! opts)))
+          (is (= :already-terminal (:status (sut/dispatch! opts))))
+          (is (= before (submission/submitted (:submission/job-id request)))))))))
