@@ -1,0 +1,13 @@
+{
+  "schema": "wm/coordinator-packet-hash-review-v1",
+  "review_commit": "5f3a06e3889745b6f08e70989ef843ec6125306f",
+  "runtime_pins_checked": 12,
+  "packet_hashes_checked": 8,
+  "readiness_sha256": "0f5c45bb46af3061494e946f1b3276651f2dcc083613e2fb8ff72b8760244fcd",
+  "review_note_sha256": "bbd7c36a82390378aceaf0dce2013e024ac1d5450e4cd8736391d4a340de5b49",
+  "checks": "passed",
+  "scope": "exact current byte hashes; independent lifecycle evidence retained in referenced review",
+  "zai_staffing_job": "invoke-1789148820027-20225-df620e28",
+  "live_installation": "not-performed",
+  "held_queue": "unchanged"
+}
