@@ -152,6 +152,8 @@
                        (false? (get-in value [:repair :resolved?])))
           (refuse! :historical-projection-binding-mismatch))
         (when-not (and (nonblank? repair-root)
+                       (nonblank? (get-in value [:repair :id]))
+                       (map? (:repair-transition value))
                        (= (:repair-transition value)
                           (some->> (repair-store/open-obligations repair-root)
                                    (filter #(= (get-in value [:repair :id])
