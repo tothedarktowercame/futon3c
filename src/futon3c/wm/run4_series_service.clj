@@ -138,6 +138,8 @@
                            (binding [runner/*click-run-binding-dir*
                                      (:binding-root series)
                                      runner/*run4-terminal-projection-dir*
+                                     (:projection-root series)
+                                     runner/*run4-historical-projection-dir*
                                      (:projection-root series)]
                              (runner/click!
                               (assoc opts :run-record-dir

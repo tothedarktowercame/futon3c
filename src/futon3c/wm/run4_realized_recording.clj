@@ -63,6 +63,11 @@
 
 (def ^:dynamic *append-immutable!* atomic-append!)
 
+(defn publish-immutable!
+  "Shared no-clobber publisher for already validated RUN4 evidence values."
+  [file value]
+  (*append-immutable!* file value))
+
 (defn from-terminal-bundle
   [bundle]
   (let [{:keys [identity attempt-id run-record projection-digest

@@ -167,6 +167,7 @@
                     (when-let [historical (:historical-action cfg)]
                       (historical-action/runner-ports historical))
                     {:run4-task-pin-text pin-text
+                     :run4/controller-attempt-id attempt-id
                      :run4-task-pin-ports ports
                      :run4-trusted-boundary-fn trust
                      :run4/requested-pin

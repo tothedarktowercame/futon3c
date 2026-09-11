@@ -16,10 +16,6 @@
         checkpoints {:selection {:ground {:run4/requested-pin requested
                                           :run4/enacted-action enacted}}
                      :adjudication {:judgment {:repair-resolved? false}}}
-        record {:click/id "click-1" :run/id "run-1" :attempt-id "attempt-2"
-                :checkpoints checkpoints}
-        path (io/file root "run.edn")
-        _ (spit path (str (pr-str record) "\n"))
         transition {:schema :wm/historical-repair-admission-v1
                     :repair/id "repair-057" :repair/status :awaiting-validation
                     :verification-id "verification-057"
@@ -28,6 +24,14 @@
                                           :sha256 (apply str (repeat 64 "b"))}
                     :verification-artifact {:path "/evidence/store"
                                             :sha256 (apply str (repeat 64 "c"))}}
+        record {:click/id "click-1" :run/id "run-1"
+                :runner-attempt/id "attempt-2"
+                :run4/controller-attempt-id "controller-attempt-2"
+                :run4/requested-pin requested :run4/enacted-action enacted
+                :historical-verification transition
+                :execution-cohort {:cohort-id :cohort :sha256 (apply str (repeat 64 "d"))}}
+        path (io/file root "run.edn")
+        _ (spit path (str (pr-str record) "\n"))
         result {:run/id "run-1" :attempt-id "attempt-2"
                 :outcome :historical-verification-awaiting-validation
                 :run-record (.getPath path) :checkpoints checkpoints
