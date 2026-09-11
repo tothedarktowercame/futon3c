@@ -76,7 +76,7 @@
                                :data-root (.getCanonicalPath root)
                                :cohort-id :historical-roundtrip :sha256 (digest/sha256 raw)}
             :cohort-preflight! cohort/execution-preflight})
-        (finally (delete-tree! root)))))))
+        (finally (delete-tree! root))))))
 
 (deftest ^:slow materialized-historical-async-roundtrip
   (with-authority
