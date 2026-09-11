@@ -1,12 +1,12 @@
 {:schema :wm/run4-successor-v2-selection-admission-preparation-v1
- :status :disabled-awaiting-independent-packet-review :enabled? false
- :source-provenance {:futon2-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
-                     :futon3c-packet-base "06f8f83cd8a0ca206de1e180ceb2469fb7e0bb82"
+ :status :disabled-awaiting-execution-authority-id-length-repair :enabled? false
+ :source-provenance {:futon2-head "2185297c1de7d2822f796650a02e559ca6464dfd"
+                     :futon3c-packet-base "9a22025dedb686b5a32afbe8a37d3e065e4a9016"
                      :verification-source-head "eed108f51c5e3419f9f58a6b8ba234eb0d842c4f"
                      :runtime-source-pins
-                     [{:repo :futon2 :path "src/futon2/aif/full_loop_runner.clj" :sha256 "1431e8f684cdaa30e1f13654c3d016c072f293e6e1440b20f9dd9b490217e0b3"}
-                     {:repo :futon2 :path "src/futon2/aif/full_loop_cohort.clj" :sha256 "9f1c7d94e0ab9d089c00d5d5c14fad7ba68fe42684b276aa9e495ec1d2eaf8f3"}
-                     {:repo :futon2 :path "src/futon2/aif/repair_obligation.clj" :sha256 "4c432d6c449945c2107caf05a5cc00f54d4bf9aaf7d24cc426d7b108795c96fd"}
+                     [{:repo :futon2 :path "src/futon2/aif/full_loop_runner.clj" :sha256 "0b2a8ddc3f3e16b1e7e522c0b818a4ad3627c32734b9005e8419afff4a5a3ea2"}
+                     {:repo :futon2 :path "src/futon2/aif/full_loop_cohort.clj" :sha256 "4c164ffd9560a1ac906454a28151e3e1b93990dab34eb109292032d95ad263b6"}
+                     {:repo :futon2 :path "src/futon2/aif/repair_obligation.clj" :sha256 "a2ae2f28dd01832d6221648a7af686fa04c0dbe932740da050955dd6ae97e0f3"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_deployment_config.clj" :sha256 "4958fbcf28bc11fce6c41ffca8c68dd50be73110c2c7cb3ea56fd7f8215c5c48"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_historical_action.clj" :sha256 "9048f039fcbdfe55bb6f5010b302b218aed3e5518eee9a4f2c93d149438e2c97"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_historical_verification.clj" :sha256 "903ad022c480a79d959401128da0993c1b5681d58be16a6b164bda3658c84443"}
