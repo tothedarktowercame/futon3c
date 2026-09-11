@@ -5,6 +5,8 @@
             [clojure.test :refer [deftest is]]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-cohort :as cohort]
+            [futon2.aif.repair-obligation :as repair]
+            [futon2.aif.tripwire :as tripwire]
             [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
@@ -389,7 +391,9 @@
         (cohort/activate! (.getCanonicalPath prereg)
                           (.getCanonicalPath cohort-root))
         (let [prepared (atom nil)]
-          (with-redefs [runner/click!
+          (with-redefs [repair/default-root (.getPath (io/file root "repairs"))
+                        tripwire/default-trip-root (.getPath (io/file root "trips"))
+                        runner/click!
                         (fn [opts]
                           (reset! prepared opts)
                           {:click-id "isolated-full-core"
