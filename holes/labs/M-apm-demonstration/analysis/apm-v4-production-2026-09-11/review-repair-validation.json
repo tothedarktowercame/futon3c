@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "namespace": "futon3c.apm.pattern-revision-review-test",
+      "tests": 10,
+      "assertions": 93,
+      "passed": true
+    },
+    {
+      "namespace": "futon3c.apm.typed-role-submission-test",
+      "tests": 19,
+      "assertions": 87,
+      "passed": true
+    },
+    {
+      "namespace": "futon3c.apm.live-proof-phases-test",
+      "tests": 18,
+      "assertions": 52,
+      "passed": true
+    },
+    {
+      "namespace": "futon3c.apm.live-promotion-test",
+      "tests": 57,
+      "assertions": 294,
+      "passed": true
+    }
+  ],
+  "lint": "zero errors and warnings",
+  "parens": "passed",
+  "diff_check": "passed",
+  "live_changes": false
+}
