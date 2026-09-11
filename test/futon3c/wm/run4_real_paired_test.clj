@@ -7,8 +7,10 @@
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-cohort :as cohort]
             [futon2.aif.full-loop-runner :as full-runner]
+            [futon2.aif.full-loop-runner-test :as ft]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-projection :as historical]
+            [futon3c.wm.run4-historical-roundtrip-test :as fresh]
             [futon3c.wm.run4-deployment-config :as deployment]
             [futon3c.wm.run4-series-service :as service]
             [futon3c.wm.run4-historical-successor :as successor]
@@ -184,3 +186,110 @@
                        (spit resolution original))
                      (is (.isFile (io/file service-root "store-controller-and-admission/001-terminal.edn")))))))))))
       (finally (delete! root)))))
+
+(deftest ^:slow fresh-authority-historical-admission-resolves-through-fresh-successor
+  (fresh/with-authority
+   (fn [historical-deps]
+     (let [materialize deployment/materialize
+           actual full-runner/run-opportunity!
+           historical-link (atom nil)
+           historical-service-root (atom nil)]
+       (with-redefs [deployment/materialize
+                     (fn [text dependencies]
+                       (materialize text (merge dependencies historical-deps)))
+                     full-runner/run-opportunity!
+                     (fn [opts]
+                       (actual (merge opts (ft/isolated-runner-opts)
+                                      {:cohort? true
+                                       :roster-fn (fn [_] {:zai-2 {:status "idle" :invoke-ready? true}
+                                                           :codex-12 {:status "idle" :invoke-ready? true}
+                                                           :codex-17 {:status "idle" :invoke-ready? true}})
+                                       :repair-open-fn
+                                       #(repair/open-obligations
+                                         (get-in historical-deps
+                                                 [:historical-action :repair-root]))})))]
+         (with-redefs-fn
+          {(ns-resolve 'futon3c.wm.run4-u88-roundtrip-test 'delete-tree!)
+           (fn [_] nil)}
+          (fn []
+           (#'u/with-service
+            (fn [root cfg]
+            (reset! historical-service-root root)
+            (reset! runner/!status runner/initial-status)
+            (registry/reset-registry!)
+            (registry/register-agent! {:agent-id {:id/value "war-machine" :id/type :apparatus}
+                                       :type :wm :invoke-fn nil :capabilities []
+                                       :metadata {:apparatus? true}})
+            (binding [full-runner/*wm-status-reporting?* false]
+              (let [req {:run4-series-ref (get-in cfg [:run4 :series :manifest-ref])}
+                    started-result (service/step! cfg u/auth req)
+                    _ (is (= :completed
+                             (:status (runner/await-click! (:click-id started-result)))))
+                    started (read-edn (io/file root "store-controller-and-admission/001-started.edn"))
+                    reservation (read-edn
+                                 (io/file root "store-controller-and-admission"
+                                          (:attempt-id started) "reservation.edn"))
+                    roots {:admission (get-in cfg [:run4 :admission-root])
+                           :bindings (get-in cfg [:run4 :series :binding-root])
+                           :projections (get-in cfg [:run4 :series :projection-root])
+                           :run-records (get-in cfg [:run4 :series :run-record-root])
+                           :repair-root (get-in historical-deps [:historical-action :repair-root])
+                           :cohort-preregistration
+                           (get-in historical-deps [:execution-cohort :preregistration])
+                           :cohort-data-root
+                           (get-in historical-deps [:execution-cohort :data-root])}
+                    bundle (historical/read-bundle!
+                            roots {:attempt-id (:attempt-id started)
+                                   :identity (:identity reservation)} started)
+                    frozen (read-edn (str base "historical-successor-link.edn"))]
+                (is (= 1 (get-in bundle [:closed-execution :identity-version])))
+                (reset! historical-link
+                        {:repair-id (get-in bundle [:projection :repair :id])
+                         :verification-id (get-in bundle [:projection :repair :verification-id])
+                         :verification-attempt (get-in bundle [:projection :execution-attempt])
+                         :verification-cohort (:execution-cohort historical-deps)
+                         :historical-evidence {:roots roots
+                                               :admission-request
+                                               {:attempt-id (:attempt-id started)
+                                                :identity (:identity reservation)}
+                                               :started started}
+                         :successor (:successor frozen)}))))))))
+       (let [captured (atom nil)]
+         (with-redefs [u/template-path (str base "server-config.disabled.edn")
+                       deployment/materialize
+                       (fn [text deps]
+                         (let [t (edn/read-string text)
+                               ref (first (filter #(str/ends-with? % "/cohort.edn")
+                                                  (:source-allowlist t)))
+                               prereg (.getCanonicalPath (io/file (:authority-root t) ref))
+                               data (.getPath (doto (io/file (:authority-root t)
+                                                            "fresh-successor-cohort") .mkdir))
+                               cb {:preregistration prereg :data-root data
+                                   :cohort-id (:cohort/id (read-edn prereg))
+                                   :sha256 (digest/sha256 (slurp prereg))}]
+                           (cohort/activate! prereg data)
+                           (reset! captured cb)
+                           (materialize text (assoc deps :execution-cohort cb
+                                                    :cohort-preflight! cohort/execution-preflight
+                                                    :historical-successor @historical-link))))]
+           (#'u/with-service
+            (fn [_ cfg]
+              (reset! runner/!status runner/initial-status)
+              (registry/reset-registry!)
+              (registry/register-agent! {:agent-id {:id/value "war-machine" :id/type :apparatus}
+                                         :type :wm :invoke-fn nil :capabilities []
+                                         :metadata {:apparatus? true}})
+              (binding [full-runner/*wm-status-reporting?* false]
+                (with-redefs [full-runner/run-opportunity-core! fixture-core]
+                  (let [req {:run4-series-ref (get-in cfg [:run4 :series :manifest-ref])}
+                        start (service/step! cfg u/auth req)]
+                    (is (= :completed (:status (runner/await-click! (:click-id start)))))
+                    (is (= :trial-terminal (:status (service/step! cfg u/auth req))))
+                    (is (empty? (repair/open-obligations
+                                 (get-in @historical-link
+                                         [:historical-evidence :roots :repair-root]))))
+                    (is (= :series-terminal (:status (service/step! cfg u/auth req))))
+                    (is (= 1 (:attempt-count
+                              (cohort/ledger (:preregistration @captured)
+                                             (:data-root @captured))))))))))))
+         (delete! @historical-service-root)))))
