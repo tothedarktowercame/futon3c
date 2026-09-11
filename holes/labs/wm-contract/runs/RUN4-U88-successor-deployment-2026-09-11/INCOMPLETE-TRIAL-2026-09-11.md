@@ -1,0 +1,11 @@
+# Successor terminal inspection — 2026-09-11
+
+The actual click `wm-click-8d1d9141-5e33-4032-aebd-dbadc2d9755f` completed with service outcome `:incomplete`, returned attempt `initialization-b076e0f8-dbc2-4368-80a0-073d243951a0`, and observed run ID `59d9e41c-03d4-431e-8eac-6b26422f1855`. Its durable binding explicitly says unavailable and run record absent. This is not an accepted RUN4 result.
+
+The real cohort attempt-001 has time-step, selection, construction, dispatch, build, and adjudication checkpoints, but no closed checkpoint. Selection's selected-mission is `repair-attempt-057-untyped-failure`, under existing stop-line precedence. The remaining checkpoints are explicit agent-unavailable sorries. No author or reviewer job was dispatched and no U88 artifact exists.
+
+The exact initialization finding identifies `java.nio.file.FileAlreadyExistsException` at `/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-attempt-001-agent-unavailable.edn`. Separate cohort storage restarted numbering at attempt-001 while the repair consumer uses global attempt identity. Thus closure failed when it tried to record the unavailable-agent finding. The outer wrapper then returned an initialization identity and lost the original route/checkpoint linkage. Required repair is qualified identity across these actual consumers, not overwrite or deletion of old findings.
+
+One authenticated call to the SAME successor series-step for existing terminal finalization returned HTTP 403 with `run4-series-serving-refused` / `run4-series-trial-refused`. Preparation applies positive remaining capacity before reaching the existing started lifecycle, whose one slot is already consumed. Required repair separates fresh admission from authenticated existing-attempt terminal inspection, without letting an exhausted new admission dispatch.
+
+No second click, reset, new attempt, terminal fabrication, acceptance, or restart was performed. The visibility observation is still working/pending but stale; it is not evidence of an active worker. The missing projection/record/closed checkpoint prevents an honest terminal classification. Source pins retain the exact available evidence. Current reconciliation must be append-only and separately reviewed.

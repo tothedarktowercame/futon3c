@@ -1,0 +1,67 @@
+[
+  {
+    "path": "/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-initialization-b076e0f8-dbc2-4368-80a0-073d243951a0-initialization-failed.edn",
+    "sha256": "48d831aac3f8645a659f227fdbef17cdbe1e30939a6dbfb468f6d8b814e41024",
+    "bytes": 842
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/activation.edn",
+    "sha256": "f4ec2a9ebf479b8b00fea565217e1e7e041cc414dc9924315f3240dc16bca270",
+    "bytes": 308
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/001-time-step.edn",
+    "sha256": "43c2046eca9182abde5c713b4da930b53dbd1985f0311d03660767ab86e83bcf",
+    "bytes": 13297
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/002-selection.edn",
+    "sha256": "5985ba84105ba0b6519a355738a0aef971734c504446b0745f0ffc362ee758a4",
+    "bytes": 170702
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/003-construction.edn",
+    "sha256": "91e3a7a91ac442261b45a825ac7e40f267618d1a9ed21eac78ed3e55330fd888",
+    "bytes": 287
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/004-dispatch.edn",
+    "sha256": "c1992e50780aac6900827fc90959d7e7d95b371577011c745949d68ecdbea0e0",
+    "bytes": 279
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/005-build.edn",
+    "sha256": "28761a2e6120c7c8d054bc3d85ea4088ea1b30f5b9c93f690834a9429b8cbf86",
+    "bytes": 273
+  },
+  {
+    "path": "/home/joe/run4/U88-cohort-20260911/run4-u88-20260911-v1/attempt-001/006-adjudication.edn",
+    "sha256": "45ba524ca8d078dccd9786aa3e1e36ee1af38083c41f4b677f5935e7998895de",
+    "bytes": 287
+  },
+  {
+    "path": "/home/joe/run4/U88-successor/bindings/click-run-binding-wm-click-8d1d9141-5e33-4032-aebd-dbadc2d9755f.edn",
+    "sha256": "d3641ad4f97b4a2131d6c7453e1f556654e1b7015c7ae05dc0403945c95a6693",
+    "bytes": 459
+  },
+  {
+    "path": "/home/joe/run4/U88-successor/controller/001-started.edn",
+    "sha256": "09f0ee415f0d9d4959438ce3265ad598fd5c33e1b87beddba79d5e71d5516419",
+    "bytes": 498
+  },
+  {
+    "path": "/home/joe/run4/U88-successor/controller/series.edn",
+    "sha256": "2654eeb055a3349d637158df9d900daa53a17e50166eaa9ea2aaa163eb9abf9b",
+    "bytes": 190
+  },
+  {
+    "path": "/home/joe/run4/U88-successor/controller/u88-successor-20260911-attempt-1/click-result.edn",
+    "sha256": "2fd9546cc33785a3b216acc87f0ab96751bdcd59844d9e528b483207d0f297b4",
+    "bytes": 205
+  },
+  {
+    "path": "/home/joe/run4/U88-successor/controller/u88-successor-20260911-attempt-1/reservation.edn",
+    "sha256": "ca892d86e056dcc09206c82e58a117de0268cd1ac15b6f85293fe1d8871b195f",
+    "bytes": 442
+  }
+]
