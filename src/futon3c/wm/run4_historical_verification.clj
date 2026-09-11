@@ -22,13 +22,17 @@
       (when (or (= x ::empty) (not= ::end (edn/read {:eof ::end} r))) (refuse! :invalid-form)) x)))
 (defn- ancestor? [repo a b]
   (zero? (:exit (shell/sh "git" "-C" repo "merge-base" "--is-ancestor" a b))))
+(defn- head [repo] (str/trim (:out (shell/sh "git" "-C" repo "rev-parse" "HEAD"))))
+(defn- output-valid? [{:keys [sha256 utf8]}]
+  (and (pin? sha256) (string? utf8) (= sha256 (digest/sha256 utf8))))
 
 (defn admit!
-  [{:keys [finding-root qualification-root output-root source-repo finding-path
+  [{:keys [finding-root qualification-root qualification-source-root output-root source-repo finding-path
            finding-sha256 qualification-path qualification-sha256 expected-check-ids
            first-commit last-commit source-head verification-id author reviewer
            review-job-id review-job-reader] :as opts}]
-  (when-not (and (= #{:finding-root :qualification-root :output-root :source-repo :finding-path
+  (when-not (and (= #{:finding-root :qualification-root :qualification-source-root
+                     :output-root :source-repo :finding-path
                      :finding-sha256 :qualification-path :qualification-sha256
                      :expected-check-ids :first-commit :last-commit :source-head
                      :verification-id :author :reviewer :review-job-id :review-job-reader}
@@ -42,21 +46,38 @@
   (let [finding-cap (capture! finding-root finding-path finding-sha256)
         qcap (capture! qualification-root qualification-path qualification-sha256)
         finding (one! (:text finding-cap)) q (one! (:text qcap))
-        rows (:checks q) ids (mapv :id rows)
+        plan-cap (capture! qualification-source-root (get-in q [:manifest :path])
+                           (get-in q [:manifest :sha256]))
+        plan (one! (:text plan-cap)) rows (:checks q) ids (mapv :id rows)
         job (review-job-reader review-job-id)
         reviewed (runner/independent-review-evidence [finding-path qualification-path] job)
-        marker (str "HISTORICAL_VERIFICATION_SHA256: " qualification-sha256)
-        review-text (str (:result-summary job) "\n" (:result job))]
-    (when-not (and (= verification-id (:verification-id q))
+        marker-re #"(?m)^HISTORICAL_VERIFICATION_SHA256: ([0-9a-f]{64})$"
+        markers (mapv second (re-seq marker-re (str (:result job))))]
+    (when-not (and (= :wm/historical-qualification-output-v1 (:schema q))
+                   (= :wm/historical-qualification-plan-v1 (:schema plan))
+                   (= verification-id (:verification-id q) (:verification-id plan))
                    (= (:repair/id finding) (:repair-id q))
+                   (= :open (:repair/status finding))
+                   (= :machine-failure (:repair/class finding))
+                   (= 3 (:repair/schema-version finding))
+                   (= (:repair/id finding) (:repair-id plan))
                    (= expected-check-ids ids)
+                   (= expected-check-ids (mapv :id (:checks plan)))
+                   (= (mapv #(select-keys % [:id :argv :timeout-ms]) rows) (:checks plan))
+                   (= (:sources q)
+                      (mapv (fn [{:keys [path sha256]}]
+                              (select-keys (capture! qualification-source-root path sha256)
+                                           [:path :sha256])) (:sources plan)))
                    (every? #(and (zero? (:exit %)) (false? (:timed-out? %))) rows)
+                   (every? #(and (output-valid? (:stdout %)) (output-valid? (:stderr %))) rows)
                    (true? (:qualification-passed? q)) (= :not-performed (:independent-review q))
                    (false? (:repair-admitted? q))
                    (= review-job-id (:job-id reviewed)) (:valid? reviewed)
-                   (str/includes? review-text marker)
+                   (= reviewer (:agent-id job)) (not= author (:agent-id job))
+                   (= [qualification-sha256] markers)
                    (ancestor? source-repo first-commit last-commit)
-                   (ancestor? source-repo last-commit source-head))
+                   (ancestor? source-repo last-commit source-head)
+                   (= source-head (head source-repo)))
       (refuse! :evidence-not-qualified))
     (let [record {:schema :wm/historical-repair-verification-v1
                   :verification-id verification-id :repair-id (:repair/id finding)
@@ -69,5 +90,11 @@
                   :implementation {:first first-commit :last last-commit :source-head source-head}}]
       (capture! finding-root finding-path finding-sha256)
       (capture! qualification-root qualification-path qualification-sha256)
-      (recording/*append-immutable!* (io/file output-root (str verification-id ".verification.edn")) record)
-      record)))
+      (let [base (.getCanonicalFile (io/file output-root))
+            target (io/file base (str verification-id ".verification.edn"))]
+        (when-not (and (.isDirectory base)
+                       (= base (.getCanonicalFile (.getParentFile target)))
+                       (not (java.nio.file.Files/isSymbolicLink (.toPath target))))
+          (refuse! :invalid-output-authority))
+        (recording/*append-immutable!* target record)
+        record))))
