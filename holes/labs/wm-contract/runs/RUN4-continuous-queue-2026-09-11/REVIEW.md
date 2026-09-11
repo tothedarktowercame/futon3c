@@ -29,3 +29,22 @@ visibility and terminal readers. Task core/environment may be isolated ports;
 validator/step substitutes cannot establish that composed gate.
 
 No live queue, capacity, click, restart or old evidence mutation occurred.
+
+## Follow-up review of 5150c54a
+
+Independent fast 6/44 and materialized 1/9 pass. Original resume now retains the
+click and returns running; directory state refuses. Those corrections accepted.
+
+Remaining recovery seam reproduced in lost-completion-repro.clj: with persisted
+in-flight identity but no process-local completion promise, actual await-click!
+returns not-tracked; queue holds :click-incomplete and never consults the durable
+service reader (0 calls). A completed durable trial cannot recover this way after
+JVM loss. Require exact-existing-start inspection that cannot become admission if
+its marker disappears. Incomplete/corrupt evidence still holds.
+
+The materialized positive fixture currently activates a cohort but replaces the
+whole core with a map; no start/checkpoint/close API is invoked there and no cohort
+count is asserted. Strengthen the actual cohort lifecycle gate rather than
+claiming activation alone proves cohort consumption. Also cover recovery after
+terminal publication and loss of the completion promise, plus unknown-incomplete
+refusal with no new click.
