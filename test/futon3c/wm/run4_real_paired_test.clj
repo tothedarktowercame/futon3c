@@ -133,15 +133,11 @@
                               cb {:preregistration prereg :data-root data
                                   :cohort-id (:cohort/id (read-edn prereg))
                                   :sha256 (digest/sha256 (slurp prereg))}
-                              _ (cohort/activate! prereg data)
-                              hp {:repair-root store
-                                  :verification-root (.getParent (io/file (get-in bundle [:projection :repair :verification-source :path])))
-                                  :verification-path (get-in bundle [:projection :repair :verification-source :path])
-                                  :verification-sha256 (get-in bundle [:projection :repair :verification-source :sha256])}]
+                              _ (cohort/activate! prereg data)]
                           (reset! captured cb)
                           (materialize text (assoc deps :execution-cohort cb
                                                    :cohort-preflight! cohort/execution-preflight
-                                                   :historical-action hp :historical-successor link))))]
+                                                   :historical-successor link))))]
           (#'u/with-service
            (fn [service-root cfg]
              (reset! runner/!status runner/initial-status)

@@ -11,6 +11,7 @@
             [futon3c.agency.registry :as registry]
             [futon3c.transport.http :as http]
             [futon3c.wm.run4-effective-environment :as effective]
+            [futon3c.wm.run4-historical-action :as historical-action]
             [futon3c.wm.run4-realized-recording :as realized]
             [futon3c.wm.run4-historical-successor :as historical-successor]
             [futon3c.wm.run4-series-controller :as controller]
@@ -305,10 +306,54 @@
                                       {:click-id "click-existing-exhausted"
                                        :started-at "2026-09-11T02:00:00Z"})]
           (is (= 200 (:status (handler (request payload auth)))))
-          (let [response (handler (request payload auth))
+          (let [action-checks (atom 0)
+                inspection-handler
+                (http/make-handler
+                 (assoc-in cfg [:run4 :historical-action]
+                           {:repair-root "/not-read-for-existing-inspection"
+                            :verification-root "/not-read-for-existing-inspection"
+                            :verification-path "/not-read-for-existing-inspection/v.edn"
+                            :verification-sha256 (apply str (repeat 64 "a"))}))]
+            (with-redefs [historical-action/runner-ports
+                          (fn [_] {})
+                          historical-action/validate-applicable!
+                          (fn [_]
+                            (swap! action-checks inc)
+                            (throw (ex-info "already admitted" {})))]
+              (let [response (inspection-handler (request payload auth))
+                    body (json/parse-string (:body response) true)]
+                (is (= 200 (:status response)))
+                (is (= "awaiting-terminal-evidence" (:status body)))
+                (is (zero? @action-checks))
+                (is (= 1 @clicks))))))))))
+
+(deftest disappearing-existing-start-refuses-without-new-admission-or-click
+  (with-service
+    (fn [root cfg]
+      (let [clicks (atom 0)
+            payload {:run4-series-ref "series.edn"}
+            initial (http/make-handler cfg)]
+        (with-redefs [runner/click! (fn [_]
+                                      (swap! clicks inc)
+                                      {:click-id "click-that-disappears"
+                                       :started-at "2026-09-11T02:00:00Z"})]
+          (is (= 200 (:status (initial (request payload auth)))))
+          (let [started (io/file root "controller" "001-started.edn")
+                deleting-preflight
+                (fn
+                  ([_] {:cohort-id :run4-test :target 1 :remaining 1})
+                  ([_ require-capacity?]
+                   (is (false? require-capacity?))
+                   (io/delete-file started)
+                   {:cohort-id :run4-test :target 1 :remaining 0}))
+                replay (http/make-handler
+                        (assoc-in cfg [:run4 :cohort-preflight!]
+                                  deleting-preflight))
+                response (replay (request payload auth))
                 body (json/parse-string (:body response) true)]
-            (is (= 200 (:status response)))
-            (is (= "awaiting-terminal-evidence" (:status body)))
+            (is (= 500 (:status response)))
+            (is (= "existing-start-disappeared-or-changed" (:reason body))
+                (pr-str body))
             (is (= 1 @clicks))))))))
 
 (deftest declared-corrupt-terminal-chain-stops-resume-without-redispatch

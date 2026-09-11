@@ -2,12 +2,36 @@
   (:require [clojure.test :refer [deftest is]] [clojure.java.io :as io]
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-runner :as full]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-action :as action]
             [futon3c.wm.run4-historical-qualification :as qualification]
             [futon3c.wm.run4-historical-verification :as v]))
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
 (defn- write! [f x] (spit f (str (pr-str x) "\n")) f)
+(defn- isolated-runner-opts [store dispatches]
+  {:cohort? false
+   :author "zai-2" :reviewer "codex-10" :repair-reviewer "codex-10"
+   :phase-log-fn (fn [_])
+   :roster-fn (fn [_] {:zai-2 {:status "idle" :invoke-ready? true}
+                       :codex-10 {:status "idle" :invoke-ready? true}})
+   :judge-fn (fn [_] {:judgement {:ranked-actions [] :decision {:action nil}
+                                  :belief {} :belief-pre {} :observation {}
+                                  :free-energy {} :prediction-errors {}
+                                  :precision-state {} :micro-step-trace []}})
+   :refresh-fn (fn [])
+   :substrate-preflight-fn (fn [_] {:route :isolated})
+   :code-state-fn (fn [] {:repo "/isolated" :git-sha "head"
+                          :git-dirty? false :repo-heads {}})
+   :mode-flags-fn (fn [] {})
+   :version-stamp-fn identity
+   :repair-open-fn #(repair/open-obligations store)
+   :repair-system-record-fn #(assoc % :repair/id "isolated-followup")
+   :repair-supersede-fn (fn [& _])
+   :dispatch-fn (fn [& args] (swap! dispatches conj args))
+   :r16-park-fn (fn [& _] {:ok true :status :parked})
+   :delivery-qa-fn (fn [& _] {:morning-brief/addendum-id "isolated"})
+   :queue-fn identity})
 (deftest qualification-to-reviewed-awaiting-validation
   (let [root (tmp) store (doto (io/file root "store") .mkdir)
         findings (doto (io/file store "findings") .mkdir) quals (doto (io/file root "q") .mkdir)
@@ -68,7 +92,22 @@
                :attempt-id "repair-attempt-058-untyped-failure"})
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
                             #"another stop-line"
-                            (action/validate-applicable! action-config))))
+                            (action/validate-applicable! action-config)))
+      (let [dispatches (atom [])
+            selected (atom nil)
+            actual-candidate (:historical-verification-candidate-fn ports)
+            result (full/run-opportunity!
+                    (merge (isolated-runner-opts (.getPath store) dispatches)
+                           ports
+                           {:historical-verification-candidate-fn
+                            (fn [obligation]
+                              (reset! selected (:repair/id obligation))
+                              (actual-candidate obligation))}))]
+        (is (= "repair-058" @selected)
+            "the actual runner selects the open non-environmental 058")
+        (is (= "Historical candidate targets another stop-line"
+               (get-in result [:data :error])))
+        (is (empty? @dispatches))))
     (doseq [bad [(assoc opts :expected-check-ids [:recovery])
                  (assoc opts :expected-check-ids [:recovery :recovery])
                  (assoc opts :expected-check-ids [:recovery :foreign])

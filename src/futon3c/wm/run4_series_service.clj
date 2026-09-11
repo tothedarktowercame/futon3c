@@ -223,12 +223,6 @@
             ;; Historical admission is deliberately nil to the task controller:
             ;; it remains awaiting evidence and cannot advance the trial.
             (:classification bundle)))
-        ;; Populate the same trusted values used by the controller, without
-        ;; writing an admission or dispatching. This permits persisted-terminal
-        ;; reconciliation to run before the controller considers a successor.
-        _ (controller/preflight manifest-text
-                                {:read-text read-text :prepare-trial prepare-trial})
-        _ (linked-successor! run4 series manifest-text @prepared evidence-roots)
         result (controller/step!
                 (:controller-root series) manifest-text
                 {:read-text read-text
