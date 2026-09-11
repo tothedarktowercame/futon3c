@@ -1,0 +1,131 @@
+diff --git a/src/futon3c/apm/durable_coordinator.clj b/src/futon3c/apm/durable_coordinator.clj
+index 54395694..a9a53627 100644
+--- a/src/futon3c/apm/durable_coordinator.clj
++++ b/src/futon3c/apm/durable_coordinator.clj
+@@ -30,6 +30,9 @@
+ (def watchdog-rearm-limit 3)
+ (def watchdog-rearm-window-ms 60000)
+ (declare stop!)
++;; watch-fn drives ensure-watchdog! when it finds itself muted; both are
++;; defined below, so the reference is forward.
++(declare ensure-watchdog!)
+ 
+ (defn- canonical [value]
+   (cond
+@@ -664,30 +667,57 @@
+            (and (:coordinator/enabled? current)
+                 (= authority-digest (:coordinator/entry-digest current))))
+         watch-fn
+-        #(if-not (current-authority?)
+-           {:ok true :status :superseded :watchdog-id id}
+-           (watchdog/check!
+-            {:watch-state (persistence/read-state watch-path)
+-             :observation (watchdog-observation
+-                           entry (persistence/read-state state-path))
+-             :now-ms (*watchdog-now-fn*)
+-             :registry-path registry-path
+-             :coordinator-id coordinator-id
+-             ;; Namespace reloads have historically left an old scheduled
+-             ;; observer alive after a newer lifecycle generation was armed.
+-             ;; Fence the destructive stop itself, not only observation, so a
+-             ;; stale observer cannot disable or stop the current generation
+-             ;; in the gap between evaluation and action.
+-             :stop-fn (fn [path coordinator cause]
+-                        (if (current-authority?)
+-                          (stop! path coordinator cause)
+-                          {:ok false
+-                           :error/code
+-                           :durable-coordinator-watchdog-authority-superseded
+-                           :coordinator/id coordinator
+-                           :watchdog/authority-digest authority-digest}))
+-             :persist-fn (fn [state]
+-                           (persistence/atomic-persist! watch-path state))}))]
++        #(let [current (get-in (read-registry registry-path)
++                               [:entries coordinator-id])]
++           (cond
++             ;; Switched off, or the row is gone. start-entry! disarms an
++             ;; observer it finds on a disabled entry, but nothing calls
++             ;; start-entry! for a coordinator that is not running, so an
++             ;; observer left here spins forever against a row that is not
++             ;; coming back. Disarm ourselves.
++             (not (:coordinator/enabled? current))
++             (do (*watchdog-stop-fn* id)
++                 {:ok true :status :stopped-not-enabled :watchdog-id id})
++
++             ;; Enabled, but under a newer digest: this observer is muted and
++             ;; persists nothing. ensure-watchdog! is the repair, and it is
++             ;; reachable only from start-entry! and from :tick-state-fn -- so
++             ;; a coordinator parked on an expired intent never ticks, never
++             ;; re-arms, and the observer that would have declared that
++             ;; intent's deadline exceeded is the one that has been muted.
++             ;; jit-all-open-v3 sat that way for 348 minutes on 2026-09-10;
++             ;; the strip read the frozen file and said "loop supervisor gone"
++             ;; while the supervisor was running and forbidden to look. This
++             ;; scheduler is the one thing still ticking, so drive the repair
++             ;; from here. A successful re-arm shuts this executor down, so
++             ;; the branch is self-terminating; a failing one is bounded by
++             ;; claim-watchdog-rearm!'s 3-per-60s budget.
++             (not= authority-digest (:coordinator/entry-digest current))
++             (ensure-watchdog! registry-path current)
++
++             :else
++             (watchdog/check!
++              {:watch-state (persistence/read-state watch-path)
++               :observation (watchdog-observation
++                             entry (persistence/read-state state-path))
++               :now-ms (*watchdog-now-fn*)
++               :registry-path registry-path
++               :coordinator-id coordinator-id
++               ;; Namespace reloads have historically left an old scheduled
++               ;; observer alive after a newer lifecycle generation was armed.
++               ;; Fence the destructive stop itself, not only observation, so a
++               ;; stale observer cannot disable or stop the current generation
++               ;; in the gap between evaluation and action.
++               :stop-fn (fn [path coordinator cause]
++                          (if (current-authority?)
++                            (stop! path coordinator cause)
++                            {:ok false
++                             :error/code
++                             :durable-coordinator-watchdog-authority-superseded
++                             :coordinator/id coordinator
++                             :watchdog/authority-digest authority-digest}))
++               :persist-fn (fn [state]
++                             (persistence/atomic-persist! watch-path state))})))]
+     (*watchdog-start-fn* {:watchdog-id id :watch-fn watch-fn})))
+ 
+ (defn- claim-watchdog-rearm! [entry]
+@@ -828,13 +858,32 @@
+                                            :running))))
+                             :tick-state-fn
+                             (fn [state]
+-                              (let [repair (ensure-watchdog! registry-path entry)]
++                              ;; Re-read the row. ENTRY is the snapshot this
++                              ;; start captured, and set-enabled! rewrites the
++                              ;; digest under a running coordinator on every
++                              ;; resume. Comparing the rearm journal against a
++                              ;; snapshot means that once anything re-arms the
++                              ;; observer onto the current digest, this branch
++                              ;; disagrees on every tick -- 500ms apart -- and
++                              ;; burns claim-watchdog-rearm!'s 3-per-60s budget
++                              ;; in seconds, at which point the exhausted
++                              ;; budget halts the coordinator for a watchdog
++                              ;; that is in fact correctly armed. Observed on
++                              ;; 2026-09-10 within 40s of a digest change.
++                              (let [current (or (get-in (read-registry registry-path)
++                                                        [:entries (:coordinator/id entry)])
++                                                entry)
++                                    repair (ensure-watchdog! registry-path current)]
+                                 (if (:ok repair)
+                                   (coordinator-tick (:coordinator/id entry)
+                                                     adapter state)
+                                   (halt-for-watchdog-repair!
+                                    registry-path entry repair))))})
+-                  post-start-watchdog (ensure-watchdog! registry-path entry)]
++                  post-start-watchdog (ensure-watchdog!
++                                       registry-path
++                                       (or (get-in (read-registry registry-path)
++                                                   [:entries (:coordinator/id entry)])
++                                           entry))]
+               (cond
+                 (not (:ok started))
+                 (do (*watchdog-stop-fn* (watchdog-id (:coordinator/id entry)))
