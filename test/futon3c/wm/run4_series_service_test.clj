@@ -237,12 +237,46 @@
           (is (= :awaiting-terminal-evidence
                  (:status (service/inspect-started! cfg auth payload "inspect-click"))))
           (is (= 1 @clicks))
-          (is (= :existing-start-disappeared-or-changed
+          (is (= :existing-start-required
                  (try (service/inspect-started! cfg auth payload "foreign-click") nil
                       (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
           (io/delete-file (io/file root "controller" "001-started.edn"))
           (is (= :existing-start-required
                  (try (service/inspect-started! cfg auth payload "inspect-click") nil
+                      (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+          (is (= 1 @clicks)))))))
+
+(deftest exact-existing-inspection-is-scoped-to-one-of-two-trials
+  (with-service
+    (fn [root cfg]
+      (let [pin (edn/read-string (slurp (io/file root "pin.edn")))
+            pin2 (assoc pin :trial-id :second-trial
+                        :candidate-task-ids [:second-trial]
+                        :selected-task-id :second-trial)
+            pin2-text (pr-str pin2)
+            manifest (edn/read-string (slurp (io/file root "series.edn")))
+            trial2 {:ordinal 2 :trial-id :second-trial :attempt-id "second-attempt"
+                    :pin-sha256 (digest/sha256 pin2-text)
+                    :packet {:path "pin2.edn" :sha256 (digest/sha256 pin2-text)}}
+            manifest2 (update manifest :trials conj trial2)
+            cfg2 (update-in cfg [:run4 :pin-allowlist] conj "pin2.edn")
+            clicks (atom 0)
+            payload {:run4-series-ref "series.edn"}]
+        (write! root "pin2.edn" pin2-text)
+        (write! root "series.edn" (pr-str manifest2))
+        (with-redefs [runner/click! (fn [_]
+                                      (swap! clicks inc)
+                                      {:click-id "two-trial-click"
+                                       :started-at "2026-09-11T12:00:00Z"})]
+          (is (= :trial-started (:status (service/step! cfg2 auth payload))))
+          (is (= :awaiting-terminal-evidence
+                 (:status (service/inspect-started! cfg2 auth payload
+                                                    "two-trial-click"))))
+          (is (= 1 @clicks))
+          (is (not (.exists (io/file root "controller" "002-started.edn"))))
+          (io/delete-file (io/file root "controller" "001-started.edn"))
+          (is (= :existing-start-required
+                 (try (service/inspect-started! cfg2 auth payload "two-trial-click") nil
                       (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
           (is (= 1 @clicks)))))))
 

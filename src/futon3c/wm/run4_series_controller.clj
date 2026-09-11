@@ -203,6 +203,29 @@
    :ordinal (:ordinal trial) :trial-id (:trial-id trial)
    :attempt-id (:attempt-id trial) :pin-sha256 (:pin-sha256 trial)})
 
+(defn started-ordinal-for-click!
+  "Resolve one exact persisted started event without advancing the controller.
+  The locked step revalidates the same event and its admission before use."
+  [root manifest-text click-id]
+  (when-not (and (string? root) (id? click-id))
+    (refuse! :invalid-existing-click-id))
+  (let [root-file (.getCanonicalFile (io/file root))
+        manifest (parse-one manifest-text)
+        manifest-sha256 (digest/sha256 manifest-text)
+        matches
+        (keep (fn [trial]
+                (when-let [started (some-> (read-event
+                                            (event-file root-file (:ordinal trial) :started)
+                                            :wm/run4-series-started-v1)
+                                           (event-identity! trial))]
+                  (when-not (started-event? started manifest-sha256 manifest trial)
+                    (refuse! :invalid-persisted-started {:ordinal (:ordinal trial)}))
+                  (when (= click-id (:click-id started)) (:ordinal trial))))
+              (:trials manifest))]
+    (when-not (= 1 (count matches))
+      (refuse! :existing-start-required))
+    (first matches)))
+
 (defn- mark-remaining! [root manifest-sha256 manifest from reason]
   (doseq [{:keys [ordinal] :as trial} (drop from (:trials manifest))]
     (append-event! (event-file root ordinal :terminal)
@@ -271,10 +294,15 @@
   "Advance at most one durable boundary. Never starts a successor in the same call
   that records its predecessor terminal."
   [root manifest-text {:keys [read-text prepare-trial click! terminal-evidence
-                              before-terminal-advance]}]
+                              before-terminal-advance inspection]}]
   (when-not (and (string? root) (fn? click!) (fn? terminal-evidence)
                  (or (nil? before-terminal-advance)
-                     (fn? before-terminal-advance)))
+                     (fn? before-terminal-advance))
+                 (or (nil? inspection)
+                     (and (map? inspection)
+                          (= #{:ordinal :click-id} (set (keys inspection)))
+                          (pos-int? (:ordinal inspection))
+                          (id? (:click-id inspection)))))
     (refuse! :missing-controller-port))
   (let [root-file (.getCanonicalFile (io/file root))
         key (.getPath root-file)
@@ -321,19 +349,36 @@
                                (:click-id started)))
                 (refuse! :existing-start-disappeared-or-changed
                          {:ordinal ordinal}))
+              (when inspection
+                (cond
+                  (< ordinal (:ordinal inspection))
+                  (when-not terminal
+                    (refuse! :existing-start-disappeared-or-changed
+                             {:ordinal (:ordinal inspection)}))
+                  (> ordinal (:ordinal inspection))
+                  (refuse! :existing-start-disappeared-or-changed
+                           {:ordinal (:ordinal inspection)})
+                  :else
+                  (when-not (and started
+                                 (= (:click-id inspection) (:click-id started)))
+                    (refuse! :existing-start-disappeared-or-changed
+                             {:ordinal ordinal}))))
               (when terminal
                 (terminal-lifecycle! key prepared-trial started terminal ordinal))
               (when (and terminal before-terminal-advance)
                 (before-terminal-advance trial prepared-trial started terminal))
               (cond
                 terminal
-                (if (= :unsafe (:infrastructure terminal))
+                (if (and inspection (= ordinal (:ordinal inspection)))
+                  {:status :trial-terminal :ordinal ordinal
+                   :task-result (:task-result terminal)}
+                  (if (= :unsafe (:infrastructure terminal))
                   (do
                     (mark-remaining! root-file manifest-sha256 manifest (inc index)
                                      :prior-infrastructure-stop)
                     {:status :infrastructure-stopped :ordinal ordinal
                      :reason (or (:reason terminal) :terminal-infrastructure-unsafe)})
-                  (recur (inc index)))
+                  (recur (inc index))))
                 started
                 (if-let [evidence (terminal-evidence started)]
                   (do

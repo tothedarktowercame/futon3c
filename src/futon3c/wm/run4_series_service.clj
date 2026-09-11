@@ -173,6 +173,10 @@
                                   (:manifest-allowlist series)
                                   (:manifest-ref series) :manifest)
         manifest-text (slurp manifest-file)
+        inspection-ordinal (when required-existing-click-id
+                             (controller/started-ordinal-for-click!
+                              (:controller-root series) manifest-text
+                              required-existing-click-id))
         prepared (atom {})
         read-text (source-reader cfg)
         prepare-trial
@@ -180,19 +184,21 @@
           (let [existing-start? (.isFile
                                  (io/file (:controller-root series)
                                           (format "%03d-started.edn" (:ordinal trial))))
-                _ (when (and required-existing-click-id (not existing-start?))
+                target-inspection? (= inspection-ordinal (:ordinal trial))
+                _ (when (and target-inspection? (not existing-start?))
                     (refuse! :existing-start-required))
                 value (trusted/prepare
                        config headers
                        {:run4-pin-ref (get-in trial [:packet :path])
                         :run4-attempt-id (:attempt-id trial)}
-                       {:require-cohort-capacity? (not existing-start?)})]
+                       {:require-cohort-capacity?
+                        (and (nil? inspection-ordinal) (not existing-start?))})]
             (when-not (:ok value)
               (refuse! :run4-series-trial-refused
                        {:ordinal (:ordinal trial) :cause (:error value)}))
             (let [value (cond-> value
                           existing-start? (assoc :run4/existing-inspection-only? true)
-                          required-existing-click-id
+                          target-inspection?
                           (assoc :run4/existing-click-id required-existing-click-id))]
               (swap! prepared assoc (:ordinal trial) value)
               value)))
@@ -245,6 +251,9 @@
                              (assoc opts :run-record-dir
                                      (:run-record-root series)))))
                  :terminal-evidence terminal-port
+                 :inspection (when inspection-ordinal
+                               {:ordinal inspection-ordinal
+                                :click-id required-existing-click-id})
                  :before-terminal-advance
                  (fn [trial prepared-trial started terminal]
                    (reconcile-linked-row! run4 @prepared evidence-roots
