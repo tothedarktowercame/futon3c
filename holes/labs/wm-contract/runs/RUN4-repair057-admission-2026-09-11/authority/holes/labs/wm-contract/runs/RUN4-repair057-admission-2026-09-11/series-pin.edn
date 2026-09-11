@@ -13,10 +13,10 @@
                {:path "holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md"
                 :sha256 "47981b01c1ebbb5efa822ba9c7479e312323cd113c1bdd1f40cc61715678356d"}
                {:path "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/cohort.edn"
-                :sha256 "553e7401828abbc8226e91eed82b4ab5f64060b0a16bd92e0f8133258356e089"}]
+                :sha256 "2c4f3004c32f5d9f978dcb8cc8aa7d2fee118933ebed41cb940e63c1147113ef"}]
  :trials [{:ordinal 1
            :trial-id "M-u88-contextual-preferences"
            :attempt-id "historical-verification-admission-001"
-           :pin-sha256 "7f1fb8b238b56c5d62b42bd5fe8576fad4fbad5e08d6e9be1d4557b3927c8c85"
+           :pin-sha256 "57bc2b984f7c331e139087d9ecf9cd69c7e078e7cb98abea38a50707e9a3422c"
            :packet {:path "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/task-pin.edn"
-                    :sha256 "7f1fb8b238b56c5d62b42bd5fe8576fad4fbad5e08d6e9be1d4557b3927c8c85"}}]}
+                    :sha256 "57bc2b984f7c331e139087d9ecf9cd69c7e078e7cb98abea38a50707e9a3422c"}}]}

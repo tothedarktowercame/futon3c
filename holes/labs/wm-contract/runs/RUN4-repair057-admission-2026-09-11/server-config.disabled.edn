@@ -8,7 +8,7 @@
  :casting {:author "codex-10" :reviewer "codex-12" :repair-reviewer "codex-12"}
  :authority-root "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/authority"
  :manifest {:ref "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/series-pin.edn"
-            :sha256 "8765e61b86b2d32d29cacccb204514b23d53910a291c483841202929f72f96de"}
+            :sha256 "25c8a48fc30cff11e69bd402ffff4632a474e1cf8992387b474bf46ca9798dd9"}
  :pin-allowlist
  #{"holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/task-pin.edn"}
  :source-allowlist

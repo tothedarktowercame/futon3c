@@ -13,7 +13,7 @@
            {:path "holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json"
             :sha256 "64db034c9ae02282a169337d1683fc707abe2e4f05ddbd1e198b48b36778545c"}
            {:path "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/cohort.edn"
-            :sha256 "553e7401828abbc8226e91eed82b4ab5f64060b0a16bd92e0f8133258356e089"}]
+            :sha256 "2c4f3004c32f5d9f978dcb8cc8aa7d2fee118933ebed41cb940e63c1147113ef"}]
  :config {:path "holes/labs/wm-contract/runs/RUN4-repair057-admission-2026-09-11/run-config.edn"
           :sha256 "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8"}
  :casting {:author "codex-10"
