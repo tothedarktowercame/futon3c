@@ -95,11 +95,19 @@
                        (valid-serving-declaration? (:serving-declaration sheet))))
       (refuse! :unsupported-config-shape))
     (let [reader (fn [requested]
-                   (read-text (if (= requested path)
-                                path
-                                (normalized-ref requested))))
+                   (let [normalized (normalized-ref requested)]
+                     (read-text (if (= normalized (normalized-ref path))
+                                  path
+                                  normalized))))
+          ;; Give the fold resolver an explicit relative parent.  A bare
+          ;; "config.edn" has a nil File parent and cannot safely resolve its
+          ;; pinned sibling artifacts.
+          materialization-path (if (.getParentFile (io/file path))
+                                 path
+                                 (.getPath (io/file "." path)))
           materialized (try
-                         (c-fold/resolve-opts (:runner-options sheet) path reader)
+                         (c-fold/resolve-opts (:runner-options sheet)
+                                              materialization-path reader)
                          (catch clojure.lang.ExceptionInfo e
                            (refuse! :c-fold-materialization-refused
                                     {:cause (:reason (ex-data e))})))]
