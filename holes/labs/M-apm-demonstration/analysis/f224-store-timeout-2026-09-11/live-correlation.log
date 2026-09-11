@@ -1,0 +1,4 @@
+2026-09-11T18:37:18+00:00 zone clojure[2166403]: [futon1b-request] start method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-6c2deafad1cced833ba34525be00967c&limit=10&include-total=false trace-id=codex16-read-correlation-20260911 admission={:request-task/id 429435, :queue-wait-ms 1}
+2026-09-11T18:37:18+00:00 zone clojure[2166403]: [futon1b-expensive-read] start id=26760 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=codex16-read-correlation-20260911 holders=2
+2026-09-11T18:37:20+00:00 zone clojure[2166403]: [futon1b-expensive-read] end id=26760 shape=/api/alpha/hyperedges?end&include-total&limit trace-id=codex16-read-correlation-20260911 elapsed-ms=1796 outcome=ok
+2026-09-11T18:37:20+00:00 zone clojure[2166403]: [futon1b-request] end method=GET uri=/api/alpha/hyperedges?end=e-apm-promotion-6c2deafad1cced833ba34525be00967c&limit=10&include-total=false trace-id=codex16-read-correlation-20260911 elapsed-ms=1797 outcome=ok

@@ -1,0 +1,29 @@
+{
+  "window": [
+    "2026-09-11T18:02:00Z",
+    "2026-09-11T18:18:00Z"
+  ],
+  "endpoint_reads": 469,
+  "p50_ms": 2171,
+  "p95_ms": 3771,
+  "p99_ms": 4515,
+  "max_ms": 5360,
+  "over_5000_ms": [
+    {
+      "at": "2026-09-11T18:11:39+00:00",
+      "elapsed_ms": 5202,
+      "outcome": "client-disconnected"
+    },
+    {
+      "at": "2026-09-11T18:11:39+00:00",
+      "elapsed_ms": 5360,
+      "outcome": "client-disconnected"
+    }
+  ],
+  "outcomes": {
+    "ok": 467,
+    "client-disconnected": 2
+  },
+  "service_executor_rejections": 6149,
+  "rejection_scope": "pool and client unknown; not necessarily main HTTP pool"
+}
