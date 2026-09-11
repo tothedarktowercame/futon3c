@@ -168,7 +168,8 @@
                        (nonblank? (get-in value [:repair :id]))
                        (map? (:repair-transition value))
                        (= (:repair-transition value)
-                          (some->> (repair-store/open-obligations repair-root)
+                          (some->> (repair-store/obligation-history
+                                    repair-root (get-in value [:repair-transition :failed-attempt]))
                                    (filter #(= (get-in value [:repair :id])
                                                (:repair/id %))) first
                                    :repair/verification)))
