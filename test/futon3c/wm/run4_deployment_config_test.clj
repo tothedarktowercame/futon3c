@@ -74,6 +74,12 @@
                           text (assoc deps :historical-action authority
                                            :historical-successor (assoc link :foreign true)))
                          nil
+                         (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+    (is (= :invalid-deployment-contract
+           (:reason (try (sut/materialize
+                          text (assoc deps :historical-action authority
+                                           :historical-successor (assoc link :repair-id false)))
+                         nil
                          (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
 
 (deftest malformed-template-and-unprovisioned-enable-refuse
