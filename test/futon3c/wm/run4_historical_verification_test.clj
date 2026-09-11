@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]] [clojure.java.io :as io]
             [clojure.string :as str] [clojure.java.shell :as shell]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-historical-qualification :as qualification]
             [futon3c.wm.run4-historical-verification :as v]))
 (defn- tmp [] (.toFile (java.nio.file.Files/createTempDirectory "hist-v" (make-array java.nio.file.attribute.FileAttribute 0))))
@@ -9,10 +10,12 @@
 (deftest qualification-to-reviewed-awaiting-validation
   (let [root (tmp) findings (doto (io/file root "f") .mkdir) quals (doto (io/file root "q") .mkdir)
         out (doto (io/file root "o") .mkdir)
+        store (doto (io/file root "store") .mkdir)
         source (write! (io/file root "source.edn") {:source :pinned})
         finding (write! (io/file findings "057.edn")
                         {:repair/id "repair-057" :repair/status :open
-                         :repair/class :machine-failure :repair/schema-version 3})
+                         :repair/class :machine-failure :repair/schema-version 3
+                         :attempt-id "repair-attempt-057-untyped-failure"})
         plan-file (io/file root "plan.edn")
         plan {:schema :wm/historical-qualification-plan-v1 :verification-id "verify-1"
               :repair-id "repair-057"
@@ -44,6 +47,18 @@
               :review-job-id "review-1" :review-job-reader (fn [_] job)}]
     (is (= :awaiting-validation (:state (v/admit! opts))))
     (is (false? (:repair-resolved? (v/admit! opts))))
+    (let [verification-file (io/file out "verify-1.verification.edn")
+          obligation (read-string (slurp finding))
+          _ (doto (io/file store "findings") .mkdir)
+          _ (spit (io/file store "findings/repair-057.edn") (slurp finding))
+          admission (repair/record-historical-verification!
+                     (.getPath store) obligation
+                     {:verification-root (.getPath out)
+                      :path (.getPath verification-file)
+                      :sha256 (digest/sha256 (slurp verification-file))})]
+      (is (= :wm/historical-repair-admission-v1 (:schema admission)))
+      (is (= :awaiting-validation (:repair/status admission)))
+      (is (nil? (:repair/resolution admission))))
     (doseq [bad [(assoc opts :expected-check-ids [:recovery])
                  (assoc opts :expected-check-ids [:recovery :recovery])
                  (assoc opts :expected-check-ids [:recovery :foreign])
