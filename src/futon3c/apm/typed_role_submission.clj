@@ -69,7 +69,7 @@
    :blob "d3351807f1597baf97e8ba7ae5605274f0f9a92c"})
 
 (def authority-fields
-  #{:job-id :dispatch/id :agent-id :frame-id :problem-id :phase :role
+  #{:job-id :dispatch/id :agent-id :session-id :submission/authority-version :frame-id :problem-id :phase :role
     :attempt-ordinal :submission/attempt :predecessor-job-id
     :fresh-session-nonce :memory-snapshot
     ;; The holdout travels with the job authority so every channel that
@@ -220,8 +220,12 @@
                           [:dispatch/id :agent-id :frame-id :problem-id :phase
                            :role :attempt :submission/attempt
                            :session-id :memory-snapshot-id])]
-    (assoc request :submission/token
-           (machine/ledger-digest ["apm-role-submission" seed]))))
+    (cond-> (assoc request :submission/token
+                   (machine/ledger-digest ["apm-role-submission" seed]))
+      ;; Saved V1 requests already have a token. Do not reinterpret their
+      ;; formerly unregistered session field as immutable authority on replay.
+      (not (contains? request :submission/token))
+      (assoc :submission/authority-version 2))))
 
 (defn canonical-job-id [request]
   (str "apm-role-" (machine/ledger-digest
@@ -273,7 +277,8 @@
   "Create the exact authority that will be registered after job announcement."
   [request ticket]
   (select-keys
-   (merge request {:job-id (:job-id ticket)})
+   (cond-> (merge request {:job-id (:job-id ticket)})
+     (not= 2 (:submission/authority-version request)) (dissoc :session-id))
    (into (conj authority-fields :submission/token)
          checkpoint-authority-fields)))
 
@@ -304,7 +309,9 @@
         pin (:v4/revision-review auth)
         sha? #(and (string? %) (re-matches #"[0-9a-f]{64}" %))
         text? #(and (string? %) (not (str/blank? %)))]
-    (and (map? review)
+    (and (= 0 (:command-own-exit payload))
+         (contains? #{:complete :success} (wire-keyword (:outcome payload)))
+         (map? review)
          (sha? (:proposal/id review))
          (= (:proposal/id pin) (:proposal/id review))
          (sha? (:candidate/sha256 review))

@@ -19,16 +19,19 @@
          {:ok false :error/code (or (:error/code (ex-data e)) :pattern-review-read-failed)})))
 
 (defn file-pin
-  "Resolve symlinks and reject paths outside the configured authority."
+  "Retain the supplied root/path AND resolved target. Every recheck traverses
+  the supplied path again, detecting retargeted root or file symlinks."
   [root relative-path]
   (need! (and (text? root) (text? relative-path)) :pattern-review-path-missing)
-  (let [base (.toRealPath (Path/of root (make-array String 0)) (make-array LinkOption 0))
+  (let [supplied-root (.toAbsolutePath (Path/of root (make-array String 0)))
+        base (.toRealPath supplied-root (make-array LinkOption 0))
         path (.toRealPath (.resolve base relative-path) (make-array LinkOption 0))]
     (need! (.startsWith path base) :pattern-review-path-escape)
     (need! (Files/isRegularFile path (make-array LinkOption 0)) :pattern-review-not-file)
     (let [bytes (Files/readAllBytes path)
           hash (.digest (MessageDigest/getInstance "SHA-256") bytes)]
-      {:root (str base) :path (str (.relativize base path))
+      {:root (str supplied-root) :path relative-path
+       :resolved/root (str base) :resolved/path (str path)
        :sha256 (apply str (map #(format "%02x" (bit-and 255 %)) hash))})))
 
 (defn- executed-submission
@@ -48,7 +51,21 @@
     (need! (and (= job-id (:job-id auth)) (text? (:agent-id auth))
                 (= (:agent-id auth) (:agent-id job)) (text? (:session-id job)))
            :pattern-review-executed-identity-mismatch)
+    (when (contains? auth :session-id)
+      (need! (and (text? (:session-id auth)) (= (:session-id auth) (:session-id job)))
+             :pattern-review-registered-session-mismatch))
     {:job job :typed typed})))
+
+(defn- author-completion [typed]
+  (let [payload (:payload typed)
+        exit (:command-own-exit payload)
+        outcome (submission/wire-keyword (:outcome payload))]
+    {:observation (select-keys payload [:command-own-exit :outcome :failure-account])
+     :status (cond
+               (or (and (int? exit) (not= 0 exit))
+                   (contains? #{:failed :failure :error} outcome)) :failed
+               (and (= 0 exit) (contains? #{:complete :success} outcome)) :successful
+               :else :unknown)}))
 
 (defn prepare!
   "Read an executed TA proposal, pin both files under configured roots, and
@@ -90,6 +107,12 @@
                         :proposal proposed :source source :candidate candidate
                         :author/job-id author-job-id :author/agent-id (:agent-id job)
                         :author/session-id (:session-id job)
+                        :author/session-binding
+                        (cond
+                          (contains? (:authority typed) :session-id) :registered-and-matched
+                          (= 2 (get-in typed [:authority :submission/authority-version])) :unpinned
+                          :else :legacy-unpinned)
+                        :author/completion (author-completion typed)
                         :author/submission-id (:submission/id typed)
                         :reviewer/session-id session-id :review/budget-ms 900000}
              request (-> {:agent-id reviewer-agent-id

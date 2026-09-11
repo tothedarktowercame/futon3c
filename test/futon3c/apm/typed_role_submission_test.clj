@@ -237,3 +237,18 @@
                  (assoc-in valid [:evidence :revision-review :candidate/sha256] "wrong")
                  (assoc-in valid [:evidence :revision-review :proposal/id] (apply str (repeat 64 "c")))]]
       (is (false? (:ok (sut/validate-payload auth bad)))))))
+
+(deftest registered-session-pins-are-versioned-without-reinterpreting-legacy-requests
+  (let [legacy {:agent-id "ta" :frame-id "f1" :problem-id "p1" :phase :promote-solver
+                :role :solver :dispatch/id "d1" :session-id "historically-not-registered"
+                :submission/token "saved-v1-token"}
+        ticket {:job-id "job1"}
+        legacy-auth (sut/authority legacy ticket)
+        replay (sut/authority (sut/prepare-request legacy) ticket)
+        fresh (sut/prepare-request (dissoc legacy :submission/token))
+        fresh-auth (sut/authority fresh ticket)]
+    (is (not (contains? legacy-auth :session-id)))
+    (is (= (dissoc legacy-auth :submission/token) (dissoc replay :submission/token)))
+    (is (= 2 (:submission/authority-version fresh-auth)))
+    (is (= "historically-not-registered" (:session-id fresh-auth)))
+    (is (= fresh-auth (sut/authority (sut/prepare-request fresh) ticket)))))

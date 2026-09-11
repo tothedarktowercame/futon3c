@@ -115,3 +115,41 @@ V3 to the prototype to accomplish these gates.
 - Retained a93A01 provenance verifier: 11 nodes, acyclic obligations and matching
   source/pattern revisions. No fresh Lean check or Student invocation.
 - clj-kondo, workspace check-parens and diff checks pass.
+
+## Independent review and repair follow-up
+
+The independent Codex TA review of `af3b3b26` (Agency job
+`invoke-1789154561592-20249-20b68a57`) reproduced three P2 defects. This follow-up
+repairs them; independent confirmation of the repairs is still pending.
+
+1. Revision-review submission now validates the completion envelope as well as
+   nested fields: the supported successful outcome and zero own-command exit
+   must hold before immutable persistence. Regression tests submit nil/failed
+   outcomes, a nonzero exit and malformed failure accounting, verify that the
+   slot stays empty, then submit and collect a corrected review successfully.
+2. File pins retain the supplied absolute root and supplied path separately
+   from their resolved root and target. Rechecks traverse the supplied paths
+   again. File-link and root-link retargeting are rejected, including a target
+   containing identical bytes. Publication locking is still required; these
+   read checks do not provide concurrent compare-and-publish isolation.
+3. Fresh typed requests have authority version 2, which retains a supplied
+   session ID. Already prepared V1 requests retain their earlier authority
+   semantics on replay; formerly dropped session fields are not retroactively
+   treated as registered guarantees. Execution rejects a mismatched or invalid
+   registered session. The review authority records session binding as
+   `registered-and-matched`, `legacy-unpinned`, or `unpinned` (V2 without a pin).
+   Observed session identity remains available, but the latter two states do
+   not assert registered-session correspondence.
+
+Failed source attempts are deliberately eligible to motivate proposals. Their
+actual typed outcome, command exit and failure account are retained in
+`:author/completion`, with status `failed`, `successful` or `unknown`. An Agency
+`done` state establishes transport completion only; it does not turn a failed
+proof attempt into success. Independent review and publication gates remain.
+
+Current verification: 104 Clojure tests / 526 assertions pass across native
+revision review, typed submission, existing V3 proof phases and promotion.
+`review-repair-validation.json` records the counts. These remain isolated tests
+with mocked transport, not a live review, Student trial, restart trial or proof
+of concurrent immutable-write safety. No shared namespace reload, canonical
+library change or V3 loop operation was performed.

@@ -134,3 +134,85 @@
       (Files/createSymbolicLink (.toPath (io/file library "link"))
                                (.toPath (io/file root "outside")) (make-array FileAttribute 0))
       (is (thrown? clojure.lang.ExceptionInfo (sut/file-pin (str library) "link"))))))
+
+(deftest invalid-review-envelope-does-not-consume-immutable-slot
+  (with-fixture
+    (fn [{:keys [options jobs]}]
+      (let [request (:request (sut/prepare! options)) opts (assoc options :request request)
+            id (:submission/job-id request) auth (:v4/revision-review request)
+            valid {:command-own-exit 0 :outcome "complete" :failure-account []
+                   :evidence {:revision-review {:proposal/id (:proposal/id auth)
+                                               :candidate/sha256 (get-in auth [:candidate :sha256])
+                                               :verdict :accept :reason "fixture" :residual "unverified"}}}]
+        (sut/dispatch! opts)
+        (doseq [bad [(assoc valid :outcome nil) (assoc valid :outcome "failed")
+                     (assoc valid :command-own-exit 1) (assoc valid :failure-account nil)]]
+          (is (false? (:ok (submission/submit! id (:submission/token request) bad))))
+          (is (nil? (submission/submitted id))))
+        (submit-review! request jobs {})
+        (is (:ok (sut/collect! opts)))))))
+
+(deftest symlink-retarget-is-drift-at-dispatch-and-collection
+  (doseq [when-retarget [:before-dispatch :before-collection]]
+    (with-fixture
+      (fn [{:keys [options library jobs]}]
+        (let [alias (.toPath (io/file library "method.flexiarg"))
+              original (.toPath (io/file library "original.flexiarg"))
+              replacement (.toPath (io/file library "replacement.flexiarg"))]
+          (Files/move alias original (make-array java.nio.file.CopyOption 0))
+          (Files/createSymbolicLink alias original (make-array FileAttribute 0))
+          ;; Equal bytes still must not conceal a changed resolution.
+          (spit (.toFile replacement) (slurp (.toFile original)))
+          (let [request (:request (sut/prepare! options)) opts (assoc options :request request)]
+            (when (= when-retarget :before-collection)
+              (is (:ok (sut/dispatch! opts)))
+              (submit-review! request jobs {}))
+            (Files/delete alias)
+            (Files/createSymbolicLink alias replacement (make-array FileAttribute 0))
+            (is (= :pattern-review-source-drift
+                   (:error/code ((if (= when-retarget :before-dispatch) sut/dispatch! sut/collect!) opts))))))))))
+
+(deftest registered-author-session-and-failed-attempt-policy
+  (doseq [case [:matched :mismatched :legacy :failed]]
+    (with-fixture
+      (fn [{:keys [options jobs]}]
+        (let [id (str "author-" (name case))
+              request (submission/prepare-request
+                       (cond-> {:agent-id "ta" :frame-id "development-frame" :problem-id "source"
+                                :phase :promote-solver :role :solver :dispatch/id id}
+                         (= case :legacy) (assoc :submission/token "retained-v1-token")
+                         (not= case :legacy)
+                         (assoc :session-id (if (= case :mismatched) "wrong-session" "ta-session"))))
+              payload (:payload (submission/submitted "author-job"))
+              payload (if (= case :failed) (assoc payload :outcome "failed" :command-own-exit 1) payload)]
+          (is (:ok (submission/register! request {:job-id id})))
+          (is (:ok (submission/submit! id (:submission/token request) payload)))
+          (swap! jobs assoc id {:job-id id :agent-id "ta" :session-id "ta-session" :state "done"})
+          (let [result (sut/prepare! (assoc options :author-job-id id))
+                authority (get-in result [:request :v4/revision-review])]
+            (if (= case :mismatched)
+              (is (= :pattern-review-registered-session-mismatch (:error/code result)))
+              (do
+                (is (:ok result))
+                (is (= (if (= case :legacy) :legacy-unpinned :registered-and-matched)
+                       (:author/session-binding authority)))
+                (is (= (if (= case :failed) :failed :successful)
+                       (get-in authority [:author/completion :status])))
+                (is (= payload (assoc (:observation (:author/completion authority))
+                                      :evidence (:evidence payload))))))))))))
+
+(deftest retargeted-library-root-is-not-hidden-by-a-resolved-pin
+  (with-fixture
+    (fn [{:keys [options root library]}]
+      (let [alias (.toPath (io/file root "library-alias"))
+            replacement (io/file root "replacement-library")]
+        (.mkdir replacement)
+        (spit (io/file replacement "method.flexiarg") (slurp (io/file library "method.flexiarg")))
+        (Files/createSymbolicLink alias (.toPath library) (make-array FileAttribute 0))
+        (let [opts (assoc options :library-root (str alias))
+              request (:request (sut/prepare! opts))]
+          (is (some? request))
+          (Files/delete alias)
+          (Files/createSymbolicLink alias (.toPath replacement) (make-array FileAttribute 0))
+          (is (= :pattern-review-source-drift
+                 (:error/code (sut/dispatch! (assoc opts :request request))))))))))
