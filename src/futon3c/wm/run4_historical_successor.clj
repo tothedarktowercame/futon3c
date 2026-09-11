@@ -38,7 +38,8 @@
          verification-cohort
          (get-in historical-bundle [:projection :runner-attempt/id]))
         successor-execution (cohort/closed-execution successor-cohort local-attempt)
-        successor-attempt (select-keys successor-execution [:kind :id])]
+        successor-attempt (select-keys successor-execution [:kind :id])
+        historical-authority? (= 1 (:identity-version historical-execution))]
     (when-not (and historical-bundle
                    (= repair-id (get-in historical-bundle [:projection :repair :id]))
                    (= verification-id
@@ -46,7 +47,10 @@
                    (= verification-attempt
                       (get-in historical-bundle [:projection :execution-attempt]))
                    (= verification-attempt
-                      (select-keys historical-execution [:kind :id]))
+                      (if historical-authority?
+                        (select-keys historical-execution [:kind :id])
+                        {:kind :runner-execution
+                         :id (:attempt-id historical-execution)}))
                    (= historical-execution configured-historical-execution)
                    (= (:cohort-id historical-execution)
                       (get-in historical-bundle [:projection :cohort :cohort-id]))
