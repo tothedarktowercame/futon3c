@@ -1,12 +1,12 @@
 {:schema :wm/run4-successor-v2-selection-admission-preparation-v1
- :status :disabled-awaiting-execution-authority-id-length-repair :enabled? false
- :source-provenance {:futon2-head "2185297c1de7d2822f796650a02e559ca6464dfd"
-                     :futon3c-packet-base "9a22025dedb686b5a32afbe8a37d3e065e4a9016"
+ :status :disabled-awaiting-independent-packet-review :enabled? false
+ :source-provenance {:futon2-head "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
+                     :futon3c-packet-base "3bd733167ad60e6bd1ca4d141e2df2d7a953147a"
                      :verification-source-head "eed108f51c5e3419f9f58a6b8ba234eb0d842c4f"
                      :runtime-source-pins
                      [{:repo :futon2 :path "src/futon2/aif/full_loop_runner.clj" :sha256 "0b2a8ddc3f3e16b1e7e522c0b818a4ad3627c32734b9005e8419afff4a5a3ea2"}
-                     {:repo :futon2 :path "src/futon2/aif/full_loop_cohort.clj" :sha256 "4c164ffd9560a1ac906454a28151e3e1b93990dab34eb109292032d95ad263b6"}
-                     {:repo :futon2 :path "src/futon2/aif/repair_obligation.clj" :sha256 "a2ae2f28dd01832d6221648a7af686fa04c0dbe932740da050955dd6ae97e0f3"}
+                     {:repo :futon2 :path "src/futon2/aif/full_loop_cohort.clj" :sha256 "7819b2da811344979355ed9188ccfb2a181d94882bb58cd3c560de282bf4cda7"}
+                     {:repo :futon2 :path "src/futon2/aif/repair_obligation.clj" :sha256 "7bc42ed3be4bdccf99bb88e485d86e71cef2a781683dbea6c518d4ab91c49dff"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_deployment_config.clj" :sha256 "4958fbcf28bc11fce6c41ffca8c68dd50be73110c2c7cb3ea56fd7f8215c5c48"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_historical_action.clj" :sha256 "9048f039fcbdfe55bb6f5010b302b218aed3e5518eee9a4f2c93d149438e2c97"}
                      {:repo :futon3c :path "src/futon3c/wm/run4_historical_verification.clj" :sha256 "903ad022c480a79d959401128da0993c1b5681d58be16a6b164bda3658c84443"}

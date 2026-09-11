@@ -38,7 +38,7 @@
                                "/home/joe/code/futon2" (.getPath source-repo))
         _ (assert (zero? (:exit clone-result)) (:err clone-result))
         checkout-result (shell/sh "git" "-C" (.getPath source-repo) "checkout"
-                                  "--detach" "2185297c1de7d2822f796650a02e559ca6464dfd")
+                                  "--detach" "810be2a9a19d70b054d9ef7ceb43a2349b7a923d")
         _ (assert (zero? (:exit checkout-result)) (:err checkout-result))
         original (edn/read-string (slurp (str review-root "offline-verification/repair-successor-v2-selection-revalidation-20260911-v1.verification.edn")))
         finding (io/file findings (str (:repair-id original) ".edn"))
@@ -80,8 +80,8 @@
               :qualification-sha256 qualification-sha
               :expected-check-ids [:current-execution-authority]
               :first-commit "8788443d7cf0c806261933e2c68009d84f57819d"
-              :last-commit "2185297c1de7d2822f796650a02e559ca6464dfd"
-              :source-head "2185297c1de7d2822f796650a02e559ca6464dfd"
+              :last-commit "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
+              :source-head "810be2a9a19d70b054d9ef7ceb43a2349b7a923d"
               :verification-id (:verification-id original)
               :author (get-in original [:actors :author]) :reviewer (get-in original [:actors :reviewer])
               :review-job-id (:job-id job) :review-job-reader (fn [_] job)}
