@@ -175,7 +175,9 @@
   Validation uses only server-configured read ports. The returned callback
   rechecks the exact digest in the runner and is one-use; it is not HTTP
   request replay protection."
-  [server-config headers payload]
+  ([server-config headers payload] (prepare server-config headers payload {}))
+  ([server-config headers payload {:keys [require-cohort-capacity?]
+                                   :or {require-cohort-capacity? true}}]
   (let [cfg (:run4 server-config)]
     (cond
       (not (map? cfg)) (refuse :run4-disabled)
@@ -212,7 +214,8 @@
                                  (try
                                    (execution-cohort/validate-and-preflight!
                                     (:execution-cohort cfg)
-                                    (:cohort-preflight! cfg))
+                                    (:cohort-preflight! cfg)
+                                    require-cohort-capacity?)
                                    (catch clojure.lang.ExceptionInfo e
                                      {:refusal
                                       (refuse :run4-execution-cohort-invalid
@@ -227,7 +230,7 @@
                         (if (and (:ok prepared) cohort)
                           (assoc-in prepared [:opts :execution-cohort] cohort)
                           prepared))))))))
-        (refuse :run4-pin-reference-refused)))))
+        (refuse :run4-pin-reference-refused))))))
 
 (defn authenticate
   "Authenticate a server-configured RUN4 principal without reading task or

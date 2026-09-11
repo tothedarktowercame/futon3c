@@ -98,10 +98,14 @@
         read-text (source-reader cfg)
         prepare-trial
         (fn [trial]
-          (let [value (trusted/prepare
+          (let [existing-start? (.isFile
+                                 (io/file (:controller-root series)
+                                          (format "%03d-started.edn" (:ordinal trial))))
+                value (trusted/prepare
                        config headers
                        {:run4-pin-ref (get-in trial [:packet :path])
-                        :run4-attempt-id (:attempt-id trial)})]
+                        :run4-attempt-id (:attempt-id trial)}
+                       {:require-cohort-capacity? (not existing-start?)})]
             (when-not (:ok value)
               (refuse! :run4-series-trial-refused
                        {:ordinal (:ordinal trial) :cause (:error value)}))

@@ -101,9 +101,13 @@
                     :resolve-mission #(when (= "M-outer-loop-successor" %) mission)
                     :execution-cohort execution-cohort
                     :cohort-preflight!
-                    (fn [requested]
-                      {:cohort-id (:cohort-id requested)
-                       :target 9 :remaining 9 :snapshot ::internal})
+                    (fn
+                      ([requested]
+                       {:cohort-id (:cohort-id requested)
+                        :target 9 :remaining 9 :snapshot ::internal})
+                      ([requested _require-capacity?]
+                       {:cohort-id (:cohort-id requested)
+                        :target 9 :remaining 9 :snapshot ::internal}))
                     :action-admissible? (fn [m action]
                                           (and (= mission m)
                                                (= {:type :advance-mission
@@ -233,6 +237,29 @@
             (is (zero? @clicks))
             (is (not (.exists (io/file root "controller"
                                        "eligible-attempt-1"))))))))))
+
+(deftest exhausted-cohort-allows-existing-start-read-without-redispatch
+  (with-service
+    (fn [_ cfg]
+      (let [clicks (atom 0)
+            preflight (fn
+                        ([_] {:cohort-id :run4-test :target 1 :remaining 1})
+                        ([_ require-capacity?]
+                         {:cohort-id :run4-test :target 1
+                          :remaining (if require-capacity? 1 0)}))
+            cfg (assoc-in cfg [:run4 :cohort-preflight!] preflight)
+            handler (http/make-handler cfg)
+            payload {:run4-series-ref "series.edn"}]
+        (with-redefs [runner/click! (fn [_]
+                                      (swap! clicks inc)
+                                      {:click-id "click-existing-exhausted"
+                                       :started-at "2026-09-11T02:00:00Z"})]
+          (is (= 200 (:status (handler (request payload auth)))))
+          (let [response (handler (request payload auth))
+                body (json/parse-string (:body response) true)]
+            (is (= 200 (:status response)))
+            (is (= "awaiting-terminal-evidence" (:status body)))
+            (is (= 1 @clicks))))))))
 
 (deftest declared-corrupt-terminal-chain-stops-resume-without-redispatch
   (with-service

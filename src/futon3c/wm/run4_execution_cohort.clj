@@ -21,7 +21,8 @@
   retained nor serialized here.
   The preregistration file is reread after the port call to close preflight
   drift. Race-safe capacity is still rechecked by the runner at start."
-  [cohort preflight]
+  ([cohort preflight] (validate-and-preflight! cohort preflight true))
+  ([cohort preflight require-capacity?]
   (when-not (and (map? cohort) (= cohort-keys (set (keys cohort)))
                  (string? (:preregistration cohort))
                  (.isAbsolute (io/file (:preregistration cohort)))
@@ -42,15 +43,20 @@
     (let [bytes (slurp prereg)]
       (when-not (= (:sha256 cohort) (digest/sha256 bytes))
         (refuse! :cohort-preregistration-drift))
-      (let [result (preflight cohort)
+      (let [result (if require-capacity?
+                     (preflight cohort)
+                     (preflight cohort false))
             summary (select-keys result [:cohort-id :target :remaining])]
         (when-not (and (map? result)
                        (= #{:cohort-id :target :remaining} (set (keys summary)))
                        (= (:cohort-id cohort) (:cohort-id summary))
                        (pos-int? (:target summary))
-                       (pos-int? (:remaining summary))
+                       (if require-capacity?
+                         (pos-int? (:remaining summary))
+                         (and (int? (:remaining summary))
+                              (not (neg? (:remaining summary)))))
                        (<= (:remaining summary) (:target summary)))
           (refuse! :cohort-unavailable-or-exhausted))
         (when-not (= bytes (slurp prereg))
           (refuse! :cohort-preregistration-drift))
-        cohort))))
+        cohort)))))
