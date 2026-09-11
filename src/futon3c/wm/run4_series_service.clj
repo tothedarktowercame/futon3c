@@ -109,8 +109,10 @@
             (when-not (:ok value)
               (refuse! :run4-series-trial-refused
                        {:ordinal (:ordinal trial) :cause (:error value)}))
-            (swap! prepared assoc (:ordinal trial) value)
-            value))
+            (let [value (cond-> value existing-start?
+                          (assoc :run4/existing-inspection-only? true))]
+              (swap! prepared assoc (:ordinal trial) value)
+              value)))
         evidence-roots {:admission (:admission-root run4)
                         :bindings (:binding-root series)
                         :projections (:projection-root series)

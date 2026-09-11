@@ -341,6 +341,9 @@
                      :ordinal ordinal :task-result (:task-result evidence)})
                   {:status :awaiting-terminal-evidence :ordinal ordinal
                    :click-id (:click-id started)})
+                (:run4/existing-inspection-only? prepared-trial)
+                (refuse! :existing-start-disappeared-or-changed
+                         {:ordinal ordinal})
                 :else
                 (let [reservation (admission/reserve!
                                    key (:admission-request prepared-trial))]
