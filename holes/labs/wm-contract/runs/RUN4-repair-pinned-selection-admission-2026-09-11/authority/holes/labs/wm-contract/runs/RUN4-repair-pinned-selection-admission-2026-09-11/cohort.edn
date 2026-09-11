@@ -1,0 +1,83 @@
+{:machine-evolution
+ {:allowed? true,
+  :rule
+  "Normal machine development may continue during collection; it never permits dropping, replacing, or relabelling an opportunity.",
+  :per-attempt-provenance
+  [:semantic-epoch
+   :git-sha
+   :git-dirty?
+   :resolved-mode-flags
+   :configuration-digest],
+  :epoch-boundary
+  "First pinned-selection-refused stop-line historical verification admission under a separate RUN4 cohort; codex-17 qualification author and zai-1 independent reviewer; the repair bf10b3d9 (canonical mission pins to unique intact admissible candidates) with closure 0d1e203c; no pooling with repair 057, repair 058, successor, initialization, or the successor-v2-selection admission cohorts.",
+  :analysis
+  "Report attempts chronologically and stratified by semantic epoch; do not pool across an undocumented semantic boundary."},
+ :protocol/version 4,
+ :purpose
+ "One pinned-selection-refused historical repair-verification admission. U88 is the authenticated requested task, not the enacted task when the open repair stop-line takes precedence. Admission does not resolve the repair or establish U88 success; the separate initialization stop-line 8c13130f and init38690 remain open and are not discharged by this evidence.",
+ :authority
+ "Joe-authorized first-repair revalidation preparation (2026-09-11). This frozen disabled packet authorizes no live capacity or execution; prior failed cohorts and all retained receipts remain unchanged.",
+ :checkpoint-contract
+ {:closed
+  [:outcome :grounded? :artifact-only? :duration-ms :resource-use],
+  :adjudication [:before :after :witness :build-match :dial],
+  :construction
+  [:mission :cascade :sorries :wiring :patterns :deposit],
+  :cell-shape
+  "Every checkpoint payload is either {:judgment ... :ground ...} or {:sorry {:kind keyword ...}}.",
+  :time-step
+  [:opportunity-id
+   :trigger
+   :machine-state
+   :agent-roster
+   :code-state
+   :semantic-epoch],
+  :dispatch [:agent :availability :job-id :prompt-ref],
+  :build
+  [:artifacts
+   :generated-code
+   :commits
+   :patterns-used
+   :inline-improvements
+   :validation],
+  :selection
+  [:selected-mission
+   :selected-action
+   :ranked-candidates
+   :selection-reasons],
+  :revision-note
+  "A revision round nests inside the :build payload as :revision {:round 2 :commits [...] :review {...}} with both review records under :reviews; checkpoint order and schema unchanged from protocol 4."},
+ :casting
+ {:author "codex-17", :reviewer "zai-1", :repair-reviewer "zai-1"},
+ :grounded-success
+ {:outcome :grounded-change,
+  :requires
+  [:independent-before-witness
+   :independent-after-witness
+   :resolved-adjudication
+   :dial-moved],
+  :artifact-only-counts? false},
+ :required-before-close
+ #{:adjudication :construction :dispatch :build :selection},
+ :analysis
+ {:claim
+  "Observe one pinned-selection-refused historical verification execution and its awaiting-validation outcome; a distinct production successor remains mandatory.",
+  :denominator
+  "Every admitted opportunity in this cohort, including unsuccessful outcomes."},
+ :status :draft,
+ :checkpoint-order
+ [:time-step
+  :selection
+  :construction
+  :dispatch
+  :build
+  :adjudication
+  :closed],
+ :predecessor-evidence
+ {:repair-id "repair-ea1-78cd8a42e23392a5ce1412e49d181c3e7c3ac95aaa40d4f54c5c9d8ef3ae08eb--attempt-001-pinned-selection-refused",
+  :counts-in-this-cohort? false,
+  :reason "Immutable open stop-line qualified independently (codex-17/zai-1 receipt 015b6f6a); no prior execution counts in this cohort."},
+ :allowed-triggers #{:duree-click-continuous :duree-click-on-demand},
+ :stopping-rule {:kind :fixed-attempt-count, :target 1},
+ :registered-on "2026-09-11",
+ :cohort/id :run4-repair-pinned-selection-admission-20260911-v1}
