@@ -858,3 +858,52 @@
                                                              (:receipt/id good)))))
             "uppercase hex is not the pinned form")
         (is (not (sut/valid-guide-receipt? obligation nil)))))))
+
+(deftest recovered-frames-resume-before-suspended-work-without-reminting
+  (let [{:keys [providers state calls plan]} (harness)
+        park-fn (fn [frame]
+                  {:ok true :status :frame-parked
+                   :frame/park {:state/type :promotion-apparatus-frame-park
+                                :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+                                :phase :promotion :error/code :promotion-apparatus-repair-exhausted
+                                :promotion/state-path "checkpoint" :repair/kind :promotion-pass
+                                :repair/attempts 1 :promotion/findings [:missing-trace]
+                                :residual "source evidence unavailable"
+                                :last-valid-receipt/id (str "receipt-" (:frame/id frame))
+                                :decision/owner :claude-supervisor
+                                :decision/status :awaiting-decision :decision/bell-required true}})
+        recovered (atom [])]
+    (sut/tick! providers)
+    (dotimes [_ 2]
+      (swap! recovered conj
+             {:active (assoc-in (:active @state) [:frame :queue/id] (:queue/id plan))
+              :decision {:disposition :resume-frame :operator "operator"
+                         :frame/id (get-in @state [:active :frame :frame/id])
+                         :last-valid-receipt/id (str "receipt-" (get-in @state [:active :frame :frame/id]))
+                         :recovery/evidence-ref "checked repair"}})
+      (sut/tick! (assoc providers :frame-tick-fn park-fn)))
+    (let [before @state result (sut/resume-parked-frames before @recovered)
+          resumed (:state result)]
+      (is (:ok result))
+      (is (sut/valid-state? resumed))
+      (is (= (:next-index before) (:next-index resumed)))
+      (is (= (:frame-ordinal before) (:frame-ordinal resumed)))
+      (is (= (:parked before) (mapv :park (:park-recoveries resumed))))
+      (is (empty? (:parked resumed)))
+      (is (= "q1" (get-in resumed [:active :frame :frame/id])))
+      (is (= ["q2" "q3"] (mapv #(get-in % [:frame :frame/id]) (:resumption-queue resumed))))
+      (is (false? (:ok (sut/resume-parked-frames resumed @recovered))))
+      (is (false? (:ok (sut/resume-parked-frames before
+                           (assoc-in @recovered [0 :decision :last-valid-receipt/id] "wrong")))))
+      (reset! state resumed)
+      (reset! calls [])
+      (sut/tick! providers)
+      (is (= "q2" (get-in @state [:active :frame :frame/id])))
+      (sut/tick! providers)
+      (is (= "q3" (get-in @state [:active :frame :frame/id])))
+      (is (= ["q1" "q2"] (mapv :frame/id (:completed @state))))
+      (is (empty? (filter #(contains? #{:mint :prepare} (first %)) @calls)))
+      (is (= (:next-index before) (:next-index @state)))
+      (sut/tick! providers)
+      (is (= "q4" (get-in @state [:active :frame :frame/id])))
+      (is (= [[:mint "p4"]] (filter #(= :mint (first %)) @calls))))))

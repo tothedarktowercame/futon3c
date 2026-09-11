@@ -184,6 +184,51 @@
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
 
+(defn resume-parked-frames
+  "Trusted operator re-entry at a quiescent queue boundary. Schedules preserved
+  phase drivers without certifying phases or resetting retry budgets. Previously
+  active work resumes before the queue mints another frame."
+  [state recoveries]
+  (let [ids (mapv #(get-in % [:active :frame :frame/id]) recoveries)
+        nonblank? #(and (string? %) (not-empty %))
+        parks (mapv (fn [{:keys [active decision]}]
+                      (some #(when (and (= (get-in active [:frame :frame/id]) (:frame/id %))
+                                        (= (get-in active [:frame :problem/id]) (:problem/id %))
+                                        (= (:last-valid-receipt/id decision)
+                                           (:last-valid-receipt/id %))) %)
+                            (:parked state))) recoveries)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (or (empty? recoveries) (not= (count ids) (count (set ids)))
+          (some #{(get-in state [:active :frame :frame/id])} ids)
+          (seq (:resumption-queue state)) (some? (:status state)))
+      {:ok false :error/code :problem-queue-recovery-not-exclusive}
+      (not-every? true?
+       (map (fn [{:keys [active decision]} park]
+              (boolean
+               (and park (valid-frame-park? park)
+                    (= :resume-frame (:disposition decision))
+                    (= (get-in active [:frame :frame/id]) (:frame/id decision))
+                    (= (:queue/id state) (get-in active [:frame :queue/id]))
+                    (every? nonblank? [(:preparation/id active) (:operator decision)
+                                      (:recovery/evidence-ref decision)
+                                      (:last-valid-receipt/id decision)]))))
+            recoveries parks))
+      {:ok false :error/code :problem-queue-recovery-authority-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (assoc :active (:active (first recoveries))
+                          :resumption-queue
+                          (cond-> (mapv :active (rest recoveries))
+                            (:active state) (conj (:active state))))
+                   (update :parked #(vec (remove (set parks) %)))
+                   (update :park-recoveries (fnil into [])
+                           (mapv (fn [recovery park] (assoc recovery :park park))
+                                 recoveries parks))))})))
+
 (defn- frame-failure-signature [terminal-receipt]
   (when (= :role-terminal-unrecoverable
            (:void/classification terminal-receipt))
@@ -456,6 +501,15 @@
 (defn- prepare-next
   [plan state {:keys [mint-frame-fn qualify-frame-fn prepare-frame-fn
                       persist-state-fn]}]
+  (if (seq (:resumption-queue state))
+    (let [resumed (addressed
+                   (assoc state :active (first (:resumption-queue state))
+                                :resumption-queue (vec (rest (:resumption-queue state)))))
+          persisted (persist-state-fn resumed)]
+      (if (:ok persisted)
+        {:ok true :status :frame-prepared :state resumed
+         :frame (get-in resumed [:active :frame])}
+        {:ok false :error/code :problem-queue-state-persistence-failed}))
   (if (= (:next-index state) (count (:problems plan)))
     (let [complete (addressed (assoc state :status :complete))
           persisted (persist-state-fn complete)]
@@ -517,7 +571,7 @@
                 {:ok true :status :frame-prepared :state advanced
                  :frame (:frame minted)}
                 {:ok false :error/code
-                 :problem-queue-state-persistence-failed}))))))))
+                 :problem-queue-state-persistence-failed})))))))))
 
 (defn- park-failure-signature
   "Streak signature for a park that replaced what was previously a void.
