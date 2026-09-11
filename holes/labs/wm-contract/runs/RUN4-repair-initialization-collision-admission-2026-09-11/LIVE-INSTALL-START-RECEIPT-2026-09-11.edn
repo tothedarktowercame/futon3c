@@ -1,0 +1,75 @@
+{:schema :wm/run4-live-queue-install-start-receipt-v1
+ :operator-authority "Joe direct live provisioning/install and one-entry queue authorization"
+ :reviewed-packet-commit "736db8cf"
+ :independent-acceptance-commit "70dfc2d1"
+ :futon2-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
+ :installed-at "2026-09-11T15:25:19Z"
+ :queue-started-at "2026-09-11T15:26:20.227515370Z"
+ :fresh-gates
+ {:packet-hashes 8
+  :source-joins :current
+  :effective-environment :all-required-consumers-true
+  :recording-environment "1"
+  :runner-idle true
+  :actors {:codex-17 {:status :idle :invoke-ready? true}
+           :codex-12 {:status :idle :invoke-ready? true}}
+  :first-nonenvironmental-stop-line
+  "repair-initialization-b076e0f8-dbc2-4368-80a0-073d243951a0-initialization-failed"
+  :preexisting-controller-files 0
+  :preexisting-queue-files 0}
+ :stores
+ {:controller-and-admission "/home/joe/run4/initialization-collision-admission/controller"
+  :bindings "/home/joe/run4/initialization-collision-admission/bindings"
+  :projections "/home/joe/run4/initialization-collision-admission/projections"
+  :run-records "/home/joe/run4/initialization-collision-admission/run-records"
+  :recordings "/home/joe/run4/initialization-collision-admission/recordings"
+  :visibility "/home/joe/run4/initialization-collision-admission/visibility"
+  :queue "/home/joe/run4/initialization-collision-admission/queue"
+  :mode "0700"}
+ :handler {:status :handler-reconfigured :run4-configured? true}
+ :trusted-preparation
+ {:ok true
+  :series-id "run4-initialization-collision-admission-20260911-v1"
+  :trial-id "M-u88-contextual-preferences"
+  :controller-attempt-id "initialization-collision-historical-admission-001"
+  :pin-sha256 "f3a6550a463ca1f5707cd412682122b4a4f678f88f376cc9b7756a36c85ae6a0"}
+ :execution-cohort
+ {:preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-admission-2026-09-11/authority/holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-admission-2026-09-11/cohort.edn"
+  :sha256 "6418b1fbd5dadd36a4a3ce4efffb344461a3f25e6d6eeced975fa0c7d0abfeb4"
+  :data-root "/home/joe/run4/initialization-collision-admission/cohort"
+  :cohort-id :run4-initialization-collision-admission-20260911-v1
+  :target 1 :remaining-before-start 1
+  :activation-sha256 "048dd0d7079cc39a6cade8fa36e04bff971c89b99a6c15f4faf69021067bfd07"}
+ :queue
+ {:queue-id "run4-initialization-collision-queue-20260911-v1"
+  :config-sha256 "63a84a703e2e8f659337e3a5ce04973332149b0d84dcb58cebcb3f867ee8dc88"
+  :visibility-file "/home/joe/run4/initialization-collision-admission/queue/visibility.json"
+  :status :held :reason :terminal-evidence-incomplete
+  :active-actors []}
+ :execution
+ {:click-id "wm-click-e348efc5-96b3-4a05-96de-f0f867e9d38e"
+  :run-id "5b51477f-74f2-4a4d-aca7-522bd7047d70"
+  :runner-attempt-id "attempt-001"
+  :outcome :historical-verification-awaiting-validation
+  :binding-status :verified
+  :run-record-status :present
+  :cohort {:attempt-count 1 :closed-count 1 :remaining 0
+           :outcomes {:historical-verification-awaiting-validation 1}}
+  :requested-task {:trial-id "M-u88-contextual-preferences"
+                   :status :authenticated-not-enacted}
+  :repair-id "repair-initialization-b076e0f8-dbc2-4368-80a0-073d243951a0-initialization-failed"
+  :verification-id "repair-initialization-collision-revalidation-20260911-v1"
+  :repair-resolution :awaiting-successor-validation
+  :task-success? false}
+ :durable-sha256
+ {:binding "fff356a89a92c450cac6e2d61b79f4c6790e34f38625ebaa67474980269d9c50"
+  :run-record "9e78b1559a34550af1cc5ce5b54b46e1902496c487956e19dc6c372d68f6ecf1"
+  :observation "d09970c1f3a9674f222e07a59a2ae26099d3564e79de541226abd8d6db3e6b4c"}
+ :voxterm
+ {:source-config "/home/joe/.config/voxterm/wm-source.json"
+  :root "/home/joe/run4/initialization-collision-admission/visibility"
+  :queue-status-file "/home/joe/run4/initialization-collision-admission/queue/visibility.json"
+  :http-status 200 :state "review" :result "pending" :active-workers []}
+ :claims
+ {:task-success false :repair-resolved false :acceptance false
+  :next-required :distinct-grounded-production-successor}}
