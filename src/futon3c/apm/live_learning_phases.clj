@@ -113,6 +113,15 @@
 
 (declare memory-use-audit)
 
+(defn close-input-trace-id
+  "Reference the frozen inputs to closure, not the later operational checker result."
+  [request]
+  (str "apm-close-inputs:"
+       (machine/ledger-digest
+        ["apm-close-inputs-v1"
+         (select-keys request [:frame-id :problem-id :ledger-digest
+                               :input-receipt-ids])])) )
+
 (defn build-request
   [{:keys [contract action ledger unit role-card seat seat-role workspace receipts
            snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets
@@ -315,7 +324,11 @@
                                     (assoc :snapshot-path
                                            (:receipt/snapshot-path prior)))))
                    (= :close-frame kind)
-                   (assoc :memory-use-audit (memory-use-audit receipts)))]
+                   (assoc :memory-use-audit (memory-use-audit receipts)))
+            body (if (= :close-frame kind)
+                   (assoc body :trace-id (close-input-trace-id body)
+                               :trace-id-kind :closure-input-reference)
+                   body)]
         (if (= :transport (:error/component cascade))
           {:ok false
            :error/component :transport
@@ -526,7 +539,9 @@
                          (seq (:memory-candidates report)))))
           (conj :solver-promotion-candidates-invalid)
           (and (= :close-frame kind)
-               (not (and (string? (:trace-id report))
+               (not (and (string? (:trace-id request))
+                         (= (:trace-id request) (close-input-trace-id request))
+                         (= (:trace-id request) (:trace-id report))
                          (contains? #{:closed :partial}
                                     (canonical-close-result
                                      (:result report)))
@@ -947,7 +962,7 @@
    :close-evidence-invalid
    ["Your close-frame evidence was rejected."
     "The trace id, canonical closed-or-partial result, and controller-derived :memory-use-audit must all match the request contract."
-    "Supply the checker-bound trace id and result, and copy :memory-use-audit from the request verbatim, then submit below."]})
+    "Copy :trace-id and :memory-use-audit from the request verbatim and supply the result. Do not search memory or substitute a Git SHA. A request without :trace-id needs controller repair, not a guessed identifier."]})
 
 (def candidate-field-instructions
   "Per-candidate rejections. The Guide deposit validator reports these inside
@@ -1133,7 +1148,12 @@
                                "and trajectory/challenge memories; return :lanes, "
                                ":dispositions, :promotion-reviews and :memory-candidates."))
          :close-frame
-         (str "Audit the complete receipt graph and return a content-addressable trace result. "
+         (str "Audit the complete receipt graph. CONTROLLER-SUPPLIED TRACE ID: "
+              (pr-str (:trace-id request)) ". Copy this exact string as :trace-id. "
+              "It identifies the frozen closure inputs; the controller computes and checks "
+              "the operational trace digest after submission. It is not a memory-search ID, "
+              "Git SHA, or a claim that checking has already passed. Do not search the "
+              "database for it. This clarifies the frozen card's checker-bound wording. "
               "Copy :memory-use-audit verbatim from the request into the typed submission.")))
        (if-let [job-id (:submission/job-id request)]
          (str " Completion is accepted only through the typed submission tool; "

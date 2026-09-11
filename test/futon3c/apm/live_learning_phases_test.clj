@@ -696,10 +696,11 @@
   (let [request {:dispatch/type :close-frame :agent-id "f25-guide"
                  :frame-id "f25" :problem-id "m94A02"
                  :memory-use-audit []}
+        request (assoc request :trace-id (sut/close-input-trace-id request))
         job (fn [result]
               {:job-id "j" :agent-id "f25-guide" :state :done
                :report {:command-own-exit 0 :frame-id "f25"
-                        :problem-id "m94A02" :trace-id "trace"
+                        :problem-id "m94A02" :trace-id (:trace-id request)
                         :result result :memory-use-audit []}})]
     (is (:ok (sut/validate-terminal request {:job-id "j"} (job "closed"))))
     (is (:ok (sut/validate-terminal request {:job-id "j"} (job :closed))))
@@ -739,9 +740,10 @@
     (let [request {:dispatch/type :close-frame :agent-id "f19-guide"
                    :frame-id "f19" :problem-id "a01J05"
                    :memory-use-audit audit}
+          request (assoc request :trace-id (sut/close-input-trace-id request))
           job {:job-id "close-job" :agent-id "f19-guide" :state :done
                :report {:command-own-exit 0 :frame-id "f19"
-                        :problem-id "a01J05" :trace-id "trace"
+                        :problem-id "a01J05" :trace-id (:trace-id request)
                         :result :closed
                         :memory-use-audit audit}}]
       (is (:ok (sut/validate-terminal request {:job-id "close-job"} job)))
@@ -1922,3 +1924,31 @@
                                        :authority {:role :student}}))))))
     (testing "a genuinely finished job that delivered nothing still owes it"
       (is (some #{:fresh-session-id-missing} (findings base))))))
+
+(deftest close-input-identity-is-supplied-and-checked-without-store-discovery
+  (let [built (sut/build-request
+               (-> base
+                   (assoc-in [:contract :phases :close-frame :requires] [])
+                   (assoc :receipts {}
+                          :action {:kind :close-frame :phase :close-frame
+                                   :frame-id "f19" :problem-id "a01J05"}
+                          :seat {:agent-id "f19-guide" :invoke-ready? true})))
+        request (:request built)
+        job {:job-id "close" :agent-id "f19-guide" :state :done
+             :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
+                      :trace-id (:trace-id request) :result "partial"
+                      :memory-use-audit []}}
+        validate #(sut/validate-terminal %1 {:job-id "close"} %2)]
+    (is (:ok built))
+    (is (= :closure-input-reference (:trace-id-kind request)))
+    (is (= (:trace-id request) (sut/close-input-trace-id request)))
+    (is (.contains (sut/prompt request) (:trace-id request)))
+    (is (.contains (sut/prompt request) "Do not search the database"))
+    (is (:ok (validate request job)))
+    (doseq [bad ["memory-query-123" "9bc3226916f41eae92d411b6adbeac79334aecfb" "" nil]]
+      (is (some #{:close-evidence-invalid}
+                (:findings (validate request (assoc-in job [:report :trace-id] bad))))))
+    (is (false? (:ok (validate (dissoc request :trace-id) job))))
+    (is (false? (:ok (validate (assoc request :ledger-digest "changed") job))))
+    (is (not= (:trace-id request)
+              (sut/close-input-trace-id (assoc request :input-receipt-ids #{"different"}))))))
