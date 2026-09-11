@@ -53,3 +53,35 @@ new independent review with correct trace access, preserving both old attempts.
 Do not reset the exhausted counter, edit the retained review into approval,
 or mark promotion complete from these probes. If the current recovery protocol
 cannot express that successor, extend and test that protocol first.
+
+## Follow-up: shared trace reader and recovery constraint
+
+The command history establishes the address carryover: evidence lookup on 7073,
+then invoke/jobs on 7073, then the successor repeats the latter. It does not
+establish the reviewer's private reason for choosing it.
+
+Added scripts/apm-read-job.py and supplied its invocation through the shared
+`typed-role-submission/command`, so all roles using that prompt receive a trace
+reader rather than having to compose an endpoint. The reader uses the canonical
+Agency default (7070), supports an explicit --agency-base, URL-encodes IDs,
+checks returned identity, bounds each read to 30 seconds, and reports HTML HTTP
+errors with URL/status. It makes no automatic retry or claim of witness validity.
+This complements the promotion-specific configured URLs in 4ca4eb8a.
+
+Validation: four Python tests (success/routing, wrong identity, HTML 404,
+timeout/no retry); typed-role-submission-test 16 tests / 73 assertions; kondo
+zero warnings/errors; parentheses OK; diff check clean. Actual read-only reader
+invocation returned the exact first source ID and 84 events.
+
+Recovery remains blocked by an explicit transition constraint:
+`live-promotion/drive-step!` refuses an exhausted promotion pass, and
+`problem-queue-supervisor/reconcile-park-decisions` explicitly records but does
+not execute dispositions. The necessary structural extension is an operator-
+authorized recovery record bound to the parked state digest, previous terminal
+review ID, repair source identity and a one-use successor authorization. Validate
+those bindings, archive the predecessor, and use the existing independent-review
+successor path without resetting the old retry count. Test mismatched/stale
+records, duplicate consumption and failed persistence before dispatch. Neither
+source reload alone nor attaching a queue decision will recover F223.
+
+No live reload, review dispatch, counter reset, or queue mutation in this packet.

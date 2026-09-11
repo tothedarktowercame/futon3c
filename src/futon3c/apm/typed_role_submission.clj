@@ -456,7 +456,10 @@
                       " --job-id " (:job-id ticket)
                       " --token " (:submission/token request)
                       " --query 'YOUR QUERY'"))]
-    (str (or search "")
+    (str "# Read source job traces through Agency (not the evidence store):\n"
+         "python3 /home/joe/code/futon3c/scripts/apm-read-job.py --job-id SOURCE_JOB_ID\n"
+         "# This checks response identity; inspect the events before claiming support.\n"
+         (or search "")
          (when search "\n")
          (cond
            (= :student (:role request))
