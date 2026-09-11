@@ -1,0 +1,32 @@
+{
+  "reviewed_commit": "4ea65b03",
+  "agent": "codex-ta-transfer-20260910",
+  "job_id": "invoke-1789157187595-20274-b5588f36",
+  "dispatch_accepted": true,
+  "last_observed_state": "running",
+  "review_completion_observed": false,
+  "production_ready": false,
+  "live_reload": false,
+  "student_dispatch": false,
+  "source_paths": [
+    "src/futon3c/apm/teaching_exchange.clj",
+    "src/futon3c/apm/teaching_plan.clj",
+    "src/futon3c/apm/live_learning_phases.clj"
+  ],
+  "validation": {
+    "tests": 162,
+    "assertions": 810,
+    "failures": 0,
+    "errors": 0,
+    "clj_kondo": "passed",
+    "check_parens": "passed",
+    "diff_check": "passed"
+  },
+  "remaining_release_gates": [
+    "independent review",
+    "observable reset reconciliation and failure disposition",
+    "explicit TA seat lifecycle",
+    "canonical pattern revision compare-and-publish and index freshness",
+    "real bounded end-to-end rehearsal"
+  ]
+}
