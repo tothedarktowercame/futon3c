@@ -26,3 +26,11 @@ identity/lifecycle shape but does not prove this runtime correspondence.
 The implemented constructor and immutable publisher are build-only. They have
 not read or written the live roots. Publication is no-clobber and idempotent
 only for byte-equivalent evidence; conflicting evidence refuses.
+
+The retained artifacts do **not** contain a producer-written edge from the
+controller click/wrapper identity to the execution-cohort ID and local attempt.
+Accordingly the record captures the two evidence groups but marks
+`:cross-store-association :unknown`. The expected identities cannot turn that
+caller context into historical evidence. This record prevents replay of the
+already reserved controller attempt; it does not prove that the cohort prefix
+belongs to that click, and it cannot support a task or cohort verdict.

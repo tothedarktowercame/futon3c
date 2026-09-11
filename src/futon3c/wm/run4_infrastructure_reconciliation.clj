@@ -12,6 +12,14 @@
                   {:error :run4-infrastructure-reconciliation-refused
                    :reason reason})))
 
+(defn- safe-id? [value]
+  (and (string? value)
+       (boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" value))))
+
+(defn- admission-content-digest [identity]
+  (digest/sha256 (pr-str [(:series-id identity) (:trial-id identity)
+                          (:pin-sha256 identity) (:casting identity)])))
+
 (defn- read-one! [root path]
   (let [base (.getCanonicalFile (io/file root))
         file (.getCanonicalFile (io/file path))
@@ -58,6 +66,8 @@
         bv (:value binding) fv (:value repair)
         cell-values (mapv :value cells)]
     (when-not (and (= 6 (count cells))
+                   (every? #(and (= 1 (:event/schema-version %))
+                                 (= 1 (:attempt/ordinal %))) cell-values)
                    (= (range 1 7) (map :event/sequence cell-values))
                    (= [:time-step :selection :construction :dispatch :build :adjudication]
                       (mapv :checkpoint/type cell-values))
@@ -72,32 +82,55 @@
                                  (map? (:payload cell)))))
                            cell-values))
       (refuse! :checkpoint-prefix-not-positive))
-    (when-not (and (= series-id (:series-id sv)) (= trial-id (:trial-id sv))
+    (when-not (and (= :wm/run4-series-started-v1 (:schema sv))
+                   (= :wm/run4-attempt-reservation-v1 (:schema rv))
+                   (= :wm/run4-attempt-click-result-v1 (:schema cv))
+                   (= :wm-click-run-binding-v1 (:schema bv))
+                   (= 3 (:repair/schema-version fv))
+                   (= :open (:repair/status fv))
+                   (= series-id (:series-id sv)) (= trial-id (:trial-id sv))
                    (= controller-attempt-id (:attempt-id sv)) (= click-id (:click-id sv))
                    (= pin-sha256 (:pin-sha256 sv))
                    (= manifest-sha256 (:manifest-sha256 sv))
                    (= controller-attempt-id (:attempt-id rv))
+                   (= (admission-content-digest (:identity rv))
+                      (:content-sha256 rv))
                    (= pin-sha256 (get-in rv [:identity :pin-sha256]))
                    (= series-id (get-in rv [:identity :series-id]))
                    (= trial-id (get-in rv [:identity :trial-id]))
+                   (= controller-attempt-id (:attempt-id cv))
                    (= click-id (get-in cv [:click :click-id]))
+                   (string? (get-in cv [:click :started-at]))
+                   (try (java.time.Instant/parse (get-in cv [:click :started-at])) true
+                        (catch Throwable _ false))
                    (= click-id (:click/id bv)) (= :incomplete (:outcome bv))
                    (= :unavailable (:binding-status bv)) (= :absent (:run-record-status bv))
                    (= wrapper-attempt-id (:attempt/id bv))
                    (= repair-id (:repair/id fv)) (= wrapper-attempt-id (:attempt-id fv))
+                   (= :machine-failure (:repair/class fv))
+                   (= :initialization (:failure-stage fv))
+                   (= :incomplete (:failure-outcome fv))
                    (= :initialization-failed (:failure-kind fv)))
       (refuse! :identity-or-incomplete-binding-mismatch))
     {:schema :wm/run4-infrastructure-reconciliation-v1
      :state :reconciliation-required
      :task-verdict :unknown
      :redispatch-permitted? false
+     ;; No retained producer artifact joins the controller click/wrapper to
+     ;; the execution-cohort prefix. Preserve both captures without inventing
+     ;; that missing edge.
+     :cross-store-association :unknown
      :identity identity
      :evidence (mapv #(select-keys % [:path :sha256])
                      (concat [started reservation click binding repair] cells))}))
 
 (defn publish!
-  [root record]
-  (when-not (and (.isDirectory (io/file root))
+  "Recapture and validate all sources at publication. Caller-supplied records
+  are deliberately not an admission API."
+  [root roots identity paths]
+  (let [record (construct! roots identity paths)]
+    (when-not (and (.isDirectory (io/file root))
+                 (safe-id? (get-in record [:identity :controller-attempt-id]))
                  (= :wm/run4-infrastructure-reconciliation-v1 (:schema record))
                  (= :reconciliation-required (:state record))
                  (= :unknown (:task-verdict record))
@@ -106,8 +139,13 @@
                  (every? #(and (string? (:path %))
                                (re-matches #"[0-9a-f]{64}" (:sha256 %)))
                          (:evidence record)))
-    (refuse! :invalid-publication))
-  (let [file (io/file root (str (get-in record [:identity :controller-attempt-id])
-                                ".reconciliation.edn"))]
-    (recording/*append-immutable!* file record)
-    record))
+      (refuse! :invalid-publication))
+    (let [base (.getCanonicalFile (io/file root))
+          file (.getCanonicalFile
+                (io/file base (str (get-in record [:identity :controller-attempt-id])
+                                   ".reconciliation.edn")))]
+      (when-not (= (.getCanonicalPath base)
+                   (.getCanonicalPath (.getParentFile file)))
+        (refuse! :publication-outside-authority))
+      (recording/*append-immutable!* file record)
+      record)))

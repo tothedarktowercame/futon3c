@@ -14,6 +14,15 @@ the RUN4 infrastructure reconciliation, or the later failed successor cannot
 satisfy those fields. The API's `supersede!` transition applies only to
 `:incomplete-recoverable`, not this `:machine-failure`.
 
+Two later Futon2 commits are technically relevant evidence, but not discharge
+records: `9ab503bd` added patient strategic-selection retries on 2026-07-26 and
+`3bdc381e` typed timeout/transport retry eligibility with per-attempt evidence
+on 2026-07-27. They postdate the recorded raw timeout and address its failure
+class. Neither is attached to repair 057 in `implementations/`, and there is no
+independent-review/grounding witness or distinct production-shaped validation
+record for 057. They are candidates for an explicit repair investigation, not
+permission to treat the stop line as repaired.
+
 For the later RUN4 attempt, the selected repair action is positively recorded
 in checkpoint 002. The runner assigns the casting `repair-reviewer` to the
 reviewer role for such an action before its availability guard. With the pinned
