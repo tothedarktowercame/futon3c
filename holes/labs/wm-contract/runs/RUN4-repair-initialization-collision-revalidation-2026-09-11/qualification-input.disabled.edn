@@ -1,0 +1,13 @@
+{:schema :wm/historical-qualification-preparation-v1
+ :enabled? false
+ :source-root "/home/joe"
+ :source-repo "/home/joe/code/futon2"
+ :source-head "16c215c5bf615741715dc92bce47817fbd96e9e1"
+ :manifest
+ {:path "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/qualification-plan.disabled.edn"
+  :sha256 "c598fa60498610eca03e2bea29ab968f197ed28534c0afca7ffae135e8270b7b"}
+ :output-root "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence"
+ :qualification-output :not-performed
+ :independent-review :not-performed
+ :repair-admission :not-performed
+ :production-successor :not-performed}
