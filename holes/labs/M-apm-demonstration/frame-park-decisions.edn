@@ -4377,4 +4377,22 @@
   :decision/rationale "Joe directed transfer after 50 solver rounds with three frozen infrastructure bridges remaining. Actual open probe and blocked strategy rows added and full worklist validated."
   :decision/recommended-route "Topology infrastructure assessment, reviewed dependency DAG, then bounded implementation. Preserve frozen statements and original solver branch."
   :decision/not-done "No mathematical completion, no APM requeue, no topology supervisor restart; original parked frame and receipts retained."}
+
+ {:frame/id "f218"
+  :problem/id "m03J03"
+  :decision/status :decided
+  :decision/by "codex-16"
+  :decision/authority :joe-explicit-recordkeeping-direction
+  :decision/class :f218-apparatus-closure-disposition
+  :decision/at "2026-09-11T10:39:43.407940+00:00"
+  :decision/frame-voided? false
+  :decision/apparatus-repair-required? true
+  :decision/error-code :combined-trace-checker-rejected
+  :decision/rejected-trace-digest "1165eeaeb365f3ea9f2157e710b4be375e1b989ec02cfea0fbcab5dabffd1302"
+  :decision/guide-reported-result :partial
+  :decision/diagnostic-commit "6a3650b8"
+  :decision/preventive-fix-commit "33b56d65"
+  :decision/rationale "Joe authorized the record keeping to clear m03J03's pending park decision. Classified as an apparatus closure failure: the enabled watchdog recorded 532092ms with a valid external wait, while the closure checker requires at most 300000ms. The Guide reported partial, not a completed Student proof. Preserve all original receipts and the rejected operational trace."
+  :decision/recommended-route "Clear awaiting-decision bookkeeping. Retain F218 as a historical partial frame with failed operational closure. Any actual closure replay remains gated on a coherent reviewed watchdog/checker contract and verification of the preserved wait authority."
+  :decision/not-done "No successful closure certificate, mathematical completion, trace rewrite, frame void, retry or requeue is asserted by this decision. The preventive identity fix does not repair the historical trace."}
 ]}
