@@ -1474,13 +1474,22 @@
 (deftest source-trace-lookup-uses-agency-not-the-evidence-store
   (let [instruction (#'sut/review-read-instruction
                      "http://agency.example:7070/"
-                     [{:source-attempts ["job-a" "job/a"]}
-                      {:source-attempts ["job-a"]}])]
+                     [{:source-refs [{:source/type :agency-job :source/id "job-a"}
+                                     {:source/type :agency-job :source/id "job/a"}]}
+                      {:source-refs [{:source/type :agency-job :source/id "job-a"}]}])]
     (is (string/includes? instruction
                           "http://agency.example:7070/api/alpha/invoke/jobs/job-a"))
     (is (string/includes? instruction "/api/alpha/invoke/jobs/job%2Fa"))
-    (is (= 1 (count (re-seq #":source-attempt-id \"job-a\"" instruction))))
+    (is (= 1 (count (re-seq #":source/id \"job-a\"" instruction))))
     (is (not (string/includes? instruction ":7073")))
     (is (string/includes? instruction "does not establish that a trace exists")))
   (is (string/includes? (#'sut/review-read-instruction "http://agency" [])
                         "preserve cannot-judge")))
+
+(deftest legacy-identifiers-are-not-guessed-to-be-jobs
+  (let [prompt (#'sut/review-read-instruction
+                "http://agency" [{:source-attempts ["legacy-hash"]}]
+                [{:source/type :agency-job :source/id "reobserved-job"}])]
+    (is (.contains prompt "legacy-hash"))
+    (is (not (.contains prompt "/invoke/jobs/legacy-hash")))
+    (is (.contains prompt "/invoke/jobs/reobserved-job"))))

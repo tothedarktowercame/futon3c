@@ -7,6 +7,8 @@
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-learning-phases :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-promotion :as promotion]
+            [futon3c.apm.promotion-candidate-store :as candidates]
             [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -1954,3 +1956,37 @@
     (is (false? (:ok (validate (assoc request :ledger-digest "changed") job))))
     (is (not= (:trace-id request)
               (sut/close-input-trace-id (assoc request :input-receipt-ids #{"different"}))))))
+
+(deftest guide-ticket-to-materialized-candidate-to-review-urls
+  (doseq [[receipt-id guide-job]
+          [["ebf2d3c20f127a1012e102e0001c44232837a7a332f47d49ca2a3b56a338db75"
+            "apm-role-96dc21d03a15812886f5cb0bc5a276a136322782c22b7f840d94dc2bd440c347"]
+           ["a13c68effa57febbc7b6b5ce9cf4df9be9454a4c4c3bccaa696056cba036fb81"
+            "apm-role-fb8d1a7b56ad088169ed22c765017539dfe8a4b0fc6c80a75ae691e9d95d3d04"]]]
+    (let [dir (java.nio.file.Files/createTempDirectory
+               "guide-provenance-" (make-array java.nio.file.attribute.FileAttribute 0))
+          path (.resolve dir "review.edn")
+          request {:agent-id "guide" :dispatch/id "guide-dispatch"
+                   :input-attempt-id receipt-id}
+          seen (atom nil)
+          promotion-driver
+          {:state-path path
+           :persist-candidates-fn
+           (fn [deposit req]
+             (let [candidate (candidates/canonical-candidate req "guide" 0 guide-candidate)]
+               (reset! seen candidate)
+               {:ok true :deposit (assoc deposit :candidates [candidate])
+                :candidates [candidate]}))
+           :run-fn (constantly {:ok true :status :awaiting-terminal})}]
+      (with-redefs [driver/drive!
+                    (fn [ports]
+                      ((:receipt-provider ports) request {:job-id guide-job}
+                       {:job-id guide-job} {:report {:candidates [guide-candidate]}}))]
+        (is (:ok (sut/run-live! {:state-path (.resolve dir "guide.edn")
+                                :request request :action {:kind :guide-intervention}
+                                :guide-promotion promotion-driver}))))
+      (let [prompt (#'promotion/review-read-instruction "http://agency" [@seen])]
+        (is (.contains prompt (str "/invoke/jobs/" guide-job)))
+        (is (not (.contains prompt (str "/invoke/jobs/" receipt-id)))))
+      (is (some #{ {:source/type :phase-receipt :source/id receipt-id}}
+                (:source-refs @seen))))))

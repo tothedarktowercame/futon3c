@@ -295,6 +295,9 @@
                           :source-attempt-ids
                           [(or (:receipt/job-id (get receipts :solve))
                                (:receipt/id (get receipts :solve)))]
+                          :source-job-ids
+                          (when-let [id (:receipt/job-id (get receipts :solve))] [id])
+                          :source-receipt-ids [(:receipt/id (get receipts :solve))]
                           :solver-final-head
                           (:receipt/final-head (get receipts :solve)))
                    (and (= :scribe-reduce kind) (= :scribe-reduce phase))
@@ -1396,7 +1399,8 @@
              (seq (get-in validated [:report :candidates])))
         (if-not (map? guide-promotion)
           {:ok false :error/code :guide-promotion-driver-missing}
-          (let [stepped (guide-promotion-step! guide-promotion request
+          (let [stepped (guide-promotion-step! guide-promotion
+                                               (assoc request :job-id (:job-id ticket))
                                                (:report validated))]
             (if (= :certified (:status stepped))
               (receipt contract action receipts request ticket job

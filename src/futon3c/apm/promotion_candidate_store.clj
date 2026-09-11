@@ -51,6 +51,22 @@
                (cond-> [] job-id (conj job-id) true (into repair-job-ids)))
              (:student-attempts request))))))
 
+(defn controller-source-refs
+  "Keep controller-provided jobs, receipts and unresolved legacy IDs distinct."
+  [request]
+  (let [jobs (distinct (concat (:source-job-ids request)
+                               (when-let [id (:job-id request)] [id])
+                               (mapcat (fn [{:keys [job-id repair-job-ids]}]
+                                         (cond-> (vec repair-job-ids) job-id (conj job-id)))
+                                       (:student-attempts request))))
+        receipts (distinct (concat (:source-receipt-ids request)
+                                   (when-let [id (:input-attempt-id request)] [id])))
+        known (set (concat jobs receipts))]
+    (vec (concat (map #(hash-map :source/type :agency-job :source/id %) jobs)
+                 (map #(hash-map :source/type :phase-receipt :source/id %) receipts)
+                 (map #(hash-map :source/type :unresolved :source/id %)
+                      (remove known (:source-attempt-ids request)))))))
+
 (defn canonical-candidate
   "Derive controller-owned identity and digest for one described candidate."
   [deposit-request depositor ordinal candidate]
@@ -67,7 +83,8 @@
                          :admission/schema
                          pipeline/durable-memory-admission-schema
                          :source-attempts
-                         (controller-source-attempts deposit-request))
+                         (controller-source-attempts deposit-request)
+                         :source-refs (controller-source-refs deposit-request))
         body (evidence-body candidate)
         digest (machine/ledger-digest [body])
         identity-digest

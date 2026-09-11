@@ -359,27 +359,32 @@
          :role :promotion-proctor
          :candidate-set-digest (machine/ledger-digest [candidates])))
 
-(defn- review-read-instruction [agency-base candidates]
-  (str "\nThe controller freshly read each complete persisted EvidenceEntry "
-       "into :candidate-evidence. Treat its :entry :evidence/body as the "
-       "authoritative body and its :read-ref as the dedicated full-entry "
-       "read endpoint. A hyperedge-neighborhood projection intentionally "
-       "embeds only an envelope-grade hook and is not a body read."
-       "\nSource job traces use Agency, a separate service from candidate evidence. "
-       "GET " (str/replace agency-base #"/+$" "")
-       "/api/alpha/invoke/jobs/<job-id>. Do not send invoke-job requests to "
-       "the evidence-store address. Controller source-attempt lookup URLs:\n"
-       (pr-str (mapv (fn [id]
-                       {:source-attempt-id id
-                        :job-lookup-url
-                        (str (str/replace agency-base #"/+$" "")
-                             "/api/alpha/invoke/jobs/"
-                             (java.net.URLEncoder/encode (str id) "UTF-8"))})
-                     (distinct (mapcat :source-attempts candidates))))
-       "\nA lookup URL does not establish that a trace exists or supports a claim. "
-       "Check the returned job-id and actual events. If retrieval fails, report "
-       "the exact URL, HTTP status and response diagnostic; preserve cannot-judge "
-       "when the required witness remains unavailable."))
+(defn- review-read-instruction
+  ([agency-base candidates] (review-read-instruction agency-base candidates []))
+  ([agency-base candidates supplemental-refs]
+   (let [refs (distinct (concat (mapcat :source-refs candidates) supplemental-refs))
+         typed-ids (set (map :source/id refs))
+         unresolved (remove typed-ids (distinct (mapcat :source-attempts candidates)))]
+     (str "\nThe controller freshly read each complete persisted EvidenceEntry "
+          "into :candidate-evidence. Its :entry :evidence/body is authoritative; "
+          "its :read-ref is the full-entry endpoint. A neighborhood hook is not a body read."
+          "\nTyped source references (receipt IDs are NOT Agency job IDs):\n"
+          (pr-str (mapv (fn [ref]
+                          (cond-> ref
+                            (= :agency-job (:source/type ref))
+                            (assoc :job-lookup-url
+                                   (str (str/replace agency-base #"/+$" "")
+                                        "/api/alpha/invoke/jobs/"
+                                        (java.net.URLEncoder/encode (:source/id ref) "UTF-8")))))
+                        refs))
+          "\nUnresolved historical IDs; do not invent job URLs for these: "
+          (pr-str (vec unresolved))
+          "\nUse the supplied Agency job URLs or apm-read-job.py for job references. "
+          "A lookup URL does not establish that a trace exists or supports a claim. "
+          "Check the returned job-id and actual events. Phase receipts must be resolved "
+          "through their receipt-to-job provenance, never by treating their digest as a job ID. "
+          "Report the exact URL/status/diagnostic for failed job reads and preserve cannot-judge "
+          "when a required witness is unavailable."))))
 
 (defn- review-output-instruction []
   (str " The complete report MUST include :candidate-set-digest and "
@@ -452,9 +457,11 @@
   (let [persist-fn #(runtime/atomic-persist! state-path %)
         stored-state (runtime/read-state state-path)
         reviewer-request (if (= :review-successor-pending (:stage stored-state))
-                           (dissoc (get-in stored-state
-                                           [:recovery/origin :last-valid-state :request])
-                                   :submission/job-id :submission/token)
+                           (assoc (dissoc (get-in stored-state
+                                                  [:recovery/origin :last-valid-state :request])
+                                          :submission/job-id :submission/token)
+                                  :recovery/source-refs
+                                  (get-in stored-state [:recovery/authorization :source-refs]))
                            reviewer-request)
         deposit-request (or (:deposit-request stored-state) deposit-request)
         state-request (when (= :promotion (:state/type stored-state))
@@ -532,7 +539,7 @@
                               (:candidate-evidence inputs))
                      prompt (str "Independently review this exact candidate set. Authority:\n"
                                  (pr-str request)
-                                 (review-read-instruction agency-base candidates)
+                                 (review-read-instruction agency-base candidates (:recovery/source-refs request))
                                  "\nRead and follow the frozen role card at "
                                  (resolved-role-card-path control-root request)
                                  " (blob " (:role-card-blob request) ")."
@@ -557,7 +564,7 @@
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)
-                             (review-read-instruction agency-base candidates)
+                             (review-read-instruction agency-base candidates (:recovery/source-refs request))
                              "\nRead and follow the frozen role card at "
                              (resolved-role-card-path control-root request)
                              " (blob " (:role-card-blob request) "). "
@@ -593,7 +600,7 @@
                                  "append-only successor to terminal job "
                                  predecessor-job-id ". Authority:\n"
                                  (pr-str request)
-                                 (review-read-instruction agency-base candidates)
+                                 (review-read-instruction agency-base candidates (:recovery/source-refs request))
                                  "\nRead and follow the frozen role card at "
                                  (resolved-role-card-path control-root request)
                                  " (blob " (:role-card-blob request) ")."
