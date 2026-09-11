@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-cohort :as cohort]
             [futon2.aif.run4-route-conformance :as route]
             [futon2.aif.repair-obligation :as repair]
             [futon3c.wm.run4-terminal-evidence :as sut]
@@ -42,9 +43,35 @@
 (defn- delete-tree! [root]
   (doseq [f (reverse (file-seq root))] (io/delete-file f true)))
 
+(defn- closed-cohort! [root cohort-id attempt-id outcome]
+  (let [template (cohort/read-edn
+                  "/home/joe/code/futon2/holes/labs/M-aif-full-loop-40/cohort.edn")
+        prereg (io/file root (str (name cohort-id) ".edn"))
+        value (assoc template :cohort/id cohort-id
+                     :stopping-rule {:kind :fixed-attempt-count :target 1})
+        _ (write! prereg value)
+        sha (digest/sha256 (slurp prereg))
+        data (doto (io/file root (str (name cohort-id) "-data")) .mkdir)
+        dir (doto (io/file data (name cohort-id)) .mkdir)
+        attempt (doto (io/file dir attempt-id) .mkdir)
+        activation {:cohort/id cohort-id :activated-at "2026-09-11T00:00:00Z"
+                    :preregistration-path (.getCanonicalPath prereg)
+                    :preregistration-sha256 sha :stopping-target 1}
+        base {:event/schema-version 1 :cohort/id cohort-id :attempt/id attempt-id
+              :attempt/ordinal 1 :recorded-at "2026-09-11T00:00:00Z"}]
+    (write! (io/file dir "activation.edn") activation)
+    (write! (io/file attempt "001-time-step.edn")
+            (assoc base :event/sequence 1 :checkpoint/type :time-step
+                   :payload {:judgment {:opportunity-id (str (name cohort-id) "/1")}}))
+    (write! (io/file attempt "002-closed.edn")
+            (assoc base :event/sequence 2 :checkpoint/type :closed
+                   :payload {:judgment {:outcome outcome}}))
+    {:preregistration (.getCanonicalPath prereg)
+     :data-root (.getCanonicalPath data) :cohort-id cohort-id :sha256 sha}))
+
 (defn- grounded-projection [run-path]
   {:schema :wm-run4-terminal-projection-v1 :click/id "click-1" :run/id "run-1"
-   :attempt/id "internal-1" :run4/task-pin pin :outcome :grounded-change
+   :attempt/id "attempt-001" :run4/task-pin pin :outcome :grounded-change
    :checkpoints
    {:selection {:status :present :judgment {}
                 :ground {:kind :wm-judgement :run4/task-pin pin}}
@@ -82,10 +109,11 @@
                      (digest/sha256 (pr-str ["RUN4" :outer-loop (:sha256 pin) casting]))}
         click {:schema :wm/run4-attempt-click-result-v1 :attempt-id "outer-attempt"
                :click (select-keys started [:click-id :started-at])}
+        execution-cohort (closed-cohort! root :successor-cohort
+                                           "attempt-001" :grounded-change)
         run-file (io/file (:run-records roots) "run.edn")
         run-record {:run/id "run-1" :click/id "click-1" :startedAt (:started-at started)
-                    :execution-cohort {:cohort-id :successor-cohort
-                                       :sha256 (apply str (repeat 64 "d"))}
+                    :execution-cohort (select-keys execution-cohort [:cohort-id :sha256])
                     :selectorSeam "live:validated-selection" :traceWritten true
                     :route [{:fromNode "R20" :toNode "R12" :via "observe" :at_ (:started-at started)}]
                     :run4/task-pin pin
@@ -102,7 +130,7 @@
                         :sha256 (digest/sha256 (pr-str projection))
                         :source-sha256 (digest/sha256 run-text)}
         binding {:schema :wm-click-run-binding-v1 :click/id "click-1"
-                 :attempt/id "internal-1" :outcome :grounded-change
+                 :attempt/id "attempt-001" :outcome :grounded-change
                  :binding-status :verified
                  :run-id-observation {:status :present :source :runner-return :value "run-1"}
                  :run-record-status :present :recorded-at "2026-09-10T00:00:01Z"
@@ -111,7 +139,8 @@
         binding-file (io/file (:bindings roots) "click-run-binding-click-1.edn")]
     (write! binding-file binding)
     (try (f {:roots roots :projection-file projection-file :binding-file binding-file
-             :run-file run-file :projection projection :binding binding})
+             :run-file run-file :projection projection :binding binding
+             :execution-cohort execution-cohort})
          (finally (delete-tree! root)))))
 
 (deftest strict-valid-chain-classifies-grounded-success
@@ -138,7 +167,7 @@
 
 (deftest validated-bundle-authorizes-distinct-historical-successor
   (fixture
-   (fn [{:keys [roots]}]
+   (fn [{:keys [roots execution-cohort]}]
      (let [store (.toFile (java.nio.file.Files/createTempDirectory
                            "historical-successor"
                            (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -162,21 +191,42 @@
                                           :source-head "8bf149c5"}}
            _ (write! verification-file verification)
            _ (repair/commit-historical-verification!
-              (.getPath store) {:kind :runner-execution :id "verification-attempt-001"}
+              (.getPath store) {:kind :runner-execution :id "attempt-001"}
               {:verification-root (.getPath verification-root)
                :path (.getPath verification-file)
                :sha256 (digest/sha256 (slurp verification-file))})
+           verification-cohort (closed-cohort! store :verification-cohort
+                                                "attempt-001"
+                                                :historical-verification-awaiting-validation)
            config {:repair-root (.getPath store) :evidence-roots roots
                    :admission-request request :started started :repair-id "repair-057"
                    :verification-id "verification-057"
                    :verification-attempt {:kind :runner-execution
-                                          :id "verification-attempt-001"}}]
+                                          :id "attempt-001"}
+                   :verification-cohort verification-cohort
+                   :successor-cohort execution-cohort}]
        (try
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (dissoc config :verification-cohort))))
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (assoc config :successor-cohort
+                              (assoc execution-cohort :sha256
+                                     (apply str (repeat 64 "d")))))))
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (assoc config :successor-cohort
+                              (assoc execution-cohort :cohort-id :foreign-cohort)))))
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (assoc config :verification-cohort execution-cohort)))
+             "different controller labels cannot distinguish one physical execution")
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-attempt
                               {:kind :runner-execution
-                               :id "successor-cohort--internal-1"}))))
+                               :id "successor-cohort--attempt-001"}))))
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-id "foreign-verification"))))
@@ -196,11 +246,11 @@
          (let [resolution (successor/resolve-from-durable! config)]
            (is (= :resolved (:repair/status resolution)))
            (is (= {:kind :runner-execution
-                   :id "successor-cohort--internal-1"}
+                   :id "successor-cohort--attempt-001"}
                   (:validation-attempt resolution)))
            (is (= {:cohort-id :successor-cohort
-                   :cohort-sha256 (apply str (repeat 64 "d"))
-                   :attempt-id "internal-1"}
+                   :cohort-sha256 (:sha256 execution-cohort)
+                   :attempt-id "attempt-001"}
                   (:validation-execution resolution)))
            (is (empty? (repair/open-obligations (.getPath store)))))
          (finally (delete-tree! store)))))))

@@ -92,11 +92,13 @@
 (defn- linked-successor! [run4 series manifest-text prepared evidence-roots]
   (when-let [link (:historical-successor run4)]
     (let [successor (:successor link)]
-      (when-not (and (= #{:repair-id :verification-id :verification-attempt :successor}
+      (when-not (and (= #{:repair-id :verification-id :verification-attempt
+                          :verification-cohort :successor}
                          (set (keys link)))
                      (every? #(and (string? %) (not (str/blank? %)))
                              ((juxt :repair-id :verification-id) link))
                      (execution-identity? (:verification-attempt link))
+                     (map? (:verification-cohort link))
                      (= #{:series-id :trial-id :attempt-id} (set (keys successor)))
                      (every? #(or (and (string? %) (not (str/blank? %)))
                                   (keyword? %))
@@ -128,7 +130,9 @@
                 :started (:started row)
                 :repair-id (:repair-id link)
                 :verification-id (:verification-id link)
-                :verification-attempt (:verification-attempt link)}))))))))
+                :verification-attempt (:verification-attempt link)
+                :verification-cohort (:verification-cohort link)
+                :successor-cohort (:execution-cohort run4)}))))))))
 
 (defn- reconcile-linked-row!
   [run4 prepared evidence-roots trial prepared-trial started terminal]
@@ -150,7 +154,9 @@
           :started started
           :repair-id (:repair-id link)
           :verification-id (:verification-id link)
-          :verification-attempt (:verification-attempt link)})))))
+          :verification-attempt (:verification-attempt link)
+          :verification-cohort (:verification-cohort link)
+          :successor-cohort (:execution-cohort run4)})))))
 
 (defn step!
   "Authenticate all frozen trial pins, then advance at most one boundary.

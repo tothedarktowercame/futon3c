@@ -29,6 +29,9 @@
         _ (spit (io/file controller-root "series.edn") "persisted")
         link {:repair-id "repair-057" :verification-id "verification-057"
               :verification-attempt {:kind :runner-execution :id "verify-1"}
+              :verification-cohort {:preregistration "/authority/historical.edn"
+                                    :data-root "/authority/historical"
+                                    :cohort-id :historical :sha256 (apply str (repeat 64 "a"))}
               :successor {:series-id "series-2" :trial-id :trial-2
                           :attempt-id "attempt-2"}}
         request {:attempt-id "attempt-2"
