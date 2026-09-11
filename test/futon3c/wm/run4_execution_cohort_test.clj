@@ -19,21 +19,20 @@
                     :sha256 (digest/sha256 (slurp prereg))}]
         (is (= cohort (sut/validate-and-preflight!
                        cohort (fn [_]
-                                {:snapshot {:value {:cohort/id :run4-successor}}
-                                 :remaining 3}))))
+                                {:cohort-id :run4-successor
+                                 :target 3 :remaining 3
+                                 :snapshot ::internal-not-propagated}))))
         (is (= :cohort-unavailable-or-exhausted
                (:reason (try
                           (sut/validate-and-preflight!
-                           cohort (fn [_] {:snapshot
-                                           {:value {:cohort/id :run4-successor}}
-                                             :remaining 0}))
+                           cohort (fn [_] {:cohort-id :run4-successor
+                                           :target 3 :remaining 0}))
                           nil (catch clojure.lang.ExceptionInfo e (ex-data e))))))
         (spit prereg "{:cohort/id :changed}\n")
         (is (= :cohort-preregistration-drift
                (:reason (try
                           (sut/validate-and-preflight!
-                           cohort (constantly {:snapshot
-                                               {:value {:cohort/id :run4-successor}}
-                                               :remaining 1}))
+                           cohort (constantly {:cohort-id :run4-successor
+                                               :target 3 :remaining 1}))
                           nil (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
       (finally (delete-tree! root)))))

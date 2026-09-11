@@ -16,8 +16,9 @@
 (defn validate-and-preflight!
   "Validate exact server-owned COHORT and call PREFLIGHT on its captured bytes.
 
-  PREFLIGHT is Futon2's read-only `execution-preflight` port and must return
-  a matching pinned `:snapshot` plus positive `:remaining`.
+  PREFLIGHT is Futon2's read-only `execution-preflight` port. This boundary
+  checks only its public summary; the internal captured `:snapshot` is neither
+  retained nor serialized here.
   The preregistration file is reread after the port call to close preflight
   drift. Race-safe capacity is still rechecked by the runner at start."
   [cohort preflight]
@@ -41,11 +42,14 @@
     (let [bytes (slurp prereg)]
       (when-not (= (:sha256 cohort) (digest/sha256 bytes))
         (refuse! :cohort-preregistration-drift))
-      (let [result (preflight cohort)]
+      (let [result (preflight cohort)
+            summary (select-keys result [:cohort-id :target :remaining])]
         (when-not (and (map? result)
-                       (= (:cohort-id cohort)
-                          (get-in result [:snapshot :value :cohort/id]))
-                       (pos-int? (:remaining result)))
+                       (= #{:cohort-id :target :remaining} (set (keys summary)))
+                       (= (:cohort-id cohort) (:cohort-id summary))
+                       (pos-int? (:target summary))
+                       (pos-int? (:remaining summary))
+                       (<= (:remaining summary) (:target summary)))
           (refuse! :cohort-unavailable-or-exhausted))
         (when-not (= bytes (slurp prereg))
           (refuse! :cohort-preregistration-drift))

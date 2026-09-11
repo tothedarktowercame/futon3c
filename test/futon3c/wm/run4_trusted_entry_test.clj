@@ -86,8 +86,8 @@
                           :execution-cohort cohort
                           :cohort-preflight!
                           (fn [requested]
-                            {:snapshot {:value {:cohort/id (:cohort-id requested)}}
-                             :remaining 2})
+                            {:cohort-id (:cohort-id requested)
+                             :target 2 :remaining 2 :snapshot ::internal})
                           :action-admissible?
                           #(and (= mission %1)
                                 (= {:type :advance-mission :target "M-run4"} %2))}}})))

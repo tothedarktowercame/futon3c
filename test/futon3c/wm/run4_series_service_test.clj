@@ -99,8 +99,8 @@
                     :execution-cohort execution-cohort
                     :cohort-preflight!
                     (fn [requested]
-                      {:snapshot {:value {:cohort/id (:cohort-id requested)}}
-                       :remaining 9})
+                      {:cohort-id (:cohort-id requested)
+                       :target 9 :remaining 9 :snapshot ::internal})
                     :action-admissible? (fn [m action]
                                           (and (= mission m)
                                                (= {:type :advance-mission
@@ -221,8 +221,8 @@
       (let [clicks (atom 0)
             cfg (assoc-in cfg [:run4 :cohort-preflight!]
                           (fn [requested]
-                            {:snapshot {:value {:cohort/id (:cohort-id requested)}}
-                             :remaining 0}))
+                            {:cohort-id (:cohort-id requested)
+                             :target 9 :remaining 0}))
             handler (http/make-handler cfg)]
         (with-redefs [runner/click! (fn [_] (swap! clicks inc))]
           (let [response (handler (request {:run4-series-ref "series.edn"} auth))]
