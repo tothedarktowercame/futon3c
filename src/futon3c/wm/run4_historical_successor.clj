@@ -39,7 +39,11 @@
          (get-in historical-bundle [:projection :runner-attempt/id]))
         successor-execution (cohort/closed-execution successor-cohort local-attempt)
         successor-attempt (select-keys successor-execution [:kind :id])
-        historical-authority? (= 1 (:identity-version historical-execution))]
+        historical-authority? (= 1 (:identity-version historical-execution))
+        run-record (:run-record bundle)
+        record-identity-present? (contains? run-record :runner-execution/identity)
+        record-provenance-present? (contains? run-record :runner-execution/provenance)
+        successor-authority? (= 1 (:identity-version successor-execution))]
     (when-not (and historical-bundle
                    (= repair-id (get-in historical-bundle [:projection :repair :id]))
                    (= verification-id
@@ -65,6 +69,14 @@
                    (string? local-attempt) (not (str/blank? local-attempt))
                    (= cohort-id (:cohort-id successor-execution))
                    (= cohort-sha (:cohort-sha256 successor-execution))
+                   (= record-identity-present? record-provenance-present?)
+                   (if successor-authority?
+                     (and record-identity-present?
+                          (= (:runner-execution/identity run-record)
+                             (select-keys successor-execution [:kind :id]))
+                          (= (:runner-execution/provenance run-record)
+                             (dissoc successor-execution :outcome)))
+                     (not record-identity-present?))
                    (= :historical-verification-awaiting-validation
                       (:outcome historical-execution))
                    (= :grounded-change (:outcome successor-execution))

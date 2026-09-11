@@ -58,12 +58,17 @@
           (recur (into {} (map (fn [[p text]] [p (pr-str (edn/read-string (replace-hashes text)))]) texts))
                  next-hashes (replace-hashes link-text) (inc n)))))))
 (defn- close-fixture-cohort! [{:keys [preregistration data-root]}]
-  (let [term #(hash-map :judgment % :ground {:kind :test-witness})
+  (let [binding {:preregistration preregistration :data-root data-root
+                 :cohort-id (:cohort/id (read-edn preregistration))
+                 :sha256 (digest/sha256 (slurp preregistration))}
+        authority (cohort/execution-authority binding)
+        term #(hash-map :judgment % :ground {:kind :test-witness})
         s (cohort/start-attempt! preregistration data-root
            (term {:opportunity-id "successor-fixture/1" :trigger :duree-click-on-demand
                   :machine-state {} :agent-roster [] :semantic-epoch :test
                   :code-state {:git-sha "fixture" :git-dirty? false :resolved-mode-flags {}
-                               :configuration-digest "fixture"}}))]
+                               :configuration-digest "fixture"}
+                  :execution-authority authority}))]
     (is (= "attempt-001" (:attempt/id s)))
     (doseq [k [:selection :construction :dispatch :build :adjudication]]
       (cohort/append-checkpoint! preregistration data-root "attempt-001" k
@@ -71,11 +76,12 @@
     (cohort/close-attempt! preregistration data-root "attempt-001"
        (term {:outcome :grounded-change :grounded? true :artifact-only? false
               :duration-ms 1 :resource-use {:agent-turns 0}
-              :witness {:before "a" :after "b" :resolved? true :dial-moved? true}}))))
+              :witness {:before "a" :after "b" :resolved? true :dial-moved? true}}))
+    (cohort/closed-execution binding "attempt-001")))
 (def fixture-core
 (fn [opts]
-              (close-fixture-cohort! (:execution-cohort opts))
-              (let [action {:type :advance-mission :target "M-u88-contextual-preferences"}
+              (let [execution (close-fixture-cohort! (:execution-cohort opts))
+                    action {:type :advance-mission :target "M-u88-contextual-preferences"}
                     judgment {:decision {:action {:type :no-op}}
                               :ranked-actions [{:rank 1 :action action}]
                               :admissible-actions [{:rank 1 :action action}]}
@@ -83,6 +89,8 @@
                               opts judgment (select-keys opts (keys casting)))
                     identity (:identity selected)]
                 {:attempt-id "attempt-001"
+                 :execution-identity (select-keys execution [:kind :id])
+                 :execution-provenance (dissoc execution :outcome)
                  :outcome :grounded-change
                  :checkpoints
                  {:selection {:judgment {:outcome :ok}

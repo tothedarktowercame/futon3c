@@ -123,9 +123,12 @@
                :click (select-keys started [:click-id :started-at])}
         execution-cohort (closed-cohort! root :successor-cohort
                                            "attempt-001" :grounded-change)
+        execution (cohort/closed-execution execution-cohort "attempt-001")
         run-file (io/file (:run-records roots) "run.edn")
         run-record {:run/id "run-1" :click/id "click-1" :startedAt (:started-at started)
                     :execution-cohort (select-keys execution-cohort [:cohort-id :sha256])
+                    :runner-execution/identity (select-keys execution [:kind :id])
+                    :runner-execution/provenance (dissoc execution :outcome)
                     :selectorSeam "live:validated-selection" :traceWritten true
                     :route [{:fromNode "R20" :toNode "R12" :via "observe" :at_ (:started-at started)}]
                     :run4/task-pin pin
@@ -176,6 +179,44 @@
        (is (= (digest/sha256 (slurp run-file)) (:run-record-digest bundle)))
        (is (= (digest/sha256 (pr-str projection)) (:projection-digest bundle)))
        (is (= :succeeded (get-in bundle [:classification :task-result])))))))
+
+(deftest versioned-run-record-execution-authority-is-exact-and-paired
+  (fixture
+   (fn [{:keys [roots run-file projection-file binding-file projection binding
+                execution-cohort]}]
+     (let [authority (cohort/execution-authority execution-cohort)
+           identity (cohort/execution-identity authority "attempt-001")
+           provenance (cohort/execution-provenance authority "attempt-001")
+           original (dissoc (read-string (slurp run-file))
+                            :runner-execution/identity
+                            :runner-execution/provenance)
+           install! (fn [record]
+                      (write! run-file record)
+                      (let [sha (digest/sha256 (slurp run-file))
+                            p (assoc-in projection [:source :run-record-sha256] sha)]
+                        (write! projection-file p)
+                        (write! binding-file
+                                (assoc binding :run4/terminal-projection
+                                       (assoc (:run4/terminal-projection binding)
+                                              :sha256 (digest/sha256 (pr-str p))
+                                              :source-sha256 sha)))))]
+       (install! (assoc original :runner-execution/identity identity
+                        :runner-execution/provenance provenance))
+       (is (= identity (get-in (sut/read-terminal-evidence-bundle roots request started)
+                               [:run-record :runner-execution/identity])))
+       (doseq [bad [(assoc original :runner-execution/identity nil
+                           :runner-execution/provenance provenance)
+                    (assoc original :runner-execution/identity identity)
+                    (assoc original :runner-execution/identity identity
+                           :runner-execution/provenance false)
+                    (assoc original :runner-execution/identity identity
+                           :runner-execution/provenance
+                           (assoc provenance :attempt-id "attempt-999"))]]
+         (install! bad)
+         (is (= :run-record-binding-mismatch
+                (:reason (try (sut/read-terminal-evidence-bundle roots request started)
+                              nil
+                              (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
 
 (deftest validated-bundle-authorizes-distinct-historical-successor
   (fixture

@@ -66,6 +66,21 @@
 (defn- exact-keys? [m expected]
   (and (map? m) (= expected (set (clojure.core/keys m)))))
 
+(defn- execution-provenance? [identity provenance local-attempt execution-cohort]
+  (and (exact-keys? identity #{:kind :id})
+       (= :runner-execution (:kind identity))
+       (safe-id? (:id identity))
+       (exact-keys? provenance
+                    #{:kind :id :identity-version :cohort-id :cohort-sha256
+                      :data-root-sha256 :authority-id :attempt-id})
+       (= identity (select-keys provenance [:kind :id]))
+       (= 1 (:identity-version provenance))
+       (= local-attempt (:attempt-id provenance))
+       (= (:cohort-id execution-cohort) (:cohort-id provenance))
+       (= (:sha256 execution-cohort) (:cohort-sha256 provenance))
+       (every? sha? ((juxt :cohort-sha256 :data-root-sha256 :authority-id)
+                     provenance))))
+
 (defn- admission-content-digest [identity]
   (digest/sha256 (pr-str [(:series-id identity) (:trial-id identity)
                           (:pin-sha256 identity) (:casting identity)])))
@@ -146,19 +161,31 @@
   (let [declared (get-in projection [:source :run-record])
         file (declared-file root declared :run-record)
         snapshot (parse-one-bytes file :run-record)
-        value (:value snapshot)]
+        value (:value snapshot)
+        identity-present? (contains? value :runner-execution/identity)
+        provenance-present? (contains? value :runner-execution/provenance)
+        authority? (and identity-present? provenance-present?)
+        base-keys #{:run/id :click/id :startedAt :selectorSeam
+                    :traceWritten :route :run4/task-pin
+                    :run4/effective-environment-attestation :execution-cohort}
+        expected-keys (cond-> base-keys
+                        authority? (conj :runner-execution/identity
+                                         :runner-execution/provenance))]
     (when-not (and (= (.getCanonicalPath file)
                       (.getCanonicalPath (io/file (:run-record binding))))
                    (= (:sha256 snapshot)
                       (get-in projection [:source :run-record-sha256]))
-                   (exact-keys? value
-                                #{:run/id :click/id :startedAt :selectorSeam
-                                  :traceWritten :route :run4/task-pin
-                                  :run4/effective-environment-attestation
-                                  :execution-cohort})
+                   (= identity-present? provenance-present?)
+                   (exact-keys? value expected-keys)
                    (= (:click/id projection) (:click/id value))
                    (= (:run/id projection) (:run/id value))
                    (= (:run4/task-pin projection) (:run4/task-pin value))
+                   (or (not authority?)
+                       (execution-provenance?
+                        (:runner-execution/identity value)
+                        (:runner-execution/provenance value)
+                        (:attempt/id projection)
+                        (:execution-cohort value)))
                    (do (effective/validate-recorded!
                         (:run4/effective-environment-attestation value)
                         (:run4/task-pin value))
