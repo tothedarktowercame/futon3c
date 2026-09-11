@@ -1,0 +1,12 @@
+test_bounded_discrete_contrast_keeps_condition_refuted (test_plan_review.ReviewControls.test_bounded_discrete_contrast_keeps_condition_refuted) ... ok
+test_child_and_parent_must_agree (test_plan_review.ReviewControls.test_child_and_parent_must_agree) ... ok
+test_citation_and_old_status_do_not_close_obligation (test_plan_review.ReviewControls.test_citation_and_old_status_do_not_close_obligation) ... ok
+test_claimed_conditions_need_an_argument (test_plan_review.ReviewControls.test_claimed_conditions_need_an_argument) ... ok
+test_complete_review_is_not_proof_verification (test_plan_review.ReviewControls.test_complete_review_is_not_proof_verification) ... ok
+test_disconnected_cycle_is_not_ignored (test_plan_review.ReviewControls.test_disconnected_cycle_is_not_ignored) ... ok
+test_unknown_dependency_duplicate_and_unpinned (test_plan_review.ReviewControls.test_unknown_dependency_duplicate_and_unpinned) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.000s
+
+OK

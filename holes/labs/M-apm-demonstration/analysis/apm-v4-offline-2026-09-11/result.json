@@ -1,0 +1,108 @@
+{
+  "schema": "apm-v4-offline-review-v1",
+  "structural_errors": [],
+  "open_obligations": [
+    {
+      "node": "P",
+      "reason": "conditions-open",
+      "conditions": "Both implications must preserve the epsilon quantifiers."
+    },
+    {
+      "node": "P",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "F",
+      "reason": "conditions-open",
+      "conditions": "Uniform continuity on the actual domain; global numerator bound still needed."
+    },
+    {
+      "node": "F",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "B",
+      "reason": "conditions-open",
+      "conditions": "Total boundedness of the domain, not merely boundedness in a metric space."
+    },
+    {
+      "node": "B",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "B1",
+      "reason": "conditions-open",
+      "conditions": "Eta is independent of the chosen center and point."
+    },
+    {
+      "node": "B1",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "B2",
+      "reason": "conditions-open",
+      "conditions": "Centers lie in the domain; an open interval need not be compact."
+    },
+    {
+      "node": "B2",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "B3",
+      "reason": "conditions-open",
+      "conditions": "Finite nonempty set of centers and B1/B2."
+    },
+    {
+      "node": "B3",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "Q",
+      "reason": "conditions-open",
+      "conditions": "M>0, delta>0, x!=y, and A<2M."
+    },
+    {
+      "node": "Q",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "R",
+      "reason": "conditions-open",
+      "conditions": "N>0 is required. No domain total-boundedness needed in this direction."
+    },
+    {
+      "node": "R",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "R1",
+      "reason": "conditions-open",
+      "conditions": "Epsilon>0; do not divide by zero."
+    },
+    {
+      "node": "R1",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "R2",
+      "reason": "conditions-open",
+      "conditions": "Same epsilon and the N selected for it."
+    },
+    {
+      "node": "R2",
+      "reason": "missing-proof-argument"
+    },
+    {
+      "node": "R3",
+      "reason": "conditions-open",
+      "conditions": "d>0, N>0 and strict d<delta."
+    },
+    {
+      "node": "R3",
+      "reason": "missing-proof-argument"
+    }
+  ],
+  "ready_for_ta_review": false,
+  "mathematics_verified": false,
+  "scope": "Review completeness only; arguments require independent mathematical adjudication."
+}
