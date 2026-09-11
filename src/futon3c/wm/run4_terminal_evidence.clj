@@ -98,10 +98,13 @@
   (let [snapshot (parse-one-bytes (binding-file root (:click-id started))
                                   :click-run-binding)
         value (:value snapshot)
-        required #{:schema :click/id :attempt/id :outcome :binding-status
-                   :run-id-observation :run-record-status :recorded-at
-                   :run-record :run4/terminal-projection}]
-    (when-not (and (exact-keys? value required)
+        base #{:schema :click/id :attempt/id :outcome :binding-status
+               :run-id-observation :run-record-status :recorded-at :run-record}
+        evidence-keys (set (filter #{:run4/terminal-projection
+                                    :run4/historical-projection}
+                                   (keys value)))]
+    (when-not (and (exact-keys? value (into base evidence-keys))
+                   (= 1 (count evidence-keys))
                    (= :wm-click-run-binding-v1 (:schema value))
                    (= (:click-id started) (:click/id value))
                    (= :verified (:binding-status value))
@@ -110,7 +113,7 @@
                    (instant? (:recorded-at value))
                    (= :present (get-in value [:run-id-observation :status]))
                    (nonblank? (get-in value [:run-id-observation :value]))
-                   (map? (:run4/terminal-projection value)))
+                   (map? (get value (first evidence-keys))))
       (refuse! :invalid-click-run-binding))
     value))
 
@@ -323,6 +326,20 @@
          :run-record-digest (get-in projection [:source :run-record-sha256])
          :run-record run-record
          :classification classification}))))
+
+(defn read-admission-click-binding!
+  "Shared strict admission/click/binding join for evidence families. Returns
+  nil only when the click binding is genuinely absent."
+  [{:keys [admission bindings] :as roots} admission-request started]
+  (when-not (and (map? roots) (map? admission-request) (map? started)
+                 (safe-id? (:attempt-id admission-request))
+                 (map? (:identity admission-request))
+                 (safe-id? (:click-id started))
+                 (instant? (:started-at started)))
+    (refuse! :invalid-consumer-input))
+  (read-admission! admission admission-request started)
+  (when (.exists (binding-file bindings (:click-id started)))
+    (read-binding! bindings started)))
 
 (defn read-terminal-evidence
   "Backward-compatible classification view of read-terminal-evidence-bundle."

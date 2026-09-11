@@ -5,7 +5,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
-            [futon3c.wm.run4-realized-recording :as recording]))
+            [futon3c.wm.run4-realized-recording :as recording]
+            [futon3c.wm.run4-terminal-evidence :as evidence]))
 
 (defn- refuse! [reason]
   (throw (ex-info "RUN4 historical projection refused"
@@ -27,15 +28,14 @@
 (defn projection [click-id result]
   (let [requested (get-in result [:checkpoints :selection :ground :run4/requested-pin])
         enacted (get-in result [:checkpoints :selection :ground :run4/enacted-action])]
-    (when requested
+    (when (= :revalidate-historical-repair (:type enacted))
       (when-not (and (= :historical-verification-awaiting-validation (:outcome result))
                      (nonblank? click-id) (nonblank? (:run/id result))
                      (nonblank? (:attempt-id result))
                      (= :authenticated-not-enacted (:status requested))
                      (map? (:identity requested))
                      (sha? (get-in requested [:identity :pin-sha256]))
-                     (map? enacted)
-                     (= :revalidate-historical-repair (:type enacted)))
+                     (map? enacted))
         (refuse! :malformed-historical-result))
       (let [path (:run-record result)
             file (when (nonblank? path) (.getCanonicalFile (io/file path)))
@@ -91,3 +91,80 @@
           (refuse! (or (:reason (ex-data e)) :projection-publication-failed))))
       {:path (.getAbsolutePath file) :sha256 sha
        :source-sha256 (get-in value [:source :run-record-sha256])})))
+
+(defn- confined-file [root path]
+  (when-not (and (nonblank? root) (nonblank? path))
+    (refuse! :invalid-evidence-reference))
+  (let [r (.getCanonicalFile (io/file root)) f (.getCanonicalFile (io/file path))]
+    (when-not (and (.isDirectory r) (.isFile f)
+                   (.startsWith (.toPath f) (.toPath r)))
+      (refuse! :evidence-reference-outside-authority))
+    f))
+
+(defn read-bundle!
+  "Read an admitted historical outcome through the shared strict admission and
+  click-binding join. Returns nil only before binding publication."
+  [{:keys [projections run-records] :as roots} admission-request started]
+  (when-let [binding (evidence/read-admission-click-binding!
+                      roots admission-request started)]
+    (when (contains? binding :run4/historical-projection)
+      (let [ref (:run4/historical-projection binding)]
+      (when-not (and (map? ref) (= #{:path :sha256 :source-sha256} (set (keys ref)))
+                     (sha? (:sha256 ref)) (sha? (:source-sha256 ref)))
+        (refuse! :missing-historical-projection-reference))
+      (let [file (confined-file projections (:path ref))
+            text (slurp file)
+            value (parse-one text)]
+        (when-not (and (= (:sha256 ref) (digest/sha256 (pr-str value)))
+                       (= :wm/run4-historical-admission-projection-v1 (:schema value))
+                       (= (:click-id started) (:click/id value))
+                       (= (:attempt-id admission-request)
+                          (:controller-attempt/id value))
+                       (= (get-in admission-request [:identity :pin-sha256])
+                          (get-in value [:requested-pin :identity :pin-sha256]))
+                       (= :awaiting-validation (get-in value [:repair :status]))
+                       (false? (get-in value [:repair :resolved?])))
+          (refuse! :historical-projection-binding-mismatch))
+        (let [run-file (confined-file run-records (get-in value [:source :run-record]))
+              run-text (slurp run-file)
+              run-record (parse-one run-text)]
+          (when-not (and (= (:source-sha256 ref) (digest/sha256 run-text))
+                         (= (:source-sha256 ref)
+                            (get-in value [:source :run-record-sha256]))
+                         (= (:run/id value) (:run/id run-record))
+                         (= (:click/id value) (:click/id run-record))
+                         (= (:controller-attempt/id value)
+                            (:run4/controller-attempt-id run-record)))
+            (refuse! :historical-run-record-source-mismatch))
+          {:schema :wm/run4-historical-admission-bundle-v1
+           :identity (:identity admission-request)
+           :attempt-id (:attempt-id admission-request)
+           :started started :click-run-binding binding
+           :projection value :run-record run-record
+           :classification {:task-result :unknown
+                            :repair-status :awaiting-validation
+                            :infrastructure :safe
+                            :production-successor-required? true}}))))))
+
+(defn persist-observation!
+  "Persist an observational historical admission. It is not a task terminal."
+  [root bundle]
+  (when-not (and (string? root) (.isDirectory (io/file root))
+                 (= :wm/run4-historical-admission-bundle-v1 (:schema bundle)))
+    (refuse! :invalid-observation))
+  (let [attempt (:attempt-id bundle)]
+    (when-not (and (nonblank? attempt)
+                   (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]{0,127}" attempt))
+      (refuse! :invalid-observation-identity))
+    (let [value {:schema :wm/run4-historical-admission-observation-v1
+                 :attempt-id attempt :identity (:identity bundle)
+                 :click-id (get-in bundle [:started :click-id])
+                 :run-id (get-in bundle [:projection :run/id])
+                 :repair (get-in bundle [:projection :repair])
+                 :task-verdict :unknown
+                 :controller-state :awaiting-terminal-evidence
+                 :visibility {:stage "review" :result "pending"
+                              :reason "historical repair awaiting validation"}}
+          file (io/file root (str "run4-historical-observation-" attempt ".edn"))]
+      (recording/publish-immutable! file value)
+      {:path (.getAbsolutePath file) :sha256 (digest/sha256 (pr-str value))})))

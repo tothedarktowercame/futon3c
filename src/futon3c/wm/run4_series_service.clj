@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [futon3c.wm.run4-series-controller :as controller]
             [futon3c.wm.run4-realized-recording :as realized]
+            [futon3c.wm.run4-historical-projection :as historical]
             [futon3c.wm.run4-run-visibility :as visibility]
             [futon3c.wm.run4-terminal-evidence :as terminal]
             [futon3c.wm.run4-trusted-entry :as trusted]
@@ -122,10 +123,19 @@
           (let [prepared-trial (get @prepared (:ordinal started))
                 _ (when-not prepared-trial
                     (refuse! :run4-series-prepared-trial-missing))
-                bundle (terminal/read-terminal-evidence-bundle
-                        evidence-roots (:admission-request prepared-trial) started)]
+                historical-bundle
+                (historical/read-bundle! evidence-roots
+                                         (:admission-request prepared-trial) started)
+                bundle (when-not historical-bundle
+                         (terminal/read-terminal-evidence-bundle
+                          evidence-roots (:admission-request prepared-trial) started))]
+            (when (and historical-bundle (true? (:recording-enabled? series)))
+              (historical/persist-observation! (:recording-root series)
+                                               historical-bundle))
             (when (and bundle (true? (:recording-enabled? series)))
               (realized/persist-bundle! (:recording-root series) bundle))
+            ;; Historical admission is deliberately nil to the task controller:
+            ;; it remains awaiting evidence and cannot advance the trial.
             (:classification bundle)))
         result (controller/step!
                 (:controller-root series) manifest-text
