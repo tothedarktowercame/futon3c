@@ -37,7 +37,7 @@
 (defn enqueue!
   [{:keys [agent session type dedupe-key prompt metadata]}]
   (ensure!)
-  (when-not (= :inbox-zero type)
+  (when-not (contains? #{:inbox-zero :apm-store-repair} type)
     (throw (ex-info "Unsupported followup type" {:type type})))
   (when-not (and (string? agent) (not (str/blank? agent))
                  (string? session) (not (str/blank? session))

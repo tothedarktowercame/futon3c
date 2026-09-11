@@ -23,21 +23,30 @@
     #(is (= "f1" @(future (:frame/id health/*context*)))))
   (is (nil? health/*context*)))
 
-(deftest dispatch-is-activated-but-terminal-replay-is-not
-  (doseq [state ["queued" "running" "done" "failed"]]
-    (let [calls (atom []) hold {:hold/id "stable"}
-          http (fn [method url body]
-                 (swap! calls conj [method url body])
-                 (cond
-                   (.endsWith url "/announce")
-                   {:http/status 202 :ok true :accepted true :job-id "store-repair-stable"}
-                   (= method "GET")
-                   {:http/status 200 :job {:job-id "store-repair-stable"
-                                          :agent-id "repair" :state state}}
-                   (.endsWith url "/activate")
-                   {:http/status 202 :ok true :accepted true}))
-          result (sut/dispatch! http "http://agency" {:repair-agent-id "repair"} hold)]
-      (is (:ok result))
-      (is (= "store-repair-stable" (:dispatch/id result)))
-      (is (= (if (= state "queued") 1 0)
-             (count (filter #(.endsWith (second %) "/activate") @calls)))))))
+(deftest repair-is-queued-to-exact-session-without-an-invoke
+  (let [calls (atom [])
+        http (fn [method url body]
+               (swap! calls conj [method url body])
+               (if (= method "GET")
+                 {:http/status 200 :ok true :agent-id "repair" :agent {:session-id "busy-session"}}
+                 {:http/status 200 :ok true :id "followup-1" :status "queued"}))
+        policy {:repair-agent-id "repair" :queue-state-path "/fixture/queue.edn"}
+        result (sut/dispatch! http "http://agency" policy {:hold/id "stable"})]
+    (is (:ok result))
+    (is (= "followup-1" (:dispatch/id result)))
+    (is (= :busy-safe-followup (:delivery/type result)))
+    (is (= ["GET" "POST"] (mapv first @calls)))
+    (is (.endsWith (second (second @calls)) "/followups"))
+    (is (= "busy-session" (get-in @calls [1 2 :session])))
+    (is (= "apm-store-repair" (get-in @calls [1 2 :type])))
+    (is (= ["store-repair-stable" "busy-session"] (get-in @calls [1 2 :dedupe-key])))))
+
+(deftest no-session-or-failed-enqueue-is-not-a-delivered-repair
+  (doseq [[response expected] [[{:http/status 200 :ok true :agent-id "repair" :agent {}}
+                                :store-repair-session-unavailable]
+                               [{:http/status 200 :ok true :agent-id "repair" :agent {:session-id "s"}}
+                                :store-repair-followup-enqueue-failed]]]
+    (is (= expected
+           (:error/code (sut/dispatch! (fn [method _ _] (if (= "GET" method) response {:http/status 503}))
+                                      "http://agency" {:repair-agent-id "repair" :queue-state-path "/queue"}
+                                      {:hold/id "h"}))))))

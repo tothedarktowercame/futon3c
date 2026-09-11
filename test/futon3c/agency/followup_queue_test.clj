@@ -66,3 +66,10 @@
     (is (empty? (:dedupe (queue/snapshot))))
     (is (empty? (:dedupe (edn/read-string (slurp path)))))
     (is (= :queued (:status (queue/enqueue! request))))))
+
+(deftest store-repair-uses-existing-dedupe-and-session-lease
+  (let [r (assoc request :type :apm-store-repair :dedupe-key ["hold" "session-1"])
+        first-result (queue/enqueue! r)]
+    (is (= (:id first-result) (:id (queue/enqueue! r))))
+    (is (nil? (queue/lease-one! "codex-11" "other-session" (constantly true))))
+    (is (= :apm-store-repair (:type (queue/lease-one! "codex-11" "session-1" (constantly true)))))))

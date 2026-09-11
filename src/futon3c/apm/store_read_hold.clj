@@ -3,7 +3,6 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.substrate.read-health :as health])
 )
@@ -53,8 +52,8 @@
     records))
 
 (defn dispatch!
-  "Uses a stable announced job id. Re-observe before activation so a completed
-  repair is never reactivated after a crash before the dispatch receipt write."
+  "Queue a typed followup for the exact existing session. The ready endpoint
+  withholds it while that session is invoking; no second process is launched."
   [http-fn agency-base policy hold]
   (let [agent-id (:repair-agent-id policy)
         job-id (str "store-repair-" (:hold/id hold))
@@ -78,20 +77,22 @@
                                                                         :warning/examples (vec (take 5 (:warnings hold))))
                                                :queue-state-path (:queue-state-path policy)
                                                :coordinator-id (:coordinator-id policy)}))}]
-    (if-not (and (string? agent-id) (seq agent-id))
-      {:ok false :error/code :store-repair-agent-missing}
-      (let [announced (job-port/announce! http-fn agency-base request)]
-        (if-not (and (:ok announced) (= job-id (:job-id announced)))
-          {:ok false :error/code :store-repair-announcement-failed}
-          (let [observed (job-port/observe http-fn agency-base job-id)]
-            (cond
-              (not (and (:ok observed) (= agent-id (:agent-id observed))))
-              {:ok false :error/code :store-repair-identity-unverified}
-              (or (:terminal? observed)
-                  (contains? #{:running :overrun :delivered :delivering} (:state observed)))
-              {:ok true :dispatch/id job-id :repair/agent-id agent-id}
-              :else
-              (let [activated (job-port/activate! http-fn agency-base request)]
-                (if (:ok activated)
-                  {:ok true :dispatch/id job-id :repair/agent-id agent-id}
-                  {:ok false :error/code :store-repair-activation-failed})))))))))
+    (if-not (and (string? agent-id) (re-matches #"[A-Za-z0-9_.:-]+" agent-id)
+                 (string? (:queue-state-path policy)) (seq (:queue-state-path policy)))
+      {:ok false :error/code :store-repair-delivery-authority-missing}
+      (let [resolved (http-fn "GET" (str agency-base "/api/alpha/agents/" agent-id) nil)
+            session (get-in resolved [:agent :session-id])]
+        (if-not (and (= 200 (:http/status resolved)) (:ok resolved)
+                     (= agent-id (:agent-id resolved)) (string? session) (seq session))
+          {:ok false :error/code :store-repair-session-unavailable}
+          (let [queued (http-fn "POST" (str agency-base "/api/alpha/followups")
+                                {:agent agent-id :session session :type "apm-store-repair"
+                                 :dedupe-key [job-id session]
+                                 :prompt (:prompt request)
+                                 :metadata {:hold-id (:hold/id hold)
+                                            :queue-state-path (:queue-state-path policy)}})]
+            (if (and (= 200 (:http/status queued)) (:ok queued)
+                     (string? (:id queued)) (seq (:id queued)))
+              {:ok true :dispatch/id (:id queued) :repair/agent-id agent-id
+               :delivery/type :busy-safe-followup :delivery/session-id session}
+              {:ok false :error/code :store-repair-followup-enqueue-failed})))))))

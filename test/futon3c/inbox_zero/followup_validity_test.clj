@@ -65,3 +65,11 @@
     (is (true? (current? attribution-item)))
     (is (true? (current? attribution-item)))
     (is (= 1 @loads))))
+
+(deftest store-repair-requires-the-exact-still-held-queue
+  (let [item {:type :apm-store-repair :metadata {:hold-id "h" :queue-state-path "/fixture"}}]
+    (is (true? (validity/still-current? item {:load-queue-fn (constantly {:store-read/hold {:hold/id "h"}})})))
+    (is (false? (validity/still-current? item {:load-queue-fn (constantly {:store-read/hold {:hold/id "other"}})})))
+    (is (false? (validity/still-current? item {:load-queue-fn (constantly {})})))
+    (is (false? (validity/still-current? item {:load-queue-fn (fn [_] (throw (ex-info "unreadable" {})))
+                                             :print-fn (constantly nil)})))))

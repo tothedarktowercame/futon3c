@@ -1,6 +1,7 @@
 (ns futon3c.inbox-zero.followup-validity
   "Delivery-time staleness checks for durable inbox-zero followups."
-  (:require [futon3.inbox-zero.projection :as projection]
+  (:require [clojure.edn :as edn]
+            [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as state]
             [futon3c.dev.config :as config])
   (:import [java.util Date]))
@@ -27,6 +28,12 @@
               proposal-type (value metadata :proposal/type)
               route-tier (value metadata :route-tier)]
           (cond
+            (= :apm-store-repair (:type item))
+            (let [path (value metadata :queue-state-path)
+                  id (value metadata :hold-id)
+                  queue ((or (:load-queue-fn options) #(edn/read-string (slurp %))) path)]
+              (and (string? id) (seq id) (= id (get-in queue [:store-read/hold :hold/id]))))
+
             (#{:inbox-zero/attribution "inbox-zero/attribution"} proposal-type)
             (let [path-key (value metadata :path/key)
                   worktree (value path-key :worktree/id)
@@ -47,7 +54,8 @@
         (catch Throwable error
           (print! (str "[inbox-zero] followup validity check failed: "
                        (.getMessage error)))
-          true)))))
+          ;; A store repair must not run on an unverifiable or released hold.
+          (not= :apm-store-repair (:type item)))))))
 
 (defn still-current?
   "Return whether ITEM still describes current inbox-zero work."
