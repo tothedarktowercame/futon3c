@@ -154,7 +154,8 @@
                    (exact-keys? value
                                 #{:run/id :click/id :startedAt :selectorSeam
                                   :traceWritten :route :run4/task-pin
-                                  :run4/effective-environment-attestation})
+                                  :run4/effective-environment-attestation
+                                  :execution-cohort})
                    (= (:click/id projection) (:click/id value))
                    (= (:run/id projection) (:run/id value))
                    (= (:run4/task-pin projection) (:run4/task-pin value))

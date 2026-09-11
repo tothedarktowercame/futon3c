@@ -84,6 +84,8 @@
                :click (select-keys started [:click-id :started-at])}
         run-file (io/file (:run-records roots) "run.edn")
         run-record {:run/id "run-1" :click/id "click-1" :startedAt (:started-at started)
+                    :execution-cohort {:cohort-id :successor-cohort
+                                       :sha256 (apply str (repeat 64 "d"))}
                     :selectorSeam "live:validated-selection" :traceWritten true
                     :route [{:fromNode "R20" :toNode "R12" :via "observe" :at_ (:started-at started)}]
                     :run4/task-pin pin
@@ -173,7 +175,8 @@
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-attempt
-                              {:kind :runner-execution :id "internal-1"}))))
+                              {:kind :runner-execution
+                               :id "successor-cohort--internal-1"}))))
          (is (thrown? clojure.lang.ExceptionInfo
                       (successor/resolve-from-durable!
                        (assoc config :verification-id "foreign-verification"))))
@@ -192,8 +195,13 @@
                  "store must independently reject verification as its own successor")))
          (let [resolution (successor/resolve-from-durable! config)]
            (is (= :resolved (:repair/status resolution)))
-           (is (= {:kind :runner-execution :id "internal-1"}
+           (is (= {:kind :runner-execution
+                   :id "successor-cohort--internal-1"}
                   (:validation-attempt resolution)))
+           (is (= {:cohort-id :successor-cohort
+                   :cohort-sha256 (apply str (repeat 64 "d"))
+                   :attempt-id "internal-1"}
+                  (:validation-execution resolution)))
            (is (empty? (repair/open-obligations (.getPath store)))))
          (finally (delete-tree! store)))))))
 
