@@ -39,3 +39,13 @@
   (is (thrown? clojure.lang.ExceptionInfo
                (http/reconfigure-handler! (constantly nil))))
   (is (= "stable" (:irc-send-base (health)))))
+
+(deftest failed-handler-construction-preserves-rebuild-source
+  (http/rebuild-handler! (http/make-handler {:irc-send-base "retained"}))
+  (with-redefs [http/make-handler
+                (fn [_] (throw (ex-info "injected construction failure" {})))]
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (http/reconfigure-handler! #(assoc % :irc-send-base "rejected"))))
+    (is (= "retained" (:irc-send-base (health)))))
+  (http/rebuild-handler!)
+  (is (= "retained" (:irc-send-base (health)))))
