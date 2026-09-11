@@ -104,3 +104,18 @@
                                       (assoc casting :repair-reviewer "codex-10"))) deps)
                       nil
                       (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
+
+(deftest casting-structure-and-separation-refuse-before-materialization
+  (let [template (edn/read-string text)
+        good {:author "codex-10" :reviewer "codex-12" :repair-reviewer "codex-12"}]
+    (doseq [bad [(dissoc good :repair-reviewer)
+                 (assoc good :reviewer "codex-10")
+                 (assoc good :repair-reviewer " ")
+                 (assoc good :author 10)
+                 (assoc good :extra "codex-17")]]
+      (is (= :invalid-deployment-contract
+             (:reason (try
+                        (sut/materialize (pr-str (assoc template :casting bad)) deps)
+                        nil
+                        (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+          (pr-str bad)))))
