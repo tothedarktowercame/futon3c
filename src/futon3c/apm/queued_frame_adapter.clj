@@ -18,6 +18,7 @@
             [futon3c.apm.problem-queue-supervisor :as queue-supervisor]
             [futon3c.apm.qualification :as qualification]
             [futon3c.apm.queued-frame-terminal :as terminal]
+            [futon3c.apm.store-read-hold :as store-hold]
             [futon3c.apm.workspace-build :as workspace-build]
             [futon3c.apm.workspace-lifecycle :as workspace])
   (:import [java.nio.channels FileChannel]
@@ -755,7 +756,7 @@
       :else
       (do (retire-guide!) {:ok true :status :failed}))))
 
-(defn live-effects
+(defn- base-live-effects
   "Build queue-supervisor effects for JIT preparation and supervised execution.
 
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
@@ -964,6 +965,37 @@
                              (keys live-preparation/required-seat-types)))]
                  {:ok (every? #(and (:ok %) (= 200 (:http/status %))) responses)
                   :responses responses}))}))))))))))})
+
+(defn live-effects
+  "Attach frame-scoped read policy to the production lifecycle boundaries.
+  Retained warnings still gate retirement if policy configuration is removed."
+  [config]
+  (let [policy (:store-read-health config)
+        effects (assoc (base-live-effects config)
+                       :store-read-warnings-fn
+                       (fn [frame]
+                         (store-hold/warnings
+                          (:state-directory (campaign-paths config frame)) frame))
+                       :dispatch-store-repair-fn
+                       #(store-hold/dispatch!
+                         (or (:http-fn config) runtime/http-json)
+                         (or (:agency-base config) "http://localhost:7070")
+                         (assoc policy :queue-state-path
+                                (str (:campaign-root config) "/queue-state.edn")
+                                :coordinator-id (str "jit-queue:" (:campaign-prefix config)))
+                         %))
+        wrap (fn [f frame-of]
+               (fn [argument]
+                 (let [frame (frame-of argument)
+                       paths (campaign-paths config frame)]
+                   (store-hold/with-frame!
+                    policy frame (:state-directory paths) #(f argument)))))]
+    (if-not policy
+      effects
+      (-> effects
+          (update :frame-tick-fn wrap identity)
+          (update :prepare-frame-fn wrap identity)
+          (update :retire-frame-fn wrap :frame)))))
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix

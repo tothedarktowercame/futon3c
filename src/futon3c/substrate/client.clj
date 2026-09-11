@@ -5,7 +5,8 @@
   while the historical variable name is retired."
   (:require [babashka.http-client :as http]
             [clojure.edn :as edn]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.substrate.read-health :as read-health])
   (:import [java.net URLEncoder]
            [java.util UUID]
            [java.util.concurrent CompletableFuture ExecutionException
@@ -39,11 +40,9 @@
   (cond-> {"Accept" "application/edn"}
     trace-id (assoc "X-Trace-Id" trace-id)))
 
-(defn- get-edn!
-  ([url timeout-ms] (get-edn! url timeout-ms nil))
-  ([url timeout-ms trace-id]
-   (let [trace-id (or trace-id (str "substrate-read:" (UUID/randomUUID)))
-         started (System/nanoTime)]
+(defn- raw-get-edn!
+  [url timeout-ms trace-id]
+   (let [started (System/nanoTime)]
      (try
        (let [future ^CompletableFuture
              (http/get url {:headers (request-headers trace-id)
@@ -66,7 +65,15 @@
                          (merge (ex-data error)
                                 {:url url :trace-id trace-id :timeout-ms timeout-ms
                                  :elapsed-ms (quot (- (System/nanoTime) started) 1000000)})
-                         error)))))))
+                         error))))))
+
+(defn- get-edn!
+  ([url timeout-ms] (get-edn! url timeout-ms nil))
+  ([url timeout-ms trace-id]
+   (let [trace-id (or trace-id (str "substrate-read:" (UUID/randomUUID)))
+         bound (read-health/timeout-ms timeout-ms)]
+     (read-health/observe! {:url url :trace-id trace-id :timeout-ms bound}
+                          #(raw-get-edn! url bound trace-id)))))
 
 (defn- post-edn!
   [url payload timeout-ms trace-id]

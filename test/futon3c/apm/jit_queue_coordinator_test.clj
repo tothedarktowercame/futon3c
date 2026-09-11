@@ -6,6 +6,7 @@
             [futon3c.apm.fault-taxonomy :as fault-taxonomy]
             [futon3c.apm.jit-queue-coordinator :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-regulator :as regulator]
             [futon3c.apm.semantic-progress-watchdog :as watchdog])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
@@ -330,3 +331,17 @@
               (is (= :jit-coordinator-launch-unavailable (:error/code result)))
               (is (= reason (:reason result)))
               (is (false? @called)))))))))
+
+(deftest store-hold-release-refuses-a-running-coordinator
+  (let [writes (atom [])]
+    (with-redefs [durable/read-registry
+                  (constantly {:entries {"queue" {:coordinator/state-path "/unused/coordinator.edn"}}})
+                  durable/valid-entry? (constantly true)
+                  regulator/with-file-tick-lock (fn [_] (fn [f] (f)))
+                  runtime/read-state (constantly {:regulator/status :running
+                                                   :regulator/tick-claim {:id "active"}})
+                  runtime/atomic-persist! (fn [p v] (swap! writes conj [p v]) {:ok true})]
+      (is (= :store-read-coordinator-not-quiescent
+             (:error/code (sut/release-store-read-hold!
+                           {:coordinator-id "queue" :receipt {}}))))
+      (is (empty? @writes)))))

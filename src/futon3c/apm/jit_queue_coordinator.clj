@@ -2,7 +2,10 @@
   "Durable coordinator adapter for the JIT problem queue."
   (:require [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.durable-coordinator :as coordinator]
-            [futon3c.apm.phase-status :as phase-status]))
+            [futon3c.apm.phase-status :as phase-status]
+            [futon3c.apm.problem-queue-supervisor :as queue]
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-regulator :as regulator]))
 
 (def adapter-key :apm/jit-problem-queue)
 (def default-registry-path "data/apm-coordinators/registry.edn")
@@ -185,3 +188,34 @@
 
 (defn status [registry-path coordinator-id]
   (coordinator/status registry-path coordinator-id))
+
+
+(defn release-store-read-hold!
+  "Trusted operator action after verifying the supplied repair artifacts.
+  Mutates only a quiescent matching queue. Resume is separate so an independent
+  manual pause or other failure remains in force. No bell result is trusted as
+  proof of repair. Uses the same cross-process lock as coordinator ticks."
+  [{:keys [registry-path coordinator-id receipt]
+    :or {registry-path default-registry-path}}]
+  (let [entry (get-in (coordinator/read-registry registry-path) [:entries coordinator-id])
+        state-path (:coordinator/state-path entry)]
+    (if-not (and (coordinator/valid-entry? entry) (string? state-path))
+      {:ok false :error/code :store-read-coordinator-invalid}
+      ((regulator/with-file-tick-lock (str state-path ".tick-claim.lock"))
+       (fn []
+         (let [path (java.nio.file.Path/of state-path (make-array String 0))
+               state (runtime/read-state path)
+               queue-path (.resolve (.getParent (.toAbsolutePath path)) "queue-state.edn")
+               current (runtime/read-state queue-path)]
+           (if-not (and (nil? (:regulator/tick-claim state))
+                        (contains? #{:complete :stopped :failed} (:regulator/status state)))
+             {:ok false :error/code :store-read-coordinator-not-quiescent}
+             (let [released (queue/release-store-read-hold current receipt)]
+               (if-not (:ok released)
+                 released
+                 (let [saved (runtime/atomic-persist! queue-path (:state released))]
+                   (if (:ok saved)
+                     {:ok true :status :store-read-hold-released
+                      :queue/status (get-in released [:state :status])
+                      :hold/id (:hold/id receipt)}
+                     saved)))))))))))

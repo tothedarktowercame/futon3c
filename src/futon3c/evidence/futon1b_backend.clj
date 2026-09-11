@@ -30,6 +30,7 @@
    Reads throw on transport errors (R4 loud failure); -append returns a
    SocialError so the invoke path can surface it as data."
   (:require [futon3c.evidence.backend :as backend]
+            [futon3c.substrate.read-health :as read-health]
             [futon3c.evidence.subject :as subject]
             [clojure.edn :as edn]
             [clojure.string :as str]
@@ -217,16 +218,12 @@
         (or (re-find #"(?i)timeout|timed out" description)
             (when throwable? (recur (.getCause ^Throwable t))))))))
 
-(defn- get-edn
-  "GET url, EDN-parse the body. Returns {:status n :body v}.
-   Throws on transport-level failure (connection refused etc.)."
-  ([url] (get-edn url timeout-ms))
-  ([url request-timeout-ms]
+(defn- raw-get-edn
+  [url request-timeout-ms trace-id]
    ;; http-kit's :timeout can expire after headers while its response promise
    ;; remains blocked on a stalled body.  Bound the promise dereference itself
    ;; so evidence reads cannot monopolize a regulator tick indefinitely.
-   (let [trace-id (str "evidence-read:" (UUID/randomUUID))
-         pending (future @(http/get url {:timeout request-timeout-ms :as :text
+   (let [pending (future @(http/get url {:timeout request-timeout-ms :as :text
                                         :headers {"x-trace-id" trace-id}}))
          timed-out (Object.)
          response (deref pending request-timeout-ms timed-out)]
@@ -260,7 +257,15 @@
                             :transport/acquired-outcome
                             (if (= status 504) :timeout :unavailable)
                             :transport/evidence :not-obtained}))))
-       {:status status :body (read-edn body)}))))
+       {:status status :body (read-edn body)})))
+
+(defn- get-edn
+  ([url] (get-edn url timeout-ms))
+  ([url requested-ms]
+   (let [bound (read-health/timeout-ms requested-ms)
+         trace-id (str "evidence-read:" (UUID/randomUUID))]
+     (read-health/observe! {:url url :trace-id trace-id :timeout-ms bound}
+                          #(raw-get-edn url bound trace-id)))))
 
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
