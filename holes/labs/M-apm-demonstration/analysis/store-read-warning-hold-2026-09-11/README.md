@@ -108,3 +108,21 @@ Deployment observations are separate from these simulated latency tests. No
 synthetic warning is inserted into a live frame and no fake repair is claimed.
 The motivating historical timing evidence is in the sibling
 `f224-store-timeout-2026-09-11` packet.
+
+## Executed deployment
+
+Canonical futon3c commit `ed791340` was loaded from its own classpath on
+2026-09-11 at 19:01:02Z. The campaign policy was atomically enabled for subsequent
+V3 queue ticks; an already executing tick keeps its existing context. No JVM
+or APM loop was restarted. Voxterm commit `3faf4f6` was deployed by restarting
+only the UI service. `enabled.edn` records the policy and active F225 identity.
+
+One labelled diagnostic read of the previously slow endpoint completed in
+1,381ms with the effective 30,000ms deadline. `diagnostic.edn` records it;
+`server-trace.log` correlates the same wire ID with 0ms admission wait,
+1,377ms expensive-read callback and 1,378ms server request duration. This is
+availability/correlation evidence, not a stress test or proof of a query repair.
+No synthetic warning was written to a production frame. At readback F225 was
+running and F226 remained queued to resume; no production warning hold existed
+at that observation. The automatic warning/hold/dispatch cycle is tested but
+has not yet been observed end-to-end on a genuine production slow read.

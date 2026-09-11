@@ -1,0 +1,1 @@
+{:effective-http-deadline-ms 30000, :production-warning-injected? false, :diagnostic? true, :hyperedge-count 1, :response-obtained? true, :trace-id "codex16-read-health-20260911", :warning-count 0, :at "2026-09-11T19:01:37.837819797Z", :elapsed-ms 1381}
