@@ -25,3 +25,11 @@ Next bounded implementation: reproduce the pinned-refusal path in disposable sto
 - `/home/joe/run4/U88-codex20-20260911/cohort/run4-u88-codex20-20260911-v1/attempt-001/005-build.edn`: `27da11d09c69a4bd2ba9f953f3872b7119c04de70d9259d0fa43908226c70f3b`
 - `/home/joe/run4/U88-codex20-20260911/cohort/run4-u88-codex20-20260911-v1/attempt-001/006-adjudication.edn`: `20527b9f022b7822216ad644183ebdd4bc2072b18cce19a57fb00a3621c46348`
 - `/home/joe/run4/U88-codex20-20260911/queue/queue-state.edn`: `55021f7453b4042fb851031e1cd91a5aa4127a63ffccadcd14669312513facde`
+
+## Correction after focused Zai diagnosis and actual proposer check
+
+The original subtype **is retained** in the root-qualified system finding `futon2/data/wm-repair-obligations/findings/repair-ea1-78cd8a42e23392a5ce1412e49d181c3e7c3ac95aaa40d4f54c5c9d8ef3ae08eb--attempt-001-pinned-selection-refused.edn`: `:failure-detail :pinned-action-not-candidate`. The earlier statement about absence applies only to the checkpoint prefix, not all durable evidence. Zai job `invoke-1789155119831-20254-da1df9dc` found this artifact.
+
+Coordinator executed the real `mission-registry/open-missions` and `mission-enumerator-proposer` in a separate read-only Babashka process. U88 was present. Its proposed action has the pinned type/target plus weight, mission-path, open-hole-count and rationale. It is not map-equal to the two-key pin. `efe/compute-efe` retains the input action in its result, and `rank-actions` uses those results. The existing U88 roundtrip fixture instead constructs a two-key action by hand; it does not disprove this mismatch.
+
+The retained script `candidate-shape-repro.clj` reproduces the structural incompatibility without calling the judgement generator, runner or actuator. Current mission presence cannot prove presence during the failed run; that run's actual ranked population remains unavailable. A correction must distinguish canonical action identity from producer annotations, reject ambiguity/changed behavior, and keep the selected real candidate and its admissibility evidence intact. Simply inserting a candidate or deleting arbitrary action keys is not a valid repair.
