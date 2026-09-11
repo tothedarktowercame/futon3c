@@ -1,0 +1,55 @@
+{
+  "captured_at": "2026-09-11T00:49:45.532612+00:00",
+  "unit": "futon3c-zone.service",
+  "active": "active",
+  "main_pid": "1942862",
+  "staged_flags": {
+    "FUTON_WM_FPI_DARK": "1",
+    "FUTON_WM_BETA_DARK": "1",
+    "FUTON_WM_TRACE_POLICY_DETAILS": "1",
+    "FUTON_WM_RECORDING_CONTRACT": "1",
+    "FUTON3C_RUN4_U88_ENABLED": "false",
+    "FUTON3C_TICKLE_AUTOSTART": "false",
+    "FUTON3C_FM_CONDUCTOR_AUTOSTART": "false"
+  },
+  "staged_flags_match": true,
+  "mission_c_explicitly_unset": true,
+  "process_environment": {
+    "FUTON_WM_FPI_DARK": "1",
+    "FUTON_WM_BETA_DARK": "1",
+    "FUTON_WM_TRACE_POLICY_DETAILS": "1",
+    "FUTON_WM_RECORDING_CONTRACT": "1",
+    "FUTON3C_RUN4_U88_ENABLED": "false",
+    "FUTON3C_TICKLE_AUTOSTART": "false",
+    "FUTON3C_FM_CONDUCTOR_AUTOSTART": "false"
+  },
+  "dropins": "/home/joe/.config/systemd/user.control/futon3c-zone.service.d/50-MemoryHigh.conf /home/joe/.config/systemd/user.control/futon3c-zone.service.d/50-MemoryMax.conf /home/joe/.config/systemd/user.control/futon3c-zone.service.d/50-TasksMax.conf /home/joe/.config/systemd/user/futon3c-zone.service.d/70-run4-preparation.conf",
+  "restart_performed": false,
+  "restart_observed": true,
+  "prior_main_pid": "562921",
+  "restart_performed_by_this_turn": false,
+  "loaded_consumers": {
+    "FPI_DARK": {
+      "loaded": false,
+      "effective": null
+    },
+    "BETA_DARK": {
+      "loaded": false,
+      "effective": null
+    },
+    "TRACE_POLICY_DETAILS": {
+      "loaded": false,
+      "effective": null
+    }
+  },
+  "live_mission_c": null,
+  "agency_codex17_session": "01a08438-839b-7e22-b2ca-5e327e9a2d2e",
+  "agency_codex17_status": "invoking",
+  "independent_boot_tests": {
+    "tests": 4,
+    "assertions": 10,
+    "failures": 0,
+    "errors": 0
+  },
+  "interpretation": "New process has required environment; Agency recovered. Consumers are not loaded, so effective attestation remains unknown. RUN4 disabled; no launch."
+}
