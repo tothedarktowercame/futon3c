@@ -3,7 +3,9 @@
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.run4-route-conformance :as route]
-            [futon3c.wm.run4-terminal-evidence :as sut]))
+            [futon2.aif.repair-obligation :as repair]
+            [futon3c.wm.run4-terminal-evidence :as sut]
+            [futon3c.wm.run4-historical-successor :as successor]))
 
 (def pin {:sha256 (apply str (repeat 64 "a")) :series-id "RUN4"
           :trial-id :outer-loop :mission-id "M-run4" :action {:type :mission}})
@@ -131,6 +133,53 @@
        (is (= (digest/sha256 (slurp run-file)) (:run-record-digest bundle)))
        (is (= (digest/sha256 (pr-str projection)) (:projection-digest bundle)))
        (is (= :succeeded (get-in bundle [:classification :task-result])))))))
+
+(deftest validated-bundle-authorizes-distinct-historical-successor
+  (fixture
+   (fn [{:keys [roots]}]
+     (let [store (.toFile (java.nio.file.Files/createTempDirectory
+                           "historical-successor"
+                           (make-array java.nio.file.attribute.FileAttribute 0)))
+           finding-file (io/file store "findings/repair-057.edn")
+           obligation {:repair/id "repair-057" :repair/status :open
+                       :repair/class :machine-failure :attempt-id "failed-057"}
+           _ (write! finding-file obligation)
+           verification-root (doto (io/file store "incoming") .mkdir)
+           verification-file (io/file verification-root "verification.edn")
+           verification {:schema :wm/historical-repair-verification-v1
+                         :verification-id "verification-057" :repair-id "repair-057"
+                         :state :awaiting-validation :repair-resolved? false
+                         :actors {:author "zai-2" :reviewer "codex-10"}
+                         :review {:job-id "review-job-057" :verdict :approve
+                                  :execution {:executed true :tool-events 1}}
+                         :qualification {:path "/qualified/output" :sha256 (apply str (repeat 64 "a"))
+                                         :check-ids [:timeout-recovery :timeout-exhaustion]}
+                         :finding {:path (.getCanonicalPath finding-file)
+                                   :sha256 (digest/sha256 (slurp finding-file))}
+                         :implementation {:first "9ab503bd" :last "3bdc381e"
+                                          :source-head "8bf149c5"}}
+           _ (write! verification-file verification)
+           _ (repair/commit-historical-verification!
+              (.getPath store) "verification-attempt-001"
+              {:verification-root (.getPath verification-root)
+               :path (.getPath verification-file)
+               :sha256 (digest/sha256 (slurp verification-file))})
+           config {:repair-root (.getPath store) :evidence-roots roots
+                   :admission-request request :started started :repair-id "repair-057"
+                   :verification-id "verification-057"
+                   :verification-attempt "verification-attempt-001"}]
+       (try
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (assoc config :verification-attempt "outer-attempt"))))
+         (is (thrown? clojure.lang.ExceptionInfo
+                      (successor/resolve-from-durable!
+                       (assoc config :verification-id "foreign-verification"))))
+         (let [resolution (successor/resolve-from-durable! config)]
+           (is (= :resolved (:repair/status resolution)))
+           (is (= "outer-attempt" (:validation-attempt resolution)))
+           (is (empty? (repair/open-obligations (.getPath store)))))
+         (finally (delete-tree! store)))))))
 
 (deftest validated-bundle-feeds-the-shared-u49-route-core
   (fixture

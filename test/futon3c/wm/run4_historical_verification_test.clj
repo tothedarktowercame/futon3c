@@ -51,6 +51,7 @@
           obligation (read-string (slurp finding))
           admission (repair/commit-historical-verification!
                      (.getPath store)
+                     "verification-attempt-001"
                      {:verification-root (.getPath out)
                       :path (.getPath verification-file)
                       :sha256 (digest/sha256 (slurp verification-file))})]
