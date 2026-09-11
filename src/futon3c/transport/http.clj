@@ -8636,6 +8636,15 @@
 (defonce ^:private !handler-builder
   (atom nil))
 
+(defonce ^:private !handler-config
+  ;; Private serving construction state. It may contain credentials and must
+  ;; never be returned from an HTTP route, status map or log message.
+  (atom nil))
+
+(defonce ^:private handler-reconfiguration-lock (Object.))
+
+(declare make-handler)
+
 (defn- installed-handler
   [request]
   (if-let [handler @!installed-handler]
@@ -8647,17 +8656,48 @@
 
    With no argument, rebuild from the original `make-handler` config captured
    at server installation. With an explicit handler, install that value and
-   retain its rebuild function when it was produced by `make-handler`."
+  retain its rebuild function when it was produced by `make-handler`."
   ([]
-   (if-let [build @!handler-builder]
-     (rebuild-handler! (build))
-     (throw (ex-info "installed handler has no rebuild function" {}))))
+   (locking handler-reconfiguration-lock
+     (if-let [build @!handler-builder]
+       (rebuild-handler! (build))
+       (throw (ex-info "installed handler has no rebuild function" {})))))
   ([handler]
    (when-not (fn? handler)
      (throw (ex-info "handler must be invocable" {:handler handler})))
-   (reset! !installed-handler handler)
-   (reset! !handler-builder (::rebuild-fn (meta handler)))
+   (locking handler-reconfiguration-lock
+     (reset! !installed-handler handler)
+     (reset! !handler-builder (::rebuild-fn (meta handler)))
+     (reset! !handler-config (::handler-config (meta handler))))
    handler))
+
+(defn reconfigure-handler!
+  "Apply a server-owned CONFIG-TRANSFORM to the installed handler config.
+
+  The transform and fresh `make-handler` construction both finish before the
+  live handler is swapped. On any exception the handler, config and subsequent
+  rebuild source remain unchanged. This is an in-process operator API, not an
+  HTTP endpoint. The return value deliberately contains no configuration."
+  [config-transform]
+  (when-not (fn? config-transform)
+    (throw (ex-info "config transform must be invocable"
+                    {:reason :config-transform-invalid})))
+  (locking handler-reconfiguration-lock
+    (let [current @!handler-config]
+      (when-not (map? current)
+        (throw (ex-info "installed handler has no captured configuration"
+                        {:reason :handler-config-unavailable})))
+      (let [updated (config-transform current)]
+        (when-not (map? updated)
+          (throw (ex-info "config transform must return a map"
+                          {:reason :handler-config-invalid})))
+        (let [handler (make-handler updated)]
+          (reset! !installed-handler handler)
+          (reset! !handler-builder (::rebuild-fn (meta handler)))
+          (reset! !handler-config updated)
+          {:ok true
+           :status :handler-reconfigured
+           :run4-configured? (map? (:run4 updated))})))))
 
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.
@@ -9006,7 +9046,8 @@
           ;; ERROR log + stacktrace surface during graceful shutdown.
           (Thread/interrupted)  ; clear the interrupt flag
           (json-response 503 {:ok false :error "shutting-down"}))))
-      {::rebuild-fn #(make-handler config)})))
+      {::rebuild-fn #(make-handler config)
+       ::handler-config config})))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.

@@ -44,3 +44,25 @@ the recovered roster/queued work before any RUN4 request. Inspect startup logs
 for a typed refusal only; the secret must not appear. Finally run the read-only
 deployment preflight against the newly reviewed template. A series-step POST
 remains a distinct operator action and is not authorized by this procedure.
+
+## Post-review live handler installation (NOT EXECUTED)
+
+The first restart must keep `FUTON3C_RUN4_U88_ENABLED=false`. After that JVM
+passes effective-environment checks and the OPEN mission plus regenerated pins
+have independent review, an authenticated private operator evaluation may
+install the configuration without another restart:
+
+```clojure
+(let [fragment (futon3c.wm.run4-boot/materialize true)]
+  (futon3c.transport.http/reconfigure-handler!
+   #(assoc % :run4 (:run4 fragment))))
+```
+
+The expression returns only `:ok`, `:status`, and `:run4-configured?`; it must
+not print `fragment`, handler metadata, or captured server configuration.
+Materialization reads the fixed private credential internally and completes
+template, source, store, mission, and effective-environment validation before
+the existing handler is replaced. A refusal leaves the old handler installed.
+
+This installs route configuration only. It neither invokes the route nor
+creates an admission, click, series transition, run record, or acceptance.
