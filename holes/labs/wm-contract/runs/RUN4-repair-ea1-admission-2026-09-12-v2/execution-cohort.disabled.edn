@@ -1,0 +1,6 @@
+{:schema :wm/run4-execution-cohort-binding-v1 :enabled? false
+ :preregistration "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/authority/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/cohort.edn"
+ :data-root "/home/joe/run4/ea1-admission-20260912-v2/cohort"
+ :cohort-id :run4-ea1-artifact-binding-admission-20260912-v2
+ :sha256 "ef390f48fbdc834302fece98a16eb9d79d59741646c44cdc00dc789e32de90c5"
+ :target 1 :activation :not-performed}

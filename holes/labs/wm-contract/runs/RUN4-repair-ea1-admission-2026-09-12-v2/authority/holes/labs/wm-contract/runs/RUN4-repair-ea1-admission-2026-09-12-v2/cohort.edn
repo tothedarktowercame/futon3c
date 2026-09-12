@@ -1,0 +1,83 @@
+{:machine-evolution
+ {:allowed? true,
+  :rule
+  "Normal machine development may continue during collection; it never permits dropping, replacing, or relabelling an opportunity.",
+  :per-attempt-provenance
+  [:semantic-epoch
+   :git-sha
+   :git-dirty?
+   :resolved-mode-flags
+   :configuration-digest],
+  :epoch-boundary
+  "ea1 artifact-binding historical verification admission under a separate RUN4 cohort; zai-5 qualification author and zai-1 independent reviewer; no pooling with repair 057, repair 058, initialization38690, or successor cohorts.",
+  :analysis
+  "Report attempts chronologically and stratified by semantic epoch; do not pool across an undocumented semantic boundary."},
+ :protocol/version 4,
+ :purpose
+ "One ea1 artifact-binding-mismatch historical repair-verification admission (repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch, verification repair-ea1-artifact-binding-revalidation-20260912-v1). U88 is the authenticated requested task, not the enacted task when the open repair stop-line takes precedence. Admission does not resolve the repair or establish U88 success.",
+ :authority
+ "Joe-authorized ea1 artifact-binding revalidation preparation (2026-09-12). This frozen disabled packet authorizes no live capacity or execution; repair 057, repair 058, initialization38690, and prior failed cohorts remain unchanged.",
+ :checkpoint-contract
+ {:closed
+  [:outcome :grounded? :artifact-only? :duration-ms :resource-use],
+  :adjudication [:before :after :witness :build-match :dial],
+  :construction
+  [:mission :cascade :sorries :wiring :patterns :deposit],
+  :cell-shape
+  "Every checkpoint payload is either {:judgment ... :ground ...} or {:sorry {:kind keyword ...}}.",
+  :time-step
+  [:opportunity-id
+   :trigger
+   :machine-state
+   :agent-roster
+   :code-state
+   :semantic-epoch],
+  :dispatch [:agent :availability :job-id :prompt-ref],
+  :build
+  [:artifacts
+   :generated-code
+   :commits
+   :patterns-used
+   :inline-improvements
+   :validation],
+  :selection
+  [:selected-mission
+   :selected-action
+   :ranked-candidates
+   :selection-reasons],
+  :revision-note
+  "A revision round nests inside the :build payload as :revision {:round 2 :commits [...] :review {...}} with both review records under :reviews; checkpoint order and schema unchanged from protocol 4."},
+ :casting
+ {:author "zai-5", :reviewer "zai-1", :repair-reviewer "zai-1"},
+ :grounded-success
+ {:outcome :grounded-change,
+  :requires
+  [:independent-before-witness
+   :independent-after-witness
+   :resolved-adjudication
+   :dial-moved],
+  :artifact-only-counts? false},
+ :required-before-close
+ #{:adjudication :construction :dispatch :build :selection},
+ :analysis
+ {:claim
+  "Observe one ea1 artifact-binding historical verification execution and its awaiting-validation outcome; a distinct production successor remains mandatory.",
+  :denominator
+  "Every admitted opportunity in this cohort, including unsuccessful outcomes."},
+ :status :draft,
+ :checkpoint-order
+ [:time-step
+  :selection
+  :construction
+  :dispatch
+  :build
+  :adjudication
+  :closed],
+ :predecessor-evidence
+ {:repair-id "repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch",
+  :counts-in-this-cohort? false,
+  :reason "Immutable open stop-line qualified independently; no prior execution counts in this cohort."},
+ :allowed-triggers #{:duree-click-continuous :duree-click-on-demand},
+ :stopping-rule {:kind :fixed-attempt-count, :target 1},
+ :registered-on "2026-09-12",
+ :cohort/id :run4-ea1-artifact-binding-admission-20260912-v2}
