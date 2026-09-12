@@ -5,7 +5,7 @@
  :casting {:author "codex-20" :reviewer "codex-18" :repair-reviewer "codex-19"}
  :authority-root "/home/joe/code/futon2"
  :manifest {:ref "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/series-pin.edn"
-            :sha256 "ed37aa796118ffd2b13ffbd2d7759814cf660dc239d0262fc0fee1b8b3ab8797"}
+            :sha256 "4cc5068d5df95e9f92d86c38c361788eac6ce02db389c877d9eea101628d27a3"}
  :pin-allowlist #{"holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/task-pin.edn"}
  :source-allowlist
  #{"holes/missions/M-f11-find-production-successor.md"
