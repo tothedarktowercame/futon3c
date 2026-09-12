@@ -71,7 +71,9 @@
 (defn- first-debt-id [inputs]
   (-> (:verification-debt inputs) first :id))
 
-(defn- resolve-args [inputs]
+(defn resolve-args
+  "Resolve :first-flagged/:first-debt placeholders against INPUTS."
+  [inputs]
   (let [target (first-debt-id inputs)]
     (update board-v0 :chips
             (fn [chips]

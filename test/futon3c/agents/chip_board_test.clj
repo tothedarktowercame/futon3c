@@ -99,3 +99,45 @@
                 :chips [{:chip/id :a :verb :sing :wires {:true :a}}]}
                {} no-op)]
       (is (= :end/fuel-exhausted (:end-reason run))))))
+
+;; ---- witness-defect regressions (codex-17, mathlib4 9fe1552eaf) ----
+
+(deftest witness-defect-1-nil-repo-never-certified
+  (testing "a zap chip with a missing/nil repo is a typed refusal, never a commit"
+    (let [run (board/run-board
+               {:entry :z :constants {}
+                :chips [{:chip/id :z :verb :zap :args {}
+                         :wires {:true :y :false :y}}
+                        {:chip/id :y :verb :yield}]}
+               {} no-op)
+          eff (effects-of run)]
+      (is (not (some #(= :commit (first %)) eff)))
+      (is (= :refusal (-> eff first first))))))
+
+(deftest witness-defect-2-replay-rejects-altered-effects
+  (testing "verify-trace fails when the recorded effect payload is altered"
+    (let [inputs (izb/observation-packet
+                  [{:repo "futon3c" :clean? false :clauses-failed [:dirty]}]
+                  [] false)
+          b (izb/resolve-args inputs)
+          run (board/run-board b inputs no-op)
+          tampered (update-in run [:trace]
+                              (fn [tr]
+                                (mapv #(if (= :commit (-> % :effects first first))
+                                         (update-in % [:effects 0 1] assoc :repo "evil")
+                                         %)
+                                      tr)))]
+      (is (board/verify-trace b inputs run))
+      (is (not (board/verify-trace b inputs tampered))))))
+
+(deftest witness-defect-3-compare-move-implemented
+  (testing "a validated compare-move board runs: true on match, and the
+empty-square argument tests stack emptiness"
+    ;; drive the verb directly (v0 inputs do not seed the move stack)
+    (let [f (get @board/verb-registry :compare-move)]
+      (is (= :true (:branch (f {:move-stack [:forward]} {:move :forward} {}))))
+      (is (= :false (:branch (f {:move-stack [:forward]} {:move :back} {}))))
+      (is (= :true (:branch (f {:move-stack []} {:move nil} {}))))
+      (is (= :false (:branch (f {:move-stack [:forward]} {:move nil} {})))))))
+
+

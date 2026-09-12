@@ -130,16 +130,29 @@
 
    :zap
    (fn [state args _inputs]
-     (if (= (:feel-certified state) (:repo args))
+     (if (and (:repo args) (= (:feel-certified state) (:repo args)))
        {:branch :true
         :effects [[:commit {:repo (:repo args) :mode (:mode args :commit)}]]
         :state' state}
        ;; The hazard gate: acting on an unfelt target is a typed refusal.
+       ;; A nil/missing repository is never feel-certified (witness defect 1).
        {:branch :false
         :effects [[:refusal {:record/type :inbox-zero/refusal
                              :reason :zap-without-feel
                              :repo (:repo args)}]]
         :state' state}))
+
+   :compare-move
+   ;; Two-wire: compare the top of the move stack to the argued move.
+   ;; A nil argument is the empty-square test: true iff the stack is empty.
+   (fn [state args _inputs]
+     (let [stack (vec (:move-stack state))
+           arg (:move args)
+           match? (if (nil? arg)
+                    (empty? stack)
+                    (and (seq stack) (= (peek stack) arg)))]
+       (assoc (branch (if match? :true :false))
+              :state' state)))
 
    :sing
    ;; Meters only, never prose (SPEC: SING is not evidence; singing a
@@ -223,11 +236,12 @@
 
 (defn verify-trace
   "Replay BOARD against INPUTS with a no-op effect handler and compare the
-  pure trace (chip/verb/branch/digest) and end-reason to the recorded run.
-  The runtime certificate check: identical board + identical inputs =>
-  identical trace."
+  full trace (chip/verb/branch/digest AND effects) plus end-reason to the
+  recorded run. Effects are pure functions of (state, args, inputs), so an
+  altered payload in the recorded trace must fail the comparison — the
+  certificate certifies what was done, not just the route (witness
+  defect 2)."
   [board inputs recorded-run]
-  (let [replayed (run-board board inputs (fn [_] nil))
-        strip (fn [t] (mapv #(dissoc % :effects) t))]
-    (and (= (strip (:trace replayed)) (strip (:trace recorded-run)))
+  (let [replayed (run-board board inputs (fn [_] nil))]
+    (and (= (:trace replayed) (:trace recorded-run))
          (= (:end-reason replayed) (:end-reason recorded-run)))))
