@@ -85,6 +85,50 @@
                  [:components :rung2 :evaluation
                   :recovered-from-misleading-seed?])))))
 
+(deftest selection-proof-input-replays-and-refuses-drift
+  (let [result (live/run-verification
+                {:recall-fn (recall-fixture memories)
+                 :trace-id "selection-proof-input-unit"}
+                live-input)
+        envelope (:selection-proof-input result)
+        rows (:policy-table envelope)
+        recomputed-order
+        (->> rows
+             (sort-by (juxt (comp - #(- (:E_S %)
+                                        (/ (:G_S %) (:temperature envelope))))
+                            :policy-id))
+             (mapv :policy-id))
+        strategic (->> (get-in result [:components :phase7 :shadow-traces])
+                       (filter #(= (:decision-id envelope) (:decision-id %)))
+                       first
+                       (#(assoc % :strategic-policy-ranking
+                                (mapv :policy-id (:ranked-policies %)))))
+        ranked (:ranked-policies strategic)
+        call-proof (fn [rows order]
+                     (live/selection-proof-input
+                      (:candidate-domain result)
+                      (assoc strategic :ranked-policies rows
+                             :strategic-policy-ranking order)
+                      (:selected-policy-id result)))
+        refusal-reason
+        (fn [f]
+          (try (f) nil
+               (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))]
+    (is (= :wm/selection-proof-input-v1 (:schema envelope)))
+    (is (= (:selected-policy-id envelope) (first recomputed-order)))
+    (is (= (mapv :policy-id rows) recomputed-order))
+    (is (= :missing-policy
+           (refusal-reason #(call-proof (pop ranked)
+                                        (mapv :policy-id ranked)))))
+    (is (= :extra-policy
+           (refusal-reason #(call-proof
+                             (conj ranked (assoc (first ranked)
+                                                 :policy-id "pi-s-extra"))
+                             (mapv :policy-id ranked)))))
+    (is (= :policy-order-mutation
+           (refusal-reason #(call-proof (vec (reverse ranked))
+                                        (mapv :policy-id ranked)))))))
+
 (deftest cache-gated-selection-becomes-machine-authorized
   (let [verified
         (live/run-verification

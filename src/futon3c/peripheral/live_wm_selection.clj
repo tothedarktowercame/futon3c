@@ -14,6 +14,7 @@
             [futon3c.peripheral.strategic-policies :as policies]))
 
 (def algorithm :live-wm-selection/reason-bearing-v1)
+(def selection-proof-input-revision 1)
 (def operator-decision-evidence-id
   "6e6f56a1-b9d7-4f83-928f-3a211ef890a0")
 (def rollback-boundary "e74c7e7")
@@ -48,6 +49,78 @@
       :elapsed-ms (get-in step [:result :recalls 0 :elapsed-ms])
       :audit (get-in step [:result :recalls 0 :audit])})
    (:steps outer)))
+
+(defn selection-proof-input
+  "Construct the exact replay envelope for one certified selection.
+
+   A selection whose proof input cannot be constructed is not a certified
+   selection: missing/extra policy rows, order drift, incomplete numeric inputs,
+   or a selected id outside the ranked table refuse here rather than returning
+   an uncheckable success. This function only projects values already used by
+   the selector; it does not rank or change the selected policy."
+  [candidate-domain strategic selected-policy-id]
+  (let [ranked (:ranked-policies strategic)
+        expected-order (:strategic-policy-ranking strategic)
+        ;; run-verification adds the independently projected order before this
+        ;; constructor is called; tests pass it explicitly to commission drift.
+        actual-order (mapv :policy-id ranked)
+        missing-policy-ids (vec (remove (set actual-order) expected-order))
+        extra-policy-ids (vec (remove (set expected-order) actual-order))
+        refuse! (fn [reason data]
+                  (throw (ex-info "selection proof input is incomplete"
+                                  (merge {:refusal :selection-proof-input-incomplete
+                                          :reason reason}
+                                         data))))
+        policy-table
+        (mapv (fn [policy]
+                (let [e-s (get-in policy [:e-s :log-probability])
+                      g-s (get-in policy [:predicted-g-s :value])
+                      log-potential (:log-shadow-potential policy)
+                      probability (:shadow-probability policy)
+                      row {:policy-id (:policy-id policy)
+                           :mission-ids (:mission-ids policy)
+                           :E_S e-s
+                           :G_S g-s
+                           :log-shadow-potential log-potential
+                           :shadow-probability probability
+                           :hard-support (:hard-support policy)
+                           :provenance (:provenance policy)}]
+                  (when-not (and (string? (:policy-id row))
+                                 (vector? (:mission-ids row))
+                                 (seq (:mission-ids row))
+                                 (every? #(and (number? %)
+                                               (Double/isFinite (double %)))
+                                         [e-s g-s log-potential probability])
+                                 (map? (:hard-support row))
+                                 (seq (:provenance row)))
+                    (refuse! :policy-row-incomplete
+                             {:policy-id (:policy-id row)}))
+                  row))
+              ranked)
+        selected-ids (set actual-order)]
+    (when (seq missing-policy-ids)
+      (refuse! :missing-policy {:policy-ids missing-policy-ids}))
+    (when (seq extra-policy-ids)
+      (refuse! :extra-policy {:policy-ids extra-policy-ids}))
+    (when-not (= expected-order actual-order)
+      (refuse! :policy-order-mutation
+               {:expected expected-order :observed actual-order}))
+    (when-not (contains? selected-ids selected-policy-id)
+      (refuse! :selected-policy-not-in-table
+               {:selected-policy-id selected-policy-id}))
+    (when-not (= selected-policy-id (first actual-order))
+      (refuse! :selected-policy-not-ranked-head
+               {:selected-policy-id selected-policy-id
+                :ranked-head (first actual-order)}))
+    {:schema :wm/selection-proof-input-v1
+     :algorithm/revision {:name algorithm
+                          :revision selection-proof-input-revision}
+     :decision-id (:decision-id strategic)
+     :temperature (:temperature strategic)
+     :candidate-domain candidate-domain
+     :policy-table policy-table
+     :tie-break :ascending-policy-id
+     :selected-policy-id selected-policy-id}))
 
 (defn run-verification
   "Run Phase 5-7 from the ordinary live WM recall seam.
@@ -125,10 +198,14 @@
         (candidate-ranking
          (get-in phase6-judgement [:rankings :current-additive]))
         phase7-result (policies/run-shadow-window outer phase7)
-        strategic
+        strategic0
         (trace-by-id (:shadow-traces phase7-result)
                      strategic-decision-id :decision-id)
-        selected (first (:ranked-policies strategic))
+        selected (first (:ranked-policies strategic0))
+        strategic (assoc strategic0 :strategic-policy-ranking
+                         (mapv :policy-id (:ranked-policies strategic0)))
+        proof-input (selection-proof-input candidate-domain strategic
+                                           (:policy-id selected))
         fixed-ranking
         (get-in checkpoint [:retrieval-checkpoint :control-ranking])
         typed-ranking
@@ -167,6 +244,7 @@
      :strategic-policy-ranking
      (mapv :policy-id (:ranked-policies strategic))
      :selected-policy-id (:policy-id selected)
+     :selection-proof-input proof-input
      :selected-mission-ids (:mission-ids selected)
      :selected-memory-ids (:memory-ids selected)
      :selected-policy
