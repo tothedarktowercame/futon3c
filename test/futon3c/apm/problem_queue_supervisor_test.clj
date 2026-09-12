@@ -965,3 +965,31 @@
                             :validation/evidence ["/evidence"]})]
       (is (:ok released))
       (is (= :paused (get-in released [:state :status]))))))
+
+(deftest decommission-preserves-proof-history-and-prevents-further-work
+  (let [{:keys [providers state calls]} (harness)]
+    (sut/tick! providers)
+    (let [before @state
+          receipt {:actor "operator" :archive {:queue/state-id (:state/id before)
+                                               :path "/archive/queue.edn"
+                                               :sha256 (apply str (repeat 64 "a"))}
+                   :quiescence {:coordinator/enabled? false :tick-claim nil
+                                :active-job-ids [] :registered-frame-agent-ids []}}
+          result (sut/decommission before receipt)]
+      (is (:ok result))
+      (is (= (:completed before) (get-in result [:state :completed])))
+      (is (= (:parked before) (get-in result [:state :parked])))
+      (is (nil? (get-in result [:state :active])))
+      (is (sut/valid-state? (:state result)))
+      (reset! state (:state result))
+      (reset! calls [])
+      (is (= :decommissioned (:pause/reason (sut/tick! providers))))
+      (is (empty? @calls))
+      (is (false? (:ok (sut/resume-paused @state))))
+      (doseq [bad [(assoc-in receipt [:archive :queue/state-id] "stale")
+                   (assoc-in receipt [:quiescence :coordinator/enabled?] true)
+                   (assoc-in receipt [:quiescence :tick-claim] {:id "tick"})
+                   (assoc-in receipt [:quiescence :active-job-ids] ["job"])
+                   (assoc-in receipt [:quiescence :registered-frame-agent-ids] ["seat"])
+                   (update receipt :quiescence dissoc :tick-claim)]]
+        (is (false? (:ok (sut/decommission before bad))))))))

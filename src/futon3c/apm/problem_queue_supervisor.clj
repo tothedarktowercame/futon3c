@@ -184,6 +184,36 @@
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
 
+(defn decommission
+  "Trusted operator retirement of an entire quiescent queue, not a proof result.
+  Archive the exact prior queue first. Unfinished frames remain in that archive;
+  this transition creates no completion receipt and cannot mint a successor."
+  [state {:keys [archive quiescence actor] :as receipt}]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (= :decommissioned (:status state))
+    {:ok false :error/code :problem-queue-already-decommissioned}
+    (or (:store-read/hold state)
+        (some #(= :awaiting-decision (:decision/status %)) (:parked state)))
+    {:ok false :error/code :problem-queue-unresolved-obligations}
+    (not (and (= (:state/id state) (:queue/state-id archive))
+              (string? (:path archive)) (seq (:path archive))
+              (string? (:sha256 archive))
+              (re-matches #"[0-9a-f]{64}" (:sha256 archive))
+              (string? actor) (seq actor)
+              (= #{:coordinator/enabled? :tick-claim :active-job-ids :registered-frame-agent-ids}
+                 (set (keys quiescence)))
+              (false? (:coordinator/enabled? quiescence))
+              (nil? (:tick-claim quiescence))
+              (= [] (:active-job-ids quiescence))
+              (= [] (:registered-frame-agent-ids quiescence))))
+    {:ok false :error/code :problem-queue-decommission-evidence-invalid}
+    :else
+    {:ok true :state (addressed (assoc state :status :decommissioned
+                                      :active nil :resumption-queue []
+                                      :decommission/receipt receipt))}))
+
 (defn resume-parked-frames
   "Trusted operator re-entry at a quiescent queue boundary. Schedules preserved
   phase drivers without certifying phases or resetting retry budgets. Previously
@@ -724,6 +754,7 @@
         initial (or (state-provider) (initial-state plan))
         decision-sync (when (and (:ok plan-check)
                                  (valid-state? initial)
+                                 (not= :decommissioned (:status initial))
                                  (= (:queue/id plan) (:queue/id initial)))
                         (reconcile-decisions! initial providers))
         state (or (:state decision-sync) initial)]
@@ -738,6 +769,8 @@
       (not= (:queue/id plan) (:queue/id state))
       {:ok false :error/code :problem-queue-state-plan-mismatch}
       (and decision-sync (not (:ok decision-sync))) decision-sync
+      (= :decommissioned (:status state))
+      {:ok true :status :batch-paused :pause/reason :decommissioned :state state}
       (= :complete (:status state))
       {:ok true :status :batch-complete :state state}
       (:store-read/hold state)
