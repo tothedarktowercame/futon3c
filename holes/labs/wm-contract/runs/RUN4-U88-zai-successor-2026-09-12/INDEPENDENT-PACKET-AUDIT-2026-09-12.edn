@@ -1,0 +1,71 @@
+{:result :pass,
+ :items
+ {1 :pass,
+  2 :pass,
+  3 :pass,
+  4 :pass-retained-installer-to-durable-evidence,
+  5 :pass},
+ :boundary
+ "No live JVM config capture; installer parsed, never executed. No POST, successor root access, dispatch or mutation.",
+ :historical-link
+ {:repair-id
+  "repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch",
+  :verification-id
+  "repair-ea1-artifact-binding-revalidation-20260912-v1",
+  :verification-attempt
+  {:kind :runner-execution,
+   :id
+   "ea1-4dce4ed5ed9b99e6664f05eb8c821b141cc238f3572fd845310a4a4e0a17874c--attempt-001"},
+  :verification-cohort
+  {:preregistration
+   "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/authority/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/cohort.edn",
+   :data-root "/home/joe/run4/ea1-admission-20260912-v2/cohort",
+   :cohort-id :run4-ea1-artifact-binding-admission-20260912-v2,
+   :sha256
+   "ef390f48fbdc834302fece98a16eb9d79d59741646c44cdc00dc789e32de90c5"},
+  :historical-evidence
+  {:roots
+   {:repair-root "/home/joe/code/futon2/data/wm-repair-obligations",
+    :projections
+    "/home/joe/run4/ea1-admission-20260912-v2/projections",
+    :run-records
+    "/home/joe/run4/ea1-admission-20260912-v2/run-records",
+    :admission "/home/joe/run4/ea1-admission-20260912-v2/controller",
+    :bindings "/home/joe/run4/ea1-admission-20260912-v2/bindings",
+    :cohort-preregistration
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/authority/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/cohort.edn",
+    :cohort-data-root
+    "/home/joe/run4/ea1-admission-20260912-v2/cohort"}},
+  :successor
+  {:series-id "run4-u88-zai-successor-20260912-v1",
+   :trial-id "M-u88-contextual-preferences",
+   :attempt-id "u88-zai-successor-20260912-attempt-001"}},
+ :hashes
+ {"/home/joe/code/futon2/data/wm-repair-obligations/findings/repair-ea1-6a0de60a159e907dc51bb6b6b564330ec2a7f330b5bdfbf0f3dd06145fc44a12--attempt-001-artifact-binding-mismatch.edn"
+  "7e9a8d45743cf759161f70b1d2a709e5866057dcd6387eb6e590c8759ca91048",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/src/futon2/aif/mission_registry.clj"
+  "07822ed0667f268350fc3b9d921adce4d0d8c78276463b3bf03e93f5a01b89da",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/server-config.disabled.edn"
+  "c9645edca70b59e817b1bbd09a87054ee7c4e6495806992ee2d4f497afeaed93",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/cohort.edn"
+  "2794a8699c133e34a3a4c387a789cc625d353d498327bd5466b9982163a42e21",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/run-config.edn"
+  "7005dafb0467024ccf0d624ab2b370ed0d3a74c3629776ad97df597f3f5b5ee8",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/SESSION-IAD-feedback-interpretation-2026-09-10.md"
+  "47981b01c1ebbb5efa822ba9c7479e312323cd113c1bdd1f40cc61715678356d",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/task-pin.edn"
+  "4c0feb4a72ef5488f34de8827af7cad23272906725d8b37eba3e9e44746152ce",
+  "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-ea1-artifact-binding-revalidation-2026-09-12/offline-verification/repair-ea1-artifact-binding-revalidation-20260912-v1.verification.edn"
+  "81f671b14dd21168bb38b6a4190302cc55e7bc5aa3875c5189071371cc770b65",
+  "/tmp/wm-install-succ.clj"
+  "ef3f80dc9babfb85e2f7c2c5cea1d2e431b53ea78215f95b4f71a2d9cb6736b7",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/runs/RUN4-preparation-2026-09-10/U88-PREPARATION-BASIS.json"
+  "64db034c9ae02282a169337d1683fc707abe2e4f05ddbd1e198b48b36778545c",
+  "/home/joe/code/futon3c/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/authority/holes/labs/wm-contract/runs/RUN4-repair-ea1-admission-2026-09-12-v2/cohort.edn"
+  "ef390f48fbdc834302fece98a16eb9d79d59741646c44cdc00dc789e32de90c5",
+  "/home/joe/run4/ea1-admission-20260912-v2/projections/run4-historical-projection-wm-click-3f1ad6ae-bbd9-4efe-9947-3cc2af5d14a4.edn"
+  "35ca7e0db3ef0eac5f734bdea6295aac568d0f7bf0e925cf8bbf7cca68cfb982",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/missions/M-u88-contextual-preferences.md"
+  "8212ec999123468aa10a8bfc657028a0d06ec3c51be7b97a0bcb517f4040c146",
+  "holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/authority/holes/labs/wm-contract/runs/RUN4-U88-zai-successor-2026-09-12/series-pin.edn"
+  "bd78b6de0ef7d00c613bb2a9e3797a9914abfb053c6dd5d9df3c0df2f8c3006e"}}
