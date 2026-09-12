@@ -1308,6 +1308,42 @@
                            [:entries (:turn-id first-response) :status])))
             @(:waiter first-turn)))))))
 
+(deftest agent-compact-dedupes-running-compact-and-returns-clean-outcome
+  ;; pop-next! takes an entry off :queues as it starts, so a POST while a
+  ;; compact is executing must still find it (claude-16 review, 2026-09-12).
+  (with-isolated-turn-queue
+    (fn []
+      (let [handler (make-handler)
+            aid "claude-compact-running"
+            url (str "/api/alpha/agents/" aid "/compact")
+            started (promise)
+            release (promise)]
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [_prompt session-id]
+                                        (deliver started true)
+                                        @release
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "sid-running"})]
+          (let [first-post (future (post handler url "{}"))]
+            (is (true? (deref started 2000 false)))
+            (let [second-response (parse-body (post handler url "{}"))
+                  running-id (:turn-id second-response)]
+              (is (true? (:deduped second-response)))
+              (is (= "compact-control"
+                     (get-in (turn-queue/snapshot) [:entries running-id :from])))
+              (is (empty? (get-in (turn-queue/snapshot) [:queues aid])))
+              (deliver release true)
+              (let [response (deref first-post 2000 nil)
+                    body (parse-body response)]
+                (is (= 200 (:status response)))
+                (is (= "success" (:compact-result body)))
+                (is (= "cold" (:path body)))
+                ;; mark-terminal! decorates the waiter value with the queue entry.
+                (is (not-any? #(.contains (str %) "turn-queue") (keys body)))))))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================

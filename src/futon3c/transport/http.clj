@@ -6346,16 +6346,24 @@
     (or (contains? (set (:draining state)) aid)
         (pos? (count (get-in state [:queues aid] []))))))
 
+(defonce ^:private !running-compacts
+  ;; agent-id -> turn-id of the compact executing now. pop-next! takes an entry
+  ;; off :queues as it starts, so the queue alone cannot see a running compact
+  ;; and a POST during one would queue a redundant second compaction.
+  (atom {}))
+
 (defn- pending-compact-entry [agent-id]
   (let [state (turn-queue/snapshot)
         aid (str agent-id)]
-    (some (fn [id]
-            (let [entry (get-in state [:entries id])]
-              (when (and (= "compact-control" (:from entry))
-                         (= "control" (:surface entry))
-                         (= "/compact" (:prompt entry)))
-                entry)))
-          (get-in state [:queues aid] []))))
+    (or (some (fn [id]
+                (let [entry (get-in state [:entries id])]
+                  (when (and (= "compact-control" (:from entry))
+                             (= "control" (:surface entry))
+                             (= "/compact" (:prompt entry)))
+                    entry)))
+              (get-in state [:queues aid] []))
+        (when-let [id (get @!running-compacts aid)]
+          {:id id}))))
 
 (defn- compact-agent-busy? [agent agent-id]
   ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
@@ -6410,18 +6418,22 @@
       (:compact-witness result) (assoc :compact-witness (:compact-witness result)))))
 
 (defn- perform-queued-compact! [agent-id entry]
-  (binding [turn-queue/*drained-by-outer* true
-            turn-queue/*turn-id* (:id entry)]
-    (let [warm-result (agent-pouch/compact-pouch! agent-id {:wait? true})]
-      (if (not= "no warm pouch" (:error warm-result))
-        (assoc warm-result :path "warm")
-        (let [agent (reg/get-agent agent-id)
-              invoke-fn (:agent/invoke-fn agent)]
-          (if (fn? invoke-fn)
-            (let [start-ms (System/currentTimeMillis)]
-              (cold-compact-result
-               (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
-            {:ok false :error "no local agent" :path "cold"}))))))
+  (swap! !running-compacts assoc (str agent-id) (:id entry))
+  (try
+    (binding [turn-queue/*drained-by-outer* true
+              turn-queue/*turn-id* (:id entry)]
+      (let [warm-result (agent-pouch/compact-pouch! agent-id {:wait? true})]
+        (if (not= "no warm pouch" (:error warm-result))
+          (assoc warm-result :path "warm")
+          (let [agent (reg/get-agent agent-id)
+                invoke-fn (:agent/invoke-fn agent)]
+            (if (fn? invoke-fn)
+              (let [start-ms (System/currentTimeMillis)]
+                (cold-compact-result
+                 (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
+              {:ok false :error "no local agent" :path "cold"})))))
+    (finally
+      (swap! !running-compacts dissoc (str agent-id)))))
 
 (defn- enqueue-compact! [agent-id]
   (let [turn-id (str "compact-" (UUID/randomUUID))]
@@ -6473,7 +6485,11 @@
             (if (= ::compact-timeout result)
               (json-response 202 {:ok false :error "compaction pending"
                                   :turn-id turn-id :path "queued"})
-              (json-response 200 result))))))))
+              ;; mark-terminal! decorates the waiter value with the whole queue
+              ;; entry; the client gets the compact outcome only.
+              (json-response 200 (dissoc result :turn-queue/status
+                                         :turn-queue/entry
+                                         :turn-queue/reply-route)))))))))
 
 ;; =============================================================================
 ;; CYDER process endpoints
