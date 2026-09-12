@@ -6417,23 +6417,48 @@
              :path "cold"}
       (:compact-witness result) (assoc :compact-witness (:compact-witness result)))))
 
+(def ^:private compact-heartbeat-ms
+  ;; voxterm counts an agent chip's activity as live for 120 s (server.py); a
+  ;; compaction of a large session runs 2-3 min, so a single stamp at the start
+  ;; would blank the chip partway through.
+  30000)
+
+(defn- stamp-compacting! [aid]
+  (try (reg/update-invoke-activity! aid "compacting context")
+       (catch Throwable _ nil)))
+
 (defn- perform-queued-compact! [agent-id entry]
-  (swap! !running-compacts assoc (str agent-id) (:id entry))
-  (try
-    (binding [turn-queue/*drained-by-outer* true
-              turn-queue/*turn-id* (:id entry)]
-      (let [warm-result (agent-pouch/compact-pouch! agent-id {:wait? true})]
-        (if (not= "no warm pouch" (:error warm-result))
-          (assoc warm-result :path "warm")
-          (let [agent (reg/get-agent agent-id)
-                invoke-fn (:agent/invoke-fn agent)]
-            (if (fn? invoke-fn)
-              (let [start-ms (System/currentTimeMillis)]
-                (cold-compact-result
-                 (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
-              {:ok false :error "no local agent" :path "cold"})))))
-    (finally
-      (swap! !running-compacts dissoc (str agent-id)))))
+  ;; A compaction bypasses reg/invoke-agent!, so the roster read :idle with no
+  ;; activity for its whole run and voxterm's chip went blank; a park resume
+  ;; queued behind one looked lost (Joe, 2026-09-12).
+  (let [aid (str agent-id)
+        done (promise)]
+    (swap! !running-compacts assoc aid (:id entry))
+    (stamp-compacting! aid)
+    (let [heartbeat (future
+                      (loop []
+                        (when (= ::beat (deref done compact-heartbeat-ms ::beat))
+                          (stamp-compacting! aid)
+                          (recur))))]
+      (try
+        (binding [turn-queue/*drained-by-outer* true
+                  turn-queue/*turn-id* (:id entry)]
+          (let [warm-result (agent-pouch/compact-pouch! aid {:wait? true})]
+            (if (not= "no warm pouch" (:error warm-result))
+              (assoc warm-result :path "warm")
+              (let [agent (reg/get-agent aid)
+                    invoke-fn (:agent/invoke-fn agent)]
+                (if (fn? invoke-fn)
+                  (let [start-ms (System/currentTimeMillis)]
+                    (cold-compact-result
+                     (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
+                  {:ok false :error "no local agent" :path "cold"})))))
+        (finally
+          ;; Stop the heartbeat before going idle, so no stamp lands after.
+          (deliver done true)
+          (try @heartbeat (catch Throwable _ nil))
+          (try (reg/mark-agent-idle! aid) (catch Throwable _ nil))
+          (swap! !running-compacts dissoc aid))))))
 
 (defn- enqueue-compact! [agent-id]
   (let [turn-id (str "compact-" (UUID/randomUUID))]

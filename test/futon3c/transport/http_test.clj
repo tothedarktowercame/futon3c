@@ -1303,9 +1303,16 @@
                                   [:queues "claude-compact-live-shape"]))))
             (deliver release-first {:result "first done"})
             (is (= ["/compact" "retained-session"] (deref compacted 2000 nil)))
+            ;; The entry turns terminal only after the compact's finally (heartbeat
+            ;; stop, idle reset), so wait for it rather than race it.
             (is (= :processed
-                   (get-in (turn-queue/snapshot)
-                           [:entries (:turn-id first-response) :status])))
+                   (loop [deadline (+ (System/currentTimeMillis) 2000)]
+                     (let [status (get-in (turn-queue/snapshot)
+                                          [:entries (:turn-id first-response) :status])]
+                       (if (or (= :processed status)
+                               (> (System/currentTimeMillis) deadline))
+                         status
+                         (do (Thread/sleep 10) (recur deadline)))))))
             @(:waiter first-turn)))))))
 
 (deftest agent-compact-dedupes-running-compact-and-returns-clean-outcome
@@ -1343,6 +1350,42 @@
                 (is (= "cold" (:path body)))
                 ;; mark-terminal! decorates the waiter value with the queue entry.
                 (is (not-any? #(.contains (str %) "turn-queue") (keys body)))))))))))
+
+(deftest agent-compact-shows-as-activity-while-it-runs
+  ;; voxterm's chip reads roster status + invoke-activity-at on a 120 s window;
+  ;; a compaction must read as activity throughout and end idle (Joe, 2026-09-12).
+  (let [handler (make-handler)
+        calls (atom [])
+        seen-at-invoke (promise)]
+    (with-redefs-fn {#'http/compact-heartbeat-ms 20}
+      (fn []
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/update-invoke-activity! (fn [aid activity]
+                                                    (swap! calls conj [:activity aid activity]))
+                      reg/mark-agent-idle! (fn [aid] (swap! calls conj [:idle aid]) true)
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [_prompt session-id]
+                                        (deliver seen-at-invoke @calls)
+                                        (Thread/sleep 150)
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "sid-chip"
+                                      :running-jobs 0 :queued-jobs 0})
+                      turn-queue/accept-async!
+                      (fn [entry]
+                        (let [waiter (promise)]
+                          (deliver waiter ((:process-fn entry) entry))
+                          {:status :queued :entry entry :waiter waiter}))]
+          (let [response (post handler "/api/alpha/agents/claude-chip/compact" "{}")
+                log @calls]
+            (is (= 200 (:status response)))
+            (is (= [[:activity "claude-chip" "compacting context"]] @seen-at-invoke)
+                "stamped before the compaction starts")
+            (is (<= 2 (count (filter #(= :activity (first %)) log)))
+                "the heartbeat restamps during a long compaction")
+            (is (= [:idle "claude-chip"] (last log)) "ends idle, with no stamp after")
+            (is (= 1 (count (filter #(= :idle (first %)) log))))))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
