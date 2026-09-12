@@ -83,8 +83,8 @@
 (defn- startup-attest!
   "Read the reviewed task/config chain and attest current environment against
   values already captured by loaded consumers. No namespace is loaded here."
-  []
-  (let [template (one-form (slurp template-path))
+  [template-text]
+  (let [template (one-form template-text)
         root (:authority-root template)
         allowlist (into (:source-allowlist template) (:pin-allowlist template))
         read-text (fn [ref]
@@ -115,11 +115,12 @@
               :or {read-template #(slurp template-path)
                    read-secret production-secret
                    admissible? action-admissible
-                   attest! startup-attest!}}]
+                   attest! nil}}]
    (when-not (boolean? enabled?) (refuse :activation-not-boolean))
    (if-not enabled?
      {}
-     (let [resolver (or resolve-mission (mission-resolver))
+     (let [template-text (read-template)
+           resolver (or resolve-mission (mission-resolver))
            dependencies (cond->
                          {:credential read-secret
                           :resolve-mission resolver
@@ -139,7 +140,7 @@
                                  :construction-wiring-authority
                                  construction-wiring-authority))
            config (deployment/materialize
-                   (read-template)
+                   template-text
                    dependencies)]
-       (attest!)
+       ((or attest! #(startup-attest! template-text)))
        config))))
