@@ -17,7 +17,10 @@
     (doseq [name ["controller" "bindings" "projections" "run-records" "recordings" "visibility" "battery" "cohort"]]
       (let [f (io/file root name)] (.mkdirs f) (.setReadable f false false) (.setWritable f false false)
             (.setExecutable f false false) (.setReadable f true true) (.setWritable f true true) (.setExecutable f true true)))
-    (cohort/activate! prereg data-root)
+    (when-not (.isFile (io/file data-root
+                                "run4-f11-production-successor-20260912-v3"
+                                "activation.edn"))
+      (cohort/activate! prereg data-root))
     (let [fragment (boot/materialize true {:read-template #(slurp (str packet "/server-config.disabled.edn"))
                                            :execution-cohort binding :cohort-preflight! cohort/execution-preflight
                                            :construction-wiring-fn (fold/make-port authority)
