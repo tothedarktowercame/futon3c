@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [clojure.edn :as edn]
             [futon3c.wm.run4-deployment-config :as sut]
+            [futon3c.wm.run4-deployment-preflight :as preflight]
             [futon3c.wm.run4-series-service :as service]
             [futon3c.wm.runner-service :as runner]))
 
@@ -39,6 +40,37 @@
                                        :cohort-preflight! preflight))]
     (is (= cohort (get-in c [:run4 :execution-cohort])))
     (is (identical? preflight (get-in c [:run4 :cohort-preflight!])))))
+
+(deftest materializes-authenticated-server-owned-codex-fold-port
+  (let [authority {:schema :wm/codex-fold-authority-v1
+                   :root "/server/fold-authority"
+                   :plan-ref "plan.edn"
+                   :seat "codex-12"
+                   :plan-sha256 (apply str (repeat 64 "a"))
+                   :agency-base "http://127.0.0.1:7070"
+                   :caller "run4-fold"}
+        result {:wiring {:boxes []} :coverage-score-delta -1
+                :policy-holes []}
+        materialize #(with-redefs [preflight/inspect
+                                   (constantly {:sources :current
+                                                :declaration :supported})]
+                       (sut/materialize %1 %2))
+        c (materialize
+           text (assoc deps :construction-wiring-fn (constantly result)
+                            :construction-wiring-authority authority))]
+    (is (= (assoc result :fold/authority authority)
+           ((get-in c [:run4 :construction-wiring-fn]) {:shown []})))
+    (doseq [bad [(dissoc authority :seat)
+                 (assoc authority :seat "zai-5")
+                 (assoc authority :plan-sha256 "")]]
+      (is (= :invalid-deployment-contract
+             (:reason (try
+                        (materialize
+                         text (assoc deps
+                                     :construction-wiring-fn (constantly result)
+                                     :construction-wiring-authority bad))
+                        nil
+                        (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))
 
 (deftest materializes-server-owned-historical-action-authority
   (let [root (.toFile (java.nio.file.Files/createTempDirectory

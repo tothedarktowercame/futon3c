@@ -1,0 +1,3 @@
+{:schema :wm/codex-fold-plan-v1
+ :prompt-prefix "Produce the enriched V1 fold output for this RUN4 construction. Return exactly one EDN map with :wiring {:boxes [...]}, numeric :coverage-score-delta, and :policy-holes [...]. Each box must have a unique keyword :id, nonblank :role, :fits-pattern from the construction's shown cascade, :warrant-kind in #{:pattern :analogy :deduction}, a nonempty :conditions vector of typed condition maps, and optional obligation-id'd :hole. Account for every shown cascade pattern through a box or policy hole. A genuine inability may instead return {:fold/refused true :why nonblank-string :refusal/class keyword}."
+}

@@ -14,6 +14,7 @@
 (def cohort-dependency-keys #{:execution-cohort :cohort-preflight!})
 (def historical-dependency-keys #{:historical-action})
 (def successor-dependency-keys #{:historical-successor})
+(def fold-dependency-keys #{:construction-wiring-fn :construction-wiring-authority})
 
 (defn- refuse [reason] (throw (ex-info "RUN4 deployment refused" {:reason reason})))
 (defn- nonblank? [x] (and (string? x) (not (str/blank? x))))
@@ -60,9 +61,11 @@
                     (set (keys dependencies))
                     (into dependency-keys
                           (concat cohort-dependency-keys historical-dependency-keys
-                                  successor-dependency-keys)))
+                                  successor-dependency-keys fold-dependency-keys)))
                    (= (contains? dependencies :execution-cohort)
                       (contains? dependencies :cohort-preflight!))
+                   (= (contains? dependencies :construction-wiring-fn)
+                      (contains? dependencies :construction-wiring-authority))
                    (= :wm/run4-disabled-deployment-template-v1 (:schema t))
                    (false? (:enabled? t))
                    (= "/api/alpha/wm/run4/series/step" (get-in t [:serving :route]))
@@ -81,6 +84,23 @@
                          (catch Throwable _ false)))
                    (or (not (contains? dependencies :historical-successor))
                        (successor-link? (:historical-successor dependencies)))
+                   (or (not (contains? dependencies :construction-wiring-fn))
+                       (and (fn? (:construction-wiring-fn dependencies))
+                            (map? (:construction-wiring-authority dependencies))
+                            (= #{:schema :root :plan-ref :plan-sha256
+                                 :seat :agency-base :caller}
+                               (set (keys (:construction-wiring-authority
+                                          dependencies))))
+                            (= :wm/codex-fold-authority-v1
+                               (get-in dependencies [:construction-wiring-authority
+                                                     :schema]))
+                            (nonblank? (get-in dependencies
+                                              [:construction-wiring-authority :seat]))
+                            (str/starts-with?
+                             (get-in dependencies [:construction-wiring-authority :seat])
+                             "codex-")
+                            (nonblank? (get-in dependencies
+                                              [:construction-wiring-authority :plan-sha256]))))
                    (boolean? (:enable? dependencies)))
       (refuse :invalid-deployment-contract))
     (let [facts (preflight/inspect template-text)
@@ -119,4 +139,13 @@
          (assoc :historical-action (:historical-action dependencies))
          (contains? dependencies :historical-successor)
          (assoc :historical-successor (:historical-successor dependencies))
+         (contains? dependencies :construction-wiring-fn)
+         (assoc :construction-wiring-fn
+                (let [fold-fn (:construction-wiring-fn dependencies)
+                      authority (:construction-wiring-authority dependencies)]
+                  (fn [construction]
+                    (let [result (fold-fn construction)]
+                      (if (map? result)
+                        (assoc result :fold/authority authority)
+                        result)))))
          enabled? (assoc :bearer-token token))})))

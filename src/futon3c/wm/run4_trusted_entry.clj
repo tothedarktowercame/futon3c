@@ -164,6 +164,7 @@
       :else
       {:ok true
        :opts (merge runner-opts (:casting cfg)
+                    (select-keys cfg [:construction-wiring-fn])
                     (when-let [historical (:historical-action cfg)]
                       (historical-action/runner-ports historical))
                     {:run4-task-pin-text pin-text
