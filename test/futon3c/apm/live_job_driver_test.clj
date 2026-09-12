@@ -1941,6 +1941,160 @@
       (is (some? (get-in result [:state :terminal-collection :evidence])))
       (is (some #(= [:persist :live-job-dispatched] %) @calls)))))
 
+(def acceptance-ordering-replay-provenance
+  {:f177
+   {:pin/source :durable-queue-record
+    :source/path "data/apm-campaigns/jit-all-open-v3/queue-state.edn"
+    :source/sha256
+    "bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550"}
+   :f194
+   {:pin/source :adjudication-record
+    :source/path "holes/labs/M-apm-demonstration/frame-park-decisions.edn"
+    :source/sha256
+    "5d67984e0832e5dffca56dad4d9861a527818bfc7bbcadb5bc15c79b616df6b8"}
+   :f218
+   {:pin/source :durable-role-state-and-technote
+    :role-state/path
+    "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f218/live/guide-intervention-1.edn"
+    :role-state/sha256
+    "b269f451e19af6be2124b3c155dbdd1e61b08acab6dcaaec96e4db9cf9ae2392"
+    :technote/path "holes/technotes/TN-F218-watchdog-recovery-2026-09-11.md"
+    :technote/sha256
+    "018fefddfded0571e6e3c09d8140c2a4bdbfdff9058622a2d8f8199f3f6302a4"}})
+
+(def f177-cancel-pin
+  {:ok false
+   :job-id
+   "apm-role-bb0c48a43932105733502b48fc07122ced1331b5db2078e355df683b531e9d81"
+   :response
+   {:ok false :error "invoke-job-already-terminal"
+    :job-id
+    "apm-role-bb0c48a43932105733502b48fc07122ced1331b5db2078e355df683b531e9d81"
+    :state "done" :http/status 409}})
+
+(def f218-accepted-pin
+  {:job-id
+   "apm-role-ec1ea5119e971343294e3f1ded6ff94af6ed67020ad185e3198ab7325f3a6df9"
+   :submission/id
+   "2445c6727e603f2b2aed7f66342c5d0ed1886462cf9a092ebd4334a2d6ff6c4b"
+   :collection/id
+   "7abf27551c249efc7dcf504677ecd117ddaf2c530b85e662ad1b5525fe0f8f8d"
+   :cancelled-at "2026-09-10T22:48:41Z"})
+
+(defn- drive-production-cancellation
+  [{:keys [job-id agent-id frame-id phase submission cancel-result
+           observed-state replay-state]}]
+  (let [request {:dispatch/id (str "dispatch-" frame-id)
+                 :agent-id agent-id :frame-id frame-id :problem-id "p"
+                 :phase phase :role (:role (:authority submission))}
+        initial {:state/type :live-job-dispatched :request request
+                 :ticket {:job-id job-id} :activation/accepted? true}
+        current-job (atom {:job-id job-id :agent-id agent-id
+                           :session-id "retained-session"
+                           :state observed-state})
+        submission-now (atom submission)
+        persisted (atom [])
+        calls (atom [])
+        fx (assoc (effects calls current-job)
+                  :request request
+                  :persist-fn (fn [state]
+                                (swap! persisted conj state)
+                                {:ok true})
+                  :cancel-fn (fn [_]
+                               (swap! calls conj :cancel)
+                               cancel-result)
+                  :terminal-submission-provider
+                  (fn [& _] @submission-now))
+        collected (sut/drive! (assoc fx :state initial))
+        _ (reset! submission-now nil)
+        _ (reset! current-job
+                  {:job-id job-id :agent-id agent-id :state replay-state})
+        certified (sut/drive! (assoc fx :state (:state collected)))]
+    {:collected collected :certified certified
+     :persisted @persisted :calls @calls}))
+
+(deftest f177-done-during-cancel-persists-one-accepted-collection
+  (let [job-id (:job-id f177-cancel-pin)
+        submission {:submission/id "f177-authenticated-submission"
+                    :authority {:job-id job-id :role :student
+                                :agent-id "f177-student"}}
+        {:keys [collected persisted]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f177-student" :frame-id "f177"
+          :phase :student-attempt-1 :submission submission
+          ;; The durable fault pins the cancel response's terminal state. The
+          ;; preceding poll must still be live for the real cancel branch to run.
+          :observed-state :running :replay-state :done
+          :cancel-result f177-cancel-pin})]
+    (is (= :durable-queue-record
+           (get-in acceptance-ordering-replay-provenance [:f177 :pin/source])))
+    (is (= :terminal-collected (:status collected)))
+    (is (= :already-terminal
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= 1 (count (distinct
+                     (keep #(get-in % [:terminal-collection
+                                       :evidence :collection/id])
+                           persisted)))))
+    (is (not= :live-job-wrapper-reconciliation-failed
+              (:error/code collected)))))
+
+(deftest f194-running-to-409-replay-certifies-idempotently
+  (let [job-id (:job-id f194-cancel-result)
+        ;; The adjudication record states that this exact Guide job's
+        ;; authenticated submission was already held; it does not embed the
+        ;; submission payload, so this is explicitly an adjudication pin.
+        submission {:submission/id "f194-authenticated-guide-submission"
+                    :authority {:job-id job-id :role :guide
+                                :agent-id "f194-guide"}}
+        {:keys [collected certified persisted calls]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f194-guide" :frame-id "f194"
+          :phase :guide-intervention-2 :submission submission
+          :observed-state :running :replay-state :done
+          :cancel-result f194-cancel-result})
+        collection (get-in collected [:state :terminal-collection])]
+    (is (= :adjudication-record
+           (get-in acceptance-ordering-replay-provenance [:f194 :pin/source])))
+    (is (= :already-terminal
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= :certified (:status certified)))
+    (is (= collection (get-in certified [:state :terminal-collection])))
+    (is (= 1 (count (distinct
+                     (keep #(get-in % [:terminal-collection
+                                       :evidence :collection/id])
+                           persisted)))))
+    (is (= 1 (count (filter #{:cancel} calls))))))
+
+(deftest f218-cancelled-wrapper-cannot-negate-its-accepted-guide-collection
+  (let [job-id (:job-id f218-accepted-pin)
+        submission {:submission/id (:submission/id f218-accepted-pin)
+                    :authority {:job-id job-id :role :guide
+                                :agent-id "f218-guide"}}
+        cancel-result
+        {:ok true :job-id job-id
+         :response {:ok true :job-id job-id :agent-id "f218-guide"
+                    :state "cancelled" :http/status 200 :finalized true}}
+        {:keys [collected certified]}
+        (drive-production-cancellation
+         {:job-id job-id :agent-id "f218-guide" :frame-id "f218"
+          :phase :guide-intervention-1 :submission submission
+          :observed-state :running :replay-state :cancelled
+          :cancel-result cancel-result})]
+    (is (= :durable-role-state-and-technote
+           (get-in acceptance-ordering-replay-provenance [:f218 :pin/source])))
+    (is (= :cancelled
+           (get-in collected [:state :wrapper/reconciliation
+                              :cancellation/disposition])))
+    (is (= :delivered-by-submission
+           (get-in collected [:collection :collection/disposition])))
+    (is (= :certified (:status certified)))
+    (is (= (:submission/id f218-accepted-pin)
+           (get-in certified [:state :terminal-collection
+                              :submission :submission/id])))
+    (is (not= :live-job-terminal-failure (:error/code certified)))))
+
 (deftest a-genuine-cancel-failure-still-parks-the-frame
   (let [{:keys [result]}
         (f194-shaped-collection
