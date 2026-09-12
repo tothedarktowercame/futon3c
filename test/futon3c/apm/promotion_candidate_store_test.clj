@@ -339,6 +339,45 @@
     (is (= :not-obtained (:transport/evidence result)))
     (is (#'live-promotion/transport-failure? result))))
 
+(deftest review-input-futon1b-read-failures-are-typed-transport-outcomes
+  (let [candidate {:memory-id "m" :content-digest "digest"}
+        failure (fn [message code outcome]
+                  (ex-info message
+                           {:error/code code
+                            :error/component :transport
+                            :transport/operation :read
+                            :transport/acquired-outcome outcome}))
+        timeout (sut/review-inputs
+                 [candidate]
+                 (fn [_] (throw (failure "futon1b read timed out"
+                                         :futon1b-read-timeout :timeout)))
+                 "http://substrate")
+        unreachable (sut/review-inputs
+                     [candidate]
+                     (fn [_] (throw (failure "futon1b unreachable"
+                                             :futon1b-unreachable :unavailable)))
+                     "http://substrate")]
+    (is (= {:error/code :futon1b-read-timeout
+            :transport/acquired-outcome :timeout
+            :memory-id "m"
+            :exception/class "clojure.lang.ExceptionInfo"
+            :exception/message "futon1b read timed out"}
+           (select-keys timeout [:error/code :transport/acquired-outcome
+                                 :memory-id :exception/class
+                                 :exception/message])))
+    (is (= {:error/code :futon1b-unreachable
+            :transport/acquired-outcome :unavailable
+            :memory-id "m"
+            :exception/class "clojure.lang.ExceptionInfo"
+            :exception/message "futon1b unreachable"}
+           (select-keys unreachable [:error/code :transport/acquired-outcome
+                                     :memory-id :exception/class
+                                     :exception/message])))
+    (is (every? #(and (= :transport (:error/component %))
+                      (= :not-obtained (:transport/evidence %))
+                      (#'live-promotion/transport-failure? %))
+                [timeout unreachable]))))
+
 (deftest review-input-nontransport-exception-still-escapes
   (is (thrown-with-msg?
        IllegalStateException #"programmer fault"
@@ -346,6 +385,16 @@
                           (fn [_] (throw (IllegalStateException.
                                          "programmer fault")))
                           "http://substrate"))))
+
+(deftest review-input-nontransport-ex-info-still-escapes
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo #"projection invalid"
+       (sut/review-inputs
+        [{:memory-id "m" :content-digest "digest"}]
+        (fn [_]
+          (throw (ex-info "projection invalid"
+                          {:error/code :promotion-review-projection-invalid})))
+        "http://substrate"))))
 
 ;; A pair written before the atomic route existed can be half-present: the
 ;; evidence committed and the edge did not. The atomic route refuses that

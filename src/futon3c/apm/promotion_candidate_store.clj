@@ -24,16 +24,34 @@
   (try
     {:ok true :entry (fetch-entry memory-id)}
     (catch Throwable error
-      (if-let [timeout (timeout-throwable error)]
-        {:ok false
-         :error/code :promotion-review-candidate-evidence-timeout
-         :error/component :transport
-         :transport/acquired-outcome :timeout
-         :transport/evidence :not-obtained
-         :memory-id memory-id
-         :exception/class (.getName (class timeout))
-         :exception/message (.getMessage timeout)}
-        (throw error)))))
+      (let [data (ex-data error)
+            typed-read-failure?
+            (and (= :transport (:error/component data))
+                 (= :read (:transport/operation data)))
+            timeout (timeout-throwable error)]
+        (cond
+          typed-read-failure?
+          {:ok false
+           :error/code (:error/code data)
+           :error/component :transport
+           :transport/acquired-outcome (:transport/acquired-outcome data)
+           :transport/evidence :not-obtained
+           :memory-id memory-id
+           :exception/class (.getName (class error))
+           :exception/message (.getMessage error)}
+
+          timeout
+          {:ok false
+           :error/code :promotion-review-candidate-evidence-timeout
+           :error/component :transport
+           :transport/acquired-outcome :timeout
+           :transport/evidence :not-obtained
+           :memory-id memory-id
+           :exception/class (.getName (class timeout))
+           :exception/message (.getMessage timeout)}
+
+          :else
+          (throw error))))))
 
 (defn- evidence-body [candidate]
   (select-keys candidate [:name :hook :kind :body :why :how-to-apply
