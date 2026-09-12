@@ -212,6 +212,11 @@
    (let [chips (into {} (map (juxt :chip/id identity) (:chips board)))
          digest (board-digest board)
          vd (verbs-digest board)
+         ;; capture the registry ONCE at run start: execution dereferences
+         ;; this snapshot, never the atom per step, so a mid-run registry
+         ;; swap cannot change behavior inside a run (codex-17 whistle,
+         ;; 2026-09-12). vd is computed from the same snapshot.
+         registry @verb-registry
          fuel0 (long (get (:constants board) :fuel-budget 32))
          result (loop [id (:entry board)
                        state {:fuel fuel0 :damage 0 :range-finder nil}
@@ -234,7 +239,7 @@
                       (let [chip (get chips id)
                             verb (:verb chip)
                             terminal? (contains? terminals verb)
-                            f (or (get @verb-registry verb)
+                            f (or (get registry verb)
                                   (throw (ex-info (str "unknown verb " verb) {:chip id})))
                             result (f (update state :fuel dec)
                                       (:args chip)
