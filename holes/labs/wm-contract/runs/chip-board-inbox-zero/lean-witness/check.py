@@ -38,7 +38,8 @@ assert before == digests(), "Source or retained evidence changed during verifica
 print(lean, end="")
 print(json.dumps({"state": "validated", "scope": "pinned-projection-and-repaired-base-verb-hazard",
                   "matching_lines": 17, "deltas": [0] * 17,
-                  "runtime_certificate_status": "pending",
+                  "runtime_certificate_status": {"status": "witnessed-under-declared-registry",
+                      "scope": "lean-model", "runtime-correspondence": "not-proven"},
                   "blockers": ["mutable-registry-not-bound-by-certificate",
                                "arbitrary-validated-board-can-still-throw"],
                   "input_digest": "retained carrier only; original observation packet absent",

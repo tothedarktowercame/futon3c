@@ -70,11 +70,9 @@
   "Run one sweep cycle under the board. EFFECT-HANDLER performs the
   effects (commit/report/refusal are the caller's I/O). Returns the run map
   plus a runtime certificate: the claim (trace + end-reason), the board
-  digest, and the inputs digest, with :lean/status :pending — validation in
-  DarkTower/WarMachine/ChipBoardWitness validates a named-repository model
-  and pinned readback; repaired base verbs now exclude nil commits and
-  replay compares effects. The mutable verb registry is still not bound by
-  this certificate, so the witness does not validate arbitrary replacements."
+  digest, and the inputs digest. Lean status identifies the completed model
+  witness under declared verb semantics. It does not claim that arbitrary
+  registry functions, this run, or external I/O have been proved in Lean."
   ([inputs effect-handler]
    (let [b (resolve-args inputs)
          run (board/run-board b inputs effect-handler)
@@ -84,5 +82,15 @@
                :inputs/digest (board/board-digest {:chips [inputs]})
                :claim {:trace (:trace run) :end-reason (:end-reason run)}
                :verified? (board/verify-trace b inputs run)
-               :lean/status :pending}]
+               :lean/status {:status :witnessed-under-declared-registry
+                :scope :lean-model
+                :witness {:repository "mathlib4"
+                          :commit "a9a24a3b9e070550ede41ebd10621c5bb9b843f0"
+                          :module "DarkTower/WarMachine/ChipBoardWitness.lean"
+                          :theorem "DarkTower.WarMachine.ChipBoardWitness.Repaired.repairedHazard"}
+                :assumption :registered-verbs-implement-declared-semantics
+                :runtime-correspondence :not-proven
+                :registry {:digest (:verbs/digest run)
+                           :scope :in-process-function-identity
+                           :semantic-approval? false}}}]
      (assoc run :certificate cert))))

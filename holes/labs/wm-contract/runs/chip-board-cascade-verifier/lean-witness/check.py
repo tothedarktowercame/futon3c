@@ -38,7 +38,8 @@ assert before == digests(), "Source or retained evidence changed during verifica
 print(lean, end="")
 print(json.dumps({"state": "validated", "scope": "declared-registry-no-act-model-and-pinned-readback",
                   "matching_lines": 14, "deltas": [0] * 14,
-                  "runtime_certificate_status": "pending",
+                  "runtime_certificate_status": {"status": "witnessed-under-declared-registry",
+                      "scope": "lean-model", "runtime-correspondence": "not-proven"},
                   "blockers": ["board-digest-does-not-bind-mutable-verb-registry"],
                   "replay": "full trace, effects and final state match using retained shelf-debt",
                   "hashes": before}, indent=2))

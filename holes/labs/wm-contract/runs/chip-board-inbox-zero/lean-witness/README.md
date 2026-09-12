@@ -1,5 +1,11 @@
 # Chip-board Lean witness — 2026-09-12
 
+Status vocabulary update: new certificates now carry
+`:witnessed-under-declared-registry`, scoped to `:lean-model`, with the
+semantic assumption and `:runtime-correspondence :not-proven` explicit.
+See [the shared status note](../../CHIP-BOARD-WITNESS-STATUS-2026-09-12.md).
+Earlier pending-state reports and logs below remain historical evidence.
+
 Historical first-witness report below. The three runtime fixes are reviewed in
 [REPAIR-REVIEW-80d874b8.md](REPAIR-REVIEW-80d874b8.md); the current checker uses
 the repaired model. The original validation.log remains unchanged.

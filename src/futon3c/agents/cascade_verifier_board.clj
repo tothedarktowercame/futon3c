@@ -97,9 +97,9 @@
 
 (defn run
   "Run one cycle. EFFECT-HANDLER performs effects; the default prints.
-  Lean proves no-act effects under the declared registry, not arbitrary
-  register-verb! replacements. The board digest does not bind that mutable
-  registry, so the unrestricted runtime certificate remains :pending."
+  Lean status identifies the completed no-act model witness under declared
+  verb semantics; runtime correspondence and arbitrary register-verb!
+  replacements are explicitly not proved."
   ([inputs] (run inputs (fn [e] (prn {:effect (first e)}))))
   ([inputs effect-handler]
    (let [b (resolve-args inputs)
@@ -109,7 +109,17 @@
                           :board/id (:board/id b)
                           :board/digest (board/board-digest b)
                           :verified? (board/verify-trace b inputs run)
-                          :lean/status :pending}))))
+                          :lean/status {:status :witnessed-under-declared-registry
+                :scope :lean-model
+                :witness {:repository "mathlib4"
+                          :commit "e407ec20cbedb8667070dee89cd45f27a52207a0"
+                          :module "DarkTower/WarMachine/CascadeVerifierBoardWitness.lean"
+                          :theorem "DarkTower.WarMachine.CascadeVerifierBoardWitness.cascadeHasNoActEffects"}
+                :assumption :registered-verbs-implement-declared-semantics
+                :runtime-correspondence :not-proven
+                :registry {:digest (:verbs/digest run)
+                           :scope :in-process-function-identity
+                           :semantic-approval? false}}}))))
 
 ;; ------------------------------------------------------- live adapter
 

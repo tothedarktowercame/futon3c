@@ -1,5 +1,11 @@
 # N1 cascade board witness — 2026-09-12
 
+Status vocabulary update: new certificates now carry
+`:witnessed-under-declared-registry`, scoped to `:lean-model`, with the
+semantic assumption and `:runtime-correspondence :not-proven` explicit.
+See [the shared status note](../../CHIP-BOARD-WITNESS-STATUS-2026-09-12.md).
+Earlier pending-state reports and logs below remain historical evidence.
+
 Mathlib commit `e407ec20cb` adds
 `DarkTower/WarMachine/CascadeVerifierBoardWitness.lean`.
 
