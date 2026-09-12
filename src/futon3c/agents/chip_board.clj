@@ -173,6 +173,24 @@
 
 (defn register-verb! [verb f] (swap! verb-registry assoc verb f) verb)
 
+(defn verbs-digest
+  "Content digest of the registry entries a BOARD uses, computed from the
+  actual fn objects: the certificate's provenance covers not just the
+  board-as-data but the verb implementations it ran under. Replacing a
+  registered implementation (same verb name, different fn) changes this
+  digest, so a recorded run stops verifying — the registry cannot be
+  swapped under a certificate (codex-17 witness, mathlib4 e407ec20cb).
+
+  Caveat, stated not hidden: (str fn) is identity-stable within a JVM and
+  NOT across restarts. Cross-JVM verification therefore requires the verb
+  sources' own version pins; this digest makes tampering *detectable and
+  attributable* in-process, which is the v0 claim."
+  [board]
+  (sha256 (mapv (fn [chip]
+                  [(-> chip :verb name)
+                   (str (get @verb-registry (:verb chip)))])
+                (:chips board))))
+
 ;; -------------------------------------------------------------- executor
 
 (defn- inputs-for [_verb _chip inputs] inputs)
@@ -180,68 +198,73 @@
 (defn run-board
   "Run BOARD from :entry against INPUTS until a terminal, fuel exhaustion,
   or the step cap (cycle guard). EFFECT-HANDLER is (fn [effect] result);
-  it performs I/O. Returns {:trace [...] :end-reason ... :final-state ...}.
-
-  Fuel is charged per fired chip; exhaustion is a typed end, not a crash."
+  it performs I/O. Returns {:trace [...] :end-reason ... :final-state ...
+  :verbs/digest ...} — the verbs digest binds the registry the run
+  executed under into the result, so certificates cannot be replayed
+  against a swapped registry."
   ([board inputs effect-handler]
    (run-board board inputs effect-handler 64))
   ([board inputs effect-handler max-steps]
    (let [v (validate-board board)]
-     (when v (throw (ex-info (str "invalid board: " v) {:board board})))
-     (let [w (validate-wiring board)]
-       (when w (throw (ex-info (str "invalid wiring: " w) {:board board}))))
-     (let [chips (into {} (map (juxt :chip/id identity) (:chips board)))
-           digest (board-digest board)
-           fuel0 (long (get (:constants board) :fuel-budget 32))]
-       (loop [id (:entry board)
-              state {:fuel fuel0 :damage 0 :range-finder nil}
-              trace []]
-         (let [step (count trace)]
-           (cond
-             (contains? terminals id)
-             {:trace (conj trace {:chip id :verb :terminal
-                                  :board/digest digest :branch :true})
-              :end-reason (keyword "end" (name id))
-              :final-state state}
+     (when v (throw (ex-info (str "invalid board: " v) {:board board}))))
+   (let [w (validate-wiring board)]
+     (when w (throw (ex-info (str "invalid wiring: " w) {:board board}))))
+   (let [chips (into {} (map (juxt :chip/id identity) (:chips board)))
+         digest (board-digest board)
+         vd (verbs-digest board)
+         fuel0 (long (get (:constants board) :fuel-budget 32))
+         result (loop [id (:entry board)
+                       state {:fuel fuel0 :damage 0 :range-finder nil}
+                       trace []]
+                  (let [step (count trace)]
+                    (cond
+                      (contains? terminals id)
+                      {:trace (conj trace {:chip id :verb :terminal
+                                           :board/digest digest :branch :true})
+                       :end-reason (keyword "end" (name id))
+                       :final-state state}
 
-             (>= step max-steps)
-             {:trace trace :end-reason :end/step-cap :final-state state}
+                      (>= step max-steps)
+                      {:trace trace :end-reason :end/step-cap :final-state state}
 
-             (zero? (long (:fuel state)))
-             {:trace trace :end-reason :end/fuel-exhausted :final-state state}
+                      (zero? (long (:fuel state)))
+                      {:trace trace :end-reason :end/fuel-exhausted :final-state state}
 
-             :else
-             (let [chip (get chips id)
-                   verb (:verb chip)
-                   terminal? (contains? terminals verb)
-                   f (or (get @verb-registry verb)
-                         (throw (ex-info (str "unknown verb " verb) {:chip id})))
-                   result (f (update state :fuel dec)
-                             (:args chip)
-                             (inputs-for verb chip inputs))
-                   {:keys [branch effects state']} result
-                   _ (run! effect-handler effects)
-                   rec {:chip id :verb verb :branch branch
-                        :board/digest digest
-                        :effects (mapv vec effects)}]
-               (if terminal?
-                 {:trace (conj trace rec)
-                  :end-reason (keyword "end" (name verb))
-                  :final-state state'}
-                 (let [wire-target (get-in chip [:wires branch])]
-                   (when (nil? wire-target)
-                     (throw (ex-info (str "unwired branch :" branch " on chip " id)
-                                     {:chip id :branch branch})))
-                   (recur wire-target state' (conj trace rec))))))))))))
+                      :else
+                      (let [chip (get chips id)
+                            verb (:verb chip)
+                            terminal? (contains? terminals verb)
+                            f (or (get @verb-registry verb)
+                                  (throw (ex-info (str "unknown verb " verb) {:chip id})))
+                            result (f (update state :fuel dec)
+                                      (:args chip)
+                                      (inputs-for verb chip inputs))
+                            {:keys [branch effects state']} result
+                            _ (run! effect-handler effects)
+                            rec {:chip id :verb verb :branch branch
+                                 :board/digest digest
+                                 :effects (mapv vec effects)}]
+                        (if terminal?
+                          {:trace (conj trace rec)
+                           :end-reason (keyword "end" (name verb))
+                           :final-state state'}
+                          (let [wire-target (get-in chip [:wires branch])]
+                            (when (nil? wire-target)
+                              (throw (ex-info (str "unwired branch :" branch " on chip " id)
+                                              {:chip id :branch branch})))
+                            (recur wire-target state' (conj trace rec))))))))]
+     (assoc result :verbs/digest vd))))
 
 (defn verify-trace
   "Replay BOARD against INPUTS with a no-op effect handler and compare the
   full trace (chip/verb/branch/digest AND effects) plus end-reason to the
   recorded run. Effects are pure functions of (state, args, inputs), so an
   altered payload in the recorded trace must fail the comparison — the
-  certificate certifies what was done, not just the route (witness
-  defect 2)."
+  comparison checks the emitted effect proposals, not execution of external
+  I/O by the caller's effect handler (witness defect 2)."
   [board inputs recorded-run]
   (let [replayed (run-board board inputs (fn [_] nil))]
     (and (= (:trace replayed) (:trace recorded-run))
-         (= (:end-reason replayed) (:end-reason recorded-run)))))
+         (= (:end-reason replayed) (:end-reason recorded-run))
+         ;; the registry the run executed under is part of the claim
+         (= (:verbs/digest replayed) (:verbs/digest recorded-run)))))
