@@ -1,0 +1,34 @@
+{:schema :wm/codex-fold-port-commissioning-v1
+ :date "2026-09-12"
+ :apparatus-work true
+ :i8/increment 0
+ :claim-boundary {:runtime-validation true :lean-attestation :suspended-vocabulary}
+ :authority {:schema :wm/codex-fold-authority-v1
+             :plan-ref "holes/labs/wm-contract/runs/RUN4-codex-fold-port-commissioning-2026-09-12/fold-plan.edn"
+             :plan-sha256 "09d1fe0e014f57cb0d8649a57e1350562c692bcf37ae1f7b8a6b57d3a5b2a6de"
+             :seat "codex-20"
+             :agency-base "http://127.0.0.1:7070"
+             :caller "run4-codex-fold"}
+ :source-construction
+ {:path "/home/joe/run4/U88-zai-successor-20260912-v4/cohort/run4-u88-zai-successor-20260912-v4/attempt-001/003-construction.edn"
+  :sha256 "af7ad4b55801cc7986a2be118a6e755ebe40f6cfa906c1037c12d9742d602f6e"
+  :legacy-wiring nil
+  :negative-verdict :silent-nil-refused-by-tightened-checkpoint}
+ :typed-refusal
+ {:job-id "run4-fold-d14c3305-0bba-4857-8c8c-86029efc3a15"
+  :seat "codex-12"
+  :terminal-state :failed
+  :terminal-message-sha256 "d69c5cce96933c856b2d7bedbb002527272522860dd8be26813deba004c71a10"
+  :port-result {:fold/refused true :refusal/class :fold-job-invalid}
+  :gate-status :refused}
+ :positive
+ {:job-id "run4-fold-41612c7a-5c99-4ada-9a5f-a93a716a22e3"
+  :seat "codex-20"
+  :terminal-state :done
+  :captured-output-sha256 "58d2233674d8944aa51a5f8226d079f2091953b7d6b23ade36eef0d25809a77a"
+  :validate-fold-output-v1 {:ok true :fold/schema :enriched :findings []}
+  :validate-fold-correspondence {:ok true :findings []}
+  :runner-gate-status :wired}
+ :persistence
+ {:agency-job-authority "/api/alpha/invoke/jobs/run4-fold-41612c7a-5c99-4ada-9a5f-a93a716a22e3"
+  :checkpoint-contract :construction-persists-fold-output-wiring-and-authority}}
