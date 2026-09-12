@@ -185,11 +185,12 @@
   NOT across restarts. Cross-JVM verification therefore requires the verb
   sources' own version pins; this digest makes tampering *detectable and
   attributable* in-process, which is the v0 claim."
-  [board]
-  (sha256 (mapv (fn [chip]
-                  [(-> chip :verb name)
-                   (str (get @verb-registry (:verb chip)))])
-                (:chips board))))
+  ([board] (verbs-digest board @verb-registry))
+  ([board registry]
+   (sha256 (mapv (fn [chip]
+                   [(-> chip :verb name)
+                    (str (get registry (:verb chip)))])
+                 (:chips board)))))
 
 ;; -------------------------------------------------------------- executor
 
@@ -211,12 +212,12 @@
      (when w (throw (ex-info (str "invalid wiring: " w) {:board board}))))
    (let [chips (into {} (map (juxt :chip/id identity) (:chips board)))
          digest (board-digest board)
-         vd (verbs-digest board)
          ;; capture the registry ONCE at run start: execution dereferences
          ;; this snapshot, never the atom per step, so a mid-run registry
          ;; swap cannot change behavior inside a run (codex-17 whistle,
          ;; 2026-09-12). vd is computed from the same snapshot.
          registry @verb-registry
+         vd (verbs-digest board registry)
          fuel0 (long (get (:constants board) :fuel-budget 32))
          result (loop [id (:entry board)
                        state {:fuel fuel0 :damage 0 :range-finder nil}

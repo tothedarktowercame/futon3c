@@ -1,0 +1,56 @@
+BOARD|sha256:3a806b34dd46e94c4b91adead7b86105d7e0c682452392375a3cfbf90b863664
+END|end/yield
+DEBT|324
+REQUEST|wm-choice/c-grain|futon2/holes/labs/wm-contract/aif-equations.edn:1|a6d551bb9bfbc4ca451f3071710e3490926c369266ccccfe5bb4e87c80d3c09d|dated-not-revalidated|1
+METERS|1|5|0
+CHIP|ck/smell|smell-backlog||ck/look-first|ck/sing-clear
+CHIP|ck/look-first|look-debt|wm-choice/c-grain|ck/sing-debt|ck/yield
+CHIP|ck/sing-clear|sing||ck/yield|
+CHIP|ck/sing-debt|sing||ck/yield|
+CHIP|ck/yield|yield|||
+ROW|ck/smell|smell-backlog|true|sha256:3a806b34dd46e94c4b91adead7b86105d7e0c682452392375a3cfbf90b863664|observe
+ROW|ck/look-first|look-debt|true|sha256:3a806b34dd46e94c4b91adead7b86105d7e0c682452392375a3cfbf90b863664|verify-request
+ROW|ck/sing-debt|sing|true|sha256:3a806b34dd46e94c4b91adead7b86105d7e0c682452392375a3cfbf90b863664|report
+ROW|ck/yield|yield|true|sha256:3a806b34dd46e94c4b91adead7b86105d7e0c682452392375a3cfbf90b863664|yield-turn
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.boardHasNoZap' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.declaredEffectsAllowed' depends on axioms: [propext]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.traceEffectsAllowed' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.cascadeHasNoActEffects' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.noZapAloneIsInsufficient' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.fixtureExecutes' depends on axioms: [propext]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.fixtureWired' does not depend on any axioms
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.fixtureEffectsAllowed' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.CascadeVerifierBoardWitness.fixtureDeltasZero' does not depend on any axioms
+{
+  "state": "validated",
+  "scope": "declared-registry-no-act-model-and-pinned-readback",
+  "matching_lines": 14,
+  "deltas": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "runtime_certificate_status": "pending",
+  "blockers": [
+    "board-digest-does-not-bind-mutable-verb-registry"
+  ],
+  "replay": "full trace, effects and final state match using retained shelf-debt",
+  "hashes": {
+    "/home/joe/code/mathlib4/DarkTower/WarMachine/CascadeVerifierBoardWitness.lean": "fe9d349a0c4fb92b2f9d329a41e94c8ace769e9cc42c725d62067a76c95b9a25",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-cascade-verifier/lean-witness/readback.clj": "7f2c2ed3fbcab92c98b0cdbc6fe52cf68462ea63f394c53d0c3c6d62ea7a72b5",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-cascade-verifier/run-2026-09-12.edn": "addb342c93d5f5b04a38fb2b3fe18fe00531153e958a15833f4a1bed54c97036",
+    "/home/joe/code/futon3c/src/futon3c/agents/chip_board.clj": "a0489ed3aa0ca184e8878e1dfda1bcb1e7f3dbc21e612dc6c098d7f8c0b4716c",
+    "/home/joe/code/futon3c/src/futon3c/agents/cascade_verifier_board.clj": "2a5a5c46db5605f768c4771376d9ebc34cef97c5edb815077a7c081d59e0a1a7"
+  }
+}
