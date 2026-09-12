@@ -367,10 +367,22 @@
                                    :review-gate :passed?] false)
                         (assoc-in [:checkpoints :adjudication]
                                   {:status :absent :reason :checkpoint-not-returned}))]
-         (install! failed)
-         (is (= [:failed :safe]
-                ((juxt :task-result :infrastructure)
-                 (sut/read-terminal-evidence roots request started)))))
+         (doseq [p [failed (-> failed
+                              (assoc :schema :wm-run4-terminal-projection-v2)
+                              (assoc-in [:checkpoints :adjudication]
+                                        {:status :not-reached :outcome :build-failed
+                                         :kind :not-reached-adjudication}))]]
+           (install! p)
+           (is (= [:failed :safe]
+                  ((juxt :task-result :infrastructure)
+                   (sut/read-terminal-evidence roots request started)))))
+         (doseq [cell [{:status :not-reached :outcome :grounded-change
+                       :kind :not-reached-adjudication}
+                      {:status :not-reached :outcome :build-failed
+                       :kind :not-reached-build}]]
+           (install! (-> failed (assoc :schema :wm-run4-terminal-projection-v2)
+                         (assoc-in [:checkpoints :adjudication] cell)))
+           (is (nil? (sut/read-terminal-evidence roots request started)))))
        (let [unsafe (-> projection
                         (assoc :outcome :incomplete)
                         (assoc :failure {:kind :transport-timeout :stage :dispatch}))]
@@ -474,3 +486,24 @@
          (is (= :run4-terminal-evidence-refused
                 (:error (try (sut/read-terminal-evidence roots request started) nil
                              (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+
+(deftest not-reached-versioning-and-success-boundary
+  (let [v1 (grounded-projection "unused")
+        ;; Schema checks require a digest; the existing fixture supplies it at IO.
+        v1 (assoc-in v1 [:source :run-record-sha256] (apply str (repeat 64 "a")))
+        v2 (assoc v1 :schema :wm-run4-terminal-projection-v2)]
+    (is (#'sut/projection-schema? v1))
+    (is (#'sut/projection-schema? v2))
+    (is (= :succeeded (:task-result (#'sut/classify v2 {:sha256 "evidence"}))))
+    (doseq [phase [:selection :construction :dispatch :build :adjudication]]
+      (let [p (assoc-in v2 [:checkpoints phase]
+                        {:status :not-reached :kind (keyword (str "not-reached-" (name phase)))
+                         :outcome :build-failed})]
+        (is (#'sut/projection-schema? p))
+        (is (not (#'sut/complete-grounded-change? p)))
+        (is (not= :succeeded (:task-result (#'sut/classify p {:sha256 "evidence"}))))))
+    (doseq [cell [{:status :not-reached :kind :not-reached-build}
+                  {:status :not-reached :kind :not-reached-build :outcome nil}
+                  {:status :not-reached :kind :not-reached-build :outcome :build-failed
+                   :judgment {}}]]
+      (is (not (#'sut/projection-schema? (assoc-in v2 [:checkpoints :build] cell)))))))

@@ -1,5 +1,7 @@
 (ns futon3c.wm.run4-terminal-projection-test
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [futon3c.wm.run4-terminal-evidence :as evidence]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
             [futon2.aif.full-loop-runner :as full-runner]
@@ -161,3 +163,62 @@
                (is (= "actual-run" (:run/id value)))
                (is (= "actual-internal-attempt" (:attempt/id value)))
                (is (= :grounded-change (:outcome value)))))))))))
+
+(deftest captured-f11-unreached-checkpoints-roundtrip
+  ;; Captured verbatim from both real cohort files; pins are not regenerated.
+  (doseq [{:keys [version phase cell pin]}
+          (edn/read-string (slurp "test/fixtures/run4/f11-not-reached.edn"))]
+    (testing version
+      (fixture
+       (fn [{:keys [result run-record projections]}]
+         (spit run-record (pr-str {:run/id "run-1" :click/id "click-1" :run4/task-pin pin}))
+         (let [result (-> result
+                          (assoc :outcome (get-in cell [:sorry :outcome]))
+                          (assoc-in [:checkpoints :selection :ground :run4/task-pin] pin)
+                          (assoc-in [:checkpoints :construction :judgment :run4/task-pin] pin)
+                          (assoc-in [:checkpoints phase] cell))
+               ref (sut/persist! projections "click-1" result)
+               projected (edn/read-string (slurp (:path ref)))]
+           (is (= (assoc (:sorry cell) :status :not-reached)
+                  (get-in projected [:checkpoints phase])))
+           (is (= pin (:run4/task-pin projected)))
+           (is (= :wm-run4-terminal-projection-v2 (:schema projected)))
+           (is (#'evidence/projection-schema? projected))
+           (is (not (#'evidence/complete-grounded-change? projected)))
+           (is (not= :succeeded (:task-result (#'evidence/classify projected ref))))
+           (is (not (#'evidence/projection-schema?
+                     (assoc projected :schema :wm-run4-terminal-projection-v1))))))))))
+
+(deftest absent-and-completed-checkpoints-remain-distinct
+  (fixture
+   (fn [{:keys [result]}]
+     (let [completed (sut/projection "click-1" result)
+           absent (sut/projection "click-1" (update result :checkpoints dissoc :build))]
+       (is (= :present (get-in completed [:checkpoints :build :status])))
+       (is (= {:status :absent :reason :checkpoint-not-returned}
+              (get-in absent [:checkpoints :build])))
+       (is (#'evidence/projection-schema? completed))
+       (is (#'evidence/projection-schema? absent))))))
+
+(deftest malformed-unreached-and-conflicting-pins-still-refuse
+  (fixture
+   (fn [{:keys [result]}]
+     (doseq [cell [{:sorry nil} {:sorry :no}
+                  {:sorry {:kind :not-reached-build}}
+                  {:sorry {:outcome :build-failed}}
+                  {:sorry {:outcome "build-failed" :kind :not-reached-build}}
+                  {:sorry {:outcome :build-failed :kind :not-reached-build :extra true}}
+                  {:sorry {:outcome :build-failed :kind :not-reached-build} :judgment {}}
+                  {:sorry {:outcome :build-failed :kind :not-reached-build} :ground {}}]]
+       (is (= :malformed-checkpoint
+              (:reason (try (sut/projection "click-1" (assoc-in result [:checkpoints :build] cell))
+                            (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+     (is (= :run-record-binding-mismatch
+            (:reason (try (sut/projection "wrong-click" result)
+                          (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+     (is (= :conflicting-task-pin-checkpoints
+            (:reason (try (sut/projection "click-1"
+                                         (assoc-in result [:checkpoints :construction :judgment
+                                                           :run4/task-pin :trial-id] :different))
+                          (catch clojure.lang.ExceptionInfo e (ex-data e))))))))
+)

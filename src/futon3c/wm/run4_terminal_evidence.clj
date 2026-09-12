@@ -195,8 +195,12 @@
 
 (def checkpoint-names #{:selection :construction :dispatch :build :adjudication})
 
-(defn- valid-checkpoint? [cell]
-  (or (and (exact-keys? cell #{:status :reason})
+(defn- valid-checkpoint? [schema cell]
+  (or (and (= :wm-run4-terminal-projection-v2 schema)
+           (exact-keys? cell #{:status :outcome :kind})
+           (= :not-reached (:status cell))
+           (keyword? (:outcome cell)) (keyword? (:kind cell)))
+      (and (exact-keys? cell #{:status :reason})
            (= :absent (:status cell))
            (= :checkpoint-not-returned (:reason cell)))
       (and (exact-keys? cell #{:status :judgment :ground})
@@ -206,7 +210,8 @@
 
 (defn- projection-schema? [value]
   (and (exact-keys? value projection-keys)
-       (= :wm-run4-terminal-projection-v1 (:schema value))
+       (contains? #{:wm-run4-terminal-projection-v1 :wm-run4-terminal-projection-v2}
+                  (:schema value))
        (keyword? (:outcome value))
        (exact-keys? (:failure value) #{:kind :stage})
        (exact-keys? (:evidence value)
@@ -215,7 +220,7 @@
        (exact-keys? (:source value) #{:run-record :run-record-sha256})
        (sha? (get-in value [:source :run-record-sha256]))
        (= checkpoint-names (set (keys (:checkpoints value))))
-       (every? valid-checkpoint? (vals (:checkpoints value)))
+       (every? #(valid-checkpoint? (:schema value) %) (vals (:checkpoints value)))
        (let [pin (:run4/task-pin value)]
          (and (map? pin) (sha? (:sha256 pin))
               (some? (:series-id pin)) (some? (:trial-id pin))))))
@@ -293,7 +298,11 @@
          (nonblank? (:commit evidence))
          (some #{(:commit evidence)} (get-in build [:judgment :commits]))
          ;; A rejected build never has a successful grounding/adjudication.
-         (= :absent (get-in p [:checkpoints :adjudication :status])))))
+         (let [cell (get-in p [:checkpoints :adjudication])]
+           (or (= :absent (:status cell))
+               (and (= :not-reached (:status cell))
+                    (= :not-reached-adjudication (:kind cell))
+                    (= :build-failed (:outcome cell))))))))
 
 (def unsafe-failure-kinds
   #{:agent-unavailable :agent-readiness-failed :substrate-unavailable

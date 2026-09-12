@@ -57,12 +57,22 @@
 (defn- checkpoint-projection [checkpoints phase]
   (if (contains? checkpoints phase)
     (let [cell (get checkpoints phase)]
-      (when-not (and (map? cell) (map? (:judgment cell)) (map? (:ground cell)))
-        (refuse! :malformed-checkpoint {:checkpoint phase}))
-      {:status :present
-       :judgment (judgment-projection phase (:judgment cell))
-       :ground (select-keys (:ground cell)
-                            [:kind :reason :outcome :repository :run4/task-pin])})
+      (cond
+        (and (map? cell) (= #{:sorry} (set (keys cell)))
+             (map? (:sorry cell))
+             (= #{:outcome :kind} (set (keys (:sorry cell))))
+             (keyword? (get-in cell [:sorry :outcome]))
+             (keyword? (get-in cell [:sorry :kind])))
+        (assoc (:sorry cell) :status :not-reached)
+
+        (and (map? cell) (not (contains? cell :sorry))
+             (map? (:judgment cell)) (map? (:ground cell)))
+        {:status :present
+         :judgment (judgment-projection phase (:judgment cell))
+         :ground (select-keys (:ground cell)
+                              [:kind :reason :outcome :repository :run4/task-pin])}
+
+        :else (refuse! :malformed-checkpoint {:checkpoint phase})))
     {:status :absent :reason :checkpoint-not-returned}))
 
 (defn projection
@@ -98,7 +108,11 @@
                          (= (:run/id result) (:run/id run-record))
                          (= pin (:run4/task-pin run-record)))
             (refuse! :run-record-binding-mismatch))
-          {:schema :wm-run4-terminal-projection-v1
+          {;; Keep existing v1 bytes replayable when no new variant is needed.
+           :schema (if (some #(contains? (get (:checkpoints result) %) :sorry)
+                             required-checkpoints)
+                     :wm-run4-terminal-projection-v2
+                     :wm-run4-terminal-projection-v1)
            :click/id click-id :run/id (:run/id result)
            :attempt/id (:attempt-id result) :run4/task-pin pin
            :outcome (:outcome result)
