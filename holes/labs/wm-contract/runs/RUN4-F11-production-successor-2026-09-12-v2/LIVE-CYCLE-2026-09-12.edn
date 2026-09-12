@@ -1,0 +1,49 @@
+{:schema :wm/f11-continuous-cycle-v1
+ :recorded-at "2026-09-12T17:35:00Z"
+ :series-id "run4-f11-production-successor-20260912-v2"
+ :trial-id "M-f11-find-production-successor"
+ :controller-attempt-id "f11-production-successor-20260912-attempt-002"
+ :click-id "wm-click-77112280-b4a8-4127-b1a7-308f0bb1097f"
+ :cohort {:id :run4-f11-production-successor-20260912-v2
+          :local-attempt "attempt-001" :target 1 :closed-count 1}
+ :fold {:job-id "run4-fold-bf7c4a1e-809b-438e-80af-b615c1545fd8"
+        :seat "codex-21" :wiring-present? true
+        :authority-present? true :execution-present? true}
+ :selection-enaction
+ {:verdict :match
+  :selected {:type :advance-mission :target "M-f11-find-production-successor"}
+  :enacted {:type :advance-mission :target "M-f11-find-production-successor"}
+  :evidence {:source :authenticated-operator-task-pin
+             :operator-authority-ref "Joe continuous WM direction; claude-15 seam and TN-9a review; 2026-09-12"}}
+ :jobs {:author "invoke-1789234090752-20443-b3d3e781"
+        :review-round-1 "invoke-1789234219035-20445-79354f82"
+        :revision-author "invoke-1789234317462-20446-76567592"
+        :review-round-2 "invoke-1789234385934-20447-8c802427"}
+ :result {:cohort-outcome :build-failed
+          :task-success false
+          :grounded false
+          :review-verdict :reject
+          :reason :documentation-only-commits-with-implementation-uncommitted
+          :authored-commits ["1166a832f0c2e2c27681fbd18c27a8091d527b48"
+                             "98d0dcb115b18934b84a9992bfc48fcbba6b683f"]
+          :service-projection {:status :failed
+                               :error "RUN4 terminal projection refused"}}
+ :repair-successor {:repair-id "repair-attempt-024-feature-card-missing-or-invalid"
+                    :replacement-commit "a0bd18be8ba400a9930ae7b773652076df4981ad"
+                    :discharged? false
+                    :verification-record-present? false}
+ :i6 {:previous-finding :required-pointer-gate-failed
+      :current-finding :implementation-remained-uncommitted
+      :same-consecutive-finding? false}
+ :i8 {:item 2 :operator-interventions 0 :terminal-disposition :build-failed}
+ :artifacts
+ {:selection-sha256 "5ffac34f33f22baa27557d36eeb9130a8620ca8ff554255df016b5f115a56de2"
+  :construction-sha256 "514c268bbdd585c51a3bb00c9c099ea8003e7679c4bedab20aba85bdb46bb2ae"
+  :dispatch-sha256 "8ed84b53063445e94c144fba2d85888dbd48457029cd06112dd1a0d1ba1bd7b0"
+  :build-sha256 "c143d17a3c2ba0d61dedb5e288f358835e14dcd08c229398d011e9fee18153e3"
+  :adjudication-sha256 "f7e2ea4d08f704e9470f55834650971ea41f595ad5f55bd2c69b42636e9733ec"
+  :closed-sha256 "2b84ab4b68b658586c0369726b136bb1948ffce4a37ea57f7577df79976b32db"
+  :run-record "/home/joe/run4/F11-production-successor-20260912-v2/run-records/tick-run-record-90feda63-9932-4678-9b62-7929402eab51.edn"
+  :run-record-sha256 "5ea7c60866ff98257225716b1e2be1935ee75b3803ea6a9910c3ec5e62371520"}
+ :claims {:runtime-validation-only true
+          :lean-attestation :suspended-vocabulary}}
