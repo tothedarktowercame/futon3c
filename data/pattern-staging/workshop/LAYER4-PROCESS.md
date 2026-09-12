@@ -56,3 +56,28 @@ participation in rule revision, formative feedback, shared evaluation cases,
 and institutions for building institutions. The refusal-capture trigger,
 record fields, admission procedure, and artifact verification above are local
 proposals developed with Joe, not claims that the paper specifies them.
+
+## Review and proposed practical trial
+
+zai-7 reviewed commit `31d93d98` in Agency job
+`invoke-1789240513445-20488-f9fb66c7`. Follow-up edits name the receiving
+agent's capture responsibility at refusal events, sigil-pin maintenance,
+and Joe as the current sole workshop-family adoption authority.
+
+The review proposes EX-1, a pattern-card entry trial over 3–5 tasks, one
+week, and one or two agents. It has not been launched. Reuse the existing
+mission clock and investigate PSR/PUR backpack records before adding storage.
+The entry should link task and clock event, pattern version, intended state
+transition, witness conditions, and refusal conditions. Departure should cite
+the actual clause consulted (carriage alone is not use), application evidence,
+observed outcome, witness verdict, uncertainty, and any maintenance proposal.
+Reconcile entries with departures so missing departures remain visible.
+
+A useful observation would be a refusal with a reopening condition or an
+observed-use finding that warrants a maintenance proposal. Do not manufacture
+findings to meet a quota; no such finding is also a reportable trial outcome.
+Acceptance-versus-execution remains Joe's pending ruling. The trial must not
+bypass existing gates: any proposed additional gate can be observed without
+being enabled, while current enforcement remains in force. Clocking in does
+not itself earn completion credit. Runtime integration and the exact trial
+record schema remain proposals for review.

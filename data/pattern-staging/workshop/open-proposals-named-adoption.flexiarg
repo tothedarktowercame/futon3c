@@ -6,7 +6,7 @@
 @style pattern
 @grade technique
 @provenance Joe requested a Layer 4 process for managing pattern-language extensions, 2026-09-12; codex-25 operationalization of the discussion of Corneli (2016), An institutional approach to computational social creativity, https://metameso.org/~joe/papers/corneli2016institutional.pdf. Proposed local procedure, not a quotation from the paper.
-@review Joe authorized adding this process layer; specific institutional rules and sanctions still require their own adoption decisions.
+@review Joe authorized adding this process layer; Joe alone currently adopts workshop-family institutional rules and sanctions. Affected participants advise and challenge; they do not thereby acquire adoption authority.
 @class process
 @domain process
 @family-note workshop/ Layer 4 extension and maintenance process; see LAYER4-PROCESS.md for the linked sequence.
@@ -32,6 +32,12 @@
     review attention. Participation does not require unanimous agreement.
 
   + THEN:
+    Capture at the point a typed gate refusal or checker exit is received,
+    or an agent explicitly declines an action because of a noticed tension.
+    Retain the event or command receipt, including exit status and diagnostic;
+    a nonzero exit alone does not establish a domain breach. The receiving
+    agent owns capture until it records an explicit handoff. No automatic
+    refusal-stream collector is claimed by this pattern.
     The observing agent records the attempted action, competing demands,
     concrete observation, withheld action or claim, and reopening condition.
     Link the relevant existing pattern and version; open a candidate only
@@ -39,7 +45,7 @@
     unresolved candidate is legal and must not pretend to supply a solution.
     Name a proposal owner and the affected roles; offer those roles a place
     to challenge scope, evidence, and cost. Record the adoption authority
-    (Joe for workshop-wide rules, or his explicitly delegated authority),
+    (currently Joe alone for workshop-family rules),
     decision, reasons, and effective scope/version. Until that decision,
     candidate status grants no new enforcement or sanctioning authority.
 
