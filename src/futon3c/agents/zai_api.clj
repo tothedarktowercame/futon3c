@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.agency.invoke-activity :as invoke-activity]
             [futon3c.agents.memory-provisioning :as memory-provisioning]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zaif-inputs]
@@ -766,6 +767,24 @@
       (when-let [sink (get-sink (str agent-id))]
         (try (sink event) (catch Throwable _))))))
 
+(defn- report-activity!
+  "Publish a live activity string for an in-turn agent.
+
+  2026-09-12: zai seats driven straight from the operator's REPL minted no
+  invoke job and never reported activity, so voxterm's in-turn test (live job
+  OR activity within 120s — the roster status is deliberately ignored there
+  as intent-not-liveness) could never see them working: zai-7 ran a whole
+  turn showing 'not executing'. The codex adapter reports per event; this is
+  the same contract for the zai loop. Stamps invoke-activity-at, which is
+  the actual liveness signal."
+  [agent-id activity-str]
+  (when-not (str/blank? activity-str)
+    (when (find-ns 'futon3c.agency.registry)
+      (when-let [update! (ns-resolve 'futon3c.agency.registry
+                                     'update-invoke-activity!)]
+        (try (@update! (str agent-id) activity-str) (catch Throwable _))))))
+
+
 (defn- normalized-usage
   "Translate a successful z.ai completion's usage block into the vendor-neutral
   per-turn cost schema. Optional detail counters are omitted when absent."
@@ -1228,6 +1247,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                                    (filter #(= (:role %) "user"))
                                                    last
                                                    :content)))
+              _ (report-activity! agent-id "awaiting model response")
               resp (chat! client
                           (cond-> (assoc opts :api-key api-key)
                             remaining-ms
@@ -1251,6 +1271,17 @@ CALLS contains maps of tool name, arguments, and result digest."
               (when-not (str/blank? text)
                 (sink! agent-id {:type "text" :text text}))
               (if tool-calls
+                ;; Voxterm liveness: report the tool batch BEFORE executing it
+                ;; (2026-09-12) — see report-activity!. The details carry the
+                ;; salient argument (path/command), the same describer the
+                ;; codex adapter uses.
+                (do (report-activity!
+                     agent-id
+                     (invoke-activity/tool-details->activity
+                      (mapv (fn [tc]
+                              (tool-call-detail tc (parse-arguments
+                                                     (get-in tc [:function :arguments]))))
+                            tool-calls)))
                 ;; A tool exception must NEVER kill the turn: feed the error
                 ;; back as the tool result so the model can correct (found live
                 ;; 2026-07-04: a nil :path arg NPE'd through resolve-path and
@@ -1314,7 +1345,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :usage usage})
                   (swap! !messages into (mapv :message executed))
                   (recur (dec remaining) (str final-text text) auto-continues true
-                         (inc round-n) report-reserved?))
+                         (inc round-n) report-reserved?)))
                 (do
                   (persist-round! {:evidence-store (:evidence-store ctx)
                                    :agent-id agent-id :sid sid
