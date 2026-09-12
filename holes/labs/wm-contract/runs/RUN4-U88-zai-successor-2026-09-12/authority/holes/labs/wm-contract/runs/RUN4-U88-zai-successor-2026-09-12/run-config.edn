@@ -1,0 +1,19 @@
+{:schema :wm/run4-pinned-run-config-v1
+ :runner-options {:beta-habit-in-both? true
+                  :accumulate-strategic-habit? true
+                  :policy-depth {:anticipation 3 :cascade-rollout 5}}
+ :serving-declaration
+ {:required-environment {"FUTON_WM_FPI_DARK" "1"
+                         "FUTON_WM_BETA_DARK" "1"
+                         "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+  :hierarchy {:model :single-level :scope :RUN4}
+  :recording-requirement
+  {:contract :wm/realized-recording-v1
+   :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}}
+ :c-fold {:enabled? true
+          :seed {:id :ruled-outcome-c-v1
+                 :path "../../../../../resources/run4/seeded-c.edn"
+                 :sha256 "1459952e2d3e4534760ba8512482fc3cb3aa4020d2c3464b2056efaff6112e1f"}
+          :kernel {:adapter :constant-checkpoint-kernel/v1
+                   :path "../../../../../resources/run4/checkpoint-kernel.edn"
+                   :sha256 "39996c267ba36fc7cfbfb53a5821f304a4ff21089ff53bff031090e8f23e90d0"}}}
