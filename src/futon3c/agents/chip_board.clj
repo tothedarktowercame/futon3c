@@ -81,12 +81,15 @@
 
 (defn- branch [b] {:branch b :effects []})
 
-(def verbs
+(defn verbs-branch
+  "Public branch constructor for registered verbs (the two-wire result)."
+  [b] (branch b))
+
+(def base-verbs
   {:keypress
    (fn [state _args inputs]
      (assoc (branch (if (:operator-pending? inputs) :true :false))
             :state' state))
-
    :smell
    (fn [state _args inputs]
      (let [sweep (vec (:sweep inputs))
@@ -149,6 +152,14 @@
    :yield
    (fn [state _args _inputs] {:branch :true :effects [[:yield-turn {}]] :state' state})})
 
+(def verb-registry
+  "The verb library. Registration is code-level (load time), never a
+  run-time transition: boards reference registered verbs; a board naming
+  an unregistered verb fails validation-by-execution as a type error."
+  (atom base-verbs))
+
+(defn register-verb! [verb f] (swap! verb-registry assoc verb f) verb)
+
 ;; -------------------------------------------------------------- executor
 
 (defn- inputs-for [_verb _chip inputs] inputs)
@@ -190,7 +201,7 @@
              (let [chip (get chips id)
                    verb (:verb chip)
                    terminal? (contains? terminals verb)
-                   f (or (get verbs verb)
+                   f (or (get @verb-registry verb)
                          (throw (ex-info (str "unknown verb " verb) {:chip id})))
                    result (f (update state :fuel dec)
                              (:args chip)
