@@ -188,7 +188,8 @@
              :snapshot-digest "digest" :accessible-memory-ids []}
             :fresh-session-nonce (:fresh-session-nonce request)
             :dispatch/id (:dispatch/id request)
-            :submission/token (:submission/token request)}
+            :submission/token (:submission/token request)
+            :submission/authority-version 2}
            request)
         "the arm-off request is exactly the pre-change request")
     (let [certificate (:certificate result)]
