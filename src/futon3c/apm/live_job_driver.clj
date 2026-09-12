@@ -799,6 +799,33 @@
               :collection/disposition (collection-disposition job submission)}]
     (assoc body :collection/id (machine/ledger-digest [body]))))
 
+(defn- submission-from-observation [observation]
+  (if (and (map? observation)
+           (true? (:ok observation))
+           (contains? observation :submission))
+    (:submission observation)
+    (when-not (and (map? observation) (false? (:ok observation)))
+      observation)))
+
+(defn- terminal-exhaustion-recheck-record
+  [now-ms ticket job observation submission]
+  {:recheck/type :terminal-exhaustion-submission-authority
+   :recheck/attempt 1
+   :recheck/observed-at-ms (long now-ms)
+   :recheck/observation (cond
+                          submission :authenticated-submission
+                          (and (map? observation) (false? (:ok observation)))
+                          :provider-error
+                          :else :empty)
+   :recheck/provider-error
+   (when (and (map? observation) (false? (:ok observation)))
+     (select-keys observation [:error/code :error/component
+                               :transport/operation :exception/class
+                               :exception/message]))
+   :retained/job-id (:job-id ticket)
+   :retained/session-id (:session-id job)
+   :retained-session/recovery-possible? (string? (:session-id job))})
+
 (defn- orphan-recovery-failure!
   [state finding persist-fn max-attempts]
   (let [attempt (inc (:orphan/recovery-attempts state))
@@ -1055,12 +1082,8 @@
           (when (and (map? submission-observation)
                      (false? (:ok submission-observation)))
             submission-observation)
-          observed-submission
-          (if (and (map? submission-observation)
-                   (true? (:ok submission-observation))
-                   (contains? submission-observation :submission))
-            (:submission submission-observation)
-            submission-observation)
+          observed-submission (submission-from-observation
+                               submission-observation)
           observed-job (job-fn (get-in state [:ticket :job-id]))
           ;; A session id exists while the job is live and is LOST when the
           ;; job is cancelled -- and the canceller is our own typed-submission
@@ -1454,43 +1477,91 @@
                                       (>= agent-repairs max-repairs)))]
                 (cond
                   exhausted?
-                  (if (and (= :agent repair-origin)
-                           (submission-only-failure? (:findings validated))
-                           (fn? missing-observation-provider))
-                    (let [provided (missing-observation-provider
-                                    active-request (:ticket state) job
-                                    agent-repairs
-                                    (get-in state [:terminal-collection :evidence]))]
-                      (if-not (:ok provided)
-                        provided
-                        (let [receipt (:certificate provided)
-                              recovered? (= :student-observation-recovered
-                                            (:receipt/type receipt))
-                              next-state
-                              (assoc state :state/type :live-job-certified
-                                     :receipt receipt :learning/outcome
-                                     (if recovered? :observed :unobserved))]
-                          (if (:ok (persist-fn next-state))
-                            {:ok true :status :certified :state next-state
-                             :certificate (:certificate provided)}
-                            {:ok false
-                             :error/code :live-job-receipt-persistence-failed}))))
-                    (assoc validated
+                  (let [terminal-exhaustion?
+                        (and (= :agent repair-origin)
+                             (submission-only-failure? (:findings validated)))
+                        recheck-observation
+                        (when (and terminal-exhaustion?
+                                   (fn? terminal-submission-provider))
+                          (terminal-submission-provider
+                           active-request (:ticket state) nil))
+                        rechecked-submission
+                        (submission-from-observation recheck-observation)
+                        recheck-record
+                        (when (and terminal-exhaustion?
+                                   (fn? terminal-submission-provider))
+                          (terminal-exhaustion-recheck-record
+                           (now-ms-fn) (:ticket state) job
+                           recheck-observation rechecked-submission))]
+                    (cond
+                      rechecked-submission
+                      (let [attempt (inc (or (get-in state
+                                                      [:terminal-collection
+                                                       :evidence :attempt])
+                                             1))
+                            collection (terminal-collection-record
+                                        active-request (:ticket state) job
+                                        rechecked-submission attempt)
+                            next-state
+                            (assoc state
+                                   :terminal-collection
+                                   {:evidence collection
+                                    :submission rechecked-submission
+                                    :budget configured}
+                                   :terminal-exhaustion/recheck recheck-record)]
+                        (if (:ok (persist-fn next-state))
+                          {:ok true :status :terminal-collected
+                           :state next-state :collection collection
+                           :terminal-exhaustion/recheck recheck-record}
+                          {:ok false
                            :error/code
-                           (cond
-                             (= :apparatus repair-origin)
-                             :live-job-apparatus-repair-exhausted
+                           :live-job-terminal-collection-persistence-failed
+                           :state state}))
 
-                             (unauthorized-memory-repair-repeated? validated)
-                             :live-job-unauthorized-memory-repair-rejected
+                      (and terminal-exhaustion?
+                           (fn? missing-observation-provider))
+                      (let [provided (missing-observation-provider
+                                      active-request (:ticket state) job
+                                      agent-repairs
+                                      (get-in state
+                                              [:terminal-collection :evidence]))]
+                        (if-not (:ok provided)
+                          provided
+                          (let [receipt (:certificate provided)
+                                recovered? (= :student-observation-recovered
+                                              (:receipt/type receipt))
+                                next-state
+                                (assoc state :state/type :live-job-certified
+                                       :receipt receipt :learning/outcome
+                                       (if recovered? :observed :unobserved))]
+                            (if (:ok (persist-fn next-state))
+                              {:ok true :status :certified :state next-state
+                               :certificate (:certificate provided)}
+                              {:ok false
+                               :error/code
+                               :live-job-receipt-persistence-failed}))))
 
-                             :else
-                             :live-job-terminal-repair-exhausted)
-                           :repair/fault-origin repair-origin
-                           :repair/attempts
-                           (if (= :apparatus repair-origin)
-                             apparatus-repairs agent-repairs)
-                           :repair/history (:repair-attempt-history state)))
+                      :else
+                      (cond->
+                       (assoc validated
+                              :error/code
+                              (cond
+                                (= :apparatus repair-origin)
+                                :live-job-apparatus-repair-exhausted
+
+                                (unauthorized-memory-repair-repeated? validated)
+                                :live-job-unauthorized-memory-repair-rejected
+
+                                :else
+                                :live-job-terminal-repair-exhausted)
+                              :repair/fault-origin repair-origin
+                              :repair/attempts
+                              (if (= :apparatus repair-origin)
+                                apparatus-repairs agent-repairs)
+                              :repair/history
+                              (:repair-attempt-history state))
+                        recheck-record
+                        (assoc :terminal-exhaustion/recheck recheck-record))))
 
                   (not (and (:ok repair) (map? repair-request)
                             (string? (:dispatch/id repair-request))))

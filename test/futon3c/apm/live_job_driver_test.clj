@@ -1121,6 +1121,108 @@
     (is (= :live-job-terminal-repair-exhausted (:error/code result)))
     (is (= 1 (:repair/attempts result)))))
 
+(def f227-terminal-exhaustion-pin
+  ;; Verbatim identities from:
+  ;; data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f227/live/
+  ;; guide-intervention-2-review.edn
+  ;; SHA-256 270f3e712a673b237b26eaf8e3e049cc30e735c3b740eb1df2dc00880a42aa57
+  ;; and the f227 parked entry in queue-state.edn
+  ;; SHA-256 bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550.
+  {:dispatch/id
+   "9e4a8794e623c0edd86071df573b14b41fbaee902f94635eaa4a4d130e1770bb"
+   :job-id
+   "apm-role-5a1aa8b0dfa0f1cd1f4634d20cb262ad87f7c182d9ea6bcc506cdd844d064817"
+   :repair-job-id
+   "apm-role-785ee0eaf05e1231bd760e1f971225e52ce8135fd20b8a38635a10fa1f2b0ad0"
+   :session-id "01a092fb-9ef6-7903-ada7-ebc94980fa6c"
+   :submission/id
+   "856f8294163582224d19a6c00aeb35b750c6030788da2c0385b3afcc7e1e02fe"})
+
+(defn- f227-exhaustion-inputs [submission]
+  (let [calls (atom [])
+        persisted (atom [])
+        job-id (:job-id f227-terminal-exhaustion-pin)
+        job {:job-id job-id
+             :agent-id "f227-promotion-proctor"
+             :session-id (:session-id f227-terminal-exhaustion-pin)
+             :state :done
+             :report {:reviews []}}
+        request (assoc request
+                       :dispatch/id (:dispatch/id f227-terminal-exhaustion-pin)
+                       :agent-id "f227-promotion-proctor"
+                       :frame-id "f227"
+                       :problem-id "m93J07"
+                       :role :promotion-proctor
+                       :phase :promote-solver)
+        state {:state/type :live-job-dispatched
+               :request request
+               :ticket {:job-id job-id}
+               :activation/accepted? true
+               :terminal-collection
+               {:evidence {:collection/type :typed-role-terminal
+                           :job-id job-id :attempt 1
+                           :submission/available? false}
+                :submission nil
+                :budget sut/default-terminal-budget}
+               :terminal-repair-attempts 1
+               :typed-submission-migration-attempts 1
+               :repair-attempt-history
+               [{:job-id (:repair-job-id f227-terminal-exhaustion-pin)
+                 :fault-origin :agent :findings nil}]}
+        inputs (assoc (effects calls (atom job))
+                      :request request
+                      :state state
+                      :now-ms-fn (constantly 1789219885296)
+                      :job-fn (fn [_] (swap! calls conj :poll) job)
+                      :persist-fn (fn [next-state]
+                                    (swap! calls conj :persist)
+                                    (swap! persisted conj next-state)
+                                    {:ok true})
+                      :terminal-submission-provider
+                      (fn [& _]
+                        (swap! calls conj :submission-recheck)
+                        submission)
+                      :terminal-repair-request-fn (constantly {:ok true}))]
+    {:inputs inputs :calls calls :persisted persisted}))
+
+(deftest f227-durable-submission-at-exhaustion-enters-normal-collection
+  (let [submission {:submission/id
+                    (:submission/id f227-terminal-exhaustion-pin)
+                    :authority
+                    {:job-id (:job-id f227-terminal-exhaustion-pin)
+                     :frame-id "f227" :problem-id "m93J07"
+                     :agent-id "f227-promotion-proctor"}
+                    :payload {:reviews []}}
+        {:keys [inputs calls persisted]} (f227-exhaustion-inputs
+                                          {:ok true
+                                           :submission submission})
+        result (sut/drive! inputs)]
+    (is (= :terminal-collected (:status result)))
+    (is (not= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= (:submission/id f227-terminal-exhaustion-pin)
+           (get-in result [:state :terminal-collection
+                           :submission :submission/id])))
+    (is (= :authenticated-submission
+           (get-in result [:terminal-exhaustion/recheck
+                           :recheck/observation])))
+    (is (= [:poll :submission-recheck :persist] @calls))
+    (is (= 1 (count @persisted)))))
+
+(deftest f227-empty-exhaustion-recheck-is-recorded
+  (let [{:keys [inputs calls]} (f227-exhaustion-inputs nil)
+        result (sut/drive! inputs)
+        recheck (:terminal-exhaustion/recheck result)]
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= :empty (:recheck/observation recheck)))
+    (is (= 1 (:recheck/attempt recheck)))
+    (is (= 1789219885296 (:recheck/observed-at-ms recheck)))
+    (is (= (:job-id f227-terminal-exhaustion-pin)
+           (:retained/job-id recheck)))
+    (is (= (:session-id f227-terminal-exhaustion-pin)
+           (:retained/session-id recheck)))
+    (is (true? (:retained-session/recovery-possible? recheck)))
+    (is (= [:poll :submission-recheck] @calls))))
+
 (deftest f83-shaped-repair-that-retains-unauthorized-memory-is-refused
   ;; f83/a1's first terminal cited this exact rejected promotion candidate.
   ;; A repair instruction is not enforcement: if the replacement submission
