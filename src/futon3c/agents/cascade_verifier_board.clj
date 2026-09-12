@@ -96,7 +96,10 @@
                 issues))})
 
 (defn run
-  "Run one cycle. EFFECT-HANDLER performs effects; the default prints."
+  "Run one cycle. EFFECT-HANDLER performs effects; the default prints.
+  Lean proves no-act effects under the declared registry, not arbitrary
+  register-verb! replacements. The board digest does not bind that mutable
+  registry, so the unrestricted runtime certificate remains :pending."
   ([inputs] (run inputs (fn [e] (prn {:effect (first e)}))))
   ([inputs effect-handler]
    (let [b (resolve-args inputs)
