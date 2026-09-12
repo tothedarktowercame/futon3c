@@ -1366,6 +1366,16 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
             (or (plist-get payload :compact-error) "unknown failure")))
    ((= status 409)
     "[compact] busy — seat is mid-turn, try again after it finishes")
+   ((and (= status 202) (plist-get payload :queued))
+    (let ((turn-id (plist-get payload :turn-id))
+          (ahead (plist-get payload :ahead)))
+      (format "[compact] %s%s — runs when the seat's earlier turns finish"
+              (if (plist-get payload :deduped) "already queued" "queued")
+              (cond
+               ((and turn-id (numberp ahead))
+                (format " (turn %s, %d ahead)" turn-id ahead))
+               (turn-id (format " (turn %s)" turn-id))
+               (t "")))))
    ((= status 202)
     (format "[compact] pending%s — check the next Cooked line"
             (if-let* ((turn-id (plist-get payload :turn-id)))
@@ -1416,10 +1426,11 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
         (kill-buffer response-buffer)))))
 
 (defun claude-repl-compact ()
-  "Request context compaction for this Claude seat asynchronously."
+  "Request context compaction for this Claude seat asynchronously.
+A compaction is a turn like any other: when the seat is mid-turn (this
+buffer's or anyone else's), the server queues it behind that turn and
+answers 202 with its turn id instead of refusing."
   (interactive)
-  (when (process-live-p agent-chat--pending-process)
-    (user-error "Claude is still responding; compact after the turn finishes"))
   (let* ((chat-buffer (current-buffer))
          (url-request-method "POST")
          (url-request-extra-headers '(("Content-Type" . "application/json")

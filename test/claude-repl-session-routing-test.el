@@ -4,13 +4,21 @@
 (require 'agent-chat)
 (require 'claude-repl)
 
-(ert-deftest claude-repl-compact-refuses-during-live-turn ()
+(ert-deftest claude-repl-compact-posts-during-live-turn ()
+  ;; Joe, 2026-09-12: compaction queues like any other turn; the server orders
+  ;; it behind the live one, so the buffer must not refuse to send it.
   (with-temp-buffer
-    (setq agent-chat--pending-process 'pretend-process)
-    (cl-letf (((symbol-function 'process-live-p) (lambda (_) t))
-              ((symbol-function 'url-retrieve)
-               (lambda (&rest _) (ert-fail "compact POST must not run"))))
-      (should-error (claude-repl-compact) :type 'user-error))))
+    (let (posted)
+      (setq claude-repl-api-url "http://agency.test:7070"
+            claude-repl-agent-id "claude-15"
+            agent-chat--pending-process 'pretend-process)
+      (cl-letf (((symbol-function 'process-live-p) (lambda (_) t))
+                ((symbol-function 'agent-chat-insert-message) (lambda (&rest _)))
+                ((symbol-function 'url-retrieve)
+                 (lambda (url &rest _) (setq posted url) 'request-process)))
+        (should (eq 'request-process (claude-repl-compact)))
+        (should (equal posted
+                       "http://agency.test:7070/api/alpha/agents/claude-15/compact"))))))
 
 (ert-deftest claude-repl-compact-posts-to-the-seat-control-url ()
   (with-temp-buffer
@@ -45,6 +53,12 @@
   (should (equal (claude-repl--compact-outcome-line
                   202 '(:ok nil :turn-id "compact-123"))
                  "[compact] pending (turn compact-123) — check the next Cooked line"))
+  (should (equal (claude-repl--compact-outcome-line
+                  202 '(:ok t :queued t :turn-id "compact-7" :ahead 2 :path "queued"))
+                 "[compact] queued (turn compact-7, 2 ahead) — runs when the seat's earlier turns finish"))
+  (should (equal (claude-repl--compact-outcome-line
+                  202 '(:ok t :queued t :deduped t :turn-id "compact-7" :path "queued"))
+                 "[compact] already queued (turn compact-7) — runs when the seat's earlier turns finish"))
   (should (equal (claude-repl--compact-outcome-line
                   404 '(:ok nil :error "no local agent"))
                  "[compact] unavailable: no local agent")))
