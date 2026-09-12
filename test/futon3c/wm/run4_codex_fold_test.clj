@@ -20,7 +20,9 @@
         seen (atom nil)
         port (sut/make-port
               authority
-              {:activate-fn (fn [_ request]
+              {:announce-fn (fn [_ request]
+                              {:ok true :job-id (:job-id request)})
+               :activate-fn (fn [_ request]
                               (reset! seen request)
                               {:ok true :accepted? true :job-id (:job-id request)})
                :await-fn (fn [_ dispatch]
@@ -35,7 +37,8 @@
     (testing "wrong actor and typed refusal never become silent nil"
       (let [bad (sut/make-port
                  authority
-                 {:activate-fn (fn [_ r] {:ok true :accepted? true :job-id (:job-id r)})
+                 {:announce-fn (fn [_ r] {:ok true :job-id (:job-id r)})
+                  :activate-fn (fn [_ r] {:ok true :accepted? true :job-id (:job-id r)})
                   :await-fn (fn [_ d]
                               {:ok true :dispatch-observation
                                {:terminal {:job-id (:job-id d) :agent-id "zai-5"

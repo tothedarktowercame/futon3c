@@ -27,8 +27,9 @@
   injected for hermetic tests; production defaults to the canonical Agency API."
   [{:keys [root plan-ref plan-sha256 seat agency-base caller]
     :as authority}
-   & [{:keys [activate-fn await-fn]
-       :or {activate-fn jobs/activate! await-fn jobs/await-terminal!}}]]
+   & [{:keys [announce-fn activate-fn await-fn]
+       :or {announce-fn jobs/announce! activate-fn jobs/activate!
+            await-fn jobs/await-terminal!}}]]
   (when-not (and (= :wm/codex-fold-authority-v1 (:schema authority))
                  (= #{:schema :root :plan-ref :plan-sha256 :seat :agency-base :caller}
                     (set (keys authority)))
@@ -37,7 +38,7 @@
                  (string? seat) (str/starts-with? seat "codex-")
                  (string? agency-base) (not (str/blank? agency-base))
                  (string? caller) (not (str/blank? caller))
-                 (fn? activate-fn) (fn? await-fn))
+                 (fn? announce-fn) (fn? activate-fn) (fn? await-fn))
     (throw (ex-info "Codex fold authority refused" {:reason :invalid-fold-authority})))
   (let [plan-file (or (safe-file root plan-ref)
                       (throw (ex-info "Codex fold plan refused"
@@ -61,11 +62,13 @@
                 prompt (str (:prompt-prefix plan) "\n\nConstruction EDN:\n"
                             (pr-str construction)
                             "\n\nReturn exactly one EDN fold-output map and no prose.")
-                activation (activate-fn agency-base
-                                        {:agent-id seat :prompt prompt
-                                         :surface "bell" :caller caller
-                                         :job-id job-id})]
-            (if-not (and (:ok activation) (:accepted? activation)
+                request {:agent-id seat :prompt prompt :surface "bell"
+                         :caller caller :job-id job-id}
+                announcement (announce-fn agency-base request)
+                activation (when (and (:ok announcement)
+                                      (= job-id (:job-id announcement)))
+                             (activate-fn agency-base request))]
+            (if-not (and (:ok announcement) (:ok activation) (:accepted? activation)
                          (= job-id (:job-id activation)))
               (refuse :fold-dispatch-refused {:job-id job-id})
               (let [observed (await-fn agency-base
