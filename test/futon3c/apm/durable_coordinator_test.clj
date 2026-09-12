@@ -244,6 +244,7 @@
   (let [{:keys [registry state-a]} (temp-paths)
         armed (atom nil)
         checks (atom 0)
+        disarmed (atom [])
         running? (atom false)]
     (sut/register-adapter!
      :test/watchdog-fence
@@ -258,7 +259,11 @@
                 (reset! armed request)
                 (reset! running? true)
                 {:ok true :status :started})
-              sut/*watchdog-running-fn* (fn [_] @running?)]
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [id]
+                                       (swap! disarmed conj id)
+                                       (reset! running? false)
+                                       {:ok true :status :stopped})]
       (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
                     watchdog/check! (fn [_]
                                       (swap! checks inc)
@@ -269,8 +274,64 @@
         (is (= 1 @checks))
         (is (:ok (#'sut/set-enabled! registry "c:fenced" false
                                             :test :test-generation-change)))
-        (is (= :superseded (:status ((:watch-fn @armed)))))
+        ;; A disabled row is never coming back through start-entry!, so the
+        ;; observer disarms itself rather than spinning against it forever.
+        (is (= :stopped-not-enabled (:status ((:watch-fn @armed)))))
+        (is (= ["semantic-progress:c:fenced"] @disarmed))
         (is (= 1 @checks))))))
+
+(deftest muted-watchdog-rearms-itself-without-a-tick
+  ;; ensure-watchdog! is reachable only from start-entry! and :tick-state-fn.
+  ;; A coordinator parked on an expired intent never ticks, so on 2026-09-10
+  ;; jit-all-open-v3's observer stayed bound to a superseded digest for 348
+  ;; minutes, persisting nothing, while the deadline it existed to enforce
+  ;; passed unobserved. The observer's own scheduler is the one thing still
+  ;; running, so it drives the repair.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        arms (atom 0)
+        checks (atom 0)
+        running? (atom false)]
+    (sut/register-adapter!
+     :test/watchdog-remute
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:muted"
+                             :adapter :test/watchdog-remute :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [_] {:ok true :status :started})
+                    watchdog/check! (fn [_]
+                                      (swap! checks inc)
+                                      {:ok true :status :watching})]
+        (is (:ok (sut/start-entry! registry
+                                   (registered-entry registry "c:muted"))))
+        (is (= 1 @arms))
+        (let [muted (:watch-fn @armed)]
+          (is (= :watching (:status (muted))))
+          (is (= 1 @checks))
+          ;; Still enabled, but re-registered under a newer digest -- exactly
+          ;; what resume!'s set-enabled! does while an observer is alive.
+          (is (:ok (#'sut/set-enabled! registry "c:muted" true
+                                       :test :test-generation-change)))
+          (let [repair (muted)]
+            (is (= :rearmed (:status repair)))
+            (is (:ok repair)))
+          ;; It re-armed rather than observing, and the replacement is bound
+          ;; to the current generation.
+          (is (= 2 @arms))
+          (is (= 1 @checks))
+          (is (not= muted (:watch-fn @armed)))
+          (is (= :watching (:status ((:watch-fn @armed)))))
+          (is (= 2 @checks)))))))
 
 (deftest durable-stop-disarms-watchdog
   (let [{:keys [registry state-a]} (temp-paths)
@@ -395,6 +456,57 @@
                          (regulator/initial-state "c:tick-rearm")))))
         (is @running?)
         (is (= 1 @arms))))))
+
+(deftest tick-rearm-follows-the-registry-not-the-start-snapshot
+  ;; start-entry! captures ENTRY once, and set-enabled! rewrites the digest
+  ;; under a running coordinator on every resume. Once the observer re-arms
+  ;; itself onto the current digest, a tick that compares the rearm journal
+  ;; against that stale snapshot disagrees on every tick -- 500ms apart in
+  ;; production -- and burns the 3-per-60s rearm budget, whereupon the
+  ;; exhausted budget halts a coordinator whose watchdog is correctly armed.
+  ;; That halt took under 40 seconds on 2026-09-10.
+  (let [{:keys [registry state-a]} (temp-paths)
+        armed (atom nil)
+        arms (atom 0)
+        running? (atom false)
+        start-request (atom nil)]
+    (sut/register-adapter!
+     :test/tick-digest
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :idle})
+              :reconcile-fn (fn [_ _] {:ok true :status :idle})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:tick-digest"
+                             :adapter :test/tick-digest :config {}
+                             :state-path state-a :period-ms 10})))
+    (binding [sut/*watchdog-start-fn*
+              (fn [request]
+                (reset! armed request)
+                (swap! arms inc)
+                (reset! running? true)
+                {:ok true :status :started})
+              sut/*watchdog-running-fn* (fn [_] @running?)
+              sut/*watchdog-stop-fn* (fn [_] {:ok true :status :stopped})]
+      (with-redefs [regulator/start! (fn [request]
+                                       (reset! start-request request)
+                                       {:ok true :status :started})
+                    watchdog/check! (fn [_] {:ok true :status :watching})]
+        (is (:ok (sut/start-registered! registry "c:tick-digest")))
+        (is (= 1 @arms))
+        (let [tick (:tick-state-fn @start-request)
+              state (regulator/initial-state "c:tick-digest")]
+          (is (= :idle (:status (tick state))))
+          (is (= 1 @arms))
+          ;; The digest moves under the running coordinator, and the muted
+          ;; observer repairs itself onto it.
+          (is (:ok (#'sut/set-enabled! registry "c:tick-digest" true
+                                       :test :test-generation-change)))
+          (is (= :rearmed (:status ((:watch-fn @armed)))))
+          (is (= 2 @arms))
+          ;; The tick agrees with the journal, so it neither re-arms nor
+          ;; spends the budget it would need for a real repair.
+          (dotimes [_ 10]
+            (is (= :idle (:status (tick state)))))
+          (is (= 2 @arms)))))))
 
 (deftest repeated-watchdog-deaths-hit-durable-rearm-bound
   (let [{:keys [registry state-a]} (temp-paths)

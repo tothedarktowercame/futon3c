@@ -82,6 +82,15 @@ def rec_bytes(rec):
     return len(json.dumps(rec, ensure_ascii=False).encode("utf-8")) + 1  # +newline
 
 
+def _blocks(rec):
+    """Content blocks of a transcript record, or [] when it has none."""
+    msg = rec.get("message")
+    if not isinstance(msg, dict):
+        return []
+    content = msg.get("content")
+    return [b for b in content if isinstance(b, dict)] if isinstance(content, list) else []
+
+
 def truncate(recs, target_bytes):
     """Layer 2: keep newest conversation records within a target FILE-byte budget
     (the joey-max gate measures raw file bytes), re-root the oldest kept.
@@ -110,15 +119,77 @@ def truncate(recs, target_bytes):
             has_user = True
     # Snap the window start to a USER turn: the API requires a conversation to
     # begin user-first, so drop any leading assistant/system records in the window.
+    #
+    # But a tool_result IS a user turn, and the API also rejects a tool_result
+    # whose tool_use is not present. Cutting between an assistant's tool_use and
+    # the user's matching tool_result satisfies "begins user-first" while leaving
+    # an ORPHAN, which fails on resume. Measured 2026-09-07 on claude-5's
+    # session 4ea2e78a: the compacted transcript began user/[tool_result] with
+    # 220 tool_use ids against 221 tool_result refs -- exactly one orphan, at
+    # the re-root.
+    #
+    # So the window must start at a user turn that carries no unmatched
+    # tool_result. Anything earlier is a turn the API will not accept.
+    kept_tool_use_ids = set()
+    for i in sorted(keep):
+        for b in _blocks(recs[i]):
+            if b.get("type") == "tool_use" and b.get("id"):
+                kept_tool_use_ids.add(b["id"])
+
+    def _orphan_free_user(i):
+        r = recs[i]
+        if r.get("type") != "user":
+            return False
+        for b in _blocks(r):
+            if b.get("type") == "tool_result":
+                ref = b.get("tool_use_id")
+                if ref is not None and ref not in kept_tool_use_ids:
+                    return False
+        return True
+
     first_user = None
     for i in sorted(keep):
-        if recs[i].get("type") == "user":
+        if _orphan_free_user(i):
             first_user = i
             break
+    if first_user is None:
+        # Every candidate start is orphaned. Keeping a transcript the API will
+        # refuse is worse than keeping less, so fall back to the plain
+        # user-first rule and drop the offending tool_result blocks below.
+        for i in sorted(keep):
+            if recs[i].get("type") == "user":
+                first_user = i
+                break
     keep = {i for i in keep if first_user is not None and i >= first_user}
     dropped = len(conv_idx) - len(keep)
     out = [r for i, r in enumerate(recs)
            if (r.get("type") not in CONVERSATION_TYPES) or (i in keep)]
+    # Belt and braces: strip any tool_result whose tool_use did not survive.
+    # The window rule above should prevent this, but an orphan anywhere in the
+    # transcript -- not just at the root -- is refused, and a dropped block
+    # costs one tool echo where a refused transcript costs the whole session.
+    surviving_uses = set()
+    for r in out:
+        for b in _blocks(r):
+            if b.get("type") == "tool_use" and b.get("id"):
+                surviving_uses.add(b["id"])
+    for r in out:
+        msg = r.get("message")
+        if not isinstance(msg, dict):
+            continue
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        pruned = [b for b in content
+                  if not (isinstance(b, dict)
+                          and b.get("type") == "tool_result"
+                          and b.get("tool_use_id") is not None
+                          and b.get("tool_use_id") not in surviving_uses)]
+        if len(pruned) != len(content):
+            # Never leave an EMPTY content list; the API rejects that too.
+            msg["content"] = pruned if pruned else [
+                {"type": "text", "text": "[compacted: tool result dropped]"}]
+
     # re-root: the first surviving conversation record (now a user turn) starts the chain
     for r in out:
         if r.get("type") in CONVERSATION_TYPES:
