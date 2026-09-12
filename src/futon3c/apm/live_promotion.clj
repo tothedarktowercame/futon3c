@@ -12,6 +12,7 @@
             [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-review-store :as review-store]
+            [futon3c.apm.role-job-reconciliation :as role-job]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.transport-conformance :as transport])
   (:import [java.nio.file Path]))
@@ -360,6 +361,43 @@
 
       :else {:ok true :reviewer reviewer :reviews reviews})))
 
+(defn- nested-review-prompt [request]
+  (if (contains? #{:submit-step :typed-submission-contract-migration}
+                 (:repair/kind request))
+    (str "SUBMIT STEP — ONLY THE TYPED SUBMISSION IS MISSING.\n"
+         "The review turn is over. Do not re-review or alter the candidate set. "
+         "Submit the completed review that already exists for this exact authority.\n"
+         "Authority:\n" (pr-str request) "\nCORRECTIVE COMMAND:\n"
+         (submission/command request {:job-id (:submission/job-id request)}))
+    (str "Independently review this exact candidate set. Authority:\n"
+         (pr-str request))))
+
+(defn- nested-review-repair-request [request ticket job failure]
+  (let [kind (:repair/kind failure)
+        contract-migration? (= :typed-submission-contract-migration kind)]
+  (if-not (contains? #{:submit-step :typed-submission-contract-migration} kind)
+    {:ok false :error/code :promotion-review-repair-kind-invalid
+     :finding (select-keys failure [:error/code :findings :repair/kind])}
+    (let [body (-> request
+                   (dissoc :dispatch/id :submission/job-id :submission/token)
+                   (assoc :fresh-session? contract-migration?
+                          :repair/attempt
+                          (if contract-migration?
+                            :typed-contract-migration-1
+                            (:repair/next-attempt failure 1))
+                          :repair/of-job-id (:job-id job)
+                          :repair/of-ticket-id (:ticket/id ticket)
+                          :repair/findings (vec (:findings failure))
+                          :repair/fault-origin
+                          (or (:repair/fault-origin failure) :agent)
+                          :repair/kind kind
+                          :repair/validation-output
+                          {:error/code (:error/code failure)
+                           :findings (vec (:findings failure))
+                           :report/error (:report/error job)}))
+          addressed (assoc body :dispatch/id (machine/ledger-digest [body]))]
+      {:ok true :request (submission/prepare-request addressed)}))))
+
 (defn- review-read-instruction
   ([agency-base candidates] (review-read-instruction agency-base candidates []))
   ([agency-base candidates supplemental-refs]
@@ -454,6 +492,74 @@
          {:ok true :status :awaiting-terminal :job job-id}
          {:ok false :error/code :promotion-stage-job-state-unclassified
           :job job}))))))
+
+(defn- reconcile-nested-review!
+  [state reviewer-request agency-base persist-fn]
+  (let [inputs (candidate-store/review-inputs (:candidates state))]
+    (if-not (:ok inputs)
+      inputs
+      (let [authority (-> (reviewer-authority
+                           reviewer-request (:candidates state)
+                           (:candidate-evidence inputs))
+                          submission/with-job-authority)
+            job-id (:job state)]
+        (if-not (= job-id (:submission/job-id authority))
+          {:ok false :error/code :promotion-review-authority-mismatch
+           :expected-job-id job-id
+           :derived-job-id (:submission/job-id authority)}
+          (let [nested-state
+                (or (:review/nested-driver-state state)
+                    {:state/type :live-job-dispatched
+                     :request authority
+                     :ticket (:ticket state)
+                     :activation/accepted? true})
+                result
+                (role-job/drive!
+                 {:request authority
+                  :state nested-state
+                  :persist-fn
+                  (fn [next-state]
+                    (persist-fn
+                     (assoc state :review/nested-driver-state next-state)))
+                  :agency-base agency-base
+                  :prompt-fn nested-review-prompt
+                  :terminal-validator
+                  (fn [request _ticket job]
+                    (let [report (some-> (:typed-submission job)
+                                         submitted-report)
+                          normalized (when report
+                                       (normalize-review-report
+                                        report
+                                        (:candidate-set-digest request)
+                                        (:base-problem-blob request)
+                                        (:agent-id request)))]
+                      (if (:ok normalized)
+                        (assoc normalized :report report)
+                        (or normalized
+                            {:ok false
+                             :error/code :promotion-review-report-missing
+                             :findings [:typed-submission-missing]}))))
+                  :terminal-repair-request-fn nested-review-repair-request
+                  :terminal-budget-config
+                  (or (:terminal-budget authority)
+                      job-driver/default-terminal-budget)
+                  :receipt-provider
+                  (fn [_request _ticket _job validated]
+                    {:ok true
+                     :certificate
+                     (select-keys validated [:report :reviewer :reviews])})})]
+            (cond
+              (= :certified (:status result))
+              (assoc (:certificate result) :ok true)
+
+              (false? (:ok result))
+              {:ok false :error/code :promotion-review-reconciliation-failed
+               :nested/fault result}
+
+              :else
+              {:ok true :status :awaiting-terminal
+               :job-id (or (:job-id result)
+                           (get-in result [:state :ticket :job-id]))})))))))
 
 (defn run-live!
   [{:keys [state-path agency-base control-root deposit-request reviewer-request
@@ -628,6 +734,7 @@
     (when (not= stored-state state) (persist-fn state))
     (assoc
      (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
+              :agency-base agency-base
               :deposit-request deposit-request
               :reviewer-request reviewer-request
               :persist-candidates-fn #(candidate-store/persist!
@@ -911,7 +1018,7 @@
   [{:keys [state deposit-fn review-fn publish-fn persist-fn certificate-emitter-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
            persist-reviews-fn deposit-request reviewer-request
-           promotion-policy contract-digest now-ms-fn]
+           promotion-policy contract-digest now-ms-fn agency-base]
     :as inputs
     :or {prepare-patterns-fn coined-pattern/publish!
          now-ms-fn #(System/currentTimeMillis)
@@ -1097,7 +1204,16 @@
                              :memory-id (:memory-id candidate)})
                           invisible)}
          deposit-fn persist-fn)
-        (let [r (review-fn (:job state) (:candidates state))
+        (let [observed (review-fn (:job state) (:candidates state))
+              missing-submission?
+              (and (false? (:ok observed))
+                   (= :typed-submission-missing
+                      (get-in observed [:report/error :error/code])))
+              r (if (or (:review/nested-driver-state state)
+                        missing-submission?)
+                  (reconcile-nested-review! state reviewer-request
+                                            agency-base persist-fn)
+                  observed)
               state (cond-> state
                       (:terminal-collection r)
                       (assoc :terminal-collection (:terminal-collection r)))

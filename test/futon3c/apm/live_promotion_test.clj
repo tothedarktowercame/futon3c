@@ -2,9 +2,12 @@
   (:require [clojure.edn :as edn]
             [clojure.string :as string]
             [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-job-driver :as job-driver]
+            [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as sut]
+            [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.transport-conformance :as transport]
             [futon3c.apm.typed-role-submission :as submission]))
@@ -665,6 +668,147 @@
     (is (= "review-1" (:job-id @published)))
     (is (= "f27-guide" (get-in @published [:candidates 0 :depositor])))
     (is (= "f27-promotion-proctor" (:reviewer @published)))))
+
+(def f227-review-job
+  "apm-role-5a1aa8b0dfa0f1cd1f4634d20cb262ad87f7c182d9ea6bcc506cdd844d064817")
+
+(def f227-conflict
+  {:error/code "role-submission-conflict"
+   :ok false
+   :submission/id
+   "57f8b6fe1dd931d1d2603374347c9fcca4a471ddf0937ff193b6d754e75acee0"})
+
+(def f227-replay-provenance
+  {:review-state/path
+   "data/apm-campaigns/jit-all-open-v3/jit-all-open-v3-f227/live/guide-intervention-2-review.edn"
+   :review-state/sha256
+   "270f3e712a673b237b26eaf8e3e049cc30e735c3b740eb1df2dc00880a42aa57"
+   :queue-state/sha256
+   "bb9a3b0df9992680339f8b22e94689ca778e68b84afe929060550bace66c5550"
+   :agency/job-id f227-review-job
+   :agency/event-seq 18})
+
+(defn- drive-f227-nested-review [submission-on-repair?]
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts ["e9f16fd64b887b4ed4c4711adff954716ff491616f8b8a17ad4051c5118d4530"]}
+        reviewer "f227-promotion-proctor"
+        base-blob "aa207f8ec052dd891b5597c158efc3d015fc2366"
+        digest (machine/ledger-digest [[candidate]])
+        review {:memory-id "m" :reviewer reviewer :verdict "approve"
+                :review-evidence-id "e" :attachment-status "reviewed"
+                :pattern-ids ["p"] :reason "pinned reason"
+                :residual "Main.lean:1"}
+        typed {:authority {:job-id "nested-repair-job" :agent-id reviewer}
+               :payload {:evidence {:candidate-set-digest digest
+                                    :base-problem-blob base-blob
+                                    :open-residuals [] :reviews [review]}}}
+        saved (atom {:state/type :promotion :stage :independent-review
+                     :deposit {:depositor "f227-guide"}
+                     :candidates [candidate] :job f227-review-job
+                     :ticket {:job-id f227-review-job}
+                     :request {:agent-id reviewer :base-problem-blob base-blob}})
+        announced (atom [])
+        persisted (atom [])
+        provider-calls (atom 0)
+        request {:agent-id reviewer :base-problem-blob base-blob
+                 :dispatch/id "9e4a8794e623c0edd86071df573b14b41fbaee902f94635eaa4a4d130e1770bb"
+                 :terminal-budget {:collection-attempts 1 :repair-attempts 1}}
+        step (fn []
+               (let [result
+                     (sut/drive!
+                      {:state @saved :reviewer-request request
+                       :agency-base "http://agency"
+                       :review-fn
+                       (fn [_ _]
+                         {:ok false :error/code :promotion-stage-terminal-invalid
+                          :job {:job-id f227-review-job :state :done
+                                :submission-attempt/error f227-conflict}
+                          :report/error {:error/code :typed-submission-missing}})
+                       :persist-candidates-fn
+                       (fn [deposit] {:ok true :deposit deposit
+                                      :candidates (:candidates deposit)})
+                       :candidate-visible-fn (constantly true)
+                       :persist-reviews-fn
+                       (fn [{:keys [reviews]}] {:ok true :reviews reviews})
+                       :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+                       :persist-fn (fn [state]
+                                     (swap! persisted conj state)
+                                     (reset! saved state)
+                                     {:ok true})})]
+                 result))]
+    (with-redefs [candidate-store/review-inputs
+                  (fn [_] {:ok true :candidate-evidence []})
+                  submission/prepare-request identity
+                  submission/with-job-authority
+                  (fn [req]
+                    (assoc req :submission/token "token"
+                           :submission/job-id
+                           (if (:repair/of-job-id req)
+                             "nested-repair-job" f227-review-job)))
+                  submission/register! (fn [& _] {:ok true})
+                  runtime/http-json (fn [& _] {:ok true :http/status 200})
+                  submission/authenticated-completion
+                  (fn [_ ticket]
+                    (swap! provider-calls inc)
+                    (when (and submission-on-repair?
+                               (= "nested-repair-job" (:job-id ticket)))
+                      typed))
+                  job-port/observe
+                  (fn [_ job-id]
+                    {:ok true :job-id job-id :agent-id reviewer :state :done
+                     :session-id "01a092fb-9ef6-7903-ada7-ebc94980fa6c"
+                     :submission-attempt/error f227-conflict})
+                  job-port/announce!
+                  (fn [_ {:keys [job-id]}]
+                    (swap! announced conj job-id)
+                    {:ok true :job-id job-id :state :announced})
+                  job-port/activate! (fn [& _] {:ok true})
+                  job-port/cancel! (fn [& _] {:ok true})]
+      (let [results (vec (repeatedly (if submission-on-repair? 4 6) step))]
+        {:results results :state @saved :states @persisted :announced @announced
+         :provider-calls @provider-calls}))))
+
+(deftest f227-missing-review-submission-is-reconciled-under-reviewer-authority
+  (let [{:keys [results states announced]}
+        (drive-f227-nested-review true)
+        state (last (filter #(= :submit-step
+                                (get-in % [:review/nested-driver-state
+                                           :active-request :repair/kind]))
+                            states))]
+    (is (= 18 (:agency/event-seq f227-replay-provenance)))
+    (is (= ["nested-repair-job"] announced))
+    (is (= f227-review-job
+           (get-in state [:review/nested-driver-state
+                          :superseded-terminals 0 :job :job-id])))
+    (is (= f227-conflict
+           (get-in state [:review/nested-driver-state
+                          :superseded-terminals 0 :job
+                          :submission-attempt/error])))
+    (is (= :submit-step
+           (get-in state [:review/nested-driver-state
+                          :active-request :repair/kind])))
+    (is (= f227-review-job
+           (get-in state [:review/nested-driver-state
+                          :active-request :repair/of-job-id])))
+    (is (= "f227-promotion-proctor"
+           (get-in state [:review/nested-driver-state
+                          :active-request :agent-id])))
+    (is (= :certified (:status (last results))))
+    (is (not-any? #(= :typed-submission-missing %)
+                  (:findings (last results))))))
+
+(deftest f227-empty-nested-repair-exhausts-with-recheck-outside-guide-findings
+  (let [{:keys [results state]} (drive-f227-nested-review false)
+        exhausted (last results)
+        nested (:nested/fault exhausted)]
+    (is (false? (:ok exhausted)))
+    (is (= :promotion-review-reconciliation-failed (:error/code exhausted)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code nested)))
+    (is (= :empty
+           (get-in nested [:terminal-exhaustion/recheck
+                           :recheck/observation])))
+    (is (map? (get-in state [:review/nested-driver-state])))
+    (is (not-any? #(= :typed-submission-missing %) (:findings exhausted)))))
 
 (deftest independent-review-persists-returned-verdict-before-publication
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
