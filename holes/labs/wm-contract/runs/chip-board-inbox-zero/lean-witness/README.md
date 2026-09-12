@@ -1,5 +1,9 @@
 # Chip-board Lean witness — 2026-09-12
 
+Historical first-witness report below. The three runtime fixes are reviewed in
+[REPAIR-REVIEW-80d874b8.md](REPAIR-REVIEW-80d874b8.md); the current checker uses
+the repaired model. The original validation.log remains unchanged.
+
 Mathlib commit `9fe1552eaf` adds `DarkTower/WarMachine/ChipBoardWitness.lean`.
 This is a manually related model and executable readback comparison, not a
 verified compiler or proof of the entire Clojure interpreter.

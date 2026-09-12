@@ -28,7 +28,7 @@ def run(argv, cwd):
 before = digests()
 lean = run(["lake", "env", "lean", str(witness.relative_to(mathlib))], mathlib)
 assert "sorryAx" not in lean
-assert len([x for x in lean.splitlines() if x.startswith("'DarkTower.")]) == 9
+assert len([x for x in lean.splitlines() if x.startswith("'DarkTower.")]) == 17
 prefixes = ("BOARD|", "INPUTS|", "END|", "CHIP|", "ROW|")
 expected = [x for x in lean.splitlines() if x.startswith(prefixes)]
 actual = run(["bb", "--classpath", "src", str(here / "readback.clj")], f3).splitlines()
@@ -36,10 +36,10 @@ assert len(expected) == 17
 assert actual == expected, {"lean": expected, "clojure": actual}
 assert before == digests(), "Source or retained evidence changed during verification"
 print(lean, end="")
-print(json.dumps({"state": "validated", "scope": "pinned-projection-and-named-repository-model",
+print(json.dumps({"state": "validated", "scope": "pinned-projection-and-repaired-base-verb-hazard",
                   "matching_lines": 17, "deltas": [0] * 17,
                   "runtime_certificate_status": "pending",
-                  "blockers": ["nil-target-commit-without-feel", "replay-erases-effects",
-                               "validated-board-can-throw"],
+                  "blockers": ["mutable-registry-not-bound-by-certificate",
+                               "arbitrary-validated-board-can-still-throw"],
                   "input_digest": "retained carrier only; original observation packet absent",
                   "hashes": before}, indent=2))
