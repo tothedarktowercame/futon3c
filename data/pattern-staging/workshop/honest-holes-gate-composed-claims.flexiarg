@@ -10,7 +10,7 @@
 @class process
 @domain process
 @family-note workshop/ family, second member; out of the math pool by construction.
-@status workshop experiment 2026-09-12; NOT assayed; the live s4=false is the pattern's standing counterexample-until-fixed.
+@status workshop experiment 2026-09-12; NOT assayed; the s4 counterexample is FIXED at source (d0741b04: typed evidence + in-band :s4-evidence); live flip pending JVM reload — until then the live page still shows s4=false, which is now a stale rendering, not an untyped absence.
 
 ! conclusion:
   A composed claim (a cascade, a page, a report) may not present itself
