@@ -1,0 +1,53 @@
+{:schema :wm/f11-fold-production-path-repair-v1
+ :date "2026-09-12"
+ :claim-boundary {:runtime-validation true
+                  :lean-attestation :suspended-vocabulary}
+ :failed-click
+ {:click-id "wm-click-b118a6da-12b5-4fe5-aacd-43eee6dc2245"
+  :checkpoint "/home/joe/run4/F11-production-successor-20260912/cohort/run4-f11-production-successor-20260912-v1/attempt-001/003-construction.edn"
+  :finding :silent-nil-construction-wiring
+  :wiring nil}
+ :discovery
+ {:serving-jvm {:http-port 7070 :drawbridge-port 6768
+                :started-before-gate true}
+  :live-runner-probe {:runner-loaded? true
+                      :construction-wiring-result-var? false}
+  :cause :stale-loaded-futon2-full-loop-runner
+  :config-evidence :trusted-f11-pin-was-enacted
+  :interpretation "The F11 config reached the trusted route, but runner-service resolved the already-loaded pre-gate Futon2 runner Var."}
+ :repair
+ {:futon2-commit "679746a3"
+  :production-rule :authenticated-pinned-run-requires-server-fold-port
+  :missing-port-outcome :construction-wiring-port-missing
+  :selection-enaction-record {:verdicts [:match :typed-divergence]
+                              :persisted-at :construction}}
+ :live-load
+ {:source :canonical-master
+  :files ["/home/joe/code/futon2/src/futon2/aif/fold.clj"
+          "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj"]
+  :result {:wiring-var? true
+           :selection-enaction-var? true
+           :negative-control {:status :invalid
+                              :failure-kind :construction-wiring-port-missing}}}
+ :positive-commissioning
+ {:job-id "run4-fold-e922932a-9501-4f3c-bd8d-907334404d56"
+  :seat "codex-21"
+  :checkpoint "production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1/attempt-001/003-construction.edn"
+  :checkpoint-sha256 "48044bd3b06412421385241c913795491cc55bbac3d44ae46fff3acb7cb8e926"
+  :validate-fold-output-v1 {:ok true :fold/schema :enriched :findings []}
+  :validate-fold-correspondence {:ok true :findings []}
+  :persisted [:wiring :fold/execution :fold/authority :selection-enaction]
+  :selection-enaction-verdict :match}
+ :domain-finding
+ {:finding :required-pointer-gate-failed
+  :diagnosis :generated-control-stage-line-drift
+  :producer-change {:repository "p4ng"
+                    :commit "6ea611d8"
+                    :effect "Removed the multiline R16 amendment and added compact basis text, moving assurance rows from 39-43 to 30-35."}
+  :wrong-side-refuted "All nine failing references were stale coordinates in Futon2 VERIFY-r-nodes.edn; the generated control-stages content and node identities were current."
+  :repair-commit "46ab6c0d"
+  :gate-before {:pointers 4006 :unresolved 9}
+  :gate-after {:pointers 4006 :unresolved 0}
+  :second-read-required true}
+ :accounting {:apparatus-work true :i8/increment 0
+              :second-f11-admission-performed false}}
