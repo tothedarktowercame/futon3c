@@ -110,7 +110,8 @@
   ([enabled?] (materialize enabled? {}))
   ([enabled? {:keys [read-template read-secret resolve-mission admissible? attest!
                      execution-cohort cohort-preflight! historical-action
-                     historical-successor]
+                     historical-successor construction-wiring-fn
+                     construction-wiring-authority]
               :or {read-template #(slurp template-path)
                    read-secret production-secret
                    admissible? action-admissible
@@ -132,7 +133,11 @@
                           historical-action
                           (assoc :historical-action historical-action)
                           historical-successor
-                          (assoc :historical-successor historical-successor))
+                          (assoc :historical-successor historical-successor)
+                          construction-wiring-fn
+                          (assoc :construction-wiring-fn construction-wiring-fn
+                                 :construction-wiring-authority
+                                 construction-wiring-authority))
            config (deployment/materialize
                    (read-template)
                    dependencies)]
