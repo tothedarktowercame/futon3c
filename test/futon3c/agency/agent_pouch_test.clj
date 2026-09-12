@@ -18,6 +18,8 @@
           (str "#!/usr/bin/env python3\n"
                "import json, sys\n"
                "sid = 'fake-session-1'\n"
+               ;; Like the real CLI, results carry the process's running total.
+               "total = [0.0]\n"
                "for line in sys.stdin:\n"
                "    data = json.loads(line)\n"
                "    content = data.get('message', {}).get('content', '')\n"
@@ -43,11 +45,13 @@
                "        print(json.dumps({'type':'system','subtype':'status','status':'compacting'}), flush=True)\n"
                "        print(json.dumps({'type':'system','subtype':'status','status':None,'compact_result':'success','compact_error':None}), flush=True)\n"
                "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
-               "        print(json.dumps({'type':'result','subtype':'success','session_id':sid,'usage':{'input_tokens':12},'total_cost_usd':0.01}), flush=True)\n"
+               "        total[0] += 0.25\n"
+               "        print(json.dumps({'type':'result','subtype':'success','session_id':sid,'usage':{'input_tokens':12},'total_cost_usd':total[0]}), flush=True)\n"
                "        continue\n"
                "    print(json.dumps({'type':'system','session_id':sid}), flush=True)\n"
                "    print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}}), flush=True)\n"
-               "    print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"))
+               "    total[0] += 0.5\n"
+               "    print(json.dumps({'type':'result','session_id':sid,'is_error':False,'total_cost_usd':total[0]}), flush=True)\n"))
     (.setExecutable f true)
     (.deleteOnExit f)
     (.getAbsolutePath f)))
@@ -121,7 +125,9 @@
             :orphaned-turns 0
             :session-id "fake-session-1"
             :usage {:input_tokens 12}
-            :total-cost-usd 0.01}
+            ;; warm turn left the running total at 0.5; compact took it to 0.75
+            :total-cost-usd 0.25
+            :pouch-total-cost-usd 0.75}
            (pouch/compact-pouch! "claude-compact" {:timeout-ms 2000})))))
 
 (deftest compact-pouch-reads-past-an-in-flight-unsolicited-turn
@@ -135,7 +141,9 @@
       (is (true? (:ok r)))
       (is (= "success" (:compact-result r)))
       (is (= 1 (:orphaned-turns r)) "the unsolicited turn's result is consumed, not reported")
-      (is (nil? (:error r))))
+      (is (nil? (:error r)))
+      (is (nil? (:total-cost-usd r))
+          "no earlier running total (BURST results carry none): no price, not the total"))
     ;; alignment survives: the next fed turn reads its own reply
     (is (= "reply:after"
            (:result (pouch/feed-turn! "claude-burst" "after"

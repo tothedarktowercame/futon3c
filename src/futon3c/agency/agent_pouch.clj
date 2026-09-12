@@ -527,6 +527,24 @@
    {:type "user"
     :message {:role "user" :content "/compact"}}))
 
+(defn- note-total-cost!
+  "Record the CLI's `total_cost_usd` from a result EVENT on AGENT-ID's pouch.
+   A stream-json process reports its running total, not the turn's cost
+   (a warm compact of claude-15 read $113.95 against a session at ~$95,
+   2026-09-12); compact-pouch! subtracts the last total to price itself."
+  [agent-id event]
+  (let [c (:total_cost_usd event)
+        aid (str agent-id)]
+    (when (number? c)
+      (swap! !pouches
+             (fn [m] (cond-> m
+                       (contains? m aid)
+                       (assoc-in [aid :last-total-cost-usd] c)))))))
+
+(defn- compaction-cost [before after]
+  (when (and (number? before) (number? after) (>= after before))
+    (- after before)))
+
 (defn- read-turn* [pouch on-event]
   (let [text (StringBuilder.)
         tools (java.util.ArrayList.)
@@ -566,6 +584,7 @@
 
               "result"
               (do
+                (note-total-cost! (:agent-id pouch) event)
                 (when-let [event-sid (:session_id event)]
                   (reset! sid event-sid))
                 {:result (let [s (str text)]
@@ -655,6 +674,7 @@
             (case (:type event)
               "result"
               (do
+                (note-total-cost! (:agent-id pouch) event)
                 (when-let [event-sid (:session_id event)]
                   (reset! sid event-sid))
                 (if @status
@@ -892,6 +912,7 @@
 
                     "result"
                     (locking demux
+                      (note-total-cost! aid event)
                       (ensure-open!)
                       (emit! event)
                       (finish-turn! event false))
@@ -1036,6 +1057,7 @@
       :else
       (let [status (atom nil)
             result-event (atom nil)
+            before-cost (atom nil)
             on-event (fn [event]
                        (when (and (= "system" (:type event))
                                   (= "status" (:subtype event))
@@ -1049,6 +1071,8 @@
                 (run-pouch-turn!
                  aid pouch (boolean wait?)
                  (fn []
+                   ;; Read under the pouch lock, before /compact is written.
+                   (reset! before-cost (:last-total-cost-usd (get @!pouches aid)))
                    (if (:demux pouch)
                      (feed-line-demux! pouch (control-line) timeout on-event
                                        (str "pouch-compact-" (java.util.UUID/randomUUID)))
@@ -1069,7 +1093,11 @@
                          :orphaned-turns orphans
                          :session-id (:session-id result)
                          :usage (:usage @result-event)
-                         :total-cost-usd (:total_cost_usd @result-event)}
+                         ;; The CLI reports the process's running total; price the
+                         ;; compaction as the increase over the last turn's total.
+                         :total-cost-usd (compaction-cost @before-cost
+                                                          (:total_cost_usd @result-event))
+                         :pouch-total-cost-usd (:total_cost_usd @result-event)}
                   ;; Never answer `ok false` without saying why: Emacs renders
                   ;; a reasonless payload as a bare "[compact] error".
                   (nil? compact-result)
