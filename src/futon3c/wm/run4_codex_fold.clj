@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
-            [futon3c.apm.job-port :as jobs])
+            [futon3c.apm.job-port :as jobs]
+            [futon3c.apm.live-preflight-runtime :as runtime])
   (:import [java.nio.file Files LinkOption]
            [java.util UUID]))
 
@@ -30,7 +31,7 @@
    & [{:keys [announce-fn activate-fn await-fn]
        :or {announce-fn jobs/announce! activate-fn jobs/activate!
             await-fn (fn [base dispatch]
-                       (jobs/await-terminal! base dispatch
+                       (jobs/await-terminal! runtime/http-json base dispatch
                                              {:max-polls 1800
                                               :max-settling-polls 120
                                               :poll-ms 500}))}}]]
