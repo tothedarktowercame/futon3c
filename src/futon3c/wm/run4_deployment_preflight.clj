@@ -44,8 +44,11 @@
                                (= sha256 (digest/sha256 (read-text path))))
                              pinned-sources)
         missing-roots (->> (:stores t) (keep (fn [[k p]] (when-not (.isDirectory (io/file p)) k))) vec)
-        mission-ref (some #(when (str/includes? % "M-u88-contextual-preferences.md") %) (:source-allowlist t))
-        mission-text (read-text mission-ref)]
+        mission-id (get-in pin [:mapping :mission-id])
+        mission-ref (some #(when (and (string? mission-id)
+                                      (str/ends-with? % (str "/" mission-id ".md"))) %)
+                          (:source-allowlist t))
+        mission-text (when mission-ref (read-text mission-ref))]
     {:schema :wm/run4-deployment-preflight-v1
      :template-disabled (and (false? (:enabled? t))
                              (false? (get-in t [:serving :automatic-start?])))
@@ -56,7 +59,7 @@
      :declaration (if (:run4/serving-declaration opts) :supported :missing)
      :consumer-state :unknown-not-loaded
      :roots (if (empty? missing-roots) :present {:missing missing-roots})
-     :mission (if (str/includes? mission-text "Status: OPEN")
+     :mission (if (and mission-text (str/includes? mission-text "Status: OPEN"))
                 :open-activated :unexpected-state)
      :route (get-in t [:serving :route])
      :eligible-to-launch? false}))
