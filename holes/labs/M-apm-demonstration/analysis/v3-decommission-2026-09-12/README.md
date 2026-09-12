@@ -31,3 +31,35 @@ Validation: queue namespace 42 tests / 272 assertions passing; clj-kondo and Ema
 check-parens pass. Tests cover stale archive identity, missing observations, live
 jobs/seats/tick, enabled coordinator, preserved history and no effects on replay.
 Deployment/archive/seat-removal and queue readback receipts follow separately.
+
+## Executed decommission
+
+Canonical repair `6f02bb6b` was loaded from its own classpath. The new queue
+transition was applied under the coordinator tick lock. The original reviewer
+submission was independently read and passed the typed payload validator before
+the append-only F227 park decision was reconciled. No phase result was forged.
+
+The authoritative job-history scan showed no active V3 jobs. 272 idle/restored
+frame registrations were removed through the registry lifecycle API; its durable
+roster watch persisted removal. `pre-decommission.edn` and `seat-removals.edn`
+retain the scope and receipts. `applied.edn` pins the reconciled queue archive at
+`data/apm-decommission/jit-all-open-v3-2026-09-12/queue-reconciled.edn`, SHA256
+`fd75207e7555eb1835639ab06fd8ba6ed2732a6799a34498bde414b48d6d0bf9`.
+The original pre-decision queue is retained beside it. Both contain full historical
+state; these runtime archives remain local, while their identity receipts are committed.
+
+Execution correction: the first operator script passed a string to the Path-only
+atomic persistence API after archive/seat removal. That queue write did not land.
+Recovery inspected all completed effects and resumed only the final queue transition
+with a Path, checking equality with the archived queue first. Its final write and
+receipt landed before a subsequent malformed catch form failed compilation. Neither
+seat removal nor the queue transition was rerun; verification read the durable results.
+
+`verified.edn` at 13:34:06Z records the valid decommissioned queue, no active frame
+or resumptions, no awaiting-decision parks, stopped/disabled coordinator with no tick
+claim, no active V3 jobs, and zero remaining frame seats in both registry and saved
+restart roster. Completed history, reconciled park history and store-warning repair
+history exactly match the retained archive. `verify.clj` reproduces these read-only
+checks. M93J07's interrupted learning phase and M94A03's preflight are retained work,
+not newly claimed successes. No V4 installation, JVM restart, V2 or topology restart
+occurred. Workspaces and historical ledgers are preserved for explicit future intake.
