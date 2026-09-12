@@ -165,3 +165,22 @@
       (is (= {:ok false :error "turn in flight"}
              (pouch/compact-pouch! "claude-busy-compact" {})))
       @slow)))
+
+(deftest compact-pouch-wait-option-serializes-behind-held-lock
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-wait-compact" "warm"
+                      {:claude-bin bin :timeout-ms 2000})
+    (let [slow (future
+                 (pouch/feed-turn! "claude-wait-compact" "SLOW"
+                                   {:claude-bin bin :timeout-ms 5000}))
+          deadline (+ (System/currentTimeMillis) 2000)]
+      (while (and (not (get-in (pouch/snapshot)
+                               ["claude-wait-compact" :in-flight?]))
+                  (< (System/currentTimeMillis) deadline))
+        (Thread/sleep 10))
+      (let [compact (future
+                      (pouch/compact-pouch! "claude-wait-compact"
+                                           {:wait? true :timeout-ms 3000}))]
+        (is (= ::waiting (deref compact 100 ::waiting)))
+        (is (= "reply:SLOW" (:result @slow)))
+        (is (= "success" (:compact-result @compact)))))))

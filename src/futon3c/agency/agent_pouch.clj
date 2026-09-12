@@ -1019,15 +1019,18 @@
           (read-turn-with-timeout pouch timeout on-event))))))
 
 (defn compact-pouch!
-  "Send the raw /compact control to an already-warm AGENT-ID pouch."
-  [agent-id {:keys [timeout-ms] :as _opts}]
+  "Send the raw /compact control to an already-warm AGENT-ID pouch.
+   By default, refuse an active/contended pouch immediately. `:wait? true` is
+   for callers already serialized by the agent turn queue: it waits for the
+   pouch lock and rechecks liveness under that ownership."
+  [agent-id {:keys [timeout-ms wait?] :as _opts}]
   (let [aid (str agent-id)
         pouch (get @!pouches aid)]
     (cond
       (or (nil? pouch) (not (alive? pouch)))
       {:ok false :error "no warm pouch"}
 
-      (:in-flight? pouch)
+      (and (:in-flight? pouch) (not wait?))
       {:ok false :error "turn in flight"}
 
       :else
@@ -1044,7 +1047,7 @@
         (try
           (let [result
                 (run-pouch-turn!
-                 aid pouch false
+                 aid pouch (boolean wait?)
                  (fn []
                    (if (:demux pouch)
                      (feed-line-demux! pouch (control-line) timeout on-event

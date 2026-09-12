@@ -6346,6 +6346,17 @@
     (or (contains? (set (:draining state)) aid)
         (pos? (count (get-in state [:queues aid] []))))))
 
+(defn- pending-compact-entry [agent-id]
+  (let [state (turn-queue/snapshot)
+        aid (str agent-id)]
+    (some (fn [id]
+            (let [entry (get-in state [:entries id])]
+              (when (and (= "compact-control" (:from entry))
+                         (= "control" (:surface entry))
+                         (= "/compact" (:prompt entry)))
+                entry)))
+          (get-in state [:queues aid] []))))
+
 (defn- compact-agent-busy? [agent agent-id]
   ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
   ;; (invoke-stream) only shows as registry status :invoking (claude-13 was
@@ -6389,64 +6400,80 @@
         result (cond-> result
                  witness (assoc :compact-result "success"
                                 :compact-witness (:compactMetadata witness)))]
-    {:ok (= "success" (:compact-result result))
-     :compact-result (:compact-result result)
-     :compact-witness (:compact-witness result)
-     :compact-error (:compact-error result)
-     :session-id (:session-id result)
-     :usage (:usage result)
-     :total-cost-usd (:total-cost-usd result)
-     :path "cold"}))
+    (cond-> {:ok (= "success" (:compact-result result))
+             :compact-result (:compact-result result)
+             :compact-error (:compact-error result)
+             :session-id (:session-id result)
+             :usage (:usage result)
+             :total-cost-usd (:total-cost-usd result)
+             :path "cold"}
+      (:compact-witness result) (assoc :compact-witness (:compact-witness result)))))
 
-(defn- run-cold-compact! [agent-id agent]
-  (let [turn-id (str "compact-" (UUID/randomUUID))
-        start-ms (System/currentTimeMillis)
-        invoke-fn (:agent/invoke-fn agent)
-        session-id (:agent/session-id agent)
-        {:keys [waiter]}
-        (turn-queue/accept-async!
-         {:id turn-id
-          :msg-id turn-id
-          :to (str agent-id)
-          :from "compact-control"
-          :surface "control"
-          :prompt "/compact"
-          :process-fn (fn [entry]
-                        (binding [turn-queue/*drained-by-outer* true
-                                  turn-queue/*turn-id* (:id entry)]
-                          (invoke-fn "/compact" session-id)))})
-        result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
-    (if (= ::compact-timeout result)
-      {:status 202
-       :body {:ok false :error "compaction pending" :turn-id turn-id :path "cold"}}
-      {:status 200 :body (cold-compact-result result start-ms)})))
+(defn- perform-queued-compact! [agent-id entry]
+  (binding [turn-queue/*drained-by-outer* true
+            turn-queue/*turn-id* (:id entry)]
+    (let [warm-result (agent-pouch/compact-pouch! agent-id {:wait? true})]
+      (if (not= "no warm pouch" (:error warm-result))
+        (assoc warm-result :path "warm")
+        (let [agent (reg/get-agent agent-id)
+              invoke-fn (:agent/invoke-fn agent)]
+          (if (fn? invoke-fn)
+            (let [start-ms (System/currentTimeMillis)]
+              (cold-compact-result
+               (invoke-fn "/compact" (:agent/session-id agent)) start-ms))
+            {:ok false :error "no local agent" :path "cold"}))))))
+
+(defn- enqueue-compact! [agent-id]
+  (let [turn-id (str "compact-" (UUID/randomUUID))]
+    (turn-queue/accept-async!
+     {:id turn-id
+      :msg-id turn-id
+      :to (str agent-id)
+      :from "compact-control"
+      :surface "control"
+      :prompt "/compact"
+      :process-fn #(perform-queued-compact! agent-id %)
+      :finalize-fn
+      (fn [result]
+        (println
+         (str "[compact-control] agent-id=" agent-id
+              " turn-id=" turn-id
+              " path=" (:path result)
+              " compact-result=" (pr-str result))))})))
 
 (defn- handle-agent-compact
   "POST /api/alpha/agents/:id/compact — compact through a warm or cold seat."
   [_config agent-id _request]
-  (let [warm-result (agent-pouch/compact-pouch! agent-id {})]
+  (let [aid (str agent-id)
+        pending (pending-compact-entry aid)
+        agent (reg/get-agent aid)
+        warm (get (agent-pouch/snapshot) aid)
+        job-counts (get (active-invoke-job-counts)
+                        (canonical-job-agent-id aid) {})
+        agent (merge job-counts agent)]
     (cond
-      (= "turn in flight" (:error warm-result))
-      (json-response 409 (assoc warm-result :path "warm"))
+      pending
+      (json-response 202 {:ok true :queued true :deduped true
+                          :turn-id (:id pending) :path "queued"})
 
-      (not= "no warm pouch" (:error warm-result))
-      (json-response 200 (assoc warm-result :path "warm"))
+      (and (not (:alive? warm)) (not (fn? (:agent/invoke-fn agent))))
+      (json-response 404 {:ok false :error "no local agent"})
 
       :else
-      (let [agent (reg/get-agent agent-id)
-            job-counts (get (active-invoke-job-counts)
-                            (canonical-job-agent-id agent-id) {})
-            agent (merge job-counts agent)]
-        (cond
-          (not (fn? (:agent/invoke-fn agent)))
-          (json-response 404 {:ok false :error "no local agent"})
-
-          (compact-agent-busy? agent agent-id)
-          (json-response 409 {:ok false :error "turn in flight" :path "cold"})
-
-          :else
-          (let [{:keys [status body]} (run-cold-compact! agent-id agent)]
-            (json-response status body)))))))
+      (let [busy? (or (:in-flight? warm) (compact-agent-busy? agent aid))
+            state-before (turn-queue/snapshot)
+            ahead (+ (count (get-in state-before [:queues aid] []))
+                     (if (contains? (:draining state-before) aid) 1 0))
+            {:keys [waiter entry]} (enqueue-compact! aid)
+            turn-id (:id entry)]
+        (if busy?
+          (json-response 202 {:ok true :queued true :turn-id turn-id
+                              :ahead ahead :path "queued"})
+          (let [result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
+            (if (= ::compact-timeout result)
+              (json-response 202 {:ok false :error "compaction pending"
+                                  :turn-id turn-id :path "queued"})
+              (json-response 200 result))))))))
 
 ;; =============================================================================
 ;; CYDER process endpoints

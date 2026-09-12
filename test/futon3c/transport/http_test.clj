@@ -1174,32 +1174,38 @@
             (.delete session-file)))))))
 
 (deftest agent-compact-maps-pouch-control-statuses
-  (let [handler (make-handler)]
-    (doseq [[result expected expected-path]
-            [[{:ok true :compact-result "success"} 200 "warm"]
-             [{:ok false :error "turn in flight"} 409 "warm"]]]
-      (with-redefs [agent-pouch/compact-pouch! (fn [agent-id opts]
-                                                (is (= "claude-compact" agent-id))
-                                                (is (= {} opts))
-                                                result)]
-        (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
-          (is (= expected (:status response)))
-          (is (= (assoc result :path expected-path) (parse-body response))))))))
+  (let [handler (make-handler)
+        result {:ok true :compact-result "success"}]
+    (with-redefs [agent-pouch/snapshot (constantly {"claude-compact" {:alive? true}})
+                  agent-pouch/compact-pouch! (fn [agent-id opts]
+                                               (is (= "claude-compact" agent-id))
+                                               (is (= {:wait? true} opts))
+                                               result)
+                  turn-queue/accept-async!
+                  (fn [entry]
+                    (let [waiter (promise)]
+                      (deliver waiter ((:process-fn entry) entry))
+                      {:status :queued :entry entry :waiter waiter}))]
+      (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
+        (is (= 200 (:status response)))
+        (is (= (assoc result :path "warm") (parse-body response)))))))
 
-(deftest agent-compact-cold-path-refuses-unknown-or-busy-agent
+(deftest agent-compact-cold-path-refuses-only-unknown-agent
   (let [handler (make-handler)]
-    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+    (with-redefs [agent-pouch/snapshot (constantly {})
                   reg/get-agent (constantly nil)]
       (let [response (post handler "/api/alpha/agents/missing/compact" "{}")]
         (is (= 404 (:status response)))
         (is (= {:ok false :error "no local agent"} (parse-body response)))))
-    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+    (with-redefs [agent-pouch/snapshot (constantly {})
                   reg/get-agent (constantly {:agent/invoke-fn identity
-                                             :running-jobs 1 :queued-jobs 0})]
+                                             :running-jobs 1 :queued-jobs 0})
+                  turn-queue/accept-async!
+                  (fn [entry] {:status :queued :entry entry :waiter (promise)})]
       (let [response (post handler "/api/alpha/agents/claude-busy/compact" "{}")]
-        (is (= 409 (:status response)))
-        (is (= {:ok false :error "turn in flight" :path "cold"}
-               (parse-body response)))))))
+        (is (= 202 (:status response)))
+        (is (true? (:queued (parse-body response))))
+        (is (string? (:turn-id (parse-body response))))))))
 
 (deftest agent-compact-cold-path-queues-literal-control-and-returns-outcome
   (let [handler (make-handler)
@@ -1214,7 +1220,8 @@
                      :session-id session-id
                      :usage {:input_tokens 10}
                      :total-cost-usd 0.0})]
-    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+    (with-redefs [agent-pouch/snapshot (constantly {})
+                  agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
                   reg/get-agent (constantly {:agent/invoke-fn invoke-fn
                                              :agent/session-id "sid-cold"
                                              :running-jobs 0 :queued-jobs 0})
@@ -1237,6 +1244,69 @@
                 :total-cost-usd 0.0
                 :path "cold"}
                parsed))))))
+
+(defn- with-isolated-turn-queue [f]
+  (let [root (Files/createTempDirectory
+              "compact-turn-queue-" (make-array FileAttribute 0))
+        store-path (str (.resolve root "queue-state.edn"))]
+    (try
+      (with-redefs-fn {#'turn-queue/queue-store-path (constantly store-path)}
+        (fn []
+          (turn-queue/clear!)
+          (try (f) (finally (turn-queue/clear!)))))
+      (finally (delete-temp-tree! root)))))
+
+(deftest agent-compact-queues-behind-draining-repl-and-dedupes
+  (with-isolated-turn-queue
+    (fn []
+      (let [handler (make-handler)
+            release-first (promise)
+            compacted (promise)
+            first-turn (turn-queue/accept-async!
+                        {:id "repl-claude-compact-live-shape"
+                         :msg-id "repl-claude-compact-live-shape"
+                         :to "claude-compact-live-shape" :from "joe"
+                         :surface "emacs-repl" :prompt "long turn"
+                         :process-fn (fn [_] @release-first)})]
+        (loop [deadline (+ (System/currentTimeMillis) 2000)]
+          (when (and (not (contains? (:draining (turn-queue/snapshot))
+                                     "claude-compact-live-shape"))
+                     (< (System/currentTimeMillis) deadline))
+            (Thread/sleep 10)
+            (recur deadline)))
+        (turn-queue/accept-async!
+         {:id "repl-queued-behind-live-turn" :msg-id "repl-queued-behind-live-turn"
+          :to "claude-compact-live-shape" :from "joe" :surface "emacs-repl"
+          :prompt "queued repl" :process-fn (fn [_] {:result "repl done"})})
+        (with-redefs [agent-pouch/snapshot (constantly {})
+                      agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                      reg/get-agent (constantly
+                                     {:agent/invoke-fn
+                                      (fn [prompt session-id]
+                                        (deliver compacted [prompt session-id])
+                                        {:compact-result "success" :session-id session-id})
+                                      :agent/session-id "retained-session"})]
+          (let [first-response (parse-body
+                                (post handler
+                                      "/api/alpha/agents/claude-compact-live-shape/compact" "{}"))
+                depth-before-second (count (get-in (turn-queue/snapshot)
+                                                   [:queues "claude-compact-live-shape"]))
+                second-response (parse-body
+                                 (post handler
+                                       "/api/alpha/agents/claude-compact-live-shape/compact" "{}"))]
+            (is (true? (:queued first-response)))
+            (is (= 2 (:ahead first-response)))
+            (is (true? (:deduped second-response)))
+            (is (= (:turn-id first-response) (:turn-id second-response)))
+            (is (= depth-before-second
+                   (count (get-in (turn-queue/snapshot)
+                                  [:queues "claude-compact-live-shape"]))))
+            (deliver release-first {:result "first done"})
+            (is (= ["/compact" "retained-session"] (deref compacted 2000 nil)))
+            (is (= :processed
+                   (get-in (turn-queue/snapshot)
+                           [:entries (:turn-id first-response) :status])))
+            @(:waiter first-turn)))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
