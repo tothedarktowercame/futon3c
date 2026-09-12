@@ -1,5 +1,7 @@
 (do
-  (require 'clojure.edn 'clojure.string 'futon3c.agency.roster-store)
+  (require 'clojure.edn 'clojure.string 'futon3c.agency.roster-store
+           'futon3c.agency.registry 'futon3c.transport.http
+           'futon3c.apm.problem-queue-supervisor)
   (let [read-doc #(clojure.edn/read-string (slurp %))
         packet "holes/labs/M-apm-demonstration/analysis/v3-decommission-2026-09-12/"
         q (read-doc "data/apm-campaigns/jit-all-open-v3/queue-state.edn")
