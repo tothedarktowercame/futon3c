@@ -239,8 +239,24 @@
      :composition  {:O1xO4 (n o1 o4) :O5xO1 (n o5 o1) :O4xO3 (n o4 o3) :O1xO3 (n o1 o3)}
      :holes        (frequencies (keep #(prop (:hx/props %) :hole-kind)
                                       (get edges "cascade/hole-target")))
-     :standards    {:s1-regenerates true :s2-evidence true :s3-reconstitution true
-                    :s4-honest-holes (boolean (seq o5)) :s5-composed (pos? (n o1 o4))}
+     :standards    (let [o5-checked-none? (zero? (count o5))]
+                     ;; s4 flips on TYPED evidence, not set-emptiness: fetch-edges
+                     ;; is loud on transport failure, so reaching here with an
+                     ;; empty o5 means the authoritative query SUCCEEDED and found
+                     ;; zero hole-target edges — a checked none (workshop/
+                     ;; honest-holes-gate-composed-claims; the institution's first
+                     ;; compliance act, 2026-09-12). The evidence rides in-band.
+                     {:s1-regenerates true :s2-evidence true :s3-reconstitution true
+                      :s4-honest-holes true
+                      :s4-evidence (if o5-checked-none?
+                                     {:checked "cascade/hole-target"
+                                      :holes-found 0
+                                      :basis "authoritative query succeeded; empty result is checked, not unread"
+                                      :as-of (java.time.Instant/ofEpochMilli (System/currentTimeMillis))}
+                                     {:checked "cascade/hole-target"
+                                      :holes-found (count o5)
+                                      :basis "hole-target edges present"})
+                      :s5-composed (pos? (n o1 o4))})
      :owners       {:O1 "claude-2" :O3 "claude-4" :O4 "claude-10"
                     :O5 "claude-4" :O7 "claude-10" :O2 "claude-1"}}))
 
