@@ -79,6 +79,47 @@
            :candidates [{:pattern-id "candidate"
                          :memory-support [{:memory-id "support"}]}]}))))
 
+(def pattern-description-candidate
+  {:pattern-id "math/described-pattern"
+   :source :reviewed-pattern-description-lexical-proposal
+   :memory-support
+   [{:description-evidence-id "e-pattern-description"
+     :memory-ids ["description-support-1" "description-support-2"]
+     :fts-score 0.75
+     :hook "A persisted pattern description"}]})
+
+(deftest receipt-surfaced-ids-includes-pattern-description-support-memories
+  (is (= #{"math/described-pattern"
+           "description-support-1" "description-support-2"}
+         (sut/receipt-surfaced-ids
+          {:candidates [pattern-description-candidate]}))))
+
+(deftest receipt-surfaced-ids-combines-singular-and-plural-support-shapes
+  (is (= #{"singular-pattern" "singular-support"
+           "math/described-pattern"
+           "description-support-1" "description-support-2"}
+         (sut/receipt-surfaced-ids
+          {:candidates
+           [{:pattern-id "singular-pattern"
+             :memory-support [{:memory-id "singular-support"
+                               :memory-ids [nil 7 :not-a-memory-id]}]}
+            (update-in pattern-description-candidate [:memory-support 0 :memory-ids]
+                       conj nil 8 :junk)]}))))
+
+(deftest gated-receipt-surfaced-ids-handles-plural-support
+  (let [receipt {:candidates [pattern-description-candidate]}]
+    (is (= #{"math/described-pattern"
+             "description-support-1" "description-support-2"}
+           (sut/gated-receipt-surfaced-ids
+            {:problem-id "new-problem"} :search receipt)))
+    (is (= #{}
+           (sut/gated-receipt-surfaced-ids
+            {:problem-id "new-problem"
+             :shelf/holdout :same-problem
+             :shelf/withheld-ids []}
+            :search receipt))
+        "the holdout carrier still rejects plural support without depositor provenance")))
+
 (deftest unauthorized-role-and-narrative-only-query-are-refused
   (let [authority-root (temp-dir "role-search-auth-refusal")
         receipt-root (temp-dir "role-search-receipt-refusal")]

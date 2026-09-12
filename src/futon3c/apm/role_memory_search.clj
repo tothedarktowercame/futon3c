@@ -211,7 +211,13 @@
                  hyperedge-components
                  (map :pattern-id candidates)
                  (mapcat (fn [candidate]
-                           (map :memory-id (:memory-support candidate)))
+                           (mapcat (fn [support]
+                                     (cond-> []
+                                       (string? (:memory-id support))
+                                       (conj (:memory-id support))
+                                       (sequential? (:memory-ids support))
+                                       (into (:memory-ids support))))
+                                   (:memory-support candidate)))
                          candidates))
          (filter string?)
          set)))
