@@ -1,0 +1,64 @@
+BOARD|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4
+INPUTS|sha256:cb45070fa6189bec07bae3784eba70ea60d0382fd6c16dcd92d6dd30cc42dbd9
+END|end/yield
+CHIP|ck/keypress|keypress||ck/yield|ck/smell
+CHIP|ck/smell|smell||ck/look-first|ck/sing-clean
+CHIP|ck/look-first|look|futon5a|ck/feel-target|ck/yield
+CHIP|ck/feel-target|feel|futon5a|ck/sing-flag-live|ck/zap-commit
+CHIP|ck/zap-commit|zap|futon5a|ck/yield|ck/yield
+CHIP|ck/sing-clean|sing||ck/yield|
+CHIP|ck/sing-flag-live|sing||ck/yield|
+CHIP|ck/yield|yield|||
+ROW|ck/keypress|keypress|false|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||
+ROW|ck/smell|smell|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||observe
+ROW|ck/look-first|look|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|observe
+ROW|ck/feel-target|feel|false|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|
+ROW|ck/zap-commit|zap|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4|futon5a|commit:futon5a
+ROW|ck/yield|yield|true|sha256:a09756448d0dfb11eb1cdd8e11ef03c2be473c836cd4e8f82b6e222e5fff52b4||yield-turn
+'DarkTower.WarMachine.ChipBoardWitness.fixtureFollowsWires' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.fixtureTwoWires' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.checkedObservationHasEitherWire' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.executorNamedHazard' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.nilZapExecutesWithoutFeel' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.replayDoesNotCertifyEffects' does not depend on any axioms
+'DarkTower.WarMachine.ChipBoardWitness.fixtureExecutes' depends on axioms: [propext]
+'DarkTower.WarMachine.ChipBoardWitness.fixtureNamedHazard' depends on axioms: [propext, Quot.sound]
+'DarkTower.WarMachine.ChipBoardWitness.fixtureDeltasZero' does not depend on any axioms
+{
+  "state": "validated",
+  "scope": "pinned-projection-and-named-repository-model",
+  "matching_lines": 17,
+  "deltas": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "runtime_certificate_status": "pending",
+  "blockers": [
+    "nil-target-commit-without-feel",
+    "replay-erases-effects",
+    "validated-board-can-throw"
+  ],
+  "input_digest": "retained carrier only; original observation packet absent",
+  "hashes": {
+    "/home/joe/code/mathlib4/DarkTower/WarMachine/ChipBoardWitness.lean": "4666b07fdb30bd232444c90fe4adb54cc06584b2ae8ca60a692149956923d544",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-inbox-zero/lean-witness/readback.clj": "9230a2b80ba56536995561a079d4b0125973eea563e8920fdfb5c389ff05f510",
+    "/home/joe/code/futon3c/holes/labs/wm-contract/runs/chip-board-inbox-zero/run-2026-09-12.txt": "875560963b7db5d1e64ed46bbbd5690c76e2e19d0e78181a8bd2f3710db309d4",
+    "/home/joe/code/futon3c/src/futon3c/agents/chip_board.clj": "a99634d2dd94e2fca2099febee5d0fc296fdb47c8b52b9515d1e05a50e4ae276",
+    "/home/joe/code/futon3c/src/futon3c/agents/inbox_zero_board.clj": "23f21ca279632a07c79e319fd115c5d3929126edfc27f50a6037278f041422f2"
+  }
+}

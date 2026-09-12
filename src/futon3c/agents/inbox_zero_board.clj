@@ -71,8 +71,9 @@
   effects (commit/report/refusal are the caller's I/O). Returns the run map
   plus a runtime certificate: the claim (trace + end-reason), the board
   digest, and the inputs digest, with :lean/status :pending — validation in
-  DarkTower/WarMachine is consumed when a witness module exists, never
-  asserted before it does."
+  DarkTower/WarMachine/ChipBoardWitness validates a named-repository model
+  and pinned readback only. Its nil-target and effect-replay counterexamples
+  prevent upgrading every v0 certificate merely because the module exists."
   ([inputs effect-handler]
    (let [b (resolve-args inputs)
          run (board/run-board b inputs effect-handler)
