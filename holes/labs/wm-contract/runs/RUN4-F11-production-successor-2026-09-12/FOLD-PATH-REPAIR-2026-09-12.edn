@@ -27,6 +27,8 @@
           "/home/joe/code/futon2/src/futon2/aif/full_loop_runner.clj"]
   :result {:wiring-var? true
            :selection-enaction-var? true
+           :installed-run4? true
+           :installed-fold-fn? true
            :negative-control {:status :invalid
                               :failure-kind :construction-wiring-port-missing}}}
  :positive-commissioning
