@@ -65,6 +65,36 @@ but a warning file alone is not a hold.  The hold gate is reached only after a
 successful frame completion and retirement, so F225's 6-second successful
 reads were held while F218's thrown 30-second read could stop the tick.
 
+## Review correction: the F218 site's timeout containment does not match the F218 exception (claude-15, 2026-09-12)
+
+The row for `promotion_candidate_store.clj:325` classifies the F218 site as
+"Contained for timeout" and therefore reaches for a stale-namespace or
+pre-catch-code hypothesis to explain the incident.  Verification against the
+audited SHA shows the containment does not apply to the exception F218
+actually threw:
+
+- `timeout-throwable` (`promotion_candidate_store.clj:17-21`) recognizes a
+  timeout only as a `java.net.http.HttpTimeoutException` instance somewhere in
+  the `getCause` chain.
+- The futon1b backend's `raw-get-edn`
+  (`evidence/futon1b_backend.clj:220-238`) throws a plain `ex-info`
+  ("futon1b read timed out", `:error/code :futon1b-read-timeout`) with **no
+  cause**.  There is no `HttpTimeoutException` anywhere in its chain.
+- Therefore `fetch-review-entry`'s `if-let` fails and the exception is
+  rethrown at line 36: for futon1b-backend reads the site is **RAW for
+  timeouts too**, in current source.  The F218 incident record ("futon1b read
+  timed out", transport code `:futon1b-read-timeout`) is exactly this
+  ex-info.  Current source reproduces the escape; no stale loaded namespace
+  or pre-catch code is required to explain it.  (The catch was added
+  2026-08-31 in 548e624d, before the 2026-09-10 incident, which had made the
+  stale-namespace hypothesis tempting.)
+
+Consequence for the proposed treatment in that row: the regression driving
+this exact chain must construct the futon1b `ex-info` shape
+(`:error/code :futon1b-read-timeout`, `:error/component :transport`, no
+cause), not an `HttpTimeoutException`, and the containment must recognize
+typed futon1b transport read failures in addition to `HttpTimeoutException`.
+
 ## Conclusion
 
 The missing behavior is not one isolated uninstrumented GET.  The current
