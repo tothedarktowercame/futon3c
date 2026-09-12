@@ -389,10 +389,11 @@
 (defn- fail-click!
   [agent-id click-id throwable]
   (let [attempt-id (:attempt-id @!status)
-        summary {:attempt-id attempt-id
-                 :outcome :service-failed
-                 :error (or (.getMessage ^Throwable throwable)
-                            (.getName (class throwable)))}]
+        summary (cond-> {:attempt-id attempt-id
+                         :outcome :service-failed
+                         :error (or (.getMessage ^Throwable throwable)
+                                    (.getName (class throwable)))}
+                  (ex-data throwable) (assoc :error-data (ex-data throwable)))]
     (swap! !status
            (fn [current]
              (if (= click-id (:click-id current))

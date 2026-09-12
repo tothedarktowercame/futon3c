@@ -431,3 +431,23 @@
                (get-in (service/status) [:registry-publication :stage])))
         (is (= :failed
                (get-in (service/status) [:registry-publication :status])))))))
+
+
+(deftest failure-summary-retains-structured-projection-diagnostics
+  (doseq [throwable [(ex-info "RUN4 terminal projection refused"
+                             {:error :run4-terminal-projection-refused
+                              :reason :malformed-checkpoint :checkpoint :adjudication})
+                     (Exception. "plain failure")]]
+    (binding [service/*resolve-var*
+              (fn [sym]
+                (case sym
+                  futon2.aif.full-loop-runner/config identity
+                  (throw throwable)))]
+      (let [started (service/click! {:wm-agent-id scratch-agent-id})]
+        (is (= :completed (:status (service/await-click! (:click-id started)))))
+        (let [summary (:last-result (service/status))]
+          (is (= :service-failed (:outcome summary)))
+          (is (= (.getMessage throwable) (:error summary)))
+          (if-let [data (ex-data throwable)]
+            (is (= data (:error-data summary)))
+            (is (not (contains? summary :error-data)))))))))
