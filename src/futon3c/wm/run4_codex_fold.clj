@@ -29,7 +29,11 @@
     :as authority}
    & [{:keys [announce-fn activate-fn await-fn]
        :or {announce-fn jobs/announce! activate-fn jobs/activate!
-            await-fn jobs/await-terminal!}}]]
+            await-fn (fn [base dispatch]
+                       (jobs/await-terminal! base dispatch
+                                             {:max-polls 1800
+                                              :max-settling-polls 120
+                                              :poll-ms 500}))}}]]
   (when-not (and (= :wm/codex-fold-authority-v1 (:schema authority))
                  (= #{:schema :root :plan-ref :plan-sha256 :seat :agency-base :caller}
                     (set (keys authority)))
