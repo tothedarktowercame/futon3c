@@ -26,6 +26,8 @@
   :seat "codex-20"
   :terminal-state :done
   :captured-output-sha256 "58d2233674d8944aa51a5f8226d079f2091953b7d6b23ade36eef0d25809a77a"
+  :captured-output-sha256-recipe
+  "SHA-256 of UTF-8 Agency :job/:result followed by one LF (the exact jq -r byte stream)"
   :validate-fold-output-v1 {:ok true :fold/schema :enriched :findings []}
   :validate-fold-correspondence {:ok true :findings []}
   :runner-gate-status :wired}
