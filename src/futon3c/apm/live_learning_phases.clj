@@ -6,11 +6,11 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.live-job-driver :as driver]
-            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.memory-access-gate :as access-gate]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.role-memory-search :as role-memory]
+            [futon3c.apm.role-job-reconciliation :as role-job]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
   (:import [java.nio.charset StandardCharsets]
@@ -1277,57 +1277,13 @@
          workspace-reset-fn workspace-lifecycle/reset-to-base!
          source-archive-fn workspace-lifecycle/archive-problem-source!
          student-candidate-fn workspace-lifecycle/preserve-student-candidate!}}]
-  (driver/drive!
-   {:request request :state (runtime/read-state state-path)
-    :announce-fn
-    (fn [req]
-      (let [req (submission/with-job-authority req)
-            announced (job-port/announce!
-                       agency-base
-                       {:agent-id (:agent-id req) :prompt (prompt (assoc req :agency-base agency-base))
-                        :job-id (:submission/job-id req)})]
-        announced))
-    :activate-fn
-    (fn [req ticket]
-      (let [prepared (prepare-student-workspace! req workspace-reset-fn)
-            reset-response (when (and (:ok prepared) (:fresh-session? req))
-                             (runtime/http-json
-                              "POST" (str agency-base "/api/alpha/agents/"
-                                          (:agent-id req) "/reset-session") {}))
-            reset-ok? (or (nil? reset-response)
-                          (and (= 200 (:http/status reset-response))
-                               (:ok reset-response)))]
-        (cond
-          (not (:ok prepared)) prepared
-          (not reset-ok?)
-          {:ok false :error/code :student-session-reset-failed}
-          :else
-          (let [packet (prompt (assoc (submission/with-job-authority req) :agency-base agency-base))
-                archived (archive-rendered-packet! state-path (:phase req)
-                                                   packet)
-                _ (when-not (:ok archived)
-                    (binding [*out* *err*]
-                      (println "[apm.packet-archive]" (pr-str archived))))
-                activated (job-port/activate!
-                           agency-base
-                           {:agent-id (:agent-id req)
-                            :prompt packet
-                            :job-id (:job-id ticket)})]
-            (cond-> activated
-              (not (:ok archived))
-              (assoc :packet/archive-finding archived))))))
-    :job-fn
-    (fn [job-id]
-      (job-port/observe agency-base job-id))
-    :cancel-fn
-    (fn [job-id]
-      (job-port/cancel! agency-base job-id
-                        "typed-submission wrapper reconciliation"))
-    :persist-fn #(runtime/atomic-persist! state-path %)
-    :ticket-register-fn submission/register!
-    :terminal-submission-provider
-    (fn [req ticket _]
-      (submission/authenticated-completion req ticket))
+  (role-job/drive!
+   {:request request :state-path state-path :agency-base agency-base
+    :prompt-fn prompt
+    :prepare-fn #(prepare-student-workspace! % workspace-reset-fn)
+    :archive-packet-fn
+    (fn [req packet]
+      (archive-rendered-packet! state-path (:phase req) packet))
     :terminal-validator validate-terminal
     :posthoc-fault-origin-fn
     (fn [active-request failure]
