@@ -2247,7 +2247,7 @@
 
 (deftest invoke-request-commission-survives-hot-job-expiry-and-rejoins-digest
   (testing "the exact preimage and R9 join projection outlive the seven-day hot job"
-    (let [create! (fn [id finished-at]
+    (let [create! (fn [id]
                     (let [job-id (#'http/create-invoke-job!
                                   {:requested-job-id id
                                    :agent-id "claude-reviewer"
@@ -2256,25 +2256,30 @@
                                    :surface "bell"
                                    :mode "work"
                                    :model "review-model"})]
-                      (swap! (var-get #'http/!invoke-jobs-ledger) update-in [:jobs job-id]
-                             #(-> %
-                                  (assoc :state "done" :finished-at finished-at
-                                         :trace-id (str "trace-" id)
-                                         :artifact-ref (str "artifact-" id)
-                                         :execution {:executed? true :tool-events 2})
-                                  (assoc :events [{:seq 1 :type "accepted" :at finished-at}
-                                                  {:seq 2 :type "prompt" :at finished-at
-                                                   :text (str "Review " id " and its receipts.")}
-                                                  {:seq 3 :type "tool_use" :at finished-at
-                                                   :tools ["read" "exec"]}
-                                                  {:seq 4 :type "done" :at finished-at}])))
                       job-id))
-          target-id (create! "r9-production-shaped-review" "2020-01-01T00:00:00Z")
-          second-id (create! "r9-second-old-job" "2020-01-02T00:00:00Z")
-          sentinel-id (create! "r9-newest-sentinel" "2020-01-03T00:00:00Z")
+          target-id (create! "r9-production-shaped-review")
+          second-id (create! "r9-second-old-job")
+          sentinel-id (create! "r9-newest-sentinel")
           ledger-atom (var-get #'http/!invoke-jobs-ledger)
-          original @ledger-atom
+          finish! (fn [ledger id finished-at]
+                    (update-in ledger [:jobs id]
+                               #(-> %
+                                    (assoc :state "done" :finished-at finished-at
+                                           :trace-id (str "trace-" id)
+                                           :artifact-ref (str "artifact-" id)
+                                           :execution {:executed? true :tool-events 2})
+                                    (assoc :events [{:seq 1 :type "accepted" :at finished-at}
+                                                    {:seq 2 :type "prompt" :at finished-at
+                                                     :text (str "Review " id " and its receipts.")}
+                                                    {:seq 3 :type "tool_use" :at finished-at
+                                                     :tools ["read" "exec"]}
+                                                    {:seq 4 :type "done" :at finished-at}]))))
+          original (-> @ledger-atom
+                       (finish! target-id "2020-01-01T00:00:00Z")
+                       (finish! second-id "2020-01-02T00:00:00Z")
+                       (finish! sentinel-id "2020-01-03T00:00:00Z"))
           clock (constantly (java.time.Instant/parse "2020-01-20T00:00:00Z"))]
+      (reset! ledger-atom original)
       (testing "archive failure leaves the hot jobs intact for retry"
         (let [outcome (try
                         (binding [http/*invoke-ledger-now* clock
