@@ -1868,7 +1868,14 @@
 (defn- finish-controller-execution! [job-id]
   (when-let [controller (configured-invoke-ingress-controller)]
     (locking invoke-lifecycle-order-lock
-      (invoke-ingress/finish-execution! controller job-id))))
+      ;; A worker that unwinds before its terminal ledger publication succeeds
+      ;; is unresolved work, not a completed execution. Keep it conservatively
+      ;; counted until reconciliation or a successful terminal retry.
+      (let [state (some-> (get-in (ensure-invoke-jobs-ledger!)
+                                  [:jobs job-id :state]) str)]
+        (when (terminal-invoke-state? state)
+          (invoke-ingress/finish-execution! controller job-id)
+          true)))))
 
 (defn- finalize-invoke-job!
   [job-id terminal-state terminal-code terminal-message result sid]

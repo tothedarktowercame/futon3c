@@ -166,6 +166,7 @@
           (is (true? (#'http/mark-invoke-job-running! "duplicate-running")))
           (is (= "duplicate-running"
                  (#'http/create-invoke-job! (invoke-request "duplicate-running"))))
+          (is (nil? (#'http/finish-controller-execution! "duplicate-running")))
           (let [s (snapshot controller)]
             (is (= 1 (:executing s)))
             (is (= 0 (:accepted-queued s))))))

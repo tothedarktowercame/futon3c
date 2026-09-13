@@ -23,7 +23,9 @@ terminal ledger transition moves either queued cancellation/submission failure
 or executing work to final delivery, but it does not release the executing
 identity. The first durable delivery receipt clears final delivery. Only the
 actual worker wrapper's `finally`, after unregistering the worker, releases
-execution. Thus timeout/cancel notification cannot report drain while an
+execution, and only when the durable ledger is already terminal. A worker
+whose terminal publication failed remains conservatively counted for later
+reconciliation. Thus timeout/cancel notification cannot report drain while an
 interrupt-resistant worker remains alive. Duplicate creation, running,
 terminal, and delivery calls preserve the existing lifecycle set and do not
 advance state twice. A terminal job lacking a safe delivery receipt remains
