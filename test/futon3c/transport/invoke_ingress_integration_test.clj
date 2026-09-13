@@ -189,7 +189,7 @@
                          id {:surface "test" :destination "fixture"
                              :delivered? true :note "duplicate"})))
             (is (true? (:drained? (snapshot controller))))))
-        (finally (ingress/release-controller! controller)))))))
+        (finally (ingress/release-controller! controller))))))
 
 (deftest service-configuration-is-explicit-durable-and-never-ready
   (let [controller (durable-controller)
