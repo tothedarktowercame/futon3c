@@ -31,7 +31,7 @@
   "Resolve one host event only when a separately pinned trust-review record
   accepts that exact source/line/hash under an explicit host-process model.
   Merely locating a user-role JSONL line is a typed refusal."
-  [{:keys [verification-scope source line record-sha256 trust-review] :as config} _]
+  [{:keys [verification-scope source line record-sha256 trust-review]} _]
   (when-not (and (string? source) (pos-int? line)
                  (re-matches #"[0-9a-f]{64}" (str record-sha256)))
     (throw (ex-info "host event configuration missing"
