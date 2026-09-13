@@ -47,7 +47,7 @@
       (with-open [r (PushbackReader. (StringReader. text))]
         (let [back (edn/read {:eof ::eof} r) trailing (edn/read {:eof ::eof} r)]
           (when-not (and (= record back) (= ::eof trailing))
-            (refuse! :snapshot/provider-record-unserializable {:kind kind}))))
+            (refuse! :snapshot/provider-record-unserializable {:kind kind})))))
     (catch clojure.lang.ExceptionInfo e (throw e))
     (catch Throwable e
       (throw (ex-info "provider record is not strict EDN"
