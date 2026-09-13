@@ -8648,6 +8648,9 @@
                      (nonblank-string? (:repair-reviewer payload))
                      (assoc :repair-reviewer (:repair-reviewer payload))
 
+                     (nonblank-string? (:run-id payload))
+                     (assoc :run-id (:run-id payload))
+
                      (nonblank-string? (:trigger payload))
                      (assoc :trigger (keyword (:trigger payload))))
               prepared (when (contains? payload :run4-pin-ref)

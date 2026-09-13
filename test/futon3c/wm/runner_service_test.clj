@@ -117,7 +117,8 @@
                 :body (json/generate-string
                        {:author "zai-2"
                         :reviewer "codex-2"
-                        :repair-reviewer "codex-1"})})
+                        :repair-reviewer "codex-1"
+                        :run-id "row26-isolated-run"})})
             first-body (response-body first-response)
             _ (is (= true (deref phase-seen 1000 false)))
             second-response
@@ -152,6 +153,7 @@
         (is (= "zai-2" (:author @runner-opts-seen)))
         (is (= "codex-2" (:reviewer @runner-opts-seen)))
         (is (= "codex-1" (:repair-reviewer @runner-opts-seen)))
+        (is (= "row26-isolated-run" (:run-id @runner-opts-seen)))
         (deliver release true)
         (is (wait-until #(false? (:running? (service/status))) 5000))
         (let [closed (service/status)
