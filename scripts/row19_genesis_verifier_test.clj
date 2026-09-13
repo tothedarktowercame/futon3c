@@ -2,7 +2,7 @@
   (:require [clojure.test :as t]
             [futon3c.agency.r9-genesis-test]))
 
-(def target #'futon3c.agency.r9-genesis-test/genesis-boundary-positive-and-refusals)
+(def target #'futon3c.agency.r9-genesis-test/genesis-boundary-positive-and-source-derived-refusals)
 
 (defn -main [& args]
   (let [induced? (some #{"--induced-failure"} args)
