@@ -188,7 +188,7 @@
             (is (false? (#'http/record-invoke-job-delivery-by-job-id!
                          id {:surface "test" :destination "fixture"
                              :delivered? true :note "duplicate"})))
-            (is (true? (:drained? (snapshot controller)))))
+            (is (true? (:drained? (snapshot controller))))))
         (finally (ingress/release-controller! controller)))))))
 
 (deftest service-configuration-is-explicit-durable-and-never-ready
