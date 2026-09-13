@@ -78,7 +78,7 @@
       (is (= ::blocked (deref capture-future 50 ::blocked)))
       (deliver release true) @mutation
       (is (= :snapshot/provider-record-invalid
-             (refusal #(deref capture-future)))))
+             (refusal #(deref capture-future))))))
   (let [{:keys [boundary revision]} (fixture-boundary)]
     (snapshot/register-provider!
      (snapshot/boundary {:owner-id "other" :generation 1 :scope :isolated-fixture})
