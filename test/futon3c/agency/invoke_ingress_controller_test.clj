@@ -25,27 +25,29 @@
 
 (deftest deferred-resumes-are-durable-idempotent-and-ordered
   (let [writes (atom [])
-        store {:read! (fn [] {:schema ingress/deferred-schema :order [] :records {}})
-               :persist! #(do (swap! writes conj %) true)}
+        store {:acquire! (fn [] :lease) :release! (fn [_] true)
+               :read! (fn [_] {:schema ingress/deferred-schema :order [] :records {}})
+               :persist! (fn [_ p] (swap! writes conj p) true)}
         c (ingress/controller {:auth-token "s" :deferred-store store})]
     (ingress/close-intake! c)
-    (is (= "resume-1" (ingress/defer-resume! c "resume-1" {:prompt "p"})))
-    (is (= "resume-1" (ingress/defer-resume! c "resume-1" {:prompt "p"})))
+    (is (= "resume-1" (ingress/defer-resume! c "resume-1" {:requested-job-id "resume-1" :prompt "p"})))
+    (is (= "resume-1" (ingress/defer-resume! c "resume-1" {:requested-job-id "resume-1" :prompt "p"})))
     (is (= :ingress/deferred-resume-conflict
-           (refusal #(ingress/defer-resume! c "resume-1" {:prompt "changed"}))))
-    (is (= [["resume-1" {:prompt "p"}]] (ingress/reopen! c)))
-    (is (= [["resume-1" {:prompt "p"}]] (ingress/reopen! c)))
+           (refusal #(ingress/defer-resume! c "resume-1" {:requested-job-id "resume-1" :prompt "changed"}))))
+    (is (= [["resume-1" {:requested-job-id "resume-1" :prompt "p"}]] (ingress/reopen! c)))
+    (is (= [["resume-1" {:requested-job-id "resume-1" :prompt "p"}]] (ingress/reopen! c)))
     (ingress/acknowledge-resume! c "resume-1")
     (is (= [] (ingress/reopen! c)))
     (is (= 2 (count @writes)))))
 
 (deftest persistence-failure-does-not-publish-resume
-  (let [store {:read! (fn [] {:schema ingress/deferred-schema :order [] :records {}})
-               :persist! (constantly false)}
+  (let [store {:acquire! (fn [] :lease) :release! (fn [_] true)
+               :read! (fn [_] {:schema ingress/deferred-schema :order [] :records {}})
+               :persist! (fn [_ _] false)}
         c (ingress/controller {:auth-token "s" :deferred-store store})]
     (ingress/close-intake! c)
     (is (= :ingress/deferred-persistence-failed
-           (refusal #(ingress/defer-resume! c "r" {:x 1}))))
+           (refusal #(ingress/defer-resume! c "r" {:requested-job-id "r" :x 1}))))
     (is (= 0 (:deferred (ingress/verification-snapshot
                          c {:remote-addr "127.0.0.1" :auth-token "s"}))))))
 
@@ -69,20 +71,24 @@
     (ingress/initialize-file-store! store)
     (let [c1 (ingress/controller {:auth-token "s" :deferred-store store})]
       (ingress/close-intake! c1)
-      (ingress/defer-resume! c1 "park-7" {:requested-job-id "park-7" :prompt "resume"}))
+      (ingress/defer-resume! c1 "park-7" {:requested-job-id "park-7" :prompt "resume"})
+      (ingress/release-controller! c1))
     (let [c2 (ingress/controller {:auth-token "s" :deferred-store store})]
       (ingress/close-intake! c2)
       (is (= [["park-7" {:requested-job-id "park-7" :prompt "resume"}]]
              (ingress/reopen! c2)))
+      (ingress/release-controller! c2)
       ;; Crash-before-ack: a fresh controller returns the identical stable pair.
       (let [c3 (ingress/controller {:auth-token "s" :deferred-store store})]
         (ingress/close-intake! c3)
         (is (= [["park-7" {:requested-job-id "park-7" :prompt "resume"}]]
                (ingress/reopen! c3)))
-        (ingress/acknowledge-resume! c3 "park-7")))
+        (ingress/acknowledge-resume! c3 "park-7")
+        (ingress/release-controller! c3)))
     (let [c4 (ingress/controller {:auth-token "s" :deferred-store store})]
       (ingress/close-intake! c4)
-      (is (= [] (ingress/reopen! c4))))))
+      (is (= [] (ingress/reopen! c4)))
+      (ingress/release-controller! c4))))
 
 (deftest corrupt-store-and-missing-store-refuse
   (let [dir (Files/createTempDirectory "ingress-corrupt-" (make-array java.nio.file.attribute.FileAttribute 0))
@@ -102,3 +108,40 @@
   (is (= :ingress/deferred-store-required
          (refusal #(ingress/controller {:auth-token "s"}))))
   (is (map? (ingress/controller {:auth-token "s" :test-only? true}))))
+
+(deftest invalid-payload-preserves-prior-evidence
+  (let [dir (Files/createTempDirectory "ingress-payload-" (make-array java.nio.file.attribute.FileAttribute 0))
+        path (.resolve dir "deferred.edn") store (ingress/file-deferred-store path)]
+    (ingress/initialize-file-store! store)
+    (let [c (ingress/controller {:auth-token "s" :deferred-store store})]
+      (ingress/close-intake! c)
+      (ingress/defer-resume! c "good" {:requested-job-id "good" :prompt "kept"})
+      (is (= :ingress/deferred-payload-unsupported
+             (refusal #(ingress/defer-resume!
+                        c "bad" {:requested-job-id "bad" :value (Object.)}))))
+      (ingress/release-controller! c))
+    (let [recovered (ingress/controller {:auth-token "s" :deferred-store store})]
+      (ingress/close-intake! recovered)
+      (is (= [["good" {:requested-job-id "good" :prompt "kept"}]]
+             (ingress/reopen! recovered)))
+      (ingress/release-controller! recovered))))
+
+(deftest competing-owner-and-initialization-refuse-without-write
+  (let [dir (Files/createTempDirectory "ingress-owner-" (make-array java.nio.file.attribute.FileAttribute 0))
+        path (.resolve dir "deferred.edn") store-a (ingress/file-deferred-store path)
+        store-b (ingress/file-deferred-store path)]
+    (ingress/initialize-file-store! store-a)
+    (let [c (ingress/controller {:auth-token "s" :deferred-store store-a})]
+      (ingress/close-intake! c)
+      (ingress/defer-resume! c "a" {:requested-job-id "a" :prompt "a"})
+      (is (= :ingress/deferred-store-owned
+             (refusal #(ingress/controller {:auth-token "s" :deferred-store store-b}))))
+      (is (= :ingress/deferred-store-owned
+             (refusal #(ingress/initialize-file-store! store-b))))
+      (ingress/release-controller! c))
+    (is (= :ingress/deferred-store-already-exists
+           (refusal #(ingress/initialize-file-store! store-b))))
+    (let [c (ingress/controller {:auth-token "s" :deferred-store store-b})]
+      (ingress/close-intake! c)
+      (is (= [["a" {:requested-job-id "a" :prompt "a"}]] (ingress/reopen! c)))
+      (ingress/release-controller! c))))

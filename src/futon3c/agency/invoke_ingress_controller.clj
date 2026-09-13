@@ -16,6 +16,7 @@
   (throw (ex-info (name code) (assoc data :refusal code))))
 
 (def deferred-schema :agency/deferred-resumes-v1)
+(declare one-edn)
 
 (defn- sha256 [^bytes bs]
   (apply str (map #(format "%02x" (bit-and 255 %))
@@ -36,6 +37,14 @@
                              (and (string? id) (= :pending (:status rec))
                                   (contains? rec :payload))) records))
       (refuse! :ingress/deferred-projection-invalid {}))
+    (try
+      (when-not (= p (one-edn (pr-str p)))
+        (refuse! :ingress/deferred-edn-roundtrip-failed {}))
+      (catch clojure.lang.ExceptionInfo e
+        (if (:refusal (ex-data e))
+          (throw (ex-info "unsupported deferred payload"
+                          {:refusal :ingress/deferred-payload-unsupported} e))
+          (throw e))))
     p))
 
 (defn- decode-utf8 [^bytes bs]
@@ -62,10 +71,30 @@
   "Isolated durable adapter. The on-disk envelope authenticates the canonical
   projection bytes; recovery reads the file once, then parses those same bytes."
   [path]
-  (let [^Path target (Path/of (str path) (make-array String 0))]
+  (let [^Path target (Path/of (str path) (make-array String 0))
+        ^Path lock-path (.resolveSibling target (str (.getFileName target) ".lock"))]
     {:path (str target)
+     :acquire!
+     (fn []
+       (let [ch (FileChannel/open lock-path (into-array StandardOpenOption
+                                                        [StandardOpenOption/CREATE
+                                                         StandardOpenOption/WRITE]))]
+         (try
+           (if-let [lock (try (.tryLock ch) (catch java.nio.channels.OverlappingFileLockException _ nil))]
+             {:channel ch :lock lock}
+             (do (.close ch) (refuse! :ingress/deferred-store-owned {:path (str target)})))
+           (catch Throwable e
+             (when (.isOpen ch) (.close ch))
+             (if (instance? clojure.lang.ExceptionInfo e) (throw e)
+                 (throw (ex-info "store ownership failed"
+                                 {:refusal :ingress/deferred-store-ownership-failed} e)))))))
+     :release!
+     (fn [{:keys [^java.nio.channels.FileLock lock ^FileChannel channel]}]
+       (when (and lock (.isValid lock)) (.release lock))
+       (when (and channel (.isOpen channel)) (.close channel))
+       true)
      :persist!
-     (fn [projection]
+     (fn [_lease projection]
        (let [projection (validate-projection! projection)
              projection-bytes (.getBytes (pr-str projection) StandardCharsets/UTF_8)
              envelope {:schema :agency/deferred-resume-envelope-v1
@@ -86,7 +115,7 @@
            true
            (finally (Files/deleteIfExists tmp)))))
      :read!
-     (fn []
+     (fn [_lease]
        (when-not (Files/isRegularFile target (make-array java.nio.file.LinkOption 0))
          (refuse! :ingress/deferred-store-missing {:path (str target)}))
        (let [bytes (Files/readAllBytes target)
@@ -102,10 +131,25 @@
 (defn initialize-file-store!
   "Explicitly create a fresh empty store; refuses to overwrite any record."
   [store]
-  (let [path (Path/of (:path store) (make-array String 0))]
-    (when (Files/exists path (make-array java.nio.file.LinkOption 0))
-      (refuse! :ingress/deferred-store-already-exists {:path (str path)}))
-    ((:persist! store) {:schema deferred-schema :order [] :records {}})))
+  (let [path (Path/of (:path store) (make-array String 0))
+        lease ((:acquire! store))
+        projection {:schema deferred-schema :order [] :records {}}
+        projection-bytes (.getBytes (pr-str projection) StandardCharsets/UTF_8)
+        envelope {:schema :agency/deferred-resume-envelope-v1
+                  :projection projection :projection-sha256 (sha256 projection-bytes)}
+        bytes (.getBytes (pr-str envelope) StandardCharsets/UTF_8)]
+    (try
+      (try
+        (Files/write path bytes (into-array StandardOpenOption
+                                            [StandardOpenOption/CREATE_NEW StandardOpenOption/WRITE]))
+        (catch java.nio.file.FileAlreadyExistsException _
+          (refuse! :ingress/deferred-store-already-exists {:path (str path)})))
+      (with-open [ch (FileChannel/open path (into-array StandardOpenOption [StandardOpenOption/WRITE]))]
+        (.force ch true))
+      (with-open [ch (FileChannel/open (.getParent path) (into-array StandardOpenOption [StandardOpenOption/READ]))]
+        (.force ch true))
+      true
+      (finally ((:release! store) lease)))))
 
 (defmacro ^:private with-controller-lock [c & body]
   `(let [^ReentrantLock lock# (:lock ~c)]
@@ -121,12 +165,18 @@
     (refuse! :ingress/auth-token-missing {}))
   (when-not (or deferred-store test-only?)
     (refuse! :ingress/deferred-store-required {}))
-  (let [projection (if deferred-store
-                     ((:read! deferred-store))
-                     {:schema deferred-schema :order [] :records {}})]
+  (let [lease (when deferred-store ((:acquire! deferred-store)))
+        projection (try
+                     (if deferred-store
+                       ((:read! deferred-store) lease)
+                       {:schema deferred-schema :order [] :records {}})
+                     (catch Throwable e
+                       (when lease ((:release! deferred-store) lease))
+                       (throw e)))]
    {:lock (ReentrantLock.)
     :auth-token auth-token
     :deferred-store deferred-store
+    :store-lease lease
     :test-only? test-only?
     :state (atom {:mode :open :generation 0 :waiting-writer 0 :entrant-tokens #{}
                  :accepted-queued #{} :executing #{} :final-delivery #{}
@@ -135,13 +185,22 @@
 (defn- persist-state! [c next-state]
   (when-let [store (:deferred-store c)]
     (try
-      (when-not (true? ((:persist! store) (deferred-projection next-state)))
+      (when-not (true? ((:persist! store) (:store-lease c)
+                        (deferred-projection next-state)))
         (refuse! :ingress/deferred-persistence-failed {}))
       (catch clojure.lang.ExceptionInfo e (throw e))
       (catch Throwable e
         (throw (ex-info "deferred persistence failed"
                         {:refusal :ingress/deferred-persistence-failed} e)))))
   (reset! (:state c) next-state))
+
+(defn release-controller!
+  "Release exclusive deferred-store ownership. The controller must not be used
+  afterward; integration owns lifecycle enforcement around this boundary."
+  [c]
+  (with-controller-lock c
+    (when-let [store (:deferred-store c)]
+      ((:release! store) (:store-lease c)))))
 
 (defn begin-creation!
   "Register an entrant before it waits for the invoke-jobs writer lock. Returns
@@ -208,15 +267,20 @@
   Repeating the identical id/payload is idempotent; mutation refuses."
   [c resume-id payload]
   (with-controller-lock c
-    (let [id (str resume-id) s @(:state c) old (get-in s [:deferred id])]
+    (when-not (and (string? resume-id) (not-empty resume-id)
+                   (map? payload) (= resume-id (:requested-job-id payload)))
+      (refuse! :ingress/deferred-payload-schema-invalid {:resume-id resume-id}))
+    (let [id resume-id s @(:state c) old (get-in s [:deferred id])]
       (when (= :open (:mode s))
         (refuse! :ingress/defer-while-open {:resume-id id}))
       (when (and old (not= payload (:payload old)))
         (refuse! :ingress/deferred-resume-conflict {:resume-id id}))
       (when-not old
-        (persist-state! c (-> s
-                              (update :deferred-order conj id)
-                              (assoc-in [:deferred id] {:payload payload :status :pending}))))
+        (let [next-state (-> s
+                             (update :deferred-order conj id)
+                             (assoc-in [:deferred id] {:payload payload :status :pending}))]
+          (validate-projection! (deferred-projection next-state))
+          (persist-state! c next-state)))
       id)))
 
 (defn reopen! [c]
