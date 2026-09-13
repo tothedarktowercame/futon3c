@@ -9,10 +9,10 @@
             [futon2.aif.c-fold-config :as digest]))
 
 (def binding-path
-  "/home/joe/code/futon3c/holes/labs/wm-contract/cohort-47-execution-binding.edn")
+  "/home/joe/code/futon3c/holes/labs/wm-contract/cohort-execution-binding.edn")
 
 (def binding-sha256
-  "1828798b33ec554e3b8dfd53bd48565b948597b1478b5a379ff05afa82fd1384")
+  "117da01895ce5ca4ff1693b636172b4e1775db4f951bd2334e20171af367caa0")
 
 (def ^:dynamic *read-binding-text* #(slurp binding-path))
 
