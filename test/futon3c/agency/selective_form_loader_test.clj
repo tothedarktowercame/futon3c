@@ -23,7 +23,7 @@
     (is (= :loader/ingress-quiescence-unproved
            (refusal #(loader/preflight! 'futon3c.agency.selective-form-loader-test
                                         (assoc proof :waiting-creations 1) #{} #{}))))
-    (is (= :loader/ingress-fence-unavailable
+    (is (= :loader/live-activation-disabled
            (refusal #(loader/activate-http-retention! {:source-path "src/futon3c/transport/http.clj"}))))
     (let [n (create-ns (gensym "loader-fixture"))]
       (binding [*ns* n] (clojure.core/refer 'clojure.core) (eval '(def existing :old)))
@@ -31,14 +31,24 @@
              (refusal #(loader/load-transactionally!
                         {:target-ns (ns-name n) :forms '[(def existing :new) (def newly-interned :new)]
                          :required '[existing newly-interned] :ingress-proof proof :fail-after 1
+                         :offline-experimental? true
                          :aliases-required #{} :classes-required #{}}))))
       (is (= :old (var-get (ns-resolve n 'existing))))
       (is (nil? (ns-resolve n 'newly-interned)))
       (let [loaded (loader/load-transactionally!
                     {:target-ns (ns-name n) :forms '[(def existing :loaded) (def loaded-new :loaded)]
                      :required '[existing loaded-new] :ingress-proof proof
+                     :offline-experimental? true
                      :aliases-required #{} :classes-required #{}})]
         (is (= :loaded (:status loaded)))
         (is (= '[existing loaded-new] (mapv :name (:forms loaded))))
         (is (= :loaded (var-get (ns-resolve n 'loaded-new)))))
       (remove-ns (ns-name n)))))
+
+(deftest production-targets-are-disabled
+  (is (= :loader/production-namespace-disabled
+         (refusal #(loader/load-transactionally!
+                    {:target-ns 'futon3c.agency.selective-form-loader-test
+                     :forms [] :required [] :ingress-proof proof
+                     :offline-experimental? true
+                     :aliases-required #{} :classes-required #{}})))))

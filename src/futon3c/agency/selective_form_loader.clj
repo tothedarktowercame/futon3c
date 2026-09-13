@@ -1,6 +1,6 @@
 (ns futon3c.agency.selective-form-loader
-  "Offline-reviewed transactional loader. It performs no serving activation
-  unless an external ingress proof establishes rejection before every creator."
+  "Experimental offline form loader. Serving activation and production
+  namespace targets are deliberately disabled; use a controlled restart."
   (:import (java.io PushbackReader StringReader)
            (java.nio.charset StandardCharsets) (java.nio.file Files Path)
            (java.security MessageDigest)))
@@ -70,8 +70,13 @@
       :all-creation-surfaces-covered? false
       :refusal :loader/ingress-fence-unavailable})
 (defn load-transactionally!
-  [{:keys [target-ns forms required ingress-proof fail-after aliases-required classes-required]
+  [{:keys [target-ns forms required ingress-proof fail-after aliases-required classes-required
+           offline-experimental?]
     :or {aliases-required required-aliases classes-required required-classes}}]
+  (when-not offline-experimental?
+    (refuse! :loader/offline-experimental-opt-in-required {}))
+  (when (.startsWith (str target-ns) "futon3c.")
+    (refuse! :loader/production-namespace-disabled {:namespace target-ns}))
   (preflight! target-ns ingress-proof aliases-required classes-required)
   (let [{selected :forms} (select-exact-forms forms required)
         ns-obj (the-ns target-ns)
@@ -96,30 +101,8 @@
                          :restored (vec required)} e))))))
 
 (defn activate-http-retention!
-  "Concrete activation entry. INGRESS-VERIFIER must measure a pre-create fence,
-  including callers already inside an old creator. It is checked before and
-  again under the writer lock with an unchanged generation token. HEAD has no
-  such fence, so calling without an independently installed verifier refuses."
-  [{:keys [source-path ingress-verifier]}]
-  (when-not (fn? ingress-verifier)
-    (refuse! :loader/ingress-fence-unavailable {}))
-  (let [proof-before (ingress-verifier)
-        target (find-ns 'futon3c.transport.http)
-        lock-var (some-> target (ns-resolve 'invoke-jobs-writer-lock))]
-    (when-not lock-var (refuse! :loader/writer-lock-unavailable {}))
-    (preflight! 'futon3c.transport.http proof-before)
-    (let [lock-object (var-get lock-var)]
-      (monitor-enter lock-object)
-      (try
-        (let [proof-under-lock (ingress-verifier)]
-          (preflight! 'futon3c.transport.http proof-under-lock)
-          (when-not (and (= (:generation-token proof-before) (:generation-token proof-under-lock))
-                         (some? (:generation-token proof-before)))
-            (refuse! :loader/ingress-generation-changed
-                     {:before (:generation-token proof-before)
-                      :under-lock (:generation-token proof-under-lock)}))
-          (load-transactionally!
-           {:target-ns 'futon3c.transport.http
-            :forms (read-pinned-forms source-path http-sha256)
-            :required required-http-forms :ingress-proof proof-under-lock}))
-        (finally (monitor-exit lock-object))))))
+  "Historical entry retained only to give every attempted live activation a
+  typed refusal. Caller assertions cannot authorize mutation of the server."
+  [_]
+  (refuse! :loader/live-activation-disabled
+           {:required-mechanism :controlled-process-restart}))
