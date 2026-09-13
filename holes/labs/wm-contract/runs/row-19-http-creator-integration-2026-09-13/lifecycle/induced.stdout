@@ -1,0 +1,11 @@
+
+Running tests in #{"/tmp"}
+
+Testing codex23-http-lifecycle-induced-test
+
+FAIL in (deliberate-failure) (codex23_http_lifecycle_induced_test.clj:5)
+expected: (= :drained :work-remains)
+  actual: (not (= :drained :work-remains))
+
+Ran 1 tests containing 1 assertions.
+1 failures, 0 errors.

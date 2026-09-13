@@ -1,0 +1,25 @@
+{:schema :wm/execution-receipts-v1
+ :tree-sha "f5a3cf115a9354efe09b4fe2cbb301c9e0a38e9a"
+ :at "2026-09-13T16:23:02Z"
+ :failed-history
+ [{:commit "835c39cd" :exit 1 :kind :test-read-error :stdout "test-attempt1.stdout" :stderr "test-attempt1.stderr"}
+  {:commit "9972aa5e" :exit 1 :kind :test-compile-error :stdout "test-attempt2.stdout" :stderr "test-attempt2.stderr"}
+  {:commit "129c73b1" :exit 1 :kind :test-read-error :stdout "test-attempt3.stdout" :stderr "test-attempt3.stderr"}
+  {:commit "9e659241" :exit 1 :tests 8 :assertions 54 :failures 2
+   :kind :duplicate-result-was-nil :stdout "test-attempt4.stdout" :stderr "test-attempt4.stderr"}]
+ :runs
+ [{:gate :http-lifecycle-tests
+   :command "clojure -M:test -n futon3c.transport.invoke-ingress-integration-test"
+   :exit 0 :tests 8 :assertions 54 :stdout "test-final.stdout" :stderr "test-final.stderr"}
+  {:gate :controller-tests
+   :command "clojure -M:test -n futon3c.agency.invoke-ingress-controller-test"
+   :exit 0 :tests 11 :assertions 38 :stdout "controller-test.stdout" :stderr "controller-test.stderr"}
+  {:gate :clj-kondo
+   :command "clj-kondo --lint src/futon3c/agency/invoke_ingress_controller.clj src/futon3c/transport/http.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :errors 0 :warnings 0 :stdout "kondo.stdout" :stderr "kondo.stderr"}
+  {:gate :check-parens
+   :command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el --eval '(arxana-check-parens-cli)' -- --no-defaults src/futon3c/agency/invoke_ingress_controller.clj src/futon3c/transport/http.clj test/futon3c/transport/invoke_ingress_integration_test.clj"
+   :exit 0 :stdout "parens.stdout" :stderr "parens.stderr"}
+  {:gate :induced-runner-failure
+   :command "clojure -Sdeps '{:paths [\"/tmp\"] :deps {io.github.cognitect-labs/test-runner {:git/url \"https://github.com/cognitect-labs/test-runner.git\" :git/sha \"5e91ee0989d93115cfb5e15b6f242f5ec7ab762e\"}}}' -M -m cognitect.test-runner -d /tmp -n codex23-http-lifecycle-induced-test"
+   :exit 1 :tests 1 :assertions 1 :failures 1 :stdout "induced.stdout" :stderr "induced.stderr"}]}

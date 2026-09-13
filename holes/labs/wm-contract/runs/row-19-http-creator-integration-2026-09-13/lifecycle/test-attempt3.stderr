@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+Syntax error reading source at (futon3c/transport/invoke_ingress_integration_test.clj:192:64).
+Unmatched delimiter: )
+
+Full report at:
+/tmp/clojure-11218473467696322758.edn

@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+Syntax error reading source at (futon3c/transport/invoke_ingress_integration_test.clj:224:1).
+EOF while reading, starting at line 159
+
+Full report at:
+/tmp/clojure-15239098851276453879.edn
