@@ -94,7 +94,7 @@
            (refusal (fn []
                       (reconcile-mutated
                        (fn [r] (assoc-in r [:execution :generation] 6)))))))
-    (is (= :reconcile/delivery-state-unknown
+    (is (= :reconcile/delivery-records-invalid
            (refusal (fn []
                       (reconcile-mutated
                        (fn [r] (-> r
