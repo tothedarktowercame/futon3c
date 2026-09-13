@@ -2244,62 +2244,73 @@
         (is (= :request-already-bound
                (:error (http/bind-unbound-invoke-request! authority))))))))
 
-(deftest invoke-request-commission-survives-event-trimming-and-rejoins-digest
-  (testing "the exact digest preimage survives persistence after transcript trimming"
-    (let [job-id (#'http/create-invoke-job!
-                  {:requested-job-id "r9-production-shaped-review"
-                   :agent-id "claude-reviewer"
-                   :prompt "Review commit deadbeef and its executed receipts."
-                   :caller "completion-lead"
-                   :surface "bell"
-                   :mode "work"
-                   :model "review-model"})
+(deftest invoke-request-commission-survives-hot-job-expiry-and-rejoins-digest
+  (testing "the exact preimage and R9 join projection outlive the seven-day hot job"
+    (let [create! (fn [id finished-at]
+                    (let [job-id (#'http/create-invoke-job!
+                                  {:requested-job-id id
+                                   :agent-id "claude-reviewer"
+                                   :prompt (str "Review " id " and its receipts.")
+                                   :caller "completion-lead"
+                                   :surface "bell"
+                                   :mode "work"
+                                   :model "review-model"})]
+                      (swap! (var-get #'http/!invoke-jobs-ledger) update-in [:jobs job-id]
+                             #(-> %
+                                  (assoc :state "done" :finished-at finished-at
+                                         :trace-id (str "trace-" id)
+                                         :artifact-ref (str "artifact-" id)
+                                         :execution {:executed? true :tool-events 2})
+                                  (assoc :events [{:seq 1 :type "accepted" :at finished-at}
+                                                  {:seq 2 :type "prompt" :at finished-at
+                                                   :text (str "Review " id " and its receipts.")}
+                                                  {:seq 3 :type "tool_use" :at finished-at
+                                                   :tools ["read" "exec"]}
+                                                  {:seq 4 :type "done" :at finished-at}])))
+                      job-id))
+          target-id (create! "r9-production-shaped-review" "2020-01-01T00:00:00Z")
+          _ (create! "r9-second-old-job" "2020-01-02T00:00:00Z")
+          sentinel-id (create! "r9-newest-sentinel" "2020-01-03T00:00:00Z")
           ledger-atom (var-get #'http/!invoke-jobs-ledger)
-          old-time "2020-01-01T00:00:00Z"]
-      (swap! ledger-atom update-in [:jobs job-id]
-             #(-> %
-                  (assoc :state "done" :finished-at old-time)
-                  (assoc :events [{:seq 1 :type "accepted" :at old-time}
-                                  {:seq 2 :type "prompt" :at old-time
-                                   :text "Review commit deadbeef and its executed receipts."}
-                                  {:seq 3 :type "tool_use" :at old-time
-                                   :tools ["read" "exec"]}
-                                  {:seq 4 :type "done" :at old-time}])))
-      (let [compacted (binding [http/*invoke-ledger-now*
-                                (constantly
-                                 (java.time.Instant/parse
-                                  "2020-01-03T00:00:00Z"))]
-                        (#'http/compact-invoke-jobs-ledger @ledger-atom))]
-        (#'http/persist-invoke-jobs-ledger! compacted)
-        (http/reset-invoke-jobs!)
-        (let [readback (http/invoke-job-request-commission job-id)]
-          (is (= :agency/invoke-request-commission-v1 (:schema readback)))
-          (is (= "Review commit deadbeef and its executed receipts."
-                 (get-in readback [:commission :prompt])))
-          (is (= (:request-digest readback)
-                 (get-in (#'http/ensure-invoke-jobs-ledger!)
-                         [:jobs job-id :request-digest])))
-          (is (= :d13/rolling-expiry
-                 (get-in (#'http/ensure-invoke-jobs-ledger!)
-                         [:jobs job-id :events-trimmed])))))
+          compacted (binding [http/*invoke-ledger-now*
+                              (constantly
+                               (java.time.Instant/parse
+                                "2020-01-20T00:00:00Z"))]
+                      (#'http/compact-invoke-jobs-ledger @ledger-atom))]
+      (#'http/persist-invoke-jobs-ledger! compacted)
+      (http/reset-invoke-jobs!)
+      (let [ledger (#'http/ensure-invoke-jobs-ledger!)
+            readback (http/invoke-job-request-commission target-id)]
+        (is (nil? (get-in ledger [:jobs target-id])))
+        (is (some? (get-in ledger [:jobs sentinel-id]))
+            "a different newest job is the tombstone sentinel")
+        (is (= :commission-archive (:source readback)))
+        (is (= "Review r9-production-shaped-review and its receipts."
+               (get-in readback [:commission :prompt])))
+        (is (= "trace-r9-production-shaped-review"
+               (get-in readback [:job-join :trace-id])))
+        (is (= "artifact-r9-production-shaped-review"
+               (get-in readback [:job-join :artifact-ref]))))
 
-      (testing "missing retained commission refuses without reconstructing events"
-        (swap! ledger-atom update-in [:jobs job-id] dissoc :request-commission)
-        (is (= :request-commission-missing
+      (testing "missing archive refuses without reconstructing trimmed events"
+        (swap! ledger-atom update :request-commission-archive dissoc target-id)
+        (is (= :invoke-job-missing
                (:refusal (try
-                           (http/invoke-job-request-commission job-id)
+                           (http/invoke-job-request-commission target-id)
                            (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
 
-      (testing "tampered retained commission refuses the digest join"
-        (swap! ledger-atom assoc-in [:jobs job-id :request-commission]
-               {:agent-id "claude-reviewer"
-                :prompt "tampered"
-                :caller "completion-lead"
-                :surface "bell"
-                :model "review-model"})
-        (is (= :request-commission-digest-mismatch
+      (testing "tampered archive refuses its own content digest"
+        (swap! ledger-atom assoc-in
+               [:request-commission-archive target-id]
+               (assoc (get-in compacted [:request-commission-archive target-id])
+                      :commission {:agent-id "claude-reviewer"
+                                   :prompt "tampered"
+                                   :caller "completion-lead"
+                                   :surface "bell"
+                                   :model "review-model"}))
+        (is (= :request-commission-archive-tampered
                (:refusal (try
-                           (http/invoke-job-request-commission job-id)
+                           (http/invoke-job-request-commission target-id)
                            (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally

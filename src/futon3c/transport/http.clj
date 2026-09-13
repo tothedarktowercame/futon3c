@@ -363,6 +363,7 @@
    :next-seq 0
    :job-order []
    :trace->job {}
+   :request-commission-archive {}
    :jobs {}})
 
 (declare terminal-invoke-state?)
@@ -417,6 +418,43 @@
                             vec)
                :events-trimmed :d13/rolling-expiry))))
 
+(defn- request-commission-archive-record
+  [job archived-at]
+  (when-let [commission (:request-commission job)]
+    (let [record {:schema :agency/invoke-request-commission-archive-v1
+                  :job-id (:job-id job)
+                  :request-digest (:request-digest job)
+                  :commission commission
+                  :job-join (select-keys
+                             job [:agent-id :caller :surface :artifact-ref
+                                  :trace-id :created-at :started-at :finished-at
+                                  :state :terminal-code :execution :delivery
+                                  :invocation/model])
+                  :archived-at (str archived-at)}]
+      (assoc record :archive-digest
+             (campaign-machine/ledger-digest [record])))))
+
+(defn- add-request-commission-archives
+  "Archive only the small immutable R9 join projection for jobs crossing the
+  seven-day hot-ledger boundary. Full job transcripts still expire under D13.
+  Archive entries have no time-based expiry; removal requires a separately
+  reviewed retention operation. Conflicting reuse of a job id refuses."
+  [ledger dropped now]
+  (reduce
+   (fn [acc [job-id job]]
+     (if-let [record (request-commission-archive-record job now)]
+       (if-let [existing (get-in acc [:request-commission-archive job-id])]
+         (if (= (dissoc existing :archived-at :archive-digest)
+                (dissoc record :archived-at :archive-digest))
+           acc
+           (throw (ex-info "invoke commission archive conflict"
+                           {:refusal :request-commission-archive-conflict
+                            :job-id job-id})))
+         (assoc-in acc [:request-commission-archive job-id] record))
+       acc))
+   ledger
+   dropped))
+
 (defn- compact-invoke-jobs-ledger
   "Bound terminal-job retention in two stages: compact transcript payload
    after 24h, then drop the unreferenced tombstone after seven days. Active
@@ -429,6 +467,7 @@
                 (and (not (contains? protected job-id))
                      (expired-terminal-job?
                       job now invoke-terminal-tombstone-retention-ms)))
+        dropped-jobs (into {} (filter drop?) (:jobs ledger))
         retained-jobs* (into {} (remove drop?) (:jobs ledger))
         ;; A persisted ledger with no jobs is rejected as probable truncation.
         ;; Preserve the newest tombstone only when expiry would otherwise make
@@ -440,7 +479,7 @@
         retained-jobs (cond-> retained-jobs*
                         sentinel-id (assoc sentinel-id (get-in ledger [:jobs sentinel-id])))
         retained-ids (set (keys retained-jobs))]
-    (-> ledger
+    (-> (add-request-commission-archives ledger dropped-jobs now)
         (assoc :jobs
                (into {}
                      (map (fn [[job-id job]]
@@ -1325,26 +1364,41 @@
   a prompt from lossy events. This is the read boundary used by R9's later
   producer/reviewer join; it does not authenticate a bootstrap anchor."
   [job-id]
-  (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)])
-        commission (:request-commission job)]
-    (when-not job
-      (throw (ex-info "invoke job is missing"
-                      {:refusal :invoke-job-missing :job-id (str job-id)})))
+  (let [ledger (ensure-invoke-jobs-ledger!)
+        job-id (str job-id)
+        job (get-in ledger [:jobs job-id])
+        archived (get-in ledger [:request-commission-archive job-id])
+        commission (or (:request-commission job) (:commission archived))]
+    (when-not (or job archived)
+      (throw (ex-info "invoke job and commission archive are missing"
+                      {:refusal :invoke-job-missing :job-id job-id})))
     (when-not (map? commission)
       (throw (ex-info "invoke request commission was not retained"
                       {:refusal :request-commission-missing
-                       :job-id (str job-id)})))
+                       :job-id job-id})))
+    (when archived
+      (let [expected (:archive-digest archived)
+            observed (campaign-machine/ledger-digest
+                      [(dissoc archived :archive-digest)])]
+        (when-not (= expected observed)
+          (throw (ex-info "invoke commission archive digest mismatch"
+                          {:refusal :request-commission-archive-tampered
+                           :job-id job-id :expected expected
+                           :observed observed})))))
     (let [observed (campaign-machine/ledger-digest [commission])]
-      (when-not (= (:request-digest job) observed)
+      (when-not (= (or (:request-digest job) (:request-digest archived)) observed)
         (throw (ex-info "invoke request commission digest mismatch"
                         {:refusal :request-commission-digest-mismatch
-                         :job-id (str job-id)
-                         :expected (:request-digest job)
+                         :job-id job-id
+                         :expected (or (:request-digest job)
+                                       (:request-digest archived))
                          :observed observed})))
       {:schema :agency/invoke-request-commission-v1
-       :job-id (str job-id)
+       :job-id job-id
        :request-digest observed
-       :commission commission})))
+       :commission commission
+       :job-join (when archived (:job-join archived))
+       :source (if job :hot-ledger :commission-archive)})))
 
 (defn- create-invoke-job!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
