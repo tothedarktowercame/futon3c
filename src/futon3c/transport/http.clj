@@ -1853,9 +1853,10 @@
                              (append-job-event "running" {})))
                ledger)
              ledger)))
-        started? (and (#{"queued" "activating"}
-                        (str (get-in before [:jobs job-id :state])))
-                      (= "running" (get-in after [:jobs job-id :state])))]
+        started? (boolean
+                  (and (#{"queued" "activating"}
+                         (str (get-in before [:jobs job-id :state])))
+                       (= "running" (get-in after [:jobs job-id :state]))))]
     (when started?
       (when-let [controller (configured-invoke-ingress-controller)]
         (invoke-ingress/start-execution! controller job-id)))
