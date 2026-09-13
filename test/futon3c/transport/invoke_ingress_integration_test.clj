@@ -156,6 +156,21 @@
           (is (= 1 (:accepted-queued (snapshot controller))))))
       (finally (ingress/release-controller! controller)))))
 
+(deftest duplicate-create-preserves-running-lifecycle
+  (let [controller (durable-controller)]
+    (try
+      (with-http-fixture
+        controller
+        (fn [_]
+          (#'http/create-invoke-job! (invoke-request "duplicate-running"))
+          (is (true? (#'http/mark-invoke-job-running! "duplicate-running")))
+          (is (= "duplicate-running"
+                 (#'http/create-invoke-job! (invoke-request "duplicate-running"))))
+          (let [s (snapshot controller)]
+            (is (= 1 (:executing s)))
+            (is (= 0 (:accepted-queued s))))))
+      (finally (ingress/release-controller! controller)))))
+
 (deftest execution-terminal-and-delivery-transitions-are-idempotent
   (doseq [[id terminal-state]
           [["success-1" "done"] ["failure-1" "failed"]
@@ -188,8 +203,41 @@
             (is (false? (#'http/record-invoke-job-delivery-by-job-id!
                          id {:surface "test" :destination "fixture"
                              :delivered? true :note "duplicate"})))
-            (is (true? (:drained? (snapshot controller))))))
+            (if (= "cancelled" terminal-state)
+              (is (true? (:drained? (snapshot controller))))
+              (do
+                ;; Delivery does not prove the supervising worker unwound.
+                (is (= 1 (:executing (snapshot controller))))
+                (is (false? (:drained? (snapshot controller))))
+                (#'http/finish-controller-execution! id)
+                (is (true? (:drained? (snapshot controller))))))))
         (finally (ingress/release-controller! controller))))))
+
+(deftest timeout-and-delivery-do-not-release-held-worker
+  (let [controller (durable-controller)]
+    (try
+      (with-http-fixture
+        controller
+        (fn [_]
+          (#'http/create-invoke-job! (invoke-request "held-timeout"))
+          (#'http/mark-invoke-job-running! "held-timeout")
+          (with-redefs-fn
+            {#'http/parked-on-notify! (constantly {})
+             #'http/auto-bellback-enabled? (constantly false)
+             #'http/inbox-agent? (constantly false)
+             #'reg/get-agent (constantly {})}
+            (fn []
+              (#'http/finalize-invoke-job! "held-timeout" "timeout"
+                                           "job-ceiling-exceeded" nil {:ok false} nil)))
+          (#'http/record-invoke-job-delivery-by-job-id!
+           "held-timeout" {:surface "test" :destination "fixture"
+                           :delivered? false :note "timeout notified"})
+          (is (= 1 (:executing (snapshot controller))))
+          (is (false? (:drained? (snapshot controller))))
+          ;; Only the actual worker wrapper's finally/unwind can do this.
+          (#'http/finish-controller-execution! "held-timeout")
+          (is (true? (:drained? (snapshot controller))))))
+      (finally (ingress/release-controller! controller)))))
 
 (deftest service-configuration-is-explicit-durable-and-never-ready
   (let [controller (durable-controller)

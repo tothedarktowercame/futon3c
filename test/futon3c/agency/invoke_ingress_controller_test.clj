@@ -19,6 +19,7 @@
     (is (false? (ingress/drained? c)))
     (deliver release true) @worker
     (ingress/start-execution! c "job-1")
+    (ingress/finish-job! c "job-1")
     (ingress/finish-execution! c "job-1")
     (is (false? (ingress/drained? c)))
     (ingress/finish-delivery! c "job-1")

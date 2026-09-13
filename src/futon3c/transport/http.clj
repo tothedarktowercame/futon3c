@@ -255,6 +255,7 @@
 
 (defonce ^:private !invoke-jobs-ledger (atom nil))
 (defonce ^:private invoke-jobs-writer-lock (Object.))
+(defonce ^:private invoke-lifecycle-order-lock (Object.))
 
 (defonce ^:private !invoke-ingress-controller-config
   ;; Loading this namespace preserves the existing serving behaviour. Only
@@ -1633,20 +1634,21 @@
         job-id (if controller
                  (let [ticket (invoke-ingress/begin-creation! controller)
                        accepted-id (atom nil)]
-                   (try
-                     (let [id (create-invoke-job-ledger! request)]
-                       ;; The ledger replacement is durable before this point.
-                       ;; Reused stable ids are already durable, and the
-                       ;; controller's accepted set is itself idempotent.
-                       (reset! accepted-id id)
-                       id)
-                     (catch Throwable t
-                       (when-let [id (:committed-invoke-job-id (ex-data t))]
-                         (reset! accepted-id id))
-                       (throw t))
-                     (finally
-                       (invoke-ingress/creation-finished!
-                        controller ticket @accepted-id))))
+                   (locking invoke-lifecycle-order-lock
+                     (try
+                       (let [id (create-invoke-job-ledger! request)]
+                         ;; The ledger replacement is durable before this point.
+                         ;; Reused stable ids are already durable, and the
+                         ;; controller preserves their actual lifecycle set.
+                         (reset! accepted-id id)
+                         id)
+                       (catch Throwable t
+                         (when-let [id (:committed-invoke-job-id (ex-data t))]
+                           (reset! accepted-id id))
+                         (throw t))
+                       (finally
+                         (invoke-ingress/creation-finished!
+                          controller ticket @accepted-id)))))
                  (create-invoke-job-ledger! request))
         {:keys [caller agent-id surface]} request]
     ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
@@ -1841,30 +1843,37 @@
 
 (defn- mark-invoke-job-running!
   [job-id]
-  (let [[before after]
-        (update-invoke-jobs-ledger-vals!
-         (fn [ledger]
-           (if-let [job (get-in ledger [:jobs job-id])]
-             (if (#{"queued" "activating"} (str (:state job)))
-               (assoc-in ledger [:jobs job-id]
-                         (-> job
-                             (assoc :state "running"
-                                    :started-at (or (:started-at job) (str (Instant/now))))
-                             (append-job-event "running" {})))
-               ledger)
-             ledger)))
-        started? (boolean
-                  (and (#{"queued" "activating"}
-                         (str (get-in before [:jobs job-id :state])))
-                       (= "running" (get-in after [:jobs job-id :state]))))]
-    (when started?
-      (when-let [controller (configured-invoke-ingress-controller)]
-        (invoke-ingress/start-execution! controller job-id)))
-    started?))
+  (locking invoke-lifecycle-order-lock
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (if (#{"queued" "activating"} (str (:state job)))
+                 (assoc-in ledger [:jobs job-id]
+                           (-> job
+                               (assoc :state "running"
+                                      :started-at (or (:started-at job) (str (Instant/now))))
+                               (append-job-event "running" {})))
+                 ledger)
+               ledger)))
+          started? (boolean
+                    (and (#{"queued" "activating"}
+                           (str (get-in before [:jobs job-id :state])))
+                         (= "running" (get-in after [:jobs job-id :state]))))]
+      (when started?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/start-execution! controller job-id)))
+      started?)))
+
+(defn- finish-controller-execution! [job-id]
+  (when-let [controller (configured-invoke-ingress-controller)]
+    (locking invoke-lifecycle-order-lock
+      (invoke-ingress/finish-execution! controller job-id))))
 
 (defn- finalize-invoke-job!
   [job-id terminal-state terminal-code terminal-message result sid]
-  (let [invoke-meta (:invoke-meta result)
+  (locking invoke-lifecycle-order-lock
+    (let [invoke-meta (:invoke-meta result)
         execution (invoke-execution-evidence result job-id)
         trace-id (extract-trace-id invoke-meta)
         result-text (when (string? (:result result)) (:result result))
@@ -1974,11 +1983,12 @@
         :destination (str "/api/alpha/invoke/jobs/" job-id)
         :delivered? false
         :note "caller-not-a-registered-seat"}))
-    (boolean updated-terminal-job)))
+      (boolean updated-terminal-job))))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
-  (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
+  (locking invoke-lifecycle-order-lock
+    (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
     (let [[before after]
           (update-invoke-jobs-ledger-vals!
            (fn [ledger]
@@ -2014,11 +2024,12 @@
       (when transitioned?
         (when-let [controller (configured-invoke-ingress-controller)]
           (invoke-ingress/finish-delivery! controller job-id)))
-      transitioned?)))
+      transitioned?))))
 
 (defn- record-invoke-job-delivery-by-job-id!
   [job-id {:keys [surface destination delivered? note]}]
-  (when (and (string? job-id) (not (str/blank? job-id)))
+  (locking invoke-lifecycle-order-lock
+    (when (and (string? job-id) (not (str/blank? job-id)))
     (let [[before after]
           (update-invoke-jobs-ledger-vals!
            (fn [ledger]
@@ -2050,7 +2061,7 @@
       (when transitioned?
         (when-let [controller (configured-invoke-ingress-controller)]
           (invoke-ingress/finish-delivery! controller job-id)))
-      transitioned?)))
+      transitioned?))))
 
 (declare get-invoke-job)
 
@@ -4651,6 +4662,7 @@
         model (some-> (or (:model payload) (get payload "model"))
                       str str/trim not-empty)
         ev-opts (when mission-id [:mission-id mission-id])
+        execution-started? (atom false)
         job-id (create-invoke-job! {:requested-job-id requested-job-id
                                     :agent-id agent-id
                                     :prompt prompt
@@ -4658,7 +4670,10 @@
                                     :surface surface
                                     :model model})]
     (try
-      (mark-invoke-job-running! job-id)
+      (when-not (mark-invoke-job-running! job-id)
+        (throw (ex-info "invoke job is already running or terminal"
+                        {:refusal :invoke-job-execution-reuse :job-id job-id})))
+      (reset! execution-started? true)
       (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
@@ -4740,6 +4755,7 @@
                             :message (.getMessage t)}))
       (finally
        (unregister-job-worker! job-id)
+       (when @execution-started? (finish-controller-execution! job-id))
        ;; Guarantee: every terminal outcome resets agent status.
        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
 
@@ -4750,9 +4766,13 @@
    reached a terminal state while they sat in the queue."
   [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
            model reasoning-effort]}]
-  (let [ev-opts (when mission-id [:mission-id mission-id])]
+  (let [ev-opts (when mission-id [:mission-id mission-id])
+        execution-started? (atom false)]
     (try
-      (mark-invoke-job-running! job-id)
+      (when-not (mark-invoke-job-running! job-id)
+        (throw (ex-info "invoke job is already running or terminal"
+                        {:refusal :invoke-job-execution-reuse :job-id job-id})))
+      (reset! execution-started? true)
       (preclock-dispatch! agent-id mission-id)
       (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
                          job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
@@ -4835,6 +4855,7 @@
       (finally
        ;; Unregister worker (ceiling reaper no longer needs to track this job).
        (unregister-job-worker! job-id)
+       (when @execution-started? (finish-controller-execution! job-id))
        ;; Guarantee: every terminal outcome resets agent status. The registry's
        ;; invoke-agent! wrapper normally handles this, but if the worker thread
        ;; is killed or the invoke-fn blocks past process boundaries, mark-idle!

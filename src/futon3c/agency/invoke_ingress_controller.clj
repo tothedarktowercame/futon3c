@@ -234,7 +234,10 @@
       (swap! (:state c)
              (fn [x] (cond-> (-> x (update :waiting-writer dec)
                                     (update :entrant-tokens disj (:token ticket)))
-                       accepted-job-id (update :accepted-queued conj (str accepted-job-id))))))))
+                       (and accepted-job-id
+                            (not (contains? (:executing x) (str accepted-job-id)))
+                            (not (contains? (:final-delivery x) (str accepted-job-id))))
+                       (update :accepted-queued conj (str accepted-job-id))))))))
 
 (defn start-execution! [c job-id]
   (with-controller-lock c
@@ -249,8 +252,9 @@
     (let [id (str job-id)]
       (when-not (contains? (:executing @(:state c)) id)
         (refuse! :ingress/job-not-executing {:job-id id}))
-      (swap! (:state c) #(-> % (update :executing disj id)
-                              (update :final-delivery conj id))))))
+      ;; Terminal ledger state separately owns final-delivery accounting.
+      ;; Actual wrapper unwind is the only event that releases execution.
+      (swap! (:state c) update :executing disj id))))
 
 (defn finish-job!
   "Move a durably terminal job to final delivery.
@@ -264,8 +268,7 @@
       (cond
         (contains? (:final-delivery s) id) id
         (contains? (:executing s) id)
-        (do (swap! (:state c) #(-> % (update :executing disj id)
-                                      (update :final-delivery conj id))) id)
+        (do (swap! (:state c) update :final-delivery conj id) id)
         (contains? (:accepted-queued s) id)
         (do (swap! (:state c) #(-> % (update :accepted-queued disj id)
                                       (update :final-delivery conj id))) id)

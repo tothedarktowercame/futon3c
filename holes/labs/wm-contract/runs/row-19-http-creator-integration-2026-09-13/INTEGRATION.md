@@ -20,10 +20,19 @@ as accepted work. A pre-rename failure has no retained identity.
 The central running transition advances an accepted job to execution only
 when the ledger itself changes from queued/activating to running. The first
 terminal ledger transition moves either queued cancellation/submission failure
-or executing work to final delivery. The first durable delivery receipt clears
-that final-delivery identity. Duplicate running, terminal, and delivery calls
-do not advance controller state twice. A terminal job lacking a safe delivery
-receipt remains in final delivery and therefore remains non-drained.
+or executing work to final delivery, but it does not release the executing
+identity. The first durable delivery receipt clears final delivery. Only the
+actual worker wrapper's `finally`, after unregistering the worker, releases
+execution. Thus timeout/cancel notification cannot report drain while an
+interrupt-resistant worker remains alive. Duplicate creation, running,
+terminal, and delivery calls preserve the existing lifecycle set and do not
+advance state twice. A terminal job lacking a safe delivery receipt remains
+in final delivery and therefore remains non-drained.
+
+An HTTP lifecycle-order monitor surrounds each ledger transition and its
+controller notification. Its ordering is lifecycle monitor, ledger writer,
+then controller; `begin-creation!` releases the controller before entering the
+monitor. No path holds controller and then waits for the ledger writer.
 
 Loading the namespace leaves `!invoke-ingress-controller-config` exactly
 inactive, preserving ordinary service behavior. Activation requires the
