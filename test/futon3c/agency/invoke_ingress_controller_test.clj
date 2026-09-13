@@ -42,15 +42,20 @@
     (is (= 2 (count @writes)))))
 
 (deftest persistence-failure-does-not-publish-resume
-  (let [store {:acquire! (fn [] :lease) :release! (fn [_] true)
+  (let [fail? (atom true)
+        saved (atom nil)
+        store {:acquire! (fn [] :lease) :release! (fn [_] true)
                :read! (fn [_] {:schema ingress/deferred-schema :order [] :records {}})
-               :persist! (fn [_ _] false)}
+               :persist! (fn [_ p] (if @fail? false (do (reset! saved p) true)))}
         c (ingress/controller {:auth-token "s" :deferred-store store})]
     (ingress/close-intake! c)
     (is (= :ingress/deferred-persistence-failed
            (refusal #(ingress/defer-resume! c "r" {:requested-job-id "r" :x 1}))))
     (is (= 0 (:deferred (ingress/verification-snapshot
-                         c {:remote-addr "127.0.0.1" :auth-token "s"}))))))
+                         c {:remote-addr "127.0.0.1" :auth-token "s"}))))
+    (reset! fail? false)
+    (is (= "r" (ingress/defer-resume! c "r" {:requested-job-id "r" :x 1})))
+    (is (= ["r"] (:order @saved)))))
 
 (deftest verification-lane-is-local-and-authenticated
   (let [c (ingress/controller {:auth-token "correct" :test-only? true})]
