@@ -1,0 +1,5 @@
+Execution error (FileNotFoundException) at futon3c.blackboard/eval291$loading (blackboard.clj:1).
+Could not locate futon3c/dev/config__init.class, futon3c/dev/config.clj or futon3c/dev/config.cljc on classpath.
+
+Full report at:
+/tmp/clojure-10636304695228181019.edn

@@ -1,0 +1,5 @@
+Execution error (AssertionError) at user/eval34166$fn$fn (lead-committed-control.clj:26).
+Assert failed: (= 0 (:accepted-queued snap))
+
+Full report at:
+/tmp/clojure-8254242171661565873.edn
