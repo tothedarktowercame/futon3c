@@ -405,6 +405,7 @@
                              (update :message #(when % (subs (str %) 0 (min 220 (count (str %))))))))
         events (:events job)]
     (-> (select-keys job [:job-id :agent-id :caller :surface :request-digest
+                          :request-commission
                           :bellback-of :mode :state :created-at :started-at :finished-at
                           :terminal-code :terminal-message :session-id :trace-id
                           :result-summary :artifact-ref :execution :invocation/model
@@ -1301,13 +1302,49 @@
        (name code)
        msg])))
 
+(defn- normalized-invoke-commission
+  "Return the exact normalized invoke request that Agency hashes. This value is
+  retained before prompt events can be trimmed; it is evidence, not a prompt
+  reconstruction."
+  [agent-id prompt caller surface model]
+  (cond-> {:agent-id (str agent-id)
+           :prompt (str prompt)
+           :caller (str (or caller "http-caller"))
+           :surface (str (or surface "http"))}
+    model (assoc :model model)))
+
 (defn- invoke-job-request-digest
   [agent-id prompt caller surface model]
   (campaign-machine/ledger-digest
-   [(cond-> {:agent-id (str agent-id) :prompt (str prompt)
-             :caller (str (or caller "http-caller"))
-             :surface (str (or surface "http"))}
-      model (assoc :model model))]))
+   [(normalized-invoke-commission agent-id prompt caller surface model)]))
+
+(defn invoke-job-request-commission
+  "Read the durable request-digest preimage for JOB-ID and verify its join.
+
+  Missing legacy retention and any tampering refuse rather than reconstructing
+  a prompt from lossy events. This is the read boundary used by R9's later
+  producer/reviewer join; it does not authenticate a bootstrap anchor."
+  [job-id]
+  (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)])
+        commission (:request-commission job)]
+    (when-not job
+      (throw (ex-info "invoke job is missing"
+                      {:refusal :invoke-job-missing :job-id (str job-id)})))
+    (when-not (map? commission)
+      (throw (ex-info "invoke request commission was not retained"
+                      {:refusal :request-commission-missing
+                       :job-id (str job-id)})))
+    (let [observed (campaign-machine/ledger-digest [commission])]
+      (when-not (= (:request-digest job) observed)
+        (throw (ex-info "invoke request commission digest mismatch"
+                        {:refusal :request-commission-digest-mismatch
+                         :job-id (str job-id)
+                         :expected (:request-digest job)
+                         :observed observed})))
+      {:schema :agency/invoke-request-commission-v1
+       :job-id (str job-id)
+       :request-digest observed
+       :commission commission})))
 
 (defn- create-invoke-job!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
@@ -1333,13 +1370,15 @@
                  job-id (or usable-requested auto-id)
                  created-at (str (Instant/now))
                  mode (invoke-job-mode prompt mode)
+                 commission (normalized-invoke-commission
+                             agent-id prompt caller surface model)
                  job (cond-> {:job-id job-id
                                :agent-id (str agent-id)
                                :caller (str (or caller "http-caller"))
                                :surface (str (or surface "http"))
                                :request-digest
-                               (invoke-job-request-digest
-                                agent-id prompt caller surface model)
+                               (campaign-machine/ledger-digest [commission])
+                               :request-commission commission
                                :bellback-of (some-> bellback-of str)   ;; bell-router: this job is a reply to <job-id>
                                :mode mode
                                :state "queued"
@@ -1386,10 +1425,7 @@
    resulting digest check."
   [{:keys [job-id agent-id prompt caller surface mode]}]
   (let [job-id (some-> job-id str)
-        authority {:agent-id (str agent-id)
-                   :prompt (str prompt)
-                   :caller (str (or caller "http-caller"))
-                   :surface (str (or surface "http"))}
+        authority (normalized-invoke-commission agent-id prompt caller surface nil)
         normalized-mode (normalize-invoke-job-mode mode)
         digest (campaign-machine/ledger-digest [authority])
         result (atom nil)]
@@ -1417,7 +1453,8 @@
 
            :else
            (let [bound (-> job
-                           (assoc :request-digest digest)
+                           (assoc :request-digest digest
+                                  :request-commission authority)
                            (append-job-event "request-bound"
                                              {:migration "legacy-unbound-request"}))]
              (reset! result {:ok true :job-id job-id :request-digest digest})
