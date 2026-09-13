@@ -1,9 +1,10 @@
 (ns futon3c.agency.r9-genesis-test
-  (:require [clojure.java.io :as io] [clojure.test :refer [deftest is testing]]
+  (:require [cheshire.core :as json] [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]]
             [futon2.aif.r9-checker :as r9] [futon3c.agency.r9-authority :as r9-authority]
             [futon3c.agency.r9-genesis :as genesis]
             [futon3c.transport.http :as http])
-  (:import (java.nio.charset StandardCharsets) (java.nio.file Files OpenOption)
+  (:import (java.nio.charset StandardCharsets) (java.nio.file Files OpenOption StandardOpenOption)
            (java.security MessageDigest)))
 
 (defn- hex [bs] (apply str (map #(format "%02x" (bit-and 0xff %)) bs)))
@@ -12,6 +13,9 @@
     (let [d (MessageDigest/getInstance "SHA-256") b (byte-array 8192)]
       (loop [] (let [n (.read in b)] (when (pos? n) (.update d b 0 n) (recur))))
       (hex (.digest d)))))
+(defn- text-sha [s]
+  (hex (.digest (doto (MessageDigest/getInstance "SHA-256")
+                  (.update (.getBytes s StandardCharsets/UTF_8))))))
 (def artifact-paths
   {"r9-genesis-source" "src/futon3c/agency/r9_genesis.clj"
    "r9-genesis-tests" "test/futon3c/agency/r9_genesis_test.clj"
@@ -72,12 +76,17 @@
 (defn- record-entry! [tmp name record]
   (let [path (.resolve tmp (str name ".edn"))]
     (Files/writeString path (pr-str record) StandardCharsets/UTF_8 (make-array OpenOption 0))
-    {:id (:id record) :path (str path) :sha256 (sha256 (str path))}))
+    {:id (:id record) :path (str path) :metadata-sha256 (sha256 (str path))}))
 (defn- configured-options [tmp c authority]
   (let [artifact-records (into {} (map (fn [[_ pin]]
-                                         [(:id pin) (record-entry! tmp (:id pin)
-                                                                   {:id (:id pin) :artifact-id (:id pin)
-                                                                    :sha256 (:sha256 pin)})]))
+                                         [(:id pin)
+                                          (assoc (record-entry! tmp (:id pin)
+                                                                (verified :wm/artifact-byte-resolution-v1
+                                                                          :fixture-artifact-metadata
+                                                                          {:id (:id pin) :artifact-id (:id pin)
+                                                                           :sha256 (:sha256 pin)}))
+                                                 :artifact-path (artifact-paths (:id pin))
+                                                 :artifact-sha256 (:sha256 pin))]))
                                (:artifacts c))
         root-entry (record-entry! tmp "root" (assoc (:root authority) :id "root-ref"))
         acceptance-entry (record-entry! tmp "acceptance" (assoc (:acceptance authority) :id "acceptance-ref"))
@@ -92,6 +101,8 @@
            (r9-authority/configured-resolvers config))))
 (defn- refusal [o] (:refusal (try (genesis/verify-candidate o)
                                   (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+(defn- thrown-refusal [f]
+  (:refusal (try (f) (catch clojure.lang.ExceptionInfo e (ex-data e)))))
 
 (deftest genesis-boundary-positive-and-source-derived-refusals
   (let [tmp (Files/createTempDirectory "r9-genesis-" (make-array java.nio.file.attribute.FileAttribute 0))
@@ -109,6 +120,74 @@
               configured-o (configured-options tmp c authority)]
           (is (= :temporary-positive-boundary-fixture
                  (:verification-scope (genesis/verify-candidate configured-o))))
+          (testing "authority records are hashed and parsed from one buffer"
+            (let [record (assoc (:root authority) :id "single-read")
+                  entry (record-entry! tmp "single-read" record)
+                  resolver (:root-resolver (r9-authority/configured-resolvers
+                                            {:verification-scope :temporary-positive-boundary-fixture
+                                             :roots {"single-read" entry}}))]
+              (is (= "fixture-root"
+                     (:authority-root-id
+                      (binding [r9-authority/*after-authority-read*
+                                (fn [path _] (Files/writeString (java.nio.file.Path/of path (make-array String 0))
+                                                                "{:mutated true}" StandardCharsets/UTF_8
+                                                                (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING])))]
+                        (resolver {:id "single-read"})))))))
+          (testing "host JSONL hashes exact LF, CRLF, and unterminated records"
+            (let [meta (json/generate-string {:type "session_meta" :payload {:session_id "fixture-session"}})
+                  event (json/generate-string {:type "response_item"
+                                               :payload {:type "message" :role "user"
+                                                         :content [{:text "From: joe\nTo: codex-26\nOrigin: operator\n"}]}})
+                  run-case (fn [sep terminal]
+                             (let [path (.resolve tmp (str "host-" (text-sha (str sep terminal)) ".jsonl"))
+                                   raw-event (str event terminal)]
+                               (Files/writeString path (str meta sep raw-event) StandardCharsets/UTF_8 (make-array OpenOption 0))
+                               (thrown-refusal
+                                #(r9-authority/configured-host-event-resolver
+                                  {:verification-scope :production :source (str path) :session-id "fixture-session"
+                                   :line 2 :record-sha256 (text-sha raw-event)
+                                   :expected {:role "user" :from "joe" :to "codex-26" :origin "operator"}}
+                                  nil))))]
+              (is (= :r9/host-origin-review-missing (run-case "\n" "\n")))
+              (is (= :r9/host-origin-review-missing (run-case "\r\n" "\r\n")))
+              (is (= :r9/host-origin-review-missing (run-case "\n" "")))))
+          (testing "typed adapter failures and non-laundered scope"
+            (let [missing {:id "missing" :path (str (.resolve tmp "absent.edn"))
+                           :metadata-sha256 (apply str (repeat 64 "0"))}
+                  root-call #(let [r (:root-resolver (r9-authority/configured-resolvers
+                                                       {:verification-scope :production :roots {"missing" missing}}))]
+                               (r {:id "missing"}))]
+              (is (= :r9/authority-io-failure (thrown-refusal root-call))))
+            (let [path (.resolve tmp "invalid-utf8.edn")
+                  _ (Files/write path (byte-array [(unchecked-byte 255)]) (make-array OpenOption 0))
+                  entry {:id "bad-utf8" :path (str path) :metadata-sha256 (sha256 (str path))}
+                  r (:root-resolver (r9-authority/configured-resolvers {:verification-scope :production :roots {"bad-utf8" entry}}))]
+              (is (= :r9/authority-utf8-invalid (thrown-refusal #(r {:id "bad-utf8"})))))
+            (let [path (.resolve tmp "bad-edn.edn")
+                  _ (Files/writeString path "{" StandardCharsets/UTF_8 (make-array OpenOption 0))
+                  entry {:id "bad-edn" :path (str path) :metadata-sha256 (sha256 (str path))}
+                  r (:root-resolver (r9-authority/configured-resolvers {:verification-scope :production :roots {"bad-edn" entry}}))]
+              (is (= :r9/authority-parse-failure (thrown-refusal #(r {:id "bad-edn"})))))
+            (let [entry (record-entry! tmp "fixture-as-production" (assoc (:root authority) :id "fixture-as-production"))
+                  r (:root-resolver (r9-authority/configured-resolvers {:verification-scope :production :roots {"fixture-as-production" entry}}))]
+              (is (= :r9/authority-record-status-conflict
+                     (thrown-refusal #(r {:id "fixture-as-production"})))))
+            (let [artifact-path (.resolve tmp "mutable-artifact.clj")
+                  _ (Files/writeString artifact-path "(original)" StandardCharsets/UTF_8 (make-array OpenOption 0))
+                  original-sha (sha256 (str artifact-path))
+                  entry (assoc (record-entry! tmp "mutable-artifact-metadata"
+                                              (verified :wm/artifact-byte-resolution-v1 :fixture-artifact-metadata
+                                                        {:id "mutable-artifact" :artifact-id "mutable-artifact"
+                                                         :sha256 original-sha}))
+                               :id "mutable-artifact" :artifact-path (str artifact-path)
+                               :artifact-sha256 original-sha)
+                  r (:artifact-resolver (r9-authority/configured-resolvers
+                                         {:verification-scope :temporary-positive-boundary-fixture
+                                          :artifacts {"mutable-artifact" entry}}))]
+              (Files/writeString artifact-path "(changed)" StandardCharsets/UTF_8
+                                 (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING]))
+              (is (= :r9/artifact-content-mismatch
+                     (thrown-refusal #(r {:id "mutable-artifact" :sha256 original-sha}))))))
           (is (= :r9/author-equals-reviewer (refusal (options (assoc c :reviewer (:author c)) commissions authority))))
           (is (= :r9/role-identity-missing (refusal (options (assoc c :author "") commissions authority))))
           (is (= :r9/author-reviewer-job-equal (refusal (options (assoc c :reviewer-job-id (:author-job-id c)) commissions authority))))
