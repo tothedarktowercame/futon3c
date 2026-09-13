@@ -239,6 +239,40 @@
           (is (true? (:drained? (snapshot controller))))))
       (finally (ingress/release-controller! controller)))))
 
+(deftest concurrent-start-and-terminal-notifications-stay-ordered
+  (let [controller (durable-controller)]
+    (try
+      (with-http-fixture
+        controller
+        (fn [_]
+          (#'http/create-invoke-job! (invoke-request "ordered-race"))
+          (let [go (promise)
+                start (future @go (#'http/mark-invoke-job-running! "ordered-race"))
+                terminal
+                (future
+                  @go
+                  (with-redefs-fn
+                    {#'http/parked-on-notify! (constantly {})
+                     #'http/auto-bellback-enabled? (constantly false)
+                     #'http/inbox-agent? (constantly false)
+                     #'reg/get-agent (constantly {})}
+                    (fn [] (#'http/finalize-invoke-job!
+                            "ordered-race" "cancelled" "race" nil {:ok false} nil))))]
+            (deliver go true)
+            (is (boolean? @start))
+            (is (true? @terminal))
+            (let [s (snapshot controller)]
+              (is (= 0 (:accepted-queued s)))
+              (is (= 1 (:final-delivery s)))
+              (is (contains? #{0 1} (:executing s)))
+              (when (= 1 (:executing s))
+                (#'http/finish-controller-execution! "ordered-race")))
+            (#'http/record-invoke-job-delivery-by-job-id!
+             "ordered-race" {:surface "test" :destination "fixture"
+                             :delivered? true :note "ordered"})
+            (is (true? (:drained? (snapshot controller)))))))
+      (finally (ingress/release-controller! controller)))))
+
 (deftest service-configuration-is-explicit-durable-and-never-ready
   (let [controller (durable-controller)
         config-atom (atom {:status :inactive})]
