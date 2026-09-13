@@ -201,6 +201,7 @@
                 :extra (set/difference delivery-ids durable-ids)}))
     {:schema :agency/invoke-lifecycle-reconciliation-v1
      :status :complete-census
+     :scope expected-scope
      :generation generation
      :job-count (count jobs)
      :jobs (into (sorted-map) (map (fn [[id j]] [id (select-keys j [:job-id :trace-id :state])]) jobs))

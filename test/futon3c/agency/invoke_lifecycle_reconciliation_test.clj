@@ -46,6 +46,7 @@
 (deftest complete-census-is-pinned-and-never-authorizes-restart
   (let [r (reconcile/reconcile (fixture identity))]
     (is (= :complete-census (:status r)))
+    (is (= :isolated-fixture (:scope r)))
     (is (= 2 (:job-count r)))
     (is (:zero-in-flight? r))
     (is (false? (:restart-authorized? r)))
@@ -125,7 +126,7 @@
                     (reconcile-mutated
                      (fn [r] (-> r
                                  (update-in [:hot-ledger :jobs] dissoc "a")
-                                 (update-in [:final-delivery :records] dissoc "a")))))))))
+                                 (update-in [:final-delivery :records] dissoc "a"))))))))
   (is (= :reconcile/source-identities-invalid
          (refusal (fn []
                     (reconcile-mutated
@@ -155,3 +156,5 @@
             (fn []
               (reconcile/reconcile
                (assoc sources-b :completeness-authority authority-a)))))))
+
+)
