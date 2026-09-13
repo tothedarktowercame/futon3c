@@ -4,10 +4,16 @@
   request candidates cannot supply either."
   (:import (java.net InetAddress)
            (java.nio.charset StandardCharsets)
-           (java.security MessageDigest)))
+           (java.security MessageDigest)
+           (java.util.concurrent.locks ReentrantLock)))
 
 (defn- refuse! [code data]
   (throw (ex-info (name code) (assoc data :refusal code))))
+
+(defmacro ^:private with-controller-lock [c & body]
+  `(let [^ReentrantLock lock# (:lock ~c)]
+     (.lock lock#)
+     (try ~@body (finally (.unlock lock#)))))
 
 (defn controller
   "Construct an isolated controller. PERSIST! must durably replace the deferred
@@ -16,7 +22,7 @@
   [{:keys [auth-token persist!] :or {persist! (fn [_] true)}}]
   (when-not (and (string? auth-token) (not-empty auth-token))
     (refuse! :ingress/auth-token-missing {}))
-  {:lock (Object.)
+  {:lock (ReentrantLock.)
    :auth-token auth-token
    :persist! persist!
    :state (atom {:mode :open :generation 0 :waiting-writer 0 :entrant-tokens #{}
@@ -32,7 +38,7 @@
   "Register an entrant before it waits for the invoke-jobs writer lock. Returns
   an opaque generation ticket, or refuses after intake closes."
   [c]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [s @(:state c)]
       (when-not (= :open (:mode s))
         (refuse! :ingress/intake-closed {:generation (:generation s)}))
@@ -45,7 +51,7 @@
   "Move a waiting entrant to the accepted queue, or merely release it when its
   ledger operation failed. Must run in finally around the writer-lock section."
   [c ticket accepted-job-id]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [s @(:state c)]
       (when-not (contains? (:entrant-tokens s) (:token ticket))
         (refuse! :ingress/entrant-ticket-invalid {}))
@@ -55,7 +61,7 @@
                        accepted-job-id (update :accepted-queued conj (str accepted-job-id))))))))
 
 (defn start-execution! [c job-id]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [id (str job-id)]
       (when-not (contains? (:accepted-queued @(:state c)) id)
         (refuse! :ingress/job-not-queued {:job-id id}))
@@ -63,7 +69,7 @@
                               (update :executing conj id))))))
 
 (defn finish-execution! [c job-id]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [id (str job-id)]
       (when-not (contains? (:executing @(:state c)) id)
         (refuse! :ingress/job-not-executing {:job-id id}))
@@ -71,14 +77,14 @@
                               (update :final-delivery conj id))))))
 
 (defn finish-delivery! [c job-id]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [id (str job-id)]
       (when-not (contains? (:final-delivery @(:state c)) id)
         (refuse! :ingress/job-not-delivering {:job-id id}))
       (swap! (:state c) update :final-delivery disj id))))
 
 (defn close-intake! [c]
-  (locking (:lock c)
+  (with-controller-lock c
     (swap! (:state c) #(if (= :open (:mode %))
                          (-> % (assoc :mode :closed) (update :generation inc)) %))
     @(:state c)))
@@ -92,7 +98,7 @@
   "Durably retain an internal parked completion/deadline resume while closed.
   Repeating the identical id/payload is idempotent; mutation refuses."
   [c resume-id payload]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [id (str resume-id) s @(:state c) old (get-in s [:deferred id])]
       (when (= :open (:mode s))
         (refuse! :ingress/defer-while-open {:resume-id id}))
@@ -105,7 +111,7 @@
       id)))
 
 (defn reopen! [c]
-  (locking (:lock c)
+  (with-controller-lock c
     (when-not (drained? c)
       (refuse! :ingress/not-drained {}))
     (swap! (:state c) #(-> % (assoc :mode :open) (update :generation inc)))
@@ -116,7 +122,7 @@
   "Remove a deferred resume only after downstream acceptance under its stable
   requested job id. A retry before acknowledgement replays the same pair."
   [c resume-id]
-  (locking (:lock c)
+  (with-controller-lock c
     (let [id (str resume-id) s @(:state c)]
       (when-not (contains? (:deferred s) id)
         (refuse! :ingress/deferred-resume-missing {:resume-id id}))
