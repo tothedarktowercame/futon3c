@@ -16,7 +16,7 @@
                       :message "induced runner exit control"
                       :expected :passing-run
                       :actual :induced-failure})))
-    (let [{:keys [test pass fail error] :as result} @counters
+    (let [{:keys [test pass fail error]} @counters
           exit (if (zero? (+ fail error)) 0 1)]
       (println (pr-str {:runner :row19-commission-retention
                         :tests test :assertions (+ pass fail error)
