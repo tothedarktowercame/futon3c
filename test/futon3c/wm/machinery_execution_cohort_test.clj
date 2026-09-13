@@ -1,6 +1,5 @@
 (ns futon3c.wm.machinery-execution-cohort-test
   (:require [clojure.test :refer [deftest is testing]]
-            [futon2.aif.c-fold-config :as digest]
             [futon3c.wm.machinery-execution-cohort :as sut]
             [futon3c.wm.runner-service :as runner]))
 
@@ -26,8 +25,7 @@
     (is (= :binding-unavailable (refusal sut/execution-cohort))))
   (binding [sut/*read-binding-text* #(str valid-text " ")]
     (is (= :binding-sha256-mismatch (refusal sut/execution-cohort))))
-  (binding [sut/*read-binding-text* (constantly valid-text)
-            sut/binding-sha256 (digest/sha256 valid-text)]
+  (binding [sut/*read-binding-text* (constantly valid-text)]
     (is (= :wm-contract-machinery-47-v1
            (:cohort-id (sut/execution-cohort))))))
 
