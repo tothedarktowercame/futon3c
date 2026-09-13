@@ -4755,16 +4755,23 @@
                               :error (name code)
                               :message msg})))))
       (catch Throwable t
-        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
-        (json-response 500 {:ok false
-                            :job-id job-id
-                            :error "invoke-error"
-                            :message (.getMessage t)}))
+        (if @execution-started?
+          (do
+            (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+            (json-response 500 {:ok false
+                                :job-id job-id
+                                :error "invoke-error"
+                                :message (.getMessage t)}))
+          (json-response 409 {:ok false
+                              :job-id job-id
+                              :error "invoke-job-execution-reuse"
+                              :message (.getMessage t)})))
       (finally
-       (unregister-job-worker! job-id)
-       (when @execution-started? (finish-controller-execution! job-id))
-       ;; Guarantee: every terminal outcome resets agent status.
-       (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
+       (when @execution-started?
+         (unregister-job-worker! job-id)
+         (finish-controller-execution! job-id)
+         ;; Only the execution owner may reset the agent status.
+         (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))))))
 
 (defn- run-invoke-job-body!
   "Execute a queued invoke job to terminal state.
@@ -4854,20 +4861,24 @@
          :terminal-code terminal-code
          :terminal-message terminal-message})
       (catch Throwable t
-        (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
-        {:ok false
-         :job-id job-id
-         :error "invoke-error"
-         :message (.getMessage t)})
+        (if @execution-started?
+          (do
+            (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+            {:ok false
+             :job-id job-id
+             :error "invoke-error"
+             :message (.getMessage t)})
+          {:ok false
+           :job-id job-id
+           :error "invoke-job-execution-reuse"
+           :message (.getMessage t)}))
       (finally
-       ;; Unregister worker (ceiling reaper no longer needs to track this job).
-       (unregister-job-worker! job-id)
-       (when @execution-started? (finish-controller-execution! job-id))
-       ;; Guarantee: every terminal outcome resets agent status. The registry's
-       ;; invoke-agent! wrapper normally handles this, but if the worker thread
-       ;; is killed or the invoke-fn blocks past process boundaries, mark-idle!
-       ;; may never run. This finally ensures no terminal path leaks :invoking.
-       (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
+       (when @execution-started?
+         ;; Only the owner registered for this execution may remove it.
+         (unregister-job-worker! job-id)
+         (finish-controller-execution! job-id)
+         ;; Guarantee: every owned terminal outcome resets agent status.
+         (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))))))
 
 (defn- run-invoke-job!
   "Run JOB-ID unless it already ended while queued.
@@ -4881,7 +4892,6 @@
   (let [state (some-> (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]) :state str)]
     (if (terminal-invoke-state? state)
       (do
-        (unregister-job-worker! job-id)
         (println (str "[invoke] skipping " job-id " for " agent-id
                       ": already " state " before execution began"))
         {:ok false

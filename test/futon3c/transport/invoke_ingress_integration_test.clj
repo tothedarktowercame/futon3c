@@ -1,6 +1,7 @@
 (ns futon3c.transport.invoke-ingress-integration-test
   (:require [clojure.test :refer [deftest is]]
             [clojure.edn :as edn]
+            [cheshire.core :as json]
             [futon3c.agency.invoke-ingress-controller :as ingress]
             [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
@@ -272,6 +273,64 @@
              "ordered-race" {:surface "test" :destination "fixture"
                              :delivered? true :note "ordered"})
             (is (true? (:drained? (snapshot controller)))))))
+      (finally (ingress/release-controller! controller)))))
+
+(deftest reused-actual-wrappers-do-not-touch-original-owner
+  (doseq [wrapper [:queued :direct]]
+    (let [controller (durable-controller)
+          workers (atom {})
+          idle-calls (atom [])]
+      (try
+        (with-http-fixture
+          controller
+          (fn [{:keys [ledger]}]
+            (#'http/create-invoke-job! (invoke-request (str "owned-" (name wrapper))))
+            (#'http/mark-invoke-job-running! (str "owned-" (name wrapper)))
+            (let [id (str "owned-" (name wrapper))
+                  owner {:thread (Thread/currentThread) :future :original}]
+              (reset! workers {id owner})
+              (with-redefs-fn
+                {#'http/!job-workers workers
+                 #'reg/mark-agent-idle! (fn [agent] (swap! idle-calls conj agent))}
+                (fn []
+                  (let [result (case wrapper
+                                 :queued (#'http/run-invoke-job!
+                                          {:job-id id :agent-id "worker-1"})
+                                 :direct (#'http/build-invoke-response
+                                          {:payload {:job-id id :caller "operator-1"
+                                                     :surface "http"}
+                                           :agent-id "worker-1" :prompt "duplicate"
+                                           :evidence-store nil}))]
+                    (is (= "invoke-job-execution-reuse"
+                           (if (= wrapper :direct)
+                             (:error (json/parse-string (:body result) true))
+                             (:error result))))
+                    (is (= (if (= wrapper :direct) 409 nil) (:status result)))
+                    (is (= "running" (get-in @ledger [:jobs id :state])))
+                    (is (= {id owner} @workers))
+                    (is (empty? @idle-calls))))))))
+        (finally (ingress/release-controller! controller))))))
+
+(deftest terminal-queue-skip-does-not-unregister-an-owner
+  (let [controller (durable-controller)
+        workers (atom {"terminal-skip" {:thread (Thread/currentThread)
+                                         :future :original}})
+        idle-calls (atom [])]
+    (try
+      (with-http-fixture
+        controller
+        (fn [{:keys [ledger]}]
+          (#'http/create-invoke-job! (invoke-request "terminal-skip"))
+          (swap! ledger assoc-in [:jobs "terminal-skip" :state] "done")
+          (with-redefs-fn
+            {#'http/!job-workers workers
+             #'reg/mark-agent-idle! (fn [agent] (swap! idle-calls conj agent))}
+            (fn []
+              (is (= "invoke-job-already-terminal"
+                     (:error (#'http/run-invoke-job!
+                              {:job-id "terminal-skip" :agent-id "worker-1"}))))
+              (is (= :original (get-in @workers ["terminal-skip" :future])))
+              (is (empty? @idle-calls))))))
       (finally (ingress/release-controller! controller)))))
 
 (deftest service-configuration-is-explicit-durable-and-never-ready

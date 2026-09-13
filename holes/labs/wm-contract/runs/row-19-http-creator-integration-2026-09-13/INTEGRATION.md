@@ -36,6 +36,14 @@ controller notification. Its ordering is lifecycle monitor, ledger writer,
 then controller; `begin-creation!` releases the controller before entering the
 monitor. No path holds controller and then waits for the ledger writer.
 
+Both direct and queued execution wrappers acquire ownership only after their
+ledger running transition succeeds. A reused running or terminal identity
+returns `invoke-job-execution-reuse` (or the existing terminal-skip result)
+without entering owner cleanup. Only an owner may finalize on exception,
+unregister the job worker, mark the agent idle, or release controller
+execution. The terminal queue-skip branch likewise leaves any independently
+registered owner untouched.
+
 Loading the namespace leaves `!invoke-ingress-controller-config` exactly
 inactive, preserving ordinary service behavior. Activation requires the
 non-HTTP `configure-invoke-ingress-controller!` service API with schema
