@@ -11,10 +11,10 @@
   (apply str (map #(format "%02x" (bit-and 255 %))
                   (.digest (doto (MessageDigest/getInstance "SHA-256") (.update bs))))))
 (defn- records [controller]
-  {:controller (fn [g] (assoc (ingress/verification-snapshot
+  {:controller (fn [_] (assoc (ingress/verification-snapshot
                                 controller {:remote-addr "127.0.0.1" :auth-token "s"})
                                :schema :agency/ingress-controller-snapshot-v1
-                               :generation g :scope :isolated-fixture
+                               :scope :isolated-fixture
                                :provenance {:producer "fixture" :owner-id "owner"}))
    :hot-ledger (fn [g] {:schema :agency/invoke-hot-ledger-snapshot-v1 :generation g
                         :scope :isolated-fixture :provenance {:producer "fixture" :owner-id "owner"}
@@ -77,7 +77,8 @@
     (let [capture-future (future (snapshot/capture! boundary))]
       (is (= ::blocked (deref capture-future 50 ::blocked)))
       (deliver release true) @mutation
-      (is (= 2 (:generation @capture-future)))))
+      (is (= :snapshot/provider-record-invalid
+             (refusal #(deref capture-future)))))
   (let [{:keys [boundary revision]} (fixture-boundary)]
     (snapshot/register-provider!
      (snapshot/boundary {:owner-id "other" :generation 1 :scope :isolated-fixture})
