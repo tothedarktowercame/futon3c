@@ -1,7 +1,6 @@
 (ns futon3c.agency.selective-form-loader
   "Offline-reviewed transactional loader. It performs no serving activation
   unless an external ingress proof establishes rejection before every creator."
-  (:require [clojure.java.io :as io])
   (:import (java.io PushbackReader StringReader)
            (java.nio.charset StandardCharsets) (java.nio.file Files Path)
            (java.security MessageDigest)))
@@ -109,15 +108,18 @@
         lock-var (some-> target (ns-resolve 'invoke-jobs-writer-lock))]
     (when-not lock-var (refuse! :loader/writer-lock-unavailable {}))
     (preflight! 'futon3c.transport.http proof-before)
-    (locking (var-get lock-var)
-      (let [proof-under-lock (ingress-verifier)]
-        (preflight! 'futon3c.transport.http proof-under-lock)
-        (when-not (and (= (:generation-token proof-before) (:generation-token proof-under-lock))
-                       (some? (:generation-token proof-before)))
-          (refuse! :loader/ingress-generation-changed
-                   {:before (:generation-token proof-before)
-                    :under-lock (:generation-token proof-under-lock)}))
-        (load-transactionally!
-         {:target-ns 'futon3c.transport.http
-          :forms (read-pinned-forms source-path http-sha256)
-          :required required-http-forms :ingress-proof proof-under-lock})))))
+    (let [lock-object (var-get lock-var)]
+      (monitor-enter lock-object)
+      (try
+        (let [proof-under-lock (ingress-verifier)]
+          (preflight! 'futon3c.transport.http proof-under-lock)
+          (when-not (and (= (:generation-token proof-before) (:generation-token proof-under-lock))
+                         (some? (:generation-token proof-before)))
+            (refuse! :loader/ingress-generation-changed
+                     {:before (:generation-token proof-before)
+                      :under-lock (:generation-token proof-under-lock)}))
+          (load-transactionally!
+           {:target-ns 'futon3c.transport.http
+            :forms (read-pinned-forms source-path http-sha256)
+            :required required-http-forms :ingress-proof proof-under-lock}))
+        (finally (monitor-exit lock-object))))))
