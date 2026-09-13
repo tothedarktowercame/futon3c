@@ -6,7 +6,12 @@
   (:import (java.nio.charset StandardCharsets)
            (java.security MessageDigest)))
 
-(defn- refusal [f] (:refusal (try (f) (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+(defn- refusal [f]
+  (try (f) nil
+       (catch clojure.lang.ExceptionInfo e (:refusal (ex-data e)))
+       (catch java.util.concurrent.ExecutionException e
+         (when (instance? clojure.lang.ExceptionInfo (.getCause e))
+           (:refusal (ex-data (.getCause e)))))))
 (defn- sha [bs]
   (apply str (map #(format "%02x" (bit-and 255 %))
                   (.digest (doto (MessageDigest/getInstance "SHA-256") (.update bs))))))
