@@ -2265,7 +2265,11 @@
                                   {:seq 3 :type "tool_use" :at old-time
                                    :tools ["read" "exec"]}
                                   {:seq 4 :type "done" :at old-time}])))
-      (let [compacted (#'http/compact-invoke-jobs-ledger @ledger-atom)]
+      (let [compacted (binding [http/*invoke-ledger-now*
+                                (constantly
+                                 (java.time.Instant/parse
+                                  "2020-01-03T00:00:00Z"))]
+                        (#'http/compact-invoke-jobs-ledger @ledger-atom))]
         (#'http/persist-invoke-jobs-ledger! compacted)
         (http/reset-invoke-jobs!)
         (let [readback (http/invoke-job-request-commission job-id)]
