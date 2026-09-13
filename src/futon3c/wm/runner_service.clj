@@ -9,6 +9,7 @@
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.agency.registry :as reg]
+            [futon3c.wm.machinery-execution-cohort :as machinery-cohort]
             [futon3c.wm.run4-historical-projection :as run4-historical]
             [futon3c.wm.run4-terminal-projection :as run4-terminal])
   (:import [java.time Instant]
@@ -151,13 +152,14 @@
 
 (defn- configured-runner-opts
   [opts]
-  (try
-    (if-let [config-fn (*resolve-var*
-                        'futon2.aif.full-loop-runner/config)]
-      (config-fn opts)
-      opts)
-    (catch Throwable _
-      opts)))
+  (let [bound-opts (machinery-cohort/apply-binding opts)]
+    (try
+      (if-let [config-fn (*resolve-var*
+                          'futon2.aif.full-loop-runner/config)]
+        (config-fn bound-opts)
+        bound-opts)
+      (catch Throwable _
+        bound-opts))))
 
 (defn- append-phase!
   [phase-log event]
