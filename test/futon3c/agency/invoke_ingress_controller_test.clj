@@ -139,7 +139,9 @@
              (refusal #(ingress/controller {:auth-token "s" :deferred-store store-b}))))
       (is (= :ingress/deferred-store-owned
              (refusal #(ingress/initialize-file-store! store-b))))
-      (ingress/release-controller! c))
+      (ingress/release-controller! c)
+      (is (= :ingress/controller-released
+             (refusal #(ingress/defer-resume! c "late" {:requested-job-id "late"})))))
     (is (= :ingress/deferred-store-already-exists
            (refusal #(ingress/initialize-file-store! store-b))))
     (let [c (ingress/controller {:auth-token "s" :deferred-store store-b})]

@@ -154,7 +154,11 @@
 (defmacro ^:private with-controller-lock [c & body]
   `(let [^ReentrantLock lock# (:lock ~c)]
      (.lock lock#)
-     (try ~@body (finally (.unlock lock#)))))
+     (try
+       (when @(:released? ~c)
+         (refuse! :ingress/controller-released {}))
+       ~@body
+       (finally (.unlock lock#)))))
 
 (defn controller
   "Construct an isolated controller. PERSIST! must durably replace the deferred
@@ -174,6 +178,7 @@
                        (when lease ((:release! deferred-store) lease))
                        (throw e)))]
    {:lock (ReentrantLock.)
+    :released? (atom false)
     :auth-token auth-token
     :deferred-store deferred-store
     :store-lease lease
@@ -200,7 +205,9 @@
   [c]
   (with-controller-lock c
     (when-let [store (:deferred-store c)]
-      ((:release! store) (:store-lease c)))))
+      ((:release! store) (:store-lease c)))
+    (reset! (:released? c) true)
+    true))
 
 (defn begin-creation!
   "Register an entrant before it waits for the invoke-jobs writer lock. Returns
@@ -258,6 +265,7 @@
     @(:state c)))
 
 (defn drained? [c]
+  (when @(:released? c) (refuse! :ingress/controller-released {}))
   (let [{:keys [waiting-writer accepted-queued executing final-delivery]} @(:state c)]
     (and (zero? waiting-writer) (empty? accepted-queued)
          (empty? executing) (empty? final-delivery))))
@@ -311,6 +319,7 @@
   "Bounded local verification API. Integration must expose it on a distinct
   loopback-only listener; ordinary Agency HTTP routes must not dispatch here."
   [c {:keys [remote-addr auth-token]}]
+  (when @(:released? c) (refuse! :ingress/controller-released {}))
   (let [local? (try (.isLoopbackAddress (InetAddress/getByName (str remote-addr)))
                     (catch Throwable _ false))]
     (when-not local? (refuse! :ingress/verification-not-loopback {}))
