@@ -68,6 +68,7 @@
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.inbox :as agency-inbox]
+            [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
@@ -254,6 +255,61 @@
 
 (defonce ^:private !invoke-jobs-ledger (atom nil))
 (defonce ^:private invoke-jobs-writer-lock (Object.))
+
+(defonce ^:private !invoke-ingress-controller-config
+  ;; Loading this namespace preserves the existing serving behaviour. Only
+  ;; explicit reviewed service configuration activates creation accounting.
+  (atom {:status :inactive}))
+
+(defn configure-invoke-ingress-controller!
+  "Install the service-owned controller at the common invoke creator.
+
+  This activates creation accounting only. Execution, final delivery,
+  deferred-resume recovery, and startup reconciliation remain separate, so
+  this function never reports drain or restart readiness."
+  [{:keys [schema controller] :as config}]
+  (when-not (= #{:schema :controller} (set (keys config)))
+    (throw (ex-info "invoke ingress configuration is incomplete"
+                    {:refusal :ingress/http-config-invalid})))
+  (when-not (= :agency/invoke-ingress-http-v1 schema)
+    (throw (ex-info "invoke ingress configuration schema is invalid"
+                    {:refusal :ingress/http-config-invalid :schema schema})))
+  (when-not (and (map? controller)
+                 (:deferred-store controller)
+                 (false? (:test-only? controller))
+                 (instance? clojure.lang.IAtom (:state controller))
+                 (instance? clojure.lang.IAtom (:released? controller))
+                 (false? @(:released? controller)))
+    (throw (ex-info "service invoke ingress controller is not durable"
+                    {:refusal :ingress/http-controller-invalid})))
+  (let [installed {:status :active
+                   :controller controller
+                   :restart-authorized? false
+                   :lifecycle-wiring :creation-only}]
+    (locking !invoke-ingress-controller-config
+      (when-not (= {:status :inactive} @!invoke-ingress-controller-config)
+        (throw (ex-info "invoke ingress controller is already configured"
+                        {:refusal :ingress/http-controller-already-configured})))
+      (reset! !invoke-ingress-controller-config installed)
+      installed)))
+
+(defn- configured-invoke-ingress-controller []
+  (let [config @!invoke-ingress-controller-config]
+    (case (:status config)
+      :inactive nil
+      :active (let [controller (:controller config)]
+                (when-not (and (= #{:status :controller :restart-authorized?
+                                    :lifecycle-wiring}
+                                   (set (keys config)))
+                               (map? controller)
+                               (false? (:restart-authorized? config))
+                               (= :creation-only (:lifecycle-wiring config)))
+                  (throw (ex-info "partial invoke ingress configuration"
+                                  {:refusal :ingress/http-config-partial})))
+                controller)
+      (throw (ex-info "unknown invoke ingress configuration state"
+                      {:refusal :ingress/http-config-partial
+                       :status (:status config)})))))
 
 (def ^:dynamic *invoke-jobs-persist-stage-hook*
   "Test/fault-injection seam called at durable commit boundaries. Production
@@ -1497,7 +1553,7 @@
                                      :invocation/model]))
        :source (if job :hot-ledger :commission-archive)})))
 
-(defn- create-invoke-job!
+(defn- create-invoke-job-ledger!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
            model]}]
   (let [created-id (atom nil)]
@@ -1559,16 +1615,36 @@
                  (assoc :next-seq next-seq)
                  (update :job-order (fnil conj []) job-id)
                  (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+    @created-id))
+
+(defn- create-invoke-job!
+  [request]
+  (let [controller (configured-invoke-ingress-controller)
+        job-id (if controller
+                 (let [ticket (invoke-ingress/begin-creation! controller)
+                       accepted-id (atom nil)]
+                   (try
+                     (let [id (create-invoke-job-ledger! request)]
+                       ;; The ledger replacement is durable before this point.
+                       ;; Reused stable ids are already durable, and the
+                       ;; controller's accepted set is itself idempotent.
+                       (reset! accepted-id id)
+                       id)
+                     (finally
+                       (invoke-ingress/creation-finished!
+                        controller ticket @accepted-id))))
+                 (create-invoke-job-ledger! request))
+        {:keys [caller agent-id surface]} request]
     ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
     ;; (from→to) edge keyed by job-id so the in-band `Edge:` join-key resolves to a stored
     ;; edge for EVERY job (not just wrapped social-dispatch invokes). Never break the hot path.
     (try
       (coordination-ledger/record-invoke-edge!
        {:from (or caller "http-caller") :to (str agent-id)
-        :surface (or surface "http") :kind :invoke :edge-id @created-id})
+        :surface (or surface "http") :kind :invoke :edge-id job-id})
       (catch Throwable _))
     (bb/project-agents! (reg/registry-status))
-    @created-id))
+    job-id))
 
 (defn bind-unbound-invoke-request!
   "Bind the exact request digest to a legacy queued invoke job which was
