@@ -2,7 +2,9 @@
   "Isolated atomic source producer. All provider reads participate in one owned
   boundary. It emits source bytes and a coverage subject, never completeness
   approval and never restart authorization."
-  (:import (java.nio.charset StandardCharsets)
+  (:require [clojure.edn :as edn])
+  (:import (java.io PushbackReader StringReader)
+           (java.nio.charset StandardCharsets)
            (java.security MessageDigest)
            (java.util.concurrent.locks ReentrantLock)))
 
@@ -30,7 +32,26 @@
                  (integer? generation) (= :isolated-fixture scope))
     (refuse! :snapshot/boundary-config-invalid {}))
   {:owner-id owner-id :scope scope :lock (ReentrantLock.)
-   :generation (atom generation) :providers (atom {})})
+   :generation (atom generation) :providers (atom {})
+   :operation (atom nil) :poisoned? (atom false)})
+
+(defn- enter! [b operation]
+  (when @(:poisoned? b) (refuse! :snapshot/boundary-poisoned {}))
+  (when-not (compare-and-set! (:operation b) nil operation)
+    (refuse! :snapshot/reentrant-operation {:active @(:operation b) :requested operation})))
+(defn- leave! [b] (reset! (:operation b) nil))
+
+(defn- edn-roundtrip! [kind record]
+  (try
+    (let [text (pr-str record)]
+      (with-open [r (PushbackReader. (StringReader. text))]
+        (let [back (edn/read {:eof ::eof} r) trailing (edn/read {:eof ::eof} r)]
+          (when-not (and (= record back) (= ::eof trailing))
+            (refuse! :snapshot/provider-record-unserializable {:kind kind}))))
+    (catch clojure.lang.ExceptionInfo e (throw e))
+    (catch Throwable e
+      (throw (ex-info "provider record is not strict EDN"
+                      {:refusal :snapshot/provider-record-unserializable :kind kind} e)))))
 
 (defn register-provider!
   "Register one source whose mutation and capture are owned by BOUNDARY.
@@ -52,7 +73,21 @@
   generation advances after F returns."
   [b f]
   (with-lock b
-    (let [result (f)] (swap! (:generation b) inc) result)))
+    (enter! b :mutation)
+    (try
+      (let [{next-generation :generation result :result :as outcome} (f)
+            current @(:generation b)]
+        (when-not (and (map? outcome) (integer? next-generation)
+                       (> next-generation current))
+          (reset! (:poisoned? b) true)
+          (refuse! :snapshot/mutation-generation-unproved
+                   {:current current :outcome outcome}))
+        (reset! (:generation b) next-generation)
+        result)
+      (catch Throwable e
+        (reset! (:poisoned? b) true)
+        (throw e))
+      (finally (leave! b)))))
 
 (defn capture!
   "Capture all six records under the common lock. Production refuses until its
@@ -60,7 +95,9 @@
   authority, not an approval."
   [b]
   (with-lock b
-    (let [providers @(:providers b)
+    (enter! b :capture)
+    (try
+     (let [providers @(:providers b)
           missing (set (remove (set (keys providers)) (keys source-schemas)))]
       (when (seq missing) (refuse! :snapshot/providers-incomplete {:missing missing}))
       (let [generation @(:generation b)
@@ -75,10 +112,12 @@
                          (= (:scope b) (:scope record))
                          (= (:owner-id b) (get-in record [:provenance :owner-id])))
             (refuse! :snapshot/provider-record-invalid {:kind kind})))
+        (doseq [[kind record] records] (edn-roundtrip! kind record))
         (let [sources (into {}
                             (map (fn [[kind record]]
-                                   (let [bytes (.getBytes (pr-str record) StandardCharsets/UTF_8)]
-                                     [kind {:bytes bytes :sha256 (sha256 bytes)
+                                   (let [text (pr-str record)
+                                         bytes (.getBytes text StandardCharsets/UTF_8)]
+                                     [kind {:edn text :sha256 (sha256 bytes)
                                             :record record}]))) records)
               jobs (get-in records [:hot-ledger :jobs])
               universe (mapv (fn [[id job]] {:job-id id :trace-id (:trace-id job)})
@@ -90,12 +129,14 @@
                               :source-digests (into {} (map (fn [[k v]] [k (:sha256 v)]) sources))
                               :job-universe universe}
            :completeness-authority :absent
-           :restart-authorized? false})))))
+           :restart-authorized? false})))
+     (finally (leave! b)))))
 
 (defn capture-resolvers
   "Adapt one immutable capture to the reconciliation resolver interface."
   [capture]
-  (into {} (map (fn [[kind {:keys [bytes sha256]}]]
-                  [kind (fn [] {:bytes bytes :expected-sha256 sha256
-                                :path (str "atomic-capture:" (name kind))})])
+  (into {} (map (fn [[kind {:keys [edn sha256]}]]
+                  (let [private-bytes (.getBytes ^String edn StandardCharsets/UTF_8)]
+                    [kind (fn [] {:bytes (aclone ^bytes private-bytes) :expected-sha256 sha256
+                                :path (str "atomic-capture:" (name kind))})]))
                 (:sources capture))))

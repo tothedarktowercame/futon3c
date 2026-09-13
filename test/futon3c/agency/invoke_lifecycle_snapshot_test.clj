@@ -44,7 +44,7 @@
     (doseq [[kind capture] (records controller)]
       (snapshot/register-provider! b kind {:owner-id "owner" :capture capture
                                            :revision #(deref revision)}))
-    {:boundary b :revision revision}))
+    {:boundary b :revision revision :controller controller}))
 
 (deftest atomic-capture-feeds-external-completeness-boundary
   (let [{:keys [boundary]} (fixture-boundary)
@@ -74,16 +74,24 @@
                       b :controller {:owner-id "candidate" :capture identity :revision (constantly 0)}))))))
 
 (deftest common-lock-excludes-mutation-and-revision-drift-refuses
-  (let [{:keys [boundary]} (fixture-boundary)
+  (let [{:keys [boundary controller]} (fixture-boundary)
         entered (promise) release (promise)
-        mutation (future (snapshot/mutate! boundary #(do (deliver entered true) @release)))]
+        mutation (future
+                   (snapshot/mutate!
+                    boundary
+                    #(do (deliver entered true) @release
+                         (ingress/reopen! controller)
+                         (ingress/close-intake! controller)
+                         {:generation (:generation
+                                       (ingress/verification-snapshot
+                                        controller {:remote-addr "127.0.0.1"
+                                                    :auth-token "s"}))})))]
     ;; Mutation owns the boundary; capture cannot complete until it publishes a new generation.
     @entered
     (let [capture-future (future (snapshot/capture! boundary))]
       (is (= ::blocked (deref capture-future 50 ::blocked)))
       (deliver release true) @mutation
-      (is (= :snapshot/provider-record-invalid
-             (refusal #(deref capture-future))))))
+      (is (= 3 (:generation @capture-future)))))
   (let [{:keys [boundary revision]} (fixture-boundary)]
     (snapshot/register-provider!
      (snapshot/boundary {:owner-id "other" :generation 1 :scope :isolated-fixture})
@@ -101,3 +109,38 @@
 (deftest production-boundary-is-unavailable
   (is (= :snapshot/boundary-config-invalid
          (refusal #(snapshot/boundary {:owner-id "production" :generation 1 :scope :production})))))
+
+(deftest failed-mutation-poisons-without-caller-clear
+  (let [{:keys [boundary]} (fixture-boundary)
+        changed (atom false)]
+    (is (= "partial"
+           (try (snapshot/mutate! boundary
+                                  #(do (reset! changed true)
+                                       (throw (ex-info "partial" {}))))
+                nil
+                (catch clojure.lang.ExceptionInfo e (.getMessage e)))))
+    (is @changed)
+    (is (= :snapshot/boundary-poisoned (refusal #(snapshot/capture! boundary))))
+    (is (= :snapshot/boundary-poisoned
+           (refusal #(snapshot/mutate! boundary (fn [] {:generation 2})))))))
+
+(deftest resolver-defensive-copies-and-invalid-record-refusal
+  (let [{:keys [boundary]} (fixture-boundary)
+        resolver (:hot-ledger (snapshot/capture-resolvers (snapshot/capture! boundary)))
+        first-bytes (:bytes (resolver)) original (aget ^bytes first-bytes 0)]
+    (aset-byte ^bytes first-bytes 0 (byte 32))
+    (is (= original (aget ^bytes (:bytes (resolver)) 0)))
+    (is (= (:expected-sha256 (resolver)) (sha (:bytes (resolver))))))
+  (let [{:keys [boundary]} (fixture-boundary)
+        provider (get @(:providers boundary) :execution)]
+    (swap! (:providers boundary) assoc-in [:execution :capture]
+           (fn [g] (assoc ((:capture provider) g) :bad (Object.))))
+    (is (= :snapshot/provider-record-unserializable
+           (refusal #(snapshot/capture! boundary))))))
+
+(deftest nested-capture-refuses
+  (let [{:keys [boundary]} (fixture-boundary)]
+    (swap! (:providers boundary) assoc-in [:execution :capture]
+           (fn [_] (snapshot/capture! boundary)))
+    (is (= :snapshot/reentrant-operation
+           (refusal #(snapshot/capture! boundary))))))
