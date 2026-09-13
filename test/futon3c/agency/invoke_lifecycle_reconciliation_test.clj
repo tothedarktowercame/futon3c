@@ -135,7 +135,7 @@
                     (reconcile-mutated
                      (fn [r] (assoc-in r [:deferred :generation] 6)))))))
   (let [sources (fixture identity)
-        bytes (byte-array [(byte 0xc3) (byte 0x28)])]
+        bytes (byte-array [(byte -61) (byte 40)])]
     (is (= :reconcile/source-invalid-utf8
            (refusal (fn []
                       (reconcile/reconcile
@@ -151,6 +151,7 @@
                                           (assoc-in [:deferred :order] [])
                                           (assoc-in [:deferred :records] {}))))]
     (is (= :reconcile/completeness-authority-invalid
-           (refusal (fn []
-                      (reconcile/reconcile
-                       (assoc sources-b :completeness-authority authority-a))))))))
+           (refusal
+            (fn []
+              (reconcile/reconcile
+               (assoc sources-b :completeness-authority authority-a)))))))
