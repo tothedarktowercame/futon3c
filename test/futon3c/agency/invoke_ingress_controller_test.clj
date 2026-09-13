@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest is]]
             [futon3c.agency.invoke-ingress-controller :as ingress])
   (:import (java.nio.charset StandardCharsets)
-           (java.nio.file Files StandardOpenOption)))
+           (java.nio.file Files StandardOpenOption)
+           (java.util.concurrent TimeUnit)))
 
 (defn- refusal [f] (:refusal (try (f) (catch clojure.lang.ExceptionInfo e (ex-data e)))))
 
@@ -144,4 +145,22 @@
     (let [c (ingress/controller {:auth-token "s" :deferred-store store-b})]
       (ingress/close-intake! c)
       (is (= [["a" {:requested-job-id "a" :prompt "a"}]] (ingress/reopen! c)))
+      (ingress/release-controller! c))))
+
+(deftest competing-cross-process-owner-refuses
+  (let [dir (Files/createTempDirectory "ingress-process-owner-" (make-array java.nio.file.attribute.FileAttribute 0))
+        path (.resolve dir "deferred.edn") store (ingress/file-deferred-store path)]
+    (ingress/initialize-file-store! store)
+    (let [c (ingress/controller {:auth-token "parent" :deferred-store store})
+          form (str "(require '[futon3c.agency.invoke-ingress-controller :as i]) "
+                    "(try (i/controller {:auth-token \"child\" :deferred-store "
+                    "(i/file-deferred-store " (pr-str (str path)) ")}) "
+                    "(System/exit 20) "
+                    "(catch clojure.lang.ExceptionInfo e "
+                    "(System/exit (if (= :ingress/deferred-store-owned (:refusal (ex-data e))) 23 24))))")
+          process (.start (doto (ProcessBuilder. (into-array String ["clojure" "-M" "-e" form]))
+                            (.directory (java.io.File. (System/getProperty "user.dir")))
+                            (.redirectErrorStream true)))]
+      (is (.waitFor process 15 TimeUnit/SECONDS))
+      (is (= 23 (.exitValue process)))
       (ingress/release-controller! c))))
