@@ -34,4 +34,11 @@
                          :aliases-required #{} :classes-required #{}}))))
       (is (= :old (var-get (ns-resolve n 'existing))))
       (is (nil? (ns-resolve n 'newly-interned)))
+      (let [loaded (loader/load-transactionally!
+                    {:target-ns (ns-name n) :forms '[(def existing :loaded) (def loaded-new :loaded)]
+                     :required '[existing loaded-new] :ingress-proof proof
+                     :aliases-required #{} :classes-required #{}})]
+        (is (= :loaded (:status loaded)))
+        (is (= '[existing loaded-new] (mapv :name (:forms loaded))))
+        (is (= :loaded (var-get (ns-resolve n 'loaded-new)))))
       (remove-ns (ns-name n)))))
