@@ -14,7 +14,8 @@
     (Files/write p bs (into-array StandardOpenOption [StandardOpenOption/CREATE_NEW StandardOpenOption/WRITE]))
     (reconcile/file-snapshot-resolver p (sha bs))))
 (defn- records []
-  {:controller {:schema :agency/ingress-controller-snapshot-v1 :mode :closed :generation 7 :waiting-writer 0}
+  {:controller {:schema :agency/ingress-controller-snapshot-v1 :mode :closed :generation 7
+                :waiting-writer 0 :accepted-queued 0 :executing 0 :final-delivery 0}
    :hot-ledger {:schema :agency/invoke-hot-ledger-snapshot-v1 :generation 7
                 :jobs {"a" {:job-id "a" :state :terminal :trace-id "trace-a"}
                        "b" {:job-id "b" :state :terminal :trace-id "trace-b"}}}
@@ -55,16 +56,19 @@
            (refusal (fn []
                       (reconcile-mutated
                        (fn [r] (-> r
-                                   (assoc-in [:hot-ledger :jobs "a" :state] :queued)
-                                   (assoc-in [:accepted-queue :job-ids] ["a"])
-                                   (update-in [:final-delivery :records] dissoc "a")))))))))
+                                          (assoc-in [:hot-ledger :jobs "a" :state] :queued)
+                                          (assoc-in [:accepted-queue :job-ids] ["a"])
+                                          (assoc-in [:controller :accepted-queued] 1)
+                                          (update-in [:final-delivery :records] dissoc "a")))))))))
   (testing "duplicate and conflicting trace"
     (is (= :reconcile/duplicate-lifecycle
            (refusal (fn []
                       (reconcile-mutated
                        (fn [r] (-> r
                                    (assoc-in [:accepted-queue :job-ids] ["a"])
-                                   (assoc-in [:execution :job-ids] ["a"]))))))))
+                                   (assoc-in [:execution :job-ids] ["a"])
+                                   (assoc-in [:controller :accepted-queued] 1)
+                                   (assoc-in [:controller :executing] 1))))))))
     (is (= :reconcile/terminal-join-invalid
            (refusal (fn []
                       (reconcile-mutated

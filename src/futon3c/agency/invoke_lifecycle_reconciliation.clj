@@ -78,8 +78,20 @@
       (refuse! :reconcile/controller-not-closed-and-idle {:controller c}))
     (when-not (every? #{generation} generations)
       (refuse! :reconcile/stale-generation {:controller generation :sources generations}))
-    (when-not (and (map? jobs) (every? (fn [[id j]] (= id (:job-id j))) jobs))
+    (when-not (and (map? jobs)
+                   (every? (fn [[id j]]
+                             (and (string? id) (not-empty id) (= id (:job-id j)))) jobs))
       (refuse! :reconcile/hot-ledger-identity-invalid {}))
+    (when-not (= [(:accepted-queued c) (:executing c) (:final-delivery c)]
+                 [(count queue-ids) (count execution-ids)
+                  (count (filter (fn [[_ rec]] (= :pending (:status rec))) delivery-records))])
+      (refuse! :reconcile/controller-count-mismatch
+               {:controller (select-keys c [:accepted-queued :executing :final-delivery])
+                :sources {:accepted-queued (count queue-ids)
+                          :executing (count execution-ids)
+                          :final-delivery (count (filter (fn [[_ rec]]
+                                                          (= :pending (:status rec)))
+                                                        delivery-records))}}))
     (when (seq overlaps) (refuse! :reconcile/duplicate-lifecycle {:job-ids overlaps}))
     (when-let [extra (seq (set/difference referenced durable-ids))]
       (refuse! :reconcile/unknown-job-reference {:job-ids (set extra)}))
