@@ -276,7 +276,7 @@
                     {:refusal :ingress/http-config-invalid :schema schema})))
   (when-not (and (map? controller)
                  (:deferred-store controller)
-                 (false? (:test-only? controller))
+                 (not (:test-only? controller))
                  (instance? clojure.lang.IAtom (:state controller))
                  (instance? clojure.lang.IAtom (:released? controller))
                  (false? @(:released? controller)))
