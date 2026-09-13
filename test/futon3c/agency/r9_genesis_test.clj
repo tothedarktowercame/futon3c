@@ -1,8 +1,10 @@
 (ns futon3c.agency.r9-genesis-test
   (:require [clojure.java.io :as io] [clojure.test :refer [deftest is testing]]
-            [futon2.aif.r9-checker :as r9] [futon3c.agency.r9-genesis :as genesis]
+            [futon2.aif.r9-checker :as r9] [futon3c.agency.r9-authority :as r9-authority]
+            [futon3c.agency.r9-genesis :as genesis]
             [futon3c.transport.http :as http])
-  (:import (java.nio.file Files) (java.security MessageDigest)))
+  (:import (java.nio.charset StandardCharsets) (java.nio.file Files OpenOption)
+           (java.security MessageDigest)))
 
 (defn- hex [bs] (apply str (map #(format "%02x" (bit-and 0xff %)) bs)))
 (defn- sha256 [path]
@@ -16,6 +18,7 @@
    "lead-review" "../futon2/holes/labs/wm-contract/runs/row-19-genesis-verifier-2026-09-13/lead-review.md"})
 (defn- verified [schema origin body]
   (merge {:status :verified :authority/schema schema :authority-origin origin
+          :verification-scope :temporary-positive-boundary-fixture
           :provenance {:fixture "temporary/source-backed"}} body))
 (defn- pins []
   {:source {:id "r9-genesis-source" :sha256 (sha256 (artifact-paths "r9-genesis-source"))}
@@ -38,14 +41,17 @@
   (let [root (verified :wm/external-root-resolution-v1 :reviewed-host-boundary
                        {:authority-root-id "fixture-root" :delegate "codex-26"
                         :verification-scope :temporary-positive-boundary-fixture})
-        subject {:external-root "fixture-root"
+        predecessor-subject (when-let [p (:predecessor c)]
+                              (select-keys p [:anchor-id :checker-source-sha256]))
+        subject (cond-> {:kind (:kind c) :external-root "fixture-root"
                  :jobs {:author (:author-job-id c) :reviewer (:reviewer-job-id c)}
                  :commissions {:author (:request-digest (commissions (:author-job-id c)))
                                :reviewer (:request-digest (commissions (:reviewer-job-id c)))}
-                 :artifacts (:artifacts c)}]
+                 :artifacts (:artifacts c)}
+                  predecessor-subject (assoc :predecessor predecessor-subject))]
     {:root root
-     :traces {(:author-trace-id c) (verified :wm/trace-resolution-v1 :isolated-agency-ledger {:job-id (:author-job-id c)})
-              (:reviewer-trace-id c) (verified :wm/trace-resolution-v1 :isolated-agency-ledger {:job-id (:reviewer-job-id c)})}
+     :traces {(:author-trace-id c) (verified :wm/trace-resolution-v1 :isolated-agency-ledger {:job-id (:author-job-id c) :trace-id (:author-trace-id c)})
+              (:reviewer-trace-id c) (verified :wm/trace-resolution-v1 :isolated-agency-ledger {:job-id (:reviewer-job-id c) :trace-id (:reviewer-trace-id c)})}
      :acceptance (verified :wm/delegated-acceptance-resolution-v1 :independent-review-fixture
                            {:schema :delegated-canonical-branch-acceptance-v1
                             :authority :delegated-technical-lead :accepted-by "codex-26"
@@ -61,7 +67,29 @@
                                    {:artifact-id (:id %) :sha256 (when path (sha256 path))}))
    :acceptance-resolver (constantly (:acceptance authority))
    :predecessor-resolver #(verified :wm/anchored-checker-resolution-v1 :prior-anchor-store
-                                    {:checker-source-sha256 (:checker-source-sha256 %)})})
+                                    {:anchor-id (:anchor-id %)
+                                     :checker-source-sha256 (:checker-source-sha256 %)})})
+(defn- record-entry! [tmp name record]
+  (let [path (.resolve tmp (str name ".edn"))]
+    (Files/writeString path (pr-str record) StandardCharsets/UTF_8 (make-array OpenOption 0))
+    {:id (:id record) :path (str path) :sha256 (sha256 (str path))}))
+(defn- configured-options [tmp c authority]
+  (let [artifact-records (into {} (map (fn [[_ pin]]
+                                         [(:id pin) (record-entry! tmp (:id pin)
+                                                                   {:id (:id pin) :artifact-id (:id pin)
+                                                                    :sha256 (:sha256 pin)})]))
+                               (:artifacts c))
+        root-entry (record-entry! tmp "root" (assoc (:root authority) :id "root-ref"))
+        acceptance-entry (record-entry! tmp "acceptance" (assoc (:acceptance authority) :id "acceptance-ref"))
+        trace-entries (into {} (map (fn [[id record]] [id (record-entry! tmp id (assoc record :id id))]))
+                            (:traces authority))
+        config {:verification-scope :temporary-positive-boundary-fixture
+                :roots {"root-ref" root-entry} :traces trace-entries
+                :artifacts artifact-records :acceptances {"acceptance-ref" acceptance-entry}
+                :predecessors {}}]
+    (merge {:candidate (assoc c :external-root {:id "root-ref"}
+                              :acceptance {:id "acceptance-ref"})}
+           (r9-authority/configured-resolvers config))))
 (defn- refusal [o] (:refusal (try (genesis/verify-candidate o)
                                   (catch clojure.lang.ExceptionInfo e (ex-data e)))))
 
@@ -77,11 +105,14 @@
               ac (make-job! (:author-job-id c) (:author c) "Implement verifier" (:author-trace-id c))
               rc (make-job! (:reviewer-job-id c) (:reviewer c) "Review verifier" (:reviewer-trace-id c))
               commissions {(:author-job-id c) ac (:reviewer-job-id c) rc}
-              authority (context c commissions) o (options c commissions authority)]
-          (is (= :temporary-positive-boundary-fixture (:verification-scope (genesis/verify-candidate o))))
+              authority (context c commissions) o (options c commissions authority)
+              configured-o (configured-options tmp c authority)]
+          (is (= :temporary-positive-boundary-fixture
+                 (:verification-scope (genesis/verify-candidate configured-o))))
           (is (= :r9/author-equals-reviewer (refusal (options (assoc c :reviewer (:author c)) commissions authority))))
           (is (= :r9/role-identity-missing (refusal (options (assoc c :author "") commissions authority))))
           (is (= :r9/author-reviewer-job-equal (refusal (options (assoc c :reviewer-job-id (:author-job-id c)) commissions authority))))
+          (is (= :r9/trace-identity-invalid (refusal (options (assoc c :author-trace-id "") commissions authority))))
           (is (= :r9/mandatory-artifacts-missing (refusal (options (assoc c :artifacts {}) commissions authority))))
           (testing "correctly rehashed forged prompt is rejected against API authority"
             (let [forged (assoc-in ac [:commission :prompt] "forged")
@@ -99,9 +130,28 @@
           (is (= :r9/artifact-pin-mismatch (refusal (assoc o :artifact-resolver #(assoc ((:artifact-resolver o) %) :sha256 (apply str (repeat 64 "0")))))))
           (is (= :r9/delegated-acceptance-unverified (refusal (options (assoc-in c [:artifacts :source :sha256] (apply str (repeat 64 "a"))) commissions authority))))
           (is (= :r9/external-root-unverified (refusal (assoc o :root-resolver (constantly {:status :verified :authority/schema :wm/external-root-resolution-v1})))))
+          (is (= :r9/external-root-unverified (refusal (assoc o :root-resolver (fn [_] (assoc (:root authority) :authority-root-id ""))))))
+          (is (= :r9/authority-scope-mismatch (refusal (assoc o :root-resolver (fn [_] (assoc (:root authority) :verification-scope :production))))))
           (is (= :r9/delegated-acceptance-unverified (refusal (assoc o :acceptance-resolver (fn [_] (dissoc (:acceptance authority) :provenance))))))
+          (is (= :r9/delegated-acceptance-unverified (refusal (assoc o :acceptance-resolver (fn [_] (assoc (:acceptance authority) :digest ""))))))
           (is (= :r9/predecessor-unverified (refusal (options (assoc c :kind :successor :predecessor nil) commissions authority))))
-          (is (= :verified-for-independent-review
-                 (:decision (genesis/verify-candidate (options (assoc c :kind :successor :predecessor {:checker-source-sha256 (apply str (repeat 64 "b"))}) commissions authority)))))
+          (let [sc (assoc c :kind :successor
+                          :predecessor {:anchor-id "prior-anchor"
+                                        :checker-source-sha256 (apply str (repeat 64 "b"))})
+                sa (context sc commissions)]
+            (is (= :r9/delegated-acceptance-unverified
+                   (refusal (options sc commissions authority)))
+                "genesis acceptance cannot be borrowed")
+            (is (= :verified-for-independent-review
+                   (:decision (genesis/verify-candidate (options sc commissions sa)))))
+            (is (= :r9/predecessor-pin-mismatch
+                   (refusal (assoc (options sc commissions sa)
+                                   :predecessor-resolver
+                                   #(verified :wm/anchored-checker-resolution-v1 :prior-anchor-store
+                                              {:anchor-id (:anchor-id %)
+                                               :checker-source-sha256 (apply str (repeat 64 "c"))})))))
+            (is (= :r9/predecessor-unverified
+                   (refusal (options (assoc-in sc [:predecessor :checker-source-sha256] "")
+                                     commissions sa)))))
           (is (= :r9/external-root-unverified (refusal (assoc o :root-resolver genesis/unresolved-host-event-stub)))))
         (finally (http/reset-invoke-jobs!)))))))
