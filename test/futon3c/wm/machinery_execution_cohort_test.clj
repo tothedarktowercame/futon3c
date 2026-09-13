@@ -10,9 +10,9 @@
   (try (f) nil (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))
 
 (deftest exact-server-owned-binding
-  (is (= :wm-contract-machinery-48-v1
+  (is (= :wm-contract-machinery-49-v1
          (:cohort-id (sut/execution-cohort))))
-  (is (= "/home/joe/code/futon2/data/wm-full-loop-machinery-48"
+  (is (= "/home/joe/code/futon2/data/wm-full-loop-machinery-49"
          (:data-root (sut/execution-cohort))))
   (is (= (assoc {} :execution-cohort (sut/execution-cohort))
          (sut/apply-binding {})))
@@ -26,12 +26,12 @@
   (binding [sut/*read-binding-text* #(str valid-text " ")]
     (is (= :binding-sha256-mismatch (refusal sut/execution-cohort))))
   (binding [sut/*read-binding-text* (constantly valid-text)]
-    (is (= :wm-contract-machinery-48-v1
+    (is (= :wm-contract-machinery-49-v1
            (:cohort-id (sut/execution-cohort))))))
 
 (deftest runner-configures-before-invocation-and-does-not-swallow-refusal
   (binding [runner/*resolve-var* (constantly identity)]
-    (is (= :wm-contract-machinery-48-v1
+    (is (= :wm-contract-machinery-49-v1
            (get-in (#'runner/configured-runner-opts {})
                    [:execution-cohort :cohort-id]))))
   (binding [runner/*resolve-var* (constantly identity)
