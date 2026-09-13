@@ -252,6 +252,25 @@
       (swap! (:state c) #(-> % (update :executing disj id)
                               (update :final-delivery conj id))))))
 
+(defn finish-job!
+  "Move a durably terminal job to final delivery.
+
+  A job may terminate before execution (queued cancellation/submission
+  failure) or after start. Repeating an already-accounted terminal transition
+  is idempotent; an unknown identity refuses and remains unreconciled."
+  [c job-id]
+  (with-controller-lock c
+    (let [id (str job-id) s @(:state c)]
+      (cond
+        (contains? (:final-delivery s) id) id
+        (contains? (:executing s) id)
+        (do (swap! (:state c) #(-> % (update :executing disj id)
+                                      (update :final-delivery conj id))) id)
+        (contains? (:accepted-queued s) id)
+        (do (swap! (:state c) #(-> % (update :accepted-queued disj id)
+                                      (update :final-delivery conj id))) id)
+        :else (refuse! :ingress/job-not-accounted {:job-id id})))))
+
 (defn finish-delivery! [c job-id]
   (with-controller-lock c
     (let [id (str job-id)]

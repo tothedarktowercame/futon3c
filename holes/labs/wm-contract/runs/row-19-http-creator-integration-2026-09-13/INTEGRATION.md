@@ -12,6 +12,18 @@ controller lock before waiting for that writer lock, and calls
 after `update-invoke-jobs-ledger!` has completed its durable publication; a
 stable active-ID retry is supplied again and the controller set deduplicates
 it. A failed publication supplies nil and removes only the entrant.
+If the ledger reports that its atomic rename committed but directory-force
+confirmation failed, the thrown exception carries the retained job identity;
+the error is preserved while the controller conservatively retains that job
+as accepted work. A pre-rename failure has no retained identity.
+
+The central running transition advances an accepted job to execution only
+when the ledger itself changes from queued/activating to running. The first
+terminal ledger transition moves either queued cancellation/submission failure
+or executing work to final delivery. The first durable delivery receipt clears
+that final-delivery identity. Duplicate running, terminal, and delivery calls
+do not advance controller state twice. A terminal job lacking a safe delivery
+receipt remains in final delivery and therefore remains non-drained.
 
 Loading the namespace leaves `!invoke-ingress-controller-config` exactly
 inactive, preserving ordinary service behavior. Activation requires the
@@ -23,9 +35,8 @@ always states `:restart-authorized? false` and `:lifecycle-wiring
 
 ## Remaining serving seams
 
-This packet does not make the process drainable or restart-ready. The same
-controller still must be joined to worker execution start/finish, final
-delivery completion, and durable parked/deadline resume replay. Startup must
+This packet does not make the process restart-ready. The same controller still
+must be joined to durable parked/deadline resume replay. Startup must
 reconcile already accepted jobs against the ledger, queues, execution and
 delivery records before intake can open. The controller cannot protect its
 own first installation, so an independently reviewed external first-install

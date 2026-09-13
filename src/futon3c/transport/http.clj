@@ -1557,9 +1557,10 @@
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
            model]}]
   (let [created-id (atom nil)]
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (let [requested (some-> requested-job-id str str/trim)
+    (try
+      (update-invoke-jobs-ledger!
+       (fn [ledger]
+         (let [requested (some-> requested-job-id str str/trim)
              ;; Dedup active requested jobs. Callers needing durable replay of a
              ;; terminal identity must validate the immutable request first.
              archived (when (seq requested) (read-commission-archive requested))
@@ -1611,11 +1612,20 @@
                         bell-type (assoc :bell-type bell-type)
                         (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
-             (-> ledger
-                 (assoc :next-seq next-seq)
-                 (update :job-order (fnil conj []) job-id)
-                 (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
-    @created-id))
+               (-> ledger
+                   (assoc :next-seq next-seq)
+                   (update :job-order (fnil conj []) job-id)
+                   (assoc-in [:jobs job-id] (append-job-event job "accepted" {}))))))))
+      @created-id
+      (catch Throwable t
+        ;; After the atomic rename, update-invoke-jobs-ledger! deliberately
+        ;; preserves the new ledger in memory. Carry that identity through the
+        ;; error so the controller cannot report the retained job as drained.
+        (if (and (:committed? (ex-data t)) @created-id)
+          (throw (ex-info (.getMessage t)
+                          (assoc (ex-data t) :committed-invoke-job-id @created-id)
+                          t))
+          (throw t))))))
 
 (defn- create-invoke-job!
   [request]
@@ -1630,6 +1640,10 @@
                        ;; controller's accepted set is itself idempotent.
                        (reset! accepted-id id)
                        id)
+                     (catch Throwable t
+                       (when-let [id (:committed-invoke-job-id (ex-data t))]
+                         (reset! accepted-id id))
+                       (throw t))
                      (finally
                        (invoke-ingress/creation-finished!
                         controller ticket @accepted-id))))
@@ -1827,15 +1841,25 @@
 
 (defn- mark-invoke-job-running!
   [job-id]
-  (update-invoke-jobs-ledger!
-   (fn [ledger]
-     (if-let [job (get-in ledger [:jobs job-id])]
-       (assoc-in ledger [:jobs job-id]
-                 (-> job
-                     (assoc :state "running"
-                            :started-at (or (:started-at job) (str (Instant/now))))
-                     (append-job-event "running" {})))
-       ledger))))
+  (let [[before after]
+        (update-invoke-jobs-ledger-vals!
+         (fn [ledger]
+           (if-let [job (get-in ledger [:jobs job-id])]
+             (if (#{"queued" "activating"} (str (:state job)))
+               (assoc-in ledger [:jobs job-id]
+                         (-> job
+                             (assoc :state "running"
+                                    :started-at (or (:started-at job) (str (Instant/now))))
+                             (append-job-event "running" {})))
+               ledger)
+             ledger)))
+        started? (and (#{"queued" "activating"}
+                        (str (get-in before [:jobs job-id :state])))
+                      (= "running" (get-in after [:jobs job-id :state])))]
+    (when started?
+      (when-let [controller (configured-invoke-ingress-controller)]
+        (invoke-ingress/start-execution! controller job-id)))
+    started?))
 
 (defn- finalize-invoke-job!
   [job-id terminal-state terminal-code terminal-message result sid]
@@ -1894,6 +1918,9 @@
                                     (str (get-in ledger-before [:jobs job-id :state])))
                                (get-in ledger-after [:jobs job-id]))]
     (when updated-terminal-job
+      (when-let [controller (configured-invoke-ingress-controller)]
+        (invoke-ingress/finish-job! controller job-id)))
+    (when updated-terminal-job
       (let [released-park-records
             (:released-records (parked-on-notify! job-id result-text))
             bellback-request (atom nil)]
@@ -1951,11 +1978,14 @@
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
   (when (and (string? invoke-trace-id) (not (str/blank? invoke-trace-id)))
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job-id (get-in ledger [:trace->job invoke-trace-id])]
-         (if-let [job (get-in ledger [:jobs job-id])]
-           (let [delivered (boolean delivered?)
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job-id (get-in ledger [:trace->job invoke-trace-id])]
+               (if-let [job (get-in ledger [:jobs job-id])]
+                 (if (not= "pending" (get-in job [:delivery :status]))
+                   ledger
+                   (let [delivered (boolean delivered?)
                  receipt {:status (if delivered "delivered" "delivery-failed")
                           :surface (str (or surface "unknown"))
                           :destination (str (or destination "unknown"))
@@ -1973,19 +2003,28 @@
                                  (assoc :delivery receipt)
                                  (assoc :trace/delivery-observation trace-observation)
                                  (append-job-event "delivery-recorded" receipt))]
-             (assoc-in ledger [:jobs job-id] updated-job))
-           ledger)
-         ledger)))))
+                     (assoc-in ledger [:jobs job-id] updated-job)))
+                 ledger)
+               ledger)))
+          job-id (get-in before [:trace->job invoke-trace-id])
+          transitioned? (and job-id
+                             (= "pending" (get-in before [:jobs job-id :delivery :status]))
+                             (not= "pending" (get-in after [:jobs job-id :delivery :status])))]
+      (when transitioned?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/finish-delivery! controller job-id)))
+      transitioned?)))
 
 (defn- record-invoke-job-delivery-by-job-id!
   [job-id {:keys [surface destination delivered? note]}]
   (when (and (string? job-id) (not (str/blank? job-id)))
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job (get-in ledger [:jobs job-id])]
-         (if (not= "pending" (get-in job [:delivery :status]))
-           ledger
-           (let [delivered (boolean delivered?)
+    (let [[before after]
+          (update-invoke-jobs-ledger-vals!
+           (fn [ledger]
+             (if-let [job (get-in ledger [:jobs job-id])]
+               (if (not= "pending" (get-in job [:delivery :status]))
+                 ledger
+                 (let [delivered (boolean delivered?)
                receipt {:status (if delivered "delivered" "delivery-failed")
                         :surface (str (or surface "unknown"))
                         :destination (str (or destination "unknown"))
@@ -2003,8 +2042,14 @@
                                (assoc :delivery receipt)
                                (assoc :trace/delivery-observation trace-observation)
                                (append-job-event "delivery-recorded" receipt))]
-             (assoc-in ledger [:jobs job-id] updated-job)))
-         ledger)))))
+                   (assoc-in ledger [:jobs job-id] updated-job)))
+               ledger)))
+          transitioned? (and (= "pending" (get-in before [:jobs job-id :delivery :status]))
+                             (not= "pending" (get-in after [:jobs job-id :delivery :status])))]
+      (when transitioned?
+        (when-let [controller (configured-invoke-ingress-controller)]
+          (invoke-ingress/finish-delivery! controller job-id)))
+      transitioned?)))
 
 (declare get-invoke-job)
 

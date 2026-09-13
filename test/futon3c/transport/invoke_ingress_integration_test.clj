@@ -1,6 +1,8 @@
 (ns futon3c.transport.invoke-ingress-integration-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.edn :as edn]
             [futon3c.agency.invoke-ingress-controller :as ingress]
+            [futon3c.agency.registry :as reg]
             [futon3c.blackboard :as bb]
             [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.transport.http :as http])
@@ -105,6 +107,43 @@
           (is (= 0 (:accepted-queued (snapshot controller))))))
       (finally (ingress/release-controller! controller)))))
 
+(deftest persistence-boundaries-preserve-conservative-accounting
+  (doseq [[stage expected-count expected-drained?]
+          [[:temp-forced 0 true]
+           [:renamed 1 false]]]
+    (let [controller (durable-controller)
+          dir (Files/createTempDirectory
+               "invoke-http-persist-"
+               (make-array java.nio.file.attribute.FileAttribute 0))
+          path (str (.resolve dir "ledger.edn"))
+          real-persist (var-get #'http/persist-invoke-jobs-ledger!)]
+      (try
+        (with-http-fixture
+          controller
+          (fn [{:keys [ledger]}]
+            (with-redefs-fn
+              {#'http/persist-invoke-jobs-ledger! real-persist
+               #'http/invoke-jobs-store-path (constantly path)}
+              (fn []
+                (binding [http/*invoke-jobs-persist-stage-hook*
+                          (fn [observed _]
+                            (when (= stage observed)
+                              (throw (ex-info "planted persistence boundary" {}))))]
+                  (let [error (try
+                                (#'http/create-invoke-job!
+                                 (invoke-request (str "boundary-" (name stage))))
+                                nil
+                                (catch clojure.lang.ExceptionInfo e (ex-data e)))]
+                    (is (= (= stage :renamed) (:committed? error)))
+                    (is (= expected-count (count (:jobs @ledger))))
+                    (when (= stage :renamed)
+                      (is (= expected-count
+                             (count (:jobs (edn/read-string (slurp path)))))))))))
+            (ingress/close-intake! controller)
+            (is (= expected-count (:accepted-queued (snapshot controller))))
+            (is (= expected-drained? (:drained? (snapshot controller))))))
+        (finally (ingress/release-controller! controller))))))
+
 (deftest duplicate-stable-id-is-accounted-once
   (let [controller (durable-controller)]
     (try
@@ -116,6 +155,41 @@
           (is (= ["stable-1"] (:job-order @ledger)))
           (is (= 1 (:accepted-queued (snapshot controller))))))
       (finally (ingress/release-controller! controller)))))
+
+(deftest execution-terminal-and-delivery-transitions-are-idempotent
+  (doseq [[id terminal-state]
+          [["success-1" "done"] ["failure-1" "failed"]
+           ["cancel-queued-1" "cancelled"]]]
+    (let [controller (durable-controller)]
+      (try
+        (with-http-fixture
+          controller
+          (fn [_]
+            (#'http/create-invoke-job! (invoke-request id))
+            (when-not (= "cancelled" terminal-state)
+              (is (true? (#'http/mark-invoke-job-running! id)))
+              (is (false? (#'http/mark-invoke-job-running! id)))
+              (is (= 1 (:executing (snapshot controller)))))
+            (with-redefs-fn
+              {#'http/parked-on-notify! (constantly {})
+               #'http/auto-bellback-enabled? (constantly false)
+               #'http/inbox-agent? (constantly false)
+               #'reg/get-agent (constantly {})}
+              (fn []
+                (is (true? (#'http/finalize-invoke-job!
+                            id terminal-state (when-not (= "done" terminal-state) terminal-state)
+                            nil {:ok (= "done" terminal-state)} nil)))
+                (is (false? (#'http/finalize-invoke-job!
+                             id terminal-state nil nil {:ok true} nil)))))
+            (is (= 1 (:final-delivery (snapshot controller))))
+            (is (true? (#'http/record-invoke-job-delivery-by-job-id!
+                        id {:surface "test" :destination "fixture"
+                            :delivered? true :note "terminal delivery"})))
+            (is (false? (#'http/record-invoke-job-delivery-by-job-id!
+                         id {:surface "test" :destination "fixture"
+                             :delivered? true :note "duplicate"})))
+            (is (true? (:drained? (snapshot controller)))))
+        (finally (ingress/release-controller! controller))))))
 
 (deftest service-configuration-is-explicit-durable-and-never-ready
   (let [controller (durable-controller)
