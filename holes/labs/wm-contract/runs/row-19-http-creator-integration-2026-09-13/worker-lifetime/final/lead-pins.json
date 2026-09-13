@@ -1,0 +1,27 @@
+[
+  {
+    "path": "src/futon3c/agency/invoke_ingress_controller.clj",
+    "historical-match": true,
+    "current-sha256": "0da6d998ebfca5675d2d426c7c03a3aaff8fc1854fc5c6117f9f40a9fa514c52"
+  },
+  {
+    "path": "src/futon3c/transport/http.clj",
+    "historical-match": true,
+    "current-sha256": "4536d1ac2939a801404c62f0a1140c969c3198cc7ee73a6fb50f70946d828a25"
+  },
+  {
+    "path": "test/futon3c/agency/invoke_ingress_controller_test.clj",
+    "historical-match": true,
+    "current-sha256": "7a67273cd728e29b2c92ba0a27609f861c1a746e93f6fd510adddaa65ced4d57"
+  },
+  {
+    "path": "test/futon3c/transport/invoke_ingress_integration_test.clj",
+    "historical-match": true,
+    "current-sha256": "a7b76daf0cf48080e040da7ddcee93400a038505e24007d7d4cb8caf87bea7fa"
+  },
+  {
+    "path": "holes/labs/wm-contract/runs/row-19-http-creator-integration-2026-09-13/INTEGRATION.md",
+    "historical-match": true,
+    "current-sha256": "79001daa721b30e1ed800ca2683ad8e3a16743571d02af14ef80efdace9e1630"
+  }
+]
