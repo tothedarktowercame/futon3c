@@ -1,0 +1,8 @@
+{
+  "duplicate-control-exit": 0,
+  "worker-control-exit": 0,
+  "command-prefix": "clojure -Sdeps {paths: src,test,dev,resources,library} -M",
+  "source-pins": "lead-pins.json",
+  "scope": "isolated HTTP calls with stubbed external effects and a held synthetic worker; no live service",
+  "passing-suites-rerun": false
+}
