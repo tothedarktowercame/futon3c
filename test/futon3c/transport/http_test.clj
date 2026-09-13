@@ -28,7 +28,8 @@
             [futon3c.agency.clock-store :as clock-store]
             [clojure.java.io :as io]
             [clojure.string :as str])
-  (:import [java.nio.file Files]
+  (:import [java.nio.charset StandardCharsets]
+           [java.nio.file Files StandardOpenOption]
            [java.nio.file.attribute FileAttribute]))
 
 ;; =============================================================================
@@ -2269,14 +2270,28 @@
                                                   {:seq 4 :type "done" :at finished-at}])))
                       job-id))
           target-id (create! "r9-production-shaped-review" "2020-01-01T00:00:00Z")
-          _ (create! "r9-second-old-job" "2020-01-02T00:00:00Z")
+          second-id (create! "r9-second-old-job" "2020-01-02T00:00:00Z")
           sentinel-id (create! "r9-newest-sentinel" "2020-01-03T00:00:00Z")
           ledger-atom (var-get #'http/!invoke-jobs-ledger)
-          compacted (binding [http/*invoke-ledger-now*
-                              (constantly
-                               (java.time.Instant/parse
-                                "2020-01-20T00:00:00Z"))]
-                      (#'http/compact-invoke-jobs-ledger @ledger-atom))]
+          original @ledger-atom
+          clock (constantly (java.time.Instant/parse "2020-01-20T00:00:00Z"))]
+      (testing "archive failure leaves the hot jobs intact for retry"
+        (let [outcome (try
+                        (binding [http/*invoke-ledger-now* clock
+                                  http/*persist-commission-archive!*
+                                  (fn [_] (throw (ex-info "planted archive failure" {})))]
+                          (#'http/update-invoke-jobs-ledger! identity))
+                        :unexpected-success
+                        (catch clojure.lang.ExceptionInfo _ :refused))]
+          (is (= :refused outcome))
+          (is (contains? (:jobs @ledger-atom) target-id))))
+
+      (let [compacted (binding [http/*invoke-ledger-now* clock]
+                        (#'http/compact-invoke-jobs-ledger original))]
+        ;; Repeating the same archival transition proves immutable retry is
+        ;; idempotent before the hot ledger is committed.
+        (binding [http/*invoke-ledger-now* clock]
+          (#'http/compact-invoke-jobs-ledger original))
       (#'http/persist-invoke-jobs-ledger! compacted)
       (http/reset-invoke-jobs!)
       (let [ledger (#'http/ensure-invoke-jobs-ledger!)
@@ -2290,28 +2305,55 @@
         (is (= "trace-r9-production-shaped-review"
                (get-in readback [:job-join :trace-id])))
         (is (= "artifact-r9-production-shaped-review"
-               (get-in readback [:job-join :artifact-ref]))))
+               (get-in readback [:job-join :artifact-ref])))
+        (is (not (contains? ledger :request-commission-archive)))
+            "ordinary hot-ledger state contains no archive bodies")
+        (is (not (str/includes? (slurp (#'http/invoke-jobs-store-path))
+                                "Review r9-production-shaped-review"))
+            "ordinary hot-ledger persistence does not rewrite archived prompts"))
 
-      (testing "missing archive refuses without reconstructing trimmed events"
-        (swap! ledger-atom update :request-commission-archive dissoc target-id)
-        (is (= :invoke-job-missing
+      (testing "an archived requested job id cannot begin a second generation"
+        (is (= :archived-invoke-job-id-reuse
+               (:refusal (try
+                           (#'http/create-invoke-job!
+                            {:requested-job-id target-id
+                             :agent-id "other-agent" :prompt "new generation"})
+                           (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
+
+      (testing "a hot/archive disagreement never returns a mixed generation"
+        (swap! ledger-atom assoc-in [:jobs target-id]
+               {:job-id target-id :request-digest "different"
+                :request-commission {:agent-id "other-agent"
+                                     :prompt "new generation"
+                                     :caller "http-caller" :surface "http"}})
+        (is (= :request-commission-hot-archive-disagreement
                (:refusal (try
                            (http/invoke-job-request-commission target-id)
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+        (swap! ledger-atom update :jobs dissoc target-id))
+
+      (testing "missing archive refuses without reconstructing trimmed events"
+        (Files/delete (#'http/commission-archive-path second-id))
+        (is (= :invoke-job-missing
+               (:refusal (try
+                           (http/invoke-job-request-commission second-id)
                            (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
 
       (testing "tampered archive refuses its own content digest"
-        (swap! ledger-atom assoc-in
-               [:request-commission-archive target-id]
-               (assoc (get-in compacted [:request-commission-archive target-id])
-                      :commission {:agent-id "claude-reviewer"
-                                   :prompt "tampered"
-                                   :caller "completion-lead"
-                                   :surface "bell"
-                                   :model "review-model"}))
+        (let [path (#'http/commission-archive-path target-id)
+              record (#'http/read-commission-archive target-id)]
+          (Files/writeString
+           path
+           (pr-str (assoc record :commission
+                          {:agent-id "claude-reviewer" :prompt "tampered"
+                           :caller "completion-lead" :surface "bell"
+                           :model "review-model"}))
+           StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING])))
         (is (= :request-commission-archive-tampered
                (:refusal (try
                            (http/invoke-job-request-commission target-id)
-                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
+                           (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"

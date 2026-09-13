@@ -363,7 +363,6 @@
    :next-seq 0
    :job-order []
    :trace->job {}
-   :request-commission-archive {}
    :jobs {}})
 
 (declare terminal-invoke-state?)
@@ -434,26 +433,73 @@
       (assoc record :archive-digest
              (campaign-machine/ledger-digest [record])))))
 
-(defn- add-request-commission-archives
-  "Archive only the small immutable R9 join projection for jobs crossing the
-  seven-day hot-ledger boundary. Full job transcripts still expire under D13.
-  Archive entries have no time-based expiry; removal requires a separately
-  reviewed retention operation. Conflicting reuse of a job id refuses."
-  [ledger dropped now]
-  (reduce
-   (fn [acc [job-id job]]
-     (if-let [record (request-commission-archive-record job now)]
-       (if-let [existing (get-in acc [:request-commission-archive job-id])]
-         (if (= (dissoc existing :archived-at :archive-digest)
-                (dissoc record :archived-at :archive-digest))
-           acc
-           (throw (ex-info "invoke commission archive conflict"
-                           {:refusal :request-commission-archive-conflict
-                            :job-id job-id})))
-         (assoc-in acc [:request-commission-archive job-id] record))
-       acc))
-   ledger
-   dropped))
+(defn- invoke-commission-archive-dir []
+  (or (System/getenv "FUTON3C_INVOKE_COMMISSION_ARCHIVE_DIR")
+      (str (invoke-jobs-store-path) ".commissions")))
+
+(defn- commission-archive-path [job-id]
+  (let [file-id (campaign-machine/ledger-digest [(str job-id)])]
+    (Path/of (invoke-commission-archive-dir)
+             (into-array String [(str file-id ".edn")]))))
+
+(defn- read-commission-archive [job-id]
+  (let [path (commission-archive-path job-id)]
+    (when (Files/exists path (make-array java.nio.file.LinkOption 0))
+      (with-open [reader (PushbackReader. (io/reader (.toFile path)))]
+        (let [eof (Object.)
+              record (edn/read {:eof eof} reader)
+              trailing (edn/read {:eof eof} reader)]
+          (when (or (identical? record eof) (not (identical? trailing eof))
+                    (not= (str job-id) (str (:job-id record))))
+            (throw (ex-info "invoke commission archive is malformed"
+                            {:refusal :request-commission-archive-malformed
+                             :job-id (str job-id) :path (str path)})))
+          record)))))
+
+(defn- persist-commission-archive!
+  "Create one immutable, keyed archive record. Identical retry is a no-op;
+  conflicting content refuses. The file and containing directory are forced
+  before hot-ledger deletion may proceed."
+  [record]
+  (let [job-id (str (:job-id record))
+        target (.toAbsolutePath (commission-archive-path job-id))
+        parent (.getParent target)]
+    (Files/createDirectories parent
+                             (make-array java.nio.file.attribute.FileAttribute 0))
+    (if-let [existing (read-commission-archive job-id)]
+      (if (= (dissoc existing :archived-at :archive-digest)
+             (dissoc record :archived-at :archive-digest))
+        existing
+        (throw (ex-info "invoke commission archive conflict"
+                        {:refusal :request-commission-archive-conflict
+                         :job-id job-id :path (str target)})))
+      (let [tmp (Files/createTempFile parent ".commission-" ".tmp"
+                                      (make-array java.nio.file.attribute.FileAttribute 0))]
+        (try
+          (with-open [stream (FileOutputStream. (.toFile tmp))
+                      writer (BufferedWriter.
+                              (OutputStreamWriter. stream StandardCharsets/UTF_8))]
+            (binding [*out* writer] (pr record))
+            (.flush writer)
+            (.sync (.getFD stream)))
+          (Files/move tmp target
+                      (into-array StandardCopyOption
+                                  [StandardCopyOption/ATOMIC_MOVE]))
+          (with-open [directory (FileChannel/open
+                                 parent
+                                 (into-array StandardOpenOption
+                                             [StandardOpenOption/READ]))]
+            (.force directory true))
+          record
+          (finally (Files/deleteIfExists tmp)))))))
+
+(def ^:dynamic *persist-commission-archive!* persist-commission-archive!)
+
+(defn- archive-expired-jobs!
+  [dropped now]
+  (doseq [[_ job] dropped]
+    (when-let [record (request-commission-archive-record job now)]
+      (*persist-commission-archive!* record))))
 
 (defn- compact-invoke-jobs-ledger
   "Bound terminal-job retention in two stages: compact transcript payload
@@ -467,7 +513,6 @@
                 (and (not (contains? protected job-id))
                      (expired-terminal-job?
                       job now invoke-terminal-tombstone-retention-ms)))
-        dropped-jobs (into {} (filter drop?) (:jobs ledger))
         retained-jobs* (into {} (remove drop?) (:jobs ledger))
         ;; A persisted ledger with no jobs is rejected as probable truncation.
         ;; Preserve the newest tombstone only when expiry would otherwise make
@@ -478,8 +523,12 @@
                           (first (keys (:jobs ledger)))))
         retained-jobs (cond-> retained-jobs*
                         sentinel-id (assoc sentinel-id (get-in ledger [:jobs sentinel-id])))
-        retained-ids (set (keys retained-jobs))]
-    (-> (add-request-commission-archives ledger dropped-jobs now)
+        retained-ids (set (keys retained-jobs))
+        dropped-jobs (apply dissoc (:jobs ledger) retained-ids)]
+    ;; Archive durability precedes removal. Any failure throws before this
+    ;; compacted value can replace or persist over the hot ledger.
+    (archive-expired-jobs! dropped-jobs now)
+    (-> ledger
         (assoc :jobs
                (into {}
                      (map (fn [[job-id job]]
@@ -1367,14 +1416,22 @@
   (let [ledger (ensure-invoke-jobs-ledger!)
         job-id (str job-id)
         job (get-in ledger [:jobs job-id])
-        archived (get-in ledger [:request-commission-archive job-id])
-        commission (or (:request-commission job) (:commission archived))]
+        archived (read-commission-archive job-id)
+        hot-commission (:request-commission job)
+        commission (or hot-commission (:commission archived))]
     (when-not (or job archived)
       (throw (ex-info "invoke job and commission archive are missing"
                       {:refusal :invoke-job-missing :job-id job-id})))
     (when-not (map? commission)
       (throw (ex-info "invoke request commission was not retained"
                       {:refusal :request-commission-missing
+                       :job-id job-id})))
+    (when (and job archived
+               (not= {:request-digest (:request-digest job)
+                      :commission hot-commission}
+                     (select-keys archived [:request-digest :commission])))
+      (throw (ex-info "hot job and commission archive disagree"
+                      {:refusal :request-commission-hot-archive-disagreement
                        :job-id job-id})))
     (when archived
       (let [expected (:archive-digest archived)
@@ -1397,7 +1454,12 @@
        :job-id job-id
        :request-digest observed
        :commission commission
-       :job-join (when archived (:job-join archived))
+       :job-join (if archived
+                   (:job-join archived)
+                   (select-keys job [:agent-id :caller :surface :artifact-ref
+                                     :trace-id :created-at :started-at :finished-at
+                                     :state :terminal-code :execution :delivery
+                                     :invocation/model]))
        :source (if job :hot-ledger :commission-archive)})))
 
 (defn- create-invoke-job!
@@ -1409,6 +1471,11 @@
        (let [requested (some-> requested-job-id str str/trim)
              ;; Dedup active requested jobs. Callers needing durable replay of a
              ;; terminal identity must validate the immutable request first.
+             archived (when (seq requested) (read-commission-archive requested))
+             _ (when archived
+                 (throw (ex-info "archived invoke job id cannot be reused"
+                                 {:refusal :archived-invoke-job-id-reuse
+                                  :job-id requested})))
              existing (when (seq requested)
                         (get-in ledger [:jobs requested]))
              reuse? (and existing
