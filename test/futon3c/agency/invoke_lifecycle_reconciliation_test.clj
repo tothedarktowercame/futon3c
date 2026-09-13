@@ -40,48 +40,59 @@
            (:deferred-resumes r)))
     (is (= 6 (count (:pins r))))))
 
+(defn- reconcile-mutated [f]
+  (reconcile/reconcile (fixture f)))
+
 (deftest incomplete-and-conflicting-censuses-refuse
   (testing "omitted and nonterminal"
     (is (= :reconcile/omitted-queued-job
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (-> r
-                                                (assoc-in [:hot-ledger :jobs "a" :state] :queued)
-                                                (update-in [:final-delivery :records] dissoc "a")))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (-> r
+                                   (assoc-in [:hot-ledger :jobs "a" :state] :queued)
+                                   (update-in [:final-delivery :records] dissoc "a"))))))))
     (is (= :reconcile/nonterminal-accepted-jobs
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (-> r
-                                                (assoc-in [:hot-ledger :jobs "a" :state] :queued)
-                                                (assoc-in [:accepted-queue :job-ids] ["a"])
-                                                (update-in [:final-delivery :records] dissoc "a")))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (-> r
+                                   (assoc-in [:hot-ledger :jobs "a" :state] :queued)
+                                   (assoc-in [:accepted-queue :job-ids] ["a"])
+                                   (update-in [:final-delivery :records] dissoc "a")))))))))
   (testing "duplicate and conflicting trace"
     (is (= :reconcile/duplicate-lifecycle
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (-> r
-                                                (assoc-in [:accepted-queue :job-ids] ["a"])
-                                                (assoc-in [:execution :job-ids] ["a"])))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (-> r
+                                   (assoc-in [:accepted-queue :job-ids] ["a"])
+                                   (assoc-in [:execution :job-ids] ["a"]))))))))
     (is (= :reconcile/terminal-join-invalid
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (assoc-in r [:final-delivery :records "a" :trace-id]
-                                                      "other"))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (assoc-in r [:final-delivery :records "a" :trace-id]
+                                         "other"))))))))
   (testing "missing source, stale generation, unknown delivery"
     (is (= :reconcile/source-missing
-           (refusal (fn [] (reconcile/reconcile (dissoc (fixture identity) :execution))))))
+           (refusal (fn [] (reconcile/reconcile
+                            (dissoc (fixture identity) :execution))))))
     (is (= :reconcile/stale-generation
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (assoc-in r [:execution :generation] 6))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (assoc-in r [:execution :generation] 6)))))))
     (is (= :reconcile/delivery-state-unknown
-           (refusal (fn [] (reconcile/reconcile
-                            (fixture (fn [r] (-> r
-                                                (assoc-in [:hot-ledger :jobs "a" :state] :final-delivery)
-                                                (assoc-in [:final-delivery :records "a" :status] :mystery))))))))))
+           (refusal (fn []
+                      (reconcile-mutated
+                       (fn [r] (-> r
+                                   (assoc-in [:hot-ledger :jobs "a" :state] :final-delivery)
+                                   (assoc-in [:final-delivery :records "a" :status] :mystery))))))))))
 
 (deftest source-pin-and-closed-generation-are-mandatory
-  (let [sources (fixture identity)]
+  (let [sources (fixture identity)
+        bad-source (fn [] {:bytes (.getBytes "{}" StandardCharsets/UTF_8)
+                           :expected-sha256 "wrong" :path "mutated"})]
     (is (= :reconcile/source-pin-mismatch
            (refusal (fn [] (reconcile/reconcile
-                            (assoc sources :controller
-                                   (fn [] {:bytes (.getBytes "{}" StandardCharsets/UTF_8)
-                                           :expected-sha256 "wrong" :path "mutated"}))))))))
+                            (assoc sources :controller bad-source)))))))
   (is (= :reconcile/controller-not-closed-and-idle
-         (refusal (fn [] (reconcile/reconcile
-                          (fixture (fn [r] (assoc-in r [:controller :waiting-writer] 1)))))))))
+         (refusal (fn []
+                    (reconcile-mutated
+                     (fn [r] (assoc-in r [:controller :waiting-writer] 1))))))))
