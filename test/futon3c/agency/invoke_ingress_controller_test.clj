@@ -171,3 +171,17 @@
       (is (.waitFor process 15 TimeUnit/SECONDS))
       (is (= 23 (.exitValue process)))
       (ingress/release-controller! c))))
+
+(deftest store-projection-enforces-payload-identity
+  (let [dir (Files/createTempDirectory "ingress-projection-" (make-array java.nio.file.attribute.FileAttribute 0))
+        store (ingress/file-deferred-store (.resolve dir "deferred.edn"))]
+    (ingress/initialize-file-store! store)
+    (let [lease ((:acquire! store))]
+      (try
+        (is (= :ingress/deferred-projection-invalid
+               (refusal #((:persist! store) lease
+                          {:schema ingress/deferred-schema :order ["a"]
+                           :records {"a" {:status :pending
+                                           :payload {:requested-job-id "b"}}}}))))
+        (is (= [] (:order ((:read! store) lease))))
+        (finally ((:release! store) lease))))))

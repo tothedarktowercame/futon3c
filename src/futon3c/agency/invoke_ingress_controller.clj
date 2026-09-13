@@ -34,8 +34,9 @@
     (when-not (and (vector? order) (= (count order) (count (distinct order)))
                    (map? records) (= (set order) (set (keys records)))
                    (every? (fn [[id rec]]
-                             (and (string? id) (= :pending (:status rec))
-                                  (contains? rec :payload))) records))
+                             (and (string? id) (not-empty id) (= :pending (:status rec))
+                                  (map? (:payload rec))
+                                  (= id (get-in rec [:payload :requested-job-id])))) records))
       (refuse! :ingress/deferred-projection-invalid {}))
     (try
       (when-not (= p (one-edn (pr-str p)))
