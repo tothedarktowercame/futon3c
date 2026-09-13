@@ -442,6 +442,35 @@
     (Path/of (invoke-commission-archive-dir)
              (into-array String [(str file-id ".edn")]))))
 
+(defn- validate-commission-archive!
+  [job-id record]
+  (let [job-id (str job-id)
+        archive-digest (:archive-digest record)
+        observed-archive (campaign-machine/ledger-digest
+                          [(dissoc record :archive-digest)])
+        observed-request (when (map? (:commission record))
+                           (campaign-machine/ledger-digest
+                            [(:commission record)]))]
+    (when-not (and (= :agency/invoke-request-commission-archive-v1
+                      (:schema record))
+                   (= job-id (str (:job-id record)))
+                   (map? (:commission record))
+                   (map? (:job-join record)))
+      (throw (ex-info "invoke commission archive is malformed"
+                      {:refusal :request-commission-archive-malformed
+                       :job-id job-id})))
+    (when-not (= archive-digest observed-archive)
+      (throw (ex-info "invoke commission archive digest mismatch"
+                      {:refusal :request-commission-archive-tampered
+                       :job-id job-id :expected archive-digest
+                       :observed observed-archive})))
+    (when-not (= (:request-digest record) observed-request)
+      (throw (ex-info "archived request commission digest mismatch"
+                      {:refusal :request-commission-digest-mismatch
+                       :job-id job-id :expected (:request-digest record)
+                       :observed observed-request})))
+    record))
+
 (defn- read-commission-archive [job-id]
   (let [path (commission-archive-path job-id)]
     (when (Files/exists path (make-array java.nio.file.LinkOption 0))
@@ -449,12 +478,29 @@
         (let [eof (Object.)
               record (edn/read {:eof eof} reader)
               trailing (edn/read {:eof eof} reader)]
-          (when (or (identical? record eof) (not (identical? trailing eof))
-                    (not= (str job-id) (str (:job-id record))))
+          (when (or (identical? record eof) (not (identical? trailing eof)))
             (throw (ex-info "invoke commission archive is malformed"
                             {:refusal :request-commission-archive-malformed
                              :job-id (str job-id) :path (str path)})))
-          record)))))
+          (validate-commission-archive! job-id record))))))
+
+(defn- force-directory! [path]
+  (with-open [directory (FileChannel/open
+                         path
+                         (into-array StandardOpenOption
+                                     [StandardOpenOption/READ]))]
+    (.force directory true)))
+
+(defn- force-commission-archive-directories!
+  "Durability barrier for both the archive-file rename and creation of its
+  containing directory. It is deliberately repeated on idempotent retry."
+  [archive-dir]
+  (force-directory! archive-dir)
+  (when-let [container (.getParent archive-dir)]
+    (force-directory! container)))
+
+(def ^:dynamic *force-commission-archive-directories!*
+  force-commission-archive-directories!)
 
 (defn- persist-commission-archive!
   "Create one immutable, keyed archive record. Identical retry is a no-op;
@@ -469,7 +515,8 @@
     (if-let [existing (read-commission-archive job-id)]
       (if (= (dissoc existing :archived-at :archive-digest)
              (dissoc record :archived-at :archive-digest))
-        existing
+        (do (*force-commission-archive-directories!* parent)
+            existing)
         (throw (ex-info "invoke commission archive conflict"
                         {:refusal :request-commission-archive-conflict
                          :job-id job-id :path (str target)})))
@@ -485,11 +532,7 @@
           (Files/move tmp target
                       (into-array StandardCopyOption
                                   [StandardCopyOption/ATOMIC_MOVE]))
-          (with-open [directory (FileChannel/open
-                                 parent
-                                 (into-array StandardOpenOption
-                                             [StandardOpenOption/READ]))]
-            (.force directory true))
+          (*force-commission-archive-directories!* parent)
           record
           (finally (Files/deleteIfExists tmp)))))))
 
@@ -497,7 +540,7 @@
 
 (defn- archive-expired-jobs!
   [dropped now]
-  (doseq [[_ job] dropped]
+  (doseq [[_ job] (sort-by key dropped)]
     (when-let [record (request-commission-archive-record job now)]
       (*persist-commission-archive!* record))))
 
@@ -1427,21 +1470,13 @@
                       {:refusal :request-commission-missing
                        :job-id job-id})))
     (when (and job archived
-               (not= {:request-digest (:request-digest job)
-                      :commission hot-commission}
-                     (select-keys archived [:request-digest :commission])))
+               (not= (dissoc (request-commission-archive-record
+                              job (:archived-at archived))
+                             :archive-digest)
+                     (dissoc archived :archive-digest)))
       (throw (ex-info "hot job and commission archive disagree"
                       {:refusal :request-commission-hot-archive-disagreement
                        :job-id job-id})))
-    (when archived
-      (let [expected (:archive-digest archived)
-            observed (campaign-machine/ledger-digest
-                      [(dissoc archived :archive-digest)])]
-        (when-not (= expected observed)
-          (throw (ex-info "invoke commission archive digest mismatch"
-                          {:refusal :request-commission-archive-tampered
-                           :job-id job-id :expected expected
-                           :observed observed})))))
     (let [observed (campaign-machine/ledger-digest [commission])]
       (when-not (= (or (:request-digest job) (:request-digest archived)) observed)
         (throw (ex-info "invoke request commission digest mismatch"

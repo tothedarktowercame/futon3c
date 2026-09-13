@@ -2280,23 +2280,48 @@
                        (finish! sentinel-id "2020-01-03T00:00:00Z"))
           clock (constantly (java.time.Instant/parse "2020-01-20T00:00:00Z"))]
       (reset! ledger-atom original)
-      (testing "archive failure leaves the hot jobs intact for retry"
+      (testing "post-publication directory-force failure preserves hot jobs"
         (let [outcome (try
                         (binding [http/*invoke-ledger-now* clock
-                                  http/*persist-commission-archive!*
-                                  (fn [_] (throw (ex-info "planted archive failure" {})))]
+                                  http/*force-commission-archive-directories!*
+                                  (fn [_] (throw (ex-info "planted force failure" {})))]
                           (#'http/update-invoke-jobs-ledger! identity))
                         :unexpected-success
                         (catch clojure.lang.ExceptionInfo _ :refused))]
           (is (= :refused outcome))
+          (is (Files/exists (#'http/commission-archive-path target-id)
+                            (make-array java.nio.file.LinkOption 0))
+              "the immutable file was published before the failed barrier")
           (is (contains? (:jobs @ledger-atom) target-id))))
 
-      (let [compacted (binding [http/*invoke-ledger-now* clock]
+      (testing "corrupt stored digest refuses retry and preserves hot evidence"
+        (let [path (#'http/commission-archive-path target-id)
+              valid (#'http/request-commission-archive-record
+                     (get-in original [:jobs target-id]) (clock))]
+          (Files/writeString
+           path (pr-str (assoc valid :archive-digest "corrupt"))
+           StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING]))
+          (is (= :request-commission-archive-tampered
+                 (:refusal (try
+                             (binding [http/*invoke-ledger-now* clock]
+                               (#'http/update-invoke-jobs-ledger! identity))
+                             (catch clojure.lang.ExceptionInfo e (ex-data e))))))
+          (is (contains? (:jobs @ledger-atom) target-id))
+          ;; Restore the exact prepublished bytes to exercise a valid retry.
+          (Files/writeString
+           path (pr-str valid) StandardCharsets/UTF_8
+           (into-array StandardOpenOption [StandardOpenOption/TRUNCATE_EXISTING]))))
+
+      (let [barriers (atom 0)
+            compacted (binding [http/*invoke-ledger-now* clock
+                                http/*force-commission-archive-directories!*
+                                (fn [path]
+                                  (swap! barriers inc)
+                                  (#'http/force-commission-archive-directories! path))]
                         (#'http/compact-invoke-jobs-ledger original))]
-        ;; Repeating the same archival transition proves immutable retry is
-        ;; idempotent before the hot ledger is committed.
-        (binding [http/*invoke-ledger-now* clock]
-          (#'http/compact-invoke-jobs-ledger original))
+        (is (pos? @barriers)
+            "existing-file retry repeats the directory durability barrier")
       (#'http/persist-invoke-jobs-ledger! compacted)
       (http/reset-invoke-jobs!)
       (let [ledger (#'http/ensure-invoke-jobs-ledger!)
@@ -2326,11 +2351,14 @@
                            (catch clojure.lang.ExceptionInfo e (ex-data e)))))))
 
       (testing "a hot/archive disagreement never returns a mixed generation"
-        (swap! ledger-atom assoc-in [:jobs target-id]
-               {:job-id target-id :request-digest "different"
-                :request-commission {:agent-id "other-agent"
-                                     :prompt "new generation"
-                                     :caller "http-caller" :surface "http"}})
+        (let [archived (#'http/read-commission-archive target-id)
+              hot (merge (:job-join archived)
+                         {:job-id target-id
+                          :request-digest (:request-digest archived)
+                          :request-commission (:commission archived)
+                          :trace-id "different-trace"
+                          :artifact-ref "different-artifact"})]
+          (swap! ledger-atom assoc-in [:jobs target-id] hot))
         (is (= :request-commission-hot-archive-disagreement
                (:refusal (try
                            (http/invoke-job-request-commission target-id)
