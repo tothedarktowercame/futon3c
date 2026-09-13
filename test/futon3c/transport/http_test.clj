@@ -2353,7 +2353,7 @@
         (is (= :request-commission-archive-tampered
                (:refusal (try
                            (http/invoke-job-request-commission target-id)
-                           (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+                           (catch clojure.lang.ExceptionInfo e (ex-data e))))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
