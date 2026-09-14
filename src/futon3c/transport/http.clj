@@ -8662,7 +8662,10 @@
                      (assoc :run-id (:run-id payload))
 
                      (nonblank-string? (:trigger payload))
-                     (assoc :trigger (keyword (:trigger payload))))
+                     (assoc :trigger (keyword (:trigger payload)))
+
+                     (true? (:measured-acquisition payload))
+                     (assoc :measured-acquisition? true))
               _ (when (and (true? (:r10-commissioned payload))
                            (contains? payload :run4-pin-ref))
                   (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
