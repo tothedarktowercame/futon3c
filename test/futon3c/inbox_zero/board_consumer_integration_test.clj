@@ -16,7 +16,7 @@
     (when-not (zero? (:exit r)) (throw (ex-info "Test Git failed" r)))
     (:out r)))
 
-(deftest ^:slow real-git-cycle-closes-and-cites-proposal
+(deftest ^:slow real-git-cycle-refuses-without-writer-shared-guard
   (let [dir (.toFile (Files/createTempDirectory "inbox-zero-consumer-test-"
                                                 (make-array FileAttribute 0)))
         repo (io/file dir "repo")
@@ -42,18 +42,19 @@
                    :records (assoc (into {} (map (juxt :observation/id identity)) observations)
                                    "fixture-claim" claim)}]
         (spit state-path (pr-str state))
-        (let [result (consumer/run-cycle! {:state-path state-path :ledger-path ledger-path
+        (let [head-before (git! root "rev-parse" "HEAD")
+              result (consumer/run-cycle! {:state-path state-path :ledger-path ledger-path
                                            :gate-specs [{:gate/name :whitespace
                                                          :cmd ["git" "diff" "--check"]}]})
               records (mapcat :records (:consumed result))
-              witness (first (filter #(= :inbox-zero/commit-witness (:record/type %)) records))
-              message (git! root "log" "-1" "--format=%B")]
-          (is (= [1 0] [(:flags/before result) (:flags/after result)]))
-          (is (= 1 (count (filter #(= :inbox-zero/commit-witness (:record/type %)) records))))
-          (is (str/blank? (git! root "status" "--porcelain")))
-          (is (= (str/trim (git! root "rev-parse" "HEAD")) (get-in witness [:result :commit/sha])))
-          (is (str/includes? message (get-in witness [:certificate :board/digest])))
-          (is (str/includes? message (:verbs/digest witness)))
+              refusal (first (filter #(= :inbox-zero/refusal (:record/type %)) records))]
+          (is (= [1 1] [(:flags/before result) (:flags/after result)]))
+          (is (empty? (filter #(= :inbox-zero/commit-witness (:record/type %)) records)))
+          (is (= " M README.md\n" (git! root "status" "--porcelain")))
+          (is (str/blank? (git! root "diff" "--cached" "--name-only")))
+          (is (= head-before (git! root "rev-parse" "HEAD")))
+          (is (= :atomic-feel-commit-unavailable (:refusal/reason refusal)))
+          (is (= (get-in result [:consumed 0 :run :certificate]) (:certificate refusal)))
           (is (consumer/verified-proposal? (:before result)))
           (is (consumer/verified-proposal? (:after result)))
           (is (= (pr-str state) (slurp state-path)) "consumer never writes the watcher snapshot")))

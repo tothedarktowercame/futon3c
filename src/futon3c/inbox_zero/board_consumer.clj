@@ -1,6 +1,8 @@
 (ns futon3c.inbox-zero.board-consumer
   "Consume replay-verified board proposals through the existing promotion
-  planner, sensitivity screen, gates and Git executor. Never invent claims.
+  planner, sensitivity screen and gates. Commit execution is blocked until
+  editing and promotion share an enforceable atomic FEEL/commit protocol.
+  Never invent claims.
   The watcher remains the sole state writer. Fresh observations here are
   read-only overlays, retained in the cycle evidence."
   (:require [clojure.edn :as edn]
@@ -9,7 +11,6 @@
             [futon3.inbox-zero.gates :as gates]
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.promotion :as promotion]
-            [futon3.inbox-zero.promote-exec :as executor]
             [futon3.inbox-zero.watcher :as watcher]
             [futon3c.agents.inbox-zero-board :as board]
             [futon3c.agents.inbox-zero-board-live :as live]
@@ -83,14 +84,31 @@
                    :let [claims (set (map :claim/id (:members dirty-set)))]]
                (update plan :include #(filterv (comp claims :claim/id) %))))}))
 
+(defn atomic-commit!
+  "Mandatory execution boundary. No writer-shared atomic FEEL/commit protocol
+  exists in the standing machinery: the consumer lock excludes consumers only,
+  and Git index locks do not exclude edits. Refuse without invoking Git.
+  A caller flag, lock callback, or executor override cannot attest atomicity.
+  Implementing this boundary requires a reviewed protocol that all writers obey."
+  [plan _options]
+  {:record/type :inbox-zero/promotion-result
+   :plan plan :verdict :held :commit/sha nil
+   :held/reason :atomic-feel-commit-unavailable
+   :blocker {:required :writer-shared-atomic-feel-commit
+             :existing-lock-scope :consumers-only
+             :witness "mathlib4@18ff4a00:DarkTower/WarMachine/InboxZeroWitness.lean:T2"
+             :next-action :implement-writer-coordinated-edit-and-commit-protocol}})
+
 (defn consume!
-  "Consume one board run. Record intent before Git and result after Git.
+  "Consume one board run. Record intent before the mandatory commit boundary.
+  That boundary currently refuses: timing rechecks alone cannot establish T2.
   All refusals retain the proposal certificate. Exceptions become refusals;
   ledger failures propagate, because an unrecorded action is not admissible.
-  Options expose IO boundaries for focused tests. No transport sends or pushes."
-  [run {:keys [state-path record! now-fn load-fn refresh-fn execute-fn gate-specs]
+  Read-side IO is injectable for tests; the atomic boundary is not an option.
+  No transport sends, Git mutations, or pushes."
+  [run {:keys [state-path record! now-fn load-fn refresh-fn gate-specs]
         :or {now-fn #(Instant/now) load-fn read-state refresh-fn refresh-repo
-             execute-fn executor/execute-plan! gate-specs []}}]
+             gate-specs []}}]
   (let [records (atom [])
         emit! (fn [record]
                 (let [record (assoc record :certificate (:certificate run)
@@ -184,7 +202,7 @@
                         (emit! (:intent result))
                         (let [executed (try
                                          (fresh! (:root result))
-                                         (execute-fn (:plan result)
+                                         (atomic-commit! (:plan result)
                                                      {:repo-root (:root result) :gates []
                                                       :message (commit-message run (:plan result))})
                                          (catch Exception e
@@ -219,6 +237,11 @@
             flagged (filterv (complement :clean?) (get-in before [:inputs :sweep]))
             record! #(turn/append-escalation! ledger-path %)
             _ (record! {:record/type :inbox-zero/cycle-start :run before :at (str now)})
+            _ (when (seq flagged)
+                (record! {:record/type :inbox-zero/refusal :scope :consumer
+                          :refusal/reason :atomic-feel-commit-unavailable
+                          :certificate (:certificate before)
+                          :details (:blocker (atomic-commit! nil nil))}))
             consumed (mapv (fn [row]
                              (let [inputs (assoc (:inputs before) :sweep [row])
                                    run (assoc (board/run inputs (constantly nil)) :inputs inputs)]

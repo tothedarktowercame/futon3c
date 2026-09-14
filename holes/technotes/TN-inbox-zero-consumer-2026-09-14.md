@@ -1,4 +1,25 @@
-# Inbox-zero board consumer: implementation and blocked live cleanup
+# Inbox-zero board consumer: atomicity blocker and live evidence
+
+**Current status: commit execution refuses with
+`:atomic-feel-commit-unavailable`.** The atomic FEEL/commit assumption in
+`mathlib4@18ff4a00:DarkTower/WarMachine/InboxZeroWitness.lean` is not established
+by an execution-time recheck. The consumer file lock excludes only other
+consumers; editors and shell writes do not acquire it. Git index locking does
+not exclude working-tree edits either. No timing window is accepted as atomic.
+
+`board-consumer/atomic-commit!` is the mandatory boundary and returns a held
+result without invoking Git. There is no caller-supplied executor or
+self-attested guard option. Every otherwise eligible plan gets a certificate-bearing
+typed refusal. A dirty cycle also records this global capability blocker before
+processing individual proposals. Re-enabling execution requires a reviewed
+protocol that prevents *every* participating writer from editing between FEEL
+and commit, and negative controls that attempt such an edit. That structural
+change is not implemented here.
+
+The earlier 1->0 fixture result below was recorded before this requirement was
+surfaced. It demonstrates Git plumbing only, **not T2 safety**. Its replacement
+regression requires 1->1, a typed atomicity refusal, unchanged HEAD, an empty
+index, and preserved working-tree dirt.
 
 The board now has a consumer in `futon3c.inbox-zero.board-consumer`.
 It replays the proposal and certificate in the current process, resolves one
@@ -7,15 +28,18 @@ repository root, re-reads watcher state, and scans Git through the existing
 overlays: the background watcher remains the only writer of `state.edn`.
 
 Promotion uses the existing `plan-promotion`, dirty-set attribution projection,
-sensitivity screen, gate runner, and `promote-exec/execute-plan!`. Claims that
+sensitivity screen and gate runner. The former `promote-exec/execute-plan!`
+call is blocked at the mandatory `atomic-commit!` boundary. Claims that
 precede a clean transition are excluded. No new ownership claims are manufactured.
 Explicit validation gates are required for each executable plan. Activity is
 rechecked after gates and again after journalling the intent, immediately before
-calling the executor. The executor retains its empty-index and exact-path checks.
+calling that boundary. These timing checks are diagnostic and are not an
+atomicity proof. The standing executor is not invoked.
 It does not push or send agent messages.
 
-Each proposal, intent, commit witness, and refusal has durable evidence. Commit
-messages cite the board, input, and verb digests. Refusals use
+Each proposal, intent, and refusal has durable evidence. The commit message
+formatter retains board, input, and verb citations for any future reviewed
+implementation, but the current boundary cannot produce a commit witness. Refusals use
 `:record/type :inbox-zero/refusal` and `:refusal/reason`. An intent without a
 terminal record remains evidence of an interrupted attempt, not proof of a commit.
 Consumers sharing a watcher state path exclude each other with a file lock.
@@ -34,7 +58,25 @@ starts a new one. Deletions and renames count too. Existing ignored-by-design
 rules are unchanged. This board measures the dirty-age clause, not the upstream,
 unpushed-commit, or linked-worktree clauses of the full inbox-zero definition.
 
-## Live result, 2026-09-14
+## Live rerun with mandatory atomicity refusal
+
+After the T2 requirement arrived, the cycle was rerun: **4 -> 4**, zero
+cleanup commits. The durable journal contains one consumer-wide
+`:atomic-feel-commit-unavailable` refusal plus the same four repo-specific
+refusals listed below. Compact certificates and refusals are committed in
+`inbox-zero-atomic-blocker-2026-09-14.edn`. Full evidence:
+`/home/joe/code/storage/inbox-zero/board-consumer-atomic-blocker-2026-09-14.edn`,
+SHA-256 `b63083d79ad53bcbaf46bd5b1c78c74c9eef951e7888cfe08c105db6e1b0f664`.
+
+The revised consumer tests pass **12 tests / 55 assertions**. The updated real-Git
+integration test passes **1 test / 10 assertions**. Clj-kondo is 0/0 and
+check-parens passes on all changed Clojure. The negative control
+`edit-after-final-snapshot-cannot-reach-executor` places an edit after the final
+idle snapshot and verifies that execution remains refused. This establishes
+refusal behavior; it does not assert an implemented atomic transaction or
+production correspondence to the Lean theorem.
+
+## Original live result, 2026-09-14
 
 The reported **11** becomes **4** after correcting aggregation. That is a
 measurement correction, not seven cleaned repositories. The actual consumer
@@ -82,7 +124,8 @@ clojure -J-Xmx2g -M -m futon3c.inbox-zero.board-consumer \
   '{:ledger-path "/home/joe/code/storage/inbox-zero/board-consumer.edn"}'
 ```
 
-This runs one bounded cycle, not a background service. With no `:gate-specs`,
+This runs one bounded cycle, not a background service. Commit execution is
+blocked regardless of caller options. With no `:gate-specs`,
 otherwise eligible plans produce `:validation-required`. Supply the existing
 gate-runner vector in the EDN options, including the appropriate focused tests
 for source changes; gates are run in the target repo. `consume!` also accepts the
@@ -99,10 +142,10 @@ clojure -M:test:test-all -i :slow -n futon3c.inbox-zero.board-consumer-integrati
 ```
 
 The `^:slow` integration test runs real Git in a disposable repository, uses a
-fixture claim and the real promotion executor, and checks **1 -> 0**, clean Git
-status, the actual commit SHA, certificate trailers, replay verification, and an
-unchanged watcher snapshot. Ordinary tests stub shell boundaries and exercise
+fixture claim and the mandatory refusal boundary, and checks **1 -> 1**,
+unchanged HEAD, an empty index, preserved dirt, certificate-bearing refusal,
+replay verification, and an unchanged watcher snapshot. Ordinary tests stub shell boundaries and exercise
 forged certificates, missing/stale claims, edits during validation and after
-intent recording, failed gates, occupied-index outcomes, and journal failure.
+intent recording, failed gates, rejection of caller-supplied executor overrides, and journal failure.
 All changed Clojure files also pass clj-kondo with zero errors/warnings and
 `futon4/dev/check-parens.el`.

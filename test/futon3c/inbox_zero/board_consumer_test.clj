@@ -31,15 +31,16 @@
   (with-redefs [gates/run-gates (fn [& _] {:passed? true :results []})]
     (consumer/consume! run opts)))
 
-(deftest witnessed-execution
+(deftest atomicity-blocker-retains-certificate
   (let [records (atom []) executed (atom []) run (consumer/proposal-run state now)
         result (consume run (options records executed))]
-    (is (= [:inbox-zero/commit-intent :inbox-zero/commit-witness] (mapv :record/type result)))
-    (is (= 1 (count @executed)))
+    (is (= [:inbox-zero/commit-intent :inbox-zero/refusal] (mapv :record/type result)))
+    (is (empty? @executed))
+    (is (= :atomic-feel-commit-unavailable (:refusal/reason (last result))))
     (is (every? #(= (:certificate run) (:certificate %)) @records))
     (doseq [digest [(get-in run [:certificate :board/digest])
                     (get-in run [:certificate :inputs/digest]) (:verbs/digest run)]]
-      (is (str/includes? (get-in @executed [0 1 :message]) digest)))))
+      (is (str/includes? (consumer/commit-message run {}) digest)))))
 
 (deftest certificate-tampering-refuses-before-io
   (doseq [tamper [#(assoc-in % [:certificate :board/digest] "forged")
@@ -81,7 +82,7 @@
 (deftest safety-holds-are-durable
   (doseq [[reason transform]
           [[:validation-required #(assoc % :gate-specs [])]
-           [:index-not-empty #(assoc % :execute-fn (fn [& _] {:verdict :held :held/reason :index-not-empty}))]
+           [:atomic-feel-commit-unavailable #(assoc % :execute-fn (fn [& _] {:verdict :held :held/reason :index-not-empty}))]
            [:execution-error #(assoc % :refresh-fn (fn [& _] (throw (Exception. "git unavailable"))))]]]
     (let [records (atom []) executed (atom [])]
       (consume (consumer/proposal-run state now) (transform (options records executed)))
@@ -131,4 +132,25 @@
     (consume (consumer/proposal-run state now) opts)
     (is (= [:inbox-zero/commit-intent :inbox-zero/refusal] (mapv :record/type @records)))
     (is (= :in-flight (:refusal/reason (last @records))))
+    (is (empty? @executed))))
+
+(deftest caller-options-cannot-certify-atomicity
+  (doseq [opts [{} {:atomic? true} {:guard-verified? true}
+                {:execute-fn (fn [& _] (throw (Exception. "must not execute")))}]]
+    (let [result (consumer/atomic-commit! {:include [{:path "README.md"}]} opts)]
+      (is (= :held (:verdict result)))
+      (is (= :atomic-feel-commit-unavailable (:held/reason result)))
+      (is (nil? (:commit/sha result))))))
+
+(deftest edit-after-final-snapshot-cannot-reach-executor
+  ;; Negative control for the original check/use gap: return an idle snapshot,
+  ;; then mark the repo busy before control reaches the commit boundary.
+  (let [records (atom []) executed (atom []) scans (atom 0) busy? (atom false)
+        opts (assoc (options records executed)
+                    :refresh-fn (fn [s _ _]
+                                  (when (= 3 (swap! scans inc)) (reset! busy? true))
+                                  {:state s :observations []}))]
+    (consume (consumer/proposal-run state now) opts)
+    (is @busy?)
+    (is (= :atomic-feel-commit-unavailable (:refusal/reason (last @records))))
     (is (empty? @executed))))
