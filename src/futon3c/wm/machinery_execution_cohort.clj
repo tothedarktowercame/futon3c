@@ -12,7 +12,7 @@
   "/home/joe/code/futon3c/holes/labs/wm-contract/cohort-execution-binding.edn")
 
 (def binding-sha256
-  "daa82e437ede92017b6a232201ebdf7e620a36f9b67d675d23f8d88058aa5d72")
+  "d0ffe48e24abfe6835f8413b2ea956db99d48269fdd33bf69311713f833866c4")
 
 (def ^:dynamic *read-binding-text* #(slurp binding-path))
 
