@@ -1,0 +1,18 @@
+{:schema :wm/execution-receipts-v1
+ :tree-sha "cde07d04898916c44e319ec2d8c25a6787207307"
+ :at "2026-09-14"
+ :attempts
+ [{:command "clj-kondo --lint src/futon3c/wm/r10_commission.clj test/futon3c/wm/r10_commission_test.clj"
+   :exit 2 :errors 0 :warnings 1 :output "clj-kondo.out"
+   :finding "unused clojure.java.io require; corrected by follow-up cde07d04"}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el src/futon3c/wm/r10_commission.clj test/futon3c/wm/r10_commission_test.clj"
+   :exit 0 :output "check-parens.out"}
+  {:command "clojure -M:test -n futon3c.wm.r10-commission-test"
+   :exit 0 :tests 3 :assertions 15 :output "tests.out"}]
+ :final
+ [{:command "clj-kondo --lint src/futon3c/wm/r10_commission.clj test/futon3c/wm/r10_commission_test.clj"
+   :exit 0 :errors 0 :warnings 0 :output "clj-kondo-final.out"}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el src/futon3c/wm/r10_commission.clj test/futon3c/wm/r10_commission_test.clj"
+   :exit 0 :output "check-parens-final.out"}
+  {:command "clojure -M:test -n futon3c.wm.r10-commission-test"
+   :exit 0 :tests 3 :assertions 15 :output "tests-final.out"}]}
