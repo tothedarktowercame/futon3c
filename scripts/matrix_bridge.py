@@ -149,6 +149,29 @@ class MatrixBot(IRCBot):
                 if attempt:
                     raise
 
+    def _routable_text(self, content, text):
+        """Body as the inherited IRC mention rules should see it.
+
+        A reply's quoted fallback ("> <@rob:...> @codex hello") repeats someone
+        else's mention, so it is dropped. This bot's own MXID is shortened to
+        @nick, so the inherited strip leaves the prompt, not the server name.
+        A same-localpart user on another server ("@codex:elsewhere") loses its
+        "@": the inherited rule ends a name at ":" and would otherwise count it
+        as a mention of this bot. Transcript evidence keeps the original body.
+        """
+        relates = content.get("m.relates_to")
+        if isinstance(relates, dict) and "m.in_reply_to" in relates:
+            lines = text.split("\n")
+            quoted = 0
+            while quoted < len(lines) and lines[quoted].startswith(">"):
+                quoted += 1
+            if quoted:
+                text = "\n".join(lines[quoted:]).lstrip("\n")
+        if self.mxid:
+            text = text.replace(self.mxid, "@" + self.nick)
+        return re.sub(r"@(" + re.escape(self.nick) + r":\S+)", r"\1", text,
+                      flags=re.IGNORECASE)
+
     def process_sync(self, batch):
         token = batch.get("next_batch")
         if not isinstance(token, str) or not token:
@@ -196,7 +219,8 @@ class MatrixBot(IRCBot):
                 self._reply_channel = room
                 self._set_transport_context({"room": room, "event_id": event_id})
                 try:
-                    self._dispatch_message(sender, text, room)
+                    self._dispatch_message(
+                        sender, self._routable_text(event.get("content", {}), text), room)
                 finally:
                     self._set_transport_context(None)
         self._state["next_batch"] = token

@@ -20,6 +20,20 @@ Whoami verifies that the configured nick is the token account's localpart.
 Configured-room members from any server can invoke; there is no sender allowlist.
 Only listed invitations are accepted. Encryption is unsupported.
 
+Before the inherited IRC mention rules run, `_routable_text` adjusts the body
+(the transcript evidence keeps the original):
+- It drops a reply's quoted fallback (`> <@rob:…> …`), which ement sends.
+  Otherwise, replying to a message that mentioned `@codex` invokes codex again.
+- It shortens this bot's own MXID to `@nick`. Otherwise,
+  `@codex:matrix.paragogy.net: please …` reaches the agent as
+  `matrix.paragogy.net: please …`.
+- It removes the `@` from a same-named user on another server
+  (`@codex:elsewhere`). The inherited rule ends a name at `:`, so it would
+  otherwise invoke this bot.
+Mentions that exist only in `m.mentions` (an Element autocomplete pill in
+mid-sentence) do not trigger, just as bare `codex` in mid-sentence does not
+trigger on IRC.
+
 The initial sync seeds the cursor and seen IDs without invoking history. Later
 batches reserve event IDs in an atomically replaced/fsynced state file before
 calling shared routing. The cursor advances after processing the batch.
@@ -54,6 +68,7 @@ delivery receipts use the Matrix surface and `INVOKE_BASE`.
 
 - `python3 -m py_compile scripts/matrix_bridge.py scripts/ngircd_bridge.py`: pass.
 - `python3 test/matrix_bridge_test.py`: **14/14 pass**, stubbed HTTP and Agency.
+  Review (claude-17) added two tests for `_routable_text`: **16/16 pass**.
 - `python3 test/ngircd_bridge_windows_test.py`: **1/1 pass**.
 - `scripts/test_ngircd_bridge_roster.py`: **6/6 pass**, invoked using the stdlib
   runner below (running this file directly does not discover its functions).

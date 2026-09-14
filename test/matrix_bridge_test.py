@@ -231,6 +231,30 @@ class MatrixTest(unittest.TestCase):
         self.evidence.assert_any_call('matrix', ROOM, bot.mxid, 'answer',
                                       'outbound', via_nick='codex')
 
+    def test_reply_fallback_and_foreign_localpart_do_not_mention(self):
+        bot = self.bot()
+        joe = '@joe:matrix.paragogy.net'
+        quoted = event('$q', '> <@rob:remote.net> @codex hello\n\nthanks rob', sender=joe)
+        quoted['content']['m.relates_to'] = {'m.in_reply_to': {'event_id': '$one'}}
+        foreign = event('$f', '@codex:into-the-matrix.my-familiar.com please look')
+        bot.process_sync(batch('b1', [quoted, foreign]))
+        self.drain(bot)
+        self.assertFalse(self.http.invokes)
+        asked = event('$r', '> <@rob:remote.net> hello\n\n@codex what do you think?', sender=joe)
+        asked['content']['m.relates_to'] = {'m.in_reply_to': {'event_id': '$one'}}
+        bot.process_sync(batch('b2', [asked]))
+        self.drain(bot)
+        self.assertEqual(1, len(self.http.invokes))
+        self.assertTrue(self.http.invokes[0]['prompt'].endswith('what do you think?'))
+        self.assertNotIn('> <@rob:remote.net>', self.http.invokes[0]['prompt'])
+
+    def test_full_mxid_mention_leaves_clean_prompt(self):
+        bot = self.bot()
+        bot.process_sync(batch('b1', [event('$m', '@codex:matrix.paragogy.net: please summarise')]))
+        self.drain(bot)
+        self.assertEqual(1, len(self.http.invokes))
+        self.assertTrue(self.http.invokes[0]['prompt'].endswith(SENDER + ': please summarise'))
+
     def test_logic_is_inherited(self):
         for name in ['_is_mention', '_strip_mention', '_handle_mention', '_handle_ungated',
                      '_handle_command', '_enqueue_invoke', '_invoke_worker_loop', '_announce_invoke',
