@@ -1,0 +1,13 @@
+{:schema :wm/execution-receipts-v1
+ :tree-sha "f5b4ceeea850e51aa959dcdb7af4716de0e87531"
+ :at "2026-09-14"
+ :authority-sha256 "7c5018493c8b10987277231c15c67b9fc9a2102e2c358c47bd688a2a303217df"
+ :gates
+ [{:command "clj-kondo --lint src/futon3c/wm/r10_commission_binding.clj test/futon3c/wm/r10_commission_binding_test.clj"
+   :exit 0 :errors 0 :warnings 0 :output "clj-kondo.out"}
+  {:command "emacs -Q --batch -l /home/joe/code/futon4/dev/check-parens.el holes/labs/wm-contract/r10-click-commission-2026-09-14-01.edn src/futon3c/wm/r10_commission_binding.clj test/futon3c/wm/r10_commission_binding_test.clj"
+   :exit 0 :output "check-parens.out"}
+  {:command "clojure -M:test -n futon3c.wm.r10-commission-binding-test"
+   :exit 0 :tests 2 :assertions 5 :output "tests.out"}]
+ :claims {:reservation-root-created? false
+          :serving-jvm-contacted? false}}
