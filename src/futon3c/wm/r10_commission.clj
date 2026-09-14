@@ -108,7 +108,14 @@
   (let [path (reservation-path reservation-root commission-id)]
     (when-not (Files/exists path (make-array LinkOption 0))
       (refuse! :r10/reservation-missing {:commission/id commission-id}))
-    (let [record (strict-edn (slurp (.toFile path)))
+    (let [record (try
+                   (strict-edn (slurp (.toFile path)))
+                   (catch clojure.lang.ExceptionInfo e
+                     (if (= :r10/authority-invalid (:error/code (ex-data e)))
+                       (refuse! :r10/reservation-invalid
+                                {:commission/id commission-id
+                                 :reason :malformed-reservation})
+                       (throw e))))
           state (:state record)]
       (when-not (and (= reservation-schema (:schema record))
                      (= commission-id (:commission/id record))

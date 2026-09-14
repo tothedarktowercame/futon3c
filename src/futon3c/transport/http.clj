@@ -8675,9 +8675,15 @@
                   (throw (ex-info "RUN4 attempt admission refused" admission)))]
           (if (and admission (not (:new? admission)))
             (json-response 200 {:run4/admission (:admission admission)})
-            (let [click! (requiring-resolve 'futon3c.wm.runner-service/click!)
+            (let [commissioned? (true? (:r10-commissioned payload))
+                  click! (requiring-resolve
+                          (if commissioned?
+                            'futon3c.wm.r10-click-adapter/commissioned-click!
+                            'futon3c.wm.runner-service/click!))
                   opts (merge legacy-opts (:opts prepared))
-                  result (click! opts)
+                  result (if commissioned?
+                           (click! {:config config})
+                           (click! opts))
                   admission-status
                   (when admission
                     (run4-admission/record-click!
