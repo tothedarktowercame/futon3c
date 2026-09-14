@@ -7,7 +7,8 @@ No homeserver, account, service or deployment was used for qualification.
 Configuration:
 
 - `MATRIX_HOMESERVER_URL`: homeserver base URL (production should use HTTPS).
-- `MATRIX_ROOMS`: comma-separated opaque `!room:server` IDs, never aliases.
+- `MATRIX_ROOMS`: comma-separated opaque room IDs, never aliases: `!room:server`,
+  or `!room` for room version 12, whose IDs carry no server part.
 - `MATRIX_TOKEN_DIR`: one `<nick>.token` file per bot. Tokens are read from files
   and sent only in Authorization headers; HTTP redirects are refused.
 - `MATRIX_STATE_DIR`: defaults to `~/.local/state/futon-matrix`. One process owns

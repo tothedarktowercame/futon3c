@@ -39,7 +39,10 @@ class MatrixBot(IRCBot):
                  handle_commands=False, command_owner_agent_map=None):
         if not re.fullmatch(r"[A-Za-z0-9._=-]+", nick):
             raise ValueError("Unsafe Matrix localpart for token/state filename")
-        if not rooms or any(not re.fullmatch(r"![^\s:]+:[^\s]+", r) for r in rooms):
+        # Room version 12 IDs carry no server part: the Private Federation Proof
+        # room is !_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw (2026-09-14).
+        # The "!" sigil is what separates an ID from a "#alias:server".
+        if not rooms or any(not re.fullmatch(r"![^\s:]+(?::[^\s]+)?", r) for r in rooms):
             raise ValueError("MATRIX_ROOMS must contain opaque room IDs, not aliases")
         parsed = urllib.parse.urlsplit(homeserver)
         if parsed.scheme not in ("https", "http") or not parsed.netloc or parsed.username or parsed.password:

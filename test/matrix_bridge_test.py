@@ -261,6 +261,21 @@ class MatrixTest(unittest.TestCase):
                      '_invoke_agent', '_cmd_gate', '_cmd_ungate', '_cmd_mc']:
             self.assertIs(getattr(m.MatrixBot, name), getattr(m.IRCBot, name))
 
+    def test_room_version_12_id_without_server_part(self):
+        # fiona's Private Federation Proof room (2026-09-14): v12 IDs have no ":server".
+        v12 = '!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw'
+        bot = m.MatrixBot('codex', 'codex-1', [v12], 'https://offline.invalid',
+                          self.root, self.root / 'state', handle_commands=True)
+        self.bots.append(bot)
+        bot.connect()
+        bot.process_sync(batch('baseline', room=v12, invites=[v12]))
+        self.assertTrue(any(unquote(urlsplit(c.full_url).path).endswith('/join/' + v12)
+                            for c in self.http.calls))
+        bot.process_sync(batch('b1', [event('$v12')], room=v12))
+        self.drain(bot)
+        self.assertEqual(1, len(self.http.invokes))
+        self.assertTrue(any(p.startswith('/rooms/' + v12 + '/send/') for p in self.http.posts))
+
     def test_invalid_config_and_state_refused(self):
         for nick, rooms in [('../codex', [ROOM]), ('codex', ['#alias:server'])]:
             with self.assertRaises(ValueError):
