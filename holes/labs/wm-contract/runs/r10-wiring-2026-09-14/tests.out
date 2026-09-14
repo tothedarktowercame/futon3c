@@ -1,0 +1,71 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.r10-click-adapter-test
+
+FAIL in (recording-failure-is-after-click-and-leaves-dispatched) (r10_click_adapter_test.clj:99)
+expected: (= :r10/recording-failed (code-of (fn* [] (invoke c root refusing {:running? false} click))))
+  actual: (not (= :r10/recording-failed :r10/unlinked-dispatch-receipt))
+
+ERROR in (commissioned-click-happy-and-duplicate) (coordination_ledger.clj:86)
+Uncaught exception, not in assertion.
+expected: nil
+  actual: clojure.lang.ExceptionInfo: R10 scheduled dispatch receipt must identify its dispatch and commission
+{:error/type :process-assurance-refusal, :error/code :r10/unlinked-dispatch-receipt, :node :R10, :commission/id "adapter-happy", :receipt {:ok true, :commission {:schema :wm/r10-click-commission-v1, :commission/id "adapter-happy", :commission/issuer "test-operator", :commission/source-pin "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", :commission/scope {:node :R10, :test-only true}, :authority/path "/tmp/r10-adapter8042532357369338053/adapter-happy.authority.edn", :authority/sha256 "d041925ba6636b137a09d50d7f5dd5f761da3e9686674ccce45d45fcd1ad0aee", :node :R10}, :receipt {:node :R10, :commission/id "adapter-happy", :dispatch/id "click-happy", :click/id "click-happy", :click/result {:click-id "click-happy", :started-at "now"}}}}
+ at futon3c.social.coordination_ledger$refuse_scheduled_dispatch_BANG_.invokeStatic (coordination_ledger.clj:86)
+    futon3c.social.coordination_ledger$refuse_scheduled_dispatch_BANG_.invoke (coordination_ledger.clj:84)
+    futon3c.social.coordination_ledger$run_scheduled_dispatch_BANG_.invokeStatic (coordination_ledger.clj:110)
+    futon3c.social.coordination_ledger$run_scheduled_dispatch_BANG_.invoke (coordination_ledger.clj:92)
+    futon3c.wm.r10_click_adapter$commissioned_click_BANG_.invokeStatic (r10_click_adapter.clj:32)
+    futon3c.wm.r10_click_adapter$commissioned_click_BANG_.invoke (r10_click_adapter.clj:20)
+    futon3c.wm.r10_click_adapter_test$invoke$fn__12257.invoke (r10_click_adapter_test.clj:29)
+    clojure.core$with_redefs_fn.invokeStatic (core.clj:7706)
+    clojure.core$with_redefs_fn.invoke (core.clj:7690)
+    futon3c.wm.r10_click_adapter_test$invoke.invokeStatic (r10_click_adapter_test.clj:26)
+    futon3c.wm.r10_click_adapter_test$invoke.invoke (r10_click_adapter_test.clj:25)
+    futon3c.wm.r10_click_adapter_test$fn__12261.invokeStatic (r10_click_adapter_test.clj:42)
+    futon3c.wm.r10_click_adapter_test/fn (r10_click_adapter_test.clj:35)
+    clojure.test$test_var$fn__9894.invoke (test.clj:717)
+    clojure.test$test_var.invokeStatic (test.clj:717)
+    clojure.test$test_var.invoke (test.clj:708)
+    clojure.test$test_vars$fn__9920$fn__9925.invoke (test.clj:735)
+    clojure.test$default_fixture.invokeStatic (test.clj:687)
+    clojure.test$default_fixture.invoke (test.clj:683)
+    clojure.test$test_vars$fn__9920.invoke (test.clj:735)
+    clojure.test$default_fixture.invokeStatic (test.clj:687)
+    clojure.test$default_fixture.invoke (test.clj:683)
+    clojure.test$test_vars.invokeStatic (test.clj:731)
+    clojure.test$test_all_vars.invokeStatic (test.clj:737)
+    clojure.test$test_ns.invokeStatic (test.clj:758)
+    clojure.test$test_ns.invoke (test.clj:743)
+    clojure.core$map$fn__5954.invoke (core.clj:2772)
+    clojure.lang.LazySeq.force (LazySeq.java:50)
+    clojure.lang.LazySeq.realize (LazySeq.java:89)
+    clojure.lang.LazySeq.seq (LazySeq.java:106)
+    clojure.lang.Cons.next (Cons.java:41)
+    clojure.lang.RT.boundedLength (RT.java:1810)
+    clojure.lang.RestFn.applyTo (RestFn.java:133)
+    clojure.core$apply.invokeStatic (core.clj:669)
+    clojure.test$run_tests.invokeStatic (test.clj:768)
+    clojure.test$run_tests.doInvoke (test.clj:768)
+    clojure.lang.RestFn.applyTo (RestFn.java:140)
+    clojure.core$apply.invokeStatic (core.clj:667)
+    clojure.core$apply.invoke (core.clj:662)
+    cognitect.test_runner$test.invokeStatic (test_runner.clj:74)
+    cognitect.test_runner$test.invoke (test_runner.clj:62)
+    cognitect.test_runner$_main.invokeStatic (test_runner.clj:127)
+    cognitect.test_runner$_main.doInvoke (test_runner.clj:115)
+    clojure.lang.RestFn.applyTo (RestFn.java:140)
+    clojure.lang.Var.applyTo (Var.java:707)
+    clojure.core$apply.invokeStatic (core.clj:667)
+    clojure.main$main_opt.invokeStatic (main.clj:515)
+    clojure.main$main_opt.invoke (main.clj:511)
+    clojure.main$main.invokeStatic (main.clj:665)
+    clojure.main$main.doInvoke (main.clj:617)
+    clojure.lang.RestFn.applyTo (RestFn.java:140)
+    clojure.lang.Var.applyTo (Var.java:707)
+    clojure.main.main (main.java:40)
+
+Ran 5 tests containing 22 assertions.
+1 failures, 1 errors.

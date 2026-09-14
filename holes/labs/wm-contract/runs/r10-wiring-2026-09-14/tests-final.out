@@ -1,0 +1,9 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.r10-click-adapter-test
+[boundary] I-single-boundary VIOLATION: append returned not-ok — no
+
+Ran 5 tests containing 28 assertions.
+0 failures, 0 errors.
