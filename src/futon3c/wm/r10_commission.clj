@@ -4,7 +4,6 @@
   Every authority path, digest, and reservation root is supplied explicitly.
   This namespace has no production binding and does not call the WM runner."
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
             [clojure.string :as str])
   (:import (java.io PushbackReader StringReader)
            (java.math BigInteger)
