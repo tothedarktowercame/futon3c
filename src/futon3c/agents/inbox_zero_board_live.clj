@@ -63,6 +63,18 @@
        (sort-by (juxt :repo/root :worktree/id :path))
        vec))
 
+(def batch-dirty-file-threshold
+  "Joe's declared batch size, futon2@6ae963d4. Crossing it never dispatches."
+  10)
+
+(defn batch-pressure [records]
+  (let [paths (remove #(ignored-by-design? (:path %)) (dirty-paths records))
+        n (count paths)]
+    {:dirty-files n :threshold batch-dirty-file-threshold
+     :threshold-reached? (>= n batch-dirty-file-threshold)
+     :dispatch-required? true
+     :by-repo (into (sorted-map) (frequencies (map :repo/root paths)))}))
+
 (defn sweep-from-records
   "Aggregate current dirty histories, never historical dirt already cleaned.
   This board measures the dirty-age clause only, not all five inbox clauses."
@@ -110,7 +122,8 @@
                  (sweep-from-records records now)
                  (in-flight-from-records records now)
                  false)]
-     (assoc (board/run packet effect-handler) :inputs packet))))
+     (assoc (board/run packet effect-handler) :inputs packet
+            :batch-pressure (batch-pressure records)))))
 
 (defn -main
   [& [state-path]]
@@ -118,4 +131,5 @@
                            (str (System/getProperty "user.home")
                                 "/code/storage/inbox-zero/state.edn")))]
     (prn {:end-reason (:end-reason run)
-          :certificate (:certificate run)})))
+          :certificate (:certificate run)
+          :batch-pressure (:batch-pressure run)})))
