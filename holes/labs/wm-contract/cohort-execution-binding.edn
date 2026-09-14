@@ -1,7 +1,7 @@
 {:schema :wm/server-owned-execution-cohort-v1
  :status :active
  :execution-cohort
- {:preregistration "/home/joe/code/futon2/holes/labs/M-aif-full-loop-53/cohort.edn"
-  :data-root "/home/joe/code/futon2/data/wm-full-loop-machinery-53"
-  :cohort-id :wm-contract-machinery-53-v1
-  :sha256 "1c05f6b85c45107173219e17ddde77828977ab1e3ff5079ef793f1cf835d56ea"}}
+ {:preregistration "/home/joe/code/futon2/holes/labs/M-aif-full-loop-54/cohort.edn"
+  :data-root "/home/joe/code/futon2/data/wm-full-loop-machinery-54"
+  :cohort-id :wm-contract-machinery-54-v1
+  :sha256 "035f21134ac4b8369400313c43b81ed79665fb58edffc250e40a9124e2e7556b"}}
