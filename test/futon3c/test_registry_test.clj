@@ -171,3 +171,27 @@
 
 (deftest canonical-record-hash-is-order-independent
   (is (= (registry/sha {:a [1 {:b 2}] :c 3}) (registry/sha (array-map :c 3 :a [1 {:b 2}])))))
+
+(deftest environment-refusal-names-the-differing-fields
+  (fixture
+   (fn [{:keys [backend env options]}]
+     (let [run (registry/register-run! backend options)]
+       (reset! env {:sha256 "different" :jvm {:version "other"}})
+       (let [r (registry/check-record! backend (check-options run))]
+         (is (= "env" (get-in r [:details :expected-only :sha256])))
+         (is (= "other" (get-in r [:details :observed-only :jvm :version])))
+         (is (= :reconcile-test-environment (get-in r [:details :next-action]))))))))
+
+(deftest declared-locale-is-applied-to-the-actual-test-process
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [execute registry/run-process! observed (atom nil)
+           locale {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}
+           run (with-redefs [registry/run-process! (fn [& args]
+                                                   (reset! observed (select-keys (registry/effective-environment) (keys locale)))
+                                                   (apply execute args))]
+                 (registry/register-run! backend (assoc options :test-environment locale)))]
+       (is (= locale @observed))
+       (is (= locale (get-in run [:payload :scope :test-environment])))
+       (is (thrown? clojure.lang.ExceptionInfo
+                    (registry/test-environment {:test-environment {"UNDECLARED" "value"}})))))))

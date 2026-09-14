@@ -97,3 +97,25 @@ the broad stack classpath currently has no registry warrant. Pure renderer
 registration and independent review receipts are recorded below after commissioning.
 All changed Clojure/EDN passes clj-kondo 0/0 and the workspace paren gate. No shared server restart or live-load is
 needed: the CLI uses the existing evidence API.
+
+### Independent refusal and correction
+
+Zai-7's first independent review refused before selective execution. Its diagnostic
+isolated `LC_ALL`: the author shell set it to `C.UTF-8`, the reviewer shell left it
+unset. The initial hypothesis that classpath resolution used the verifier's alias
+was disproved: dependencies and toolchain matched. The empty mismatch details
+were a real implementation defect.
+
+The corrected check includes expected/observed differing fields and a next action.
+Locale remains a test input, not a waived comparison. The demo explicitly declares
+`:test-environment {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}`; both the test
+process and fingerprint probes apply these recorded values. Other environmental
+differences still refuse. Only these nonsecret locale keys support declared values.
+
+JVM metadata now comes from a subprocess resolved with the recorded test alias.
+A dedicated last alias sets a metadata-only main form, and its resolved classpath
+must equal the test classpath. This preserves the test's JVM options without
+inheriting the verifier JVM's properties. An earlier `-A ... -e` probe incorrectly
+inherited the test runner main options and failed loading namespaces before any
+test assertions ran (`/tmp/clojure-17780542405487325694.edn`). It is not counted as
+validation; the corrected probe explicitly replaces the main entrypoint.

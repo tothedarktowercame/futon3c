@@ -3,6 +3,7 @@
   -> review hash chain, not a second ledger. SHA integrity is not authentication
   or a proof of test adequacy. Missing warrants never prohibit running tests."
   (:require [clojure.edn :as edn]
+            [clojure.data :as data]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -35,8 +36,17 @@
       (loop [] (let [n (.read in buffer)]
                  (when (pos? n) (.update md buffer 0 n) (recur)))))
     (format "%064x" (BigInteger. 1 (.digest md)))))
+(def ^:dynamic *test-environment* {})
+(defn test-environment [options]
+  (let [env (:test-environment options {})]
+    (when-not (and (map? env) (every? #{"LC_ALL" "LANG" "TZ"} (keys env))
+                   (every? nonblank? (vals env)))
+      (fail! :invalid-test-environment {:allowed-keys ["LC_ALL" "LANG" "TZ"]}))
+    env))
+(defn effective-environment [] (merge (into {} (System/getenv)) *test-environment*))
+
 (defn command! [root argv]
-  (let [r (apply shell/sh (concat argv [:dir root]))]
+  (let [r (apply shell/sh (concat argv [:dir root :env (effective-environment)]))]
     (when-not (zero? (:exit r)) (fail! :command-failed {:command argv :result r}))
     (str/trim (:out r))))
 
@@ -78,7 +88,7 @@
                (for [child files]
                  [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)])))))
 
-(defn fingerprint
+(defn- fingerprint*
   "Resolve the test command's actual Clojure classpath and hash JAR bytes and
   directory contents, including local dependencies. No version-name-only pins.
   Other runners need an explicit adapter; they are not silently fingerprinted."
@@ -86,7 +96,7 @@
   (when-not (and (= "clojure" (first command))
                  (re-matches #"-M(?::[A-Za-z0-9_+.-]+)+" (second command)))
     (fail! :unsupported-runner {:command command}))
-  (let [alias (str/replace-first (second command) "-M" "-A")
+  (let [alias (second command)
         cp (command! repo-root ["clojure" "-Spath" alias])
         paths (str/split cp (re-pattern (java.util.regex.Pattern/quote java.io.File/pathSeparator)))
         deps (mapv (fn [p]
@@ -96,22 +106,31 @@
                                   (directory-sha f)
                                   (file-sha f))})) paths)
         executable (command! repo-root ["which" "clojure"])
-        java (str (System/getProperty "java.home") "/bin/java")
+        probe-form "(prn (select-keys (into {} (System/getProperties)) [\"java.home\" \"java.runtime.version\" \"java.vendor\" \"os.name\" \"os.arch\" \"os.version\" \"file.encoding\" \"user.language\" \"user.country\"]))"
+        probe-config (pr-str {:aliases {:futon3c.test-registry/jvm-probe {:main-opts ["-e" probe-form]}}})
+        probe-alias (str alias ":futon3c.test-registry/jvm-probe")
+        probe-cp (command! repo-root ["clojure" "-Sdeps" probe-config "-Spath" probe-alias])
+        _ (when-not (= cp probe-cp) (fail! :probe-classpath-mismatch {:command command}))
+        jvm-properties (edn/read-string (command! repo-root ["clojure" "-Sdeps" probe-config probe-alias]))
+        java (str (get jvm-properties "java.home") "/bin/java")
         description (command! repo-root ["clojure" "-Sdescribe"])
         config-files (:config-files (edn/read-string description))
         parts {:toolchain {:clojure description :alias alias
                            :config-hashes (into (sorted-map) (for [p config-files] [p (file-sha (if (.isAbsolute (io/file p)) p (io/file repo-root p)))]))
                            :launcher-sha (file-sha executable)}
-               :jvm {:version (System/getProperty "java.runtime.version")
-                     :vendor (System/getProperty "java.vendor")
-                     :os (select-keys (into {} (System/getProperties)) ["os.name" "os.arch" "os.version" "file.encoding" "user.language" "user.country"])
+               :jvm {:version (get jvm-properties "java.runtime.version")
+                     :vendor (get jvm-properties "java.vendor")
+                     :os (select-keys jvm-properties ["os.name" "os.arch" "os.version" "file.encoding" "user.language" "user.country"])
                      :java-sha (file-sha java)
-                     :modules-sha (file-sha (str (System/getProperty "java.home") "/lib/modules"))}
+                     :modules-sha (file-sha (str (get jvm-properties "java.home") "/lib/modules"))}
                :dependencies deps
                :environment (into (sorted-map)
-                                  (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS" "CLJ_CONFIG" "CLJ_JVM_OPTS" "LANG" "LC_ALL" "TZ"]]
-                                    [key (if-let [value (System/getenv key)] (sha value) (none :unset))]))}]
+                                  (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS" "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"]]
+                                    [key (if-let [value (get (effective-environment) key)] (sha value) (none :unset))]))}]
     (assoc parts :sha256 (sha parts))))
+
+(defn fingerprint [options]
+  (binding [*test-environment* (test-environment options)] (fingerprint* options)))
 
 (defn- decode [entry]
   (let [body (:evidence/body entry) text (:payload-edn body)]
@@ -179,6 +198,7 @@
 (defn run-process! [root command log-file]
   (let [builder (ProcessBuilder. ^java.util.List command)
         _ (.directory builder (io/file root))
+        _ (.putAll (.environment builder) *test-environment*)
         _ (.redirectErrorStream builder true)
         _ (.redirectOutput builder (io/file log-file))
         start (System/nanoTime) process (.start builder) exit (.waitFor process)]
@@ -207,14 +227,15 @@
         id (str (UUID/randomUUID)) start (str (Instant/now))
         code (capture-code options) env (fingerprint options)
         common (merge code {:run/id id :author author :ran-at start :repo/root repo-root
-                            :scope (select-keys options [:code-paths :test-paths])
+                            :scope (select-keys options [:code-paths :test-paths :test-environment])
                             :command command :env-fingerprint env
                             :origin (:origin options "agency-local")})
         intent (append-record! backend (assoc common :kind :intent) (:previous-id options))
         _ (.mkdirs (io/file artifact-dir))
         log-file (io/file artifact-dir (str id ".log"))
         _ (when-not (.createNewFile log-file) (fail! :artifact-already-exists {:path (str log-file)}))
-        results (try (run-process! repo-root command log-file)
+        results (try (binding [*test-environment* (test-environment options)]
+                       (run-process! repo-root command log-file))
                      (catch Exception e {:exit (none :process-failed) :tests (none :process-failed)
                                          :assertions (none :process-failed) :failures (none :process-failed)
                                          :errors (none :process-failed) :duration-ms (none :process-failed)
@@ -259,7 +280,10 @@
       (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
         (fail! :stale-sha {:current current}))
       (when (seq uncovered) (fail! :diff-outside-tested-scope {:paths (vec uncovered)}))
-      (when-not (= env (:env-fingerprint run)) (fail! :environment-mismatch {}))
+      (when-not (= env (:env-fingerprint run))
+        (let [[expected observed] (data/diff (:env-fingerprint run) env)]
+          (fail! :environment-mismatch {:expected-only expected :observed-only observed
+                                        :next-action :reconcile-test-environment})))
       (when-not (and (nonblank? (:path log)) (= (:sha256 log) (file-sha (:path log))))
         (fail! :log-mismatch {}))
       (when-not (= (:results run) (parse-results (get-in run [:results :exit]) (slurp (:path log))

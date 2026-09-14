@@ -4,5 +4,6 @@
  :code-paths ["src/futon3c/flight/pretty_print.clj" "data/flight-pretty-print-mapping.edn"]
  :test-paths ["test/futon3c/flight/pretty_print_test.clj"]
  :command ["clojure" "-M:test-pure" "-n" "futon3c.flight.pretty-print-test"]
+ :test-environment {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}
  :author "codex-27"
  :artifact-dir "/home/joe/code/storage/test-registry/artifacts"}
