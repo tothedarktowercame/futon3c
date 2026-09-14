@@ -1,0 +1,7 @@
+{:schema :wm/r10-click-commission-v1
+ :commission/id "r10-click-commission-2026-09-14-01"
+ :commission/issuer "joe"
+ :commission/source-pin "0a89e1869d570cba8f5ba81abc9be61ced2a1a2c7ea577fd79fae0fd0612dc06"
+ :commission/scope {:node :R10
+                    :caller :wm/handle-wm-click-start
+                    :dispatch-count 1}}
