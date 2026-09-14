@@ -1,5 +1,9 @@
 # Operator batch preparation — execution stopped at the atomicity guard
 
+Historical checkpoint. Joe subsequently authorized a separate compensating mode;
+see `TN-inbox-zero-compensating-cycle-2026-09-14.md` for the live 4->3
+commit-and-push cycle. Strict atomic callers still refuse.
+
 Implemented against Joe's ruling in
 `futon2@6ae963d485ecb8565cbb86a54f70ec3ef53b92ae`,
 `holes/labs/wm-contract/NOTE-inbox-zero-aif.md`.
