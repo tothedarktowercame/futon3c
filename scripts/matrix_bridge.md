@@ -72,18 +72,22 @@ delivery receipts use the Matrix surface and `INVOKE_BASE`.
 - `python3 test/ngircd_bridge_windows_test.py`: **1/1 pass**.
 - `scripts/test_ngircd_bridge_roster.py`: **6/6 pass**, invoked using the stdlib
   runner below (running this file directly does not discover its functions).
-- `python3 test/ngircd_bridge_test.py`: **27/28 pass**; the same failure occurs
-  on unmodified HEAD `cd88864f` in an isolated temporary directory containing
-  HEAD's script and the unchanged test file.
+- `python3 test/ngircd_bridge_test.py`: **29/29 pass**; **20/20 consecutive
+  runs passed** (580 test executions).
 - `git diff --check`: pass.
 
-The existing failing test is `test_say_records_outbound_irc_evidence`, line 376.
-It constructs a bot with default `handle_commands=False` and expects two
-outbound evidence records. `_say` records only when `_handles_bare_command`
-authorizes the bot as channel owner, so it records zero. That single-writer
-rule predates this patch. Neither the rule nor the existing tests were changed.
-**The all-green acceptance gate is blocked** pending owner resolution of this
-contradictory fixture; this packet does not claim deployment readiness.
+The IRC tests now set the outbound-evidence fixture as channel owner and verify
+that a non-owner sends without recording evidence. The mention-formatting test
+stubs invoke preparation instead of querying live Agency state. No production
+bridge behavior changed.
+
+Module-wide guards reject `urlopen`, `socket.create_connection`, and raw socket
+construction. Cleanup also fails on attempted access swallowed by a bridge
+helper. Before adding the missing stub, the guard demonstration failed with:
+`Real network forbidden in test_codex_mention_does_not_emit_accepted_ack; stub the dependency`.
+That was the only test exposed by the guard. The demonstration's unstubbed call
+has been replaced by the explicit preparation stub; the guards remain enabled.
+All requested offline test gates now pass; this is not deployment qualification.
 
 The 14 Matrix tests cover all seven requested cases plus inherited-method
 identity, Matrix transcript recording, both Agency surface paths, independent queued reply associations,

@@ -2,6 +2,7 @@ import importlib.util
 import json
 import pathlib
 import unittest
+import traceback
 from unittest import mock
 
 
@@ -16,6 +17,33 @@ def _load_bridge_module():
 
 
 bridge = _load_bridge_module()
+
+
+def setUpModule():
+    # Guard every test, including helpers that swallow ordinary HTTP errors.
+    # Individual tests can override these boundaries with explicit fake responses.
+    attempts = []
+
+    def forbidden_network(*args, **kwargs):
+        caller = next((frame.name for frame in reversed(traceback.extract_stack())
+                       if frame.name.startswith("test_")), "background/helper")
+        message = f"Real network forbidden in {caller}; stub the dependency"
+        attempts.append(message)
+        raise AssertionError(message)
+
+    def check_no_attempts():
+        if attempts:
+            raise AssertionError("\n".join(attempts))
+
+    for owner, name in [(bridge.urllib.request, "urlopen"),
+                        (bridge.socket, "create_connection"),
+                        (bridge.socket, "socket")]:
+        guard = mock.patch.object(owner, name, side_effect=forbidden_network)
+        guard.start()
+        unittest.addModuleCleanup(guard.stop)
+    # Cleanup is LIFO: check while guards are still active, even if a bridge
+    # helper caught the assertion and returned a fallback response.
+    unittest.addModuleCleanup(check_no_attempts)
 
 
 class NgircdBridgeSanitizeTest(unittest.TestCase):
@@ -174,8 +202,11 @@ class NgircdBridgeCodexFormattingTest(unittest.TestCase):
             "ok": True,
             "job_id": "codex-job-1",
             "queued_jobs": 1,
-        }), mock.patch.object(bot, "_enqueue_invoke", return_value="codex-job-1"), mock.patch.object(bot, "_say") as say:
+        }), mock.patch.object(bot, "_enqueue_invoke", return_value="codex-job-1"), \
+             mock.patch.object(bot, "_prepare_agent_for_new_invoke", return_value={"ok": True}) as prepare, \
+             mock.patch.object(bot, "_say") as say:
             bot._handle_mention("joe", "@codex check the solver", channel="#math")
+        prepare.assert_called_once_with(action_label="queue")
         say.assert_not_called()
 
     def test_frontiermath_math_room_control_mentions_bypass_generic_bridge_queue(self):
@@ -367,7 +398,8 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
         self.assertEqual(["irc", "turn"], payload["tags"])
 
     def test_say_records_outbound_irc_evidence(self):
-        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw")
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw",
+                            handle_commands=True)
         with mock.patch.object(bot, "_send") as send, \
              mock.patch.object(bridge, "post_irc_evidence") as record, \
              mock.patch.object(bridge.time, "sleep"):
@@ -376,6 +408,16 @@ class NgircdBridgeSurfaceContractTest(unittest.TestCase):
         self.assertEqual(2, record.call_count)
         record.assert_any_call("#math", "codex", "line1", "outbound", via_nick="codex")
         record.assert_any_call("#math", "codex", "line2", "outbound", via_nick="codex")
+
+    def test_non_owner_say_does_not_record_outbound_irc_evidence(self):
+        bot = bridge.IRCBot("codex", "codex-1", "#math", "localhost", 6667, "pw",
+                            handle_commands=False)
+        with mock.patch.object(bot, "_send") as send, \
+             mock.patch.object(bridge, "post_irc_evidence") as record, \
+             mock.patch.object(bridge.time, "sleep"):
+            bot._say("line1\nline2", max_lines=0, channel="#math")
+        self.assertEqual(2, send.call_count)
+        record.assert_not_called()
 
     def test_local_math_mentor_nick_keeps_brief_surface_contract(self):
         bot = bridge.IRCBot("math-mentor", "claude-2", "#math", "localhost", 6667, "pw")
