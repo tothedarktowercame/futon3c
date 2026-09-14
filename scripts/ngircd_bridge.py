@@ -547,25 +547,25 @@ def selected_bot_nicks(roster_json, *, bots_from_roster=None,
     return static | desired_bot_nicks(roster_json, type_allowlist)
 
 
-def post_irc_evidence(channel, author, text, direction, via_nick=None):
-    """Record an IRC transcript turn without blocking the IRC loop."""
+def post_transport_evidence(transport, channel, author, text, direction, via_nick=None):
+    """Record a transcript turn without blocking the transport loop."""
     channel = (channel or IRC_CHANNEL).strip() or IRC_CHANNEL
     author = (author or "unknown").strip() or "unknown"
     text = text or ""
     if not text.strip():
         return
     payload = {
-        "subject": {"ref/type": "thread", "ref/id": f"irc/{channel}"},
+        "subject": {"ref/type": "thread", "ref/id": f"{transport}/{channel}"},
         "type": "forum-post",
         "claim-type": "observation",
         "author": author,
         "body": {
             "text": text,
-            "transport": "irc",
+            "transport": transport,
             "channel": channel,
             "direction": direction,
         },
-        "tags": ["irc", "turn"],
+        "tags": [transport, "turn"],
     }
     if via_nick:
         payload["body"]["via"] = via_nick
@@ -573,13 +573,19 @@ def post_irc_evidence(channel, author, text, direction, via_nick=None):
     def worker():
         result = api_post(EVIDENCE_URL, payload, timeout=2)
         if not result.get("ok"):
-            log("bridge", f"IRC evidence write failed: {result.get('err') or result.get('error')}")
+            log("bridge", f"{transport.upper()} evidence write failed: {result.get('err') or result.get('error')}")
 
-    threading.Thread(target=worker, name="irc-evidence", daemon=True).start()
+    threading.Thread(target=worker, name=f"{transport}-evidence", daemon=True).start()
 
+
+def post_irc_evidence(channel, author, text, direction, via_nick=None):
+    """Compatibility entry point for IRC transcript recording."""
+    return post_transport_evidence("irc", channel, author, text, direction, via_nick)
 
 class IRCBot:
     """Single IRC bot that connects as a nick and relays @mentions."""
+
+    transport_name = "irc"
 
     def __init__(self, nick, agent_id, channel, host, port, password,
                  handle_commands=False, channels=None,
@@ -1102,7 +1108,7 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "invoke-trace-id": trace_id,
-            "surface": "irc",
+            "surface": self.transport_name,
             "destination": f"{self._reply_channel or self.channel} as <{self.nick}>",
             "delivered": bool(delivered),
             "note": note,
@@ -1346,8 +1352,8 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "prompt": full_prompt,
-            "caller": f"irc:{sender}",
-            "surface": f"irc ({reply_channel or self.channel})",
+            "caller": f"{self.transport_name}:{sender}",
+            "surface": f"{self.transport_name} ({reply_channel or self.channel})",
             "job-id": requested_job_id,
         }
         if mission_id:
@@ -1383,6 +1389,7 @@ class IRCBot:
             "reply_channel": reply_channel or self.channel,
             "queued_at": time.time(),
             "multi_message": bool(multi_message),
+            "transport_context": self._transport_context(),
         }
         try:
             self._invoke_queue.put_nowait(task)
@@ -1404,6 +1411,7 @@ class IRCBot:
             reply_ch = task.get("reply_channel") or self.channel
             multi_message = bool(task.get("multi_message"))
             self._reply_channel = reply_ch  # for delivery receipt
+            self._set_transport_context(task.get("transport_context"))
             response = {"ok": False}
             invoke_meta = None
             try:
@@ -1456,6 +1464,7 @@ class IRCBot:
                 )
                 log(self.nick, f"Worker exception for {job_id}: {traceback.format_exc()}")
             finally:
+                self._set_transport_context(None)
                 self._invoke_queue.task_done()
 
     def _invoke_agent(self, prompt, caller, mission_id=None, job_id=None, reply_channel=None):
@@ -1472,8 +1481,8 @@ class IRCBot:
         payload = {
             "agent-id": self.agent_id,
             "prompt": prompt,
-            "caller": f"irc:{caller}",
-            "surface": f"irc ({active_channel})",
+            "caller": f"{self.transport_name}:{caller}",
+            "surface": f"{self.transport_name} ({active_channel})",
             "timeout-ms": INVOKE_TIMEOUT_SECONDS * 1000,
         }
         if job_id:
@@ -2321,6 +2330,31 @@ class IRCBot:
             msg += f" since={started.strip()}"
         self._say(msg)
 
+    def _transport_context(self):
+        return None
+
+    def _set_transport_context(self, context):
+        pass
+
+    def _start_message_handler(self, handler, sender, text, channel):
+        threading.Thread(target=handler, args=(sender, text, channel), daemon=True).start()
+
+    def _dispatch_message(self, sender, text, channel):
+        """Shared routing rules; transports admit senders/rooms before this point."""
+        if text.startswith("!") and self._handles_bare_command(channel):
+            handler = self._handle_command
+        elif self._is_mention(text):
+            if self._is_frontiermath_room_control_message(text, channel):
+                log(self.nick, f"Rerouting FrontierMath room control mention through ungated path from {sender} on {channel}: {text[:80]}")
+                handler = self._handle_ungated
+            else:
+                handler = self._handle_mention
+        elif self.nick.rstrip("_").lower() in ungated_nicks:
+            handler = self._handle_ungated
+        else:
+            return
+        self._start_message_handler(handler, sender, text, channel)
+
     def run(self):
         """Main loop: read IRC messages, handle PINGs, commands, mentions."""
         while not self._stop_event.is_set():
@@ -2375,45 +2409,7 @@ class IRCBot:
                             if self.handle_commands and self._handles_bare_command(target):
                                 post_irc_evidence(target, sender, text, "inbound", via_nick=self.nick)
 
-                            # ! commands - room owner when configured,
-                            # otherwise fallback to first bot.
-                            if text.startswith("!") and self._handles_bare_command(target):
-                                t = threading.Thread(
-                                    target=self._handle_command,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
-
-                            # @mentions — each bot handles its own
-                            elif self._is_mention(text):
-                                if self._is_frontiermath_room_control_message(text, target):
-                                    log(
-                                        self.nick,
-                                        f"Rerouting FrontierMath room control mention through ungated path from {sender} on {target}: {text[:80]}",
-                                    )
-                                    t = threading.Thread(
-                                        target=self._handle_ungated,
-                                        args=(sender, text, target),
-                                        daemon=True,
-                                    )
-                                    t.start()
-                                else:
-                                    t = threading.Thread(
-                                        target=self._handle_mention,
-                                        args=(sender, text, target),
-                                        daemon=True,
-                                    )
-                                    t.start()
-
-                            # Ungated mode — respond to all messages
-                            elif self.nick.rstrip("_").lower() in ungated_nicks:
-                                t = threading.Thread(
-                                    target=self._handle_ungated,
-                                    args=(sender, text, target),
-                                    daemon=True,
-                                )
-                                t.start()
+                            self._dispatch_message(sender, text, target)
 
             except Exception as e:
                 log(self.nick, f"Error: {e}")
