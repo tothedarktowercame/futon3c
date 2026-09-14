@@ -148,16 +148,41 @@ content. Chain verification rejects tampering, reordering, missing
 predecessors, duplicate IDs, cycles and cross-schema chains. Source: fiona's
 11-test prototype acceptance set, 22:50Z.
 
+**R17. The formal/implementation boundary is explicit.** The first envelope
+mission is proof-ready rather than proved: its acceptance contract states the
+laws and emits machine-readable conformance vectors (canonicalize is
+deterministic; decode(encode(x)) = x on the admitted domain; equivalent
+EDN/JSON inputs share a digest; append preserves chain validity for a fresh
+identity whose predecessor is the head; mutation/reorder/removal breaks
+verification; unknown revisions are preserved, not interpreted; redaction
+precedes persistence and identity). Lean follows as a child once v1 is frozen
+and both adapters pass the same vectors, starting pure (ReceiptIdentity,
+PredecessorChain, append, verify; determinism and append-preservation), with
+SHA-256 as an abstract digest under an explicit collision-resistance
+assumption. Conformance tests prove implementation behaviour, Lean proves the
+abstract laws, and neither is cited as evidence for the other. Source: fiona
+22:50:50Z. This is R7 applied to the receipt layer, and it bears on Rob's
+proof-laundering question (R4).
+
+**R18. References are portable identities, and a design exchange confers no
+authority over the other side's artifacts.** Artifact paths are repo-relative
+(`mfuton/holes/missions/…`) and resolve only against a mount declared for each
+host; machine-local paths such as `/home/rob/gh/mfuton` are not identities.
+Creating or changing an artifact runs on the side that owns the repository,
+through its governed procedure, when that side's operator asks; agreement in a
+shared room is design analysis, not authorisation. Source: fiona 22:52:26Z,
+after fucodex found the cited mfuton paths absent on Joe's machine
+(22:52:06Z). Related: R3.
+
 ## Open questions carried to the next pass
 
-- fucodex (22:50:16Z): should the first envelope mission include a small Lean
-  model of receipt identity and predecessor-chain properties, or should Lean
-  follow once the adapters and conformance vectors are stable? Outer-loop
-  note: chain validity (append-only, acyclic, predecessor present) does not
-  depend on the byte profile and could be stated now; identity determinism
-  depends on R15's profile and is better proved after the vectors are fixed.
+- Settled (fiona 22:50:50Z, now R17): Lean is a planned child after v1 is
+  frozen, not a closure requirement of the first envelope mission.
 - Who owns futon's side of R13/R15 (EDN adapter; lifting evidence and
   turn-queue records)?
+- Implementation surface (R18): the mfuton work needs a host with an mfuton
+  checkout, or Joe mounting one under a declared path. Until then fiona
+  answers bounded factual questions with repo-relative paths.
 - fuzai's three seams (22:39Z), still unanswered from the mfuton side except as
   covered by R13: turn/message envelope, agent identity and registry
   semantics, evidence and memory model.
@@ -170,3 +195,8 @@ predecessors, duplicate IDs, cycles and cross-schema chains. Source: fiona's
   Cursor: 1789426216261 (origin_server_ts of fucodex's Lean question).
   Drafted R1–R16. fiona's 22:47Z answers arrived during the pass and were
   folded into R2, R5 and R6 before the first posting.
+- Pass 1 addendum, 2026-09-14: read 3 more messages to 22:52:26Z. Cursor:
+  1789426346172. Added R17 and R18. Delta: the pass-1 outer-loop suggestion to
+  state chain validity in Lean now is superseded by fiona's R17 position
+  (state the laws in the acceptance contract now; prove them once v1 is
+  frozen).
