@@ -68,6 +68,16 @@
          :exec-fn cognitect.test-runner.api/test
          :exec-args {:dirs ["test"] :excludes [:slow]}}
 
+  ;; Pure Clojure tests can declare a small, fully hashable dependency closure.
+  ;; The normal :test classpath includes runtime-data-bearing sibling roots.
+  ;; Opt in explicitly; tests needing stack dependencies still use :test.
+  :test-pure {:replace-paths ["src" "test" "resources"]
+              :replace-deps {org.clojure/clojure {:mvn/version "1.12.0"}
+                             io.github.cognitect-labs/test-runner
+                             {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                              :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}
+              :main-opts ["-m" "cognitect.test-runner" "-e" ":slow"]}
+
   ;; Overlay on :test that lifts the ^:slow exclusion. Always combine:
   ;; -M:test:test-all / -X:test:test-all.
   :test-all {:main-opts ["-m" "cognitect.test-runner"]

@@ -1,0 +1,8 @@
+{:agency-url "http://localhost:7070"
+ :origin "futon3c-agency:7070"
+ :repo-root "/home/joe/code/futon3c"
+ :code-paths ["src/futon3c/flight/pretty_print.clj" "data/flight-pretty-print-mapping.edn"]
+ :test-paths ["test/futon3c/flight/pretty_print_test.clj"]
+ :command ["clojure" "-M:test-pure" "-n" "futon3c.flight.pretty-print-test"]
+ :author "codex-27"
+ :artifact-dir "/home/joe/code/storage/test-registry/artifacts"}
