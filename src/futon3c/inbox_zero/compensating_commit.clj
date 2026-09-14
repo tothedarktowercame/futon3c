@@ -7,7 +7,8 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
-            [futon3.inbox-zero.promote-exec :as executor])
+            [futon3.inbox-zero.promote-exec :as executor]
+            [futon3.inbox-zero.projection :as projection])
   (:import [java.lang ProcessBuilder$Redirect]
            [java.util UUID]
            [java.util.concurrent TimeUnit TimeoutException]
@@ -20,6 +21,7 @@
    :detection/response-budget-ms detector-response-budget-ms
    :detection/deadline-policy :compensate-on-timeout-or-inconclusive
    :detection/window [:armed-before-final-idle-check :post-commit-kernel-queue-drain]
+   :detection/sources [:standing-watcher-history :fresh-watcher-git-scan :inotify :git-blobs-and-head]
    :detection/scope :local-ext4-filesystem-api-events
    :detection/exclusions [:mmap-only-transient-writes :remote-filesystems :mount-replacement
                           :writes-via-external-hardlinks]
@@ -135,20 +137,58 @@
           {:verdict :compensation-failed :held/reason :execution-outcome-unknown
            :error (.getMessage e) :recovery/error (.getMessage recovery-error)})))))
 
+(defn watcher-window
+  "Inspect every new observation, including intermediate edits later restored.
+  Only unchanged file tuples and the planned commit's clean transition are
+  expected. History loss is inconclusive; a latest-only view is insufficient."
+  [before after root paths base sha]
+  (when-not (and (map? (:records before)) (map? (:records after)))
+    (throw (ex-info "Watcher snapshots required" {:reason :watcher-history-unavailable})))
+  (let [root (.getCanonicalPath (io/file root))
+        observations (fn [s] (into {} (filter (fn [[_ r]]
+                                              (and (= :inbox-zero/file-observation (:record/type r))
+                                                   (= root (:repo/root r))))) (:records s)))
+        old (observations before) new (observations after)
+        current (projection/current-observations {:records old})
+        added (remove (fn [[id _]] (contains? old id)) new)
+        missing (remove #(contains? new %) (keys old))
+        changed (keep (fn [[id r]] (when (and (contains? new id) (not= r (get new id))) id)) old)
+        complete? (and (empty? missing) (empty? changed))
+        unexpected (keep (fn [[_ r]]
+                           (let [previous (get current [(:worktree/id r) (:path r)])
+                                 same-content? (and previous
+                                                    (= (:content/hash previous) (:content/hash r))
+                                                    (= (:index/hash previous) (:index/hash r)))
+                                 expected? (and same-content? (contains? #{base sha} (:head/sha r))
+                                                (or (= (:git/status previous) (:git/status r))
+                                                    (and (contains? paths (:path r))
+                                                         (= sha (:head/sha r))
+                                                         (= :clean (:git/status r)))))]
+                             (when-not expected? r))) added)]
+    {:complete? complete? :missing-observation-ids (vec missing)
+     :changed-observation-ids (vec changed)
+     :new-observation-count (count added)
+     :unexpected-observations (vec unexpected)
+     :paths (vec (distinct (map :path unexpected)))
+     :clean? (and complete? (empty? unexpected))}))
+
 (defn execute!
   "An operator-approved plan with reviewed blob IDs, completed gates, a durable
   record sink and a fresh idle-check callback. Strict callers use atomic-commit!.
   Hooks/tests are not disabled. A postcheck finding is compensated before return;
   compensation failure returns a distinct fatal outcome and must stop the batch."
-  [plan {:keys [repo-root message reviewed-blobs idle-check! record!]
+  [plan {:keys [repo-root message reviewed-blobs idle-check! watcher-read! record!]
          :as options}]
   (let [attempt (str (UUID/randomUUID))
         certificate (:certificate options)
         record! (fn [r] (record! (assoc r :attempt/id attempt :certificate certificate
                                         :assumptions assumptions)))
         held (fn [reason details] {:verdict :held :held/reason reason :refusal/reason reason :details details})
+        watcher-before (atom nil)
         started (System/currentTimeMillis)
         prepared (try
+                   (when-not (fn? watcher-read!)
+                     (throw (ex-info "Standing watcher postcheck required" {:reason :watcher-history-unavailable})))
                    (when-not (and (= (set (map :path (:include plan))) (set (keys reviewed-blobs)))
                                   (seq reviewed-blobs))
                      (throw (ex-info "Exact reviewed blob IDs required" {:reason :review-required})))
@@ -163,7 +203,9 @@
       (let [{:keys [detector base ref]} prepared]
         (try
           (let [pre (try
-                      (idle-check!)
+                      (reset! watcher-before (idle-check!))
+                      (when-not (map? (:records @watcher-before))
+                        (throw (ex-info "Idle check must return watcher snapshot" {:reason :watcher-history-unavailable})))
                       (doseq [[path expected] reviewed-blobs]
                         (when-not (= expected (blob-id repo-root path))
                           (throw (ex-info "Reviewed content changed" {:reason :review-stale :path path}))))
@@ -191,7 +233,9 @@
                     (do (record! executed) executed)
                     (let [sha (:commit/sha executed)
                           post (try
-                                 (let [d (drain! detector)
+                                 (let [history (watcher-window @watcher-before (watcher-read!) repo-root
+                                                               (set (keys reviewed-blobs)) base sha)
+                                       d (drain! detector)
                                        mismatches (vec (for [[path expected] reviewed-blobs
                                                               :when (or (not= expected (git! repo-root "rev-parse" (str sha ":" path)))
                                                                         (not= expected (blob-id repo-root path)))] path))
@@ -199,15 +243,15 @@
                                                         (= base (git! repo-root "rev-parse" (str sha "^"))))
                                        final-drain (drain! detector)
                                        elapsed (- (monotonic-ms) returned-at)]
-                                   {:detector d :final-drain final-drain
-                                    :paths (vec (distinct (concat mismatches (keep :path (:events d))
+                                   {:watcher history :detector d :final-drain final-drain
+                                    :paths (vec (distinct (concat (:paths history) mismatches (keep :path (:events d))
                                                                  (keep :path (:events final-drain)))))
                                     :elapsed-ms elapsed
                                     :deadline-met? (<= elapsed detector-response-budget-ms)
-                                    :inconclusive? (or (:execution/error executed) (> elapsed detector-response-budget-ms)
+                                    :inconclusive? (or (not (:complete? history)) (:execution/error executed) (> elapsed detector-response-budget-ms)
                                                        (not (:complete d)) (:invalid d)
                                                        (not (:complete final-drain)) (:invalid final-drain))
-                                    :clean? (and (nil? (:execution/error executed)) (clean-drain? d) (clean-drain? final-drain)
+                                    :clean? (and (:clean? history) (nil? (:execution/error executed)) (clean-drain? d) (clean-drain? final-drain)
                                                  (empty? mismatches) head-valid?
                                                  (<= elapsed detector-response-budget-ms))})
                                  (catch Exception e {:clean? false :inconclusive? true

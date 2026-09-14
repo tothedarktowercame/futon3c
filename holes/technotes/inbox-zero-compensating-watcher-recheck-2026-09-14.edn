@@ -1,0 +1,1836 @@
+{:flags/before 3,
+ :held
+ [{:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["holes/TN-astra-wmreview.md"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "holes",
+    :message-draft "futon2: review unattributed work in holes",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/library-loop/runs/build-loop.lock"
+     "holes/labs/library-loop/runs/build-loop.log"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern "holes/labs/library-loop/runs",
+    :message-draft
+    "futon2: review generated files in holes/labs/library-loop/runs",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/DECISIONS-FOR-JOE-2026-09-12.md"
+     "holes/labs/wm-contract/PROPOSED-ROWS.md"
+     "holes/labs/wm-contract/tick-run-record-00cadcf8-ca0b-49a1-b88c-e631c824dca3.edn"
+     "holes/labs/wm-contract/tick-run-record-01347e8c-2516-4b10-92f1-b748824c7f24.edn"
+     "holes/labs/wm-contract/tick-run-record-08430d7f-ad30-4776-9a21-04cc98fa3f10.edn"
+     "holes/labs/wm-contract/tick-run-record-08d09074-d950-4176-8a2f-a2f3542177ee.edn"
+     "holes/labs/wm-contract/tick-run-record-0af54cb2-25f9-4d47-92e5-57bd92dc4d7b.edn"
+     "holes/labs/wm-contract/tick-run-record-0babb844-06dc-4d0c-93b8-5f313a7860c4.edn"
+     "holes/labs/wm-contract/tick-run-record-0c8ee640-cbc1-4ded-bad4-44108de01c81.edn"
+     "holes/labs/wm-contract/tick-run-record-0d608d9b-4104-4777-b86e-14dbcc139b89.edn"
+     "holes/labs/wm-contract/tick-run-record-0e567315-6dbb-4f36-a0bc-d75e9c14db74.edn"
+     "holes/labs/wm-contract/tick-run-record-0fd220d6-0d02-4463-b772-368cda01fb03.edn"
+     "holes/labs/wm-contract/tick-run-record-102269cf-7353-4f79-8f38-862529ec9bff.edn"
+     "holes/labs/wm-contract/tick-run-record-13f26f7f-1eb6-493c-b211-bfc06640819f.edn"
+     "holes/labs/wm-contract/tick-run-record-14b9f885-d7e1-42d9-8552-f59b16425a06.edn"
+     "holes/labs/wm-contract/tick-run-record-16de2485-cad6-4ef2-b445-340a36d415ba.edn"
+     "holes/labs/wm-contract/tick-run-record-179b0aea-a9f2-4075-ac4d-6663841be0e9.edn"
+     "holes/labs/wm-contract/tick-run-record-18b3651b-8369-4c23-8a51-adf0788c5a94.edn"
+     "holes/labs/wm-contract/tick-run-record-19484e92-4ec9-42bb-bdb8-5ba0f059f91b.edn"
+     "holes/labs/wm-contract/tick-run-record-1a21b3f7-d47b-42cc-ab3d-ce5f2830025d.edn"
+     "holes/labs/wm-contract/tick-run-record-1c65d840-40e5-4c86-8d24-0a58017dbc29.edn"
+     "holes/labs/wm-contract/tick-run-record-1c8ee600-82f7-44ef-a0fb-fdb52b752329.edn"
+     "holes/labs/wm-contract/tick-run-record-1df408d5-6658-4007-95c8-786eb75d0311.edn"
+     "holes/labs/wm-contract/tick-run-record-20f76c81-fb4a-4711-b2d8-42f675cdbf50.edn"
+     "holes/labs/wm-contract/tick-run-record-26d5eeb7-c004-4a14-a1c8-2f0419bee76f.edn"
+     "holes/labs/wm-contract/tick-run-record-28194d9e-e597-427d-93b1-b053f16402a9.edn"
+     "holes/labs/wm-contract/tick-run-record-28d181ed-bc22-449b-b283-88bfffda2007.edn"
+     "holes/labs/wm-contract/tick-run-record-29a02b3a-b05c-4804-9cf7-cf49d4c9a422.edn"
+     "holes/labs/wm-contract/tick-run-record-2a14e9d0-8269-45ba-bfe6-1f684ab1d0c3.edn"
+     "holes/labs/wm-contract/tick-run-record-2d124442-c788-4bf4-b9d7-a48b90e51d40.edn"
+     "holes/labs/wm-contract/tick-run-record-2d3c40d7-1c4e-4cb2-b1b4-b9ce0a4681e1.edn"
+     "holes/labs/wm-contract/tick-run-record-2d9ad293-34dd-4718-8845-aebaaaf2ddb7.edn"
+     "holes/labs/wm-contract/tick-run-record-2fdafe56-f9d0-4bbd-b462-e37885a1a3cc.edn"
+     "holes/labs/wm-contract/tick-run-record-31c7d973-32b1-4dac-b366-ef0ad349e444.edn"
+     "holes/labs/wm-contract/tick-run-record-32c5a5b1-45b9-4530-b232-c86f7f068ca9.edn"
+     "holes/labs/wm-contract/tick-run-record-3390a294-ec5e-43f2-bde5-e84786b2d2aa.edn"
+     "holes/labs/wm-contract/tick-run-record-3496eeec-3de9-4d41-b6ac-2e21d766d47a.edn"
+     "holes/labs/wm-contract/tick-run-record-3b248e0d-6177-474f-bb18-538e947f198e.edn"
+     "holes/labs/wm-contract/tick-run-record-3d9807e0-8292-4691-81d4-c96df6563471.edn"
+     "holes/labs/wm-contract/tick-run-record-40d19a9b-30b4-4e77-9723-3a737608496e.edn"
+     "holes/labs/wm-contract/tick-run-record-413f5e62-e061-4e1c-8312-982f998f1f75.edn"
+     "holes/labs/wm-contract/tick-run-record-431d305b-7728-4583-b4c4-d57c5477bb51.edn"
+     "holes/labs/wm-contract/tick-run-record-4399ee11-7045-442a-89d0-79b8d88caab7.edn"
+     "holes/labs/wm-contract/tick-run-record-4766c5e4-b6c8-4a34-b21b-5f0500491faa.edn"
+     "holes/labs/wm-contract/tick-run-record-47cdfb36-474c-4a15-a1f1-e1ab3ba3cb2e.edn"
+     "holes/labs/wm-contract/tick-run-record-4b7fe808-de8e-41bc-b315-129546ffd480.edn"
+     "holes/labs/wm-contract/tick-run-record-4ef79de9-750a-4cff-96d8-7f4e69b2a0b6.edn"
+     "holes/labs/wm-contract/tick-run-record-4f6555ca-66bf-47e4-89f9-77740edac016.edn"
+     "holes/labs/wm-contract/tick-run-record-53f875cc-aac8-421c-89b9-63af248c6bfa.edn"
+     "holes/labs/wm-contract/tick-run-record-56f88f2f-a6e5-4dea-8367-31d2836be540.edn"
+     "holes/labs/wm-contract/tick-run-record-590d847f-42d9-4427-94c7-ee4f3b2bf960.edn"
+     "holes/labs/wm-contract/tick-run-record-5be15b4f-53a3-470e-9989-21a9b0b4746f.edn"
+     "holes/labs/wm-contract/tick-run-record-5c05bd06-70f7-42a6-a057-e02ad2a84b41.edn"
+     "holes/labs/wm-contract/tick-run-record-5d130572-d414-4186-97a4-0fbf43a05f62.edn"
+     "holes/labs/wm-contract/tick-run-record-5fe57f81-2861-46de-8d20-91f5b5bed74d.edn"
+     "holes/labs/wm-contract/tick-run-record-63c41b2a-1802-4243-abe6-a04c46fc7e6c.edn"
+     "holes/labs/wm-contract/tick-run-record-63fa1726-69a4-48ab-9cb6-31e50025e7da.edn"
+     "holes/labs/wm-contract/tick-run-record-64b91335-2dc6-4736-947a-eac4037781b8.edn"
+     "holes/labs/wm-contract/tick-run-record-66677db2-fb58-4827-9e96-be1c479db955.edn"
+     "holes/labs/wm-contract/tick-run-record-6831330a-8822-4503-b2ee-0aeebfc754b3.edn"
+     "holes/labs/wm-contract/tick-run-record-6900c090-0bfe-4a7f-9c53-a30f29f28e49.edn"
+     "holes/labs/wm-contract/tick-run-record-732a2494-1b6d-4d36-9d0b-0dc443ab784d.edn"
+     "holes/labs/wm-contract/tick-run-record-7436548b-13a7-4ff8-ad1e-e0312150c3f6.edn"
+     "holes/labs/wm-contract/tick-run-record-75c246f8-2d7b-43a5-aa6f-fc9e425d7581.edn"
+     "holes/labs/wm-contract/tick-run-record-78116570-4409-4fa3-8168-0204f944f366.edn"
+     "holes/labs/wm-contract/tick-run-record-79f70ccb-670b-473e-a2d6-10798743e493.edn"
+     "holes/labs/wm-contract/tick-run-record-7bc47346-1bcc-471d-ab5b-0b51edf66059.edn"
+     "holes/labs/wm-contract/tick-run-record-7caa6526-6be8-4603-8fc4-a3b03724637f.edn"
+     "holes/labs/wm-contract/tick-run-record-7d0fb0c3-e902-4186-992f-c6852dd8f99e.edn"
+     "holes/labs/wm-contract/tick-run-record-7e48b0a0-852f-4cd4-a440-653e207349a1.edn"
+     "holes/labs/wm-contract/tick-run-record-7e4ce594-c253-4df8-a469-515c5e95b5da.edn"
+     "holes/labs/wm-contract/tick-run-record-85cb2e69-cce2-4bd3-a8a9-ae96772a4eac.edn"
+     "holes/labs/wm-contract/tick-run-record-88188e58-490f-4f1d-8b56-4320ac5a04a3.edn"
+     "holes/labs/wm-contract/tick-run-record-886bd446-568a-4e68-8ecb-824e56b5e220.edn"
+     "holes/labs/wm-contract/tick-run-record-8c0b853c-4f5d-4614-a01a-600e9a4798b2.edn"
+     "holes/labs/wm-contract/tick-run-record-8ee249d3-48f4-4e6d-acf6-19b43c15f928.edn"
+     "holes/labs/wm-contract/tick-run-record-8fef1f7f-f970-4126-bb18-1663cfd1ec90.edn"
+     "holes/labs/wm-contract/tick-run-record-9106f5e3-e471-4be5-b52e-14f3870f6c5c.edn"
+     "holes/labs/wm-contract/tick-run-record-936d3349-4b91-4481-9235-e733f1370ce7.edn"
+     "holes/labs/wm-contract/tick-run-record-93f099b2-1d92-487c-9f37-8e7fbb32fa26.edn"
+     "holes/labs/wm-contract/tick-run-record-9667665c-c62e-4133-9e68-d4b64c96a215.edn"
+     "holes/labs/wm-contract/tick-run-record-97f05c8e-91cb-4c02-8e5d-544677178f1f.edn"
+     "holes/labs/wm-contract/tick-run-record-97feae30-d3a2-474d-b196-0a25d31326ae.edn"
+     "holes/labs/wm-contract/tick-run-record-997f7493-44b2-4391-8cdf-dbdf6c7e0936.edn"
+     "holes/labs/wm-contract/tick-run-record-9af1966b-8bcc-4544-b7ed-4f6b65c2eafe.edn"
+     "holes/labs/wm-contract/tick-run-record-9b303beb-096a-41c4-b72c-625ae1301f6e.edn"
+     "holes/labs/wm-contract/tick-run-record-9d3bcd46-7105-41a5-baf9-c33cfa08dd36.edn"
+     "holes/labs/wm-contract/tick-run-record-9feda8fd-6f57-43dc-8ce6-65f36793e01d.edn"
+     "holes/labs/wm-contract/tick-run-record-a3df6411-cb83-4bc6-9338-2213b336fc9e.edn"
+     "holes/labs/wm-contract/tick-run-record-a5390bf1-326b-46d6-96ae-daffcc224ba9.edn"
+     "holes/labs/wm-contract/tick-run-record-a83671bb-0c8c-4ea2-9a73-fd40767e249b.edn"
+     "holes/labs/wm-contract/tick-run-record-aa9c2043-cded-404e-a771-cf2be57eeea1.edn"
+     "holes/labs/wm-contract/tick-run-record-ab18ecd6-a75b-4d96-8296-5f2611fbb98e.edn"
+     "holes/labs/wm-contract/tick-run-record-af58ff62-2752-4cf5-8097-fbfc27ab8441.edn"
+     "holes/labs/wm-contract/tick-run-record-b226d5cf-73fe-4747-812a-025ed6f8cf86.edn"
+     "holes/labs/wm-contract/tick-run-record-b404d0db-0b89-410d-b75d-5bccfe339555.edn"
+     "holes/labs/wm-contract/tick-run-record-b66e7c76-6169-4f6c-873f-490cd7327cc9.edn"
+     "holes/labs/wm-contract/tick-run-record-b71552b0-811b-421e-87d5-fe8b0ad76ce5.edn"
+     "holes/labs/wm-contract/tick-run-record-b82e5f4a-0a82-4c2b-8a95-da1d1c10606c.edn"
+     "holes/labs/wm-contract/tick-run-record-b946ec0b-aab4-4145-aa27-10cc5fb00a4d.edn"
+     "holes/labs/wm-contract/tick-run-record-ba61ef20-f9d1-4b22-93ed-d164c5419cb5.edn"
+     "holes/labs/wm-contract/tick-run-record-ba6a1e29-3046-489e-9912-253d4060f052.edn"
+     "holes/labs/wm-contract/tick-run-record-bebb35d2-59ae-4113-b84e-6fc86981ea56.edn"
+     "holes/labs/wm-contract/tick-run-record-bf94ede9-ea24-45e4-93d3-6835e0601ec4.edn"
+     "holes/labs/wm-contract/tick-run-record-bfb0e73f-fe20-4943-a5c1-bceeae8d7d6a.edn"
+     "holes/labs/wm-contract/tick-run-record-bfe02c4e-2e16-4350-972f-404e15144d99.edn"
+     "holes/labs/wm-contract/tick-run-record-c2387c17-484f-4bef-b2c6-cb439628b63a.edn"
+     "holes/labs/wm-contract/tick-run-record-c2aed924-4307-4d3f-9d21-d60b24d2bd42.edn"
+     "holes/labs/wm-contract/tick-run-record-c3ec8b86-ba0f-4390-aaf3-f4a327b398cc.edn"
+     "holes/labs/wm-contract/tick-run-record-c4d84669-6196-4d0a-8ae3-7094de473ffc.edn"
+     "holes/labs/wm-contract/tick-run-record-c8f740d2-7304-449d-b6ba-2d118be9d170.edn"
+     "holes/labs/wm-contract/tick-run-record-c9cba9c4-e39b-4ec9-9937-efb76b55b840.edn"
+     "holes/labs/wm-contract/tick-run-record-d5101692-7c31-4738-aeda-b033d3112618.edn"
+     "holes/labs/wm-contract/tick-run-record-d776294b-1998-4d2b-8e4f-d184411f8f20.edn"
+     "holes/labs/wm-contract/tick-run-record-d9174e94-099b-4f89-b895-c1809c8c3243.edn"
+     "holes/labs/wm-contract/tick-run-record-df6efb26-6f3b-4e0d-a3d6-72149e2ce033.edn"
+     "holes/labs/wm-contract/tick-run-record-e05818ed-2325-4992-b7b1-4a5e8d9f8af7.edn"
+     "holes/labs/wm-contract/tick-run-record-e3df9010-4779-4122-a728-912a792868ca.edn"
+     "holes/labs/wm-contract/tick-run-record-e680c3dd-db20-4752-87a4-98b148b40ac2.edn"
+     "holes/labs/wm-contract/tick-run-record-e7413d8c-ee74-4da3-83a6-2624b9e4c9af.edn"
+     "holes/labs/wm-contract/tick-run-record-e7ee2e9f-4302-4d6a-846b-b59c9967a825.edn"
+     "holes/labs/wm-contract/tick-run-record-e9e3ca91-cd8a-4f71-bd99-422e17079c63.edn"
+     "holes/labs/wm-contract/tick-run-record-ea1750b6-3ddf-4921-a75b-af21a311e6b2.edn"
+     "holes/labs/wm-contract/tick-run-record-ea5b5b69-ca23-407a-938b-29b16477c12c.edn"
+     "holes/labs/wm-contract/tick-run-record-eb1685fb-8723-437c-8072-930a33cc3040.edn"
+     "holes/labs/wm-contract/tick-run-record-eb9c7cbd-ccdf-4855-9c87-a2ce2b79514c.edn"
+     "holes/labs/wm-contract/tick-run-record-ec4383d5-c698-4730-8212-95d7456663cd.edn"
+     "holes/labs/wm-contract/tick-run-record-ed2d5575-c864-464c-8e32-c2771863661e.edn"
+     "holes/labs/wm-contract/tick-run-record-ee05db0d-e14e-4c40-8429-16485b224322.edn"
+     "holes/labs/wm-contract/tick-run-record-ee061946-de53-4193-bfcf-5543c4c92646.edn"
+     "holes/labs/wm-contract/tick-run-record-ee0f124a-d469-4211-a937-ff78c5d04a9a.edn"
+     "holes/labs/wm-contract/tick-run-record-f1490ef3-d223-4358-93d1-c697e38541d2.edn"
+     "holes/labs/wm-contract/tick-run-record-f25b307a-a0e3-416f-a186-8a32ac99e2c3.edn"
+     "holes/labs/wm-contract/tick-run-record-f3ef3c3e-920a-4a39-a918-5e7fa575cc69.edn"
+     "holes/labs/wm-contract/tick-run-record-f4cadff9-0b9a-4736-b963-03215cbca60f.edn"
+     "holes/labs/wm-contract/tick-run-record-f4f3824b-31a3-4c06-bb6d-dd41e69a8fff.edn"
+     "holes/labs/wm-contract/tick-run-record-f7e298f7-1ecb-4091-851a-0078ab2fb220.edn"
+     "holes/labs/wm-contract/tick-run-record-f8182144-a694-4188-9bcd-a25af4826c19.edn"
+     "holes/labs/wm-contract/tick-run-record-f84c10c7-1a24-4e47-9413-69c0323f83b1.edn"
+     "holes/labs/wm-contract/tick-run-record-f8a9cf32-0054-4a53-8874-f412e1ac76ac.edn"
+     "holes/labs/wm-contract/tick-run-record-f98bf743-01cd-4271-be2a-c23766fe0e35.edn"
+     "holes/labs/wm-contract/tick-run-record-fc2a7c5c-66b0-4d1c-a05e-be497d971775.edn"
+     "holes/labs/wm-contract/tick-run-record-fe06ee4b-ab7a-4d91-aaaa-3430339412ed.edn"
+     "holes/labs/wm-contract/tick-run-record-fe3e8ac4-4a77-418c-9061-085a3b15ce44.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r1.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r2.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r3.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r4.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r5.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r6.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-14-claude-15-r8.edn"
+     "holes/labs/wm-contract/variable-situation-accounting.edn"
+     "holes/labs/wm-contract/workflow-report.edn"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "holes/labs/wm-contract",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/.lane-futility-index.edn"
+     "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/wm-trace-2026-09-12.edn"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/.lane-futility-index.lock"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :message-draft
+    "futon2: review generated files in holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12/run-transcript.txt"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13/machinery-test-r1.stderr"
+     "holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13/machinery-test-r1.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2.stderr"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2.stdout"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2b.stderr"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2b.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r3.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r3.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r4.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r4.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r5.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r5.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r6.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r6.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r7.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r7.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r8.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r8.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["checks/__pycache__/f12_preparation_io.cpython-312.pyc"
+     "checks/__pycache__/f12_preparation_io_test.cpython-312.pyc"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern "checks/__pycache__",
+    :message-draft
+    "futon3: review generated files in checks/__pycache__",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["library/.spider/fleet-2026-09-08.edn"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "library/.spider",
+    :message-draft
+    "futon3: review unattributed work in library/.spider",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["resources/sigils/patterns-index.tsv"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "resources/sigils",
+    :message-draft
+    "futon3: review unattributed work in resources/sigils",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment/applied.edn"
+     "holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment/watch.jsonl"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/live-roster-eval.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001/002-selection.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/002-selection.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/003-construction.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence/.historical-qualification.lock"
+     "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/INITIALIZATION38690-INDEPENDENT-REVIEW-zai1-2026-09-11.md"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/INITIALIZATION38690-SOURCE-REVIEW-2026-09-11.json"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/LIVE-COORDINATOR-RESULT-2026-09-11.edn"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/initialization38690-targeted-check.out"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence/.historical-qualification.lock"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["src/futon3c/inbox_zero/batch_dispatch.clj"
+     "src/futon3c/inbox_zero/compensating_commit.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "src/futon3c/inbox_zero",
+    :message-draft
+    "futon3c: review unattributed work in src/futon3c/inbox_zero",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["test/futon3c/inbox_zero/compensating_commit_test.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "test/futon3c/inbox_zero",
+    :message-draft
+    "futon3c: review unattributed work in test/futon3c/inbox_zero",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}],
+ :assumptions
+ {:hard-real-time-guarantee? false,
+  :survival/proved-production-bound-ms nil,
+  :transient-cost
+  :local-commit-visible-until-verification-or-compensation,
+  :survival/theorem "mathlib4@cf88292da5:T2-prime-conditional",
+  :runtime/assumptions
+  [:process-survives
+   :os-schedules-detector
+   :git-commands-terminate
+   :compensation-cas-succeeds
+   :no-concurrent-git-index-writers],
+  :survival/conditional-bound :detection-plus-compensation,
+  :detection/scope :local-ext4-filesystem-api-events,
+  :detection/exclusions
+  [:mmap-only-transient-writes
+   :remote-filesystems
+   :mount-replacement
+   :writes-via-external-hardlinks],
+  :detection/window
+  [:armed-before-final-idle-check :post-commit-kernel-queue-drain],
+  :detection/deadline-policy :compensate-on-timeout-or-inconclusive,
+  :push-policy :only-after-clean-postcheck,
+  :safety/form :compensating,
+  :detection/sources
+  [:standing-watcher-history
+   :fresh-watcher-git-scan
+   :inotify
+   :git-blobs-and-head],
+  :detection/response-budget-ms 5000,
+  :detection/not-a-bound :background-watcher-poll-interval},
+ :pushed [],
+ :committed [],
+ :dispatch
+ {:id "invoke-1789414858946-20826-448a11bd",
+  :operator "joe",
+  :relayed-by "zai-7",
+  :source "bell:invoke-1789414858946-20826-448a11bd",
+  :message
+  "Implement compensating safety (option 1), then re-run the batch; commit and push admissible packages.",
+  :action :package-commit-and-push},
+ :after
+ {:trace
+  [{:chip :ck/keypress,
+    :verb :keypress,
+    :branch :false,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects []}
+   {:chip :ck/smell,
+    :verb :smell,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:observe
+      {:channel :inbox-zero/sweep,
+       :repos-flagged ["futon2" "futon3" "futon3c"]}]]}
+   {:chip :ck/look-first,
+    :verb :look,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:observe
+      {:channel :inbox-zero/clauses,
+       :repo "futon2",
+       :clauses-failed [:dirty-older-than-24h]}]]}
+   {:chip :ck/feel-target,
+    :verb :feel,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects []}
+   {:chip :ck/sing-flag-live,
+    :verb :sing,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:report {:meters {:range-finder 1, :fuel 11, :damage 0}}]]}
+   {:chip :ck/yield,
+    :verb :yield,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects [[:yield-turn {}]]}],
+  :end-reason :end/yield,
+  :final-state
+  {:fuel 10,
+   :damage 0,
+   :range-finder 1,
+   :shelf-sweep
+   [{:repo "futon0", :clean? true, :clauses-failed []}
+    {:repo "futon2",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3a", :clean? true, :clauses-failed []}
+    {:repo "futon3b", :clean? true, :clauses-failed []}
+    {:repo "futon3c",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon4", :clean? true, :clauses-failed []}
+    {:repo "futon5", :clean? true, :clauses-failed []}
+    {:repo "futon5a", :clean? true, :clauses-failed []}
+    {:repo "futon6", :clean? true, :clauses-failed []}
+    {:repo "futon7", :clean? true, :clauses-failed []}
+    {:repo "futon7a", :clean? true, :clauses-failed []}],
+   :feel-blocked #{"futon2"}},
+  :verbs/digest
+  "sha256:fed5a2ab9f2805239cdd4646d39cc874f79f61fe84e17309146a122a3da7fb7c",
+  :certificate
+  {:cert/type :chip-board/run-v0,
+   :board/id "b-inbox-zero-0",
+   :board/digest
+   "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+   :inputs/digest
+   "sha256:103c02a0d282820175cbdb4b920913cc9bbac8e5dbc883f7c57d3b9c2b26b9d0",
+   :claim
+   {:trace
+    [{:chip :ck/keypress,
+      :verb :keypress,
+      :branch :false,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects []}
+     {:chip :ck/smell,
+      :verb :smell,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:observe
+        {:channel :inbox-zero/sweep,
+         :repos-flagged ["futon2" "futon3" "futon3c"]}]]}
+     {:chip :ck/look-first,
+      :verb :look,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:observe
+        {:channel :inbox-zero/clauses,
+         :repo "futon2",
+         :clauses-failed [:dirty-older-than-24h]}]]}
+     {:chip :ck/feel-target,
+      :verb :feel,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects []}
+     {:chip :ck/sing-flag-live,
+      :verb :sing,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:report {:meters {:range-finder 1, :fuel 11, :damage 0}}]]}
+     {:chip :ck/yield,
+      :verb :yield,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects [[:yield-turn {}]]}],
+    :end-reason :end/yield},
+   :verified? true,
+   :lean/status
+   {:status :witnessed-under-declared-registry,
+    :scope :lean-model,
+    :witness
+    {:repository "mathlib4",
+     :commit "a9a24a3b9e070550ede41ebd10621c5bb9b843f0",
+     :module "DarkTower/WarMachine/ChipBoardWitness.lean",
+     :theorem
+     "DarkTower.WarMachine.ChipBoardWitness.Repaired.repairedHazard"},
+    :assumption :registered-verbs-implement-declared-semantics,
+    :runtime-correspondence :not-proven,
+    :registry
+    {:digest
+     "sha256:fed5a2ab9f2805239cdd4646d39cc874f79f61fe84e17309146a122a3da7fb7c",
+     :scope :in-process-function-identity,
+     :semantic-approval? false}}},
+  :inputs
+  {:sweep
+   [{:repo "futon0", :clean? true, :clauses-failed []}
+    {:repo "futon2",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3a", :clean? true, :clauses-failed []}
+    {:repo "futon3b", :clean? true, :clauses-failed []}
+    {:repo "futon3c",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon4", :clean? true, :clauses-failed []}
+    {:repo "futon5", :clean? true, :clauses-failed []}
+    {:repo "futon5a", :clean? true, :clauses-failed []}
+    {:repo "futon6", :clean? true, :clauses-failed []}
+    {:repo "futon7", :clean? true, :clauses-failed []}
+    {:repo "futon7a", :clean? true, :clauses-failed []}],
+   :in-flight-repos ["futon3c" "futon3" "futon0" "futon2"],
+   :operator-pending? false}},
+ :evidence/note
+ "Post-watcher-correction rerun; original live 4-to-3 receipt predates correction.",
+ :flags/after 3,
+ :before
+ {:trace
+  [{:chip :ck/keypress,
+    :verb :keypress,
+    :branch :false,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects []}
+   {:chip :ck/smell,
+    :verb :smell,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:observe
+      {:channel :inbox-zero/sweep,
+       :repos-flagged ["futon2" "futon3" "futon3c"]}]]}
+   {:chip :ck/look-first,
+    :verb :look,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:observe
+      {:channel :inbox-zero/clauses,
+       :repo "futon2",
+       :clauses-failed [:dirty-older-than-24h]}]]}
+   {:chip :ck/feel-target,
+    :verb :feel,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects []}
+   {:chip :ck/sing-flag-live,
+    :verb :sing,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects
+    [[:report {:meters {:range-finder 1, :fuel 11, :damage 0}}]]}
+   {:chip :ck/yield,
+    :verb :yield,
+    :branch :true,
+    :board/digest
+    "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+    :effects [[:yield-turn {}]]}],
+  :end-reason :end/yield,
+  :final-state
+  {:fuel 10,
+   :damage 0,
+   :range-finder 1,
+   :shelf-sweep
+   [{:repo "futon0", :clean? true, :clauses-failed []}
+    {:repo "futon2",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3a", :clean? true, :clauses-failed []}
+    {:repo "futon3b", :clean? true, :clauses-failed []}
+    {:repo "futon3c",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon4", :clean? true, :clauses-failed []}
+    {:repo "futon5", :clean? true, :clauses-failed []}
+    {:repo "futon5a", :clean? true, :clauses-failed []}
+    {:repo "futon6", :clean? true, :clauses-failed []}
+    {:repo "futon7", :clean? true, :clauses-failed []}
+    {:repo "futon7a", :clean? true, :clauses-failed []}],
+   :feel-blocked #{"futon2"}},
+  :verbs/digest
+  "sha256:fed5a2ab9f2805239cdd4646d39cc874f79f61fe84e17309146a122a3da7fb7c",
+  :certificate
+  {:cert/type :chip-board/run-v0,
+   :board/id "b-inbox-zero-0",
+   :board/digest
+   "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+   :inputs/digest
+   "sha256:103c02a0d282820175cbdb4b920913cc9bbac8e5dbc883f7c57d3b9c2b26b9d0",
+   :claim
+   {:trace
+    [{:chip :ck/keypress,
+      :verb :keypress,
+      :branch :false,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects []}
+     {:chip :ck/smell,
+      :verb :smell,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:observe
+        {:channel :inbox-zero/sweep,
+         :repos-flagged ["futon2" "futon3" "futon3c"]}]]}
+     {:chip :ck/look-first,
+      :verb :look,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:observe
+        {:channel :inbox-zero/clauses,
+         :repo "futon2",
+         :clauses-failed [:dirty-older-than-24h]}]]}
+     {:chip :ck/feel-target,
+      :verb :feel,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects []}
+     {:chip :ck/sing-flag-live,
+      :verb :sing,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects
+      [[:report {:meters {:range-finder 1, :fuel 11, :damage 0}}]]}
+     {:chip :ck/yield,
+      :verb :yield,
+      :branch :true,
+      :board/digest
+      "sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c",
+      :effects [[:yield-turn {}]]}],
+    :end-reason :end/yield},
+   :verified? true,
+   :lean/status
+   {:status :witnessed-under-declared-registry,
+    :scope :lean-model,
+    :witness
+    {:repository "mathlib4",
+     :commit "a9a24a3b9e070550ede41ebd10621c5bb9b843f0",
+     :module "DarkTower/WarMachine/ChipBoardWitness.lean",
+     :theorem
+     "DarkTower.WarMachine.ChipBoardWitness.Repaired.repairedHazard"},
+    :assumption :registered-verbs-implement-declared-semantics,
+    :runtime-correspondence :not-proven,
+    :registry
+    {:digest
+     "sha256:fed5a2ab9f2805239cdd4646d39cc874f79f61fe84e17309146a122a3da7fb7c",
+     :scope :in-process-function-identity,
+     :semantic-approval? false}}},
+  :inputs
+  {:sweep
+   [{:repo "futon0", :clean? true, :clauses-failed []}
+    {:repo "futon2",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon3a", :clean? true, :clauses-failed []}
+    {:repo "futon3b", :clean? true, :clauses-failed []}
+    {:repo "futon3c",
+     :clean? false,
+     :clauses-failed [:dirty-older-than-24h]}
+    {:repo "futon4", :clean? true, :clauses-failed []}
+    {:repo "futon5", :clean? true, :clauses-failed []}
+    {:repo "futon5a", :clean? true, :clauses-failed []}
+    {:repo "futon6", :clean? true, :clauses-failed []}
+    {:repo "futon7", :clean? true, :clauses-failed []}
+    {:repo "futon7a", :clean? true, :clauses-failed []}],
+   :in-flight-repos ["futon3c" "futon3" "futon0" "futon2"],
+   :operator-pending? false}},
+ :record/type :inbox-zero/compensating-batch-result,
+ :outcomes
+ [{:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["holes/TN-astra-wmreview.md"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "holes",
+    :message-draft "futon2: review unattributed work in holes",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/library-loop/runs/build-loop.lock"
+     "holes/labs/library-loop/runs/build-loop.log"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern "holes/labs/library-loop/runs",
+    :message-draft
+    "futon2: review generated files in holes/labs/library-loop/runs",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/DECISIONS-FOR-JOE-2026-09-12.md"
+     "holes/labs/wm-contract/PROPOSED-ROWS.md"
+     "holes/labs/wm-contract/tick-run-record-00cadcf8-ca0b-49a1-b88c-e631c824dca3.edn"
+     "holes/labs/wm-contract/tick-run-record-01347e8c-2516-4b10-92f1-b748824c7f24.edn"
+     "holes/labs/wm-contract/tick-run-record-08430d7f-ad30-4776-9a21-04cc98fa3f10.edn"
+     "holes/labs/wm-contract/tick-run-record-08d09074-d950-4176-8a2f-a2f3542177ee.edn"
+     "holes/labs/wm-contract/tick-run-record-0af54cb2-25f9-4d47-92e5-57bd92dc4d7b.edn"
+     "holes/labs/wm-contract/tick-run-record-0babb844-06dc-4d0c-93b8-5f313a7860c4.edn"
+     "holes/labs/wm-contract/tick-run-record-0c8ee640-cbc1-4ded-bad4-44108de01c81.edn"
+     "holes/labs/wm-contract/tick-run-record-0d608d9b-4104-4777-b86e-14dbcc139b89.edn"
+     "holes/labs/wm-contract/tick-run-record-0e567315-6dbb-4f36-a0bc-d75e9c14db74.edn"
+     "holes/labs/wm-contract/tick-run-record-0fd220d6-0d02-4463-b772-368cda01fb03.edn"
+     "holes/labs/wm-contract/tick-run-record-102269cf-7353-4f79-8f38-862529ec9bff.edn"
+     "holes/labs/wm-contract/tick-run-record-13f26f7f-1eb6-493c-b211-bfc06640819f.edn"
+     "holes/labs/wm-contract/tick-run-record-14b9f885-d7e1-42d9-8552-f59b16425a06.edn"
+     "holes/labs/wm-contract/tick-run-record-16de2485-cad6-4ef2-b445-340a36d415ba.edn"
+     "holes/labs/wm-contract/tick-run-record-179b0aea-a9f2-4075-ac4d-6663841be0e9.edn"
+     "holes/labs/wm-contract/tick-run-record-18b3651b-8369-4c23-8a51-adf0788c5a94.edn"
+     "holes/labs/wm-contract/tick-run-record-19484e92-4ec9-42bb-bdb8-5ba0f059f91b.edn"
+     "holes/labs/wm-contract/tick-run-record-1a21b3f7-d47b-42cc-ab3d-ce5f2830025d.edn"
+     "holes/labs/wm-contract/tick-run-record-1c65d840-40e5-4c86-8d24-0a58017dbc29.edn"
+     "holes/labs/wm-contract/tick-run-record-1c8ee600-82f7-44ef-a0fb-fdb52b752329.edn"
+     "holes/labs/wm-contract/tick-run-record-1df408d5-6658-4007-95c8-786eb75d0311.edn"
+     "holes/labs/wm-contract/tick-run-record-20f76c81-fb4a-4711-b2d8-42f675cdbf50.edn"
+     "holes/labs/wm-contract/tick-run-record-26d5eeb7-c004-4a14-a1c8-2f0419bee76f.edn"
+     "holes/labs/wm-contract/tick-run-record-28194d9e-e597-427d-93b1-b053f16402a9.edn"
+     "holes/labs/wm-contract/tick-run-record-28d181ed-bc22-449b-b283-88bfffda2007.edn"
+     "holes/labs/wm-contract/tick-run-record-29a02b3a-b05c-4804-9cf7-cf49d4c9a422.edn"
+     "holes/labs/wm-contract/tick-run-record-2a14e9d0-8269-45ba-bfe6-1f684ab1d0c3.edn"
+     "holes/labs/wm-contract/tick-run-record-2d124442-c788-4bf4-b9d7-a48b90e51d40.edn"
+     "holes/labs/wm-contract/tick-run-record-2d3c40d7-1c4e-4cb2-b1b4-b9ce0a4681e1.edn"
+     "holes/labs/wm-contract/tick-run-record-2d9ad293-34dd-4718-8845-aebaaaf2ddb7.edn"
+     "holes/labs/wm-contract/tick-run-record-2fdafe56-f9d0-4bbd-b462-e37885a1a3cc.edn"
+     "holes/labs/wm-contract/tick-run-record-31c7d973-32b1-4dac-b366-ef0ad349e444.edn"
+     "holes/labs/wm-contract/tick-run-record-32c5a5b1-45b9-4530-b232-c86f7f068ca9.edn"
+     "holes/labs/wm-contract/tick-run-record-3390a294-ec5e-43f2-bde5-e84786b2d2aa.edn"
+     "holes/labs/wm-contract/tick-run-record-3496eeec-3de9-4d41-b6ac-2e21d766d47a.edn"
+     "holes/labs/wm-contract/tick-run-record-3b248e0d-6177-474f-bb18-538e947f198e.edn"
+     "holes/labs/wm-contract/tick-run-record-3d9807e0-8292-4691-81d4-c96df6563471.edn"
+     "holes/labs/wm-contract/tick-run-record-40d19a9b-30b4-4e77-9723-3a737608496e.edn"
+     "holes/labs/wm-contract/tick-run-record-413f5e62-e061-4e1c-8312-982f998f1f75.edn"
+     "holes/labs/wm-contract/tick-run-record-431d305b-7728-4583-b4c4-d57c5477bb51.edn"
+     "holes/labs/wm-contract/tick-run-record-4399ee11-7045-442a-89d0-79b8d88caab7.edn"
+     "holes/labs/wm-contract/tick-run-record-4766c5e4-b6c8-4a34-b21b-5f0500491faa.edn"
+     "holes/labs/wm-contract/tick-run-record-47cdfb36-474c-4a15-a1f1-e1ab3ba3cb2e.edn"
+     "holes/labs/wm-contract/tick-run-record-4b7fe808-de8e-41bc-b315-129546ffd480.edn"
+     "holes/labs/wm-contract/tick-run-record-4ef79de9-750a-4cff-96d8-7f4e69b2a0b6.edn"
+     "holes/labs/wm-contract/tick-run-record-4f6555ca-66bf-47e4-89f9-77740edac016.edn"
+     "holes/labs/wm-contract/tick-run-record-53f875cc-aac8-421c-89b9-63af248c6bfa.edn"
+     "holes/labs/wm-contract/tick-run-record-56f88f2f-a6e5-4dea-8367-31d2836be540.edn"
+     "holes/labs/wm-contract/tick-run-record-590d847f-42d9-4427-94c7-ee4f3b2bf960.edn"
+     "holes/labs/wm-contract/tick-run-record-5be15b4f-53a3-470e-9989-21a9b0b4746f.edn"
+     "holes/labs/wm-contract/tick-run-record-5c05bd06-70f7-42a6-a057-e02ad2a84b41.edn"
+     "holes/labs/wm-contract/tick-run-record-5d130572-d414-4186-97a4-0fbf43a05f62.edn"
+     "holes/labs/wm-contract/tick-run-record-5fe57f81-2861-46de-8d20-91f5b5bed74d.edn"
+     "holes/labs/wm-contract/tick-run-record-63c41b2a-1802-4243-abe6-a04c46fc7e6c.edn"
+     "holes/labs/wm-contract/tick-run-record-63fa1726-69a4-48ab-9cb6-31e50025e7da.edn"
+     "holes/labs/wm-contract/tick-run-record-64b91335-2dc6-4736-947a-eac4037781b8.edn"
+     "holes/labs/wm-contract/tick-run-record-66677db2-fb58-4827-9e96-be1c479db955.edn"
+     "holes/labs/wm-contract/tick-run-record-6831330a-8822-4503-b2ee-0aeebfc754b3.edn"
+     "holes/labs/wm-contract/tick-run-record-6900c090-0bfe-4a7f-9c53-a30f29f28e49.edn"
+     "holes/labs/wm-contract/tick-run-record-732a2494-1b6d-4d36-9d0b-0dc443ab784d.edn"
+     "holes/labs/wm-contract/tick-run-record-7436548b-13a7-4ff8-ad1e-e0312150c3f6.edn"
+     "holes/labs/wm-contract/tick-run-record-75c246f8-2d7b-43a5-aa6f-fc9e425d7581.edn"
+     "holes/labs/wm-contract/tick-run-record-78116570-4409-4fa3-8168-0204f944f366.edn"
+     "holes/labs/wm-contract/tick-run-record-79f70ccb-670b-473e-a2d6-10798743e493.edn"
+     "holes/labs/wm-contract/tick-run-record-7bc47346-1bcc-471d-ab5b-0b51edf66059.edn"
+     "holes/labs/wm-contract/tick-run-record-7caa6526-6be8-4603-8fc4-a3b03724637f.edn"
+     "holes/labs/wm-contract/tick-run-record-7d0fb0c3-e902-4186-992f-c6852dd8f99e.edn"
+     "holes/labs/wm-contract/tick-run-record-7e48b0a0-852f-4cd4-a440-653e207349a1.edn"
+     "holes/labs/wm-contract/tick-run-record-7e4ce594-c253-4df8-a469-515c5e95b5da.edn"
+     "holes/labs/wm-contract/tick-run-record-85cb2e69-cce2-4bd3-a8a9-ae96772a4eac.edn"
+     "holes/labs/wm-contract/tick-run-record-88188e58-490f-4f1d-8b56-4320ac5a04a3.edn"
+     "holes/labs/wm-contract/tick-run-record-886bd446-568a-4e68-8ecb-824e56b5e220.edn"
+     "holes/labs/wm-contract/tick-run-record-8c0b853c-4f5d-4614-a01a-600e9a4798b2.edn"
+     "holes/labs/wm-contract/tick-run-record-8ee249d3-48f4-4e6d-acf6-19b43c15f928.edn"
+     "holes/labs/wm-contract/tick-run-record-8fef1f7f-f970-4126-bb18-1663cfd1ec90.edn"
+     "holes/labs/wm-contract/tick-run-record-9106f5e3-e471-4be5-b52e-14f3870f6c5c.edn"
+     "holes/labs/wm-contract/tick-run-record-936d3349-4b91-4481-9235-e733f1370ce7.edn"
+     "holes/labs/wm-contract/tick-run-record-93f099b2-1d92-487c-9f37-8e7fbb32fa26.edn"
+     "holes/labs/wm-contract/tick-run-record-9667665c-c62e-4133-9e68-d4b64c96a215.edn"
+     "holes/labs/wm-contract/tick-run-record-97f05c8e-91cb-4c02-8e5d-544677178f1f.edn"
+     "holes/labs/wm-contract/tick-run-record-97feae30-d3a2-474d-b196-0a25d31326ae.edn"
+     "holes/labs/wm-contract/tick-run-record-997f7493-44b2-4391-8cdf-dbdf6c7e0936.edn"
+     "holes/labs/wm-contract/tick-run-record-9af1966b-8bcc-4544-b7ed-4f6b65c2eafe.edn"
+     "holes/labs/wm-contract/tick-run-record-9b303beb-096a-41c4-b72c-625ae1301f6e.edn"
+     "holes/labs/wm-contract/tick-run-record-9d3bcd46-7105-41a5-baf9-c33cfa08dd36.edn"
+     "holes/labs/wm-contract/tick-run-record-9feda8fd-6f57-43dc-8ce6-65f36793e01d.edn"
+     "holes/labs/wm-contract/tick-run-record-a3df6411-cb83-4bc6-9338-2213b336fc9e.edn"
+     "holes/labs/wm-contract/tick-run-record-a5390bf1-326b-46d6-96ae-daffcc224ba9.edn"
+     "holes/labs/wm-contract/tick-run-record-a83671bb-0c8c-4ea2-9a73-fd40767e249b.edn"
+     "holes/labs/wm-contract/tick-run-record-aa9c2043-cded-404e-a771-cf2be57eeea1.edn"
+     "holes/labs/wm-contract/tick-run-record-ab18ecd6-a75b-4d96-8296-5f2611fbb98e.edn"
+     "holes/labs/wm-contract/tick-run-record-af58ff62-2752-4cf5-8097-fbfc27ab8441.edn"
+     "holes/labs/wm-contract/tick-run-record-b226d5cf-73fe-4747-812a-025ed6f8cf86.edn"
+     "holes/labs/wm-contract/tick-run-record-b404d0db-0b89-410d-b75d-5bccfe339555.edn"
+     "holes/labs/wm-contract/tick-run-record-b66e7c76-6169-4f6c-873f-490cd7327cc9.edn"
+     "holes/labs/wm-contract/tick-run-record-b71552b0-811b-421e-87d5-fe8b0ad76ce5.edn"
+     "holes/labs/wm-contract/tick-run-record-b82e5f4a-0a82-4c2b-8a95-da1d1c10606c.edn"
+     "holes/labs/wm-contract/tick-run-record-b946ec0b-aab4-4145-aa27-10cc5fb00a4d.edn"
+     "holes/labs/wm-contract/tick-run-record-ba61ef20-f9d1-4b22-93ed-d164c5419cb5.edn"
+     "holes/labs/wm-contract/tick-run-record-ba6a1e29-3046-489e-9912-253d4060f052.edn"
+     "holes/labs/wm-contract/tick-run-record-bebb35d2-59ae-4113-b84e-6fc86981ea56.edn"
+     "holes/labs/wm-contract/tick-run-record-bf94ede9-ea24-45e4-93d3-6835e0601ec4.edn"
+     "holes/labs/wm-contract/tick-run-record-bfb0e73f-fe20-4943-a5c1-bceeae8d7d6a.edn"
+     "holes/labs/wm-contract/tick-run-record-bfe02c4e-2e16-4350-972f-404e15144d99.edn"
+     "holes/labs/wm-contract/tick-run-record-c2387c17-484f-4bef-b2c6-cb439628b63a.edn"
+     "holes/labs/wm-contract/tick-run-record-c2aed924-4307-4d3f-9d21-d60b24d2bd42.edn"
+     "holes/labs/wm-contract/tick-run-record-c3ec8b86-ba0f-4390-aaf3-f4a327b398cc.edn"
+     "holes/labs/wm-contract/tick-run-record-c4d84669-6196-4d0a-8ae3-7094de473ffc.edn"
+     "holes/labs/wm-contract/tick-run-record-c8f740d2-7304-449d-b6ba-2d118be9d170.edn"
+     "holes/labs/wm-contract/tick-run-record-c9cba9c4-e39b-4ec9-9937-efb76b55b840.edn"
+     "holes/labs/wm-contract/tick-run-record-d5101692-7c31-4738-aeda-b033d3112618.edn"
+     "holes/labs/wm-contract/tick-run-record-d776294b-1998-4d2b-8e4f-d184411f8f20.edn"
+     "holes/labs/wm-contract/tick-run-record-d9174e94-099b-4f89-b895-c1809c8c3243.edn"
+     "holes/labs/wm-contract/tick-run-record-df6efb26-6f3b-4e0d-a3d6-72149e2ce033.edn"
+     "holes/labs/wm-contract/tick-run-record-e05818ed-2325-4992-b7b1-4a5e8d9f8af7.edn"
+     "holes/labs/wm-contract/tick-run-record-e3df9010-4779-4122-a728-912a792868ca.edn"
+     "holes/labs/wm-contract/tick-run-record-e680c3dd-db20-4752-87a4-98b148b40ac2.edn"
+     "holes/labs/wm-contract/tick-run-record-e7413d8c-ee74-4da3-83a6-2624b9e4c9af.edn"
+     "holes/labs/wm-contract/tick-run-record-e7ee2e9f-4302-4d6a-846b-b59c9967a825.edn"
+     "holes/labs/wm-contract/tick-run-record-e9e3ca91-cd8a-4f71-bd99-422e17079c63.edn"
+     "holes/labs/wm-contract/tick-run-record-ea1750b6-3ddf-4921-a75b-af21a311e6b2.edn"
+     "holes/labs/wm-contract/tick-run-record-ea5b5b69-ca23-407a-938b-29b16477c12c.edn"
+     "holes/labs/wm-contract/tick-run-record-eb1685fb-8723-437c-8072-930a33cc3040.edn"
+     "holes/labs/wm-contract/tick-run-record-eb9c7cbd-ccdf-4855-9c87-a2ce2b79514c.edn"
+     "holes/labs/wm-contract/tick-run-record-ec4383d5-c698-4730-8212-95d7456663cd.edn"
+     "holes/labs/wm-contract/tick-run-record-ed2d5575-c864-464c-8e32-c2771863661e.edn"
+     "holes/labs/wm-contract/tick-run-record-ee05db0d-e14e-4c40-8429-16485b224322.edn"
+     "holes/labs/wm-contract/tick-run-record-ee061946-de53-4193-bfcf-5543c4c92646.edn"
+     "holes/labs/wm-contract/tick-run-record-ee0f124a-d469-4211-a937-ff78c5d04a9a.edn"
+     "holes/labs/wm-contract/tick-run-record-f1490ef3-d223-4358-93d1-c697e38541d2.edn"
+     "holes/labs/wm-contract/tick-run-record-f25b307a-a0e3-416f-a186-8a32ac99e2c3.edn"
+     "holes/labs/wm-contract/tick-run-record-f3ef3c3e-920a-4a39-a918-5e7fa575cc69.edn"
+     "holes/labs/wm-contract/tick-run-record-f4cadff9-0b9a-4736-b963-03215cbca60f.edn"
+     "holes/labs/wm-contract/tick-run-record-f4f3824b-31a3-4c06-bb6d-dd41e69a8fff.edn"
+     "holes/labs/wm-contract/tick-run-record-f7e298f7-1ecb-4091-851a-0078ab2fb220.edn"
+     "holes/labs/wm-contract/tick-run-record-f8182144-a694-4188-9bcd-a25af4826c19.edn"
+     "holes/labs/wm-contract/tick-run-record-f84c10c7-1a24-4e47-9413-69c0323f83b1.edn"
+     "holes/labs/wm-contract/tick-run-record-f8a9cf32-0054-4a53-8874-f412e1ac76ac.edn"
+     "holes/labs/wm-contract/tick-run-record-f98bf743-01cd-4271-be2a-c23766fe0e35.edn"
+     "holes/labs/wm-contract/tick-run-record-fc2a7c5c-66b0-4d1c-a05e-be497d971775.edn"
+     "holes/labs/wm-contract/tick-run-record-fe06ee4b-ab7a-4d91-aaaa-3430339412ed.edn"
+     "holes/labs/wm-contract/tick-run-record-fe3e8ac4-4a77-418c-9061-085a3b15ce44.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r1.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r2.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r3.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r4.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r5.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-13-claude-15-r6.edn"
+     "holes/labs/wm-contract/tick-run-record-wm-machinery-test-2026-09-14-claude-15-r8.edn"
+     "holes/labs/wm-contract/variable-situation-accounting.edn"
+     "holes/labs/wm-contract/workflow-report.edn"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "holes/labs/wm-contract",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/.lane-futility-index.edn"
+     "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/wm-trace-2026-09-12.edn"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace/.lane-futility-index.lock"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :message-draft
+    "futon2: review generated files in holes/labs/wm-contract/runs/row-15-abstain-epsilon-2026-09-12/redirected-trace",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12/run-transcript.txt"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-16-r17-envelope-2026-09-12",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13/machinery-test-r1.stderr"
+     "holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13/machinery-test-r1.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-on-demand-entrypoint-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2.stderr"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2.stdout"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2b.stderr"
+     "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13/machinery-test-r2b.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-r2-cohort-47-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:98f0e0cccc77e926",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r3.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r3.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r4.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r4.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r5.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r5.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r6.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r6.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r7.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r7.stdout"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r8.stderr"
+     "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13/machinery-test-r8.stdout"],
+    :repo/root "/home/joe/code/futon2",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13",
+    :message-draft
+    "futon2: review unattributed work in holes/labs/wm-contract/runs/row-26-r3-seam-fix-2026-09-13",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["checks/__pycache__/f12_preparation_io.cpython-312.pyc"
+     "checks/__pycache__/f12_preparation_io_test.cpython-312.pyc"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern "checks/__pycache__",
+    :message-draft
+    "futon3: review generated files in checks/__pycache__",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["library/.spider/fleet-2026-09-08.edn"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "library/.spider",
+    :message-draft
+    "futon3: review unattributed work in library/.spider",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:5017e766fbc93272",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["resources/sigils/patterns-index.tsv"],
+    :repo/root "/home/joe/code/futon3",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "resources/sigils",
+    :message-draft
+    "futon3: review unattributed work in resources/sigils",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment/applied.edn"
+     "holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment/watch.jsonl"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/M-apm-demonstration/analysis/close-input-identity-2026-09-11/deployment",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2/live-roster-eval.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12-v2",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v2/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001/002-selection.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v3/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/001-time-step.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/002-selection.edn"
+     "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001/003-construction.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v4/run4-f11-production-successor-20260912-v1/attempt-001",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning-v5/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1/activation.edn"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1/.cohort.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-F11-production-successor-2026-09-12/production-fold-commissioning/run4-f11-production-successor-20260912-v1",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence/.historical-qualification.lock"
+     "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-evidence",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-initialization-collision-revalidation-2026-09-11/offline-verification",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/INITIALIZATION38690-INDEPENDENT-REVIEW-zai1-2026-09-11.md"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/INITIALIZATION38690-SOURCE-REVIEW-2026-09-11.json"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/LIVE-COORDINATOR-RESULT-2026-09-11.edn"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11/initialization38690-targeted-check.out"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11",
+    :message-draft
+    "futon3c: review unattributed work in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-admission-2026-09-11",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence/.historical-qualification.lock"
+     "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-evidence",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :generated-artifacts-need-disposition,
+    :paths
+    ["holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification/.run4-recording.lock"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :janitorial,
+    :refusal/reason :in-flight,
+    :concern
+    "holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification",
+    :message-draft
+    "futon3c: review generated files in holes/labs/wm-contract/runs/RUN4-repair-successor-v2-selection-revalidation-2026-09-11/offline-verification",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths
+    ["src/futon3c/inbox_zero/batch_dispatch.clj"
+     "src/futon3c/inbox_zero/compensating_commit.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "src/futon3c/inbox_zero",
+    :message-draft
+    "futon3c: review unattributed work in src/futon3c/inbox_zero",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}
+  {:verdict :held,
+   :held/reason :in-flight,
+   :package
+   {:worktree/id "worktree:83d88d109136f3c8",
+    :review/reason :unattributed-content-needs-review,
+    :paths ["test/futon3c/inbox_zero/compensating_commit_test.clj"],
+    :repo/root "/home/joe/code/futon3c",
+    :seat/id nil,
+    :kind :content-review,
+    :refusal/reason :in-flight,
+    :concern "test/futon3c/inbox_zero",
+    :message-draft
+    "futon3c: review unattributed work in test/futon3c/inbox_zero",
+    :dispatch/id "invoke-1789414858946-20826-448a11bd",
+    :record/type :inbox-zero/refusal}}]}

@@ -25,12 +25,14 @@
       (git! root "commit" "-qm" "base")
       (let [base (git! root "rev-parse" "HEAD") records (atom [])]
         (spit path "reviewed work\n")
+        (let [snapshot (atom {:records {}})
+              scan! (fn [] (swap! snapshot #(-> (consumer/refresh-repo % root (java.time.Instant/now)) :state)))]
         (f {:root root :path path :base base :records records
             :plan {:verdict :proposed :include [{:path "README.md" :git/status :modified}]}
             :options {:repo-root root :message "Fixture reviewed work"
                       :reviewed-blobs {"README.md" (comp/blob-id root "README.md")}
-                      :idle-check! (fn []) :record! #(swap! records conj %)
-                      :certificate {:fixture true}}}))
+                      :idle-check! scan! :watcher-read! scan! :record! #(swap! records conj %)
+                      :certificate {:fixture true}}})))
       (finally (doseq [p (reverse (file-seq dir))] (io/delete-file p))))))
 
 (deftest strict-caller-still-refuses
@@ -111,4 +113,61 @@
                (comp/execute! plan options))]
        (is (= :compensated (:verdict r)))
        (is (= :detector-inconclusive (:finding/type r)))
+       (is (= (git! root "rev-parse" (str base "^{tree}")) (git! root "rev-parse" "HEAD^{tree}")))))))
+
+(deftest watcher-history-keeps-intermediate-evidence
+  (let [r {:record/type :inbox-zero/file-observation :observation/id "a"
+           :repo/root "/tmp" :worktree/id "w" :path "note" :observed-at 0
+           :git/status :modified :content/hash "reviewed" :head/sha "base"}
+        before {:records {"a" r}}
+        edited (assoc r :observation/id "b" :content/hash "racing" :observed-at 1)
+        clean (assoc r :observation/id "c" :git/status :clean :head/sha "commit" :observed-at 2)
+        check #(comp/watcher-window before % "/tmp" #{"note"} "base" "commit")]
+    (is (:clean? (check {:records {"a" r "c" clean}})))
+    (is (= ["note"] (:paths (check {:records {"a" r "b" edited "c" clean}}))))
+    (is (false? (:complete? (check {:records {"c" clean}}))))
+    (is (false? (:complete? (check {:records {"a" edited}}))))
+    (is (thrown? clojure.lang.ExceptionInfo (check nil)))))
+
+(deftest ^:slow watcher-only-race-compensates-and-preserves-actual-index
+  (fixture
+   (fn [{:keys [root base plan options]}]
+     (let [scan (:watcher-read! options)
+           real-execute executor/execute-plan!
+           index-bytes (atom nil)
+           r (with-redefs [executor/execute-plan!
+                           (fn [p opts]
+                             (let [result (real-execute p opts)]
+                               (reset! index-bytes (vec (Files/readAllBytes (.toPath (io/file root ".git/index")))))
+                               result))]
+               (comp/execute!
+                plan (assoc options :watcher-read!
+                            (fn []
+                              (let [s (scan)
+                                    original (first (filter #(= :modified (:git/status %)) (vals (:records s))))
+                                    event (assoc original :observation/id "history-only-race"
+                                                 :content/hash "intermediate-edit" :observed-at (java.util.Date.))]
+                                (assoc-in s [:records "history-only-race"] event))))))]
+       (is (= :compensated (:verdict r)))
+       (is (= :raced-with-edit (:finding/type r)))
+       (is (zero? (get-in r [:postcheck :detector :event_count])))
+       (is (= ["README.md"] (get-in r [:postcheck :watcher :paths])))
+       (is (= (git! root "rev-parse" (str base "^{tree}")) (git! root "rev-parse" "HEAD^{tree}")))
+       (is (= "reviewed work\n" (slurp (io/file root "README.md"))))
+       (is (= @index-bytes (vec (Files/readAllBytes (.toPath (io/file root ".git/index"))))))))))
+
+(deftest missing-watcher-source-is-a-typed-preflight-refusal
+  (let [records (atom [])
+        r (comp/execute! {} {:record! #(swap! records conj %)})]
+    (is (= :watcher-history-unavailable (:refusal/reason r)))
+    (is (= :inbox-zero/refusal (:record/type (first @records))))))
+
+(deftest ^:slow failed-watcher-read-compensates
+  (fixture
+   (fn [{:keys [root base plan options]}]
+     (let [r (comp/execute! plan (assoc options :watcher-read!
+                                      #(throw (ex-info "Watcher snapshot unavailable" {:reason :watcher-read-failed}))))]
+       (is (= :compensated (:verdict r)))
+       (is (= :detector-inconclusive (:finding/type r)))
+       (is (= :watcher-read-failed (get-in r [:postcheck :data :reason])))
        (is (= (git! root "rev-parse" (str base "^{tree}")) (git! root "rev-parse" "HEAD^{tree}")))))))

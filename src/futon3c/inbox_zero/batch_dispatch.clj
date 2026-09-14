@@ -166,13 +166,16 @@
                                              "\nInbox-zero-board-digest: " (get-in run [:certificate :board/digest])
                                              "\nInbox-zero-inputs-digest: " (get-in run [:certificate :inputs/digest])
                                              "\nInbox-zero-verbs-digest: " (:verbs/digest run))
+                                watcher-read! (fn [] (:state (consumer/refresh-repo (consumer/read-state state-path)
+                                                                                 root (Instant/now))))
                                 idle-check! (fn []
-                                              (let [s (:state (consumer/refresh-repo (consumer/read-state state-path)
-                                                                                   root (Instant/now)))]
+                                              (let [s (watcher-read!)]
                                                 (when ((live/in-flight-from-records (:records s) (Instant/now)) repo)
-                                                  (throw (ex-info "Repository became active" {:reason :in-flight})))))
+                                                  (throw (ex-info "Repository became active" {:reason :in-flight})))
+                                                s))
                                 executed (compensating/execute! plan {:repo-root root :message message
                                                                      :reviewed-blobs (:blobs review) :idle-check! idle-check!
+                                                                     :watcher-read! watcher-read!
                                                                      :record! record! :certificate (:certificate run)})]
                             (if (and (= :committed (:verdict executed)) (:compensating/verified? executed))
                               (assoc executed :push

@@ -132,3 +132,51 @@ edit-after-commit, edit-and-restore, detector timeout/overflow, moved HEAD,
 post-commit wrapper failure, and a full 1->0 commit-and-push cycle against a
 local bare remote. All changed Clojure passed clj-kondo **0/0** and
 `futon4/dev/check-parens.el`; no shared JVM was restarted or branch-loaded.
+
+## Follow-up: consult standing watcher history after commit
+
+The audit prompted by `invoke-1789415249330-20832-4252f995` found that
+06ff3181 consulted standing watcher history for the final idle check, but its
+postcheck used only inotify and Git. The original live 4->3 receipt above
+**predates this correction**; it must not be cited as exercising the added read.
+
+The idle check now returns its watcher snapshot. Postcheck rereads the same
+standing snapshot and overlays a fresh scan through the existing watcher, then
+examines every newly recorded file observation for this repository. Intermediate
+edit-and-restore observations remain evidence even when the latest content
+matches. Unchanged content/status and the reviewed paths' clean transition at
+our commit are the expected effects; unexpected observations trigger
+compensation. Missing or altered immutable history is inconclusive. Missing
+source callbacks refuse before committing; failed postcommit reads compensate.
+Inotify remains armed across these reads and the final Git checks. The journal
+names all four sources in the assumptions. The 5000 ms operational response
+budget includes the history read; it is still not a proven wall-clock bound.
+
+Compensation still creates an inverse tree commit and uses compare-and-swap to
+advance the ref. It performs no checkout, reset, or index write. The new
+watcher-only race control checks actual index bytes, working file bytes and the
+restored tree, while inotify reports zero events. Existing real-edit controls
+exercise edits before staging, after committing, and edits restored in-window.
+The moved-HEAD control still returns a typed compensation failure and preserves
+the survivor. These are runtime controls for conditional T2', not a proof of
+unconditional detector completeness or eventual successful undo.
+
+The corrected live rerun was **3->3**, with **0 commits, 0 pushes and 33 typed
+`:in-flight` package refusals** across futon2, futon3 and futon3c. No admissible
+package remained from the earlier reviewed batch. The corrected real-Git batch
+integration control committed and pushed to its disposable bare remote, 1->0.
+
+New evidence: `inbox-zero-compensating-watcher-recheck-2026-09-14.edn`, containing
+both board certificates and every outcome. Full runtime journal:
+`/home/joe/code/storage/inbox-zero/compensating-watcher-recheck-2026-09-14.edn`.
+Before and after board digest:
+`sha256:f584796e759670112b0179359bc96152db00371a42e498296a1a662fffecfd5c`;
+input digest:
+`sha256:103c02a0d282820175cbdb4b920913cc9bbac8e5dbc883f7c57d3b9c2b26b9d0`;
+verbs digest:
+`sha256:fed5a2ab9f2805239cdd4646d39cc874f79f61fe84e17309146a122a3da7fb7c`.
+Both certificates replay-verified in their generating process.
+
+Follow-up validation: **17 Clojure tests / 102 assertions**, one namespace per
+invocation using the commands above; **2 Python detector tests**. Changed
+Clojure passes clj-kondo **0 errors / 0 warnings** and the workspace paren gate.
