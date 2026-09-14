@@ -8663,6 +8663,11 @@
 
                      (nonblank-string? (:trigger payload))
                      (assoc :trigger (keyword (:trigger payload))))
+              _ (when (and (true? (:r10-commissioned payload))
+                           (contains? payload :run4-pin-ref))
+                  (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
+                                  {:status 400
+                                   :error :r10-commissioned-with-run4-pin-ref})))
               prepared (when (contains? payload :run4-pin-ref)
                          (run4-entry/prepare config (:headers request) payload))
               _ (when (and prepared (not (:ok prepared)))
