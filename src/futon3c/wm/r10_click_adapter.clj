@@ -34,23 +34,24 @@
             :evidence-store evidence-store
             :dispatch-fn
             (fn [linked]
-              (commission/dispatch-reserved!
-               {:reservation-root binding/reservation-root
-                :commission linked
-                :dispatch-fn
-                (fn [_]
-                  (let [click-result (click-fn {})]
-                    (when (= :already-running (:rejected click-result))
-                      (refuse! :r10/click-rejected
-                               {:reason :already-running
-                                :dispatch/occurred false
-                                :click-result click-result}))
-                    (let [click-id (:click-id click-result)]
-                      {:node :R10
-                       :commission/id (:commission/id linked)
-                       :dispatch/id click-id
-                       :click/id click-id
-                       :click/result click-result})))}))})]
+              (:receipt
+               (commission/dispatch-reserved!
+                {:reservation-root binding/reservation-root
+                 :commission linked
+                 :dispatch-fn
+                 (fn [_]
+                   (let [click-result (click-fn {})]
+                     (when (= :already-running (:rejected click-result))
+                       (refuse! :r10/click-rejected
+                                {:reason :already-running
+                                 :dispatch/occurred false
+                                 :click-result click-result}))
+                     (let [click-id (:click-id click-result)]
+                       {:node :R10
+                        :commission/id (:commission/id linked)
+                        :dispatch/id click-id
+                        :click/id click-id
+                        :click/result click-result})))})))})]
       (commission/mark-recorded!
        {:reservation-root binding/reservation-root
         :commission-id (:commission/id authorized)

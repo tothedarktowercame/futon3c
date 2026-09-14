@@ -1,5 +1,5 @@
 (ns futon3c.wm.r10-click-adapter-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is]]
             [futon3c.evidence.backend :as backend]
             [futon3c.evidence.store :as store]
             [futon3c.wm.r10-click-adapter :as adapter]
@@ -7,7 +7,7 @@
             [futon3c.wm.r10-commission-binding :as binding]
             [futon3c.wm.runner-service :as runner])
   (:import (java.nio.charset StandardCharsets)
-           (java.nio.file Files Path StandardOpenOption)))
+           (java.nio.file Files StandardOpenOption)))
 
 (defn- fixture [dir id]
   (let [path (.resolve dir (str id ".authority.edn"))
