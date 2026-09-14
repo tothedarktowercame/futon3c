@@ -30,42 +30,53 @@
         (str/ends-with? path ".class")
         (str/starts-with? path ".#"))))
 
-(defn- age-hours
-  [observed-at ^Instant now]
-  (let [^Instant t (cond
-                     (instance? java.util.Date observed-at)
-                     (.toInstant ^java.util.Date observed-at)
-                     (instance? Instant observed-at)
-                     observed-at
-                     :else (throw (ex-info "untyped observed-at"
-                                           {:observed-at observed-at})))]
-    (/ (.toMillis (Duration/between t now)) 3600000.0)))
+(defn- as-instant [observed-at]
+  (cond
+    (instance? java.util.Date observed-at) (.toInstant ^java.util.Date observed-at)
+    (instance? Instant observed-at) observed-at
+    :else (throw (ex-info "untyped observed-at" {:observed-at observed-at}))))
+
+(defn- age-hours [observed-at ^Instant now]
+  (/ (.toMillis (Duration/between (as-instant observed-at) now)) 3600000.0))
 
 (defn file-observations
   [records]
   (filter #(= (:record/type %) :inbox-zero/file-observation) (vals records)))
 
+(defn dirty-paths
+  "Current dirt with the start of its uninterrupted dirty history. A clean
+  transition closes that history; subsequent edits start a new one."
+  [records]
+  (->> (file-observations records)
+       (group-by (juxt :repo/root :worktree/id :path))
+       vals
+       (keep (fn [history]
+               (let [ordered (sort-by (juxt (comp as-instant :observed-at)
+                                            :observation/id)
+                                      history)
+                     newest-first (reverse ordered)
+                     dirty (take-while #(contains? #{:modified :untracked :deleted :renamed}
+                                                   (:git/status %))
+                                       newest-first)]
+                 (when (seq dirty)
+                   (assoc (first dirty) :dirty-since (:observed-at (last dirty)))))))
+       (sort-by (juxt :repo/root :worktree/id :path))
+       vec))
+
 (defn sweep-from-records
-  "Aggregate parsed state records into per-repo sweep rows:
-  {:repo <root basename> :clean? bool :clauses-failed [...]}. Clause (one
-  channel, README definition): :dirty-older-than-24h — a non-ignored
-  modified/untracked observation older than 24h at NOW."
+  "Aggregate current dirty histories, never historical dirt already cleaned.
+  This board measures the dirty-age clause only, not all five inbox clauses."
   ([records] (sweep-from-records records (Instant/now)))
   ([records ^Instant now]
-   (let [by-repo (group-by :repo/root (file-observations records))]
-     (mapv (fn [[root rows]]
-             (let [dirty (->> rows
-                              (filter #(contains? #{:modified :untracked}
-                                                  (:git/status %)))
-                              (filter #(not (ignored-by-design? (:path %))))
-                              (filter #(> (age-hours ^Instant (:observed-at %) now)
-                                          24.0)))
-                   clauses (cond-> []
-                             (seq dirty) (conj :dirty-older-than-24h))]
+   (let [dirty-by-root (group-by :repo/root (dirty-paths records))]
+     (mapv (fn [root]
+             (let [old (filter #(and (not (ignored-by-design? (:path %)))
+                                    (> (age-hours (:dirty-since %) now) 24.0))
+                               (get dirty-by-root root))]
                {:repo (.getName (io/file root))
-                :clean? (empty? clauses)
-                :clauses-failed clauses}))
-           by-repo))))
+                :clean? (empty? old)
+                :clauses-failed (if (seq old) [:dirty-older-than-24h] [])}))
+           (sort (distinct (map :repo/root (file-observations records))))))))
 
 (defn in-flight-from-records
   "Repos with watcher activity inside the liveness window — the explicit
@@ -99,7 +110,7 @@
                  (sweep-from-records records now)
                  (in-flight-from-records records now)
                  false)]
-     (board/run packet effect-handler))))
+     (assoc (board/run packet effect-handler) :inputs packet))))
 
 (defn -main
   [& [state-path]]

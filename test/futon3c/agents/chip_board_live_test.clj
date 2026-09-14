@@ -61,3 +61,21 @@
       (is (not-any? #(= :commit (first %)) (effs run-live-case)))
       (is (some #(= :report (first %)) (effs run-live-case)))
       (is (some #(= :commit (first %)) (effs run-idle-case))))))
+
+(deftest clean-transition-closes-history
+  (let [old (obs "futon3c" "README.md" :modified 100)
+        clean (obs "futon3c" "README.md" :clean 40)
+        recent (obs "futon3c" "README.md" :modified 2)]
+    (is (:clean? (first (live/sweep-from-records {:a old :b clean} now))))
+    (is (:clean? (first (live/sweep-from-records {:a old :b clean :c recent} now))))
+    (is (not (:clean? (first (live/sweep-from-records {:a old :c recent} now)))))))
+
+(deftest deleted-and-renamed-dirt-counts
+  (doseq [status [:deleted :renamed]]
+    (is (not (:clean? (first (live/sweep-from-records
+                              {:a (obs "futon3c" "README.md" status 40)} now)))))))
+
+(deftest histories-do-not-cross-worktrees
+  (let [a (assoc (obs "futon3c" "README.md" :modified 100) :worktree/id "a")
+        b (assoc (obs "futon3c" "README.md" :clean 2) :worktree/id "b")]
+    (is (not (:clean? (first (live/sweep-from-records {:a a :b b} now)))))))
