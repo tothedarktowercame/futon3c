@@ -1,0 +1,19 @@
+@flexiarg buffer-cleaner/yield-settled
+@title Yield (settled)
+@keywords terminal, report, meters, threshold, revisit-truth
+@audience adapter, G computation
+@tone normative
+@style pattern
+@grade technique
+@references [buffer-cleaner/kill]
+@provenance v3 diagram terminal; SING meters only. Live evaluation: futon2 buffer-cleaner-adapter (receipts emit these fields).
+
+! conclusion:
+  The cycle ends with a typed report — meters, never prose claims.
+
+  + METERS: remaining, kills-proposed, expected-recovery, fuel-charged.
+  + CLEAN-ENOUGH-THRESHOLD: 16, :declared-for-worked-example-not-measured
+    — the historical constructed 16 is never silently used as a real
+    verdict.
+  + REVISIT-TRUTH: :unavailable — no retained buffer-identity/kill/
+    reopen history exists; unavailable, NOT false, never defaulted.

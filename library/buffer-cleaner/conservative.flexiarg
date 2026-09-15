@@ -1,0 +1,20 @@
+@flexiarg buffer-cleaner/wiring-conservative
+@title Wiring: Conservative
+@keywords wiring, args, threshold, eligibility, candidate-reconstruction
+@audience adapter, G computation
+@tone normative
+@style pattern
+@grade technique
+@references [buffer-cleaner/observe-categories buffer-cleaner/classify-staleness buffer-cleaner/kill]
+@provenance The second candidate rational reconstruction (see wiring-aggressive for the frame).
+
+! conclusion:
+  Eligibility: stream, http, file-stale only; file stale-age 24h
+  (86400s).
+
+  + ARGS: {eligible-kinds #{stream http file-stale}
+    file-stale-age-seconds 86400} — machine projection in the lab's
+    wirings/conservative.edn.
+
+  + BECAUSE: narrow eligibility + long threshold = act only where the
+    channel is decisive or the age-prior is low.

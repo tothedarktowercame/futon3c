@@ -1,0 +1,15 @@
+@flexiarg buffer-cleaner/keep
+@title Keep
+@keywords preserve, eligibility, hard-preservation, named-buffers
+@audience adapter
+@tone normative
+@style pattern
+@grade technique
+@references [buffer-cleaner/classify-staleness]
+@provenance v3 diagram chip 4. Hard preservation rules are enforced in classify (by name and by raw flags): *scratch*, *Minibuf-*, *Arxana Browser*; visible, has-process, modified (any Emacs-truthy value incl. :autosaved), active-agent, server-clients.
+
+! conclusion:
+  Kept buffers are recorded with their reason; keep costs nothing in G,
+  the carrying cost is fuel-side.
+
+  + BECAUSE: what the score does not see, the record still must.

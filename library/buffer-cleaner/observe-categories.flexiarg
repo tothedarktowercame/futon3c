@@ -1,0 +1,22 @@
+@flexiarg buffer-cleaner/observe-categories
+@title Observe Categories
+@keywords observe, channel, category, decisiveness, read-only
+@audience adapter, G computation
+@tone normative
+@style pattern
+@grade technique
+@references [buffer-cleaner/classify-staleness]
+@provenance v3 diagram chip 1 (cascade-policy-example.html); category set = futon-buffer-cleaner.el candidate-kind predicates. Live evaluation: futon2/holes/labs/wm-contract/buffer-cleaner-adapter/ (adapter/dump-state.el, read-only).
+
+! conclusion:
+  Each buffer arrives tagged with its STRUCTURAL category (the cleaner's
+  own predicates: file/stream/http/invoke/dired/temp/render/other) and
+  raw safety/age signals; nothing is killed or judged here.
+
+  + THEN: emit per buffer {name kind file modified has-process visible
+    active-agent server-clients display-age-seconds}, read-only;
+    normalize Emacs truthiness at the source (:autosaved is truthy).
+
+  + BECAUSE: per-channel honesty begins at observation — a decisive
+    channel must be declared decisive at observation, not discounted in
+    the score later.

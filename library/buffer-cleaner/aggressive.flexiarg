@@ -1,0 +1,21 @@
+@flexiarg buffer-cleaner/wiring-aggressive
+@title Wiring: Aggressive
+@keywords wiring, args, threshold, eligibility, candidate-reconstruction
+@audience adapter, G computation
+@tone normative
+@style pattern
+@grade technique
+@references [buffer-cleaner/observe-categories buffer-cleaner/classify-staleness buffer-cleaner/kill]
+@provenance One of two CANDIDATE RATIONAL RECONSTRUCTIONS of the cleaner (Joe's frame, 2026-09-15: authored once, deterministic thereafter; per-run variation is data). Wiring = ARG CHOICES over the same node library, not different code.
+
+! conclusion:
+  Eligibility: every cleaner category (stream http temp dired render
+  invoke file-stale); file stale-age 6h (21600s).
+
+  + ARGS: {eligible-kinds #{stream http temp dired render invoke
+    file-stale} file-stale-age-seconds 21600} — values from the worked
+    example (futon2 a508aa24); the lab's wirings/aggressive.edn is the
+    machine projection.
+
+  + BECAUSE: the wiring difference is a data difference — the
+    authored-panel thesis: same chips, different args.
