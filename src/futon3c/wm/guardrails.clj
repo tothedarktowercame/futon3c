@@ -7,7 +7,7 @@
   (:require [clojure.string :as str]))
 
 (def autonomous-action-types
-  #{:address-sorry :fire-pattern :open-mission :advance-mission})
+  #{:address-sorry :fire-pattern :open-mission :advance-mission :advance-ticket})
 
 (def mission-action-types
   "Mission-targeting action types sharing the bounded-advancement guardrail:
@@ -15,7 +15,7 @@
    :advance-mission is the enumerator's type for already-open missions
    (pilot cycle #1, 2026-06-10); :open-mission retained for
    genuinely-unopened targets."
-  #{:open-mission :advance-mission})
+  #{:open-mission :advance-mission :advance-ticket})
 
 (def operator-only-action-types
   #{:learn-action-class})
@@ -126,10 +126,10 @@
       false)))
 
 (defn default-mission-status
-  "Default mission status lookup through the futon2 registry."
+  "Default mission/ticket status lookup through the futon2 registry."
   [target]
   (try
-    (if-let [mission-status-fn (requiring-resolve 'futon2.aif.mission-registry/mission-status)]
+    (if-let [mission-status-fn (requiring-resolve 'futon2.aif.mission-registry/work-target-status)]
       (mission-status-fn target)
       {:open? (registry-live-mission? target)
        :open-hole-count 0})

@@ -247,3 +247,24 @@
         (is (= :invalid-strategic-selection-request
                (try (live/validated-selection request)
                     (catch clojure.lang.ExceptionInfo e (:err (ex-data e))))))))))
+
+(deftest ticket-status-is-shared-by-http-and-in-process
+  (with-redefs-fn
+    {(requiring-resolve 'futon2.aif.mission-registry/load-tickets)
+     (constantly {:tickets [{:id "T-live" :status-class :live}
+                           {:id "T-done" :status-class :complete}]})
+     #'live/current-selection (constantly {:status :experiment-only})}
+    (fn []
+      (is (= 200 (:status (post-strategic-selection {:scheduler-habit-ranking ["T-live"]}))))
+      (is (= :experiment-only (:status (live/validated-selection {:scheduler-habit-ranking ["T-live"]}))))
+      (is (= 400 (:status (post-strategic-selection {:scheduler-habit-ranking ["T-done"]}))))
+      (is (= :invalid-strategic-selection-request
+             (try (live/validated-selection {:scheduler-habit-ranking ["T-done"]})
+                  (catch clojure.lang.ExceptionInfo e (:err (ex-data e))))))
+      (is (= {:open? true :open-hole-count 1}
+             ((requiring-resolve 'futon3c.wm.guardrails/default-mission-status) "T-live")))
+      (is (nil? ((requiring-resolve 'futon3c.wm.guardrails/guardrail-rule)
+                 {:type :advance-ticket :target "T-live"} {})))
+      (is (= :open-mission-no-holes
+             ((requiring-resolve 'futon3c.wm.guardrails/guardrail-rule)
+              {:type :advance-ticket :target "T-done"} {}))))))

@@ -431,13 +431,13 @@
            :scope :phase8-experiment)))
 
 (defn open-mission?
-  "Resolve current mission status for every transport; unknown targets refuse."
+  "Resolve current mission or ticket status for every transport; unknown targets refuse."
   [target]
-  (true? (:open? ((requiring-resolve 'futon2.aif.mission-registry/mission-status)
+  (true? (:open? ((requiring-resolve 'futon2.aif.mission-registry/work-target-status)
                   target))))
 
 (defn validated-selection
-  "Validate up to three currently open missions, then run the Phase 8
+  "Validate up to three currently open missions or live tickets, then run the Phase 8
   experiment (which does not grant live actuation authority). Throws ex-info with
   {:err :invalid-strategic-selection-request} on violation so the HTTP 400
   and the in-process rejection are the same decision."
