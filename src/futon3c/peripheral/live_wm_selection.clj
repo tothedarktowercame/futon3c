@@ -351,7 +351,8 @@
                   :accepted-endpoint-latencies accepted-latencies}))))))
 
 (defn authorize-bounded-autonomy
-  "Promote a cache-gated selection to machine-determined enactment authority.
+  "Legacy Phase 8 cache-gate validation, now experimental only.
+   This function no longer grants live enactment authority.
 
    Evidence 6e6f56a1-b9d7-4f83-928f-3a211ef890a0 retires operator
    confirm-to-enact. This does not execute the click. The full-loop runner
@@ -380,10 +381,10 @@
                  :selected-mission-ids (:selected-mission-ids selection)
                  :serving-cache-gate cache-gate})))
     (assoc selection :actuation
-           {:status :machine-authorized-bounded-autonomy
-            :authorized? true
+           {:status :experiment-only
+            :authorized? false
             :executed? false
-            :authority :machine-determined
+            :authority :experiment-only
             :operator-confirmation-required? false
             :operator-decision-evidence-id operator-decision-evidence-id
             :admissible-set :unchanged-phase1-4
@@ -402,12 +403,9 @@
              :rollback-boundary rollback-boundary}})))
 
 (defn current-selection
-  "Run the reason-bearing selector against the current shared store.
-
-   SCHEDULER-HABIT-RANKING must already be restricted to the Phase 1-4
-   candidate ids. The operation is read-only but, after the immediate serving
-   cache gate passes, returns machine enactment authority. It never executes
-   the click."
+  "Run the July Phase 8 experiment against the shared store. Its fixture
+   census is retained for experimental replay, not live selection authority.
+   Live decisions are authorized by futon2.aif.controller-authority."
   [{:keys [scheduler-habit-ranking evidence-store trace-id]}]
   (let [root (fixture-root)
         live-input
@@ -426,24 +424,21 @@
                 [:latency :click-time-contract
                  :maximum-post-warm-endpoint-recall-ms]
                 1000)]
-    (authorize-bounded-autonomy
-     (enforce-serving-cache-gate
-      #(run-verification ctx live-input)
-      max-endpoint-ms))))
+    (assoc (authorize-bounded-autonomy
+            (enforce-serving-cache-gate
+             #(run-verification ctx live-input)
+             max-endpoint-ms))
+           :scope :phase8-experiment)))
 
-(def phase1-4-allow-list
-  "Bounded-autonomy authorization (919d975): the only mission ids the
-  reason-bearing selector may be asked to rank, regardless of transport.
-  Enforcement lived inline in the HTTP endpoint until M-omni-wm-runner
-  added an in-process caller; the authority now lives here so every
-  transport refuses identically."
-  #{"M-aif-policy-conditioned-eig"
-    "M-shared-memory-control-build-test"
-    "M-wm-aif-policy-grain-compliance"})
+(defn open-mission?
+  "Resolve current mission status for every transport; unknown targets refuse."
+  [target]
+  (true? (:open? ((requiring-resolve 'futon2.aif.mission-registry/mission-status)
+                  target))))
 
 (defn validated-selection
-  "Validate REQUEST exactly as the strategic-selection endpoint always has,
-  then run current-selection. Throws ex-info with
+  "Validate up to three currently open missions, then run the Phase 8
+  experiment (which does not grant live actuation authority). Throws ex-info with
   {:err :invalid-strategic-selection-request} on violation so the HTTP 400
   and the in-process rejection are the same decision."
   [{:keys [scheduler-habit-ranking] :as request}]
@@ -453,7 +448,7 @@
                  (every? #(and (string? %)
                                (pos? (count (.trim ^String %))))
                          scheduler-habit-ranking)
-                 (every? phase1-4-allow-list scheduler-habit-ranking))
+                 (every? open-mission? scheduler-habit-ranking))
     (throw (ex-info
             "scheduler-habit-ranking must be a non-empty vector of authorized mission ids"
             {:err :invalid-strategic-selection-request

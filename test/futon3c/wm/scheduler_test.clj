@@ -76,11 +76,10 @@
         (is (= 6 (get-in out [:ranked-actions 0 :action :open-hole-count])))
         (is (nil? (get-in out [:ranked-actions 0 :action :structural-hole-count])))))))
 
-(deftest refresh-forwards-the-reason-bearing-selector
-  (testing "the scheduler cannot silently call the WM generator without selection"
+(deftest refresh-uses-controller-generator-without-fixture-selector
+  (testing "the generator owns controller selection; scheduler supplies no fixture override"
     (let [seen (atom nil)
           statuses (atom [])
-          selector (fn [_] {:status :verified-live-selection})
           generate
           (fn [days opts]
             (reset! seen {:days days :opts opts})
@@ -95,10 +94,9 @@
          (fn [status activity]
            (swap! statuses conj [status activity]))}
         (fn []
-          (#'scheduler/refresh-one-window! generate selector 14)))
+          (#'scheduler/refresh-one-window! generate 14)))
       (is (= 14 (:days @seen)))
-      (is (identical? selector
-                      (get-in @seen [:opts :strategic-selection-fn])))
+      (is (= {} (:opts @seen)))
       (is (= [[:invoking "snapshot scan 14d window"]
               [:idle nil]]
              @statuses)))))

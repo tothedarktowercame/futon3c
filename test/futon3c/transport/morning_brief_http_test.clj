@@ -1,7 +1,8 @@
 (ns futon3c.transport.morning-brief-http-test
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.transport.http :as http]))
+            [futon3c.transport.http :as http]
+            [futon3c.peripheral.live-wm-selection :as live]))
 
 (def ^:private review-uri "/api/alpha/morning-brief/review")
 (def ^:private addendum-uri "/api/alpha/morning-brief/addendum")
@@ -71,10 +72,9 @@
                    :selected-mission-ids
                    ["M-shared-memory-control-build-test"]}]
     (with-redefs
-      [clojure.core/requiring-resolve
-       (resolver
-        {'futon3c.peripheral.live-wm-selection/current-selection
-         (fn [request] (reset! seen request) selection)})]
+      [live/open-mission? (constantly true)
+       live/current-selection
+       (fn [request] (reset! seen request) selection)]
       (let [response
             (post-strategic-selection
              {:scheduler-habit-ranking
@@ -235,3 +235,15 @@
                       (get-pending)]]
       (is (= 501 (:status response)))
       (is (= "morning-brief-unavailable" (:err (response-body response)))))))
+
+(deftest strategic-scope-refusal-matches-in-process
+  (with-redefs [live/open-mission? #{"M-outside-old-canary"}
+                live/current-selection (constantly {:status :experiment-only})]
+    (is (= 200 (:status (post-strategic-selection
+                        {:scheduler-habit-ranking ["M-outside-old-canary"]}))))
+    (doseq [target ["M-closed" "M-unknown"]]
+      (let [request {:scheduler-habit-ranking [target]}]
+        (is (= 400 (:status (post-strategic-selection request))))
+        (is (= :invalid-strategic-selection-request
+               (try (live/validated-selection request)
+                    (catch clojure.lang.ExceptionInfo e (:err (ex-data e))))))))))

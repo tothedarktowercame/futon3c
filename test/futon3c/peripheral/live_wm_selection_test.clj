@@ -129,7 +129,7 @@
            (refusal-reason #(call-proof (vec (reverse ranked))
                                         (mapv :policy-id ranked)))))))
 
-(deftest cache-gated-selection-becomes-machine-authorized
+(deftest cache-gated-experiment-does-not-authorize-live-action
   (let [verified
         (live/run-verification
          {:recall-fn (recall-fixture memories)
@@ -143,9 +143,9 @@
                  :accepted-endpoint-latencies
                  [{:pattern-id "p4ng/R9-independent-witness"
                    :elapsed-ms 20.0}]}))]
-    (is (= :machine-authorized-bounded-autonomy
+    (is (= :experiment-only
            (get-in authorized [:actuation :status])))
-    (is (true? (get-in authorized [:actuation :authorized?])))
+    (is (false? (get-in authorized [:actuation :authorized?])))
     (is (false? (get-in authorized [:actuation :executed?])))
     (is (= 13 (get-in authorized
                       [:actuation :machine-gates
@@ -261,3 +261,15 @@
           (constantly
            {:recall-audits [{:pattern-id "R9" :elapsed-ms 7000.0}]})
           1000)))))
+
+(deftest all-open-mission-transport-scope
+  (with-redefs [live/open-mission? #{"M-outside-old-canary"}
+                live/current-selection identity]
+    (is (= {:scheduler-habit-ranking ["M-outside-old-canary"]}
+           (live/validated-selection {:scheduler-habit-ranking ["M-outside-old-canary"]})))
+    (doseq [ranking [["M-closed"] ["M-unknown"] []
+                     ["M-outside-old-canary" "M-outside-old-canary"
+                      "M-outside-old-canary" "M-outside-old-canary"]]]
+      (is (= :invalid-strategic-selection-request
+             (try (live/validated-selection {:scheduler-habit-ranking ranking})
+                  (catch clojure.lang.ExceptionInfo e (:err (ex-data e)))))))))

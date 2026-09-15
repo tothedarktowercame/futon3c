@@ -264,15 +264,13 @@
     {:payload payload
      :body (json/generate-string payload)}))
 
-(defn- refresh-one-window! [generate strategic-selection-fn days]
+(defn- refresh-one-window! [generate days]
   (report-snapshot-status! :invoking
                            (str "snapshot scan " days "d window"))
   (try
     (let [started-ns (System/nanoTime)
           started-at (Instant/now)
-          bundle (-> (generate days
-                              {:strategic-selection-fn
-                               strategic-selection-fn})
+          bundle (-> (generate days {})
                      http/apply-wm-operator-clear
                      ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
           {:keys [payload body]} (render-payload-json bundle)
@@ -316,9 +314,6 @@
       (swap! !state assoc :last-tick-at now)
       (try
         (let [generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)
-              strategic-selection-fn
-              (requiring-resolve
-               'futon3c.peripheral.live-wm-selection/current-selection)
               ;; demand-driven, debounced belly refresh at score time — reuses
               ;; THIS established tick (no separate poll loop; the retired
               ;; turn-trigger loop froze the evidence store, 2026-06-26).
@@ -327,7 +322,7 @@
               days-windows (:days-windows @!state)
               refreshed
               (mapv #(refresh-one-window!
-                      generate strategic-selection-fn %)
+                      generate %)
                     days-windows)]
           (swap! !state
                  (fn [s]
