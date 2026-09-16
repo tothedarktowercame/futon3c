@@ -67,6 +67,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.warrant :as warrant]
             [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
             [futon3c.agency.agent-pouch :as agent-pouch]
@@ -1650,14 +1651,19 @@
                          (invoke-ingress/creation-finished!
                           controller ticket @accepted-id)))))
                  (create-invoke-job-ledger! request))
-        {:keys [caller agent-id surface]} request]
+        {:keys [caller agent-id surface warrants]} request]
     ;; First-class durable coordination edge (E-patch-agent-evidence-leaks): record the
     ;; (from→to) edge keyed by job-id so the in-band `Edge:` join-key resolves to a stored
     ;; edge for EVERY job (not just wrapped social-dispatch invokes). Never break the hot path.
     (try
       (coordination-ledger/record-invoke-edge!
-       {:from (or caller "http-caller") :to (str agent-id)
-        :surface (or surface "http") :kind :invoke :edge-id job-id})
+       (cond-> {:from (or caller "http-caller") :to (str agent-id)
+                :surface (or surface "http") :kind :invoke :edge-id job-id}
+         ;; Warrant rides the handoff: the durable edge carries the handoff's
+         ;; warrant status and entry ids, so the ledger answers "which handoffs
+         ;; were warranted" without opening the registry.
+         (some? warrants) (assoc :warrant-status (:handoff/warrant-status warrants)
+                                 :warrant-entry-ids (mapv :entry-id (:warrants warrants)))))
       (catch Throwable _))
     (bb/project-agents! (reg/registry-status))
     job-id))
@@ -4286,6 +4292,11 @@
                    " automatically as a completion bell. Just respond — do NOT also "
                    "bell/whistle " caller " to deliver the same answer (that double-delivers; "
                    "bell " caller " yourself only to open a genuinely NEW thread).\n"))
+            ;; Warrant rides the handoff (test-registry): render the handoff's
+            ;; warrant status right after the caller/reply-delivery lines so the
+            ;; reviewer sees entry ids, lanes and base shas without searching.
+            (when-let [w (:warrants thread)]
+              (warrant/render-warrant-lines w))
             ;; bell-router: thread context so the recipient can thread the bell and
             ;; reply IN-THREAD (no crossing). NEW request shows the id to reply-to —
             ;; but only instructs a MANUAL reply-bell when the response won't auto-route.
@@ -4779,7 +4790,7 @@
    Call run-invoke-job! rather than this: the wrapper refuses jobs that already
    reached a terminal state while they sat in the queue."
   [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
-           model reasoning-effort]}]
+           model reasoning-effort warrants]}]
   (let [ev-opts (when mission-id [:mission-id mission-id])
         execution-started? (atom false)]
     (try
@@ -4796,7 +4807,11 @@
                        bell? (assoc :bell-id job-id
                                     :in-reply-to (:bellback-of job)
                                     :type (:bell-type job)
-                                    :ref (:ref job))))
+                                    :ref (:ref job))
+                       ;; Warrant rides the handoff: the reviewer meets the
+                       ;; warrant in the delivered turn header (see
+                       ;; wrap-surface-header), without searching the registry.
+                       (some? warrants) (assoc :warrants warrants)))
             effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id thread)
             ;; Install a ledger-appending event sink for the duration of the
             ;; invoke so bell-seeded turns record text/tool_use events (the
@@ -5317,6 +5332,11 @@
                             (:in_reply_to payload) (get payload "in_reply_to")
                             (:reply-to payload) (get payload "reply-to"))
             raw-bell-type (bell-type-payload payload)
+            ;; Warrant rides the handoff (test-registry): validate the optional
+            ;; "warrants" vector here; a malformed element is a typed 400 before
+            ;; any job is created. Record validation stays with the reviewer's check.
+            warrant-normalized (warrant/normalize-warrants
+                                (or (:warrants payload) (get payload "warrants")))
             typed? (typed-bells-enabled?)
             bell-type (when typed? (normalize-bell-type raw-bell-type))
             ref (when typed? (nonblank-str (bell-ref-payload payload)))
@@ -5356,6 +5376,12 @@
           (json-response 400 {:ok false :err "answer-ref-required"
                               :message "type=answer requires ref"})
 
+          (:handoff/refusal warrant-normalized)
+          (json-response 400 {:ok false :err "warrant-invalid"
+                              :message "warrants must be valid test-registry entries"
+                              :field (name (:field warrant-normalized))
+                              :value (:value warrant-normalized)})
+
           :else
           (if-let [existing-job (when (and typed? (nonblank-str requested-job-id))
                                   (get-in (ensure-invoke-jobs-ledger!)
@@ -5387,13 +5413,15 @@
                                                   :mode mode
                                                   :bellback-of (when (bell-router-enabled?) in-reply-to)
                                                   :bell-type (when typed? bell-type)
-                                                  :ref (when typed? ref')})
+                                                  :ref (when typed? ref')
+                                                  :warrants warrant-normalized})
                       run-job (fn []
                                 (run-invoke-job! {:job-id job-id
                                                   :agent-id agent-id
                                                   :prompt prompt
                                                   :caller caller
                                                   :surface surface
+                                                  :warrants warrant-normalized
                                                   :timeout-ms timeout-ms
                                                   :model model
                                                   :reasoning-effort reasoning-effort

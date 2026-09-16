@@ -62,6 +62,11 @@ ap.add_argument("--timeout-ms", type=int,
                      "result is lost. Pass 0 to defer to the server default."
                      % (BELL_DEFAULT_TIMEOUT_MS, BELL_DEFAULT_TIMEOUT_MS // 60000))
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
+ap.add_argument("--warrant", action="append", metavar="ENTRY_ID:NAMESPACE:LANE:BASE_SHA",
+                help="test-registry warrant riding this handoff (repeatable). "
+                     "LANE is routine|pre-push|invariant; BASE_SHA is 7-40 hex. "
+                     "The server renders these into the delivered turn and records "
+                     "the warrant status on the coordination edge.")
 a = ap.parse_args()
 
 prompt = sys.stdin.read()
@@ -117,6 +122,18 @@ if a.park:
     print(note % a.surface, file=sys.stderr)
 
 body = {"agent-id": a.to, "prompt": prompt}
+if a.warrant:
+    warrants = []
+    for spec in a.warrant:
+        parts = spec.split(":")
+        if len(parts) != 4:
+            sys.exit(f"agency_send: --warrant must be ENTRY_ID:NAMESPACE:LANE:BASE_SHA (got {spec!r})")
+        entry_id, namespace, lane, base_sha = parts
+        if lane not in ("routine", "pre-push", "invariant"):
+            sys.exit(f"agency_send: --warrant LANE must be routine|pre-push|invariant (got {lane!r})")
+        warrants.append({"entry-id": entry_id, "namespace": namespace,
+                          "lane": lane, "base-sha": base_sha})
+    body["warrants"] = warrants
 if a.frm:
     body["caller"] = a.frm
 if a.type:
