@@ -5334,9 +5334,13 @@
             raw-bell-type (bell-type-payload payload)
             ;; Warrant rides the handoff (test-registry): validate the optional
             ;; "warrants" vector here; a malformed element is a typed 400 before
-            ;; any job is created. Record validation stays with the reviewer's check.
-            warrant-normalized (warrant/normalize-warrants
-                                (or (:warrants payload) (get payload "warrants")))
+            ;; any job is created. ABSENT key means no warrant header and no edge
+            ;; status (ordinary handoffs are untouched); an explicit [] means
+            ;; :unwarranted (typed, routed to full rerun). Record validation
+            ;; stays with the reviewer's check.
+            warrant-normalized
+            (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+              (warrant/normalize-warrants raw-warrants))
             typed? (typed-bells-enabled?)
             bell-type (when typed? (normalize-bell-type raw-bell-type))
             ref (when typed? (nonblank-str (bell-ref-payload payload)))
@@ -5871,7 +5875,12 @@
         mission-id (or (:mission-id payload) (get payload "mission-id"))
         poll-ms (sanitize-ms (or (:poll-ms payload) (get payload "poll-ms")) 1000 100 10000)
         heartbeat-ms (sanitize-ms (or (:heartbeat-ms payload) (get payload "heartbeat-ms")) 5000 500 60000)
-        evidence-store (evidence-store-for-config config)]
+        evidence-store (evidence-store-for-config config)
+        ;; Warrant rides the handoff: same validation as handle-bell; the stream
+        ;; path refuses malformed warrants before the channel opens.
+        warrant-normalized
+        (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+          (warrant/normalize-warrants raw-warrants))]
     (cond
       (or (nil? agent-id) (str/blank? (str agent-id)))
       (json-response 400 {:ok false :err "missing-agent-id"
@@ -5881,12 +5890,19 @@
       (json-response 400 {:ok false :err "missing-prompt"
                           :message "prompt is required"})
 
+      (:handoff/refusal warrant-normalized)
+      (json-response 400 {:ok false :err "warrant-invalid"
+                          :message "warrants must be valid test-registry entries"
+                          :field (name (:field warrant-normalized))
+                          :value (:value warrant-normalized)})
+
       :else
       (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
                                         :agent-id agent-id
                                         :prompt prompt
                                         :caller caller
-                                        :surface "whistle"})
+                                        :surface "whistle"
+                                        :warrants warrant-normalized})
             mode (invoke-job-mode prompt)
             started-ms (System/currentTimeMillis)
             closed? (atom false)
@@ -5931,6 +5947,7 @@
                                          :prompt prompt
                                          :caller caller
                                          :surface "whistle"
+                                         :warrants warrant-normalized
                                          :timeout-ms timeout-ms
                                          :mission-id mission-id
                                          :evidence-store evidence-store})))
@@ -6021,7 +6038,10 @@
             caller (or (some-> payload :caller str)
                        (some-> payload (get "caller") str)
                        "http-caller")
-            evidence-store (evidence-store-for-config config)]
+            evidence-store (evidence-store-for-config config)
+            warrant-normalized
+            (when-some [raw-warrants (or (:warrants payload) (get payload "warrants"))]
+              (warrant/normalize-warrants raw-warrants))]
         (if (stream-flag? payload)
           (handle-whistle-stream* request config payload)
           (cond
@@ -6032,6 +6052,12 @@
             (nil? prompt)
             (json-response 400 {:ok false :err "missing-prompt"
                                 :message "prompt is required"})
+
+            (:handoff/refusal warrant-normalized)
+            (json-response 400 {:ok false :err "warrant-invalid"
+                                :message "warrants must be valid test-registry entries"
+                                :field (name (:field warrant-normalized))
+                                :value (:value warrant-normalized)})
 
             :else
             (hk/as-channel
@@ -6046,13 +6072,15 @@
                                  job-id (create-invoke-job! {:agent-id agent-id
                                                             :prompt prompt
                                                             :caller caller
-                                                            :surface "whistle"})
+                                                            :surface "whistle"
+                                                            :warrants warrant-normalized})
                                  completed (promise)
                                  run-job #(run-invoke-job! {:job-id job-id
                                                            :agent-id agent-id
                                                            :prompt prompt
                                                            :caller caller
                                                            :surface "whistle"
+                                                           :warrants warrant-normalized
                                                            :timeout-ms wait-ms
                                                            :evidence-store evidence-store})
                                  deliver! #(deliver completed %)]

@@ -6,12 +6,15 @@
             [clojure.data :as data]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            [clojure.set :as set]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
+            [futon3c.agency.warrant :as warrant]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.http-backend :as http-backend]
             [futon3c.evidence.store :as store])
-  (:import [java.nio.file Files]
+  (:import [java.net URL]
+           [java.nio.file Files]
            [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
@@ -101,10 +104,13 @@
         paths (str/split cp (re-pattern (java.util.regex.Pattern/quote java.io.File/pathSeparator)))
         deps (mapv (fn [p]
                      (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file p)) p (str repo-root "/" p))))]
-                       {:path (str f)
-                        :sha256 (if (.isDirectory f)
-                                  (directory-sha f)
-                                  (file-sha f))})) paths)
+                       (if (.isDirectory f)
+                         ;; Directory classpath entries are pinned by the LOAD
+                         ;; CLOSURE (see load-closure), not whole-directory
+                         ;; hashing: an unrelated commit to the same directory
+                         ;; must not stale every warrant on a busy repo.
+                         {:path (str f) :sha256 :load-closure-only}
+                         {:path (str f) :sha256 (file-sha f)}))) paths)
         executable (command! repo-root ["which" "clojure"])
         probe-form "(prn (select-keys (into {} (System/getProperties)) [\"java.home\" \"java.runtime.version\" \"java.vendor\" \"os.name\" \"os.arch\" \"os.version\" \"file.encoding\" \"user.language\" \"user.country\"]))"
         probe-config (pr-str {:aliases {:futon3c.test-registry/jvm-probe {:main-opts ["-e" probe-form]}}})
@@ -131,6 +137,79 @@
 
 (defn fingerprint [options]
   (binding [*test-environment* (test-environment options)] (fingerprint* options)))
+
+(defn test-namespace-of
+  "The single declared test namespace (validate-command! enforces exactly one -n)."
+  [command]
+  (some (fn [[flag value]] (when (contains? #{"-n" "--namespace"} flag) value))
+        (partition 2 (drop 2 command))))
+
+(defn- closure-probe-form
+  "A probe form run under the test command's own resolved classpath: require
+  the declared namespace, then report every loaded namespace whose source
+  resolves to a file: resource (repo/checkout sources; jar sources are pinned
+  by the jar fingerprint and excluded here)."
+  [test-ns]
+  (pr-str
+   `(do (require 'clojure.string 'clojure.java.io '~(symbol test-ns))
+        (let [res# (fn [nm#]
+                     (let [b# (clojure.string/replace nm# \. \/)]
+                       (or (clojure.java.io/resource (str b# ".clj"))
+                           (clojure.java.io/resource (str b# ".cljc")))))]
+          (println (pr-str
+                    (vec (for [n# (all-ns)
+                               :let [nm# (str (ns-name n#))
+                                     u# (some-> (res# nm#) str)]
+                               :when (and u# (clojure.string/starts-with? u# "file:"))]
+                           {:ns nm# :url u#}))))))))
+
+(defn load-closure
+  "The LOAD CLOSURE of a test run: which source files the declared namespace
+  actually loads, with per-file shas. Directory classpath entries are pinned
+  by this closure instead of whole-directory hashing, so an unrelated commit
+  to the same directory does not stale the warrant — only a change to a file
+  the run actually loads does. JARs, JVM, CLI config and the declared test
+  environment are fingerprinted separately and unchanged."
+  [{:keys [repo-root command] :as options}]
+  (binding [*test-environment* (test-environment options)]
+    (let [alias (second command)
+          config (pr-str {:aliases {:futon3c.test-registry/closure-probe
+                                    {:main-opts ["-e" (closure-probe-form
+                                                       (test-namespace-of command))]}}})
+          probe-alias (str alias ":futon3c.test-registry/closure-probe")
+          out (command! repo-root ["clojure" "-Sdeps" config probe-alias])
+          entries (try (edn/read-string out)
+                       (catch Exception e
+                         (fail! :closure-probe-unparseable
+                                {:error (.getMessage e)
+                                 :output (subs out 0 (min 256 (count out)))})))
+          _ (when-not (and (vector? entries)
+                           (every? #(and (map? %) (nonblank? (:ns %)) (nonblank? (:url %))) entries))
+              (fail! :closure-probe-unparseable {:output (subs out 0 (min 256 (count out)))}))
+          base-path (.toPath (.getCanonicalFile (io/file repo-root)))]
+      (vec
+       (sort-by :ns
+                (for [{:keys [ns url]} entries
+                      :let [file (io/file (URL. url))
+                            canon (.toPath (.getCanonicalFile file))]]
+                  {:ns ns
+                   :path (if (.startsWith canon base-path)
+                           (str (.relativize base-path canon))
+                           (str canon))
+                   :sha256 (file-sha file)}))))))
+
+(defn closure-shas
+  "Pure: closure entries -> {path sha256}. Testable without shelling out."
+  [closure]
+  (into {} (map (juxt :path :sha256)) closure))
+
+(defn closure-diff
+  "Pure: the paths whose sha differs between a recorded closure and an
+  observed one (changed, added or removed), sorted. Empty means identical."
+  [recorded observed]
+  (sort (set/union
+         (set (for [[p s] recorded :when (not= s (get observed p))] p))
+         (set (for [[p s] observed :when (not= s (get recorded p))] p)))))
 
 (defn- decode [entry]
   (let [body (:evidence/body entry) text (:payload-edn body)]
@@ -240,10 +319,14 @@
                                          :assertions (none :process-failed) :failures (none :process-failed)
                                          :errors (none :process-failed) :duration-ms (none :process-failed)
                                          :error (.getMessage e)}))
+        ;; The load closure pins exactly what the run actually loads; directory
+        ;; classpath entries carry :load-closure-only in the fingerprint.
+        closure (load-closure options)
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
         stable? (and (= code (:code post)) (= env (:env post)))
         record (merge common {:kind :run :finished-at (str (Instant/now)) :results results
+                              :load-closure closure
                               :log-artifact {:path (.getCanonicalPath log-file) :sha256 (file-sha log-file)}
                               :execution/stable? stable?
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
@@ -271,15 +354,26 @@
               (fail! :review-diff-required {}))
           capture-options (merge (:scope run) {:repo-root repo-root :command (:command run)})
           current (capture-code capture-options)
-          covered (set (concat (keys (:code-files run)) (keys (:test-files run))))
-          uncovered (remove covered changed-paths)
+          covered (set (concat (keys (:code-files run)) (keys (:test-files run))
+                               (map :path (:load-closure run))))
+          outside-closure (vec (sort (remove covered changed-paths)))
           env (fingerprint capture-options)
+          ;; Closure check: exactly the files the run actually loaded. A changed
+          ;; closure file refuses naming the FILES; a changed path outside both
+          ;; the manifests and the closure is irrelevant to this warrant.
+          observed-closure (try (load-closure capture-options)
+                                (catch Exception e
+                                  (fail! :closure-probe-failed {:error (.getMessage e)})))
+          closure-changed (closure-diff (closure-shas (:load-closure run))
+                                        (closure-shas observed-closure))
           log (:log-artifact run)]
       (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run)) (successful? (:results run)))
         (fail! :unsupported-results {:results (:results run)}))
       (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
         (fail! :stale-sha {:current current}))
-      (when (seq uncovered) (fail! :diff-outside-tested-scope {:paths (vec uncovered)}))
+      (when (seq closure-changed)
+        (fail! :environment-mismatch {:changed-files closure-changed
+                                      :next-action :rerun-the-declared-namespace}))
       (when-not (= env (:env-fingerprint run))
         (let [[expected observed] (data/diff (:env-fingerprint run) env)]
           (fail! :environment-mismatch {:expected-only expected :observed-only observed
@@ -290,15 +384,46 @@
                                                (get-in run [:results :duration-ms])))
         (fail! :results-log-mismatch {}))
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id
-       :checked-at (str (Instant/now)) :diff-paths changed-paths})
+       :checked-at (str (Instant/now)) :diff-paths changed-paths
+       :outside-closure outside-closure})
     (catch Exception e (if (:record/type (ex-data e)) (ex-data e)
                           (refusal :record-unavailable {:error (.getMessage e)})))))
 
-(defn execution-policy [check lane first-run?]
-  (if (or (not (:warrant? check)) first-run? (contains? #{:pre-push :invariant} lane))
-    {:mode :full-scope :reason (cond (not (:warrant? check)) :warrant-failed
-                                   first-run? :first-run :else lane)}
-    {:mode :spot-check :count default-spot-check-count}))
+(defn execution-policy
+  "Decision authority for the review's execution lane. Delegates to
+  futon3c.agency.warrant/reviewer-lane so there is ONE lane rule: any
+  disagreement between the two would be a bug, not a policy. Note the resolved
+  disagreement: the old inline policy treated a nil first-run? as \"not first
+  run\" (spot-check eligible); reviewer-lane treats nil as UNDECLARED and
+  routes to full scope — the stricter reading, per
+  rerun-when-the-warrant-fails (\"tests changed left undeclared\" is a listed
+  violation)."
+  [check lane first-run?]
+  (let [synthetic-warrant {:handoff/warrant-status (if (:warrant? check) :warranted :unwarranted)
+                           :warrants (when lane [{:lane lane}])}
+        verdict (warrant/reviewer-lane synthetic-warrant check first-run?)]
+    (if (= :full-rerun (:lane verdict))
+      {:mode :full-scope :reason (:reason verdict)}
+      {:mode :spot-check :count default-spot-check-count :reason (:reason verdict)})))
+
+(defn lane!
+  "One command for the reviewer: check the record, get the lane. Takes the
+  same EDN as check plus :lane (routine|pre-push|invariant) and
+  :tests-changed? (true/false; absent means nil — undeclared, which routes to
+  full scope)."
+  [backend {:keys [lane tests-changed?] :as options}]
+  (when-not (contains? #{:routine :pre-push :invariant nil} lane)
+    (fail! :invalid-lane {:lane lane}))
+  (when-not (or (nil? tests-changed?) (boolean? tests-changed?))
+    (fail! :invalid-tests-changed {:tests-changed? tests-changed?}))
+  (let [check (check-record! backend options)
+        verdict (warrant/reviewer-lane
+                 {:handoff/warrant-status (if (true? (:warrant? check)) :warranted :unwarranted)
+                  :warrants (when lane [{:lane lane}])}
+                 check
+                 tests-changed?)]
+    {:check (dissoc check :record)
+     :reviewer-lane verdict}))
 
 (defn review!
   "Record-check + independent adequacy note + priced execution. Full-scope means
@@ -346,6 +471,7 @@
                    "run" (register-run! backend options)
                    "check" (check-record! backend options)
                    "review" (review! backend options)
+                   "lane" (lane! backend options)
                    (fail! :unknown-operation {:operation operation}))]
       (prn result)
       (shutdown-agents)

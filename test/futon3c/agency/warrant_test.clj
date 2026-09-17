@@ -96,7 +96,7 @@
       (is (= :full-rerun (lane-of {:handoff/warrant-status :unwarranted} ok-check false)))
       (is (= :no-warrant (reason-of {:handoff/warrant-status :unwarranted} ok-check false)))
       (is (= :full-rerun (lane-of nil ok-check false))))
-    (testing "check not {:warrant? true} => full rerun"
+    (testing "check not warranted => full rerun"
       (is (= :full-rerun (lane-of w refused-check false)))
       (is (= :warrant-check-failed (reason-of w refused-check true))))
     (testing "mandatory lanes => full rerun even with a passing check"
@@ -108,6 +108,17 @@
       (is (= :tests-changed (reason-of w ok-check true)))
       (is (= :full-rerun (lane-of w ok-check nil)))
       (is (= :tests-changed-undeclared (reason-of w ok-check nil))))
+    (testing "a realistic full check result is accepted, not refused"
+      (let [realistic {:warrant? true :record {:run/id "1c2797be"}
+                       :chain-length 2 :entry-id valid-entry-id
+                       :checked-at "2026-09-17T00:00:00Z" :diff-paths []}]
+        (is (= :spot-check (lane-of w realistic false)))
+        (is (= :warrant-valid-routine (reason-of w realistic false)))))
+    (testing "a realistic refused check still routes to full rerun"
+      (let [realistic-refusal {:warrant? false :reason :environment-mismatch
+                               :expected-only {:dependencies ["x"]}}]
+        (is (= :full-rerun (lane-of w realistic-refusal false)))
+        (is (= :warrant-check-failed (reason-of w realistic-refusal false)))))
     (testing "valid warrant, passing check, declared unchanged => spot check"
       (is (= :spot-check (lane-of w ok-check false)))
       (is (= :warrant-valid-routine (reason-of w ok-check false))))))

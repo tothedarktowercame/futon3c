@@ -114,7 +114,12 @@
                      (= :unwarranted (:handoff/warrant-status warrant)))
                  :no-warrant
 
-                 (not= {:warrant? true} check-result)
+                 ;; A real registry check returns {:warrant? true :record …
+                 ;; :chain-length …}; only the boolean is load-bearing, so a
+                 ;; realistic passing check must route to spot-check (step-1
+                 ;; bug: (not= {:warrant? true} check-result) refused every
+                 ;; valid check).
+                 (not (true? (:warrant? check-result)))
                  :warrant-check-failed
 
                  (any-mandatory-lane? warrant)

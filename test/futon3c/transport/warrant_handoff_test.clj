@@ -8,6 +8,7 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.warrant :as warrant]
+            [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.transport.http :as http]))
 
 (def agent-id "claude-6-warrant-test")
@@ -81,6 +82,52 @@
             body (parse-body response)]
         (is (= 202 (:status response)))
         (is (contains? body :job-id))))))
+
+(deftest absent-warrants-key-leaves-handoff-untouched
+  (let [captured (atom nil)]
+    (with-redefs-fn {#'http/invoke-executor (fn [_ _ f] (f))
+                     #'http/run-invoke-job! (fn [_] {:ok true})
+                     #'futon3c.social.coordination-ledger/record-invoke-edge!
+                     (fn [edge] (reset! captured edge) {:ok true})}
+      (fn []
+        (let [response (handle-bell! {"agent-id" agent-id
+                                      "prompt" "an ordinary question"
+                                      "job-id" "warrant-absent-1"})]
+          (is (= 202 (:status response)))
+          ;; Absent key: NO warrant status on the edge (finding 3).
+          (is (map? @captured))
+          (is (not (contains? @captured :warrant-status)))
+          (is (not (contains? @captured :warrant-entry-ids))))))))
+
+(deftest explicit-empty-warrants-is-typed-unwarranted
+  (let [captured (atom nil)]
+    (with-redefs-fn {#'http/invoke-executor (fn [_ _ f] (f))
+                     #'http/run-invoke-job! (fn [_] {:ok true})
+                     #'futon3c.social.coordination-ledger/record-invoke-edge!
+                     (fn [edge] (reset! captured edge) {:ok true})}
+      (fn []
+        (let [response (handle-bell! {"agent-id" agent-id
+                                      "prompt" "review please"
+                                      "job-id" "warrant-empty-1"
+                                      "warrants" []})]
+          (is (= 202 (:status response)))
+          ;; Explicit [] IS a warrant statement: typed :unwarranted (finding 3).
+          (is (= :unwarranted (:warrant-status @captured)))
+          (is (= [] (:warrant-entry-ids @captured))))))))
+
+(deftest whistle-rejects-malformed-warrant
+  (let [response (#'http/handle-whistle
+                  (json-request {"agent-id" agent-id
+                                 "prompt" "review please"
+                                 "warrants" [{"entry-id" "test-registry-nope"
+                                              "namespace" "futon3c.agency.warrant-test"
+                                              "lane" "routine"
+                                              "base-sha" "14ace87"}]})
+                  {})
+        body (parse-body response)]
+    (is (= 400 (:status response)))
+    (is (= "warrant-invalid" (:err body)))
+    (is (= "entry-id" (:field body)))))
 
 (deftest turn-header-renders-warrant-lines
   (testing "warranted handoff renders entry ids into the delivered turn"
