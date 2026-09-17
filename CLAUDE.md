@@ -252,9 +252,16 @@ they survived only because the logs were backfilled into it the same night.
 Until that date futon3c's own runner sat in every Clojure warrant's load
 closure — 38 of 39 — so a comment-only edit to it refused them all with
 `:environment-mismatch` and told their holders to rerun; it killed the
-production tick's C2 that night. The runner is the instrument, not the
-specimen, and is now excluded from the recorded closure and from the
-check-time diff on both sides, which heals those records retroactively. The
+production tick's C2 that night, over a docstring. Of those 38, 14 were stale
+for that reason alone and healed when the exclusion landed; the other 24 were
+already stale on real specimen changes — "pins the instrument" and "is stale
+because of it" are different populations, and both authors of this paragraph
+conflated them at first.
+
+The runner is the instrument, not the specimen, and is now excluded from the
+recorded closure and from the check-time diff on both sides, which heals those
+records retroactively; `:runner-sha` records its bytes for audit without
+enforcing them. The
 consequence to know: a record written before `reader-version` 1 attests
 nothing about the runner's behaviour, then or now. That is not a weakening —
 its runner-bytes pinning was a measurement leak rather than an attestation —
