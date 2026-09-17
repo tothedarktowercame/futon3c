@@ -369,25 +369,40 @@
        (pos? (:tests results)) (zero? (:exit results))
        (zero? (:failures results)) (zero? (:errors results))))
 
+(def ^:private lean-sorry-line
+  ;; Lean 4.31 writes: warning: Path/File.lean:12:4: declaration uses `sorry`
+  ;; (older toolchains used straight quotes). Lake replays these for cached jobs.
+  #"^warning: (.+?\.lean):\d+:\d+: declaration uses [`'\u2018]sorry[`'\u2019]")
+
 (defn parse-lean-results
-  "Lake build results: exit, jobs from the completion line, sorry-count
-  (lines containing \"declaration uses 'sorry'\"), error-count. Unparsed
-  jobs take the (none :unparsed) route like Clojure counts."
+  "Lake build results: exit; jobs from the completion line; :sorry-files, the
+  count of `declaration uses sorry` warnings per source file, with their total
+  as :sorry-count; :error-count, lines starting `error:`. Unparsed jobs take
+  the (none :unparsed) route like Clojure counts."
   [exit log duration-ms]
   (let [lines (str/split-lines log)
         jobs (some-> (re-find #"Build completed successfully \((\d+) jobs?\)\." log)
-                     second parse-long)]
+                     second parse-long)
+        sorry-files (into (sorted-map) (frequencies (keep #(second (re-find lean-sorry-line %)) lines)))]
     {:exit exit
      :jobs (if (integer? jobs) jobs (none :unparsed))
-     :sorry-count (count (filter #(str/includes? % "declaration uses 'sorry'") lines))
-     :error-count (count (filter #(re-find #" error: " %) lines))
+     :sorry-files sorry-files
+     :sorry-count (reduce + 0 (vals sorry-files))
+     :error-count (count (filter #(str/starts-with? % "error:") lines))
      :duration-ms duration-ms}))
 
-(defn lean-successful? [results]
+(defn lean-successful?
+  "A Lean build warrant attests that the module BUILT: exit 0, jobs parsed,
+  no errors. Sorries do not block it; they are recorded per file
+  (:sorry-files) because a closure can legitimately contain declared holes
+  (DarkTower/WarMachine/Holes.lean). Consumers decide which files may carry
+  a sorry."
+  [results]
   (and (every? #(and (integer? %) (not (neg? %)))
                ((juxt :exit :jobs :sorry-count :error-count :duration-ms) results))
+       (map? (:sorry-files results))
        (zero? (:exit results)) (pos? (:jobs results))
-       (zero? (:sorry-count results)) (zero? (:error-count results))))
+       (zero? (:error-count results))))
 
 (defn command-successful? [command results]
   (if (lean-command? command) (lean-successful? results) (successful? results)))

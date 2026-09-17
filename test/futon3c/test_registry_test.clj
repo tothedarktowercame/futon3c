@@ -178,13 +178,22 @@
   (is (= ["Init.Core"] (registry/lean-header-imports "prelude\nimport Init.Core\ndef x := 1")))
   (is (= [] (registry/lean-header-imports "/-- doc -/\ntheorem t : True := trivial"))))
 
-(deftest lean-results-require-clean-build
+(deftest lean-results-record-sorries-per-file-and-require-a-clean-build
   (let [ok "✔ [12/12] Built X\nBuild completed successfully (12 jobs).\n"
-        sorry "warning: X.lean:3:8: declaration uses 'sorry'\nBuild completed successfully (12 jobs).\n"]
+        sorry (str "warning: DarkTower/WarMachine/Holes.lean:157:4: declaration uses `sorry`\n"
+                   "warning: DarkTower/WarMachine/Holes.lean:999:4: declaration uses `sorry`\n"
+                   "warning: A/B.lean:3:8: declaration uses 'sorry'\n"
+                   "info: A/B.lean:9:0: the string declaration uses `sorry` in a message\n"
+                   "Build completed successfully (12 jobs).\n")
+        failed "error: A/B.lean:1:0: unknown identifier 'x'\nerror: build failed\n"
+        r (registry/parse-lean-results 0 sorry 10)]
     (is (registry/lean-successful? (registry/parse-lean-results 0 ok 10)))
     (is (= 12 (:jobs (registry/parse-lean-results 0 ok 10))))
-    (is (false? (registry/lean-successful? (registry/parse-lean-results 0 sorry 10))))
-    (is (false? (registry/lean-successful? (registry/parse-lean-results 1 "error: X.lean:1:0: unknown\n" 10))))
+    (is (= {"A/B.lean" 1 "DarkTower/WarMachine/Holes.lean" 2} (:sorry-files r)))
+    (is (= 3 (:sorry-count r)))
+    (is (registry/lean-successful? r) "sorries are recorded, not a build failure")
+    (is (= 2 (:error-count (registry/parse-lean-results 1 failed 10))))
+    (is (false? (registry/lean-successful? (registry/parse-lean-results 1 failed 10))))
     (is (false? (registry/lean-successful? (registry/parse-lean-results 0 "no completion line" 10))))))
 
 (deftest lean-closure-is-transitive-and-repo-bounded
