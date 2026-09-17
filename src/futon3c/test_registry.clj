@@ -1,7 +1,26 @@
 (ns futon3c.test-registry
   "Test warrants in the existing evidence store. Each run is an intent -> result
   -> review hash chain, not a second ledger. SHA integrity is not authentication
-  or a proof of test adequacy. Missing warrants never prohibit running tests."
+  or a proof of test adequacy. Missing warrants never prohibit running tests.
+
+  THE ARTIFACT DIRECTORY IS PART OF THE WARRANT, NOT SCRATCH SPACE. A run pins
+  its log by absolute path AND sha256, and `check-record!` re-hashes the file
+  at that path: move it or lose it and the warrant is not stale, it is
+  unverifiable, with no way back except re-running. So `:artifact-dir` must be
+  somewhere permanent, chosen once and never moved:
+
+    - `storage/test-registry/artifacts/` for ordinary runs — outside every
+      repo, so a cleanup that sweeps run data out of a checkout cannot touch
+      it, and outside /tmp, so a reboot cannot either;
+    - beside the bundle it warrants, committed, when the run backs a shipped
+      artifact (mathlib4's machine-contracts bundles do this: one ~40 KB log
+      per 108 KB bundle, which travels with the clone and keeps the bundle
+      self-verifying). That is a deliberate exception to the rule that run
+      data does not live in a repo, earned by being small and load-bearing.
+
+  Counterexample from 2026-09-17: three claude-7 warrants pinned logs under
+  /tmp/claude-7-review/. They check today and will evaporate at the next tmp
+  sweep. They happened to back nothing, which was luck rather than design."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.data :as data]
