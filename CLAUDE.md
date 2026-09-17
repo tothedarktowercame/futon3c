@@ -196,6 +196,47 @@ M-peripheral-gauntlet §"Foundational Constraint." When porting from futon3,
 the existing code documents what worked and what failed — read it as design
 documentation, not as code to copy blindly.
 
+### I-6: Check A Warrant Before You Run A Suite
+
+**The full suite is not a verification step. It is a last resort.** Since the
+test registry landed (2026-09-17), a recorded run is evidence you can *check*
+without re-executing anything, and checking is what you should reach for.
+
+```bash
+# Is there already evidence this passed? No execution; typed refusal if not.
+clojure -M -m futon3c.test-registry check <config.edn>
+
+# Must actually run? Run the narrowest thing that answers the question.
+clojure -M:test -n futon3c.some.specific-test
+clojure -M:test -n futon3c.some.specific-test -v futon3c.some.specific-test/one-case
+
+# Need durable evidence others can rely on? Register once, check thereafter.
+clojure -M -m futon3c.test-registry run <config.edn>   # needs :artifact-dir
+```
+
+A check re-hashes the recorded load closure and resolves the run log from the
+write-only ledger (a 0.011 ms lookup); it refuses with a typed reason —
+`:stale-sha`, `:environment-mismatch`, `:results-log-mismatch` — the moment the
+code, tests, environment or closure move. **A refusal is the signal to run. An
+absence of refusal means running would tell you nothing you do not have.**
+`lane` decides spot-check versus full rerun; do not decide that by feel.
+
+Three reasons this is an invariant and not a preference:
+
+1. **The box is shared and the agents are quota-limited.** A full suite is
+   minutes of CPU that some other seat needed.
+2. **One wedged test hangs it for everyone.** 2026-09-17: a WM-08 rehearsal
+   test was killed at 400 s, then at 150 s after its fix; while it sat on
+   main, `clojure -M:test -m cognitect.test-runner` on futon2 did not
+   terminate for anybody.
+3. **Re-running is not stronger evidence than a warrant, it is weaker.** A
+   warrant records the closure, the environment fingerprint and the log under
+   its own hash. A green run in your terminal records nothing and convinces
+   no one tomorrow.
+
+The exception is the obvious one: you changed the code. Then the warrant
+refuses by design, and running is exactly the point.
+
 ## Agent Prompting: Surface Contracts
 
 When agents operate across multiple surfaces (IRC, Emacs buffer, WS), they
