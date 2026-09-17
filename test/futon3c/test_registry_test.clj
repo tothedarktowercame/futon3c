@@ -1,5 +1,6 @@
 (ns futon3c.test-registry-test
   (:require [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.test-registry :as registry])
@@ -20,7 +21,8 @@
     (try
       (with-redefs [registry/capture-code (fn [_] @current)
                     registry/fingerprint (fn [_] @env)
-                    registry/load-closure (fn [_] @closure)
+                    registry/compute-closure (fn [_ _] @closure)
+                    registry/current-closure-shas (fn [_ _] (registry/closure-shas @closure))
                     registry/run-process! (fn [_ command log]
                                             (swap! calls conj command)
                                             (let [text (if (some #{"-v"} command)
@@ -149,9 +151,60 @@
 (deftest namespace-boundary-rejects-accidental-full-suite
   (doseq [command [["clojure" "-M:test"] ["clojure" "-M:test" "-n"]
                    ["clojure" "-M:test" "-n" "one" "-n" "two"]
-                   ["clojure" "-M:test" "-r" ".*"]]]
-    (is (thrown? clojure.lang.ExceptionInfo (registry/validate-command! command))))
-  (is (nil? (registry/validate-command! (:command opts)))))
+                   ["clojure" "-M:test" "-r" ".*"]
+                   ["clojure" "-M:test" "-n" "one" "-v" "not-a-var"]
+                   ["clojure" "-M:test" "-m" "futon3c.test-registry.runner" "-n" "one"]
+                   ["lake" "build"] ["lake" "build" "A.B" "C.D"] ["lake" "build" "A B"]
+                   ["lake" "exe" "cache"] ["lake" "build" "--rehash"]]]
+    (is (thrown? clojure.lang.ExceptionInfo (registry/validate-command! command)) (pr-str command)))
+  (is (nil? (registry/validate-command! (:command opts))))
+  (is (nil? (registry/validate-command! ["clojure" "-M:test-pure" "-n" "a-test" "-v" "a-test/x"])))
+  (is (nil? (registry/validate-command! ["lake" "build" "DarkTower.WarMachine.EpistemicValue"]))))
+
+(deftest clojure-execution-injects-the-registry-runner
+  (let [argv (registry/execution-command ["clojure" "-M:test-pure" "-n" "a-test" "-v" "a-test/x"]
+                                         (io/file "/tmp/r.closure.edn"))]
+    (is (= ["clojure" "-Sdeps"] (take 2 argv)))
+    (is (str/includes? (nth argv 2) "futon3c.test-registry.runner"))
+    (is (= "-M:test-pure:futon3c.test-registry/runner" (nth argv 3)))
+    (is (= ["-n" "a-test" "-v" "a-test/x" "/tmp/r.closure.edn"] (drop 4 argv))))
+  (is (= ["lake" "build" "M"] (registry/execution-command ["lake" "build" "M"] (io/file "x")))))
+
+(deftest lean-header-parser-handles-module-system-syntax
+  (is (= ["A.B" "C" "D.E" "F" "G"]
+         (registry/lean-header-imports
+          "/- copyright\n  /- nested -/ still comment -/\n-- line\nmodule\n\npublic import A.B\nimport C -- trailing\nmeta import D.E\npublic meta import F\nimport all G\n\n/-! # Doc -/\npublic section\nimport NotHeader\n")))
+  (is (= ["Init.Core"] (registry/lean-header-imports "prelude\nimport Init.Core\ndef x := 1")))
+  (is (= [] (registry/lean-header-imports "/-- doc -/\ntheorem t : True := trivial"))))
+
+(deftest lean-results-require-clean-build
+  (let [ok "✔ [12/12] Built X\nBuild completed successfully (12 jobs).\n"
+        sorry "warning: X.lean:3:8: declaration uses 'sorry'\nBuild completed successfully (12 jobs).\n"]
+    (is (registry/lean-successful? (registry/parse-lean-results 0 ok 10)))
+    (is (= 12 (:jobs (registry/parse-lean-results 0 ok 10))))
+    (is (false? (registry/lean-successful? (registry/parse-lean-results 0 sorry 10))))
+    (is (false? (registry/lean-successful? (registry/parse-lean-results 1 "error: X.lean:1:0: unknown\n" 10))))
+    (is (false? (registry/lean-successful? (registry/parse-lean-results 0 "no completion line" 10))))))
+
+(deftest lean-closure-is-transitive-and-repo-bounded
+  (let [dir (.toFile (Files/createTempDirectory "lean-closure-" (make-array FileAttribute 0)))
+        write (fn [path text] (let [f (io/file dir path)] (io/make-parents f) (spit f text)))]
+    (try
+      (write "Top.lean" "import Mid\nimport Mathlib.NotHere\ndef t := 1")
+      (write "Mid.lean" "module\npublic import Leaf\nimport Init.Data")
+      (write "Leaf.lean" "def leaf := 0")
+      (write "Unrelated.lean" "def u := 0")
+      (let [closure (registry/lean-closure {:repo-root (str dir)} "Top")]
+        (is (= ["Leaf.lean" "Mid.lean" "Top.lean"] (mapv :path closure)))
+        (write "Unrelated.lean" "def u := 1")
+        (is (= [] (registry/closure-diff (registry/closure-shas closure)
+                                         (registry/current-closure-shas (str dir) closure))))
+        (write "Leaf.lean" "def leaf := 2")
+        (is (= ["Leaf.lean"] (registry/closure-diff (registry/closure-shas closure)
+                                                    (registry/current-closure-shas (str dir) closure)))))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"lean-module-source-missing"
+                            (registry/lean-closure {:repo-root (str dir)} "Absent")))
+      (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f))))))
 
 (deftest racing-inputs-leave-results-but-no-warrant
   (fixture
@@ -239,3 +292,52 @@
        (is (= locale (get-in run [:payload :scope :test-environment])))
        (is (thrown? clojure.lang.ExceptionInfo
                     (registry/test-environment {:test-environment {"UNDECLARED" "value"}})))))))
+
+(deftest ^:slow clojure-closure-covers-dynamic-loads-and-resources
+  ;; Real processes in a temp project: the test body loads `dyn` only through
+  ;; requiring-resolve and reads resources/data.txt, so a fresh-JVM require of
+  ;; the test namespace would record neither.
+  (let [dir (.toFile (Files/createTempDirectory "registry-closure-" (make-array FileAttribute 0)))
+        root (str dir)
+        write (fn [path text] (let [f (io/file dir path)] (io/make-parents f) (spit f text)))
+        sh (fn [& argv] (let [r (apply shell/sh (concat argv [:dir root]))]
+                          (assert (zero? (:exit r)) (pr-str r))))
+        backend (atom {:entries {} :order []})
+        check (fn [run changed] (registry/check-record! backend {:entry-id (:evidence/id run) :repo-root root
+                                                                 :changed-paths changed}))]
+    (try
+      (write "deps.edn" "{:paths [\"src\" \"test\" \"resources\"] :deps {org.clojure/clojure {:mvn/version \"1.12.0\"}} :aliases {:t {}}}")
+      (write "src/futon3c/test_registry/runner.clj" (slurp (io/resource "futon3c/test_registry/runner.clj")))
+      (write "src/demo.clj" "(ns demo)\n(defn one [] 1)\n")
+      (write "src/dyn.clj" "(ns dyn)\n(defn value [] 1)\n")
+      (write "src/unrelated.clj" "(ns unrelated)\n")
+      (write "resources/data.txt" "v1")
+      (write "test/demo_test.clj"
+             (str "(ns demo-test (:require [clojure.test :refer [deftest is]] [clojure.java.io :as io] [demo]))\n"
+                  "(deftest dynamic (is (= (demo/one) ((requiring-resolve 'dyn/value))))"
+                  " (is (= \"v1\" (slurp (io/resource \"data.txt\")))))\n"))
+      (sh "git" "init" "-q") (sh "git" "add" ".")
+      (sh "git" "-c" "user.email=t@t" "-c" "user.name=t" "commit" "-qm" "fixture")
+      (let [run (registry/register-run! backend {:repo-root root :command ["clojure" "-M:t" "-n" "demo-test"]
+                                                 :code-paths ["src/demo.clj"] :test-paths ["test/demo_test.clj"]
+                                                 :author "author" :artifact-dir (str root "/.artifacts")})
+            paths (set (map :path (get-in run [:payload :load-closure])))]
+        (is (true? (get-in run [:payload :warrant?])) (pr-str (:payload run)))
+        (is (= 2 (get-in run [:payload :results :assertions])))
+        (is (contains? paths "src/dyn.clj") (pr-str paths))
+        (is (contains? paths "test/demo_test.clj") (pr-str paths))
+        (write "src/unrelated.clj" "(ns unrelated)\n;; edited\n")
+        (let [r (check run ["src/unrelated.clj"])]
+          (is (true? (:warrant? r)) (pr-str r))
+          (is (= ["src/unrelated.clj"] (:outside-closure r))))
+        (write "src/dyn.clj" "(ns dyn)\n;; edited\n(defn value [] 1)\n")
+        (let [r (check run ["src/dyn.clj"])]
+          (is (= :environment-mismatch (:reason r)))
+          (is (= ["src/dyn.clj"] (get-in r [:details :changed-files]))))
+        (write "src/dyn.clj" "(ns dyn)\n(defn value [] 1)\n")
+        (is (true? (:warrant? (check run []))))
+        (write "resources/data.txt" "v2")
+        (let [r (check run ["resources/data.txt"])]
+          (is (= :environment-mismatch (:reason r)))
+          (is (str/includes? (pr-str (get-in r [:details :observed-only])) "data.txt"))))
+      (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f true))))))

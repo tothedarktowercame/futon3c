@@ -91,9 +91,29 @@
                (for [child files]
                  [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)])))))
 
+(defn- non-source-manifest
+  "Conservative pinning of NON-NAMESPACE resources: every non-.clj/.cljc/.cljs
+  file under a classpath directory, hashed (budget + symlink refusal retained
+  via files-under). Source files are excluded — the load closure covers them.
+  Rule: a change to such a file stales warrants that read it. Errs toward
+  rerun; rare in practice."
+  [directory]
+  (let [files (filter #(let [n (.getName %)]
+                         (not (or (.endsWith n ".clj") (.endsWith n ".cljc") (.endsWith n ".cljs"))))
+                       (files-under directory))
+        bytes (reduce + (map #(.length %) files))]
+    (when (> bytes max-dependency-directory-bytes)
+      (fail! :dependency-directory-too-large
+             {:path (str directory) :bytes bytes :limit max-dependency-directory-bytes
+              :next-action :declare-a-bounded-test-classpath}))
+    (into (sorted-map)
+          (for [child files]
+            [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)]))))
+
 (defn- fingerprint*
-  "Resolve the test command's actual Clojure classpath and hash JAR bytes and
-  directory contents, including local dependencies. No version-name-only pins.
+  "Resolve the test command's actual Clojure classpath and hash JAR bytes,
+  non-source directory contents, and local dependencies. Source files under
+  classpath directories are pinned by the LOAD CLOSURE, not hashed here.
   Other runners need an explicit adapter; they are not silently fingerprinted."
   [{:keys [repo-root command]}]
   (when-not (and (= "clojure" (first command))
@@ -105,11 +125,11 @@
         deps (mapv (fn [p]
                      (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file p)) p (str repo-root "/" p))))]
                        (if (.isDirectory f)
-                         ;; Directory classpath entries are pinned by the LOAD
-                         ;; CLOSURE (see load-closure), not whole-directory
-                         ;; hashing: an unrelated commit to the same directory
-                         ;; must not stale every warrant on a busy repo.
-                         {:path (str f) :sha256 :load-closure-only}
+                         ;; Directory classpath entries: source files are pinned
+                         ;; by the LOAD CLOSURE (see compute-closure); everything
+                         ;; else (resources data) is hashed conservatively.
+                         {:path (str f) :sha256 :load-closure-only
+                          :non-source (non-source-manifest f)}
                          {:path (str f) :sha256 (file-sha f)}))) paths)
         executable (command! repo-root ["which" "clojure"])
         probe-form "(prn (select-keys (into {} (System/getProperties)) [\"java.home\" \"java.runtime.version\" \"java.vendor\" \"os.name\" \"os.arch\" \"os.version\" \"file.encoding\" \"user.language\" \"user.country\"]))"
@@ -135,8 +155,32 @@
                                     [key (if-let [value (get (effective-environment) key)] (sha value) (none :unset))]))}]
     (assoc parts :sha256 (sha parts))))
 
+(defn- lean-fingerprint*
+  "Lean build fingerprint: lean-toolchain, lake-manifest.json and lakefile.*
+  content shas; lake/lean --version output as elan resolves them in the repo;
+  the declared environment keys as today. Never hashes .lake/ build outputs."
+  [{:keys [repo-root]}]
+  (let [config-files (into ["lean-toolchain" "lake-manifest.json" "lakefile.lean" "lakefile.toml"]
+                           (filter #(re-find #"lakefile\." %)
+                                   (map #(.getName %)
+                                        (filter #(.isFile %)
+                                                (or (seq (.listFiles (io/file repo-root))) [])))))
+        existing (distinct (filter #(.exists (io/file repo-root %)) config-files))
+        parts {:toolchain (into (sorted-map) (for [f existing] [f (file-sha (io/file repo-root f))]))
+               :lake-version (command! repo-root ["lake" "--version"])
+               :lean-version (command! repo-root ["lean" "--version"])
+               :environment (into (sorted-map)
+                                  (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS"
+                                             "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"]]
+                                    [key (if-let [value (get (effective-environment) key)]
+                                           (sha value) (none :unset))]))}]
+    (assoc parts :sha256 (sha parts))))
+
 (defn fingerprint [options]
-  (binding [*test-environment* (test-environment options)] (fingerprint* options)))
+  (binding [*test-environment* (test-environment options)]
+    (if (= "lake" (first (:command options)))
+      (lean-fingerprint* options)
+      (fingerprint* options))))
 
 (defn test-namespace-of
   "The single declared test namespace (validate-command! enforces exactly one -n)."
@@ -144,64 +188,113 @@
   (some (fn [[flag value]] (when (contains? #{"-n" "--namespace"} flag) value))
         (partition 2 (drop 2 command))))
 
-(defn- closure-probe-form
-  "A probe form run under the test command's own resolved classpath: require
-  the declared namespace, then report every loaded namespace whose source
-  resolves to a file: resource (repo/checkout sources; jar sources are pinned
-  by the jar fingerprint and excluded here)."
-  [test-ns]
-  (pr-str
-   `(do (require 'clojure.string 'clojure.java.io '~(symbol test-ns))
-        (let [res# (fn [nm#]
-                     (let [b# (clojure.string/replace nm# \. \/)]
-                       (or (clojure.java.io/resource (str b# ".clj"))
-                           (clojure.java.io/resource (str b# ".cljc")))))]
-          (println (pr-str
-                    (vec (for [n# (all-ns)
-                               :let [nm# (str (ns-name n#))
-                                     u# (some-> (res# nm#) str)]
-                               :when (and u# (clojure.string/starts-with? u# "file:"))]
-                           {:ns nm# :url u#}))))))))
+(defn- entry->closure
+  [{:keys [ns url]} base-path]
+  (let [file (io/file (URL. url))
+        canon (.toPath (.getCanonicalFile file))]
+    {:ns ns
+     :path (if (.startsWith canon base-path)
+             (str (.relativize base-path canon))
+             (str canon))
+     :sha256 (file-sha file)}))
 
-(defn load-closure
-  "The LOAD CLOSURE of a test run: which source files the declared namespace
-  actually loads, with per-file shas. Directory classpath entries are pinned
-  by this closure instead of whole-directory hashing, so an unrelated commit
-  to the same directory does not stale the warrant — only a change to a file
-  the run actually loads does. JARs, JVM, CLI config and the declared test
-  environment are fingerprinted separately and unchanged."
-  [{:keys [repo-root command] :as options}]
-  (binding [*test-environment* (test-environment options)]
-    (let [alias (second command)
-          config (pr-str {:aliases {:futon3c.test-registry/closure-probe
-                                    {:main-opts ["-e" (closure-probe-form
-                                                       (test-namespace-of command))]}}})
-          probe-alias (str alias ":futon3c.test-registry/closure-probe")
-          out (command! repo-root ["clojure" "-Sdeps" config probe-alias])
-          entries (try (edn/read-string out)
-                       (catch Exception e
-                         (fail! :closure-probe-unparseable
-                                {:error (.getMessage e)
-                                 :output (subs out 0 (min 256 (count out)))})))
-          _ (when-not (and (vector? entries)
-                           (every? #(and (map? %) (nonblank? (:ns %)) (nonblank? (:url %))) entries))
-              (fail! :closure-probe-unparseable {:output (subs out 0 (min 256 (count out)))}))
-          base-path (.toPath (.getCanonicalFile (io/file repo-root)))]
-      (vec
-       (sort-by :ns
-                (for [{:keys [ns url]} entries
-                      :let [file (io/file (URL. url))
-                            canon (.toPath (.getCanonicalFile file))]]
-                  {:ns ns
-                   :path (if (.startsWith canon base-path)
-                           (str (.relativize base-path canon))
-                           (str canon))
-                   :sha256 (file-sha file)}))))))
+(defn closure-from-entries
+  "Runner out-file entries -> the closure vector: repo-relative paths inside
+  repo-root, absolute paths for sibling local roots, per-file shas."
+  [entries repo-root]
+  (when-not (and (vector? entries)
+                 (every? #(and (map? %) (nonblank? (:ns %)) (nonblank? (:url %))) entries))
+    (fail! :closure-unparseable {:entries (pr-str (take 3 entries))}))
+  (let [base-path (.toPath (.getCanonicalFile (io/file repo-root)))]
+    (vec (sort-by :path (distinct (map #(entry->closure % base-path) entries))))))
+
+(defn- strip-lean-comments
+  "Remove `--` line comments and nested `/- … -/` block comments (including
+  doc comments) from Lean source text."
+  [^String text]
+  (let [n (count text) sb (StringBuilder.)]
+    (loop [i 0 depth 0]
+      (cond
+        (>= i n) (str sb)
+        (and (< (inc i) n) (= \/ (.charAt text i)) (= \- (.charAt text (inc i))))
+        (recur (+ i 2) (inc depth))
+        (and (pos? depth) (< (inc i) n) (= \- (.charAt text i)) (= \/ (.charAt text (inc i))))
+        (do (when (= 1 depth) (.append sb \space)) (recur (+ i 2) (dec depth)))
+        (pos? depth) (recur (inc i) depth)
+        (and (< (inc i) n) (= \- (.charAt text i)) (= \- (.charAt text (inc i))))
+        (let [eol (str/index-of text "\n" i)] (recur (if eol eol n) 0))
+        :else (do (.append sb (.charAt text i)) (recur (inc i) 0))))))
+
+(defn lean-header-imports
+  "Pure: the modules a Lean file's header imports, in order. The header is an
+  optional `module`, an optional `prelude`, then import commands with optional
+  `public`/`private`/`meta` modifiers and an optional `all`. The header ends at
+  the first other token. Checked against `lean --src-deps` in the tests."
+  [text]
+  (loop [[tok & more] (str/split (str/trim (strip-lean-comments text)) #"\s+")
+         imports []]
+    (cond
+      (contains? #{"module" "prelude" "public" "private" "meta"} tok) (recur more imports)
+      (= "import" tok) (let [[m & rest-toks] (if (= "all" (first more)) (rest more) more)]
+                         (if (nonblank? m) (recur rest-toks (conj imports m)) imports))
+      :else imports)))
+
+(defn lean-module-file
+  "Dotted module -> its source path relative to the project root."
+  [module]
+  (str (str/replace module \. \/) ".lean"))
+
+(defn lean-closure
+  "The transitive IMPORT closure of a Lean module, restricted to .lean sources
+  inside repo-root (including the module itself), with per-file shas. Imports
+  that do not resolve to a file in repo-root (Init/Lean/Std in the toolchain,
+  .lake/packages) are pinned by the toolchain and lake-manifest fingerprint
+  instead. `lean --deps`/`--src-deps` list DIRECT imports only, and one lean
+  process per module is too slow for Mathlib-sized closures, so the header is
+  parsed here and cross-checked against the toolchain in the tests."
+  [{:keys [repo-root]} module]
+  (let [base (.getCanonicalFile (io/file repo-root))
+        source (fn [m] (let [f (io/file base (lean-module-file m))] (when (.isFile f) f)))]
+    (when-not (source module)
+      (fail! :lean-module-source-missing {:module module :path (lean-module-file module)}))
+    (loop [queue [module] seen #{} closure []]
+      (if-let [m (first queue)]
+        (if (contains? seen m)
+          (recur (subvec queue 1) seen closure)
+          (let [f (source m)
+                imports (when f (lean-header-imports (slurp f)))]
+            (recur (into (subvec queue 1) (remove seen imports))
+                   (conj seen m)
+                   (cond-> closure f (conj {:ns m :path (lean-module-file m) :sha256 (file-sha f)})))))
+        (vec (sort-by :path closure))))))
+
+(defn lean-command? [command] (= "lake" (first command)))
+
+(defn compute-closure
+  "Clojure: the runner's out-file, written in the run JVM after the tests.
+  Lean: the import closure of the built module."
+  [{:keys [repo-root command]} out-file]
+  (if (lean-command? command)
+    (lean-closure {:repo-root repo-root} (last command))
+    (closure-from-entries (edn/read-string (slurp out-file)) repo-root)))
 
 (defn closure-shas
   "Pure: closure entries -> {path sha256}. Testable without shelling out."
   [closure]
   (into {} (map (juxt :path :sha256)) closure))
+
+(defn current-closure-shas
+  "Re-hash exactly the RECORDED closure files (no test or build process):
+  {path sha256}, omitting files that no longer exist. Relative paths resolve
+  against repo-root; sibling local roots were recorded absolute. Sound for
+  Clojure because the closure was written after the tests in the run JVM, so
+  loading any new source requires a change to a recorded file (or to a hashed
+  non-source file)."
+  [repo-root closure]
+  (into {} (for [{:keys [path]} closure
+                 :let [f (if (.isAbsolute (io/file path)) (io/file path) (io/file repo-root path))]
+                 :when (.isFile f)]
+             [path (file-sha f)])))
 
 (defn closure-diff
   "Pure: the paths whose sha differs between a recorded closure and an
@@ -274,26 +367,89 @@
        (pos? (:tests results)) (zero? (:exit results))
        (zero? (:failures results)) (zero? (:errors results))))
 
-(defn run-process! [root command log-file]
-  (let [builder (ProcessBuilder. ^java.util.List command)
+(defn parse-lean-results
+  "Lake build results: exit, jobs from the completion line, sorry-count
+  (lines containing \"declaration uses 'sorry'\"), error-count. Unparsed
+  jobs take the (none :unparsed) route like Clojure counts."
+  [exit log duration-ms]
+  (let [lines (str/split-lines log)
+        jobs (some-> (re-find #"Build completed successfully \((\d+) jobs?\)\." log)
+                     second parse-long)]
+    {:exit exit
+     :jobs (if (integer? jobs) jobs (none :unparsed))
+     :sorry-count (count (filter #(str/includes? % "declaration uses 'sorry'") lines))
+     :error-count (count (filter #(re-find #" error: " %) lines))
+     :duration-ms duration-ms}))
+
+(defn lean-successful? [results]
+  (and (every? #(and (integer? %) (not (neg? %)))
+               ((juxt :exit :jobs :sorry-count :error-count :duration-ms) results))
+       (zero? (:exit results)) (pos? (:jobs results))
+       (zero? (:sorry-count results)) (zero? (:error-count results))))
+
+(defn command-successful? [command results]
+  (if (lean-command? command) (lean-successful? results) (successful? results)))
+
+(def runner-alias :futon3c.test-registry/runner)
+
+(defn validate-command!
+  "Two exact shapes, nothing broader.
+  Clojure: [\"clojure\" \"-M<aliases>\" \"-n\" <ns>], optionally followed by
+           [\"-v\" <ns/var>] for a spot-check. Namespace-bound: never the whole
+           suite. The registry executes it through futon3c.test-registry.runner
+           (see execution-command); records keep this logical command.
+  Lean:    [\"lake\" \"build\" <Dotted.Module>], one module target."
+  [command]
+  (cond
+    (and (vector? command) (every? nonblank? command) (lean-command? command))
+    (let [[_ build module & more] command]
+      (when-not (and (= "build" build) (nil? more) (nonblank? module)
+                     (re-matches #"[A-Za-z_][A-Za-z0-9_']*(\.[A-Za-z_][A-Za-z0-9_']*)*" module))
+        (fail! :invalid-lean-module {:command command})))
+
+    (not (and (vector? command) (every? nonblank? command)
+              (= "clojure" (first command))
+              (re-matches #"-M(?::[A-Za-z0-9_+.-]+)+" (str (second command)))
+              (contains? #{4 6} (count command))
+              (= "-n" (nth command 2))
+              (not (str/starts-with? (nth command 3) "-"))
+              (or (= 4 (count command))
+                  (and (= "-v" (nth command 4)) (str/includes? (nth command 5) "/")))))
+    (fail! :explicit-namespace-required {:command command})))
+
+(defn execution-command
+  "The argv actually executed. Clojure runs the declared alias's classpath with
+  the registry runner's alias appended (its :main-opts replace the declared
+  runner) and the closure out-file as the last argument. Lean runs as declared."
+  [command closure-out]
+  (if (lean-command? command)
+    command
+    (let [config (pr-str {:aliases {runner-alias {:main-opts ["-m" "futon3c.test-registry.runner"]}}})]
+      (-> ["clojure" "-Sdeps" config (str (second command) ":" (namespace runner-alias) "/" (name runner-alias))]
+          (into (drop 2 command))
+          (conj (str closure-out))))))
+
+(defn parse-command-results [command exit log duration-ms]
+  (if (lean-command? command)
+    (parse-lean-results exit log duration-ms)
+    (parse-results exit log duration-ms)))
+
+(defn closure-out-file
+  "Where the runner writes a run's load closure: beside its log."
+  [log-file]
+  (io/file (str/replace (str log-file) #"\.log$" ".closure.edn")))
+
+(defn run-process!
+  "Execute the LOGICAL command (see execution-command) with its log beside the
+  closure out-file, and parse results by command kind."
+  [root command log-file]
+  (let [builder (ProcessBuilder. ^java.util.List (execution-command command (closure-out-file log-file)))
         _ (.directory builder (io/file root))
         _ (.putAll (.environment builder) *test-environment*)
         _ (.redirectErrorStream builder true)
         _ (.redirectOutput builder (io/file log-file))
         start (System/nanoTime) process (.start builder) exit (.waitFor process)]
-    (parse-results exit (slurp log-file) (long (/ (- (System/nanoTime) start) 1000000)))))
-
-(defn validate-command! [command]
-  ;; Namespace bound: never expand a registry invocation to the whole suite.
-  (when-not (and (vector? command) (every? nonblank? command)
-                 (= "clojure" (first command))
-                 (= 1 (count (filter #{"-n" "--namespace"} command)))
-                 (even? (count (drop 2 command)))
-                 (every? (fn [[flag value]]
-                           (and (contains? #{"-n" "--namespace" "-v" "--var" "-i" "--include" "-e" "--exclude" "-d" "--dir"} flag)
-                                (not (str/starts-with? value "-"))))
-                         (partition 2 (drop 2 command))))
-    (fail! :explicit-namespace-required {:command command})))
+    (parse-command-results command exit (slurp log-file) (long (/ (- (System/nanoTime) start) 1000000)))))
 
 (defn register-run!
   "Run and register mechanically. Intent survives interrupted runs; a failed
@@ -319,9 +475,12 @@
                                          :assertions (none :process-failed) :failures (none :process-failed)
                                          :errors (none :process-failed) :duration-ms (none :process-failed)
                                          :error (.getMessage e)}))
-        ;; The load closure pins exactly what the run actually loads; directory
-        ;; classpath entries carry :load-closure-only in the fingerprint.
-        closure (load-closure options)
+        ;; The load closure pins what the run actually loaded: for Clojure,
+        ;; written by the runner in the run JVM after the tests (dynamic
+        ;; requires included); for Lean, the module's import closure. No
+        ;; closure means no warrant; the run record is still appended.
+        closure (try (compute-closure options (closure-out-file log-file))
+                     (catch Exception e (refusal :closure-unavailable {:error (.getMessage e)})))
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
         stable? (and (= code (:code post)) (= env (:env post)))
@@ -332,7 +491,7 @@
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
                                      :execution-ms (:duration-ms results)}
                               :postcheck (if stable? {:status :matched} (refusal :inputs-changed-during-run post))
-                              :warrant? (and stable? (successful? results))})]
+                              :warrant? (and stable? (vector? closure) (command-successful? command results))})]
     (append-record! backend record (:evidence/id intent))))
 
 (defn check-record!
@@ -358,16 +517,17 @@
                                (map :path (:load-closure run))))
           outside-closure (vec (sort (remove covered changed-paths)))
           env (fingerprint capture-options)
-          ;; Closure check: exactly the files the run actually loaded. A changed
-          ;; closure file refuses naming the FILES; a changed path outside both
-          ;; the manifests and the closure is irrelevant to this warrant.
-          observed-closure (try (load-closure capture-options)
-                                (catch Exception e
-                                  (fail! :closure-probe-failed {:error (.getMessage e)})))
+          ;; Closure check WITHOUT rerunning tests or builds: re-hash the
+          ;; RECORDED closure files. Sound because the closure was recorded
+          ;; in the run JVM after the tests (dynamic requires included), so
+          ;; any newly-loaded source implies a change to an already-recorded
+          ;; closure file. A changed closure file refuses naming the FILES; a
+          ;; changed path outside manifests and closure is :outside-closure.
           closure-changed (closure-diff (closure-shas (:load-closure run))
-                                        (closure-shas observed-closure))
+                                        (current-closure-shas repo-root (:load-closure run)))
           log (:log-artifact run)]
-      (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run)) (successful? (:results run)))
+      (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run))
+                     (vector? (:load-closure run)) (command-successful? (:command run) (:results run)))
         (fail! :unsupported-results {:results (:results run)}))
       (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
         (fail! :stale-sha {:current current}))
@@ -380,8 +540,8 @@
                                         :next-action :reconcile-test-environment})))
       (when-not (and (nonblank? (:path log)) (= (:sha256 log) (file-sha (:path log))))
         (fail! :log-mismatch {}))
-      (when-not (= (:results run) (parse-results (get-in run [:results :exit]) (slurp (:path log))
-                                               (get-in run [:results :duration-ms])))
+      (when-not (= (:results run) (parse-command-results (:command run) (get-in run [:results :exit]) (slurp (:path log))
+                                                       (get-in run [:results :duration-ms])))
         (fail! :results-log-mismatch {}))
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id
        :checked-at (str (Instant/now)) :diff-paths changed-paths
@@ -436,6 +596,9 @@
     (when-not (and (nonblank? reviewer) (not= reviewer (:author run)) (nonblank? adequacy)
                    (contains? #{:routine :pre-push :invariant} lane) (boolean? first-run?))
       (fail! :independent-review-required {}))
+    (when (and (lean-command? (:command run)) (= :spot-check (:mode policy)))
+      (fail! :lean-spot-check-is-the-record-check
+             {:next-action :use-lane-or-full-rebuild :policy policy}))
     (when (some #{"-v" "--var"} (:command run))
       (fail! :full-scope-command-required {:command (:command run)}))
     (when (and (= :spot-check (:mode policy))
