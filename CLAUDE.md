@@ -237,17 +237,16 @@ Three reasons this is an invariant and not a preference:
 The exception is the obvious one: you changed the code. Then the warrant
 refuses by design, and running is exactly the point.
 
-**`:artifact-dir` is part of the warrant, not scratch space (2026-09-17).**
-Warrant records do not belong in git just because they carry shas, and the
-artifact directory must be **permanent and outside any repo**:
-`/home/joe/code/storage/test-registry/`. A run log under `/tmp` pins a path
-that a reboot or tmp sweep deletes, and a warrant whose log is gone is not
-stale but *unverifiable* — no way back except re-running. Live counterexample
-from 2026-09-17: three warrants (two machine-contracts build warrants) pinned
-logs under `/tmp/claude-7-review/`; they were backfilled into the write-only
-ledger the same night, which is the only reason they survived. The ledger is
-the real fix (`locate` resolves content-first), but point `:artifact-dir` at
-storage anyway: the ledger only receives what the run wrote before it vanished.
+**`:artifact-dir` is scratch; the ledger is the guarantee (2026-09-17).**
+`register-run!` stores every run log in the write-only, content-addressed
+ledger (`futon3c.test-registry.ledger`) and `check-record!` resolves it there
+by sha256, so a moved or edited artifact no longer makes a warrant
+unverifiable. Keep `:artifact-dir` at `/home/joe/code/storage/test-registry/`
+anyway: it narrows the crash window between the run writing its log and the
+ledger append, and a `/tmp` artifact-dir makes that window a reboot.
+Historical counterexample: three 2026-09-17 warrants (two machine-contracts
+build warrants) pinned logs under `/tmp/claude-7-review/` before the ledger;
+they survived only because the logs were backfilled into it the same night.
 
 **Enumerating warrants is one cheap tagged query, not a store scan:**
 
