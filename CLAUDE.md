@@ -248,6 +248,12 @@ Historical counterexample: three 2026-09-17 warrants (two machine-contracts
 build warrants) pinned logs under `/tmp/claude-7-review/` before the ledger;
 they survived only because the logs were backfilled into it the same night.
 
+Clojure run records written before reader-version 1 carry no runner pin at
+all: the registry's own runner is excluded from closures as the instrument,
+and pre-v1 records predate `:runner-sha`. Treat them as evidence about the
+specimen, not about the instrument's current behaviour; each re-registration
+closes the gap for that record.
+
 **Enumerating warrants is one cheap tagged query, not a store scan:**
 
 ```bash
