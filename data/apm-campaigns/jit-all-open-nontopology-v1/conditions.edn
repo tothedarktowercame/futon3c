@@ -193,4 +193,23 @@
  :head "19b98d41",
  :namespaces ["futon3c.inbox-zero.infer-adapters"],
  :loaded? true}
+{:id "C-18",
+ :at "2026-09-17T18:35Z",
+ :by "claude-8",
+ :kind :reload,
+ :note
+ "readonly peripheral no longer rejects 2>/dev/null as destructive (afbb9576)",
+ :head "afbb9576",
+ :namespaces
+ ["futon3c.peripheral.real-backend" "futon3c.agents.zai-api"],
+ :loaded? true}
+{:id "C-19",
+ :at "2026-09-17T18:40Z",
+ :by "claude-8",
+ :kind :code,
+ :note
+ "C-18 pins head afbb9576; that commit was amended to b0bbb2a0 (message only, identical tree) after zai-1 confirmed the fix live. The code reloaded under C-18 is the tree of b0bbb2a0.",
+ :head "b0bbb2a0",
+ :loaded? true,
+ :sha "b0bbb2a0"}
 ]

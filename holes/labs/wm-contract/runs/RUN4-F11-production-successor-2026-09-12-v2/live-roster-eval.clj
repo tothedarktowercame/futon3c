@@ -5,4 +5,4 @@
               :let [a (reg/get-agent id)]]
           [id (select-keys a [:agent/status :agent/invoke-ready?
                               :agent/current-job :agent/active-job-id
-                              :agent/session-id])])))
+                              :agent/invoke-job-id :agent/session-id])])))
