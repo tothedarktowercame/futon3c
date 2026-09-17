@@ -3,8 +3,10 @@
   in THIS JVM via clojure.test, printing the standard summary (\"Ran N tests
   containing M assertions.\\nX failures, Y errors.\"), then writes the load
   closure to the file the registry names: every loaded namespace whose source
-  resolves to a file: resource. Because the closure is recorded AFTER the
-  tests run, in the same JVM, namespaces loaded while tests run
+  resolves to a file: resource, plus every file: resource the run looked up by
+  name through the context class loader (see recording-loader). Because the
+  closure is recorded AFTER the tests run, in the same JVM, namespaces loaded
+  while tests run
   (requiring-resolve, run-time require in a test body or fixture) are covered;
   a fresh-JVM require probe under-approximates them.
 
@@ -18,6 +20,33 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :as test]))
+
+(defonce ^{:doc "Classpath resources looked up through the recording loader:
+  #{[resource-name url-string]}."} resource-lookups (atom #{}))
+
+(defn recording-loader
+  "A context class loader that delegates to PARENT and records every resource
+  it finds. clojure.java.io/resource and Clojure's own DynamicClassLoader both
+  resolve through the context loader, so data files the tests open by resource
+  name are recorded. Lookups through another loader (Class/getResource,
+  ClassLoader/getSystemResource) and plain file paths are not."
+  ^ClassLoader [^ClassLoader parent]
+  (proxy [ClassLoader] [parent]
+    (getResource [^String nm]
+      (let [u (.getResource parent nm)]
+        (when u (swap! resource-lookups conj [nm (str u)]))
+        u))
+    (getResources [^String nm]
+      (let [us (enumeration-seq (.getResources parent nm))]
+        (swap! resource-lookups into (map (fn [u] [nm (str u)])) us)
+        (java.util.Collections/enumeration (vec us))))))
+
+(defn resource-entries
+  "Recorded non-class file: resources, as closure entries named resource:<name>."
+  []
+  (vec (for [[nm u] (sort @resource-lookups)
+             :when (and (str/starts-with? u "file:") (not (str/ends-with? nm ".class")))]
+         {:ns (str "resource:" nm) :url u})))
 
 (defn closure-entries
   "Every currently loaded namespace with a file: source resource."
@@ -46,9 +75,11 @@
   "Run the namespace's tests, or VAR-SYM alone when given; return
   {:summary … :closure-entries …} without exiting."
   [namespace-sym var-sym]
+  (let [thread (Thread/currentThread)]
+    (.setContextClassLoader thread (recording-loader (.getContextClassLoader thread))))
   (require namespace-sym)
   (let [summary (if var-sym (run-var var-sym) (test/run-tests namespace-sym))]
-    {:summary summary :closure-entries (closure-entries)}))
+    {:summary summary :closure-entries (into (closure-entries) (resource-entries))}))
 
 (defn -main
   [& args]

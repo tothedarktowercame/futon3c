@@ -92,29 +92,12 @@
                (for [child files]
                  [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)])))))
 
-(defn- non-source-manifest
-  "Conservative pinning of NON-NAMESPACE resources: every non-.clj/.cljc/.cljs
-  file under a classpath directory, hashed (budget + symlink refusal retained
-  via files-under). Source files are excluded — the load closure covers them.
-  Rule: a change to such a file stales warrants that read it. Errs toward
-  rerun; rare in practice."
-  [directory]
-  (let [files (filter #(let [n (.getName %)]
-                         (not (or (.endsWith n ".clj") (.endsWith n ".cljc") (.endsWith n ".cljs"))))
-                       (files-under directory))
-        bytes (reduce + (map #(.length %) files))]
-    (when (> bytes max-dependency-directory-bytes)
-      (fail! :dependency-directory-too-large
-             {:path (str directory) :bytes bytes :limit max-dependency-directory-bytes
-              :next-action :declare-a-bounded-test-classpath}))
-    (into (sorted-map)
-          (for [child files]
-            [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)]))))
-
 (defn- fingerprint*
-  "Resolve the test command's actual Clojure classpath and hash JAR bytes,
-  non-source directory contents, and local dependencies. Source files under
-  classpath directories are pinned by the LOAD CLOSURE, not hashed here.
+  "Resolve the test command's actual Clojure classpath and hash JAR bytes and
+  local dependencies. Files under classpath DIRECTORIES are pinned by the LOAD
+  CLOSURE instead (loaded sources plus resources the run opened), not by
+  walking the directory: a classpath may include the repo root itself, and
+  hashing it would stale every warrant on any commit.
   Other runners need an explicit adapter; they are not silently fingerprinted."
   [{:keys [repo-root command]}]
   (when-not (and (= "clojure" (first command))
@@ -125,12 +108,18 @@
         paths (str/split cp (re-pattern (java.util.regex.Pattern/quote java.io.File/pathSeparator)))
         deps (mapv (fn [p]
                      (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file p)) p (str repo-root "/" p))))]
-                       (if (.isDirectory f)
-                         ;; Directory classpath entries: source files are pinned
-                         ;; by the LOAD CLOSURE (see compute-closure); everything
-                         ;; else (resources data) is hashed conservatively.
-                         {:path (str f) :sha256 :load-closure-only
-                          :non-source (non-source-manifest f)}
+                       (cond
+                         ;; A classpath entry that does not exist loads nothing;
+                         ;; if it appears later the fingerprint differs.
+                         (not (.exists f))
+                         {:path (str f) :sha256 (none :absent)}
+
+                         (.isDirectory f)
+                         ;; Directory classpath entries are pinned by the LOAD
+                         ;; CLOSURE (see compute-closure), not by walking them.
+                         {:path (str f) :sha256 :load-closure-only}
+
+                         :else
                          {:path (str f) :sha256 (file-sha f)}))) paths)
         executable (command! repo-root ["which" "clojure"])
         probe-form "(prn (select-keys (into {} (System/getProperties)) [\"java.home\" \"java.runtime.version\" \"java.vendor\" \"os.name\" \"os.arch\" \"os.version\" \"file.encoding\" \"user.language\" \"user.country\"]))"
@@ -192,23 +181,34 @@
 
 (defn- entry->closure
   [{:keys [ns url]} base-path]
+  ;; The classpath-visible path, normalized but NOT canonicalized: a symlinked
+  ;; resource is recorded at its link path and hashed through the link, so
+  ;; retargeting the link or editing its target both change the recorded sha.
   (let [file (io/file (URL. url))
-        canon (.toPath (.getCanonicalFile file))]
+        visible (.normalize (.toAbsolutePath (.toPath file)))]
     {:ns ns
-     :path (if (.startsWith canon base-path)
-             (str (.relativize base-path canon))
-             (str canon))
+     :path (if (.startsWith visible base-path)
+             (str (.relativize base-path visible))
+             (str visible))
      :sha256 (file-sha file)}))
 
 (defn closure-from-entries
   "Runner out-file entries -> the closure vector: repo-relative paths inside
-  repo-root, absolute paths for sibling local roots, per-file shas."
+  repo-root, absolute paths for sibling local roots, per-file shas. A
+  namespace source also looked up as a resource collapses to one entry per
+  path."
   [entries repo-root]
   (when-not (and (vector? entries)
                  (every? #(and (map? %) (nonblank? (:ns %)) (nonblank? (:url %))) entries))
     (fail! :closure-unparseable {:entries (pr-str (take 3 entries))}))
   (let [base-path (.toPath (.getCanonicalFile (io/file repo-root)))]
-    (vec (sort-by :path (distinct (map #(entry->closure % base-path) entries))))))
+    (->> entries
+         (map #(entry->closure % base-path))
+         (group-by :path)
+         vals
+         (map (fn [rows] (first (sort-by #(str/starts-with? (:ns %) "resource:") rows))))
+         (sort-by :path)
+         vec)))
 
 (defn- strip-lean-comments
   "Remove `--` line comments and nested `/- … -/` block comments (including
@@ -290,8 +290,8 @@
   {path sha256}, omitting files that no longer exist. Relative paths resolve
   against repo-root; sibling local roots were recorded absolute. Sound for
   Clojure because the closure was written after the tests in the run JVM, so
-  loading any new source requires a change to a recorded file (or to a hashed
-  non-source file)."
+  loading any new source or opening a new resource requires a change to a
+  recorded file."
   [repo-root closure]
   (into {} (for [{:keys [path]} closure
                  :let [f (if (.isAbsolute (io/file path)) (io/file path) (io/file repo-root path))]
@@ -419,14 +419,27 @@
                   (and (= "-v" (nth command 4)) (str/includes? (nth command 5) "/")))))
     (fail! :explicit-namespace-required {:command command})))
 
+(defn runner-root
+  "The runner library (futon3c/test-registry-runner), located from this
+  namespace's own source file so it works from any caller's working directory."
+  []
+  (let [src (io/resource "futon3c/test_registry.clj")]
+    (when-not (= "file" (some-> src .getProtocol))
+      (fail! :runner-library-unavailable {:source (str src)}))
+    (-> (io/file src) .getCanonicalFile .getParentFile .getParentFile .getParentFile
+        (io/file "test-registry-runner") .getCanonicalPath)))
+
 (defn execution-command
   "The argv actually executed. Clojure runs the declared alias's classpath with
-  the registry runner's alias appended (its :main-opts replace the declared
-  runner) and the closure out-file as the last argument. Lean runs as declared."
+  the registry runner's alias appended: it adds the runner library as a local
+  dependency and its :main-opts replace the declared runner. The closure
+  out-file is the last argument. Lean runs as declared."
   [command closure-out]
   (if (lean-command? command)
     command
-    (let [config (pr-str {:aliases {runner-alias {:main-opts ["-m" "futon3c.test-registry.runner"]}}})]
+    (let [config (pr-str {:aliases {runner-alias
+                                    {:extra-deps {'futon3c/test-registry-runner {:local/root (runner-root)}}
+                                     :main-opts ["-m" "futon3c.test-registry.runner"]}}})]
       (-> ["clojure" "-Sdeps" config (str (second command) ":" (namespace runner-alias) "/" (name runner-alias))]
           (into (drop 2 command))
           (conj (str closure-out))))))

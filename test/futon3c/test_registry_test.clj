@@ -166,6 +166,7 @@
                                          (io/file "/tmp/r.closure.edn"))]
     (is (= ["clojure" "-Sdeps"] (take 2 argv)))
     (is (str/includes? (nth argv 2) "futon3c.test-registry.runner"))
+    (is (str/includes? (nth argv 2) "test-registry-runner"))
     (is (= "-M:test-pure:futon3c.test-registry/runner" (nth argv 3)))
     (is (= ["-n" "a-test" "-v" "a-test/x" "/tmp/r.closure.edn"] (drop 4 argv))))
   (is (= ["lake" "build" "M"] (registry/execution-command ["lake" "build" "M"] (io/file "x")))))
@@ -295,8 +296,9 @@
 
 (deftest ^:slow clojure-closure-covers-dynamic-loads-and-resources
   ;; Real processes in a temp project: the test body loads `dyn` only through
-  ;; requiring-resolve and reads resources/data.txt, so a fresh-JVM require of
-  ;; the test namespace would record neither.
+  ;; requiring-resolve and reads resources/data.txt and a symlinked
+  ;; resources/page.txt, so a fresh-JVM require of the test namespace would
+  ;; record none of them.
   (let [dir (.toFile (Files/createTempDirectory "registry-closure-" (make-array FileAttribute 0)))
         root (str dir)
         write (fn [path text] (let [f (io/file dir path)] (io/make-parents f) (spit f text)))
@@ -306,16 +308,22 @@
         check (fn [run changed] (registry/check-record! backend {:entry-id (:evidence/id run) :repo-root root
                                                                  :changed-paths changed}))]
     (try
-      (write "deps.edn" "{:paths [\"src\" \"test\" \"resources\"] :deps {org.clojure/clojure {:mvn/version \"1.12.0\"}} :aliases {:t {}}}")
-      (write "src/futon3c/test_registry/runner.clj" (slurp (io/resource "futon3c/test_registry/runner.clj")))
+      ;; "." on the classpath, as in futon2's :test alias.
+      (write "deps.edn" "{:paths [\"src\" \"test\" \"resources\" \".\"] :deps {org.clojure/clojure {:mvn/version \"1.12.0\"}} :aliases {:t {}}}")
       (write "src/demo.clj" "(ns demo)\n(defn one [] 1)\n")
       (write "src/dyn.clj" "(ns dyn)\n(defn value [] 1)\n")
       (write "src/unrelated.clj" "(ns unrelated)\n")
       (write "resources/data.txt" "v1")
+      (write "resources/unused.txt" "u1")
+      (write "generated/page.txt" "p1")
+      (Files/createSymbolicLink (.toPath (io/file dir "resources/page.txt"))
+                                (.toPath (io/file dir "generated/page.txt"))
+                                (make-array FileAttribute 0))
       (write "test/demo_test.clj"
              (str "(ns demo-test (:require [clojure.test :refer [deftest is]] [clojure.java.io :as io] [demo]))\n"
                   "(deftest dynamic (is (= (demo/one) ((requiring-resolve 'dyn/value))))"
-                  " (is (= \"v1\" (slurp (io/resource \"data.txt\")))))\n"))
+                  " (is (= \"v1\" (slurp (io/resource \"data.txt\"))))"
+                  " (is (= \"p1\" (slurp (io/resource \"page.txt\")))))\n"))
       (sh "git" "init" "-q") (sh "git" "add" ".")
       (sh "git" "-c" "user.email=t@t" "-c" "user.name=t" "commit" "-qm" "fixture")
       (let [run (registry/register-run! backend {:repo-root root :command ["clojure" "-M:t" "-n" "demo-test"]
@@ -323,7 +331,9 @@
                                                  :author "author" :artifact-dir (str root "/.artifacts")})
             paths (set (map :path (get-in run [:payload :load-closure])))]
         (is (true? (get-in run [:payload :warrant?])) (pr-str (:payload run)))
-        (is (= 2 (get-in run [:payload :results :assertions])))
+        (is (= 3 (get-in run [:payload :results :assertions])))
+        (is (contains? paths "resources/data.txt") (pr-str paths))
+        (is (contains? paths "resources/page.txt") (pr-str paths))
         (is (contains? paths "src/dyn.clj") (pr-str paths))
         (is (contains? paths "test/demo_test.clj") (pr-str paths))
         (write "src/unrelated.clj" "(ns unrelated)\n;; edited\n")
@@ -336,8 +346,16 @@
           (is (= ["src/dyn.clj"] (get-in r [:details :changed-files]))))
         (write "src/dyn.clj" "(ns dyn)\n(defn value [] 1)\n")
         (is (true? (:warrant? (check run []))))
+        (write "resources/unused.txt" "u2")
+        (write "notes.md" "a new file at the repo root")
+        (is (true? (:warrant? (check run ["resources/unused.txt" "notes.md"]))))
+        (write "generated/page.txt" "p2")
+        (let [r (check run [])]
+          (is (= :environment-mismatch (:reason r)))
+          (is (= ["resources/page.txt"] (get-in r [:details :changed-files]))))
+        (write "generated/page.txt" "p1")
         (write "resources/data.txt" "v2")
         (let [r (check run ["resources/data.txt"])]
           (is (= :environment-mismatch (:reason r)))
-          (is (str/includes? (pr-str (get-in r [:details :observed-only])) "data.txt"))))
+          (is (= ["resources/data.txt"] (get-in r [:details :changed-files])))))
       (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f true))))))
