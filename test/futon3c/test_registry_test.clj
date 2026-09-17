@@ -1,5 +1,7 @@
 (ns futon3c.test-registry-test
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [futon2.aif.c-fold-config :as digest]
             [futon3c.test-registry.ledger :as registry-ledger]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -379,3 +381,51 @@
           (is (= :environment-mismatch (:reason r)))
           (is (= ["resources/data.txt"] (get-in r [:details :changed-files])))))
       (finally (doseq [f (reverse (file-seq dir))] (io/delete-file f true))))))
+
+(defn reseal!
+  "Rewrite a stored record's payload and re-derive its id the way
+  append-record! does, so the digest check passes and the check under test is
+  the one that fires."
+  [backend id f]
+  (let [entry (get-in @backend [:entries id])
+        payload (f (edn/read-string (get-in entry [:evidence/body :payload-edn])))
+        text (pr-str (#'registry/canonical payload))
+        hash (digest/sha256 text)
+        new-id (str "test-registry-" hash)
+        resealed (assoc entry :evidence/id new-id
+                        :evidence/body {:payload-edn text :sha256 hash})]
+    (swap! backend (fn [b]
+                     (-> b
+                         (update :entries dissoc id)
+                         (assoc-in [:entries new-id] resealed)
+                         (update :order (fn [order] (mapv #(if (= id %) new-id %) order))))))
+    new-id))
+
+(deftest a-record-from-an-older-reader-refuses-as-superseded-not-as-tampered
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)]
+       (is (= registry/reader-version (get-in run [:payload :reader-version]))
+           "a run records the reader that read it")
+       ;; Strip the key, as every record written before 2026-09-17 has it
+       ;; stripped, and break exactly what a newer predicate would ask for.
+       (let [id (reseal! backend (:evidence/id run)
+                         #(-> % (dissoc :reader-version)
+                              (assoc-in [:results :tests] (registry/none :unparsed))))
+             result (registry/check-record! backend
+                                            (assoc (check-options run) :entry-id id))]
+         (is (= :parser-superseded (:reason result)) (pr-str result))
+         (is (= 0 (get-in result [:details :recorded-reader-version])))
+         (is (= registry/reader-version (get-in result [:details :reader-version])))
+         (is (= :re-register-the-run (get-in result [:details :next-action]))))))))
+
+(deftest a-current-reader-record-still-refuses-as-unsupported
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)
+           id (reseal! backend (:evidence/id run)
+                       #(assoc-in % [:results :tests] (registry/none :unparsed)))
+           result (registry/check-record! backend
+                                          (assoc (check-options run) :entry-id id))]
+       (is (= :unsupported-results (:reason result))
+           "a record its own reader could have satisfied is not superseded")))))

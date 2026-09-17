@@ -420,6 +420,21 @@
        (zero? (:exit results)) (pos? (:jobs results))
        (zero? (:error-count results))))
 
+(def reader-version
+  "How this build reads a run. Bump when a change makes records written by an
+  earlier registry unreadable on their own terms — the log parser's output
+  shape, the success predicates that consume it, or the execution-command
+  shape. Records written before this key existed read as 0.
+
+  1 (2026-09-17): `ab388662` taught the Lean parser Lean 4.31's backticked
+    ``declaration uses `sorry` `` and added per-file :sorry-files, which
+    `lean-successful?` now requires; `33824f0f` moved execution through
+    futon3c.test-registry.runner. A v0 record fails those checks because it
+    was read by a reader that could not produce what they ask for, which is
+    not the same thing as a record that has been tampered with — hence
+    :parser-superseded rather than :unsupported-results."
+  1)
+
 (defn command-successful? [command results]
   (if (lean-command? command) (lean-successful? results) (successful? results)))
 
@@ -510,6 +525,7 @@
         common (merge code {:run/id id :author author :ran-at start :repo/root repo-root
                             :scope (select-keys options [:code-paths :test-paths :test-environment])
                             :command command :env-fingerprint env
+                            :reader-version reader-version
                             :origin (:origin options "agency-local")})
         intent (append-record! backend (assoc common :kind :intent) (:previous-id options))
         _ (.mkdirs (io/file artifact-dir))
@@ -576,10 +592,19 @@
           log (:log-artifact run)
           ;; The ledger holds the object under its own sha, so it cannot have
           ;; moved; the recorded path is the fallback for pre-ledger records.
-          log-file (ledger/locate log)]
+          log-file (ledger/locate log)
+          recorded-reader (get run :reader-version 0)]
       (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run))
                      (vector? (:load-closure run)) (command-successful? (:command run) (:results run)))
-        (fail! :unsupported-results {:results (:results run)}))
+        (if (< recorded-reader reader-version)
+          ;; The record cannot satisfy a predicate written after it. Say so:
+          ;; :unsupported-results here would be indistinguishable from a
+          ;; doctored record, and the remedy is different — re-register.
+          (fail! :parser-superseded {:recorded-reader-version recorded-reader
+                                     :reader-version reader-version
+                                     :results (:results run)
+                                     :next-action :re-register-the-run})
+          (fail! :unsupported-results {:results (:results run)})))
       (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
         (fail! :stale-sha {:current current}))
       (when (seq closure-changed)
@@ -593,7 +618,11 @@
         (fail! :log-mismatch {:looked-in (if (:ledger log) [:ledger :path] [:path])}))
       (when-not (= (:results run) (parse-command-results (:command run) (get-in run [:results :exit]) (slurp log-file)
                                                        (get-in run [:results :duration-ms])))
-        (fail! :results-log-mismatch {}))
+        (if (< recorded-reader reader-version)
+          (fail! :parser-superseded {:recorded-reader-version recorded-reader
+                                     :reader-version reader-version
+                                     :next-action :re-register-the-run})
+          (fail! :results-log-mismatch {})))
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id
        :checked-at (str (Instant/now)) :diff-paths changed-paths
        :outside-closure outside-closure})
