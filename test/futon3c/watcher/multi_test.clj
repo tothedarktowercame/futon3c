@@ -584,3 +584,25 @@
 (deftest mission-record-refresh-resolves-futon2-writer
   (testing "the lane's record refresh resolves futon2's single record writer"
     (is (ifn? (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)))))
+
+;; Added 2026-09-17 by claude-4 in review of c84abfcd. The scope lane's stem
+;; pattern deliberately admits excursions and campaigns; futon2's registry
+;; admits only holes/missions/M-*.md. Without a guard every E-/C- doc-land
+;; came back :path-not-admitted and was filed in the lane report as an error,
+;; which would make a real failure unreadable.
+(deftest non-mission-stems-are-not-record-failures-test
+  (let [refresh #'futon3c.watcher.multi/refresh-mission-record!]
+    (doseq [[stem path] [["C-topology" "/home/joe/code/futon3/holes/campaigns/C-topology.md"]
+                         ["E-crossed-bells" "/home/joe/code/futon3c/holes/excursions/E-crossed-bells.md"]]]
+      (let [res (refresh stem path)]
+        (is (= :not-applicable (:status res)) (str stem " is not a mission record"))
+        (is (= :not-a-mission-doc (:reason res)))))))
+
+(deftest mission-stems-still-reach-the-writer-test
+  (let [refresh #'futon3c.watcher.multi/refresh-mission-record!
+        seen (atom nil)]
+    (with-redefs [requiring-resolve (fn [sym]
+                                      (is (= 'futon2.aif.mission-registry/upsert-mission-record! sym))
+                                      (fn [arg] (reset! seen arg) {:status :unchanged}))]
+      (is (= :unchanged (:status (refresh "M-alpha" "/x/holes/missions/M-alpha.md"))))
+      (is (= {:path "/x/holes/missions/M-alpha.md"} @seen)))))

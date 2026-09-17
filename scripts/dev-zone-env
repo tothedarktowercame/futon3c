@@ -51,6 +51,17 @@ export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
 # Only the serving JVM may project peripheral state into the operator's Emacs.
 # Test and CLI JVMs intentionally do not inherit this explicit opt-in.
 export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
+# Watcher mission-scope lane (futon3c.watcher.multi). Written long ago and
+# never armed: the gate defaulted OFF "so the lane can be loaded dark", and
+# nothing ever turned it on, so mission/excursion/campaign docs were never
+# enqueued for reingest on doc-land and substrate-2 held 8 mission entities
+# against 242 mission docs. Joe 2026-09-17: substrate-2 holds ALL the
+# missions and the watcher keeps it up to date -- so the lane is part of this
+# server's configuration, not something the operator re-enables per restart.
+# Arming also runs futon2's mission-record writer on each land, which is what
+# keeps the machine's status/provenance read current.
+# In-process override for an incident: (futon3c.watcher.multi/disarm-scope-lane!).
+export FUTON3C_WATCHER_SCOPE_LANE="${FUTON3C_WATCHER_SCOPE_LANE:-1}"
 # Inbox-zero turn-end machinery (futon0/README-inbox-zero.md, slices 1-6 landed
 # 2026-08-21 but activated nowhere: dev-laptop-env got the exports with ENABLED
 # defaulting false, this file got nothing, so the 2026-08-23 restart changed

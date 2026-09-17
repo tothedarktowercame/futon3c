@@ -76,9 +76,10 @@
 (def ^:private scope-lane-env "FUTON3C_WATCHER_SCOPE_LANE")
 
 ;; In-process override for the scope-lane gate (Joe, 2026-09-17: the lane
-;; should be BINDABLE, not env-only). nil = defer to the env default. Set
-;; only through arm-scope-lane!/disarm-scope-lane! so arming is deliberate
-;; and starts (disarming stops) the maintenance drainer.
+;; should be BINDABLE, not env-only). nil = defer to the env default, true =
+;; on, false = off regardless of the env. Set only through arm-scope-lane! /
+;; disarm-scope-lane! / reset-scope-lane-override!, so a change is deliberate
+;; and starts (or stops) the maintenance drainer with it.
 (defonce ^:private !scope-lane-override (atom nil))
 
 (defn- env-scope-lane-enabled? []
@@ -87,9 +88,12 @@
 
 (defn scope-lane-enabled?
   "Truthy gate for watcher-integrated mission-scope reingest. An explicit
-   in-process override (arm-scope-lane!) wins; otherwise the env default
-   FUTON3C_WATCHER_SCOPE_LANE decides. Defaults OFF so the lane can be
-   loaded dark — arming is deliberate, never incidental."
+   in-process override (arm-scope-lane!/disarm-scope-lane!) wins; otherwise
+   the env default FUTON3C_WATCHER_SCOPE_LANE decides. The CODE default is
+   OFF, so a bare test or CLI JVM never runs the lane; the zone serving
+   profile turns it ON in scripts/dev-zone-env (Joe 2026-09-17: the watcher
+   keeps substrate-2 up to date, and that is configuration, not an operator
+   step to remember at each restart)."
   []
   (if-some [override @!scope-lane-override]
     (boolean override)
@@ -104,8 +108,19 @@
   (mission-maintenance-status))
 
 (defn disarm-scope-lane!
-  "Return the scope-lane gate to the env default (default OFF) and stop the
-   maintenance drainer. Idempotent."
+  "Turn the scope lane OFF in-process and stop the maintenance drainer.
+   Idempotent. This sets the override to FALSE rather than clearing it,
+   because the env default is now ON (scripts/dev-zone-env, 2026-09-17):
+   clearing the override would defer to that default and disarming would do
+   nothing, leaving a restart as the only way to stop the lane during an
+   incident. Use `reset-scope-lane-override!` to go back to the env default."
+  []
+  (reset! !scope-lane-override false)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
+
+(defn reset-scope-lane-override!
+  "Drop the in-process override so the gate follows the env default again."
   []
   (reset! !scope-lane-override nil)
   (ensure-mission-maintenance-drainer!)
@@ -288,14 +303,24 @@
    not also refresh the record would leave the machine reading a stale
    status after every mission-doc land. futon2 lives on this JVM's classpath
    (the WM runs in-process); if it cannot resolve, the failure is reported
-   in the lane's report — never swallowed."
-  [path]
-  (try
-    (let [upsert (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)]
-      (upsert {:path path}))
-    (catch Throwable t
-      {:status :error :message (.getMessage t)
-       :exception (.getName (class t))})))
+   in the lane's report — never swallowed.
+
+   Only MISSION docs have a record to refresh. The lane's stem pattern
+   deliberately also admits excursions and campaigns, and futon2's registry
+   admits only `holes/missions/M-*.md`, so every E-/C- land would otherwise
+   come back `:path-not-admitted` and be filed as an error forever. A doc
+   that was never in the mission registry is `:not-applicable`, not a
+   failure; keeping the two apart is what lets a real `:error` mean
+   something."
+  [stem path]
+  (if-not (some-> stem (str/starts-with? "M-"))
+    {:status :not-applicable :reason :not-a-mission-doc :stem stem}
+    (try
+      (let [upsert (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)]
+        (upsert {:path path}))
+      (catch Throwable t
+        {:status :error :message (.getMessage t)
+         :exception (.getName (class t))}))))
 
 (defn reingest-mission-scopes!
   "Run the same scope-lane mechanics as scripts/mission-scope-reingest.sh:
@@ -312,7 +337,7 @@
                                 :out (ingest-scope-binder! stem binder)})
                              binders)
         ingest-ms (- (now-ms) ingest-start)
-        record (refresh-mission-record! path)
+        record (refresh-mission-record! stem path)
         broadcast? (broadcast-mission-scopes-updated! stem)]
     {:mission stem
      :path path
