@@ -172,7 +172,7 @@
           (let [result (tools/execute-tool backend :bash-readonly [cmd])]
             (is (false? (:ok result))
                 (str "Should reject: " cmd))
-            (is (str/includes? (:error result) "destructive"))))))))
+            (is (str/includes? (:error result) "readonly peripheral"))))))))
 
 (deftest bash-readonly-allows-read-commands
   (testing ":bash-readonly allows ls, cat, wc, etc."
@@ -182,6 +182,39 @@
             result (tools/execute-tool backend :bash-readonly ["ls"])]
         (is (true? (:ok result)))
         (is (str/includes? (get-in result [:result :out]) "test.txt"))))))
+
+(deftest bash-readonly-rejects-laundered-and-redirecting-commands
+  (testing ":bash-readonly rejects mutation hidden behind xargs, find and redirects"
+    (with-temp-dir dir
+      (let [backend (rb/make-real-backend {:cwd (.getPath dir)})]
+        (doseq [cmd ["find . -name '*.log' -delete"
+                     "ls | xargs rm -f"
+                     "git log --oneline > /home/joe/notes.txt"
+                     "echo hi >> report.txt"
+                     "sed -i 's/a/b/' file.txt"
+                     "cat a.txt | tee /home/joe/b.txt"]]
+          (let [result (tools/execute-tool backend :bash-readonly [cmd])]
+            (is (false? (:ok result)) (str "Should reject: " cmd))
+            (is (str/includes? (:error result) "readonly peripheral"))))))))
+
+(deftest bash-readonly-allows-real-inspection-commands
+  ;; Regression for 2026-09-16: the guard matched `>\s*/`, so every command
+  ;; carrying `2>/dev/null` was rejected as destructive. Zai seats wasted turns
+  ;; guessing at the cause (see zai-13, zai-1, zai-18 buffers). These are the
+  ;; actual rejected commands, reduced to a temp dir.
+  (testing ":bash-readonly allows 2>/dev/null, 2>&1, and mutating words in strings"
+    (with-temp-dir dir
+      (write-test-file! dir "test.txt" "hello")
+      (let [backend (rb/make-real-backend {:cwd (.getPath dir)})]
+        (doseq [cmd ["ls 2>/dev/null; grep -rn \"hello\" . 2>/dev/null | head"
+                     "git log --oneline -3 2>/dev/null; ls ."
+                     "ls missing.el 2>/dev/null || ls test.txt"
+                     "grep -c hello test.txt 2>&1"
+                     "grep -n \"rm -rf\" test.txt; echo done"
+                     "echo 'a > /etc/passwd'"]]
+          (let [result (tools/execute-tool backend :bash-readonly [cmd])]
+            (is (true? (:ok result))
+                (str "Should allow: " cmd " — " (:error result)))))))))
 
 ;; =============================================================================
 ;; 7. Musn-log tool — evidence store access

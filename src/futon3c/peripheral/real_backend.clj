@@ -259,21 +259,87 @@
           {:ok true :result result}
           {:ok true :result result})))))
 
+(defn- blank-quoted
+  "Blank the contents of balanced quoted runs, preserving length, so that the
+   readonly guard matches command structure and not string literals. An
+   unterminated quote is left as-is: hiding a real mutation behind a stray
+   quote would be worse than a false positive."
+  [^String s]
+  (let [n (.length s)
+        sb (StringBuilder. s)]
+    (loop [i 0]
+      (if (>= i n)
+        (.toString sb)
+        (let [c (.charAt sb i)]
+          (if (or (= c \') (= c \"))
+            (let [close (.indexOf s (str c) (inc i))]
+              (if (neg? close)
+                (.toString sb)                      ; unterminated — stop, keep raw
+                (do (doseq [j (range (inc i) close)]
+                      (.setCharAt sb j \space))
+                    (recur (inc close)))))
+            (recur (inc i))))))))
+
+(def ^:private readonly-mutators
+  "[label regex] pairs for commands that change state. Matched at the head of a
+   command segment (start of string, or after ; & | ( ` or a newline), against
+   the quote-blanked command."
+  (let [head "(?:^|[;&|(`\\n])\\s*(?:\\w+=\\S+\\s+)*"]
+    [["rm"       (re-pattern (str head "(?:sudo\\s+)?(?:git\\s+)?rm\\s"))]
+     ["mv"       (re-pattern (str head "(?:sudo\\s+)?(?:git\\s+)?mv\\s"))]
+     ["cp"       (re-pattern (str head "(?:sudo\\s+)?cp\\s"))]
+     ["dd"       (re-pattern (str head "(?:sudo\\s+)?dd\\s"))]
+     ["chmod"    (re-pattern (str head "(?:sudo\\s+)?chmod\\s"))]
+     ["chown"    (re-pattern (str head "(?:sudo\\s+)?chown\\s"))]
+     ["kill"     (re-pattern (str head "(?:sudo\\s+)?(?:kill|pkill|killall)\\s"))]
+     ["truncate" (re-pattern (str head "(?:sudo\\s+)?(?:truncate|shred|mkfs\\S*)\\s"))]
+     ["tee"      (re-pattern (str head "(?:sudo\\s+)?tee\\s"))]
+     ["sed -i"   (re-pattern (str head "(?:sudo\\s+)?sed\\s+(?:-\\S+\\s+)*-i"))]
+     ;; xargs/find -exec launder a mutation past the segment-head check.
+     ["xargs rm" #"xargs\s+(?:-\S+\s+)*(?:rm|mv|chmod|chown|truncate)\b"]
+     ["find -exec" #"-(?:exec|execdir|delete)\b"]]))
+
+(def ^:private readonly-redirect-targets
+  "Redirect targets that write nothing. Everything else is a write."
+  #{"/dev/null" "/dev/stdout" "/dev/stderr" "/dev/tty"})
+
+(defn- redirect-writes
+  "Redirect targets in a quote-blanked command that name something other than
+   the null/tty sinks or another file descriptor (`2>&1`). `2>/dev/null` is a
+   read-only idiom and must stay allowed — treating it as destructive is what
+   made this guard reject ordinary greps (2026-09-16)."
+  [blanked]
+  (->> (re-seq #"(?:^|[\s;&|()])\d*>>?\s*([^\s;&|()<>]+)" blanked)
+       (map second)
+       (remove #(str/starts-with? % "&"))
+       (remove readonly-redirect-targets)
+       seq))
+
+(defn readonly-rejection
+  "Why :bash-readonly refuses `command`, or nil if it may run. Public so the
+   guard can be exercised directly by tests and by callers deciding whether to
+   route a command to a writable peripheral."
+  [command]
+  (let [blanked (blank-quoted (str command))]
+    (or (some (fn [[label re]]
+                (when (re-find re blanked)
+                  (str "`" label "` mutates state")))
+              readonly-mutators)
+        (when-let [targets (redirect-writes blanked)]
+          (str "writes to " (str/join ", " targets))))))
+
 (defn- tool-bash-readonly
-  "Execute a read-only bash command. Rejects obviously destructive commands.
+  "Execute a read-only bash command. Rejects commands that mutate state.
    Args: [command] or [command {:timeout-ms N}]."
   [cwd default-timeout args]
-  (let [command (str (first args))
-        destructive-patterns [#"(?:^|\s|;|&&|\|\|)\s*rm\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*mv\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*cp\s.*>\s"
-                              #">\s*/"
-                              #"(?:^|\s|;|&&|\|\|)\s*dd\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*chmod\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*chown\s"
-                              #"(?:^|\s|;|&&|\|\|)\s*kill\s"]]
-    (if (some #(re-find % command) destructive-patterns)
-      {:ok false :error "Command rejected: appears destructive (readonly peripheral)"}
+  (let [command (str (first args))]
+    (if-let [reason (readonly-rejection command)]
+      {:ok false
+       :error (str "Command rejected by the readonly peripheral: " reason ". "
+                   "This peripheral runs reads only; `2>/dev/null`, `2>&1` and "
+                   "pipes are fine. Rewrite the command without the mutating "
+                   "part, or report that the work needs a writable peripheral. "
+                   "Do not retry variants of the same command.")}
       (tool-bash cwd default-timeout args))))
 
 ;; =============================================================================

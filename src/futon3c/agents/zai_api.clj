@@ -104,7 +104,7 @@
                   :timeout_ms {:type "integer"}}
                  ["command"])}
    {:name "run_readonly"
-    :description "Run a read-only shell command in cwd. Destructive-looking commands are rejected."
+    :description "Run a read-only shell command in cwd. Commands that mutate state (rm, mv, sed -i, redirects to a file) are rejected; 2>/dev/null, 2>&1 and pipes are fine."
     :parameters (json-schema
                  {:command {:type "string"}
                   :timeout_ms {:type "integer"}}
