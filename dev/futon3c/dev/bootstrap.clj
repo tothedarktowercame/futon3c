@@ -586,9 +586,9 @@
               (inbox-zero-sweeper/start-loop!
                {:interval-ms (config/env-int "FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS"
                                              1800000)})
-              (println "[dev] inbox-zero attribution sweeper scheduled")
+              (println "[dev] inbox-zero commit-notice sweeper scheduled")
               (catch Throwable t
-                (println (str "[dev] inbox-zero attribution sweeper start threw: "
+                (println (str "[dev] inbox-zero commit-notice sweeper start threw: "
                               (.getName (class t)) ": " (.getMessage t)
                               " — boot continues.")))))
         f5-sys (start-futon5!)

@@ -76,12 +76,17 @@ export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http:
 # attested-only corroboration, idle-gated launch) and execute was re-enabled
 # live via set-mode!; this default keeps it on across the next restart.
 export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-execute}"
-# Street-sweeper attribution proposals (futon3c.inbox-zero.sweeper, wired
-# 2026-08-24). Proposes attributions for unattributed dirt via confirmation
-# followups; NEVER mints claims (confirmation minting is a separate slice).
+# Commit notices (futon3c.inbox-zero.sweeper). Counts each watched repo's
+# dirty files; over the threshold it tells the agents whose turns wrote them
+# to commit. Attribution is file mtime against invoke windows, NOT the agent
+# tool stream: the 2026-08-24 attribution-proposal lane keyed on Edit/Write
+# witnesses and proposed nothing in three weeks, because run output is
+# written by processes agents launch, not by their editor tools.
+# This lane only informs: it never stages, commits or pushes.
 # First run one interval after boot, then every 30 min.
 export FUTON3C_INBOX_ZERO_SWEEPER="${FUTON3C_INBOX_ZERO_SWEEPER:-true}"
 export FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS="${FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS:-1800000}"
+export FUTON3C_INBOX_ZERO_THRESHOLD="${FUTON3C_INBOX_ZERO_THRESHOLD:-10}"
 
 # The wrappers move child CLI processes out of the protected server cgroup and
 # into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.
