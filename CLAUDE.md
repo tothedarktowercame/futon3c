@@ -254,6 +254,20 @@ and pre-v1 records predate `:runner-sha`. Treat them as evidence about the
 specimen, not about the instrument's current behaviour; each re-registration
 closes the gap for that record.
 
+**Pre-`reader-version`-1 Clojure records are instrument-unpinned (2026-09-17).**
+Until that date futon3c's own runner sat in every Clojure warrant's load
+closure — 38 of 39 — so a comment-only edit to it refused them all with
+`:environment-mismatch` and told their holders to rerun; it killed the
+production tick's C2 that night. The runner is the instrument, not the
+specimen, and is now excluded from the recorded closure and from the
+check-time diff on both sides, which heals those records retroactively. The
+consequence to know: a record written before `reader-version` 1 attests
+nothing about the runner's behaviour, then or now. That is not a weakening —
+its runner-bytes pinning was a measurement leak rather than an attestation —
+but do not read a pre-v1 Clojure record as evidence about the instrument.
+Each re-registration closes one; `scripts/registry_ledger_audit.clj` can
+enumerate which remain.
+
 **Enumerating warrants is one cheap tagged query, not a store scan:**
 
 ```bash
