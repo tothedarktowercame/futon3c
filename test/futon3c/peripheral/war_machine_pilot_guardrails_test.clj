@@ -2,6 +2,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
+            [futon2.aif.decision-gate :as futon2-gate]
+            [futon2.aif.policy :as futon2-policy]
             [futon3c.peripheral.war-machine-pilot :as pilot])
   (:import (java.io File)
            (java.nio.file Files)
@@ -18,14 +20,29 @@
       (doseq [^File f (reverse (file-seq root))]
         (.delete f)))))
 
-(defn- judgement [ranked-actions]
+;; H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): the live
+;; judgement carries a cascade decision built with the REAL
+;; futon2.aif.policy/select-action-cascades over receipted candidates (it
+;; passes futon2.aif.decision-gate/emit!). Each candidate's :precedence
+;; carries step-shaped acting actions, so the differential the pilot walks is
+;; the posterior marginals over first acting patterns. A single-candidate
+;; decision with a one-step precedence is the minimal honest fixture.
+
+(defn- cascade-action [cascade-id type target]
+  {:kind :cascade-candidate
+   :cascade-id cascade-id
+   :precedence [{:type type :target target}]
+   :construction-receipt {:cascade-id cascade-id :moves 1}
+   :interpretation-receipts [{:pattern type :admitted true}]})
+
+(defn- judgement [entries]
   {:mode :base-case
-   :ranked-actions ranked-actions})
+   :decision (futon2-gate/emit!
+              (futon2-policy/select-action-cascades entries {:beta 0.25}))})
 
 (defn- ranked [rank type target g]
-  {:rank rank
-   :G-total g
-   :action {:type type :target target}})
+  {:action (cascade-action (keyword (str "C" rank)) type target)
+   :controller-score g})
 
 (defn- scheduler-resolve [sym]
   (case sym
@@ -115,7 +132,9 @@
                                       (fn [_] {:open? true :open-hole-count 0})}}))]
       (is (= true (:ok result)))
       (is (= {:type :advance-mission :target "M-zeta"} (:v result)))
-      (is (= -4.0 (:predicted-discharge result)) "predicted = the FIELD's G for the chosen entry")
+      (is (number? (:predicted-discharge result)))
+      (is (pos? (:predicted-discharge result))
+          "predicted = the enacted step's posterior marginal from the field")
       (is (= :operator-directed (:v-attribution result)))
       (is (= :needs-operator (:guardrails/classification result))
           "classification recorded honestly even though operator direction proceeds")

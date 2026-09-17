@@ -9,7 +9,6 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.cyder :as cyder]
-            [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.transport.http :as http])
   (:import [java.time Instant]
            [java.util UUID]
@@ -202,56 +201,35 @@
 (defn snapshot-for-days [days]
   (get-in @!wm-snapshot [:by-days days]))
 
-(defn- mission-target
-  [ranked-action]
-  (or (get-in ranked-action [:action :target])
-      (:target ranked-action)))
+(defn- strip-next-belief
+  "H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): the flat
+   :ranked-actions shrink is gone with the flat grain. What can still be
+   heavy is the cascade lane: a cascade decision's posterior candidates and
+   the per-target cascade problems may carry forward-model :prediction maps
+   whose :next-belief is a full belief map (~115KB each). The viewer never
+   reads :next-belief; strip it wherever it occurs inside the decision and
+   cascade-problems subtrees, leaving the light prediction fields."
+  [x]
+  (cond
+    (map? x) (into {}
+                   (keep (fn [[k v]]
+                           (when-not (= :next-belief k)
+                             [k (strip-next-belief v)])))
+                   x)
+    (vector? x) (mapv strip-next-belief x)
+    (sequential? x) (mapv strip-next-belief x)
+    :else x))
 
-(defn- mission-ranked-action?
-  [ranked-action]
-  (and (string? (mission-target ranked-action))
-       (str/starts-with? (mission-target ranked-action) "M-")
-       (or (contains? ranked-action :open-hole-count)
-           (contains? (:action ranked-action) :open-hole-count))))
-
-(defn- structural-hole-count-for-ranked-action
-  [ranked-action]
-  (when (mission-ranked-action? ranked-action)
-    (try
-      (:structural-hole-count
-       (star-extractor/structural-hole-report (mission-target ranked-action)))
-      (catch Throwable _
-        nil))))
-
-(defn- assoc-structural-hole-count
-  [ranked-action n]
-  (let [n (long n)]
-    (cond-> ranked-action
-      (contains? ranked-action :open-hole-count)
-      (assoc :structural-hole-count n)
-
-      (contains? (:action ranked-action) :open-hole-count)
-      (assoc-in [:action :structural-hole-count] n))))
-
-(defn- trim-action-predictions
-  "Drop the heavy per-action :prediction/:next-belief (a full belief map ~115KB each × ~121
-   actions ≈ 14MB, ~96% of the whole WM payload) from the judgement before serialization.
-   It is a transient forward-model byproduct retained only to score the action; the WM viewer
-   never reads it (core.cljs: 'this panel does not present predictions'). The light prediction
-   fields (:next-observation, :predicted-events, :action) are kept. Shrinks /api/alpha/war-machine
-   ~15MB → ~0.6MB. (Joe, 2026-06-12.)"
+(defn trim-cascade-predictions
+  "Shrink the served judgement's cascade lane (decision + cascade problems)
+   by dropping heavy :prediction :next-belief maps before serialization."
   [judgement]
-  (if (seq (:ranked-actions judgement))
-    (update judgement :ranked-actions
-            (fn [acts]
-              (mapv (fn [a]
-                      (let [a (if (get-in a [:prediction :next-belief])
-                                (update a :prediction dissoc :next-belief)
-                                a)]
-                        (if-let [n (structural-hole-count-for-ranked-action a)]
-                          (assoc-structural-hole-count a n)
-                          a)))
-                    acts)))
+  (if (map? judgement)
+    (cond-> judgement
+      (contains? judgement :decision)
+      (update :decision strip-next-belief)
+      (contains? judgement :cascade-problems)
+      (update :cascade-problems strip-next-belief))
     judgement))
 
 (defn- render-payload-json
@@ -259,7 +237,7 @@
   (let [{:keys [data judgement]} (http/wm-response-payload bundle)
         payload (http/stringify-wm-response
                  (-> data
-                     (assoc :judgement (trim-action-predictions judgement))
+                     (assoc :judgement (trim-cascade-predictions judgement))
                      (assoc :pilot-inhabitations (http/derive-pilot-inhabitations))))]
     {:payload payload
      :body (json/generate-string payload)}))
@@ -270,9 +248,7 @@
   (try
     (let [started-ns (System/nanoTime)
           started-at (Instant/now)
-          bundle (-> (generate days {})
-                     http/apply-wm-operator-clear
-                     ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
+          bundle (http/apply-wm-operator-clear (generate days {}))
           {:keys [payload body]} (render-payload-json bundle)
           finished-at (Instant/now)
           duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]

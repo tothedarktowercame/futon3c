@@ -1,61 +1,63 @@
 (ns futon3c.aif.live-recommendation-test
+  "H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): the admissible
+   cascade decision is built with the REAL futon2.aif.policy/select-action-cascades
+   over candidates carrying construction and interpretation receipts, and
+   passes futon2.aif.decision-gate/emit! before projection; the abstention is
+   a real typed abstention shape."
   (:require [clojure.test :refer [deftest is testing]]
+            [futon2.aif.decision-gate :as gate]
+            [futon2.aif.policy :as policy]
             [futon3c.aif.live-recommendation :as recommendation]))
 
-(def decision
-  {:action {:type :advance-mission
-            :target "M-shared-memory-control-build-test"}
-   :reason :reviewed-live-reason-bearing-policy
-   :selected-policy-id "pi-s-9dbc2ceb3317bc38050c41ce"
-   :selected-mission-ids
-   ["M-shared-memory-control-build-test"
-    "M-aif-policy-conditioned-eig"]
-   :strategic-memory
-   {:influenced? true
-    :authority :live
-    :memory-ids ["e-live-r6" "e-live-r5"]
-    :counterfactuals
-    {:fixed ["M-aif-policy-conditioned-eig"
-             "M-shared-memory-control-build-test"]
-     :additive-controller ["M-aif-policy-conditioned-eig"
-                           "M-shared-memory-control-build-test"]
-     :scheduler-habit ["M-wm-aif-policy-grain-compliance"
-                       "M-shared-memory-control-build-test"]}
-    :actuation {:status :pending-downstream-gates
-                :authorized? false
-                :executed? false}}})
+(defn- cascade-action
+  [cascade-id precedence]
+  {:kind :cascade-candidate
+   :cascade-id cascade-id
+   :precedence (vec precedence)
+   :construction-receipt {:cascade-id cascade-id :moves (count precedence)}
+   :interpretation-receipts (mapv (fn [p] {:pattern p :admitted true})
+                                  precedence)})
 
-(deftest judgement-decision-is-the-only-presentation-winner
-  (let [judgement
-        {:decision decision
-         :ranked-actions
-         [{:action {:type :apply-cascade :target "M-held-placeholder"}
-           :controller-score 0.0
-           :score-provenance :placeholder
-           :held-for-arming? true}
-          {:action {:type :no-op}
-           :controller-score -10.0}
-          {:action {:type :advance-mission
-                    :target "M-other-presentation-winner"}
-           :controller-score -20.0}]}
+(defn- entries
+  []
+  [{:action (cascade-action :C1-test-first
+                            [{:type :advance-mission :target "M-foo"}
+                             {:type :address-sorry :target "sorry/x"}])
+    :controller-score 11.434408130577516}
+   {:action (cascade-action :C2-fix-first
+                            [{:type :advance-mission :target "M-bar"}])
+    :controller-score 11.434408130577516}
+   {:action (cascade-action :C3-fix-only [{:type :no-op}])
+    :controller-score 12.101074797244184}])
+
+(defn- cascade-decision
+  []
+  (gate/emit! (policy/select-action-cascades (entries) {:beta 0.25})))
+
+(deftest cascade-decision-projects-target-enacted-step-mass-and-beta
+  (let [judgement {:decision (cascade-decision)}
         result (recommendation/project judgement)]
-    (testing "held and no-op rows cannot manufacture a winner"
+    (testing "the decision passed the gate before projection"
+      (is (map? (:decision judgement))))
+    (testing "issued: target, enacted first step, posterior mass, β with status"
       (is (= :recommendation-issued (:status result)))
-      (is (= "M-shared-memory-control-build-test"
-             (get-in result [:recommendation :target])))
       (is (= :judgement.decision
              (get-in result [:recommendation :source])))
-      (is (= "pi-s-9dbc2ceb3317bc38050c41ce"
-             (get-in result [:recommendation :policy-id]))))
-    (testing "all three comparisons remain named and inspectable"
-      (is (= "M-aif-policy-conditioned-eig"
-             (get-in result [:rankings :fixed :winner :target])))
-      (is (= "M-aif-policy-conditioned-eig"
-             (get-in result
-                     [:rankings :additive-controller :winner :target])))
-      (is (= "M-wm-aif-policy-grain-compliance"
-             (get-in result
-                     [:rankings :scheduler-habit :winner :target]))))
+      (is (contains? #{:C1-test-first :C2-fix-first :C3-fix-only}
+                     (get-in result [:recommendation :cascade-id])))
+      (is (contains? #{:advance-mission :no-op}
+                     (get-in result [:recommendation :type])))
+      (let [rec (:recommendation result)]
+        ;; the display target is the cascade id; the enacted step carries the
+        ;; step's own :target
+        (is (contains? #{:C1-test-first :C2-fix-first :C3-fix-only} (:target rec)))
+        (is (contains? #{"M-foo" "M-bar"} (:target (:enacted-step rec)))))
+      (is (= {:value 0.25 :status :declared}
+             (get-in result [:recommendation :beta])))
+      (is (pos? (get-in result [:recommendation :posterior-mass]))))
+    (testing "the posterior marginals are presented, not re-selected"
+      (is (seq (:posterior result)))
+      (is (pos? (-> result :posterior first :posterior-mass))))
     (testing "presentation explicitly performs no selection"
       (is (false? (get-in result
                           [:selection-boundary :recomputed?])))
@@ -64,18 +66,36 @@
            (get-in result
                    [:recommendation :requires-operator-override?]))))))
 
-(deftest missing-reason-bearing-decision-is-a-readiness-failure
-  (let [result
-        (recommendation/project
-         {:decision {:action :abstain
-                     :strategic-memory {:influenced? false}}
-          :ranked-actions
-          [{:action {:type :advance-mission :target "M-tempting-fallback"}
-            :controller-score -100.0}]})]
-    (is (= :authoritative-decision-unavailable (:status result)))
+(deftest typed-abstention-is-a-readiness-state-grouped-by-kind
+  (let [abstention {:status :abstained
+                    :refusals
+                    [{:target "M-foo" :kind :want-not-declared
+                      :clause "no want tokens declared"}
+                     {:target "M-bar" :kind :beta-not-declared}
+                     {:target "M-baz" :kind :want-not-declared}]}
+        result (recommendation/project {:decision abstention})]
+    (is (= :abstained-readiness (:status result)))
     (is (nil? (:recommendation result)))
-    (is (= :missing-actionable-reason-bearing-decision
-           (get-in result [:selection-boundary :failure])))
-    (is (false? (get-in result
-                        [:selection-boundary :recomputed?])))
+    (is (= {:want-not-declared 2 :beta-not-declared 1}
+           (into {} (map (fn [[k v]] [k (count v)]))
+                 (:refusals-by-kind result))))
+    (is (true? (get-in result [:selection-boundary :readiness])))
+    (is (= :withheld-selector-abstained
+           (get-in result [:actuation :status])))
     (is (false? (get-in result [:actuation :authorized?])))))
+
+(deftest missing-or-inadmissible-decision-is-a-readiness-failure
+  (testing "no decision at all"
+    (let [result (recommendation/project {:priorities []})]
+      (is (= :authoritative-decision-unavailable (:status result)))
+      (is (nil? (:recommendation result)))
+      (is (= :missing-actionable-reason-bearing-decision
+             (get-in result [:selection-boundary :failure])))
+      (is (false? (get-in result [:actuation :authorized?])))))
+  (testing "a flat-shaped decision is NOT projected — no flat branch exists"
+    (let [result (recommendation/project
+                  {:decision {:action {:type :advance-mission
+                                       :target "M-flat"}
+                              :selected-policy-id "pi-s-flat"}})]
+      (is (= :authoritative-decision-unavailable (:status result)))
+      (is (nil? (:recommendation result))))))

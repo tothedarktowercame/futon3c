@@ -1,114 +1,110 @@
 (ns futon3c.aif.stack-generator-test
   "Tests for the live AIF+ stack projection — in particular the
-   E-wm-live-recommendation surface (`:reading :next-move-live`)."
+   E-wm-live-recommendation surface (`:reading :next-move-live`).
+
+   H3 (SPEC-flat-removal-and-cascade-decision, 2026-09-17): the snapshot's
+   judgement carries a cascade decision built with the REAL
+   futon2.aif.policy/select-action-cascades over receipted candidates (it
+   passes futon2.aif.decision-gate/emit!), or a typed abstention. The flat
+   :ranked-actions grain is gone and is not read."
   (:require [clojure.test :refer [deftest is testing]]
+            [futon2.aif.decision-gate :as gate]
+            [futon2.aif.policy :as policy]
             [futon3c.aif.stack-generator :as sg]))
 
-(def ^:private fake-snapshot
-  "A synthetic WM snapshot mirroring the shape that
-   `futon3c.wm.scheduler/snapshot-for-days` returns.  The :payload is
-   JSON-key-stringified (string keys) because the scheduler renders the
-   atom that way for HTTP serialization parity."
+(defn- cascade-action
+  [cascade-id precedence]
+  {:kind :cascade-candidate
+   :cascade-id cascade-id
+   :precedence (vec precedence)
+   :construction-receipt {:cascade-id cascade-id :moves (count precedence)}
+   :interpretation-receipts (mapv (fn [p] {:pattern p :admitted true})
+                                  precedence)})
+
+(defn- cascade-decision
+  []
+  (gate/emit!
+   (policy/select-action-cascades
+    [{:action (cascade-action :C1-test-first
+                              [{:type :advance-mission :target "M-foo"}
+                               {:type :address-sorry :target "sorry/x"}])
+      :controller-score 11.434408130577516}
+     {:action (cascade-action :C2-fix-first
+                              [{:type :advance-mission :target "M-bar"}])
+      :controller-score 10.9}
+     {:action (cascade-action :C3-fix-only [{:type :no-op}])
+      :controller-score 12.101074797244184}]
+    {:beta 0.25})))
+
+(def ^:private cascade-judgement
+  {:mode :base-case
+   :decision (cascade-decision)
+   :priorities
+   [{:type :missing-head :id "h1" :summary "no head h1"}
+    {:type :channel-gap :id "g1" :summary "gap g1"}]})
+
+(def ^:private abstain-judgement
+  {:mode :base-case
+   :decision {:status :abstained
+              :refusals [{:target "M-foo" :kind :want-not-declared}
+                         {:target "M-bar" :kind :beta-not-declared}]}})
+
+(defn- snapshot
+  [judgement]
+  ;; keyword-keyed payload (the generator tolerates the JSON-stringified
+  ;; cache form too; the candidate-map posterior keys cannot survive JSON
+  ;; round-trips, so the keyword form is the faithful in-memory mirror)
   {:days 14
    :as-of (java.time.Instant/now)
    :body-bytes 1234
    :duration-ms 9
-   :payload
-   {"judgement"
-    {"mode" "recovery"
-     "ranked-actions"
-     [{"rank" 1
-       "G-total" -4.99
-       "controller-score" -4.99
-       "habit-prior-bias" -2.0
-       "action" {"type" "address-sorry"
-                 "target" "sorry/foo"
-                 "rationale" "open sorry: foo"}}
-      {"rank" 2
-       "G-total" -4.39
-       "controller-score" -4.39
-       "habit-prior-bias" -1.0
-       "action" {"type" "address-sorry"
-                 "target" "sorry/bar"
-                 "rationale" "open sorry: bar"}}
-      {"rank" 3
-       "G-total" -4.39
-       "controller-score" -4.39
-       "habit-prior-bias" -3.0
-       "action" {"type" "no-op"
-                 "rationale" "wait"}}]
-     "selection-gain" {"selection-gain" 1.0}
-     "decision"
-     {"action" {"type" "address-sorry"
-                "target" "sorry/bar"
-                "rationale" "open sorry: bar"}
-      "selected-policy-id" "pi-s-test"
-      "selected-mission-ids" ["sorry/bar"]
-      "strategic-memory"
-      {"influenced?" true
-       "authority" "live"
-       "memory-ids" ["e-test"]
-       "counterfactuals"
-       {"fixed" ["sorry/foo" "sorry/bar"]
-        "additive-controller" ["sorry/foo" "sorry/bar"]
-        "scheduler-habit" ["sorry/bar" "sorry/foo"]}
-       "actuation" {"status" "pending-downstream-gates"
-                    "authorized?" false
-                    "executed?" false}}}
-     "priorities"
-     [{"type" "missing-head" "id" "h1" "summary" "no head h1"}
-      {"type" "channel-gap" "id" "g1" "summary" "gap g1"}]}}})
+   :payload {:judgement judgement}})
 
-(deftest derive-next-move-live-from-fake-snapshot
-  (testing "Projects the reason-bearing decision, not ranked-actions top-1"
-    (let [live (sg/derive-next-move-live fake-snapshot)]
+(deftest derive-next-move-live-projects-the-cascade-decision
+  (testing "target, enacted first step, posterior mass and β; alternatives from the posterior"
+    (let [live (sg/derive-next-move-live (snapshot cascade-judgement))]
       (is (some? live))
-      (is (= 2 (:rank live)))
-      (is (= -4.39 (:G-total live)))
-      (is (= "recovery" (:mode live)))
-      (is (= :judgement.decision (:source live)))
-      (is (= "address-sorry sorry/bar" (:specifically live)))
-      (is (= "open sorry: bar" (:rationale live)))
       (is (= :recommendation-issued (:status live)))
-      (is (= "sorry/bar"
-             (get-in live [:recommendation :target])))
-      (is (false? (get-in live
-                          [:selection-boundary
-                           :recomputed?])))
-      (is (= "sorry/bar"
-             (get-in live
-                     [:rankings :scheduler-habit :winner :target])))
-      (is (true? (get-in live
-                         [:strategic-memory :influenced?])))
+      (is (= :judgement.decision (:source live)))
+      (is (= :base-case (:mode live)))
+      (is (contains? #{:advance-mission :no-op} (-> live :action :type)))
+      (is (contains? #{:C1-test-first :C2-fix-first :C3-fix-only} (:target live)))
+      (is (= {:value 0.25 :status :declared} (:beta live)))
+      (is (pos? (:posterior-mass live)))
+      (is (string? (:specifically live)))
+      (is (false? (get-in live [:selection-boundary :recomputed?])))
       (is (= 300 (:scheduler-period-seconds live)))
       (is (false? (:stale? live)) "fresh snapshot is not stale")
-      (testing "Alternatives exclude the authoritative action"
+      (testing "alternatives carry posterior masses, not flat G"
         (let [alts (:alternatives-considered live)]
-          (is (contains? alts :alternative-1))
-          (is (contains? alts :alternative-2))
-          (is (re-find #"address-sorry sorry/foo"
-                       (:alternative-1 alts)))
-          (is (re-find #"no-op" (:alternative-2 alts)))))
-      (testing "Priorities are carried through (top 5)"
-        (let [prs (:priorities live)]
-          (is (= 2 (count prs))))))))
+          (is (seq alts))
+          (doseq [[_ s] alts]
+            (is (re-find #"\(p=0\.\d{3}\)" s)))))
+      (testing "the tile's tied bucket holds only the enacted step's marginal"
+        (is (= 1 (:tied-count live)))
+        (is (pos? (get-in live [:tied-actions 0 :posterior-mass]))))
+      (testing "priorities are carried through (top 5)"
+        (is (= 2 (count (:priorities live))))))))
+
+(deftest derive-next-move-live-renders-abstention-as-readiness
+  (testing "a typed abstention is a readiness state with refusals grouped by kind"
+    (let [live (sg/derive-next-move-live (snapshot abstain-judgement))]
+      (is (some? live))
+      (is (= :abstained-readiness (:status live)))
+      (is (nil? (:action live)))
+      (is (= {:want-not-declared 1 :beta-not-declared 1}
+             (into {} (map (fn [[k v]] [k (count v)]))
+                   (:refusals-by-kind live))))
+      (is (= 0 (:tied-count live)))
+      (is (false? (get-in live [:actuation :authorized?]))))))
 
 (deftest derive-next-move-live-handles-nil
   (testing "Returns nil when there is no snapshot"
     (is (nil? (sg/derive-next-move-live nil)))))
 
-(deftest derive-next-move-live-handles-empty-ranked
-  (testing "Keeps the authoritative decision when rankings are empty"
-    (let [empty-snap (assoc-in fake-snapshot
-                               [:payload "judgement" "ranked-actions"] [])
-          live (sg/derive-next-move-live empty-snap)]
-      (is (= "sorry/bar" (get-in live [:recommendation :target])))
-      (is (nil? (:G-total live)))
-      (is (= [] (:tied-actions live))))))
-
 (deftest derive-next-move-live-marks-stale
   (testing "An hours-old snapshot is marked stale (>2× period)"
     (let [old-as-of (.minusSeconds (java.time.Instant/now) (long 1200))
-          stale-snap (assoc fake-snapshot :as-of old-as-of)
-          live (sg/derive-next-move-live stale-snap)]
+          live (sg/derive-next-move-live
+                (assoc (snapshot cascade-judgement) :as-of old-as-of))]
       (is (true? (:stale? live))))))

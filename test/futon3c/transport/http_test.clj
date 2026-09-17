@@ -3304,18 +3304,11 @@
                                           :payload {"window" {"days" 14}
                                                     "judgement"
                                                     {"mode" "steady"
-                                                     "selection-gain"
-                                                     {"selection-gain" 1.0}
                                                      "decision"
-                                                     {"action" "abstain"
-                                                      "reason" "no-action-beats-no-op"}
-                                                     "ranked-actions"
-                                                     [{"rank" 1
-                                                       "controller-score" 1.0
-                                                       "habit-prior-bias" -2.0
-                                                       "action"
-                                                       {"type" "advance-mission"
-                                                        "target" "M-live"}}]}}}))
+                                                     {"status" "abstained"
+                                                      "refusals"
+                                                      [{"target" "M-live"
+                                                        "kind" "want-not-declared"}]}}}}))
                                      futon3c.wm.scheduler/status
                                      (fn []
                                        {:running? true
@@ -3338,36 +3331,31 @@
       (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
       (is (= 14 (get-in parsed [:window :days])))
       (is (= "steady" (get-in parsed [:judgement :mode])))
-      (is (= "M-live"
-             (get-in parsed
-                     [:live-recommendation
-                      :recommendation :target])))
-      (is (false?
+      ;; parse-body keywordizes top-level keys only; nested values stay
+      ;; JSON-typed (strings), as in the pre-H3 assertions
+      (is (= "abstained-readiness"
+             (get-in parsed [:live-recommendation :status])))
+      (is (nil?
            (get-in parsed
-                   [:live-recommendation
-                    :selection-boundary
-                    :blocks-recommendation?])))
+                   [:live-recommendation :recommendation])))
+      (is (= {:want-not-declared 1}
+             (into {} (map (fn [[k v]] [k (count v)]))
+                   (get-in parsed
+                           [:live-recommendation :refusals-by-kind]))))
+      (is (= "not-yet-wired" (get-in parsed [:r14-gamma :status])))
+      (is (= "cascade-beta" (get-in parsed [:r14-gamma :controller-kind])))
       (is (= true (get-in parsed [:vsatarcs-status :available?])))
       (is (= "violation" (get-in parsed [:vsatarcs-status :build :status])))
       (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))
       (is (integer? (:scan-age-seconds parsed)))
       (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
 
-(deftest r14-summary-reads-selection-gain-schema
-  (testing "the WM compatibility projection reads Futon2's current selection-gain state"
+(deftest r14-gamma-route-is-deleted-and-answers-not-yet-wired
+  (testing "H3: the selection-gain γ route is deleted; the slot answers a typed
+            :not-yet-wired for the H5 learned cascade β, never the old gain"
     (let [summary (with-redefs [requiring-resolve
                                 (fn [sym]
                                   (case sym
-                                    futon2.aif.trace/latest-trace-record
-                                    (fn []
-                                      {:selection-gain {:selection-gain 1.25
-                                                        :perf-history [0.1 0.2]
-                                                        :samples 2}
-                                       :realized-outcome {:tick 17}})
-                                    futon2.aif.selection-gain/coerce-state
-                                    identity
-                                    futon2.aif.selection-gain/selection-gain-for
-                                    (fn [state] (double (:selection-gain state)))
                                     futon3c.aif.calibration/load-evidence
                                     (fn [] [])
                                     futon3c.aif.calibration/calibration-report
@@ -3376,12 +3364,12 @@
                                              :verdict :insufficient-data})
                                     nil))]
                     (#'http/r14-gamma-summary))]
-      (is (= :selection-gain (:controller-kind summary)))
-      (is (= 1.25 (:gamma summary)))
-      (is (= 2 (:policy-outcome-samples summary)))
-      (is (= {:tick 17} (:last-realized-outcome summary)))
-      (is (false? (:held-at-prior? summary)))
-      (is (not (str/includes? (:status summary) "trace read failed"))))))
+      (is (= :not-yet-wired (:status summary)))
+      (is (= :cascade-beta (:controller-kind summary)))
+      (is (nil? (:gamma summary)))
+      (is (nil? (:policy-outcome-samples summary)))
+      (is (= :insufficient-data
+             (get-in summary [:calibration-signal :verdict]))))))
 
 (deftest war-machine-returns-503-while-background-warmup-starts
   (testing "GET /api/alpha/war-machine returns 503 and requests a background warmup when no snapshot exists yet"
