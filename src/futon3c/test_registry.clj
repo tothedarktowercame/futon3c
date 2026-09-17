@@ -117,6 +117,26 @@
         (.getCanonicalPath dir)
         (recur (.getParentFile dir))))))
 
+(defn unclean-paths
+  "Repo-relative paths named by `git status --porcelain -uall -z` output.
+
+  A rename or copy emits `XY SP <new>` followed by a SECOND NUL field holding
+  the original path, with no XY prefix of its own. Slicing every field at 3
+  would corrupt that one, so it is consumed deliberately — and kept, because a
+  rename leaves the old path missing and a scope may still pin it (zai-1
+  review, 2026-09-17)."
+  [out]
+  (loop [fields (into [] (remove str/blank?) (str/split (str out) #"\x00"))
+         acc (transient #{})]
+    (if-let [field (first fields)]
+      (let [code (subs field 0 (min 2 (count field)))
+            path (if (> (count field) 3) (subs field 3) field)
+            moved? (or (str/starts-with? code "R") (str/starts-with? code "C"))]
+        (recur (subvec fields (min (count fields) (if moved? 2 1)))
+               (cond-> (conj! acc path)
+                 (and moved? (second fields)) (conj! (second fields)))))
+      (persistent! acc))))
+
 (defn- git-state
   "Two whole-repo listings for ROOT: every tracked path, and every path git
   reports as unclean (modified, staged, or untracked — `-uall`, so an
@@ -124,12 +144,11 @@
   directory). Two calls, then set arithmetic: pathspec-per-file does not
   survive a Lean closure of 8146 paths."
   [root]
-  (let [split (fn [out] (into #{} (remove str/blank?) (str/split (str out) #"\x00")))
-        tracked (:out (shell/sh "git" "ls-files" "-z" :dir root))
-        status (:out (shell/sh "git" "status" "--porcelain" "-uall" "-z" :dir root))]
-    {:tracked (split tracked)
-     :unclean (into #{} (comp (remove str/blank?) (map #(if (> (count %) 3) (subs % 3) %)))
-                    (str/split (str status) #"\x00"))}))
+  {:tracked (into #{} (remove str/blank?)
+                  (str/split (str (:out (shell/sh "git" "ls-files" "-z" :dir root)))
+                             #"\x00"))
+   :unclean (unclean-paths
+             (:out (shell/sh "git" "status" "--porcelain" "-uall" "-z" :dir root)))})
 
 (defn- under? [prefix path]
   (or (= prefix path) (str/starts-with? path (str prefix "/"))))
@@ -148,6 +167,8 @@
   and requiring it to be tracked would refuse every Clojure warrant (82 of a
   typical closure's 99 absolute paths are .m2 jars)."
   [repo-root paths]
+  ;; Memoised per call, not per process: the :scope and :load-closure passes
+  ;; straddle the run and must each see the tree as it is then. ~25 ms each.
   (let [state (memoize git-state)]
     (vec
      (keep (fn [path]
@@ -158,10 +179,11 @@
                        relative (str (.relativize (.toPath (io/file root))
                                                   (.toPath (.getCanonicalFile file))))]
                    (cond
+                     ;; A directory scope is dirty when anything under it is.
+                     ;; The converse (the scope path sitting under an unclean
+                     ;; DIRECTORY entry) cannot arise: -uall names untracked
+                     ;; files individually rather than collapsing them.
                      (some #(under? relative %) unclean)
-                     {:path path :reason :dirty :repo root}
-
-                     (some #(under? % relative) unclean)
                      {:path path :reason :dirty :repo root}
 
                      (not (or (contains? tracked relative)
@@ -636,8 +658,13 @@
         ;; closure means no warrant; the run record is still appended.
         closure (try (compute-closure options (closure-out-file log-file))
                      (catch Exception e (refusal :closure-unavailable {:error (.getMessage e)})))
-        _ (when (vector? closure)
-            (require-committed-scope! repo-root (map :path closure) :load-closure))
+        ;; NOT a fail!: the run has already happened, and aborting here would
+        ;; throw away a 30-minute build and its log to report a condition the
+        ;; record can state. The registry already treats an unusable closure
+        ;; this way ("No closure means no warrant; the run record is still
+        ;; appended") — zai-1 review, 2026-09-17.
+        closure-uncommitted (when (vector? closure)
+                              (seq (uncommitted-scope repo-root (map :path closure))))
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
         stable? (and (= code (:code post)) (= env (:env post)))
@@ -654,8 +681,21 @@
                               :execution/stable? stable?
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
                                      :execution-ms (:duration-ms results)}
-                              :postcheck (if stable? {:status :matched} (refusal :inputs-changed-during-run post))
-                              :warrant? (and stable? (vector? closure) (command-successful? command results))})]
+                              :postcheck (cond
+                                           closure-uncommitted
+                                           (refusal :scope-not-committed
+                                                    {:stage :load-closure
+                                                     :paths (mapv :path (take 12 closure-uncommitted))
+                                                     :count (count closure-uncommitted)
+                                                     :reasons (frequencies (map :reason closure-uncommitted))
+                                                     :next-action :commit-before-registering})
+
+                                           stable? {:status :matched}
+
+                                           :else (refusal :inputs-changed-during-run post))
+                              :warrant? (and stable? (nil? closure-uncommitted)
+                                             (vector? closure)
+                                             (command-successful? command results))})]
     (append-record! backend record (:evidence/id intent))))
 
 (defn check-record!

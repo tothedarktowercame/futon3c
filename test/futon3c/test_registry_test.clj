@@ -576,3 +576,39 @@
        (let [result (registry/check-record! backend (check-options run))]
          (is (= :log-mismatch (:reason result)))
          (is (= (:sha256 artifact) (get-in result [:details :sha256]))))))))
+
+(def ^:private NUL (str (char 0)))
+
+(deftest an-uncommitted-closure-keeps-the-run-record-and-refuses-the-warrant
+  ;; A 30-minute build must not be thrown away to report a condition the
+  ;; record can state (zai-1 review, 2026-09-17).
+  (let [repo (temp-repo)
+        _ (write! repo "src/loaded.clj" "(ns loaded)")
+        dirty (.getCanonicalPath (io/file repo "src/loaded.clj"))
+        ran (atom false)]
+    (fixture
+     (fn [{:keys [backend options closure]}]
+       (reset! closure [{:ns "loaded" :path dirty :sha256 "blob"}])
+       (let [run (registry/register-run! backend options)
+             payload (:payload run)]
+         (is (= :run (:kind payload)) "the run record still lands")
+         (is (false? (:warrant? payload)))
+         (is (= :scope-not-committed (get-in payload [:postcheck :reason])))
+         (is (= :load-closure (get-in payload [:postcheck :details :stage])))
+         (is (= :commit-before-registering
+                (get-in payload [:postcheck :details :next-action])))
+         (is (some? (get-in payload [:log-artifact :ledger]))
+             "and its log is anchored in the ledger, not left in scratch")
+         (reset! ran true))))
+    (is (true? @ran))))
+
+(deftest a-rename-in-flight-does-not-corrupt-the-unclean-set
+  (let [out (str "R  src/new.clj" NUL "src/old.clj" NUL " M src/other.clj" NUL)]
+    (is (= #{"src/new.clj" "src/old.clj" "src/other.clj"}
+           (registry/unclean-paths out))
+        "the second field of a rename carries no XY prefix and must be
+         consumed, not sliced; the old path is kept because a scope may pin it")))
+
+(deftest an-ordinary-status-still-parses
+  (is (= #{"src/a.clj" "test/b.clj"}
+         (registry/unclean-paths (str " M src/a.clj" NUL "?? test/b.clj" NUL)))))
