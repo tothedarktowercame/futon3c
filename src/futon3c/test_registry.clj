@@ -157,7 +157,8 @@
 
 (defn- lean-fingerprint*
   "Lean build fingerprint: lean-toolchain, lake-manifest.json and lakefile.*
-  content shas; lake/lean --version output as elan resolves them in the repo;
+  content shas; `lake --version` and `lake env lean --version` (the lean lake resolves for this
+  repo; bare `lean` need not be on PATH);
   the declared environment keys as today. Never hashes .lake/ build outputs."
   [{:keys [repo-root]}]
   (let [config-files (into ["lean-toolchain" "lake-manifest.json" "lakefile.lean" "lakefile.toml"]
@@ -168,7 +169,7 @@
         existing (distinct (filter #(.exists (io/file repo-root %)) config-files))
         parts {:toolchain (into (sorted-map) (for [f existing] [f (file-sha (io/file repo-root f))]))
                :lake-version (command! repo-root ["lake" "--version"])
-               :lean-version (command! repo-root ["lean" "--version"])
+               :lean-version (command! repo-root ["lake" "env" "lean" "--version"])
                :environment (into (sorted-map)
                                   (for [key ["JAVA_HOME" "JAVA_TOOL_OPTIONS" "JDK_JAVA_OPTIONS"
                                              "CLJ_CONFIG" "CLJ_JVM_OPTS" "JAVA_OPTS" "LANG" "LC_ALL" "TZ"]]
