@@ -12,7 +12,7 @@
   meant to: it stops the ordinary accident, which is what actually happens."
   (:require [clojure.java.io :as io]
             [clojure.string :as str])
-  (:import [java.nio.file Files LinkOption StandardCopyOption]
+  (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute PosixFilePermission]
            [java.security MessageDigest]
            [java.util EnumSet]))
@@ -110,15 +110,18 @@
       :ledger (str root)})))
 
 (defn locate
-  "Resolve a recorded `:log-artifact` to a readable file: the ledger first,
-  which cannot have moved, then the recorded path for records written before
-  the ledger existed. Returns nil when neither holds it."
+  "The stored object for a recorded `:log-artifact`, or nil.
+
+  Ledger only. There used to be a fallback to the recorded `:path` for
+  records written before the ledger; all 54 such records were backfilled and
+  `artifact` now refuses rather than minting a path-pinned record, so the
+  fallback became dead by construction and was deleted (zai-1 ruling,
+  2026-09-17). It was not neutral: it masked a lost object by reading
+  whatever had since drifted at the recorded path. A caller that gets nil
+  should refuse naming the sha.
+
+  `:path` is still recorded in every artifact — a checker predating the
+  ledger reads it, and it costs nothing."
   ([log] (locate (or (:ledger log) default-root) log))
   ([root log]
-   (or (resolve-file (or (:ledger log) root) (:sha256 log))
-       (let [path (:path log)]
-         (when (and (string? path) (not (str/blank? path)))
-           (let [file (io/file path)]
-             (when (Files/isRegularFile (.toPath file)
-                                        (make-array LinkOption 0))
-               file)))))))
+   (resolve-file (or (:ledger log) root) (:sha256 log))))

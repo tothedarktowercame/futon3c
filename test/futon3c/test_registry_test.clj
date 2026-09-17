@@ -71,13 +71,17 @@
                         ;; Tampering with the copy at the recorded path is not
                         ;; enough: the ledger holds the object under its own
                         ;; sha and is what the check reads. Both must be gone.
-                        :log (let [artifact (get-in run [:payload :log-artifact])]
+                        ;; The ledger object is the evidence; the copy at the
+                        ;; recorded path carries no guarantee. Losing the
+                        ;; object is a typed refusal naming the sha, not a
+                        ;; silent read of whatever drifted at the path.
+                        :log (let [artifact (get-in run [:payload :log-artifact])
+                                   object (registry-ledger/resolve-file
+                                           (:ledger artifact) (:sha256 artifact))]
                                (spit (:path artifact) "tampered")
-                               (let [object (registry-ledger/resolve-file
-                                             (:ledger artifact) (:sha256 artifact))]
-                                 (.setWritable ^java.io.File object true)
-                                 (io/delete-file object))
-                               :log-mismatch)
+                               (.setWritable ^java.io.File object true)
+                               (io/delete-file object)
+                               :log-object-missing)
                         :missing :missing-entry
                         :tamper (do (swap! backend assoc-in [:entries id :evidence/body :payload-edn] "{}") :record-digest-mismatch)
                         :truncated-chain (do (swap! backend update :entries dissoc (get-in run [:payload :previous :evidence/id]))
@@ -546,3 +550,29 @@
        (is (= 999 (get-in result [:details :recorded-only :assertions])))
        (is (some? (get-in result [:details :observed-only :assertions]))
            "a human adjudicating needs both sides, as :environment-mismatch gives")))))
+
+(deftest a-lost-ledger-object-refuses-by-name
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)
+           artifact (get-in run [:payload :log-artifact])
+           object (registry-ledger/resolve-file (:ledger artifact) (:sha256 artifact))]
+       (.setWritable ^java.io.File object true)
+       (io/delete-file object)
+       (let [result (registry/check-record! backend (check-options run))]
+         (is (= :log-object-missing (:reason result)) (pr-str result))
+         (is (= (:sha256 artifact) (get-in result [:details :sha256]))
+             "name the sha, so a lost object is debuggable rather than an NPE")
+         (is (= :re-register-the-run (get-in result [:details :next-action]))))))))
+
+(deftest a-ledger-object-edited-in-place-still-fails-the-hash
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)
+           artifact (get-in run [:payload :log-artifact])
+           object (registry-ledger/resolve-file (:ledger artifact) (:sha256 artifact))]
+       (.setWritable ^java.io.File object true)
+       (spit object "someone edited the ledger itself")
+       (let [result (registry/check-record! backend (check-options run))]
+         (is (= :log-mismatch (:reason result)))
+         (is (= (:sha256 artifact) (get-in result [:details :sha256]))))))))

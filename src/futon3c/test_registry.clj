@@ -723,8 +723,17 @@
         (let [[expected observed] (data/diff (:env-fingerprint run) env)]
           (fail! :environment-mismatch {:expected-only expected :observed-only observed
                                         :next-action :reconcile-test-environment})))
-      (when-not (and (some? log-file) (= (:sha256 log) (file-sha log-file)))
-        (fail! :log-mismatch {:looked-in (if (:ledger log) [:ledger :path] [:path])}))
+      ;; A ledger that cannot lose objects still has to say so when one is
+      ;; gone, rather than dereferencing nil (zai-1 ruling, 2026-09-17).
+      (when (nil? log-file)
+        (fail! :log-object-missing {:sha256 (:sha256 log)
+                                    :ledger (or (:ledger log) (str ledger/default-root))
+                                    :recorded-path (:path log)
+                                    :next-action :re-register-the-run}))
+      ;; Reachable only if the ledger itself was edited: an object's name is
+      ;; its content, so bytes that do not hash to it did not arrive by put!.
+      (when-not (= (:sha256 log) (file-sha log-file))
+        (fail! :log-mismatch {:sha256 (:sha256 log) :observed (file-sha log-file)}))
       (let [reparsed (parse-command-results (:command run) (get-in run [:results :exit])
                                             (slurp log-file)
                                             (get-in run [:results :duration-ms]))]

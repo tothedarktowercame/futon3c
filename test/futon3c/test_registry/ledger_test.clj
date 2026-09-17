@@ -52,16 +52,19 @@
         source (file-with work "run.log" "the run said this")
         art (ledger/artifact root source)]
     (is (.delete source))
-    (is (nil? (ledger/locate {:path (:path art) :sha256 "deadbeef"})))
+    (is (nil? (ledger/locate {:path (:path art) :sha256 "deadbeef"}))
+        "resolution is by content, never by the path that happens to be recorded")
     (let [found (ledger/locate root art)]
       (is (some? found))
       (is (= "the run said this" (slurp found))))))
 
-(deftest a-pre-ledger-record-still-resolves-by-path
+(deftest a-record-the-ledger-does-not-hold-resolves-to-nothing
   (let [root (temp-dir "ledger-") work (temp-dir "work-")
         source (file-with work "old.log" "written before the ledger")
         art {:path (.getCanonicalPath source) :sha256 "not-in-this-ledger"}]
-    (is (= "written before the ledger" (slurp (ledger/locate root art))))))
+    (is (nil? (ledger/locate root art))
+        "the path fallback masked a lost object by reading whatever had since
+         drifted at the recorded path; the caller must refuse naming the sha")))
 
 (deftest a-record-whose-path-and-ledger-are-both-gone-resolves-to-nothing
   (let [root (temp-dir "ledger-")]
