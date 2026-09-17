@@ -73,3 +73,23 @@
     (is (false? (validity/still-current? item {:load-queue-fn (constantly {})})))
     (is (false? (validity/still-current? item {:load-queue-fn (fn [_] (throw (ex-info "unreadable" {})))
                                              :print-fn (constantly nil)})))))
+
+(deftest a-commit-notice-is-cancelled-once-the-repo-is-clean
+  (let [item {:type :inbox-zero :agent "claude-7" :session "s1"
+              :metadata {:proposal/type :inbox-zero/commit-notice
+                         :repo-id "futon3c-d" :dirty-count 12}}
+        opts {:roots [{:path "/repo/futon3c-d" :label "futon3c-d"}]
+              :threshold 10}]
+    (is (false? (validity/still-current?
+                 item (assoc opts :git-fn (constantly [])))))
+    (is (false? (validity/still-current?
+                 item (assoc opts :git-fn (constantly (repeat 9 {:path "a"}))))))
+    (is (true? (validity/still-current?
+                item (assoc opts :git-fn (constantly (repeat 10 {:path "a"}))))))))
+
+(deftest a-commit-notice-for-an-unwatched-repo-is-cancelled
+  (is (false? (validity/still-current?
+               {:type :inbox-zero
+                :metadata {:proposal/type :inbox-zero/commit-notice
+                           :repo-id "not-watched"}}
+               {:roots [] :git-fn (constantly (repeat 50 {:path "a"}))}))))

@@ -3,7 +3,9 @@
   (:require [clojure.edn :as edn]
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as state]
-            [futon3c.dev.config :as config])
+            [futon3c.dev.config :as config]
+            [futon3c.inbox-zero.sweeper :as sweeper]
+            [futon3c.watcher.roots :as roots])
   (:import [java.util Date]))
 
 (def default-state-path "/home/joe/code/storage/inbox-zero/state.edn")
@@ -41,6 +43,17 @@
               (boolean (some #(and (= worktree (:worktree/id %))
                                    (= path (:path %)))
                              (:unattributed @loaded))))
+
+            (#{:inbox-zero/commit-notice "inbox-zero/commit-notice"} proposal-type)
+            ;; A commit notice is about a repo's dirt right now, not when the
+            ;; notice was written. Delivered after the repo was cleaned it is
+            ;; noise, and it names files that no longer exist. Re-count.
+            (let [label (value metadata :repo-id)
+                  threshold (or (:threshold options) sweeper/default-threshold)
+                  root (some #(when (= label (:label %)) (:path %))
+                             (or (:roots options) roots/watch-roots))
+                  git-fn (or (:git-fn options) sweeper/git-dirty)]
+              (boolean (and root (>= (count (git-fn root)) threshold))))
 
             (= 1 route-tier)
             (let [seat (str "seat:" (:agent item) ":" (:session item))
