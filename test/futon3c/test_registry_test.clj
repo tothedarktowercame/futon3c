@@ -612,3 +612,39 @@
 (deftest an-ordinary-status-still-parses
   (is (= #{"src/a.clj" "test/b.clj"}
          (registry/unclean-paths (str " M src/a.clj" NUL "?? test/b.clj" NUL)))))
+
+;; --- the runner is the instrument, not the specimen (zai-1 ruling) ----------
+
+(deftest the-runner-is-dropped-from-a-recorded-closure
+  (let [entries [{:ns "demo" :url (str "file://" (System/getProperty "user.dir") "/deps.edn")}
+                 {:ns registry/runner-namespace
+                  :url (str "file://" (System/getProperty "user.dir")
+                            "/test-registry-runner/src/futon3c/test_registry/runner.clj")}]
+        closure (registry/closure-from-entries (vec entries) (System/getProperty "user.dir"))]
+    (is (= 1 (count closure)))
+    (is (not-any? registry/instrument? closure))
+    (is (some? (registry/runner-sha (vec entries) (System/getProperty "user.dir")))
+        "its sha is still recorded for the audit trail")))
+
+(deftest an-old-record-pinning-the-runner-is-not-stale-when-only-the-runner-moved
+  ;; 38 of 39 Clojure warrants pinned it before 2026-09-17. Excluding it only
+  ;; at registration would leave every one of them stale on a comment.
+  (let [recorded {"src/a.clj" "aaa"
+                  "/home/joe/code/futon3c/test-registry-runner/src/futon3c/test_registry/runner.clj" "old"}
+        observed {"src/a.clj" "aaa"
+                  "/home/joe/code/futon3c/test-registry-runner/src/futon3c/test_registry/runner.clj" "new"}]
+    (is (= [] (registry/closure-diff recorded observed)))))
+
+(deftest a-real-closure-change-still-refuses
+  (let [recorded {"src/a.clj" "aaa"
+                  "/home/joe/code/futon3c/test-registry-runner/src/futon3c/test_registry/runner.clj" "old"}
+        observed {"src/a.clj" "CHANGED"
+                  "/home/joe/code/futon3c/test-registry-runner/src/futon3c/test_registry/runner.clj" "new"}]
+    (is (= ["src/a.clj"] (registry/closure-diff recorded observed))
+        "only the instrument is exempt; the specimen is not")))
+
+(deftest instrument-recognises-both-the-namespace-and-the-source-path
+  (is (registry/instrument? {:ns registry/runner-namespace :path "wherever.clj"}))
+  (is (registry/instrument? {:ns "resource:x"
+                             :path "/somewhere/futon3c/test_registry/runner.clj"}))
+  (is (not (registry/instrument? {:ns "futon2.aif.trace" :path "src/futon2/aif/trace.clj"}))))

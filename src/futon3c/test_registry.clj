@@ -307,6 +307,31 @@
   (some (fn [[flag value]] (when (contains? #{"-n" "--namespace"} flag) value))
         (partition 2 (drop 2 command))))
 
+(def runner-namespace
+  "The registry's own runner. It is loaded by every Clojure run, so before
+  2026-09-17 it sat in every Clojure warrant's load closure — 38 of 39 — and a
+  COMMENT-ONLY edit to it refused them all with :environment-mismatch and told
+  their holders to rerun. It killed the production tick's C2 that night.
+
+  The runner is the instrument, not the specimen: it is excluded from the
+  recorded closure and from the check-time diff, and pinned instead by
+  `reader-version` (zai-1 ruling, 2026-09-17). Excluding at check as well as
+  at registration is what heals the records already carrying it, on the same
+  reasoning as :parser-superseded's v0 classification — the refusal is wrong
+  about both the cause and the remedy, and comment-only cannot be told from
+  behavioural at check time anyway."
+  "futon3c.test-registry.runner")
+
+(def ^:private runner-source-suffix "futon3c/test_registry/runner.clj")
+
+(defn instrument?
+  "True for a closure entry that is the registry's runner rather than
+  anything the run was measuring."
+  [entry]
+  (let [entry-ns (str (:ns entry)) path (str (:path entry))]
+    (or (= runner-namespace entry-ns)
+        (str/ends-with? path runner-source-suffix))))
+
 (defn- entry->closure
   [{:keys [ns url]} base-path]
   ;; The classpath-visible path, normalized but NOT canonicalized: a symlinked
@@ -335,8 +360,21 @@
          (group-by :path)
          vals
          (map (fn [rows] (first (sort-by #(str/starts-with? (:ns %) "resource:") rows))))
+         (remove instrument?)
          (sort-by :path)
          vec)))
+
+(defn runner-sha
+  "The sha of the runner source this run loaded, for the audit trail. Not
+  enforced at check: if an instrument effect is ever suspected, the number is
+  there to look at (zai-1 ruling, 2026-09-17)."
+  [entries repo-root]
+  (let [base-path (.toPath (.getCanonicalFile (io/file repo-root)))]
+    (some->> entries
+             (map #(entry->closure % base-path))
+             (filter instrument?)
+             first
+             :sha256)))
 
 (defn- strip-lean-comments
   "Remove `--` line comments and nested `/- … -/` block comments (including
@@ -428,11 +466,18 @@
 
 (defn closure-diff
   "Pure: the paths whose sha differs between a recorded closure and an
-  observed one (changed, added or removed), sorted. Empty means identical."
+  observed one (changed, added or removed), sorted. Empty means identical.
+
+  The runner's own source is dropped from both sides: records written before
+  2026-09-17 pin it, and without this every one of them would stay stale on a
+  comment until individually re-registered. See `runner-namespace`."
   [recorded observed]
-  (sort (set/union
-         (set (for [[p s] recorded :when (not= s (get observed p))] p))
-         (set (for [[p s] observed :when (not= s (get recorded p))] p)))))
+  (let [drop-instrument (fn [m] (into {} (remove (fn [[p _]] (instrument? {:path p}))) m))
+        recorded (drop-instrument recorded)
+        observed (drop-instrument observed)]
+    (sort (set/union
+           (set (for [[p s] recorded :when (not= s (get observed p))] p))
+           (set (for [[p s] observed :when (not= s (get recorded p))] p))))))
 
 (defn- decode [entry]
   (let [body (:evidence/body entry) text (:payload-edn body)]
@@ -544,7 +589,14 @@
     futon3c.test-registry.runner. A v0 record fails those checks because it
     was read by a reader that could not produce what they ask for, which is
     not the same thing as a record that has been tampered with — hence
-    :parser-superseded rather than :unsupported-results."
+    :parser-superseded rather than :unsupported-results.
+
+  THE RUNNER IS PINNED HERE, NOT BY THE CLOSURE. A change to
+  futon3c.test-registry.runner that can alter what runs, or how a run is
+  reported, requires a bump; a comment or docstring edit costs nothing. This
+  is a DISCIPLINE, not a mechanism — nothing but the editor's judgement trips
+  it, which is the price of not refusing every Clojure warrant over a comment
+  (zai-1 ruling, 2026-09-17)."
   1)
 
 (defn command-successful? [command results]
@@ -656,6 +708,9 @@
         ;; written by the runner in the run JVM after the tests (dynamic
         ;; requires included); for Lean, the module's import closure. No
         ;; closure means no warrant; the run record is still appended.
+        closure-entries (when-not (lean-command? command)
+                          (try (edn/read-string (slurp (closure-out-file log-file)))
+                               (catch Exception _ nil)))
         closure (try (compute-closure options (closure-out-file log-file))
                      (catch Exception e (refusal :closure-unavailable {:error (.getMessage e)})))
         ;; NOT a fail!: the run has already happened, and aborting here would
@@ -679,6 +734,8 @@
                                                            :log (str log-file)
                                                            :next-action :fix-the-ledger-and-re-register})))
                               :execution/stable? stable?
+                              :runner-sha (when (vector? closure-entries)
+                                            (runner-sha closure-entries repo-root))
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
                                      :execution-ms (:duration-ms results)}
                               :postcheck (cond
