@@ -237,6 +237,28 @@ Three reasons this is an invariant and not a preference:
 The exception is the obvious one: you changed the code. Then the warrant
 refuses by design, and running is exactly the point.
 
+**`:artifact-dir` is part of the warrant, not scratch space (2026-09-17).**
+Warrant records do not belong in git just because they carry shas, and the
+artifact directory must be **permanent and outside any repo**:
+`/home/joe/code/storage/test-registry/`. A run log under `/tmp` pins a path
+that a reboot or tmp sweep deletes, and a warrant whose log is gone is not
+stale but *unverifiable* — no way back except re-running. Live counterexample
+from 2026-09-17: three warrants (two machine-contracts build warrants) pinned
+logs under `/tmp/claude-7-review/`; they were backfilled into the write-only
+ledger the same night, which is the only reason they survived. The ledger is
+the real fix (`locate` resolves content-first), but point `:artifact-dir` at
+storage anyway: the ledger only receives what the run wrote before it vanished.
+
+**Enumerating warrants is one cheap tagged query, not a store scan:**
+
+```bash
+curl -s 'http://localhost:7070/api/alpha/evidence?tag=test-registry&limit=1000'
+```
+
+Each entry carries `:log-artifact {:path … :sha256 …}`; ~100 entries in
+seconds. Use it to answer "which warrants exist / which logs do they pin /
+are any missing from disk" without touching the 272k-entry evidence store.
+
 ## Agent Prompting: Surface Contracts
 
 When agents operate across multiple surfaces (IRC, Emacs buffer, WS), they
