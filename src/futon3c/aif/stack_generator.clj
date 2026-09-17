@@ -79,7 +79,18 @@
    :effect-witness
    {:kind :ranked-actions-top-shifts-on-action
     :observable "ranked-actions[0] :action :target changes between two consecutive WM scheduler ticks bracketing a pilot action."
-    :demonstrated-by "Pre-action top: address-sorry sorry/wm-aif-substrate-addressability (G=-4.99).  Post-action top: address-sorry sorry/r3a-likelihood-loop-health (G=-4.39).  Recorded in pilot-inhabitations.edn under inhab/claude-1/cycle/cg-5b03db29-address-meta-sorry."}
+    :demonstrated-by "Pre-action top: address-sorry sorry/wm-aif-substrate-addressability (G=-4.99).  Post-action top: address-sorry sorry/r3a-likelihood-loop-health (G=-4.39).  Recorded in pilot-inhabitations.edn under inhab/claude-1/cycle/cg-5b03db29-address-meta-sorry."
+    ;; The 2026-05-25 demonstration stands as recorded; it is kept, not
+    ;; rewritten.  But no future tick can meet this criterion as written: the
+    ;; flat decision is deleted (Joe, 2026-09-17, SPEC-flat-removal), so there
+    ;; is no ranked-actions[0] to shift.  The same effect in the grain the
+    ;; machine now decides in:
+    :superseded-by
+    {:kind :enacted-cascade-shifts-on-action
+     :observable "the tick's enacted :cascade-candidate -- its target and its first acting pattern -- differs between two consecutive WM scheduler ticks bracketing a pilot action, with both decisions carrying :selection-law :applied :cascade-selection-posterior."
+     :why "a cascade is a policy and G is computed over policies (Joe, 2026-09-17); the action is a marginal of the cascade posterior, so the flat top-of-ranking has no referent."
+     :demonstrated-by :not-yet
+     :blocked-on "the tick decides for one declared target today; a second target must be declared before an enacted choice can shift."}}
    :successor-witness
    {:kind :recurring-shifts-without-pilot-intervention
     :v3-spec "v3 would close once the pilot's actions on R3a-tier sorries (likelihood models) themselves drive a recomputation that surfaces non-sorry actions — e.g. :open-mission, :fire-pattern, :learn-action-class — as concrete candidates with G-totals comparable to or exceeding the sorry tier.  Until then v3 remains a documented-but-not-preregistered follow-on."
