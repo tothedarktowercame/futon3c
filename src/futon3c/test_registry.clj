@@ -2,7 +2,8 @@
   "Test warrants in the existing evidence store. Each run is an intent -> result
   -> review hash chain, not a second ledger. SHA integrity is not authentication
   or a proof of test adequacy. Missing warrants never prohibit running tests."
-  (:require [clojure.edn :as edn]
+  (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.data :as data]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
@@ -627,6 +628,15 @@
                          :comparison :measured-execution-times-not-an-adequacy-proof}}]
       (append-record! backend record (:evidence/id sample)))))
 
+(defn- emit-result
+  "Print RESULT as EDN, or as one line of JSON when the config says
+  :output :json (for non-Clojure callers such as emit-machine-contracts.py;
+  keywords become strings, namespaced keys keep their namespace)."
+  [options result]
+  (if (= :json (:output options))
+    (println (json/generate-string result))
+    (prn result)))
+
 (defn -main [operation config-path]
   (try
     (let [options (edn/read-string (slurp config-path))
@@ -637,11 +647,12 @@
                    "review" (review! backend options)
                    "lane" (lane! backend options)
                    (fail! :unknown-operation {:operation operation}))]
-      (prn result)
+      (emit-result options result)
       (shutdown-agents)
       (when (or (= false (:warrant? result)) (= false (get-in result [:payload :warrant?])))
         (System/exit 1)))
     (catch Exception e
-      (prn (or (ex-data e) (refusal :registry-failed {:error (.getMessage e)})))
+      (emit-result (try (edn/read-string (slurp config-path)) (catch Exception _ {}))
+                   (or (ex-data e) (refusal :registry-failed {:error (.getMessage e)})))
       (shutdown-agents)
       (System/exit 1))))
