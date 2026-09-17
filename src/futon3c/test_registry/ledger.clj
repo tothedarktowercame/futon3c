@@ -90,16 +90,24 @@
      sha)))
 
 (defn artifact
-  "The `:log-artifact` value for FILE: its path, its sha, and whether the
-  ledger now holds it. The path stays recorded so a record written here can
-  still be read by a checker that predates the ledger."
+  "The `:log-artifact` value for FILE: its path, its sha, and the ledger now
+  holding it. The path stays recorded so a record written here can still be
+  read by a checker that predates the ledger.
+
+  Throws if the ledger cannot take the object. It used to fall back to hashing
+  in place and record `:ledger nil`, which minted a path-pinned warrant —
+  exactly the failure the ledger exists to prevent — and made it
+  indistinguishable from a pre-ledger record. A caller that wants a warrant
+  should refuse instead (zai-1's ruling, 2026-09-17)."
   ([file] (artifact default-root file))
   ([root file]
-   (let [sha (try (put! root file)
-                  (catch Throwable _ (sha256-file file)))]
+   (let [sha (put! root file)]
+     (when-not (holds? root sha)
+       (throw (ex-info "ledger did not take the object"
+                       {:sha256 sha :root (str root) :file (str file)})))
      {:path (.getCanonicalPath (io/file file))
       :sha256 sha
-      :ledger (when (holds? root sha) (str root))})))
+      :ledger (str root)})))
 
 (defn locate
   "Resolve a recorded `:log-artifact` to a readable file: the ledger first,

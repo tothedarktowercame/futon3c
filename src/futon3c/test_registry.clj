@@ -92,6 +92,96 @@
                 file (files-under f)]
             [(str (.relativize base (.toPath (.getCanonicalFile file)))) (file-sha file)]))))
 
+(def immutable-artifact-roots
+  "Dependency stores whose contents are immutable by convention and already
+  pinned by sha in the record: a jar under ~/.m2, a git-dep under ~/.gitlibs,
+  a toolchain under ~/.elan. Exempt from the scope guard EXPLICITLY rather
+  than incidentally — this box has a stray /tmp/.git, and a .git in $HOME
+  would otherwise make every jar read as untracked and refuse every
+  registration (82 of a typical Clojure closure's 99 absolute paths are .m2
+  jars)."
+  (let [home (System/getProperty "user.home")]
+    (mapv #(str home "/" %) [".m2" ".gitlibs" ".cache" ".elan" ".cargo" ".npm"])))
+
+(defn- immutable-artifact? [^String path]
+  (boolean (some #(str/starts-with? path (str % "/")) immutable-artifact-roots)))
+
+(defn- git-root
+  "The git repository containing FILE, or nil when it is in none (a jar under
+  ~/.m2, a git-dep under ~/.gitlibs). Walks up, because a worktree's .git is a
+  file rather than a directory."
+  [file]
+  (loop [dir (.getCanonicalFile (io/file file))]
+    (when dir
+      (if (.exists (io/file dir ".git"))
+        (.getCanonicalPath dir)
+        (recur (.getParentFile dir))))))
+
+(defn- git-state
+  "Two whole-repo listings for ROOT: every tracked path, and every path git
+  reports as unclean (modified, staged, or untracked — `-uall`, so an
+  untracked file is named individually rather than collapsed into its
+  directory). Two calls, then set arithmetic: pathspec-per-file does not
+  survive a Lean closure of 8146 paths."
+  [root]
+  (let [split (fn [out] (into #{} (remove str/blank?) (str/split (str out) #"\x00")))
+        tracked (:out (shell/sh "git" "ls-files" "-z" :dir root))
+        status (:out (shell/sh "git" "status" "--porcelain" "-uall" "-z" :dir root))]
+    {:tracked (split tracked)
+     :unclean (into #{} (comp (remove str/blank?) (map #(if (> (count %) 3) (subs % 3) %)))
+                    (str/split (str status) #"\x00"))}))
+
+(defn- under? [prefix path]
+  (or (= prefix path) (str/starts-with? path (str prefix "/"))))
+
+(defn uncommitted-scope
+  "Which of PATHS git cannot reproduce, as `[{:path … :reason …}]`.
+
+  A warrant pins scope bytes and a check re-hashes them at their recorded
+  paths, so bytes that were never committed can never be reproduced once the
+  working copy that held them is gone — which is precisely what happens to a
+  worktree (2026-09-17: 298 removed, 359 uncommitted files rescued out of
+  them first). Registration is the only place this can be caught cheaply.
+
+  Paths belonging to no git repository are exempt: a jar under ~/.m2 or a
+  git-dep under ~/.gitlibs is an immutable artifact already pinned by sha,
+  and requiring it to be tracked would refuse every Clojure warrant (82 of a
+  typical closure's 99 absolute paths are .m2 jars)."
+  [repo-root paths]
+  (let [state (memoize git-state)]
+    (vec
+     (keep (fn [path]
+             (let [file (if (.isAbsolute (io/file path)) (io/file path) (io/file repo-root path))]
+               (if-let [root (when-not (immutable-artifact? (.getCanonicalPath file))
+                               (git-root file))]
+                 (let [{:keys [tracked unclean]} (state root)
+                       relative (str (.relativize (.toPath (io/file root))
+                                                  (.toPath (.getCanonicalFile file))))]
+                   (cond
+                     (some #(under? relative %) unclean)
+                     {:path path :reason :dirty :repo root}
+
+                     (some #(under? % relative) unclean)
+                     {:path path :reason :dirty :repo root}
+
+                     (not (or (contains? tracked relative)
+                              (some #(under? relative %) tracked)))
+                     {:path path :reason :untracked :repo root}
+
+                     :else nil))
+                 nil)))
+           paths))))
+
+(defn- require-committed-scope!
+  [repo-root paths stage]
+  (when-let [offenders (seq (uncommitted-scope repo-root paths))]
+    (fail! :scope-not-committed
+           {:stage stage
+            :paths (mapv :path (take 12 offenders))
+            :count (count offenders)
+            :reasons (frequencies (map :reason offenders))
+            :next-action :commit-before-registering})))
+
 (defn capture-code [{:keys [repo-root code-paths test-paths]}]
   (let [code (manifest repo-root code-paths) tests (manifest repo-root test-paths)]
     {:code-sha (sha code) :test-sha (sha tests) :code-files code :test-files tests
@@ -522,6 +612,9 @@
   (let [wall-start (System/nanoTime)
         id (str (UUID/randomUUID)) start (str (Instant/now))
         code (capture-code options) env (fingerprint options)
+        _ (require-committed-scope! repo-root
+                                    (concat (keys (:code-files code)) (keys (:test-files code)))
+                                    :scope)
         common (merge code {:run/id id :author author :ran-at start :repo/root repo-root
                             :scope (select-keys options [:code-paths :test-paths :test-environment])
                             :command command :env-fingerprint env
@@ -543,14 +636,21 @@
         ;; closure means no warrant; the run record is still appended.
         closure (try (compute-closure options (closure-out-file log-file))
                      (catch Exception e (refusal :closure-unavailable {:error (.getMessage e)})))
+        _ (when (vector? closure)
+            (require-committed-scope! repo-root (map :path closure) :load-closure))
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
         stable? (and (= code (:code post)) (= env (:env post)))
         record (merge common {:kind :run :finished-at (str (Instant/now)) :results results
                               :load-closure closure
-                              :log-artifact (ledger/artifact
-                                             (:ledger-root options ledger/default-root)
-                                             log-file)
+                              :log-artifact (try (ledger/artifact
+                                                  (:ledger-root options ledger/default-root)
+                                                  log-file)
+                                                 (catch Exception e
+                                                   (fail! :ledger-write-failed
+                                                          {:error (.getMessage e)
+                                                           :log (str log-file)
+                                                           :next-action :fix-the-ledger-and-re-register})))
                               :execution/stable? stable?
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
                                      :execution-ms (:duration-ms results)}

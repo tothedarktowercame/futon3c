@@ -429,3 +429,82 @@
                                           (assoc (check-options run) :entry-id id))]
        (is (= :unsupported-results (:reason result))
            "a record its own reader could have satisfied is not superseded")))))
+
+;; --- scope guard (zai-1's ruling, 2026-09-17) -------------------------------
+
+(defn- git! [root & args]
+  (apply shell/sh (concat args [:dir root])))
+
+(defn- temp-repo []
+  (let [dir (str (Files/createTempDirectory "scope-repo-" (make-array FileAttribute 0)))]
+    (git! dir "git" "init" "-q")
+    (git! dir "git" "config" "user.email" "t@example.com")
+    (git! dir "git" "config" "user.name" "t")
+    dir))
+
+(defn- write! [root path content]
+  (let [f (io/file root path)]
+    (io/make-parents f)
+    (spit f content)
+    f))
+
+(deftest committed-and-clean-scope-passes
+  (let [root (temp-repo)]
+    (write! root "src/a.clj" "(ns a)")
+    (git! root "git" "add" "-A") (git! root "git" "commit" "-qm" "a")
+    (is (= [] (registry/uncommitted-scope root ["src/a.clj"])))
+    (is (= [] (registry/uncommitted-scope root ["src"])))))
+
+(deftest a-modified-scope-file-is-refused
+  (let [root (temp-repo)]
+    (write! root "src/a.clj" "(ns a)")
+    (git! root "git" "add" "-A") (git! root "git" "commit" "-qm" "a")
+    (write! root "src/a.clj" "(ns a) ;; edited, not committed")
+    (is (= [{:path "src/a.clj" :reason :dirty :repo root}]
+           (registry/uncommitted-scope root ["src/a.clj"])))
+    (is (= [:dirty] (map :reason (registry/uncommitted-scope root ["src"])))
+        "a directory scope is dirty when anything under it is")))
+
+(deftest an-untracked-scope-file-is-refused
+  (let [root (temp-repo)]
+    (write! root "src/a.clj" "(ns a)")
+    (git! root "git" "add" "-A") (git! root "git" "commit" "-qm" "a")
+    (write! root "src/never-committed.clj" "(ns b)")
+    (is (= [:dirty] (map :reason (registry/uncommitted-scope root ["src/never-committed.clj"])))
+        "git reports an untracked file as unclean, which is the same refusal")))
+
+(deftest a-dependency-artifact-is-exempt
+  (let [jar (str (System/getProperty "user.home")
+                 "/.m2/repository/org/clojure/clojure/1.12.0/clojure-1.12.0.jar")]
+    (is (= [] (registry/uncommitted-scope "/tmp" [jar]))
+        "a .m2 jar is immutable and already pinned by sha; requiring it tracked
+         would refuse every Clojure warrant")))
+
+(deftest a-stray-parent-repository-does-not-exempt-ordinary-paths
+  (let [scratch (str (Files/createTempDirectory "notarepo-" (make-array FileAttribute 0))
+                     "/scratch.clj")]
+    (spit scratch "(ns scratch)")
+    (is (= [:untracked] (map :reason (registry/uncommitted-scope "/tmp" [scratch])))
+        "/tmp has a stray .git on this box; a scope file under it is still
+         unreproducible and must refuse")))
+
+(deftest the-guard-names-what-to-do
+  (let [root (temp-repo)]
+    (write! root "src/a.clj" "(ns a)")
+    (let [result (try (#'registry/require-committed-scope! root ["src/a.clj"] :scope)
+                      (catch Exception e (ex-data e)))]
+      (is (= :scope-not-committed (:reason result)))
+      (is (= :commit-before-registering (get-in result [:details :next-action])))
+      (is (= :scope (get-in result [:details :stage]))))))
+
+(deftest a-ledger-that-cannot-take-the-log-refuses-the-registration
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [blocked (str (Files/createTempFile "not-a-dir-" ".txt"
+                                              (make-array FileAttribute 0)))
+           result (try (registry/register-run! backend (assoc options :ledger-root blocked))
+                       (catch Exception e (ex-data e)))]
+       (is (= :ledger-write-failed (:reason result))
+           "a path-pinned warrant is the failure the ledger exists to prevent")
+       (is (= :fix-the-ledger-and-re-register
+              (get-in result [:details :next-action])))))))
