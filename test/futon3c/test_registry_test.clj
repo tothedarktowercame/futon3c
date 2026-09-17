@@ -508,3 +508,41 @@
            "a path-pinned warrant is the failure the ledger exists to prevent")
        (is (= :fix-the-ledger-and-re-register
               (get-in result [:details :next-action])))))))
+
+(deftest a-run-that-never-warranted-anything-is-not-a-reader-question
+  (fixture
+   (fn [{:keys [backend options]}]
+     ;; v0 record (no :reader-version) whose tests failed at run time. The
+     ;; reader-version branch must not claim re-registering will help: the
+     ;; tests will fail again (zai-1 review, 2026-09-17).
+     (let [run (registry/register-run! backend options)
+           id (reseal! backend (:evidence/id run)
+                       #(-> % (dissoc :reader-version) (assoc :warrant? false)))
+           result (registry/check-record! backend
+                                          (assoc (check-options run) :entry-id id))]
+       (is (= :not-a-warrant (:reason result)) (pr-str result))
+       (is (= :fix-the-run-not-the-record (get-in result [:details :next-action])))))))
+
+(deftest an-unstable-run-is-not-a-reader-question-either
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)
+           id (reseal! backend (:evidence/id run)
+                       #(-> % (dissoc :reader-version) (assoc :execution/stable? false)))
+           result (registry/check-record! backend
+                                          (assoc (check-options run) :entry-id id))]
+       (is (= :not-a-warrant (:reason result)))
+       (is (false? (get-in result [:details :execution/stable?])))))))
+
+(deftest a-results-mismatch-says-what-differs
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [run (registry/register-run! backend options)
+           id (reseal! backend (:evidence/id run)
+                       #(assoc-in % [:results :assertions] 999))
+           result (registry/check-record! backend
+                                          (assoc (check-options run) :entry-id id))]
+       (is (= :results-log-mismatch (:reason result)))
+       (is (= 999 (get-in result [:details :recorded-only :assertions])))
+       (is (some? (get-in result [:details :observed-only :assertions]))
+           "a human adjudicating needs both sides, as :environment-mismatch gives")))))

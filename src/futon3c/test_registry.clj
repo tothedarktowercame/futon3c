@@ -694,12 +694,21 @@
           ;; moved; the recorded path is the fallback for pre-ledger records.
           log-file (ledger/locate log)
           recorded-reader (get run :reader-version 0)]
+      ;; Recorded facts first, and never as a reader question: a run whose
+      ;; tests failed, whose inputs moved under it, or that produced no
+      ;; closure never warranted anything, and no reader upgrade changes that.
+      ;; Re-registering will simply fail again (zai-1 review, 2026-09-17).
       (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run))
-                     (vector? (:load-closure run)) (command-successful? (:command run) (:results run)))
+                     (vector? (:load-closure run)))
+        (fail! :not-a-warrant {:warrant? (:warrant? run)
+                               :execution/stable? (:execution/stable? run)
+                               :load-closure (if (vector? (:load-closure run))
+                                               :present
+                                               (:load-closure run))
+                               :next-action :fix-the-run-not-the-record}))
+      ;; Only this gate reads the log, so only this gate can be superseded.
+      (when-not (command-successful? (:command run) (:results run))
         (if (< recorded-reader reader-version)
-          ;; The record cannot satisfy a predicate written after it. Say so:
-          ;; :unsupported-results here would be indistinguishable from a
-          ;; doctored record, and the remedy is different — re-register.
           (fail! :parser-superseded {:recorded-reader-version recorded-reader
                                      :reader-version reader-version
                                      :results (:results run)
@@ -716,13 +725,21 @@
                                         :next-action :reconcile-test-environment})))
       (when-not (and (some? log-file) (= (:sha256 log) (file-sha log-file)))
         (fail! :log-mismatch {:looked-in (if (:ledger log) [:ledger :path] [:path])}))
-      (when-not (= (:results run) (parse-command-results (:command run) (get-in run [:results :exit]) (slurp log-file)
-                                                       (get-in run [:results :duration-ms])))
-        (if (< recorded-reader reader-version)
-          (fail! :parser-superseded {:recorded-reader-version recorded-reader
-                                     :reader-version reader-version
-                                     :next-action :re-register-the-run})
-          (fail! :results-log-mismatch {})))
+      (let [reparsed (parse-command-results (:command run) (get-in run [:results :exit])
+                                            (slurp log-file)
+                                            (get-in run [:results :duration-ms]))]
+        (when-not (= (:results run) reparsed)
+          ;; Say WHAT differs. On a v0 record the refusal cannot by itself
+          ;; separate a reader change from a doctored record, so the reader
+          ;; needs the diff and the log to adjudicate (zai-1 review).
+          (let [[recorded-only observed-only] (data/diff (:results run) reparsed)
+                detail {:recorded-only recorded-only :observed-only observed-only}]
+            (if (< recorded-reader reader-version)
+              (fail! :parser-superseded (merge detail
+                                               {:recorded-reader-version recorded-reader
+                                                :reader-version reader-version
+                                                :next-action :re-register-the-run}))
+              (fail! :results-log-mismatch detail)))))
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id
        :checked-at (str (Instant/now)) :diff-paths changed-paths
        :outside-closure outside-closure})

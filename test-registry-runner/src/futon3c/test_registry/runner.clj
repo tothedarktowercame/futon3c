@@ -10,6 +10,19 @@
   (requiring-resolve, run-time require in a test body or fixture) are covered;
   a fresh-JVM require probe under-approximates them.
 
+  UNDER-APPROXIMATION, THREADS. The recording loader is installed on the main
+  thread only. A thread inherits its context class loader from whichever
+  thread constructs it, so threads a test spawns after the install — the usual
+  case for `future` and `pmap`, whose pool threads are created on demand —
+  do inherit it and are covered. A thread that already existed when the runner
+  started does not, and resources it looks up by name go unrecorded. The
+  closure is therefore a lower bound on what the run loaded, which is the safe
+  direction for a warrant (a missed file cannot manufacture a passing check;
+  it can only fail to catch a change). Walking every live thread's context
+  loader at closure time was considered and rejected: it would sweep in loads
+  from unrelated background threads that had nothing to do with the run
+  (zai-1 review, 2026-09-17).
+
   Standalone on purpose: it runs on the test command's own classpath (for
   example :test-pure) and cannot depend on futon3c.test-registry.
 
