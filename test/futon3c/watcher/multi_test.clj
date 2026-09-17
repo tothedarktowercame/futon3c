@@ -573,3 +573,14 @@
                     :stderr "fatal: not a git repository"}))))
   (is (= "plain failure"
          (sut/describe-cycle-error (RuntimeException. "plain failure")))))
+
+(deftest scope-lane-is-bindable-in-process
+  (testing "arm-scope-lane! arms without env; disarm-scope-lane! restores the env default"
+    (is (false? (:enabled? (sut/disarm-scope-lane!))) "env default is OFF")
+    (is (true? (boolean (:enabled? (sut/arm-scope-lane!)))))
+    (is (true? (boolean (sut/scope-lane-enabled?))))
+    (is (false? (boolean (:enabled? (sut/disarm-scope-lane!)))))))
+
+(deftest mission-record-refresh-resolves-futon2-writer
+  (testing "the lane's record refresh resolves futon2's single record writer"
+    (is (ifn? (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)))))

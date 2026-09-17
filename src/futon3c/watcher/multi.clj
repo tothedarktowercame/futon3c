@@ -67,12 +67,49 @@
   #"/holes/(?:campaigns/)?C-[^/]+\.md$")
 
 (declare !state)
+(declare mission-maintenance-status ensure-mission-maintenance-drainer!)
 
 ;; Scope lane: the watcher hot path only enqueues mission stems. The reingest
 ;; work runs off-cycle on a separate scheduled drainer thread. Detection shells
 ;; to futon6's Python detector; ingestion reuses the already-loaded futon3c
 ;; mission-scope ingest namespace in-process.
 (def ^:private scope-lane-env "FUTON3C_WATCHER_SCOPE_LANE")
+
+;; In-process override for the scope-lane gate (Joe, 2026-09-17: the lane
+;; should be BINDABLE, not env-only). nil = defer to the env default. Set
+;; only through arm-scope-lane!/disarm-scope-lane! so arming is deliberate
+;; and starts (disarming stops) the maintenance drainer.
+(defonce ^:private !scope-lane-override (atom nil))
+
+(defn- env-scope-lane-enabled? []
+  (contains? #{"1" "true" "yes" "on"}
+             (some-> (System/getenv scope-lane-env) str/lower-case)))
+
+(defn scope-lane-enabled?
+  "Truthy gate for watcher-integrated mission-scope reingest. An explicit
+   in-process override (arm-scope-lane!) wins; otherwise the env default
+   FUTON3C_WATCHER_SCOPE_LANE decides. Defaults OFF so the lane can be
+   loaded dark — arming is deliberate, never incidental."
+  []
+  (if-some [override @!scope-lane-override]
+    (boolean override)
+    (env-scope-lane-enabled?)))
+
+(defn arm-scope-lane!
+  "Arm the mission-scope lane IN-PROCESS (the env-var alternative is a JVM
+   restart). Idempotent; ensures the maintenance drainer is running."
+  []
+  (reset! !scope-lane-override true)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
+
+(defn disarm-scope-lane!
+  "Return the scope-lane gate to the env default (default OFF) and stop the
+   maintenance drainer. Idempotent."
+  []
+  (reset! !scope-lane-override nil)
+  (ensure-mission-maintenance-drainer!)
+  (mission-maintenance-status))
 (def ^:private maintenance-drain-interval-ms 1000)
 (def ^:private maintenance-debounce-ms 2000)
 (def ^:private maintenance-recent-limit 20)
@@ -175,13 +212,6 @@
 (defn- now-ms []
   (System/currentTimeMillis))
 
-(defn scope-lane-enabled?
-  "Truthy env gate for watcher-integrated mission-scope reingest.
-   Defaults OFF so the lane can be loaded dark."
-  []
-  (contains? #{"1" "true" "yes" "on"}
-             (some-> (System/getenv scope-lane-env) str/lower-case)))
-
 (defn- mission-stem-from-path [path]
   (some->> (str path)
            (re-find mission-doc-stem-pattern)
@@ -211,7 +241,7 @@
   (when (map? report)
     (select-keys report
                  [:mission :path :binders :binder-count :detected-json
-                  :broadcast? :detector-ms :ingest-ms])))
+                  :record-refresh :broadcast? :detector-ms :ingest-ms])))
 
 (defn- mission-scope-tree-path [stem]
   (str mission-scope-tree-dir "/" stem ".json"))
@@ -250,10 +280,28 @@
     "mission" stem})
   true)
 
+(defn- refresh-mission-record!
+  "Refresh the machine's mission-entity record (status, provenance, sha256)
+   for one landed mission doc, through futon2's single record writer
+   (futon2.aif.mission-registry/upsert-mission-record!). The futon3c watcher
+   keeps substrate-2 up to date (Joe 2026-09-17): a scope reingest that did
+   not also refresh the record would leave the machine reading a stale
+   status after every mission-doc land. futon2 lives on this JVM's classpath
+   (the WM runs in-process); if it cannot resolve, the failure is reported
+   in the lane's report — never swallowed."
+  [path]
+  (try
+    (let [upsert (requiring-resolve 'futon2.aif.mission-registry/upsert-mission-record!)]
+      (upsert {:path path}))
+    (catch Throwable t
+      {:status :error :message (.getMessage t)
+       :exception (.getName (class t))})))
+
 (defn reingest-mission-scopes!
   "Run the same scope-lane mechanics as scripts/mission-scope-reingest.sh:
    re-detect with futon6 Python, then ingest each binder in-process through the
-   Drawbridge-safe mission-scope ingest entry point, then broadcast an update
+   Drawbridge-safe mission-scope ingest entry point, refresh the mission's
+   substrate-2 RECORD (status/provenance/sha256), then broadcast an update
    frame for Emacs-side refreshers."
   [{:keys [stem path]}]
   (let [detected (detect-mission-scopes! path)
@@ -264,6 +312,7 @@
                                 :out (ingest-scope-binder! stem binder)})
                              binders)
         ingest-ms (- (now-ms) ingest-start)
+        record (refresh-mission-record! path)
         broadcast? (broadcast-mission-scopes-updated! stem)]
     {:mission stem
      :path path
@@ -271,6 +320,7 @@
      :binders binders
      :binder-count (count binders)
      :binder-reports binder-reports
+     :record-refresh record
      :broadcast? broadcast?
      :detector-ms (:duration-ms detected)
      :ingest-ms ingest-ms}))
