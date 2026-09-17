@@ -2,7 +2,6 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
-            [futon2.aif.policy :as policy]
             [futon2.aif.selection-gain :as selection-gain]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zinputs]))
@@ -107,6 +106,11 @@
   ;; LIVE PIN: the gamma value and event id are captured verbatim from tracked
   ;; B1 fold record b1-gamma-mission.edn, whose live corpus includes evidence
   ;; record e-63c25e11-ac8b-4287-966e-bdc7f007bc78.
+  ;; H6b (2026-09-17): the two flat τ_eff assertions (effective-temperature
+  ;; raised/lowered by selection gain, and the spread-τ value) were deleted
+  ;; with the flat law they tested — futon2.aif.policy/effective-temperature
+  ;; no longer exists. The selection-gain facts themselves still compute and
+  ;; stay pinned below.
   (let [record (harness-artifact "M-zaif-harness/b1-gamma-mission.edn")
         pinned-cell (get-in record [:cells "M-futon-forward-model"])
         empty-stream {:status :absent
@@ -115,8 +119,7 @@
         corrections (repeat 5 -0.5)
         corrected-state (reduce selection-gain/update-selection-gain
                                 (selection-gain/initial-selection-gain-state)
-                                corrections)
-        spread-tau 0.2]
+                                corrections)]
     (is (= 0.7071067811865476 (:policy-precision pinned-cell)))
     (is (= 10 (:samples pinned-cell)))
     (is (some #(= "e-63c25e11-ac8b-4287-966e-bdc7f007bc78" (:id %))
@@ -125,13 +128,7 @@
     (is (= :no-verdict-events (:reason empty-stream)))
     (is (= 1.0 (selection-gain/selection-gain-for (:state empty-stream))))
     (is (= 0.7071067811865476
-           (selection-gain/selection-gain-for corrected-state)))
-    (is (> (policy/effective-temperature
-            [0.0 1.0] (selection-gain/selection-gain-for corrected-state))
-           (policy/effective-temperature
-            [0.0 1.0] (selection-gain/selection-gain-for (:state empty-stream))))
-        "a sustained correction stream lowers selection gain and raises effective tau")
-    (is (= spread-tau (policy/effective-temperature [0.0 1.0] 1.0)))))
+           (selection-gain/selection-gain-for corrected-state)))))
 
 (deftest r14-wm-fixture-pins-live-temperature
   ;; LIVE PIN: values are read verbatim from tracked fixture 801976e7-R14.edn,
