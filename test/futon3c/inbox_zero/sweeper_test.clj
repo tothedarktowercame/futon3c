@@ -41,25 +41,25 @@
 (deftest a-repo-under-the-threshold-is-left-alone
   (let [calls (atom [])
         counts (sweeper/sweep-dirty-repos!
-                (base-options {"futon2-d" (dirty-repo 10)} calls))]
+                (base-options {"futon2-d" (dirty-repo 9)} calls))]
     (is (= 0 (:over-threshold counts)))
     (is (= 0 (:notified counts)))
     (is (empty? (remove #(= :print (first %)) @calls)))))
 
-(deftest over-the-threshold-the-writing-agent-is-told-to-commit
+(deftest at-the-threshold-the-writing-agent-is-told-to-commit
   (let [calls (atom [])
         counts (sweeper/sweep-dirty-repos!
-                (base-options {"futon2-d" (dirty-repo 11)} calls))
+                (base-options {"futon2-d" (dirty-repo 10)} calls))
         payload (first (remove #(= :print (first %)) @calls))]
     (is (= 1 (:over-threshold counts)))
     (is (= 1 (:notified counts)))
     (is (= "codex-10" (:agent payload)))
     (is (= "session-10" (:session payload)))
     (is (= "inbox-zero" (:type payload)))
-    (is (= 11 (get-in payload [:metadata :dirty-count])))
-    (is (= 11 (get-in payload [:metadata :implicated-count])))
-    (is (str/includes? (:prompt payload) "11 dirty file(s)"))
-    (is (str/includes? (:prompt payload) "11 of them were written"))
+    (is (= 10 (get-in payload [:metadata :dirty-count])))
+    (is (= 10 (get-in payload [:metadata :implicated-count])))
+    (is (str/includes? (:prompt payload) "10 dirty file(s)"))
+    (is (str/includes? (:prompt payload) "10 of them were written"))
     (is (str/includes? (:prompt payload) "git -C /repo/futon2-d status"))
     (is (str/includes? (:prompt payload) "Newest first: runs/out-0.edn"))))
 

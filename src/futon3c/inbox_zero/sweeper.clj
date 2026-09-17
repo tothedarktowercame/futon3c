@@ -41,6 +41,12 @@
 (defonce ^:private notices-monitor (Object.))
 
 (def ^:private sample-size 5)
+
+;; A turn Joe drives from the REPL creates no invoke job — the ledger only
+;; records dispatched work — so an agent in conversation with the operator is
+;; invisible to window attribution, which is the case that matters most. An
+;; agent the roster reports as invoking gets an open window back one interval.
+(def ^:private operator-turn-grace-ms 1800000)
 (def ^:private max-dir-walk 2000)
 
 ;; ---------- the filesystem side ----------
@@ -102,20 +108,30 @@
       (json/parse-string (:body response) true))))
 
 (defn default-windows
-  "Invoke windows as `[{:agent id :start ms :end ms}]`, newest first.
+  "Invoke windows as `[{:agent id :start ms :end ms}]`.
 
-  A job still running has no finish time; its window stays open, so dirt
-  written in the current turn is attributed to the agent writing it."
+  Two sources. The job ledger covers dispatched work; a job still running has
+  no finish time, so its window stays open. The roster covers operator-driven
+  turns, which the ledger never sees at all: an agent reported as invoking
+  gets a window reaching back one interval from now."
   []
-  (let [now (System/currentTimeMillis)]
-    (->> (:jobs (fetch-json (agency-url "/api/alpha/invoke/jobs?limit=4000")))
-         (keep (fn [job]
-                 (when-let [start (or (instant-ms (:started-at job))
-                                      (instant-ms (:created-at job)))]
-                   (when-let [agent (:agent-id job)]
-                     {:agent agent :start start
-                      :end (or (instant-ms (:finished-at job)) now)}))))
-         vec)))
+  (let [now (System/currentTimeMillis)
+        dispatched
+        (->> (:jobs (fetch-json (agency-url "/api/alpha/invoke/jobs?limit=4000")))
+             (keep (fn [job]
+                     (when-let [start (or (instant-ms (:started-at job))
+                                          (instant-ms (:created-at job)))]
+                       (when-let [agent (:agent-id job)]
+                         {:agent agent :start start
+                          :end (or (instant-ms (:finished-at job)) now)})))))
+        conversing
+        (->> (:agents (fetch-json (agency-url "/api/alpha/agents")))
+             (keep (fn [[agent-id agent]]
+                     (when (= "invoking" (:status agent))
+                       {:agent (name agent-id)
+                        :start (- now operator-turn-grace-ms)
+                        :end now}))))]
+    (vec (concat dispatched conversing))))
 
 (defn default-roster
   "Agent id → session id for every agent the Agency can reach."
@@ -288,7 +304,7 @@
             over (->> watch-roots
                       (keep (fn [{:keys [path label]}]
                               (let [entries (git-fn path)]
-                                (when (> (count entries) threshold)
+                                (when (>= (count entries) threshold)
                                   {:label label :root path :entries entries
                                    :threshold threshold}))))
                       vec)
