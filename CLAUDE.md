@@ -248,12 +248,6 @@ Historical counterexample: three 2026-09-17 warrants (two machine-contracts
 build warrants) pinned logs under `/tmp/claude-7-review/` before the ledger;
 they survived only because the logs were backfilled into it the same night.
 
-Clojure run records written before reader-version 1 carry no runner pin at
-all: the registry's own runner is excluded from closures as the instrument,
-and pre-v1 records predate `:runner-sha`. Treat them as evidence about the
-specimen, not about the instrument's current behaviour; each re-registration
-closes the gap for that record.
-
 **Pre-`reader-version`-1 Clojure records are instrument-unpinned (2026-09-17).**
 Until that date futon3c's own runner sat in every Clojure warrant's load
 closure — 38 of 39 — so a comment-only edit to it refused them all with
