@@ -3,24 +3,20 @@
   -> review hash chain, not a second ledger. SHA integrity is not authentication
   or a proof of test adequacy. Missing warrants never prohibit running tests.
 
-  THE ARTIFACT DIRECTORY IS PART OF THE WARRANT, NOT SCRATCH SPACE. A run pins
-  its log by absolute path AND sha256, and `check-record!` re-hashes the file
-  at that path: move it or lose it and the warrant is not stale, it is
-  unverifiable, with no way back except re-running. So `:artifact-dir` must be
-  somewhere permanent, chosen once and never moved:
+  A WARRANT PINS ITS LOG BY CONTENT, NOT BY PATH. The log goes into the
+  write-only ledger (`futon3c.test-registry.ledger`) under its own sha256, and
+  a check resolves it there first, falling back to the recorded path only for
+  records written before the ledger existed. So `:artifact-dir` is now just
+  where the run writes as it goes: losing it, moving it or tampering with it
+  no longer touches the warrant.
 
-    - `storage/test-registry/artifacts/` for ordinary runs — outside every
-      repo, so a cleanup that sweeps run data out of a checkout cannot touch
-      it, and outside /tmp, so a reboot cannot either;
-    - beside the bundle it warrants, committed, when the run backs a shipped
-      artifact (mathlib4's machine-contracts bundles do this: one ~40 KB log
-      per 108 KB bundle, which travels with the clone and keeps the bundle
-      self-verifying). That is a deliberate exception to the rule that run
-      data does not live in a repo, earned by being small and load-bearing.
-
-  Counterexample from 2026-09-17: three claude-7 warrants pinned logs under
-  /tmp/claude-7-review/. They check today and will evaporate at the next tmp
-  sweep. They happened to back nothing, which was luck rather than design."
+  That replaces the rule this docstring carried earlier today — choose a
+  permanent artifact directory and never move it — which asked every caller to
+  get something right that the store can simply guarantee. What survives of it
+  is the reason: on 2026-09-17 three warrants pinned logs under /tmp, and a
+  warrant whose log is gone is not stale but unverifiable, with no way back
+  except re-running. All 45 run records to that date were backfilled into the
+  ledger, so that failure is now unreachable for them too."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.data :as data]
@@ -32,7 +28,8 @@
             [futon3c.agency.warrant :as warrant]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.http-backend :as http-backend]
-            [futon3c.evidence.store :as store])
+            [futon3c.evidence.store :as store]
+            [futon3c.test-registry.ledger :as ledger])
   (:import [java.net URL]
            [java.nio.file Files]
            [java.security MessageDigest]
@@ -535,7 +532,9 @@
         stable? (and (= code (:code post)) (= env (:env post)))
         record (merge common {:kind :run :finished-at (str (Instant/now)) :results results
                               :load-closure closure
-                              :log-artifact {:path (.getCanonicalPath log-file) :sha256 (file-sha log-file)}
+                              :log-artifact (ledger/artifact
+                                             (:ledger-root options ledger/default-root)
+                                             log-file)
                               :execution/stable? stable?
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
                                      :execution-ms (:duration-ms results)}
@@ -574,7 +573,10 @@
           ;; changed path outside manifests and closure is :outside-closure.
           closure-changed (closure-diff (closure-shas (:load-closure run))
                                         (current-closure-shas repo-root (:load-closure run)))
-          log (:log-artifact run)]
+          log (:log-artifact run)
+          ;; The ledger holds the object under its own sha, so it cannot have
+          ;; moved; the recorded path is the fallback for pre-ledger records.
+          log-file (ledger/locate log)]
       (when-not (and (true? (:warrant? run)) (true? (:execution/stable? run))
                      (vector? (:load-closure run)) (command-successful? (:command run) (:results run)))
         (fail! :unsupported-results {:results (:results run)}))
@@ -587,9 +589,9 @@
         (let [[expected observed] (data/diff (:env-fingerprint run) env)]
           (fail! :environment-mismatch {:expected-only expected :observed-only observed
                                         :next-action :reconcile-test-environment})))
-      (when-not (and (nonblank? (:path log)) (= (:sha256 log) (file-sha (:path log))))
-        (fail! :log-mismatch {}))
-      (when-not (= (:results run) (parse-command-results (:command run) (get-in run [:results :exit]) (slurp (:path log))
+      (when-not (and (some? log-file) (= (:sha256 log) (file-sha log-file)))
+        (fail! :log-mismatch {:looked-in (if (:ledger log) [:ledger :path] [:path])}))
+      (when-not (= (:results run) (parse-command-results (:command run) (get-in run [:results :exit]) (slurp log-file)
                                                        (get-in run [:results :duration-ms])))
         (fail! :results-log-mismatch {}))
       {:warrant? true :record run :chain-length (count chain) :entry-id entry-id

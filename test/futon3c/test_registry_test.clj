@@ -1,5 +1,6 @@
 (ns futon3c.test-registry-test
   (:require [clojure.java.io :as io]
+            [futon3c.test-registry.ledger :as registry-ledger]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -31,7 +32,8 @@
                                               (spit log text)
                                               (registry/parse-results 0 text 40)))]
         (f {:backend backend :current current :env env :closure closure :calls calls
-            :options (assoc opts :artifact-dir (str dir))}))
+            :options (assoc opts :artifact-dir (str dir)
+                            :ledger-root (str (io/file dir "ledger")))}))
       (finally (doseq [file (reverse (file-seq dir))] (io/delete-file file))))))
 
 (defn check-options [run] {:entry-id (:evidence/id run) :repo-root "/fixture" :changed-paths ["src/demo.clj"]})
@@ -64,7 +66,16 @@
                         :stale-code (do (swap! current assoc :code-sha "new") :stale-sha)
                         :stale-tests (do (swap! current assoc :test-sha "new") :stale-sha)
                         :env (do (reset! env {:sha256 "other"}) :environment-mismatch)
-                        :log (do (spit (get-in run [:payload :log-artifact :path]) "tampered") :log-mismatch)
+                        ;; Tampering with the copy at the recorded path is not
+                        ;; enough: the ledger holds the object under its own
+                        ;; sha and is what the check reads. Both must be gone.
+                        :log (let [artifact (get-in run [:payload :log-artifact])]
+                               (spit (:path artifact) "tampered")
+                               (let [object (registry-ledger/resolve-file
+                                             (:ledger artifact) (:sha256 artifact))]
+                                 (.setWritable ^java.io.File object true)
+                                 (io/delete-file object))
+                               :log-mismatch)
                         :missing :missing-entry
                         :tamper (do (swap! backend assoc-in [:entries id :evidence/body :payload-edn] "{}") :record-digest-mismatch)
                         :truncated-chain (do (swap! backend update :entries dissoc (get-in run [:payload :previous :evidence/id]))
