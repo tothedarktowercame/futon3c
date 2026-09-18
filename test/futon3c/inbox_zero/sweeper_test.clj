@@ -269,3 +269,58 @@
         fixed (push-options 0 calls {:push-log-path log})]
     (sweeper/push-stranded-commits! fixed)
     (is (= [] (:repos (read-string (slurp log)))))))
+
+
+;; ---------- the worktree lane ----------
+
+(defn wt-options [records calls & [extra]]
+  (merge {:roots [{:path "/repo/mathlib4-d" :label "mathlib4-d"}]
+          :worktrees-fn (fn [_] records)
+          :remove-fn (fn [root path]
+                       (swap! calls conj [:remove root path]) {:ok? true :output ""})
+          :now-fn (constantly now)
+          :worktree-log-path (temp-backlog-path)
+          :print-fn (fn [line] (swap! calls conj [:print line]))}
+         extra))
+
+(defn removals [calls] (filterv #(= :remove (first %)) @calls))
+
+(deftest a-worktree-that-is-not-on-disk-is-never-removed
+  ;; The path is gone; there is nothing to judge merged and nothing to remove.
+  (let [calls (atom [])
+        counts (sweeper/retire-merged-worktrees!
+                (wt-options [{:path "/wt/absent" :head "abc" :locked? false}] calls))]
+    (is (= 0 (:retired counts)))
+    (is (= 1 (:skipped counts)))
+    (is (empty? (removals calls)))))
+
+(deftest a-locked-worktree-is-never-removed
+  (let [calls (atom [])
+        counts (sweeper/retire-merged-worktrees!
+                (wt-options [{:path "/wt/locked" :head "abc" :locked? true}] calls))]
+    (is (= 0 (:retired counts)))
+    (is (= 1 (:skipped counts)))
+    (is (empty? (removals calls)))))
+
+(deftest an-apm-frame-workspace-is-never-touched-by-this-lane
+  ;; classify-the-dirt: a worktree is retired through the owning lease path,
+  ;; never by raw removal. APM owns everything under apm-frames.
+  (let [calls (atom [])
+        options (wt-options [{:path "/home/joe/code/apm-frames/batch-1-a01A01-mem"
+                              :head "abc" :locked? false}] calls)
+        counts (sweeper/retire-merged-worktrees! options)
+        rows (:worktrees (read-string (slurp (:worktree-log-path options))))]
+    (is (= 0 (:retired counts)))
+    (is (= 1 (:skipped counts)))
+    (is (empty? (removals calls)))
+    (is (= [:lease-owned] (mapv :outcome rows)))))
+
+(deftest the-refusal-reason-is-recorded-for-each-skipped-worktree
+  (let [calls (atom [])
+        options (wt-options [{:path "/wt/locked" :head "abc" :locked? true}
+                             {:path "/home/joe/code/apm-frames/x" :head "d" :locked? false}]
+                            calls)
+        _ (sweeper/retire-merged-worktrees! options)
+        rows (:worktrees (read-string (slurp (:worktree-log-path options))))]
+    (is (= 2 (count rows)))
+    (is (= #{:locked :lease-owned} (set (map :outcome rows))))))

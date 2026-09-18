@@ -12,14 +12,20 @@
   keyed on Edit/Write witnesses observes almost nothing (2 of 238 paths on
   2026-09-17, and zero proposals in the three weeks to then).
 
-  Two lanes, and the difference between them is whether judgement is needed.
+  Three lanes, split by whether a person has to decide anything.
   Dirty files INFORM: deciding what is yours and whether it should be kept
   needs a person, so that lane never stages, commits or mints a claim.
   Unpushed commits ACT: pushing a commit already written decides nothing, so
   that lane pushes rather than asking anyone to (Joe, 2026-09-18).
+  Merged worktrees ACT: every commit in them is already on the pushed branch,
+  so removing one loses nothing there is any way to lose.
 
-  Both report their counts on every pass, so a silent pass cannot look like a
-  working one."
+  The first two carry a threshold of ten because the count IS the exposure.
+  The third has none -- a merged worktree is residue the moment it merges, and
+  holding nine of them to make a batch would be an odd thing to want.
+
+  All three report their counts on every pass, so a silent pass cannot look
+  like a working one."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
             [clojure.edn :as edn]
@@ -571,6 +577,163 @@
              (catch Throwable _))
         {:repos 0 :over-threshold 0 :pushed 0 :failed 0 :skipped 0}))))
 
+;; ---------- the worktree lane: retire what is already saved ----------
+
+(def ^:private default-worktree-log-path
+  "/home/joe/code/storage/inbox-zero/worktree-log.edn")
+
+(def ^:private default-worktree-idle-hours 24)
+
+(def ^:private lease-owned-prefixes
+  "Worktree paths another lifecycle owns, which this lane never touches.
+
+  APM frame workspaces are provisioned and retired by
+  futon3c.apm.workspace-lifecycle, behind eight fail-closed preconditions
+  (terminal frame, no job or ledger claim referencing it, a content-addressed
+  receipt). Removing one from here would skip every one of those checks.
+  classify-the-dirt says a worktree is retired through the owning lease path
+  and never by raw removal; this list is where that rule is enforced."
+  ["/home/joe/code/apm-frames/"])
+
+(defn- worktree-records
+  "Linked worktrees of the repo at ROOT, as {:path :head :branch :locked?}.
+  The main checkout is the first record and is dropped: it is the repository."
+  [root]
+  (let [{:keys [exit out]} (shell/sh "git" "worktree" "list" "--porcelain" :dir root)]
+    (if-not (zero? exit)
+      []
+      (->> (str/split out #"\n\n+")
+           (map str/trim)
+           (remove str/blank?)
+           (map (fn [chunk]
+                  (reduce (fn [m line]
+                            (cond
+                              (str/starts-with? line "worktree ") (assoc m :path (subs line 9))
+                              (str/starts-with? line "HEAD ") (assoc m :head (subs line 5))
+                              (str/starts-with? line "branch ") (assoc m :branch (subs line 7))
+                              (= line "locked") (assoc m :locked? true)
+                              (str/starts-with? line "locked ") (assoc m :locked? true)
+                              :else m))
+                          {:locked? false}
+                          (str/split-lines chunk))))
+           rest
+           vec))))
+
+(defn- worktree-idle-ms
+  "Milliseconds since anything last happened in WORKTREE-PATH.
+
+  Reads the worktree's own git admin files (index, HEAD, logs/HEAD) as well as
+  the checkout directory: the admin files move on any git operation there, so
+  a worktree somebody is actively switching branches in does not look idle
+  merely because nothing was written to the tree."
+  [worktree-path now-ms]
+  (let [admin (let [{:keys [exit out]} (shell/sh "git" "rev-parse" "--absolute-git-dir"
+                                                 :dir worktree-path)]
+                (when (zero? exit) (str/trim out)))
+        candidates (cond-> [(io/file worktree-path)]
+                     admin (into (map #(io/file admin %) ["index" "HEAD" "logs/HEAD"])))
+        newest (->> candidates
+                    (filter #(.exists ^java.io.File %))
+                    (map #(.lastModified ^java.io.File %))
+                    (reduce max 0))]
+    (if (pos? newest) (- now-ms newest) Long/MAX_VALUE)))
+
+(defn- retirable
+  "Why WORKTREE may not be retired, or nil when every condition holds.
+
+  Every commit in it must already be an ancestor of the branch this repo
+  pushes, which is what makes removal a no-judgement act: the work is not in
+  the worktree in any sense that matters, it is in the branch that went to the
+  remote. The rest are refusals to act on something that is still somebody's."
+  [root {:keys [path head locked?]} now-ms idle-hours]
+  (cond
+    locked? :locked
+    (some #(str/starts-with? (str path) %) lease-owned-prefixes) :lease-owned
+    (not (.isDirectory (io/file path))) :absent
+    (seq (git-dirty path)) :dirty
+    (not (zero? (:exit (shell/sh "git" "merge-base" "--is-ancestor" (str head) "HEAD"
+                                 :dir root)))) :unmerged
+    (< (worktree-idle-ms path now-ms) (* idle-hours 60 60 1000)) :in-use
+    :else nil))
+
+(defn retire-merged-worktrees!
+  "Remove linked worktrees whose every commit is already on the pushed branch.
+
+  A third pressure-free lane, and deliberately so: there is no count to wait
+  for. Ten dirty files and ten unpushed commits are thresholds because the
+  count IS the exposure. A merged worktree is residue the moment it merges,
+  removing it loses nothing, and waiting for ten of them would only mean
+  holding nine known-empty directories.
+
+  Never forces. `git worktree remove` refuses on its own if the tree turns out
+  dirty or busy, and that refusal is the last guard rather than the only one:
+  see `retirable` for the conditions checked first, and lease-owned-prefixes
+  for the worktrees this lane declines to touch at all."
+  [options]
+  (let [print-fn (or (:print-fn options) println)]
+    (try
+      (let [watch-roots (or (:roots options) roots/sweep-roots)
+            records-fn (or (:worktrees-fn options) worktree-records)
+            remove-fn (or (:remove-fn options)
+                          (fn [root path]
+                            (let [{:keys [exit out err]}
+                                  (shell/sh "git" "worktree" "remove" (str path) :dir root)]
+                              {:ok? (zero? exit)
+                               :output (str/trim (str out " " err))})))
+            idle-hours (or (:idle-hours options) default-worktree-idle-hours)
+            now ((or (:now-fn options) #(Date.)))
+            now-ms (.getTime ^Date now)
+            log-path (or (:worktree-log-path options) default-worktree-log-path)
+            result
+            (reduce
+             (fn [acc {:keys [path label]}]
+               (reduce
+                (fn [acc wt]
+                  (let [refusal (retirable path wt now-ms idle-hours)]
+                    (cond
+                      (nil? refusal)
+                      (let [{:keys [ok? output]} (remove-fn path (:path wt))]
+                        (if ok?
+                          (do (print-fn (str "[inbox-zero] retired merged worktree "
+                                             (:path wt) " (" label "): every commit "
+                                             "already on the pushed branch"))
+                              (update acc :retired inc))
+                          (do (print-fn (str "[inbox-zero] worktree removal FAILED "
+                                             (:path wt) ": " output))
+                              (-> acc (update :failed inc)
+                                  (update :rows conj
+                                          {:label label :worktree (:path wt)
+                                           :outcome :failed :error output})))))
+                      (= :unmerged refusal) (update acc :unmerged inc)
+                      :else
+                      (-> acc (update :skipped inc)
+                          (update :rows conj {:label label :worktree (:path wt)
+                                              :outcome refusal})))))
+                acc
+                (records-fn path)))
+             {:repos (count watch-roots) :retired 0 :failed 0
+              :skipped 0 :unmerged 0 :rows []}
+             watch-roots)]
+        (try
+          (atomic-write! log-path
+                         {:at now
+                          :generated-by "futon3c.inbox-zero.sweeper"
+                          :note (str "Linked worktrees this lane did not retire, and "
+                                     "why. Unmerged ones are counted, not listed: "
+                                     "they hold work and are nobody's residue. "
+                                     "Current state, not a queue.")
+                          :idle-hours idle-hours
+                          :worktrees (vec (sort-by :worktree (:rows result)))})
+          (catch Throwable error
+            (print-fn (str "[inbox-zero] worktree log unwritable: " (.getMessage error)))))
+        (let [counts (dissoc result :rows)]
+          (print-fn (str "[inbox-zero] worktree pass: " (pr-str counts)))
+          counts))
+      (catch Throwable error
+        (try (print-fn (str "[inbox-zero] worktree pass failed: " (.getMessage error)))
+             (catch Throwable _))
+        {:repos 0 :retired 0 :failed 0 :skipped 0 :unmerged 0}))))
+
 (defn run-pass!
   "One full pass: inform about dirty files, act on unpushed commits.
 
@@ -589,6 +752,10 @@
     (try (push-stranded-commits! options)
          (catch Throwable error
            (print-fn (str "[inbox-zero] push lane threw: "
+                          (.getMessage error)))))
+    (try (retire-merged-worktrees! options)
+         (catch Throwable error
+           (print-fn (str "[inbox-zero] worktree lane threw: "
                           (.getMessage error)))))))
 
 (defn stop-loop!
