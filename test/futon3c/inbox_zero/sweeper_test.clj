@@ -21,11 +21,19 @@
    :start (- now-ms (* from-minutes 60000))
    :end (- now-ms (* to-minutes 60000))})
 
+(defn temp-dir []
+  (.toFile (java.nio.file.Files/createTempDirectory
+            "commit-notice-test-"
+            (make-array java.nio.file.attribute.FileAttribute 0))))
+
 (defn temp-notices-path []
-  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
-                      "commit-notice-test-"
-                      (make-array java.nio.file.attribute.FileAttribute 0)))]
-    (str (java.io.File. dir "commit-notices.edn"))))
+  (str (java.io.File. (temp-dir) "commit-notices.edn")))
+
+;; Never let a pass write the real operator backlog: sweep-dirty-repos!
+;; rewrites it unconditionally, so an un-redirected test would blank the
+;; live file under /home/joe/code/storage/inbox-zero.
+(defn temp-backlog-path []
+  (str (java.io.File. (temp-dir) "operator-backlog.edn")))
 
 (defn base-options [entries-by-label calls]
   {:roots (mapv (fn [label] {:path (str "/repo/" label) :label label})
@@ -35,6 +43,7 @@
    :roster-fn (fn [] {"codex-10" "session-10"})
    :now-fn (constantly now)
    :notices-path (temp-notices-path)
+   :backlog-path (temp-backlog-path)
    :deliver! (fn [payload] (swap! calls conj payload) {:status 200})
    :print-fn (fn [line] (swap! calls conj [:print line]))})
 
@@ -95,6 +104,35 @@
                 (and (= :print (first call))
                      (str/includes? (second call) "operator backlog")))
               @calls))))
+
+(deftest unowned-dirt-is-written-to-the-operator-backlog
+  (let [calls (atom [])
+        options (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                       :roster-fn (constantly {}))
+        _ (sweeper/sweep-dirty-repos! options)
+        backlog (read-string (slurp (:backlog-path options)))
+        row (first (:repos backlog))]
+    (is (= 1 (count (:repos backlog))))
+    (is (= "futon2-d" (:label row)))
+    (is (= 11 (:dirty-count row)))
+    (is (seq (:newest row)))))
+
+(deftest a-cleaned-repo-leaves-the-backlog-without-being-acknowledged
+  ;; The backlog is current state, not a queue: escalate-by-who-can-act
+  ;; forbids one that waits, so an entry must disappear on the pass after
+  ;; the dirt does, with nobody having to close it.
+  (let [calls (atom [])
+        backlog-path (temp-backlog-path)
+        dirty (assoc (base-options {"futon2-d" (dirty-repo 11)} calls)
+                     :roster-fn (constantly {})
+                     :backlog-path backlog-path)
+        _ (sweeper/sweep-dirty-repos! dirty)
+        _ (is (= 1 (count (:repos (read-string (slurp backlog-path))))))
+        clean (assoc (base-options {"futon2-d" (dirty-repo 0)} calls)
+                     :roster-fn (constantly {})
+                     :backlog-path backlog-path)]
+    (sweeper/sweep-dirty-repos! clean)
+    (is (= [] (:repos (read-string (slurp backlog-path)))))))
 
 (deftest every-pass-reports-its-counts
   (let [calls (atom [])

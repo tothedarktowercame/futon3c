@@ -26,6 +26,28 @@
    {:path "/home/joe/code/futon7"  :label "futon7-d"}
    {:path "/home/joe/code/futon7a" :label "futon7a-d"}])
 
+(def sweep-roots
+  "Roots the inbox-zero commit-notice sweeper measures pressure over.
+
+  A superset of watch-roots: every repo the cleanliness gate covers, not only
+  the ones the file watcher observes. The two lists differ on purpose. Witness
+  production needs an open file handle per root and pays for every write, so
+  mathlib4 — an upstream checkout of ~5k files nobody here edits wholesale —
+  stays out of it. Pressure needs none of that: attribution keys on git status
+  mtimes against the agency job ledger, so a root costs one `git status` per
+  pass whether or not it is watched.
+
+  Before 2026-09-18 the sweeper used watch-roots directly, so dirt in apm-lean,
+  futon1b, mathlib4, p4ng and voxterm generated no pressure at all. The hourly
+  gate saw those five and the pressure model did not, which is the gap that
+  made inbox zero look inert from outside."
+  (into watch-roots
+        [{:path "/home/joe/code/apm-lean" :label "apm-lean-d"}
+         {:path "/home/joe/code/futon1b"  :label "futon1b-d"}
+         {:path "/home/joe/code/mathlib4" :label "mathlib4-d"}
+         {:path "/home/joe/code/p4ng"     :label "p4ng-d"}
+         {:path "/home/joe/code/voxterm"  :label "voxterm-d"}]))
+
 (def ^:private label-by-path
   (into {} (map (juxt :path :label)) watch-roots))
 

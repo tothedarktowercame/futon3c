@@ -278,6 +278,35 @@
 (defn- empty-counts []
   {:repos 0 :over-threshold 0 :notified 0 :held 0 :unowned 0 :errored 0})
 
+(def ^:private default-backlog-path
+  "/home/joe/code/storage/inbox-zero/operator-backlog.edn")
+
+(defn- write-backlog!
+  "Overwrite the operator backlog with the repos that are over threshold and
+  attributable to nobody alive.
+
+  Rewritten in full every pass, never appended to. That is the whole design:
+  escalate-by-who-can-act forbids a queue that waits, and an append-only
+  ledger of unowned dirt becomes exactly that — it accumulates entries that
+  were resolved hours ago and nobody trusts it by the end of the week. A
+  current-state file cannot rot in that direction, because cleaning the repo
+  removes its entry on the next pass without anyone acknowledging anything.
+
+  Before 2026-09-18 this case only reached print-fn, i.e. the serving JVM's
+  stdout, which is the same unwatched-lamp failure gate-fails-loudly was
+  written about — one layer up from the gate it was written about."
+  [path rows now print-fn]
+  (try
+    (atomic-write! path {:at now
+                         :generated-by "futon3c.inbox-zero.sweeper"
+                         :note (str "Repos over the dirty-file threshold that no live "
+                                    "agent wrote. Current state, not a queue: "
+                                    "rewritten every pass.")
+                         :repos (vec (sort-by :label rows))})
+    (catch Throwable error
+      (print-fn (str "[inbox-zero] operator backlog unwritable: "
+                     (.getMessage error))))))
+
 (defn sweep-dirty-repos!
   "Run one bounded commit-notice pass. Every collaborator is injectable."
   [options]
@@ -289,7 +318,7 @@
                                        default-threshold)))
             renotify-ms (long (or (:renotify-ms options) default-renotify-ms))
             max-recipients (long (or (:max-recipients options) default-max-recipients))
-            watch-roots (or (:roots options) roots/watch-roots)
+            watch-roots (or (:roots options) roots/sweep-roots)
             git-fn (or (:git-fn options) git-dirty)
             windows-fn (or (:windows-fn options) default-windows)
             roster-fn (or (:roster-fn options) default-roster)
@@ -326,7 +355,13 @@
                                       " dirty file(s) over the threshold of "
                                       threshold " but no live agent wrote them "
                                       "— operator backlog"))
-                       (update counts :unowned inc))
+                       (-> counts
+                           (update :unowned inc)
+                           (update :unowned-rows conj
+                                   {:label (:label repo) :root (:root repo)
+                                    :dirty-count total :threshold threshold
+                                    :newest (mapv :path (take sample-size
+                                                              (:entries repo)))})))
                      (reduce
                       (fn [counts recipient]
                         (let [key [(:label repo) (:agent recipient)]
@@ -360,10 +395,14 @@
                    (update counts :errored inc))))
              (assoc (empty-counts)
                     :repos (count watch-roots)
-                    :over-threshold (count over))
+                    :over-threshold (count over)
+                    :unowned-rows [])
              over)]
-        (print-fn (str "[inbox-zero] commit-notice pass: " (pr-str counts)))
-        counts)
+        (write-backlog! (or (:backlog-path options) default-backlog-path)
+                        (:unowned-rows counts) now print-fn)
+        (let [counts (dissoc counts :unowned-rows)]
+          (print-fn (str "[inbox-zero] commit-notice pass: " (pr-str counts)))
+          counts))
       (catch Throwable error
         (try
           (print-fn (str "[inbox-zero] commit-notice pass failed: "
