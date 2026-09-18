@@ -12,8 +12,13 @@
   keyed on Edit/Write witnesses observes almost nothing (2 of 238 paths on
   2026-09-17, and zero proposals in the three weeks to then).
 
-  This lane informs. It never stages, commits, pushes or mints a claim, and
-  it reports its counts on every pass so a silent pass cannot look like a
+  Two lanes, and the difference between them is whether judgement is needed.
+  Dirty files INFORM: deciding what is yours and whether it should be kept
+  needs a person, so that lane never stages, commits or mints a claim.
+  Unpushed commits ACT: pushing a commit already written decides nothing, so
+  that lane pushes rather than asking anyone to (Joe, 2026-09-18).
+
+  Both report their counts on every pass, so a silent pass cannot look like a
   working one."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
@@ -89,6 +94,40 @@
       []
       (->> (str/split out #"\x00")
            (keep #(status-entry root %))
+           vec))))
+
+(defn git-unpushed
+  "Commits on HEAD that its upstream does not have, newest first.
+
+  Measured against HEAD's OWN upstream, not against a repo's default branch.
+  The branch that ought to be pushed is the one being worked on: mathlib4
+  works on `darktower` while origin/HEAD still says `master`, and measuring
+  the default branch reported it clean for a week with 217 commits stranded
+  (Joe, 2026-09-18).
+
+  Entries are shaped like git-dirty's so attribute can name commits to the
+  turns that produced them without knowing which lane it is reading. A repo
+  with no upstream yields nothing here -- that is a different failure, and
+  reporting it as zero pressure to push is the honest reading of it.
+
+  Pressure is the COUNT, never the age. A commit that exists only on this box
+  is not saved, and the box is bare metal that can break at any moment, so
+  waiting out a staleness window is not a safety margin — it is exposure."
+  [root]
+  (let [{:keys [exit out]} (shell/sh "git" "log" "--format=%H%x1f%ct%x1f%s"
+                                     "@{upstream}..HEAD" :dir root)]
+    (if-not (zero? exit)
+      []
+      (->> (str/split-lines out)
+           (keep (fn [line]
+                   (let [[sha ct subject] (str/split line #"\x1f" 3)]
+                     (when-let [ms (and sha (not (str/blank? (str ct)))
+                                        (try (* 1000 (Long/parseLong (str/trim ct)))
+                                             (catch Exception _ nil)))]
+                       {:path (str (subs sha 0 (min 12 (count sha)))
+                                   (when-not (str/blank? subject) (str " " subject)))
+                        :sha sha
+                        :mtime-ms ms}))))
            vec))))
 
 ;; ---------- the who-was-running side ----------
@@ -410,6 +449,128 @@
           (catch Throwable _))
         (empty-counts)))))
 
+;; ---------- the push lane: act, never notify ----------
+
+(def ^:private default-push-log-path
+  "/home/joe/code/storage/inbox-zero/push-log.edn")
+
+(def ^:private push-timeout-ms 120000)
+
+(defn- mid-operation?
+  "True when the repo is part-way through a rebase, merge, cherry-pick or
+  bisect. HEAD is then a waypoint inside an operation somebody is still
+  running, not a branch tip they finished, and pushing it is never what
+  anyone meant."
+  [root]
+  (boolean (some #(.exists (io/file root ".git" %))
+                 ["rebase-merge" "rebase-apply" "MERGE_HEAD"
+                  "CHERRY_PICK_HEAD" "BISECT_LOG"])))
+
+(defn git-push!
+  "Run the plain `git push` in ROOT. Never forces, never names a refspec.
+
+  Non-interactive and bounded: a prompt or a stalled network inside a
+  background loop would wedge every later pass, and a wedged sweeper is
+  indistinguishable from a clean stack."
+  [root]
+  (let [proc (.exec (Runtime/getRuntime)
+                    (into-array String ["git" "push"])
+                    (into-array String ["GIT_TERMINAL_PROMPT=0"
+                                        "GIT_SSH_COMMAND=ssh -o BatchMode=yes"
+                                        (str "HOME=" (System/getenv "HOME"))
+                                        (str "PATH=" (System/getenv "PATH"))
+                                        (str "SSH_AUTH_SOCK="
+                                             (or (System/getenv "SSH_AUTH_SOCK") ""))])
+                    (io/file root))]
+    (if-not (.waitFor proc push-timeout-ms java.util.concurrent.TimeUnit/MILLISECONDS)
+      (do (.destroyForcibly proc)
+          {:ok? false :output (str "push timed out after " push-timeout-ms "ms")})
+      {:ok? (zero? (.exitValue proc))
+       :output (str/trim (str (slurp (.getInputStream proc))
+                              (slurp (.getErrorStream proc))))})))
+
+(defn push-stranded-commits!
+  "Push every watched repo carrying THRESHOLD or more unpushed commits.
+
+  An action, not a notice. Pushing a commit that has already been written
+  involves no judgement at all: escalate-by-who-can-act puts ordinary
+  accumulation at tier 0, which acts without asking anybody, and a notice for
+  something needing no judgement is only a queue that waits (Joe, 2026-09-18).
+  Ten dirty files means commit, because deciding what is yours needs a person.
+  Ten unpushed commits means push, because nothing needs deciding.
+
+  The threshold is a count and never an age. A commit that exists only on this
+  box is not saved, and the box is bare metal that can break at any moment, so
+  a staleness window is not a safety margin -- it is the length of time the
+  work is allowed to be at risk.
+
+  A FAILED push is the case that does need a person -- a rejected
+  non-fast-forward is someone else's history to reconcile -- so failures are
+  what this reports, into a current-state file that clears itself the pass
+  after the repo is pushed."
+  [options]
+  (let [print-fn (or (:print-fn options) println)]
+    (try
+      (let [threshold (max 1 (long (or (:threshold options)
+                                       (some-> (System/getenv "FUTON3C_INBOX_ZERO_THRESHOLD")
+                                               Long/parseLong)
+                                       default-threshold)))
+            watch-roots (or (:roots options) roots/sweep-roots)
+            ahead-fn (or (:ahead-fn options) git-unpushed)
+            push-fn (or (:push-fn options) git-push!)
+            busy-fn (or (:busy-fn options) mid-operation?)
+            now ((or (:now-fn options) #(Date.)))
+            log-path (or (:push-log-path options) default-push-log-path)
+            over (->> watch-roots
+                      (keep (fn [{:keys [path label]}]
+                              (let [commits (ahead-fn path)]
+                                (when (>= (count commits) threshold)
+                                  {:label label :root path :commits commits}))))
+                      vec)
+            result
+            (reduce
+             (fn [acc {:keys [label root commits]}]
+               (let [n (count commits)]
+                 (if (busy-fn root)
+                   (do (print-fn (str "[inbox-zero] " label " has " n
+                                      " unpushed commit(s) but is mid-operation"
+                                      " — leaving it alone"))
+                       (-> acc (update :skipped inc)
+                           (update :rows conj {:label label :root root
+                                               :unpushed n :outcome :mid-operation})))
+                   (let [{:keys [ok? output]} (push-fn root)]
+                     (if ok?
+                       (do (print-fn (str "[inbox-zero] pushed " label ": " n
+                                          " commit(s) that existed only on this box"))
+                           (update acc :pushed inc))
+                       (do (print-fn (str "[inbox-zero] push of " label " FAILED ("
+                                          n " commit(s) still local): " output))
+                           (-> acc (update :failed inc)
+                               (update :rows conj
+                                       {:label label :root root :unpushed n
+                                        :outcome :failed :error output}))))))))
+             {:repos (count watch-roots) :over-threshold (count over)
+              :pushed 0 :failed 0 :skipped 0 :rows []}
+             over)]
+        (try
+          (atomic-write! log-path
+                         {:at now
+                          :generated-by "futon3c.inbox-zero.sweeper"
+                          :note (str "Repos over the unpushed-commit threshold that "
+                                     "could not be pushed. Current state, not a "
+                                     "queue: rewritten every pass.")
+                          :threshold threshold
+                          :repos (vec (sort-by :label (:rows result)))})
+          (catch Throwable error
+            (print-fn (str "[inbox-zero] push log unwritable: " (.getMessage error)))))
+        (let [counts (dissoc result :rows)]
+          (print-fn (str "[inbox-zero] push pass: " (pr-str counts)))
+          counts))
+      (catch Throwable error
+        (try (print-fn (str "[inbox-zero] push pass failed: " (.getMessage error)))
+             (catch Throwable _))
+        {:repos 0 :over-threshold 0 :pushed 0 :failed 0 :skipped 0}))))
+
 (defn start-loop!
   "Start one delayed background pass loop. Repeated starts are idempotent."
   [{:keys [interval-ms print-fn] :as options}]
@@ -426,6 +587,11 @@
                (sweep-dirty-repos! (dissoc options :interval-ms))
                (catch Throwable error
                  (print-fn (str "[inbox-zero] commit-notice loop threw: "
+                                (.getMessage error)))))
+             (try
+               (push-stranded-commits! (dissoc options :interval-ms))
+               (catch Throwable error
+                 (print-fn (str "[inbox-zero] push loop threw: "
                                 (.getMessage error)))))
              (recur))
            (catch InterruptedException _)

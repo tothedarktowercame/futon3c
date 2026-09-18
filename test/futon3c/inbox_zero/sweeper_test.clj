@@ -202,3 +202,70 @@
     (is (= 1 (:errored counts)))
     (is (= 0 (:notified counts)))
     (is (= 1 (:notified retry)))))
+
+;; ---------- the push lane ----------
+
+(defn commits [n]
+  (mapv (fn [i] {:path (str "abc" i " subject " i) :sha (str "abc" i)
+                 :mtime-ms (- now-ms (* (inc i) 60000))})
+        (range n)))
+
+(defn push-options [ahead-by calls & [extra]]
+  (merge {:roots [{:path "/repo/futon2-d" :label "futon2-d"}]
+          :ahead-fn (fn [_] (commits ahead-by))
+          :push-fn (fn [root] (swap! calls conj [:push root]) {:ok? true :output ""})
+          :busy-fn (constantly false)
+          :now-fn (constantly now)
+          :push-log-path (temp-backlog-path)
+          :print-fn (fn [line] (swap! calls conj [:print line]))}
+         extra))
+
+(deftest nine-unpushed-commits-are-left-alone
+  (let [calls (atom [])
+        counts (sweeper/push-stranded-commits! (push-options 9 calls))]
+    (is (= 0 (:over-threshold counts)))
+    (is (= 0 (:pushed counts)))
+    (is (empty? (filter #(= :push (first %)) @calls)))))
+
+(deftest ten-unpushed-commits-are-pushed-without-asking-anyone
+  ;; The whole point: no notice, no recipient, no judgement. It just pushes.
+  (let [calls (atom [])
+        counts (sweeper/push-stranded-commits! (push-options 10 calls))]
+    (is (= 1 (:over-threshold counts)))
+    (is (= 1 (:pushed counts)))
+    (is (= [[:push "/repo/futon2-d"]] (filter #(= :push (first %)) @calls)))))
+
+(deftest a-repo-mid-rebase-is-never-pushed
+  (let [calls (atom [])
+        counts (sweeper/push-stranded-commits!
+                (push-options 40 calls {:busy-fn (constantly true)}))]
+    (is (= 1 (:skipped counts)))
+    (is (= 0 (:pushed counts)))
+    (is (empty? (filter #(= :push (first %)) @calls)))))
+
+(deftest a-rejected-push-is-recorded-because-it-needs-a-person
+  (let [calls (atom [])
+        options (push-options 12 calls
+                              {:push-fn (fn [_] {:ok? false
+                                                 :output "! [rejected] non-fast-forward"})})
+        counts (sweeper/push-stranded-commits! options)
+        logged (read-string (slurp (:push-log-path options)))
+        row (first (:repos logged))]
+    (is (= 1 (:failed counts)))
+    (is (= 0 (:pushed counts)))
+    (is (= "futon2-d" (:label row)))
+    (is (= 12 (:unpushed row)))
+    (is (= :failed (:outcome row)))
+    (is (str/includes? (:error row) "non-fast-forward"))))
+
+(deftest a-pushed-repo-leaves-the-push-log-without-being-acknowledged
+  (let [calls (atom [])
+        log (temp-backlog-path)
+        failing (push-options 12 calls
+                              {:push-log-path log
+                               :push-fn (fn [_] {:ok? false :output "rejected"})})
+        _ (sweeper/push-stranded-commits! failing)
+        _ (is (= 1 (count (:repos (read-string (slurp log))))))
+        fixed (push-options 0 calls {:push-log-path log})]
+    (sweeper/push-stranded-commits! fixed)
+    (is (= [] (:repos (read-string (slurp log)))))))
