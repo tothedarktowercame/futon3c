@@ -571,6 +571,35 @@
              (catch Throwable _))
         {:repos 0 :over-threshold 0 :pushed 0 :failed 0 :skipped 0}))))
 
+(defn run-pass!
+  "One full pass: inform about dirty files, act on unpushed commits.
+
+  The loop below calls this ONE var rather than each lane in turn, so a lane
+  added or changed later reaches the running loop through a plain namespace
+  reload. Calling the lanes directly from the loop body meant the opposite:
+  the push lane was invisible to the already-running future until the loop
+  itself was restarted, because a future holds the body it was compiled with
+  and a reload only rebinds the vars that body calls (2026-09-18)."
+  [options]
+  (let [print-fn (or (:print-fn options) println)]
+    (try (sweep-dirty-repos! options)
+         (catch Throwable error
+           (print-fn (str "[inbox-zero] commit-notice lane threw: "
+                          (.getMessage error)))))
+    (try (push-stranded-commits! options)
+         (catch Throwable error
+           (print-fn (str "[inbox-zero] push lane threw: "
+                          (.getMessage error)))))))
+
+(defn stop-loop!
+  "Cancel the background pass loop, if one is running. Returns true if it
+  cancelled something. Needed to swap the loop body itself; a reload alone
+  cannot, for the reason in run-pass!."
+  []
+  (boolean (when-let [f @!loop]
+             (when-not (future-done? f)
+               (future-cancel f)))))
+
 (defn start-loop!
   "Start one delayed background pass loop. Repeated starts are idempotent."
   [{:keys [interval-ms print-fn] :as options}]
@@ -584,14 +613,9 @@
            (loop []
              (Thread/sleep interval-ms)
              (try
-               (sweep-dirty-repos! (dissoc options :interval-ms))
+               (run-pass! (dissoc options :interval-ms))
                (catch Throwable error
-                 (print-fn (str "[inbox-zero] commit-notice loop threw: "
-                                (.getMessage error)))))
-             (try
-               (push-stranded-commits! (dissoc options :interval-ms))
-               (catch Throwable error
-                 (print-fn (str "[inbox-zero] push loop threw: "
+                 (print-fn (str "[inbox-zero] pass loop threw: "
                                 (.getMessage error)))))
              (recur))
            (catch InterruptedException _)
