@@ -58,6 +58,7 @@
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.invoke-activity :as invoke-activity]
+            [futon3c.agency.invoke-controls :as invoke-controls]
             [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.clock-lineage :as clock-lineage]
@@ -3321,10 +3322,16 @@ RESPOND WITH ONLY:
 
 (defn interrupt-agent-invoke!
   "Best-effort local interrupt for an agent's current invoke subprocess tree.
-   Returns {:ok bool :agent-id str :action keyword ...}."
+   Returns {:ok bool :agent-id str :action keyword ...}.
+
+   CLI lanes (Claude/Codex) register their controls in !invoke-controls here.
+   In-JVM ZAI lanes register in futon3c.agency.invoke-controls (2026-09-19,
+   zai-14 wedge: an interrupted zai turn had no control here, kept running
+   headless, and pinned the registry at :invoking). This fn checks both."
   [agent-id]
   (let [aid (str agent-id)
-        entry (get @!invoke-controls aid)
+        entry (or (get @!invoke-controls aid)
+                  (invoke-controls/control-for aid))
         control (:control entry)]
     (cond
       (nil? entry)

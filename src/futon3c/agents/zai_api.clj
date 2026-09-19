@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.invoke-activity :as invoke-activity]
+            [futon3c.agency.invoke-controls :as invoke-controls]
             [futon3c.agents.memory-provisioning :as memory-provisioning]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zaif-inputs]
@@ -1198,11 +1199,16 @@ CALLS contains maps of tool name, arguments, and result digest."
       ;; Return the shipped (primary) decision for any callers that read it.
       (:decision (first dual-results)))))
 
+(defn- interrupted-result
+  [sid final-text]
+  (assoc (max-tool-rounds-result sid final-text)
+         :error "interrupted"))
+
 (defn run-tool-rounds!
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
-           !repeats auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
+           !repeats !interrupted auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
     (loop [remaining tool-round-budget
            final-text ""
@@ -1213,6 +1219,9 @@ CALLS contains maps of tool name, arguments, and result digest."
       (let [remaining-ms (when deadline-ms
                            (- deadline-ms (System/currentTimeMillis)))]
         (cond
+          (and !interrupted @!interrupted)
+          (interrupted-result sid final-text)
+
           (and remaining-ms (<= remaining-ms 0))
           (assoc (max-tool-rounds-result sid final-text)
                  :error "wall-clock-budget")
@@ -1480,7 +1489,14 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; identical tool calls with identical results get a warning
             ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
             ;; turn — repetition across turns is the reviewer's watch.
-            !repeats (atom {:s nil :n 0})]
+            !repeats (atom {:s nil :n 0})
+            ;; Operator interrupt (2026-09-19, zai-14): the REPL's C-c C-c
+            ;; POSTs interrupt-invoke; before this flag existed that endpoint
+            ;; had no control for zai lanes, so an interrupted turn kept
+            ;; running headless while the registry stayed :invoking and new
+            ;; turns queued forever. The flag is checked every tool round.
+            !interrupted (atom false)
+            interrupt-token (str "zai-invoke-" (UUID/randomUUID))]
         (if-not key*
           {:result nil
            :session-id sid
@@ -1526,22 +1542,39 @@ CALLS contains maps of tool name, arguments, and result digest."
                               :profile profile*
                               :prompt prompt})
         (swap! !messages conj {:role "user" :content (str prompt)})
-        (run-tool-rounds! {:client client
-                           :opts opts
-                           :api-key key*
-                           :!messages !messages
-                           :backend backend
-                           :tool-opts tool-opts
-                           :agent-id agent-id
-                           :sid sid
-                           :dispatch-id dispatch-id
-                           :mission clocked-mission
-                           :mission-source mission-source
-                           :turn-id turn-id
-                           :deadline-ms deadline-ms
-                           :report-reserve-ms (report-reserve-for call-timeout-ms)
-                           :evidence-store evidence-store
-                           :!repeats !repeats
-                           :profile profile*
-                           :zaif-inputs-fn zaif-inputs-fn
-                           :auto-continue-max turn-auto-continue-max}))))))))
+        (invoke-controls/register!
+         agent-id interrupt-token
+         {:interrupt!
+          (fn []
+            (reset! !interrupted true)
+            (try
+              (report-activity! agent-id "interrupt requested")
+              (catch Throwable _ nil))
+            {:ok true
+             :agent-id (str agent-id)
+             :action :interrupt-issued
+             :message "zai invoke interrupted; turn stops at the next round boundary"
+             :interrupted? true})})
+        (try
+          (run-tool-rounds! {:client client
+                             :opts opts
+                             :api-key key*
+                             :!messages !messages
+                             :backend backend
+                             :tool-opts tool-opts
+                             :agent-id agent-id
+                             :sid sid
+                             :dispatch-id dispatch-id
+                             :mission clocked-mission
+                             :mission-source mission-source
+                             :turn-id turn-id
+                             :deadline-ms deadline-ms
+                             :report-reserve-ms (report-reserve-for call-timeout-ms)
+                             :evidence-store evidence-store
+                             :!repeats !repeats
+                             :!interrupted !interrupted
+                             :profile profile*
+                             :zaif-inputs-fn zaif-inputs-fn
+                             :auto-continue-max turn-auto-continue-max})
+          (finally
+            (invoke-controls/deregister! agent-id interrupt-token))))))))))

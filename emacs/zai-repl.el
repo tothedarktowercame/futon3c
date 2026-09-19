@@ -374,6 +374,17 @@ the id is display-only, so a failed read must never break buffer setup."
      ((equal type "tool_result")
       (when agent-chat--streaming-started
         (agent-chat-stream-text "")))
+     ((equal type "invoke.activity")
+      ;; Queued turns stream only a "queued #N" activity until the running
+      ;; turn ends; without rendering it the REPL sits on "thinking..."
+      ;; with no explanation (zai-14, 2026-09-19).
+      (let ((activity (or (alist-get 'activity json-obj) "")))
+        (when (and (string-match-p "queued" activity)
+                   (not agent-chat--streaming-started))
+          (agent-chat-insert-message
+           "system"
+           (format "[%s — waiting for the running turn to finish]"
+                   (string-trim activity))))))
      ((equal type "done")
       (when-let ((sid (alist-get 'session-id json-obj)))
         (setq zai-repl--session-id sid)
