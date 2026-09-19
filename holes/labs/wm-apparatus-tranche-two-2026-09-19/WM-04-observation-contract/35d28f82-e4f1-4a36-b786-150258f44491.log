@@ -1,0 +1,17 @@
+
+Testing futon2.aif.observation-checks-test
+
+FAIL in (c1-lean-warrant) (observation_checks_test.clj:85)
+expected: (true? (:observed (oc/check-lean-warrant (assoc base :decl "theorem tokenLikelihood_checkable"))))
+  actual: (not (true? nil))
+
+FAIL in (c1-lean-warrant) (observation_checks_test.clj:86)
+expected: (false? (:observed (oc/check-lean-warrant (assoc base :decl "theorem no_such_theorem"))))
+  actual: (not (false? nil))
+
+FAIL in (c1-lean-warrant) (observation_checks_test.clj:90)
+expected: (false? (:observed (oc/check-lean-warrant (assoc base :path "DarkTower/WarMachine/Holes.lean" :decl "theorem"))))
+  actual: (not (false? nil))
+
+Ran 9 tests containing 29 assertions.
+3 failures, 0 errors.

@@ -1,0 +1,4 @@
+evidence-id test-registry-cb038eec76183b9b2f9d9d0af3475864fbb09c7635737a577f9a5333d071b5ee
+warrant? true
+results {:assertions 467, :duration-ms 362462, :errors 0, :exit 0, :failures 0, :tests 14}
+bound WM-08-failure-classification -> test-registry-cb038eec76183b9b2f9d9d0af3475864fbb09c7635737a577f9a5333d071b5ee

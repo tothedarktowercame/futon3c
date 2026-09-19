@@ -1,0 +1,4 @@
+evidence-id test-registry-c075d3d723ba11975e1ee11ddf9f7dae00cd18433028c582e1884e5448e0f5cf
+warrant? true
+results {:assertions 315, :duration-ms 4707, :errors 0, :exit 0, :failures 0, :tests 26}
+bound WM-09-predecessor-history -> test-registry-c075d3d723ba11975e1ee11ddf9f7dae00cd18433028c582e1884e5448e0f5cf

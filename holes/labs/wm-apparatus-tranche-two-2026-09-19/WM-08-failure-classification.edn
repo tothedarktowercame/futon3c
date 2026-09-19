@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :subject-id "WM-08-failure-classification"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.interpretation-job-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/wm-apparatus-tranche-two-2026-09-19/WM-08-failure-classification"
+ :code-paths ["test/futon2/aif/interpretation_job_test.clj"]
+ :test-paths ["test/futon2/aif/interpretation_job_test.clj"]}
