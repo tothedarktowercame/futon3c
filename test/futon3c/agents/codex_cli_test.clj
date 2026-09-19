@@ -410,3 +410,50 @@
                   {:timeout-ms 5000})]
       (is (= 0 (:exit result)))
       (is (str/includes? (:raw-output result) prompt)))))
+
+(def ^:private oversized-turn-start-error
+  ;; Verbatim from Agency job invoke-1789828353993-22366-ad7c5d90 (codex-23,
+  ;; 2026-09-19T14:32:37Z), the sixth of six War Machine repair attempts on
+  ;; one obligation that died before the agent ran.
+  (str "Exit 1: Error: turn/start: turn/start failed: Input exceeds the "
+       "maximum length of 1048576 characters. (code -32602), data: "
+       "{\"input_error_code\":\"input_too_large\",\"max_chars\":1048576,"
+       "\"actual_chars\":1690401}"))
+
+(deftest oversized-resumed-session-is-recognised
+  (is (codex-cli/oversized-resumed-session-error? oversized-turn-start-error))
+  (testing "an ordinary failure is not mistaken for one"
+    (is (not (codex-cli/oversized-resumed-session-error? "Exit 2: nope")))
+    (is (not (codex-cli/oversized-resumed-session-error? nil)))
+    ;; A model-side context-length complaint is a different thing: it is about
+    ;; the turn's own content, and a fresh session would discard work without
+    ;; fixing it. Only turn/start's refusal to accept the resumed transcript
+    ;; takes this path.
+    (is (not (codex-cli/oversized-resumed-session-error?
+              "context_length_exceeded: too many tokens for this model")))))
+
+(deftest oversized-resumed-session-retries-in-a-fresh-session
+  (let [calls (atom [])
+        invoke (codex-cli/make-invoke-fn {:codex-bin "codex" :cwd "/tmp"})
+        fake-run (fn [cmd prompt _opts]
+                   (swap! calls conj {:cmd cmd :prompt prompt})
+                   (if (some #{"resume"} cmd)
+                     {:exit 1 :timed-out? false :session-id nil :text nil
+                      :error-text oversized-turn-start-error
+                      :stderr oversized-turn-start-error :raw-output ""}
+                     {:exit 0 :timed-out? false :session-id "sid-fresh"
+                      :text "repaired" :error-text nil :stderr ""
+                      :raw-output (str "{\"type\":\"thread.started\",\"thread_id\":\"sid-fresh\"}\n"
+                                       "{\"type\":\"item.completed\",\"item\":"
+                                       "{\"type\":\"agent_message\",\"text\":\"repaired\"}}\n")}))]
+    (with-redefs [codex-cli/run-codex-stream! fake-run]
+      (let [resp (invoke "repair this obligation" "sid-90mb")]
+        (is (= 2 (count @calls)) "the refused resume is retried exactly once")
+        (is (some #{"resume"} (:cmd (first @calls))) "first attempt resumes")
+        (is (not (some #{"resume"} (:cmd (second @calls))))
+            "the retry starts a FRESH session — retrying the same session cannot succeed")
+        (is (= "repair this obligation" (:prompt (second @calls)))
+            "the same prompt is carried into the fresh session")
+        (is (= "repaired" (:result resp)))
+        (is (= "sid-fresh" (:session-id resp)))
+        (is (nil? (:error resp)))))))

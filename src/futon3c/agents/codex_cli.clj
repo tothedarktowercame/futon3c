@@ -253,6 +253,28 @@
                   (or (str/includes? t "invalid value: 'other'")
                       (str/includes? t "supported values are: 'search', 'open_page', and 'find_in_page'"))))))
 
+(defn oversized-resumed-session-error?
+  "True when `turn/start` refused because the RESUMED SESSION's replayed input
+  is over the server's character limit.
+
+  This is a property of the session, not of the moment, so retrying the same
+  session cannot succeed. On 2026-09-19 that cost the War Machine six repair
+  attempts on one obligation: codex-23 resumes a session opened 2026-09-12
+  whose rollout reached 90 MB, `turn/start` refused at actual_chars 1690401
+  against max_chars 1048576, and the runner's own infrastructure retry
+  re-dispatched to the same seat and the same session and was refused
+  identically -- 2.3 seconds, nothing executed, a new :build-failed finding
+  each time. Those findings are what T8 has been reporting as a livelock.
+
+  A fresh session is the cure, and the retry below already knows how to start
+  one; it was only reachable for stale action.type errors."
+  [error-text]
+  (let [t (some-> error-text str/lower-case)]
+    (boolean (and (string? t)
+                  (or (str/includes? t "input_too_large")
+                      (and (str/includes? t "turn/start")
+                           (str/includes? t "exceeds the maximum length")))))))
+
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex ... exec resume <sid> -`."
@@ -591,12 +613,16 @@
                                 (when-not (zero? exit)
                                   (meaningful-agent-text (:text parsed)))
                                 (some-> stderr str/trim not-empty))
-                ;; Retry on stale session (action.type error)
+                ;; Retry on a session the server will not accept as it
+                ;; stands: a stale action.type, or a resumed transcript that
+                ;; is over the input limit. Both are cured by a fresh session
+                ;; and by nothing else, so retrying in place is wasted.
                 retry? (and (string? session-id)
                             (not (str/blank? session-id))
                             (not timed-out?)
                             (not (zero? exit))
-                            (stale-action-type-error? final-error))]
+                            (or (stale-action-type-error? final-error)
+                                (oversized-resumed-session-error? final-error)))]
             (if retry?
               ;; Fresh session retry
           (let [cmd2 (build-exec-args {:codex-bin codex-bin
