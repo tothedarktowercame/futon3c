@@ -203,15 +203,23 @@ test registry landed (2026-09-17), a recorded run is evidence you can *check*
 without re-executing anything, and checking is what you should reach for.
 
 ```bash
-# Is there already evidence this passed? No execution; typed refusal if not.
-clojure -M -m futon3c.test-registry check <config.edn>
+# Does it STILL hold? Sub-second, on the running JVM — never launch a JVM to read.
+# (Joe's ruling 2026-09-19: cold `clojure … check` runs are banned; ~30 s each.)
+curl -s -X POST localhost:7070/api/alpha/test-registry/check \
+  -H 'Content-Type: application/json' \
+  -d '{"entry-id":"test-registry-…","repo-root":"/home/joe/code/futon3c","changed-paths":[]}'
+# Response nests the authority: {:check {...} :meaning "validity-now, …"}.
+# The evidence lookup below serves the MINT verdict, which is a different answer:
+curl -s localhost:7070/api/alpha/evidence/<entry-id>          # who/what/counts at mint
+curl -s localhost:7070/api/alpha/test-registry/report          # all bindings, ≤30 s cache
 
 # Must actually run? Run the narrowest thing that answers the question.
 clojure -M:test -n futon3c.some.specific-test
 clojure -M:test -n futon3c.some.specific-test -v futon3c.some.specific-test/one-case
 
 # Need durable evidence others can rely on? Register once, check thereafter.
-clojure -M -m futon3c.test-registry run <config.edn>   # needs :artifact-dir
+clojure -M -m futon3c.test-registry.validation register <spec.edn>  # mints AND binds a subject
+clojure -M -m futon3c.test-registry run <config.edn>   # bare run; needs :artifact-dir
 ```
 
 A check re-hashes the recorded load closure and resolves the run log from the
