@@ -1,0 +1,10 @@
+WARNING: Use of :paths external to the project has been deprecated, please remove: ../futon2/test
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Running tests in #{"test"}
+
+Testing futon3c.wm.r10-click-adapter-test
+[boundary] I-single-boundary VIOLATION: append returned not-ok — no
+
+Ran 6 tests containing 32 assertions.
+0 failures, 0 errors.

@@ -1,0 +1,8 @@
+{:subject-id "EV-run-participants/click-boundary"
+ :repo-root "/home/joe/code/futon3c"
+ :code-paths ["src/futon3c/transport/http.clj" "src/futon3c/wm/r10_click_adapter.clj" "src/futon3c/wm/runner_service.clj"]
+ :test-paths ["test/futon3c/wm/run_participants_boundary_test.clj"]
+ :command ["clojure" "-M:test" "-n" "futon3c.wm.run-participants-boundary-test"]
+ :author "codex-3"
+ :artifact-dir "/home/joe/code/futon3c/holes/evidence/run-participants-2026-09-19"
+ :index-file "/home/joe/code/futon3c/data/test-registry-validation/subjects.ednlog"}

@@ -1,0 +1,4 @@
+evidence-id test-registry-b1bcd8d5d44a3b1f9e6023390159a456f9fa07bcdd99f42977707e7363b44fa9
+warrant? true
+results {:assertions 14, :duration-ms 6745, :errors 0, :exit 0, :failures 0, :tests 1}
+bound EV-run-participants/click-boundary -> test-registry-b1bcd8d5d44a3b1f9e6023390159a456f9fa07bcdd99f42977707e7363b44fa9
