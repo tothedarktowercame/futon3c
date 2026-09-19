@@ -2,7 +2,6 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.c-fold-config :as digest]
-            [futon2.aif.full-loop-runner :as full-runner]
             [futon3c.wm.run4-effective-environment :as effective]
             [futon3c.wm.run4-historical-action :as historical-action]
             [futon3c.wm.run4-trusted-entry :as sut]))
@@ -238,27 +237,35 @@
                  (:error (sut/prepare config auth request)))))))))
 
 (deftest runner-boundary-rereads-source-and-config-after-preparation
+  ;; REWRITTEN 2026-09-19: the original body called full-runner/
+  ;; resolve-pinned-selection, RETIRED with the flat decision path (SPEC
+  ;; flat-removal H4, futon2 full_loop_runner.clj) -- the test namespace had
+  ;; not compiled since. The property it pinned (the selection boundary
+  ;; rereads authoritative bytes captured at prepare) now lives in the
+  ;; prepared :run4-trusted-boundary-fn, whose first act is freshness! over
+  ;; every captured ref. Same property, current seam.
   (with-fixture
     (fn [{:keys [root config]}]
       (doseq [[path changed]
               [["source.md" "changed task\n"]
                ["config.edn"
-                "{:schema :wm/run4-pinned-run-config-v1 :runner-options {:cohort? true} :c-fold {:enabled? false}}\n"]]]
+                (str config "\n;; changed after prepare\n")]]]
         ;; Each case gets a fresh preparation and then changes authoritative
-        ;; bytes before the actual selection boundary consumes the options.
+        ;; bytes before the trusted boundary consumes the options.
         (spit (io/file root "source.md") source-text)
         (spit (io/file root "config.edn") config-text)
         (let [prepared (sut/prepare config auth request)
               opts (:opts prepared)]
           (is (:ok prepared))
           (spit (io/file root path) changed)
-          (is (= changed ((get-in opts [:run4-task-pin-ports :read-text]) path)))
-          (is (= :invalid-or-stale-task-pin
-                 (:failure-detail
+          (is (= :captured-source-changed
+                 (:reason
                   (try
-                    (full-runner/resolve-pinned-selection opts judgment casting)
+                    ((:run4-trusted-boundary-fn opts)
+                     {:pin-digest "x" :operator-selection {:operator "Joe"}})
                     nil
-                    (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
+                    (catch clojure.lang.ExceptionInfo e (ex-data e)))))
+              (str path " changed after prepare must refuse the boundary")))))))
 
 (deftest trusted-attestation-rereads-c-fold-artifacts
   (with-fixture
@@ -286,8 +293,11 @@
           (is (= :captured-source-changed
                  (:reason
                   (try
-                    (full-runner/resolve-pinned-selection
-                     (:opts prepared) judgment casting)
+                    ;; Seam rewritten 2026-09-19: resolve-pinned-selection was
+                    ;; retired with the flat decision path; the trusted
+                    ;; boundary fn is where captured bytes are reread now.
+                    ((:run4-trusted-boundary-fn (:opts prepared))
+                     {:pin-digest "x" :operator-selection {:operator "Joe"}})
                     nil
                     (catch clojure.lang.ExceptionInfo e (ex-data e)))))))))))
 
