@@ -114,3 +114,21 @@
     (is (= :r10/reservation-invalid
            (code-of #(commission/read-reservation {:reservation-root (str dir)
                                                     :commission-id "corrupt"}))))))
+
+(deftest issuer-provenance-is-descriptive-and-survives-commission
+  (let [dir (Files/createTempDirectory "r10-issuer" (make-array java.nio.file.attribute.FileAttribute 0))
+        c (fixture dir "issuer")
+        provenance {:status :present :identity "commissioner" :source :wm-click-http-boundary}
+        observed (atom nil)]
+    (with-redefs [binding/authorized-commission (constantly c)
+                  binding/reservation-root (str (.resolve dir "reservations"))
+                  runner/status (constantly {:running? false})]
+      (is (:ok (adapter/commissioned-click!
+                {:config {:evidence-store (atom {:entries {} :order []})}
+                 :issuer-provenance provenance
+                 :click-fn (fn [opts] (reset! observed opts)
+                             {:click-id "test-issuer" :started-at "now"})}))))
+    (is (= {:issuer-provenance provenance} @observed))
+    (let [broken (dissoc @observed :issuer-provenance)]
+      (is (not= @observed broken))
+      (is (not= provenance (:issuer-provenance broken))))))

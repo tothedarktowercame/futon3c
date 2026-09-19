@@ -19,8 +19,8 @@
 
 (defn commissioned-click!
   "Spend the server-owned single-use commission on one runner click.
-  Request payload values are deliberately not accepted by this interface."
-  [{:keys [config click-fn]
+  Authority comes only from the server commission. Issuer provenance is descriptive."
+  [{:keys [config click-fn issuer-provenance]
     :or {click-fn (requiring-resolve 'futon3c.wm.runner-service/click!)}}]
   (let [authorized (binding/authorized-commission)
         evidence-store (evidence-store-for-config config)]
@@ -40,7 +40,8 @@
                  :commission linked
                  :dispatch-fn
                  (fn [_]
-                   (let [click-result (click-fn {})]
+                   (let [click-result (click-fn (cond-> {} issuer-provenance
+                                                  (assoc :issuer-provenance issuer-provenance)))]
                      (when (= :already-running (:rejected click-result))
                        (refuse! :r10/click-rejected
                                 {:reason :already-running

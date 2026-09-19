@@ -8735,7 +8735,12 @@
     (if (nil? payload)
       (json-response 400 {:error "invalid-json"})
       (try
-        (let [legacy-opts (cond-> {}
+        (let [issuer-provenance {:status :present
+                                 :identity (if (nonblank-string? (:issuing-caller payload))
+                                             (:issuing-caller payload)
+                                             :caller-unknown)
+                                 :source :wm-click-http-boundary}
+              legacy-opts (cond-> {}
                      (nonblank-string? (:author payload))
                      (assoc :author (:author payload))
 
@@ -8775,7 +8780,8 @@
                           (if commissioned?
                             'futon3c.wm.r10-click-adapter/commissioned-click!
                             'futon3c.wm.runner-service/click!))
-                  opts (cond-> (merge legacy-opts (:opts prepared))
+                  opts (cond-> (assoc (merge legacy-opts (:opts prepared))
+                                      :issuer-provenance issuer-provenance)
                          (and (not commissioned?) (not prepared))
                          (assoc :ordinary-click/issue!
                                 (fn [click-id issued-at]
@@ -8784,7 +8790,7 @@
                                    (when (nonblank-string? (:issuing-caller payload))
                                      (:issuing-caller payload))))))
                   result (if commissioned?
-                           (click! {:config config})
+                           (click! {:config config :issuer-provenance issuer-provenance})
                            (click! opts))
                   admission-status
                   (when admission

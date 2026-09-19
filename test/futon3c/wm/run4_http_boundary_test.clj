@@ -186,7 +186,9 @@
                                    (swap! calls conj opts)
                                    {:started true})]
       (is (= 200 (:status (handler (request {:author "legacy"} {})))))
-      (is (= [{:author "legacy"}] (mapv #(dissoc % :ordinary-click/issue!) @calls)))
+      (is (= [{:author "legacy"
+                :issuer-provenance {:status :present :identity :caller-unknown
+                                    :source :wm-click-http-boundary}}] (mapv #(dissoc % :ordinary-click/issue!) @calls)))
       (is (fn? (:ordinary-click/issue! (first @calls)))))
     (with-redefs [service/click! (constantly {:rejected :already-running})]
       (is (= 409 (:status (handler (request {} {}))))))))
