@@ -64,3 +64,35 @@ bind the successful warrant via `futon3c.test-registry.validation/bind-subject!`
 Runner-service and RUN4 boundary tests still need their registry runs. The
 chain rehearsal needs an independently justified topology/pin repair before
 all touched-test gates can be called green.
+
+## Re-registration, 2026-09-19 16:13 UTC
+
+The owner accepted the code at closure DAG r111 and dispatched registration
+only. The previously dirty cascade-model-manifest source is now committed.
+The SAME registry.edn scope and command produced a successful warrant:
+
+`test-registry-4eebcf94553ffb79d0b52353d133ec1ee682929b991084a0ecfe9193c37785c4`
+
+Results: 4 tests, 34 assertions, zero failures/errors, exit 0, 5338 ms.
+Postcheck matched. A separate `test-registry check` resolved the two-record
+chain and returned `:warrant? true` at 16:12:56 UTC. Bound and read back via
+`validation/bind-subject!` / `subject-binding` under `OPS-ordinary-run/click`;
+binding id `33985db2-1254-4d75-9b88-3869a258168d`, time 16:13:19 UTC.
+No declared scope was narrowed and no code changed for this registration.
+
+Execution log:
+`storage/test-registry/ordinary-click-budget/68856075-5142-4e70-852c-ec887d4be7e9.log`.
+Five issue entries preceded five injected runner failures; sixth issue 409.
+Production counts remain repairs 200/200, trips 293/293, budget files 0/0.
+This supersedes the missing-warrant blocker above, not the historical slow
+rehearsal findings or any claim about tests outside this warrant's namespace.
+
+On the owner's fixture question: chain_rehearsal_test has exactly one test,
+`reload-click-certificate-chain-and-mismatch-control`. The fixture covers that
+single synthetic runner's lifetime; there is no other test whose cohort
+coverage it removes today. The rehearsal intentionally supplies a throwaway
+runner and tests identity/HTTP/certificate joins, not production cohort binding.
+Namespace-wide scope is not intrinsically required; it was chosen to keep the
+stub active for the entire worker lifetime. If the namespace gains other tests,
+the stub should move around this test's click-and-completion block. No broader
+cohort-coverage claim is made, and no source edit was made in this registration-only packet.
