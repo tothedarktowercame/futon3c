@@ -209,6 +209,8 @@ curl -s -X POST localhost:7070/api/alpha/test-registry/check \
   -H 'Content-Type: application/json' \
   -d '{"entry-id":"test-registry-…","repo-root":"/home/joe/code/futon3c","changed-paths":[]}'
 # Response nests the authority: {:check {...} :meaning "validity-now, …"}.
+# On :stale-sha, read :changed-files — it names WHICH file moved. Uncommitted
+# drift = a lane is mid-edit (wait); committed drift = superseded (re-mint).
 # The evidence lookup below serves the MINT verdict, which is a different answer:
 curl -s localhost:7070/api/alpha/evidence/<entry-id>          # who/what/counts at mint
 curl -s localhost:7070/api/alpha/test-registry/report          # all bindings, ≤30 s cache
