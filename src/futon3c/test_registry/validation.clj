@@ -201,7 +201,8 @@
           (subjects options))))
 
 (defn report! [options]
-  (let [rows (conformance options) counts (frequencies (map :verdict rows))]
+  (let [rows (conformance options)
+        counts (assoc (frequencies (map :verdict rows)) :subjects (count rows))]
     (doseq [{:keys [subject-id warrant-id verdict]} rows]
       (println subject-id (name verdict) (or warrant-id "-")))
     (println "SUMMARY" (pr-str (into (sorted-map) counts)))

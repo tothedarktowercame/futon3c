@@ -2474,8 +2474,12 @@
         ;; its recorded :warrant?.  This route answers a different question:
         ;; whether that warrant still holds after re-hashing now.  Nest the
         ;; authority's result unchanged so clients cannot confuse the two.
-        (json-response 200 {:check result
-                            :meaning "validity-now, not the recorded mint verdict"}))
+        (json-response
+         200
+         {:check result
+          :meaning (str "validity-now, not the recorded mint verdict. "
+                        "Uncommitted drift usually means a lane is mid-edit; "
+                        "wait, do not re-dispatch.")}))
       (catch Throwable throwable
         (json-response 500 {:record/type :test-registry/refusal
                             :reason :check-endpoint-failed

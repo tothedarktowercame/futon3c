@@ -477,6 +477,22 @@
            (set (for [[p s] recorded :when (not= s (get observed p))] p))
            (set (for [[p s] observed :when (not= s (get recorded p))] p))))))
 
+(defn classify-scope-drift
+  "Annotate each changed scope path without changing warrant validity.
+
+  `:uncommitted` means the current bytes are worktree-dirty (usually a lane
+  mid-edit); `:committed` means git can reproduce the current bytes and the
+  recorded warrant has been superseded."
+  [repo-root recorded observed]
+  (let [changed (vec (closure-diff recorded observed))
+        uncommitted (into #{} (map :path) (uncommitted-scope repo-root changed))]
+    (mapv (fn [path]
+            {:path path
+             :classification (if (contains? uncommitted path)
+                               :uncommitted
+                               :committed)})
+          changed)))
+
 (defn- decode [entry]
   (let [body (:evidence/body entry) text (:payload-edn body)]
     (when-not (and (string? text) (= (:sha256 body) (digest/sha256 text))
@@ -814,7 +830,13 @@
                                      :next-action :re-register-the-run})
           (fail! :unsupported-results {:results (:results run)})))
       (when-not (every? #(= (get run %) (get current %)) [:code-sha :test-sha :code-files :test-files])
-        (fail! :stale-sha {:current current}))
+        (fail! :stale-sha
+               {:current current
+                :scope-drift
+                (classify-scope-drift
+                 repo-root
+                 (merge (:code-files run) (:test-files run))
+                 (merge (:code-files current) (:test-files current)))}))
       (when (seq closure-changed)
         (fail! :environment-mismatch {:changed-files closure-changed
                                       :next-action :rerun-the-declared-namespace}))
