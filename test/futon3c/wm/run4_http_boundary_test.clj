@@ -138,6 +138,7 @@
                                                  :run4-attempt-id "attempt-valid"}
                                                 auth)))))
           (is (= 1 (count @seen)))
+          (is (not (contains? (first @seen) :ordinary-click/issue!)))
           (is (= casting (select-keys (first @seen) (keys casting))))
           (is (string? (:run4-task-pin-text (first @seen))))
           (is (fn? (:run4-trusted-boundary-fn (first @seen))))
@@ -185,6 +186,7 @@
                                    (swap! calls conj opts)
                                    {:started true})]
       (is (= 200 (:status (handler (request {:author "legacy"} {})))))
-      (is (= [{:author "legacy"}] @calls)))
+      (is (= [{:author "legacy"}] (mapv #(dissoc % :ordinary-click/issue!) @calls)))
+      (is (fn? (:ordinary-click/issue! (first @calls)))))
     (with-redefs [service/click! (constantly {:rejected :already-running})]
       (is (= 409 (:status (handler (request {} {}))))))))

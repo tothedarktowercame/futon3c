@@ -102,6 +102,7 @@
             [futon3c.wm.run4-attempt-admission :as run4-admission]
             [futon3c.wm.run4-series-service :as run4-series-service]
             [futon3c.wm.run4-trusted-entry :as run4-entry]
+            [futon3c.wm.ordinary-click-budget :as ordinary-budget]
             [meme.schema :as meme-schema]
             [meme.core :as meme-core]
             [meme.arrow :as meme-arrow]
@@ -8703,7 +8704,14 @@
                           (if commissioned?
                             'futon3c.wm.r10-click-adapter/commissioned-click!
                             'futon3c.wm.runner-service/click!))
-                  opts (merge legacy-opts (:opts prepared))
+                  opts (cond-> (merge legacy-opts (:opts prepared))
+                         (and (not commissioned?) (not prepared))
+                         (assoc :ordinary-click/issue!
+                                (fn [click-id issued-at]
+                                  (ordinary-budget/consume!
+                                   click-id issued-at
+                                   (when (nonblank-string? (:issuing-caller payload))
+                                     (:issuing-caller payload))))))
                   result (if commissioned?
                            (click! {:config config})
                            (click! opts))
@@ -8723,7 +8731,8 @@
             (json-response (or (:status data) 500)
                            {:error (or (some-> (:error data) name)
                                        "wm-click-start-failed")
-                            :message (.getMessage throwable)})))))))
+                            :message (.getMessage throwable)
+                            :details (select-keys data [:authorization :allocated :consumed :renewal])})))))))
 
 (defn- handle-wm-click-status
   []

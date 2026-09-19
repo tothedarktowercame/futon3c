@@ -474,11 +474,13 @@
             (let [completion (promise)
                   _ (reset! !completion {:click-id click-id
                                          :completion completion})
-                  runnable (bound-fn [] (run-click! click-id opts completion))
+                  runnable (bound-fn [] (run-click! click-id (dissoc opts :ordinary-click/issue!) completion))
                   thread (Thread. ^Runnable runnable "wm-runner-click")]
               (swap! !completion assoc :thread thread)
               (.setDaemon thread true)
               (try
+                (when-let [issue! (:ordinary-click/issue! opts)]
+                  (issue! click-id started-at))
                 (.start thread)
                 {:click-id click-id :started-at started-at}
                 (catch Throwable throwable

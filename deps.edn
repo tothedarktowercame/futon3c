@@ -49,7 +49,7 @@
                                           com.xtdb/xtdb-rocksdb]}}
 
  :aliases
- {:test {:extra-paths ["test" "dev"]
+ {:test {:extra-paths ["test" "dev" "../futon2/test"]
          ;; Integration tests host the authoritative Futon1b/XTDB2 backend
          ;; in-process. Arrow requires the same module access and bounded
          ;; direct-memory settings as the serving JVM.

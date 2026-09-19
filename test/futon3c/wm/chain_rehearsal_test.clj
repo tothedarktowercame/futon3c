@@ -8,12 +8,16 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [use-fixtures deftest is]]
             [futon3c.agency.registry :as reg]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]
             [futon3c.wm.code-identity :as identity]
-            [futon3c.wm.runner-service :as service]))
+            [futon3c.wm.runner-service :as service]
+            [futon3c.wm.ordinary-click-budget :as budget]
+            [futon3c.wm.machinery-execution-cohort :as cohort]))
+
+(use-fixtures :each (fn [f] (with-redefs [cohort/apply-binding identity] (f))))
 
 (def fixture-run
   "/home/joe/code/futon2/holes/labs/wm-contract/tick-run-record-2026-08-31.edn")
@@ -98,7 +102,8 @@
       (is (true? (:stable? loaded))))
     (load-file observer-source)
     (binding [service/*resolve-var* resolver
-              service/*click-run-binding-dir* binding-dir]
+              service/*click-run-binding-dir* binding-dir
+              budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
       (let [h (handler)
             observe! (resolve 'checks.wm-click-resource-observer/observe!)]
         (reset! observed-receipt

@@ -7,7 +7,9 @@
             [futon3c.agency.registry :as reg]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]
-            [futon3c.wm.runner-service :as service])
+            [futon3c.wm.runner-service :as service]
+            [futon3c.wm.ordinary-click-budget :as budget]
+            [futon3c.wm.machinery-execution-cohort :as cohort])
   (:import [java.time Instant]))
 
 (def scratch-agent-id "war-machine")
@@ -41,13 +43,15 @@
                       (java.nio.file.Files/createTempDirectory
                        "wm-click-bindings-test-"
                        (make-array java.nio.file.attribute.FileAttribute 0))))]
-    (binding [service/*click-run-binding-dir* binding-dir]
+    (binding [service/*click-run-binding-dir* binding-dir
+              budget/*ledger-path* (str binding-dir "/ordinary.jsonl")]
       (try
         (f)
         (finally
           (await-active-click!))))))
 
-(use-fixtures :each reset-service!)
+(use-fixtures :each reset-service!
+  (fn [f] (with-redefs [cohort/apply-binding identity] (f))))
 
 (defn- handler []
   (http/make-handler
