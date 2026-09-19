@@ -1,0 +1,8 @@
+{:agency-url "http://localhost:7070"
+ :repo-root "/home/joe/code/futon3c"
+ :code-paths ["src/futon3c/wm/ordinary_click_budget.clj" "src/futon3c/wm/runner_service.clj" "src/futon3c/transport/http.clj"]
+ :test-paths ["test/futon3c/wm/ordinary_click_budget_test.clj"]
+ :command ["clojure" "-M:test" "-n" "futon3c.wm.ordinary-click-budget-test"]
+ :author "codex-34"
+ :artifact-dir "/home/joe/code/storage/test-registry/ordinary-click-budget"
+ :test-environment {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}}
