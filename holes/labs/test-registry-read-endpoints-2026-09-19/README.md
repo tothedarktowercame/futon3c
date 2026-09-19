@@ -1,7 +1,8 @@
 # Test-registry read endpoints — 2026-09-19
 
 Implementation commits: `31d2400a8de629253d810b4eee68f28e40ebbad2`,
-`f0d2620efaa4eec8c19451ee2a243c2a2e343469`.
+`f0d2620efaa4eec8c19451ee2a243c2a2e343469`, and response-shape amendment
+`b30c0dd17c0ce64770b2d7f6b5a6a9ee14171874`.
 
 The handlers call `futon3c.test-registry/check-record!` and
 `futon3c.test-registry.validation/report!` against the running server's
@@ -37,3 +38,23 @@ not waive or reinterpret that refusal.
 
 Static receipts: `clj-kondo.txt` (zero errors/warnings, one informational
 finding) and `check-parens.txt` (`OK`).
+
+## Validity-now response-shape amendment
+
+The check endpoint now returns the authority's result unchanged under
+`:check`, alongside `:meaning "validity-now, not the recorded mint verdict"`.
+It never exposes an ambiguous top-level `:warrant?`; the evidence lookup's
+recorded mint verdict and the check endpoint's current validity answer are
+therefore structurally distinct.
+
+The amendment's registered warrant is
+`test-registry-e714c236b698c02c2cc90d813e37a77a52e1b902df58baf770d18738ed0c81e1`:
+4 tests, 19 assertions, zero failures/errors. `register-shape.*` and
+`shape-execution/` are its receipts. The stale-fixture test pins a recorded
+true mint verdict against a current `:stale-sha` refusal.
+
+After canonical namespace reload, `check-shape.json` contains only top-level
+`check` and `meaning`; `fabricated-shape.json` is a nested typed
+`missing-entry`. Warm live reads were 0.868 seconds for check and 0.001 seconds
+for report. `pouch-shape.http` records HTTP 200 after reload. Static amendment
+receipts are `clj-kondo-shape.txt` and `check-parens-shape.txt`.

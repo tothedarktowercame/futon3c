@@ -1,0 +1,9 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Testing futon3c.transport.test-registry-http-test
+subject-a current warrant-a
+subject-b current warrant-b
+SUMMARY {:current 2}
+
+Ran 4 tests containing 19 assertions.
+0 failures, 0 errors.

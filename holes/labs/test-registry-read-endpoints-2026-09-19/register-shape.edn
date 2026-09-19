@@ -1,0 +1,8 @@
+{:repo-root "/home/joe/code/futon3c"
+ :agency-url "http://localhost:7070"
+ :subject-id "test-registry/read-endpoints"
+ :command ["clojure" "-M:test" "-n" "futon3c.transport.test-registry-http-test"]
+ :author "codex-23"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/test-registry-read-endpoints-2026-09-19/shape-execution"
+ :code-paths ["src/futon3c/transport/http.clj"]
+ :test-paths ["test/futon3c/transport/test_registry_http_test.clj"]}
