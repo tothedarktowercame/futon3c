@@ -589,7 +589,7 @@
                                (meaningful-agent-text (:text parsed)))
                 final-error (or (some-> error-text str/trim not-empty)
                                 (when-not (zero? exit)
-                                  (some-> (:text parsed) str/trim not-empty))
+                                  (meaningful-agent-text (:text parsed)))
                                 (some-> stderr str/trim not-empty))
                 ;; Retry on stale session (action.type error)
                 retry? (and (string? session-id)

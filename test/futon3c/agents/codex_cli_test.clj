@@ -166,6 +166,19 @@
           (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
 
+(deftest invoke-failure-with-only-thread-event-preserves-stderr
+  (let [invoke (codex-cli/make-invoke-fn {:cwd "/tmp"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [& _]
+                    {:exit 1 :timed-out? false :text nil :error-text nil
+                     :stderr "turn could not start: diagnostic from stderr"
+                     :raw-output "{\"type\":\"thread.started\",\"thread_id\":\"sid\"}\n"})]
+      (let [result (invoke "work" "sid")]
+        (is (nil? (:result result)))
+        (is (= "Exit 1: turn could not start: diagnostic from stderr"
+               (:error result)))
+        (is (= "sid" (:session-id result)))))))
+
 (deftest process-timeout-ms-defaults-to-unbounded
   (testing "nil / non-positive callers are unbounded"
     (is (nil? (codex-cli/process-timeout-ms nil)))
@@ -355,7 +368,7 @@
   (testing "real subprocess launch emits verified process/output lifecycle callbacks"
     (let [events (atom [])
           result (codex-cli/run-codex-stream!
-                  ["python" "-c"
+                  ["python3" "-c"
                    (str "import sys; sys.stdin.buffer.read(); "
                         "sys.stdout.write('{\\\"type\\\":\\\"thread.started\\\",\\\"thread_id\\\":\\\"sid-runtime\\\"}\\\\n'); "
                         "sys.stdout.flush(); "
@@ -389,7 +402,7 @@
   (testing "prompt text round-trips through the subprocess boundary as UTF-8"
     (let [prompt "Caller: irc:bob⚡️"
           result (codex-cli/run-codex-stream!
-                  ["python" "-c"
+                  ["python3" "-c"
                    (str "import sys; "
                         "data = sys.stdin.buffer.read(); "
                         "sys.stdout.buffer.write(data)")]
