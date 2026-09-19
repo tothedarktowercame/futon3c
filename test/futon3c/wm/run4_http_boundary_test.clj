@@ -1,7 +1,7 @@
 (ns futon3c.wm.run4-http-boundary-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [are deftest is]]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.transport.http :as http]
             [futon3c.wm.run4-attempt-admission :as admission]
@@ -150,5 +150,18 @@
                                    {:started true})]
       (is (= 200 (:status (handler (request {:author "legacy"} {})))))
       (is (= [{:author "legacy"}] @calls)))
+    ;; The scoped per-run tripwire disable: passes through as keywords,
+    ;; refuses unknown ids, refuses malformed payloads.
+    (with-redefs [service/click! (fn [opts] (swap! calls conj opts)
+                                   {:started true})]
+      (is (= 200 (:status (handler (request {:author "legacy"
+                                              :tripwire-disabled-wire-ids ["T8"]}
+                                     {})))))
+      (is (= [:T8] (:tripwire/disabled-wire-ids (last @calls)))))
+    (are [status payload] (= status (:status (handler (request payload {}))))
+      400 {:tripwire-disabled-wire-ids ["T99"]}
+      400 {:tripwire-disabled-wire-ids "T8"}
+      400 {:tripwire-disabled-wire-ids []}
+      400 {:tripwire-disabled-wire-ids [8]})
     (with-redefs [service/click! (constantly {:rejected :already-running})]
       (is (= 409 (:status (handler (request {} {}))))))))
