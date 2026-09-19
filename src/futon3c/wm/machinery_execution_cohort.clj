@@ -6,7 +6,8 @@
   binding refuses before the Futon2 runner is invoked.  RUN4 already supplies
   its own independently checked `:execution-cohort` and is left unchanged."
   (:require [clojure.edn :as edn]
-            [futon2.aif.c-fold-config :as digest]))
+            [futon2.aif.c-fold-config :as digest]
+            [futon2.aif.full-loop-cohort :as cohort]))
 
 (def binding-path
   "/home/joe/code/futon3c/holes/labs/wm-contract/cohort-execution-binding.edn")
@@ -53,8 +54,19 @@
 
 (defn apply-binding
   "Add the server-owned cohort unless an independently prepared server path
-  (currently RUN4) already supplied one."
+  (currently RUN4) already supplied one.
+
+  The bound cohort is resolved through its succession lineage, so an exhausted
+  cohort advances to its successor instead of standing as a refusal to run
+  (Joe, 2026-09-19: this should happen automatically, not via an officious bean
+  count). THE GUARANTEE IN THIS NAMESPACE'S DOCSTRING IS UNCHANGED: the binding
+  file and the digest constant above are untouched, and `resolve-lineage!`
+  follows only a chain that is a pure function of the bytes they pin -- a
+  successor is admitted solely when its id is exactly `successor-id` of its
+  parent, its :succeeds and :succeeds-sha256 name the parent's exact bytes, and
+  every other field is identical. Request data still cannot select this file,
+  its digest, or its paths."
   [opts]
   (if (contains? opts :execution-cohort)
     opts
-    (assoc opts :execution-cohort (execution-cohort))))
+    (assoc opts :execution-cohort (cohort/resolve-lineage! (execution-cohort)))))
