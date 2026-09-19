@@ -722,7 +722,10 @@
                               (seq (uncommitted-scope repo-root (map :path closure))))
         post (try {:code (capture-code options) :env (fingerprint options)}
                   (catch Exception e {:error (.getMessage e)}))
-        stable? (and (= code (:code post)) (= env (:env post)))
+        ;; HEAD is provenance, not part of the declared input scope.
+        stable? (and (= (dissoc code :git-head)
+                        (dissoc (:code post) :git-head))
+                     (= env (:env post)))
         record (merge common {:kind :run :finished-at (str (Instant/now)) :results results
                               :load-closure closure
                               :log-artifact (try (ledger/artifact
@@ -734,6 +737,7 @@
                                                            :log (str log-file)
                                                            :next-action :fix-the-ledger-and-re-register})))
                               :execution/stable? stable?
+                              :execution/post-code (:code post)
                               :runner-sha (when (vector? closure-entries)
                                             (runner-sha closure-entries repo-root))
                               :cost {:total-before-result-append-ms (long (/ (- (System/nanoTime) wall-start) 1000000))
