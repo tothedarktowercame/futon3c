@@ -1,0 +1,4 @@
+evidence-id test-registry-04e41efff20272519b4a59d1168a372c4800f5728362644195aa4dfc86b560fc
+warrant? true
+results {:assertions 13, :duration-ms 1913, :errors 0, :exit 0, :failures 0, :tests 3}
+bound test-registry/scoped-stability -> test-registry-04e41efff20272519b4a59d1168a372c4800f5728362644195aa4dfc86b560fc
