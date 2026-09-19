@@ -73,7 +73,8 @@
 (defn wm-trip-incidents
   "Read strict one-form EDN reports in DIR, sorted by canonical path."
   ([dir] (wm-trip-incidents dir nil))
-  ([dir subject-mapping]
+  ([dir subject-mapping] (wm-trip-incidents dir subject-mapping #{}))
+  ([dir subject-mapping excluded-sources]
    (let [root (io/file dir)]
      (when-not (.isDirectory root) (refuse! :trip-directory-missing {:path (str dir)}))
      (mapv (fn [file]
@@ -87,8 +88,9 @@
                 :incident {:kind :wm-tripwire :source path :at (:trip/recorded-at trip)
                            :detail {:wire-id wire :witness (:trip/witness trip)}}}))
            (sort-by #(.getCanonicalPath ^java.io.File %)
-                    (filter #(and (.isFile %) (str/ends-with? (.getName %) ".edn"))
-                            (or (seq (.listFiles root)) [])))))))
+                    (remove #(contains? excluded-sources (.getCanonicalPath ^java.io.File %))
+                            (filter #(and (.isFile %) (str/ends-with? (.getName %) ".edn"))
+                                    (or (seq (.listFiles root)) []))))))))
 
 (defn- already-seen [options adapter]
   (let [cursor (into #{} (comp (filter #(= adapter (:adapter %))) (map :source))
@@ -120,7 +122,9 @@
     (sweep-incidents! options :agency (agency-incidents response agency-subjects))))
 
 (defn sweep-wm-trips! [{:keys [trip-directory trip-subjects] :as options}]
-  (sweep-incidents! options :wm-trips (wm-trip-incidents trip-directory trip-subjects)))
+  (let [seen (already-seen options :wm-trips)]
+    (sweep-incidents! options :wm-trips
+                      (wm-trip-incidents trip-directory trip-subjects seen))))
 
 (defn sweep! [options selection]
   (case selection

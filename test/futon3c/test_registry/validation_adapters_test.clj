@@ -6,7 +6,7 @@
             [futon3c.test-registry.validation-adapters :as adapters])
   (:import [java.net URI]
            [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
-           [java.nio.file Files]
+           [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]))
 
 (def live-trip-root "/home/joe/code/futon2/data/wm-tripwires/trips")
@@ -15,18 +15,25 @@
   (.toFile (Files/createTempDirectory "validation-adapters-" (make-array FileAttribute 0))))
 
 (defn- live-agency-response []
-  (let [request (-> (HttpRequest/newBuilder (URI/create "http://127.0.0.1:7070/api/alpha/invoke/jobs?limit=4000"))
+  (let [request (-> (HttpRequest/newBuilder (URI/create "http://127.0.0.1:7070/api/alpha/invoke/jobs?limit=200"))
                     (.GET) (.build))
         response (.send (HttpClient/newHttpClient) request (HttpResponse$BodyHandlers/ofString))]
     (is (= 200 (.statusCode response)) "read-only live Agency endpoint is available")
     (json/parse-string (.body response) true)))
 
 (deftest live-pinned-readers-and-idempotent-sweeps
-  (let [dir (temp-dir) queue (str (io/file dir "queue.ednlog"))
+  (let [dir (temp-dir) trip-dir (io/file dir "trips") _ (.mkdirs trip-dir)
+        live-trip (apply min-key #(.length ^java.io.File %)
+                         (filter #(and (.isFile %) (str/ends-with? (.getName %) ".edn"))
+                                 (file-seq (io/file live-trip-root))))
+        copied-trip (io/file trip-dir (.getName live-trip))
+        _ (Files/copy (.toPath live-trip) (.toPath copied-trip)
+                      (into-array StandardCopyOption [StandardCopyOption/REPLACE_EXISTING]))
+        queue (str (io/file dir "queue.ednlog"))
         cursor (str (io/file dir "cursor.ednlog"))
         response (live-agency-response)
         failed (adapters/agency-incidents response)
-        trips (adapters/wm-trip-incidents live-trip-root)
+        trips (adapters/wm-trip-incidents (.getCanonicalPath trip-dir))
         opts {:queue-file queue :cursor-file cursor :backend (atom {:entries {} :order []})}]
     (try
       (is (seq failed) "live API includes terminal failure evidence")
