@@ -1,0 +1,70 @@
+(ns futon3c.transport.test-registry-http-test
+  (:require [cheshire.core :as json]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
+            [futon3c.test-registry :as registry]
+            [futon3c.test-registry.validation :as validation]
+            [futon3c.transport.http :as http])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
+
+(defn- json-body [response]
+  (json/parse-string (:body response) true))
+
+(deftest check-endpoint-is-the-existing-check-authority
+  (let [backend (atom {:entries {} :order []})
+        check! (fn [received-backend options]
+                 (is (identical? backend received-backend))
+                 (if (= "test-registry-real" (:entry-id options))
+                   {:warrant? true :entry-id (:entry-id options)
+                    :diff-paths (:changed-paths options)}
+                   {:record/type :test-registry/refusal
+                    :warrant? false :reason :record-not-found}))
+        payload {:entry-id "test-registry-real"
+                 :repo-root "/repo" :changed-paths ["src/a.clj"]}]
+    (with-redefs [registry/check-record! check!]
+      (let [direct (check! backend payload)
+            response (http/handle-test-registry-check
+                      {:body (json/generate-string payload)}
+                      {:evidence-store backend})]
+        (is (= 200 (:status response)))
+        (is (= direct (json-body response))))
+      (let [response (http/handle-test-registry-check
+                      {:body (json/generate-string
+                              (assoc payload :entry-id "fabricated"))}
+                      {:evidence-store backend})]
+        (is (false? (:warrant? (json-body response))))
+        (is (= "record-not-found" (:reason (json-body response))))))))
+
+(deftest report-endpoint-row-count-equals-current-subject-bindings
+  (let [root (.toFile (Files/createTempDirectory
+                       "test-registry-http-"
+                       (make-array FileAttribute 0)))
+        index (io/file root "data/test-registry-validation/subjects.ednlog")
+        backend (atom {:entries {} :order []})]
+    (try
+      (io/make-parents index)
+      (spit index
+            (str (pr-str {:entry/type :subject-binding :subject-id "subject-a"
+                          :warrant-id "warrant-a" :actor "test"
+                          :at "2026-09-19T00:00:00Z"}) "\n"
+                 (pr-str {:entry/type :subject-binding :subject-id "subject-b"
+                          :warrant-id "warrant-b" :actor "test"
+                          :at "2026-09-19T00:00:01Z"}) "\n"))
+      (with-redefs-fn
+        {#'futon3c.test-registry.validation/check-binding
+         (fn [_ binding] {:verdict :current :check {:warrant? true
+                                                    :entry-id (:warrant-id binding)}})}
+        (fn []
+          (let [response (http/handle-test-registry-report
+                          {} {:evidence-store backend
+                              :test-registry-root (.getAbsolutePath root)})
+                body (json-body response)
+                binding-count (count (validation/subjects
+                                      {:index-file (.getAbsolutePath index)}))]
+            (is (= 200 (:status response)))
+            (is (= binding-count (count (:rows body))))
+            (is (= binding-count (get-in body [:summary :current]))))))
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (io/delete-file file true))))))

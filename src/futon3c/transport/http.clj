@@ -2426,6 +2426,46 @@
   (or (:evidence-store config)
       (get-in config [:registry :peripheral-config :evidence-store])))
 
+(def ^:private default-test-registry-root "/home/joe/code/futon3c")
+
+(declare parse-json-map)
+
+(defn- test-registry-validation-options
+  "Bind validation reads to this server's evidence store and canonical ledgers."
+  [config]
+  (let [root (io/file (or (:test-registry-root config)
+                          default-test-registry-root))]
+    {:backend (evidence-store-for-config config)
+     :index-file (str (io/file root "data/test-registry-validation/subjects.ednlog"))
+     :queue-file (str (io/file root "data/test-registry-validation/revalidation.ednlog"))}))
+
+(defn handle-test-registry-check
+  "POST /api/alpha/test-registry/check — read one existing warrant."
+  [request config]
+  (if-let [payload (parse-json-map (read-body request))]
+    (try
+      (let [check! (requiring-resolve 'futon3c.test-registry/check-record!)
+            result (check! (evidence-store-for-config config)
+                           (select-keys payload [:entry-id :repo-root :changed-paths]))]
+        (json-response 200 result))
+      (catch Throwable throwable
+        (json-response 500 {:record/type :test-registry/refusal
+                            :reason :check-endpoint-failed
+                            :details {:message (.getMessage throwable)}})))
+    (json-response 400 {:record/type :test-registry/refusal
+                        :reason :invalid-json})))
+
+(defn handle-test-registry-report
+  "GET /api/alpha/test-registry/report — conformance over default bindings."
+  [_request config]
+  (try
+    (let [report! (requiring-resolve 'futon3c.test-registry.validation/report!)]
+      (json-response 200 (report! (test-registry-validation-options config))))
+    (catch Throwable throwable
+      (json-response 500 {:record/type :test-registry.validation/refusal
+                          :reason :report-endpoint-failed
+                          :details {:message (.getMessage throwable)}}))))
+
 (defn- expected-http-kit-shutdown-close?
   "True when `http-kit` accept-loop emitted an expected close exception while stopping."
   [msg ex]
@@ -8767,6 +8807,12 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :post method) (= "/api/alpha/test-registry/check" uri))
+      (handle-test-registry-check request config)
+
+      (and (= :get method) (= "/api/alpha/test-registry/report" uri))
+      (handle-test-registry-report request config)
+
       ;; POST /api/alpha/agents/:id/compact — raw /compact control for a warm
       ;; pouch (handoff 4, 2026-08-22). Lives here, not in make-handler's cond,
       ;; so a plain Drawbridge reload activates it (reload-safe route contract).
