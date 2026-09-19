@@ -56,14 +56,13 @@
       (loop [] (let [n (.read in buffer)]
                  (when (pos? n) (.update md buffer 0 n) (recur)))))
     (format "%064x" (BigInteger. 1 (.digest md)))))
-(def ^:dynamic *test-environment* {})
+(def canonical-environment {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"})
+(defn ambient-environment [] (into {} (System/getenv)))
 (defn test-environment [options]
-  (let [env (:test-environment options {})]
-    (when-not (and (map? env) (every? #{"LC_ALL" "LANG" "TZ"} (keys env))
-                   (every? nonblank? (vals env)))
-      (fail! :invalid-test-environment {:allowed-keys ["LC_ALL" "LANG" "TZ"]}))
-    env))
-(defn effective-environment [] (merge (into {} (System/getenv)) *test-environment*))
+  (when (contains? options :test-environment)
+    (fail! :environment-not-configurable {:canonical-environment canonical-environment}))
+  canonical-environment)
+(defn effective-environment [] (merge (ambient-environment) canonical-environment))
 
 (defn command! [root argv]
   (let [r (apply shell/sh (concat argv [:dir root :env (effective-environment)]))]
@@ -296,10 +295,9 @@
     (assoc parts :sha256 (sha parts))))
 
 (defn fingerprint [options]
-  (binding [*test-environment* (test-environment options)]
-    (if (= "lake" (first (:command options)))
-      (lean-fingerprint* options)
-      (fingerprint* options))))
+  (if (= "lake" (first (:command options)))
+    (lean-fingerprint* options)
+    (fingerprint* options)))
 
 (defn test-namespace-of
   "The single declared test namespace (validate-command! enforces exactly one -n)."
@@ -670,7 +668,7 @@
   [root command log-file]
   (let [builder (ProcessBuilder. ^java.util.List (execution-command command (closure-out-file log-file)))
         _ (.directory builder (io/file root))
-        _ (.putAll (.environment builder) *test-environment*)
+        _ (.putAll (.environment builder) (effective-environment))
         _ (.redirectErrorStream builder true)
         _ (.redirectOutput builder (io/file log-file))
         start (System/nanoTime) process (.start builder) exit (.waitFor process)]
@@ -680,6 +678,7 @@
   "Run and register mechanically. Intent survives interrupted runs; a failed
   append leaves no warrant. Logs are artifacts, not a separate ledger."
   [backend {:keys [repo-root command author artifact-dir] :as options}]
+  (test-environment options)
   (validate-command! command)
   (when-not (and (nonblank? author) (nonblank? artifact-dir))
     (fail! :author-and-artifact-directory-required {}))
@@ -690,7 +689,7 @@
                                     (concat (keys (:code-files code)) (keys (:test-files code)))
                                     :scope)
         common (merge code {:run/id id :author author :ran-at start :repo/root repo-root
-                            :scope (select-keys options [:code-paths :test-paths :test-environment])
+                            :scope (select-keys options [:code-paths :test-paths])
                             :command command :env-fingerprint env
                             :reader-version reader-version
                             :origin (:origin options "agency-local")})
@@ -698,8 +697,7 @@
         _ (.mkdirs (io/file artifact-dir))
         log-file (io/file artifact-dir (str id ".log"))
         _ (when-not (.createNewFile log-file) (fail! :artifact-already-exists {:path (str log-file)}))
-        results (try (binding [*test-environment* (test-environment options)]
-                       (run-process! repo-root command log-file))
+        results (try (run-process! repo-root command log-file)
                      (catch Exception e {:exit (none :process-failed) :tests (none :process-failed)
                                          :assertions (none :process-failed) :failures (none :process-failed)
                                          :errors (none :process-failed) :duration-ms (none :process-failed)

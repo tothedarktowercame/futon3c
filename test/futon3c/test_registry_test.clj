@@ -306,19 +306,16 @@
          (is (= "other" (get-in r [:details :observed-only :jvm :version])))
          (is (= :reconcile-test-environment (get-in r [:details :next-action]))))))))
 
-(deftest declared-locale-is-applied-to-the-actual-test-process
+(deftest locale-configuration-is-retired
   (fixture
    (fn [{:keys [backend options]}]
-     (let [execute registry/run-process! observed (atom nil)
-           locale {"LC_ALL" "C.UTF-8" "LANG" "C.UTF-8" "TZ" "UTC"}
-           run (with-redefs [registry/run-process! (fn [& args]
-                                                   (reset! observed (select-keys (registry/effective-environment) (keys locale)))
-                                                   (apply execute args))]
-                 (registry/register-run! backend (assoc options :test-environment locale)))]
-       (is (= locale @observed))
-       (is (= locale (get-in run [:payload :scope :test-environment])))
-       (is (thrown? clojure.lang.ExceptionInfo
-                    (registry/test-environment {:test-environment {"UNDECLARED" "value"}})))))))
+     (try
+       (registry/register-run! backend (assoc options :test-environment {}))
+       (is false "Retired spec key must refuse, including an empty map")
+       (catch clojure.lang.ExceptionInfo e
+         (is (= :environment-not-configurable (:reason (ex-data e))))
+         (is (= registry/canonical-environment
+                (get-in (ex-data e) [:details :canonical-environment]))))))))
 
 (deftest ^:slow clojure-closure-covers-dynamic-loads-and-resources
   ;; Real processes in a temp project: the test body loads `dyn` only through
