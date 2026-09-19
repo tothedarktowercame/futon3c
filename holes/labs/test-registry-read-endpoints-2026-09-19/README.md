@@ -58,3 +58,21 @@ After canonical namespace reload, `check-shape.json` contains only top-level
 `missing-entry`. Warm live reads were 0.868 seconds for check and 0.001 seconds
 for report. `pouch-shape.http` records HTTP 200 after reload. Static amendment
 receipts are `clj-kondo-shape.txt` and `check-parens-shape.txt`.
+
+## Drift provenance and report completeness
+
+Implementation commit `641db0252ac675a25242d34492879ee7a630eeb0`
+keeps `:stale-sha` unchanged while adding `:details/:scope-drift`, whose
+per-path `:classification` is `:uncommitted` for worktree-dirty bytes and
+`:committed` for reproducible superseding commits. The check response meaning
+now tells polling clients to wait rather than re-dispatch on uncommitted drift.
+Report summaries include `:subjects`, equal to `(count :rows)`.
+
+The registered warrant is
+`test-registry-53d40f7b96a8346b3b43af3fe455e76e5cd456a39412c90212663ea026a18346`:
+4 tests, 23 assertions, zero failures/errors. `register-drift.*` and
+`drift-execution/` are the run receipts. After canonical hot reload, the new
+warrant checked current in 0.907 seconds; the superseded prior warrant named
+both changed files as `:committed` in 1.037 seconds; the warm report returned
+18 rows and `:summary/:subjects` 18 in 0.001 seconds. Static receipts are
+`clj-kondo-drift.txt` and `check-parens-drift.txt`.
