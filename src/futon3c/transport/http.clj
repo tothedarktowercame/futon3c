@@ -8657,34 +8657,6 @@
             :message (or (.getMessage e) "Strategic selection failed")
             :data (ex-data e)}))))))
 
-(defn- parse-disabled-wires
-  "Validate the per-run tripwire disables a click requests. The runner already
-   honours :tripwire/disabled-wire-ids per run (futon2.aif.tripwire enabled?
-   checks it alongside the registry), so this exposes the existing scoped seam
-   rather than adding a new one: nothing here mutates the process-wide wire
-   registry, and the disable dies with the click. Every requested id must name
-   a registered wire; an unresolvable registry is a refusal, not a pass."
-  [ids]
-  (when-not (and (vector? ids) (seq ids) (every? nonblank-string? ids))
-    (throw (ex-info "tripwire-disabled-wire-ids must be a non-empty array of wire-id strings"
-                    {:status 400
-                     :error :invalid-tripwire-disabled-wire-ids})))
-  ;; wire-registry's var holds an atom; deref the var (resolve), then the atom.
-  (let [registry (try (deref (deref (requiring-resolve
-                                     'futon2.aif.tripwire/wire-registry)))
-                      (catch Throwable _
-                        (throw (ex-info "tripwire registry unavailable; refusing scoped disable"
-                                        {:status 503
-                                         :error :tripwire-registry-unavailable}))))
-        wire-ids (mapv keyword ids)]
-    (doseq [wire-id wire-ids]
-      (when-not (contains? registry wire-id)
-        (throw (ex-info (str "unknown tripwire wire-id " (name wire-id))
-                        {:status 400
-                         :error :unknown-tripwire-wire-id
-                         :wire-id (name wire-id)}))))
-    wire-ids))
-
 (defn- handle-wm-click-start
   [request config]
   (let [payload (parse-json-map (read-body request))]
@@ -8708,11 +8680,7 @@
                      (assoc :trigger (keyword (:trigger payload)))
 
                      (true? (:measured-acquisition payload))
-                     (assoc :measured-acquisition? true)
-
-                     (contains? payload :tripwire-disabled-wire-ids)
-                     (assoc :tripwire/disabled-wire-ids
-                            (parse-disabled-wires (:tripwire-disabled-wire-ids payload))))
+                     (assoc :measured-acquisition? true))
               _ (when (and (true? (:r10-commissioned payload))
                            (contains? payload :run4-pin-ref))
                   (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
