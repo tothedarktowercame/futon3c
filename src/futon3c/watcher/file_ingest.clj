@@ -1387,6 +1387,16 @@
                      :provenance {:note (str ":pattern/has-" (name facet))
                                   :source "multi-watcher-flexiarg"}})
                   facets clause-entities)
+            ;; @why/@see-also are :split directives in the shared parser, but
+            ;; library files since 2026-09-05 annotate them with prose, so the
+            ;; token list mixes pattern ids with sentence fragments ("basis:",
+            ;; "(L14", ...). Only id-shaped tokens can be relation endpoints;
+            ;; the rest are recorded, not posted — one prose word must not
+            ;; refuse the batch.
+            id-shaped? (fn [t] (boolean (re-matches #"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)+" (str t))))
+            semantic-pairs (mapcat (fn [[semantic-kind targets]]
+                                     (map #(vector semantic-kind %) targets))
+                                   semantic-targets)
             semantic-relation-specs
             (mapv (fn [[semantic-kind target]]
                     (let [relation-type (str ":pattern/has-" (name semantic-kind))]
@@ -1395,18 +1405,32 @@
                        :dst target
                        :provenance {:note relation-type
                                     :source "multi-watcher-flexiarg"}}))
-                  (mapcat (fn [[semantic-kind targets]]
-                            (map #(vector semantic-kind %) targets))
-                          semantic-targets))
-            relation-specs (into clause-relation-specs semantic-relation-specs)]
+                  (filter (comp id-shaped? second) semantic-pairs))
+            skipped-semantic (mapv second (remove (comp id-shaped? second) semantic-pairs))]
         (swap! stats update :patterns inc)
         (swap! stats update :clauses + (count facets))
         (swap! stats update :facets into (mapv (comp name :facet) facets))
+        (when (seq skipped-semantic)
+          (swap! stats update :semantic-targets-skipped (fnil into []) skipped-semantic))
         ;; Endpoint resolution happens only after the entity batch has returned
-        ;; from its post-commit read-back verification.
-        (when (seq relation-specs)
-          (let [relation-r (post-relations-batch! relation-specs)]
-            (swap! stats update :relations + (:count relation-r))))))
+        ;; from its post-commit read-back verification. Clause relations and
+        ;; semantic relations post as SEPARATE batches: clause endpoints were
+        ;; created above and must land; a semantic target may point at a
+        ;; pattern that does not exist, and that failure is recorded per file
+        ;; rather than allowed to take the clause links down with it.
+        (when (seq clause-relation-specs)
+          (let [relation-r (post-relations-batch! clause-relation-specs)]
+            (swap! stats update :relations + (:count relation-r))))
+        (when (seq semantic-relation-specs)
+          (try
+            (let [relation-r (post-relations-batch! semantic-relation-specs)]
+              (swap! stats update :relations + (:count relation-r)))
+            (catch Exception e
+              (swap! stats update :semantic-relation-failures (fnil conj [])
+                     {:pattern pid
+                      :dsts (mapv :dst semantic-relation-specs)
+                      :error (or (get-in (ex-data e) [:body :error :message])
+                                 (ex-message e))}))))))
     @stats))
 
 (defn dispatch!
