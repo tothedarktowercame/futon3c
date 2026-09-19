@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon3c"
+ :subject-id "test-registry/canonical-environment"
+ :command ["clojure" "-M:test" "-n" "futon3c.test-registry-environment-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/registry-canonical-environment-2026-09-19/corrected-execution"
+ :code-paths ["src/futon3c/test_registry.clj"]
+ :test-paths ["test/futon3c/test_registry_environment_test.clj" "test/futon3c/test_registry_test.clj"]}

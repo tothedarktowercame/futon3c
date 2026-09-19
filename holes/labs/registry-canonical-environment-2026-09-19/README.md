@@ -21,3 +21,16 @@ The follow-up assertion correction excludes only :checked-at when comparing the 
 Coverage: real environment fingerprint construction under two ambient locale/timezone maps, retired specs rejected before execution, nested/plain check agreement, and an actual child process printing its canonical trio. Toolchain probes and test execution for fixture warrants are stubbed; the child-environment test really spawns a short shell. The old registry test for configurable locale was updated to expect explicit retirement.
 
 No :6768 reload, migration, or unrelated registration. Gate outputs, spec, CLI stdout/stderr/exit, execution log, closure and durable HTTP evidence are adjacent.
+
+## Corrected-content execution — separately authorized
+
+Claude-12 authorized one execution of the corrected test content from `0a71a836`. The command was `clojure -M -m futon3c.test-registry.validation register holes/labs/registry-canonical-environment-2026-09-19/corrected-register.edn`. The scope includes the registry source, environment test and fixture namespace. No code changed in this follow-up.
+
+```text
+evidence-id test-registry-0bd83851e1a42d3179048e558e55423b31988615bbf807ee15d8f3a921d3bf08
+warrant? true
+results {:assertions 20, :duration-ms 2043, :errors 0, :exit 0, :failures 0, :tests 4}
+bound test-registry/canonical-environment -> test-registry-0bd83851e1a42d3179048e558e55423b31988615bbf807ee15d8f3a921d3bf08
+```
+
+CLI exit: 0. The corrected suite passed once: 4 tests, 20 assertions, zero failures/errors. The durable warrant is bound to `test-registry/canonical-environment`; its HTTP evidence response is retained as `corrected-run.evidence.json`. Self-warrant acceptance is now complete. Earlier failed receipts remain intact; new runner log and closure are in `corrected-execution/`.
