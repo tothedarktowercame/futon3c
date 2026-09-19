@@ -6,6 +6,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.evidence.http-backend :as http-backend]
             [futon3c.evidence.store :as store]
             [futon3c.test-registry :as registry])
   (:import [java.nio.file Files StandardOpenOption]
@@ -32,6 +33,40 @@
                                    [StandardOpenOption/CREATE StandardOpenOption/APPEND]))
     value))
 
+(defn resolve-options
+  "Standalone callers use the same HTTP evidence backend as the registry CLI.
+  An explicitly supplied isolated backend remains available for library/tests;
+  the process-local default store is never used for validation warrants."
+  [options]
+  (if (and (:backend options) (not (identical? store/!store (:backend options))))
+    options
+    (assoc options :backend
+           (http-backend/make-http-backend
+            (or (:agency-url options)
+                (System/getenv "FUTON3C_AGENCY_URL")
+                (System/getenv "FUTON3C_AGENCY_BASE")
+                "http://localhost:7070")))))
+
+(defn- record-refusals! [file operation attempted-args f]
+  (try
+    (f)
+    (catch clojure.lang.ExceptionInfo original
+      (let [{:keys [reason details]} (ex-data original)]
+        (try
+          (append-edn! file
+                       {:entry/type :refusal :entry/id (str (UUID/randomUUID))
+                        :operation operation :reason reason :details details
+                        :at (str (Instant/now)) :attempted-args attempted-args})
+          (catch Exception append-error
+            ;; Even an unwritable/missing ledger must not replace the refusal.
+            (try
+              (binding [*out* *err*]
+                (println "validation refusal trace append failed:"
+                         (str file) (.getMessage append-error)
+                         "original refusal:" reason))
+              (catch Exception _ nil)))))
+      (throw original))))
+
 (defn- read-ledger [file]
   (let [f (io/file file)]
     (if-not (.isFile f)
@@ -44,16 +79,22 @@
 
 (defn bind-subject!
   "Append a subject -> warrant binding. Rebinding preserves prior entries."
-  [{:keys [index-file]} subject-id warrant-id actor at]
-  (when-not (every? nonblank? [index-file subject-id warrant-id actor])
-    (refuse! :binding-invalid {:subject-id subject-id :warrant-id warrant-id :actor actor}))
-  (instant! at :at)
-  (append-edn! index-file
-               {:entry/type :subject-binding :entry/id (str (UUID/randomUUID))
-                :subject-id subject-id :warrant-id warrant-id :actor actor :at at}))
+  [{:keys [index-file] :as options} subject-id warrant-id actor at]
+  (record-refusals!
+   index-file :bind-subject!
+   {:options (dissoc options :backend) :subject-id subject-id
+    :warrant-id warrant-id :actor actor :at at}
+   (fn []
+     (when-not (every? nonblank? [index-file subject-id warrant-id actor])
+        (refuse! :binding-invalid {:subject-id subject-id :warrant-id warrant-id :actor actor}))
+      (instant! at :at)
+      (append-edn! index-file
+                   {:entry/type :subject-binding :entry/id (str (UUID/randomUUID))
+                    :subject-id subject-id :warrant-id warrant-id :actor actor :at at}))))
 
 (defn subjects [{:keys [index-file]}]
   (->> (read-ledger index-file)
+       (remove #(= :refusal (:entry/type %)))
        (filter #(= :subject-binding (:entry/type %)))
        (reduce (fn [m entry] (assoc m (:subject-id entry) entry)) (sorted-map))))
 
@@ -61,21 +102,26 @@
   (get (subjects options) subject-id))
 
 (defn enqueue-revalidation!
-  [{:keys [queue-file]} {:keys [subject-id incident]}]
-  (when-not (and (nonblank? queue-file) (nonblank? subject-id) (map? incident)
-                 (keyword? (:kind incident)) (nonblank? (:source incident))
-                 (contains? incident :detail))
-    (refuse! :incident-invalid {:subject-id subject-id :incident incident}))
-  (instant! (:at incident) :incident-at)
-  (append-edn! queue-file
-               {:entry/type :revalidation-opened :entry/id (str (UUID/randomUUID))
-                :subject-id subject-id :incident incident}))
+  [{:keys [queue-file] :as options} {:keys [subject-id incident] :as request}]
+  (record-refusals!
+   queue-file :enqueue-revalidation!
+   {:options (dissoc options :backend) :request request}
+   (fn []
+     (when-not (and (nonblank? queue-file) (nonblank? subject-id) (map? incident)
+                     (keyword? (:kind incident)) (nonblank? (:source incident))
+                     (contains? incident :detail))
+        (refuse! :incident-invalid {:subject-id subject-id :incident incident}))
+      (instant! (:at incident) :incident-at)
+      (append-edn! queue-file
+                   {:entry/type :revalidation-opened :entry/id (str (UUID/randomUUID))
+                    :subject-id subject-id :incident incident}))))
 
 (defn- queue-state [queue-file]
   (reduce (fn [state entry]
             (case (:entry/type entry)
               :revalidation-opened (assoc state (:entry/id entry) entry)
               :revalidation-closed (dissoc state (:queue-entry-id entry))
+              :refusal state
               (refuse! :queue-ledger-invalid {:entry entry})))
           (sorted-map) (read-ledger queue-file)))
 
@@ -94,27 +140,33 @@
 (defn close-revalidation!
   "Close ENTRY-ID only with the subject's currently bound run warrant, minted
   strictly after its incident. The new binding must already be appended."
-  [{:keys [backend queue-file] :as options} entry-id warrant-id actor at]
-  (let [open (get (queue-state queue-file) entry-id)]
-    (when-not open (refuse! :revalidation-not-open {:entry-id entry-id}))
-    (when-not (every? nonblank? [warrant-id actor])
-      (refuse! :closure-invalid {:entry-id entry-id}))
-    (instant! at :at)
-    (let [binding (subject-binding options (:subject-id open))
-          warrant (warrant-payload! backend warrant-id)
-          incident-at (instant! (get-in open [:incident :at]) :incident-at)
-          minted-at (instant! (:finished-at warrant) :warrant-finished-at)]
-      (when-not (= warrant-id (:warrant-id binding))
-        (refuse! :fresh-warrant-not-bound
-                 {:subject-id (:subject-id open) :warrant-id warrant-id
-                  :bound-warrant-id (:warrant-id binding)}))
-      (when-not (.isAfter minted-at incident-at)
-        (refuse! :warrant-not-fresh
-                 {:incident-at (str incident-at) :warrant-finished-at (str minted-at)}))
-      (append-edn! queue-file
-                   {:entry/type :revalidation-closed :entry/id (str (UUID/randomUUID))
-                    :queue-entry-id entry-id :subject-id (:subject-id open)
-                    :warrant-id warrant-id :actor actor :at at}))))
+  [{:keys [queue-file] :as options} entry-id warrant-id actor at]
+  (record-refusals!
+   queue-file :close-revalidation!
+   {:options (dissoc options :backend) :entry-id entry-id
+    :warrant-id warrant-id :actor actor :at at}
+   (fn []
+     (let [{:keys [backend] :as options} (resolve-options options)
+           open (get (queue-state queue-file) entry-id)]
+       (when-not open (refuse! :revalidation-not-open {:entry-id entry-id}))
+       (when-not (every? nonblank? [warrant-id actor])
+         (refuse! :closure-invalid {:entry-id entry-id}))
+       (instant! at :at)
+       (let [binding (subject-binding options (:subject-id open))
+             warrant (warrant-payload! backend warrant-id)
+             incident-at (instant! (get-in open [:incident :at]) :incident-at)
+             minted-at (instant! (:finished-at warrant) :warrant-finished-at)]
+         (when-not (= warrant-id (:warrant-id binding))
+           (refuse! :fresh-warrant-not-bound
+                    {:subject-id (:subject-id open) :warrant-id warrant-id
+                     :bound-warrant-id (:warrant-id binding)}))
+         (when-not (.isAfter minted-at incident-at)
+           (refuse! :warrant-not-fresh
+                    {:incident-at (str incident-at) :warrant-finished-at (str minted-at)}))
+         (append-edn! queue-file
+                      {:entry/type :revalidation-closed :entry/id (str (UUID/randomUUID))
+                       :queue-entry-id entry-id :subject-id (:subject-id open)
+                       :warrant-id warrant-id :actor actor :at at}))))))
 
 (defn- check-binding [backend binding]
   (try
@@ -137,8 +189,9 @@
         {:verdict (if (= :warrant-not-found reason) :no-warrant :unverifiable)
          :reason reason :detail (.getMessage e)}))))
 
-(defn conformance [{:keys [backend] :as options}]
-  (let [open-by-subject (group-by :subject-id (revalidation-queue options))]
+(defn conformance [options]
+  (let [{:keys [backend] :as options} (resolve-options options)
+        open-by-subject (group-by :subject-id (revalidation-queue options))]
     (mapv (fn [[subject-id binding]]
             (if-let [open (seq (get open-by-subject subject-id))]
               {:subject-id subject-id :warrant-id (:warrant-id binding)
@@ -166,14 +219,20 @@
   :artifact-dir :code-paths :test-paths ...) plus optional :subject-id.
   Returns {:record ... :binding ...}; no warrant => no binding, and the
   typed reason is in the record — this CLI reports, it does not gate."
-  [{:keys [backend] :as options} spec]
-  (let [rec (registry/register-run! backend (dissoc spec :subject-id))
-        eid (:evidence/id rec)
-        warrant? (boolean (or (get-in rec [:payload :warrant?]) (:warrant? rec)))
-        binding (when (and warrant? (:subject-id spec))
-                  (bind-subject! options (:subject-id spec) eid
-                                 (:author spec) (str (Instant/now))))]
-    {:record rec :evidence-id eid :warrant? warrant? :binding binding}))
+  [options spec]
+  (record-refusals!
+   (:index-file options) :register-and-bind!
+   {:options (dissoc options :backend) :spec spec}
+   (fn []
+     (let [{:keys [backend] :as options}
+           (resolve-options (merge (select-keys spec [:agency-url]) options))
+           rec (registry/register-run! backend (dissoc spec :subject-id))
+           eid (:evidence/id rec)
+           warrant? (boolean (or (get-in rec [:payload :warrant?]) (:warrant? rec)))
+           binding (when (and warrant? (:subject-id spec))
+                     (bind-subject! options (:subject-id spec) eid
+                                    (:author spec) (str (Instant/now))))]
+       {:record rec :evidence-id eid :warrant? warrant? :binding binding}))))
 
 (def ^:private default-files
   {:index-file (or (System/getenv "FUTON3C_VALIDATION_INDEX")
@@ -182,24 +241,30 @@
                    "data/test-registry-validation/revalidation.ednlog")})
 
 (defn -main [& [command arg]]
-  (let [options (assoc default-files :backend store/!store)]
-    (case command
-      "report" (report! options)
-      "register"
-      (if-not (and arg (.isFile (io/file arg)))
+  (try
+    (let [config (when (and arg (.isFile (io/file arg)))
+                   (edn/read-string (slurp arg)))
+          options (resolve-options
+                   (merge default-files
+                          (select-keys config [:index-file :queue-file :agency-url])))]
+      (case command
+        "report" (report! options)
+        "register"
+        (if-not (and arg (.isFile (io/file arg)))
+          (do (binding [*out* *err*]
+                (println "register needs a spec file: ... validation register <spec.edn>"))
+              (System/exit 2))
+          (let [spec config
+                {:keys [evidence-id warrant? binding record]}
+                (register-and-bind! options spec)]
+            (println "evidence-id" evidence-id)
+            (println "warrant?" warrant?)
+            (println "results" (pr-str (or (get-in record [:payload :results])
+                                           (:results record))))
+            (when binding
+              (println "bound" (:subject-id binding) "->" (:warrant-id binding)))
+            (when-not warrant? (System/exit 1))))
         (do (binding [*out* *err*]
-              (println "register needs a spec file: ... validation register <spec.edn>"))
-            (System/exit 2))
-        (let [spec (edn/read-string (slurp arg))
-              {:keys [evidence-id warrant? binding record]}
-              (register-and-bind! options spec)]
-          (println "evidence-id" evidence-id)
-          (println "warrant?" warrant?)
-          (println "results" (pr-str (or (get-in record [:payload :results])
-                                         (:results record))))
-          (when binding
-            (println "bound" (:subject-id binding) "->" (:warrant-id binding)))
-          (when-not warrant? (System/exit 1))))
-      (do (binding [*out* *err*]
-            (println "usage: ... validation report | register <spec.edn>"))
-          (System/exit 2)))))
+              (println "usage: ... validation report [config.edn] | register <spec.edn>"))
+            (System/exit 2))))
+    (finally (shutdown-agents))))

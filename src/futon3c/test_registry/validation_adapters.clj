@@ -6,7 +6,6 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.apm.job-port :as job-port]
-            [futon3c.evidence.store :as store]
             [futon3c.test-registry.validation :as validation])
   (:import [java.io PushbackReader]
            [java.nio.file Files StandardOpenOption]))
@@ -137,8 +136,7 @@
   (when-not (and (= "sweep" command) (contains? #{"agency" "wm-trips" "all"} selection))
     (binding [*out* *err*] (println "usage: ... validation-adapters sweep [agency|wm-trips|all]"))
     (System/exit 2))
-  (let [result (sweep! {:backend store/!store
-                        :request-fn (fn [method url body]
+  (let [result (sweep! {:request-fn (fn [method url body]
                                       ((requiring-resolve 'futon3c.apm.live-preflight-runtime/http-json)
                                        method url body))
                         :agency-base (or (System/getenv "FUTON3C_AGENCY_BASE") "http://127.0.0.1:7070")
