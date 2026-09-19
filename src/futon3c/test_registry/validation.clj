@@ -154,12 +154,52 @@
     (println "SUMMARY" (pr-str (into (sorted-map) counts)))
     {:rows rows :summary counts}))
 
-(defn -main [& [command]]
-  (if (= "report" command)
-    (report! {:backend store/!store
-              :index-file (or (System/getenv "FUTON3C_VALIDATION_INDEX")
-                              "data/test-registry-validation/subjects.ednlog")
-              :queue-file (or (System/getenv "FUTON3C_REVALIDATION_QUEUE")
-                              "data/test-registry-validation/revalidation.ednlog")})
-    (do (binding [*out* *err*] (println "usage: ... validation report"))
-        (System/exit 2))))
+(defn register-and-bind!
+  "The end-to-end mint: register-run! (the registry runner executes the
+  command once and the ledger holds intent -> run -> closure), then, when a
+  warrant resulted and the spec names a :subject-id, bind it. This is the
+  invocation that existed only in one agent's transcript until 2026-09-19
+  (claude-4, r112: an unregistered verification run 'is a claim, not
+  evidence' precisely because this entry point was missing).
+
+  spec keys: register-run!'s options (:repo-root :command :author
+  :artifact-dir :code-paths :test-paths ...) plus optional :subject-id.
+  Returns {:record ... :binding ...}; no warrant => no binding, and the
+  typed reason is in the record — this CLI reports, it does not gate."
+  [{:keys [backend] :as options} spec]
+  (let [rec (registry/register-run! backend (dissoc spec :subject-id))
+        eid (:evidence/id rec)
+        warrant? (boolean (or (get-in rec [:payload :warrant?]) (:warrant? rec)))
+        binding (when (and warrant? (:subject-id spec))
+                  (bind-subject! options (:subject-id spec) eid
+                                 (:author spec) (str (Instant/now))))]
+    {:record rec :evidence-id eid :warrant? warrant? :binding binding}))
+
+(def ^:private default-files
+  {:index-file (or (System/getenv "FUTON3C_VALIDATION_INDEX")
+                   "data/test-registry-validation/subjects.ednlog")
+   :queue-file (or (System/getenv "FUTON3C_REVALIDATION_QUEUE")
+                   "data/test-registry-validation/revalidation.ednlog")})
+
+(defn -main [& [command arg]]
+  (let [options (assoc default-files :backend store/!store)]
+    (case command
+      "report" (report! options)
+      "register"
+      (if-not (and arg (.isFile (io/file arg)))
+        (do (binding [*out* *err*]
+              (println "register needs a spec file: ... validation register <spec.edn>"))
+            (System/exit 2))
+        (let [spec (edn/read-string (slurp arg))
+              {:keys [evidence-id warrant? binding record]}
+              (register-and-bind! options spec)]
+          (println "evidence-id" evidence-id)
+          (println "warrant?" warrant?)
+          (println "results" (pr-str (or (get-in record [:payload :results])
+                                         (:results record))))
+          (when binding
+            (println "bound" (:subject-id binding) "->" (:warrant-id binding)))
+          (when-not warrant? (System/exit 1))))
+      (do (binding [*out* *err*]
+            (println "usage: ... validation report | register <spec.edn>"))
+          (System/exit 2)))))
