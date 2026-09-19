@@ -68,3 +68,24 @@
       (finally
         (doseq [file (reverse (file-seq root))]
           (io/delete-file file true))))))
+
+(deftest report-endpoint-reuses-authoritative-result-while-ledgers-are-unchanged
+  (let [root (.toFile (Files/createTempDirectory
+                       "test-registry-http-cache-"
+                       (make-array FileAttribute 0)))
+        calls (atom 0)
+        report {:rows [{:subject-id "subject-a" :verdict :current}]
+                :summary {:current 1}}
+        json-report (json/parse-string (json/generate-string report) true)]
+    (try
+      (reset! @#'futon3c.transport.http/test-registry-report-cache nil)
+      (with-redefs [validation/report! (fn [_] (swap! calls inc) report)]
+        (let [config {:evidence-store (atom {})
+                      :test-registry-root (.getAbsolutePath root)}]
+          (is (= json-report (json-body (http/handle-test-registry-report {} config))))
+          (is (= json-report (json-body (http/handle-test-registry-report {} config))))
+          (is (= 1 @calls) "warm read does not recompute conformance")))
+      (finally
+        (reset! @#'futon3c.transport.http/test-registry-report-cache nil)
+        (doseq [file (reverse (file-seq root))]
+          (io/delete-file file true))))))

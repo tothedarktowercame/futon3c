@@ -2427,6 +2427,8 @@
       (get-in config [:registry :peripheral-config :evidence-store])))
 
 (def ^:private default-test-registry-root "/home/joe/code/futon3c")
+(def ^:private test-registry-report-cache-ms 30000)
+(defonce ^:private test-registry-report-cache (atom nil))
 
 (declare parse-json-map)
 
@@ -2438,6 +2440,27 @@
     {:backend (evidence-store-for-config config)
      :index-file (str (io/file root "data/test-registry-validation/subjects.ednlog"))
      :queue-file (str (io/file root "data/test-registry-validation/revalidation.ednlog"))}))
+
+(defn- test-registry-report-signature [{:keys [backend index-file queue-file]}]
+  [(System/identityHashCode backend)
+   (mapv (fn [path]
+           (let [file (io/file path)]
+             [path (when (.isFile file) (.lastModified file)) (.length file)]))
+         [index-file queue-file])])
+
+(defn- cached-test-registry-report! [config]
+  (let [options (test-registry-validation-options config)
+        signature (test-registry-report-signature options)
+        now (System/currentTimeMillis)
+        cached @test-registry-report-cache]
+    (if (and (= signature (:signature cached))
+             (< (- now (:stored-at-ms cached)) test-registry-report-cache-ms))
+      (:report cached)
+      (let [report! (requiring-resolve 'futon3c.test-registry.validation/report!)
+            report (report! options)]
+        (reset! test-registry-report-cache
+                {:signature signature :stored-at-ms now :report report})
+        report))))
 
 (defn handle-test-registry-check
   "POST /api/alpha/test-registry/check — read one existing warrant."
@@ -2459,8 +2482,7 @@
   "GET /api/alpha/test-registry/report — conformance over default bindings."
   [_request config]
   (try
-    (let [report! (requiring-resolve 'futon3c.test-registry.validation/report!)]
-      (json-response 200 (report! (test-registry-validation-options config))))
+    (json-response 200 (cached-test-registry-report! config))
     (catch Throwable throwable
       (json-response 500 {:record/type :test-registry.validation/refusal
                           :reason :report-endpoint-failed
