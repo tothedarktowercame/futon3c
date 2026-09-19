@@ -5,6 +5,8 @@
             [futon2.aif.c-fold-config :as digest]
             [futon3c.transport.http :as http]
             [futon3c.wm.run4-attempt-admission :as admission]
+            [futon3c.wm.run4-effective-environment :as effective]
+            [futon3c.wm.run4-trusted-entry :as entry]
             [futon3c.wm.runner-service :as service]))
 
 (def token (apply str (repeat 64 "b")))
@@ -20,8 +22,17 @@
                        "run4-http" (make-array java.nio.file.attribute.FileAttribute 0)))
         source "task\n"
         config-text (str (pr-str {:schema :wm/run4-pinned-run-config-v1
-                                  :runner-options {:cohort? false}
-                                  :c-fold {:enabled? false}}) "\n")
+                                  :runner-options {}
+                                  :c-fold {:enabled? false}
+                                  :serving-declaration
+                                  {:required-environment
+                                   {"FUTON_WM_FPI_DARK" "1"
+                                    "FUTON_WM_BETA_DARK" "1"
+                                    "FUTON_WM_TRACE_POLICY_DETAILS" "1"}
+                                   :hierarchy {:model :single-level :scope :RUN4}
+                                   :recording-requirement
+                                   {:contract :wm/realized-recording-v1
+                                    :environment {"FUTON_WM_RECORDING_CONTRACT" "1"}}}}) "\n")
         pin {:schema :wm/run4-task-pin-v1
              :series-id "RUN4-2026-09-10" :trial-id :outer-loop-successor
              :series-order :as-declared
@@ -52,6 +63,24 @@
       (f (http/make-handler cfg) cfg root pin)
       (finally (delete-tree! root)))))
 
+;; Production reads the live process environment through
+;; run4-effective-environment/attest; the boundary under test is the HTTP
+;; contract, not the environment, so the attest seam is stubbed exactly as
+;; run4_trusted_entry_test does.
+(defn- with-attest-stub [f]
+  (binding [entry/*attest-effective-environment*
+            (fn [declaration]
+              {:schema :wm/run4-effective-environment-attestation-v1
+               :hierarchy (:hierarchy declaration)
+               :flags (mapv (fn [[flag consumer]]
+                              {:flag flag :required "1" :observed "1"
+                               :effective true :consumer consumer})
+                            (sort-by key effective/flag-spec))
+               :recording
+               {:status :not-attested-by-this-component
+                :consumer "holes/labs/wm-contract/wm_step_observe.bb"}})]
+    (f)))
+
 (defn request [payload headers]
   {:request-method :post :uri "/api/alpha/wm/click"
    :headers headers
@@ -61,8 +90,9 @@
 (def auth {"authorization" (str "Bearer " token)})
 
 (deftest run4-refusals-occur-before-click-creation
-  (with-handler
-    (fn [handler cfg root pin]
+  (with-attest-stub
+   (fn [] (with-handler
+     (fn [handler cfg root pin]
       (let [calls (atom [])
             base {:run4-pin-ref "pin.edn" :run4-attempt-id "attempt-http"}
             cases [[base {}]
@@ -90,11 +120,13 @@
           (let [disabled (http/make-handler (dissoc cfg :run4))]
             (is (= 403 (:status (disabled
                                  (request base auth)))))
-            (is (empty? @calls))))))))
+            (is (empty? @calls)))))))))
+   )
 
 (deftest valid-run4-propagates-exact-server-derived-options
-  (with-handler
-    (fn [handler _ _ _]
+  (with-attest-stub
+   (fn [] (with-handler
+     (fn [handler _ _ _]
       (let [seen (atom [])]
         (with-redefs [service/click! (fn [opts] (swap! seen conj opts)
                                       {:click-id "click-valid"
@@ -110,11 +142,14 @@
           (is (string? (:run4-task-pin-text (first @seen))))
           (is (fn? (:run4-trusted-boundary-fn (first @seen))))
           (is (= #{:read-text :resolve-mission :action-admissible?}
-                 (set (keys (:run4-task-pin-ports (first @seen)))))))))))
+                 (set (keys (:run4-task-pin-ports (first @seen))))))))
+   )))
+   ))
 
 (deftest concurrent-duplicates-corruption-and-write-failure-never-double-click
-  (with-handler
-    (fn [handler _ root _]
+  (with-attest-stub
+   (fn [] (with-handler
+     (fn [handler _ root _]
       (let [clicks (atom 0)
             payload {:run4-pin-ref "pin.edn"
                      :run4-attempt-id "attempt-concurrent"}
@@ -141,6 +176,7 @@
                         (handler (request (assoc payload :run4-attempt-id
                                                 "attempt-write-failure") auth))))))
           (is (= before @clicks)))))))
+   ))
 
 (deftest legacy-and-single-flight-responses-are-preserved
   (let [handler (http/make-handler {})
