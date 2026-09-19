@@ -73,7 +73,7 @@
                    (registry/register-run! backend options))]
        (is (:warrant? plain))
        (is (:warrant? @nested))
-       (is (= plain @nested))
+       (is (= (dissoc plain :checked-at) (dissoc @nested :checked-at)))
        (is (get-in outer [:payload :warrant?]))))))
 
 (deftest child-process-receives-canonical-values
