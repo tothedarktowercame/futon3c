@@ -1,0 +1,7 @@
+{:repo-root "/home/joe/code/futon2"
+ :command ["clojure" "-M:test" "-n" "futon2.aif.run-validity-test"]
+ :author "codex-2"
+ :artifact-dir "/home/joe/code/futon3c/holes/labs/test-registry-validation-cli-2026-09-19/remint-c91be0ba"
+ :code-paths ["scripts/wm_run_validity.bb"]
+ :test-paths ["test/futon2/aif/run_validity_test.clj"]
+ :subject-id "EV-uniform-run-record"}

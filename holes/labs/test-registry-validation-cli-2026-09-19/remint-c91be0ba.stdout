@@ -1,0 +1,4 @@
+evidence-id test-registry-8e466ec7c4d104bcfc4bc9870eb2c9aa2a596e9c8b6ebdad10aee5b9e3c6a353
+warrant? true
+results {:assertions 7, :duration-ms 909, :errors 0, :exit 0, :failures 0, :tests 2}
+bound EV-uniform-run-record -> test-registry-8e466ec7c4d104bcfc4bc9870eb2c9aa2a596e9c8b6ebdad10aee5b9e3c6a353

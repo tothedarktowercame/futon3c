@@ -1,0 +1,20 @@
+[
+  {
+    "registration": "register",
+    "evidence-id": "test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7",
+    "http-status": 200,
+    "url": "http://localhost:7070/api/alpha/evidence/test-registry-13f52fc77768ff4453d68593598d04d99d4ac98fcf252ab60af1bdf6283192a7"
+  },
+  {
+    "registration": "remint-c91be0ba",
+    "evidence-id": "test-registry-8e466ec7c4d104bcfc4bc9870eb2c9aa2a596e9c8b6ebdad10aee5b9e3c6a353",
+    "http-status": 200,
+    "url": "http://localhost:7070/api/alpha/evidence/test-registry-8e466ec7c4d104bcfc4bc9870eb2c9aa2a596e9c8b6ebdad10aee5b9e3c6a353"
+  },
+  {
+    "registration": "remint-6c81db28",
+    "evidence-id": "test-registry-afad45cf94ff37ce8916d226d6ac3be2ee11afd70f3d39f29eb2d4ace2af6c1e",
+    "http-status": 200,
+    "url": "http://localhost:7070/api/alpha/evidence/test-registry-afad45cf94ff37ce8916d226d6ac3be2ee11afd70f3d39f29eb2d4ace2af6c1e"
+  }
+]

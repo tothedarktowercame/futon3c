@@ -1,0 +1,37 @@
+[
+  {
+    "subject": "WM-01-numerical-operations",
+    "id": "test-registry-3f63a376e2f965c64156051c197a7a4fcd2245e191d514b730a35e818d00b4f9",
+    "http-status": 200
+  },
+  {
+    "subject": "WIRE-f-on-tick",
+    "id": "test-registry-1ef986623fd9683af9ec1f6d3ca2840bffe5f1df3d621962405bdc06a610b5ce",
+    "http-status": 200
+  },
+  {
+    "subject": "EV-uniform-run-record",
+    "id": "test-registry-c91be0baf3b01d43544233c6a68e24334b5211c12ab8475dd34480687ee250de",
+    "http-status": 404
+  },
+  {
+    "subject": "AGG-single-kl-reduction",
+    "id": "test-registry-7c20e8379cab6701951f27cf052d332a624f5fea49f107ff20f63938102299fb",
+    "http-status": 200
+  },
+  {
+    "subject": "WIRE-habit-accumulate",
+    "id": "test-registry-78d77a1a608a93370f56c3fafec3b24b47bcfd2d48e7c4a46cc1fea2153d95d8",
+    "http-status": 200
+  },
+  {
+    "subject": "EV-uniform-run-record",
+    "id": "test-registry-490a2cc6e126fa45508cc750143a0db7bf59cb787f57d45cf1bdc68d0d284870",
+    "http-status": 200
+  },
+  {
+    "subject": "EV-uniform-run-record",
+    "id": "test-registry-6c81db286748dbdcf392bde4bd98835e9ead7c5eaa87d618c00ae01459605295",
+    "http-status": 404
+  }
+]
