@@ -26,15 +26,36 @@
       (let [direct (check! backend payload)
             response (http/handle-test-registry-check
                       {:body (json/generate-string payload)}
-                      {:evidence-store backend})]
+                      {:evidence-store backend})
+            body (json-body response)]
         (is (= 200 (:status response)))
-        (is (= direct (json-body response))))
+        (is (= direct (:check body)))
+        (is (= "validity-now, not the recorded mint verdict" (:meaning body)))
+        (is (not (contains? body :warrant?))
+            "top-level response cannot masquerade as the mint-time payload"))
       (let [response (http/handle-test-registry-check
                       {:body (json/generate-string
                               (assoc payload :entry-id "fabricated"))}
-                      {:evidence-store backend})]
-        (is (false? (:warrant? (json-body response))))
-        (is (= "record-not-found" (:reason (json-body response))))))))
+                      {:evidence-store backend})
+            body (json-body response)]
+        (is (false? (get-in body [:check :warrant?])))
+        (is (= "record-not-found" (get-in body [:check :reason])))))))
+
+(deftest stale-check-verdict-is-not-the-recorded-mint-verdict
+  (let [recorded-payload {:warrant? true :entry-id "test-registry-stale"}
+        current-check {:record/type :test-registry/refusal
+                       :warrant? false :reason :stale-sha}]
+    (with-redefs [registry/check-record! (fn [_ _] current-check)]
+      (let [body (json-body
+                  (http/handle-test-registry-check
+                   {:body (json/generate-string
+                           {:entry-id (:entry-id recorded-payload)
+                            :repo-root "/repo" :changed-paths []})}
+                   {:evidence-store (atom {})}))]
+        (is (true? (:warrant? recorded-payload)) "fixture was warranted at mint")
+        (is (false? (get-in body [:check :warrant?])) "current check is stale")
+        (is (= "stale-sha" (get-in body [:check :reason])))
+        (is (not (contains? body :warrant?)))))))
 
 (deftest report-endpoint-row-count-equals-current-subject-bindings
   (let [root (.toFile (Files/createTempDirectory

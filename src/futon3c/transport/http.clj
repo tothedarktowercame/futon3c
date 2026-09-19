@@ -2470,7 +2470,12 @@
       (let [check! (requiring-resolve 'futon3c.test-registry/check-record!)
             result (check! (evidence-store-for-config config)
                            (select-keys payload [:entry-id :repo-root :changed-paths]))]
-        (json-response 200 result))
+        ;; The evidence lookup route exposes the mint-time payload, including
+        ;; its recorded :warrant?.  This route answers a different question:
+        ;; whether that warrant still holds after re-hashing now.  Nest the
+        ;; authority's result unchanged so clients cannot confuse the two.
+        (json-response 200 {:check result
+                            :meaning "validity-now, not the recorded mint verdict"}))
       (catch Throwable throwable
         (json-response 500 {:record/type :test-registry/refusal
                             :reason :check-endpoint-failed
