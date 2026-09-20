@@ -9,14 +9,15 @@
            [java.nio.file StandardOpenOption]))
 
 (def authorization
-  ;; Second grant, Joe 2026-09-19 ~21:38Z: "OK, we can run up to 5 more,
-  ;; including the one you have planned." The first grant
-  ;; (AUTH-ordinary-click-budget-2026-09-19.md @ d18e4f9c) allocated five and
-  ;; was fully consumed. Consumption counts ledger entries whose :authorization
-  ;; equals THIS map, so the first grant's five are neither double-counted nor
-  ;; erased -- they remain in the ledger citing the earlier authority.
-  {:path "futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-2026-09-19.md"
-   :sha "52f75d1d"})
+  ;; Third grant, Joe 2026-09-20: "OK, I award 5 more clicks to the grant pool."
+  ;; The first grant (AUTH-ordinary-click-budget-2026-09-19.md @ d18e4f9c) and
+  ;; the second (AUTH-ordinary-click-budget-renewal-2026-09-19.md @ 52f75d1d)
+  ;; each allocated five and were fully consumed. Consumption counts ledger
+  ;; entries whose :authorization equals THIS map, so the earlier ten are
+  ;; neither double-counted nor erased -- they remain in the ledger citing the
+  ;; authority in force when they were spent.
+  {:path "futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-2-2026-09-20.md"
+   :sha "fa49ed93"})
 (def allocated 5)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
