@@ -16,6 +16,38 @@ For Mission Peripheral / Mission Control / War Room convergence, see
 For invoke surface semantics (`bell`, `whistle`, `whistle-stream`), see
 `README-bells-and-whistles.md`.
 
+## Evaluating into this JVM: never `(shutdown-agents)`
+
+`/eval` on Drawbridge (:6768) is the tool bridge every CLI agent uses, and what
+it evaluates into is a server that stays up for days — not a script. **Do not
+end an eval payload with `(shutdown-agents)` or `(System/exit ...)`.** A file
+you want to run both ways, `clojure -M -e` and POSTed here, must drop that last
+line: an eval that returns leaves no threads to wait on.
+
+`(shutdown-agents)` shuts down `clojure.lang.Agent/soloExecutor` and
+`pooledExecutor` for the whole process — the pools behind every `future`,
+`send`, `send-off` and `pmap` — and nothing in Clojure restarts them. On
+2026-09-20 one scratch file ended with it: Agency invoke rejected every task
+for seven minutes, eight jobs failed with bells among them, `/health` went on
+saying `ok`, and neither `/eval` nor `/repl` could answer with anything but
+`RejectedExecutionException`, because both evaluate in a `future`.
+
+The bridge is now robust against both halves of that (916417e3). `/eval`
+refuses the two forms on the dev-serve profile; `/admin/eval` still allows a
+deliberate operator shutdown. And if the pools die by some other route, `/eval`
+evaluates on the request thread rather than in the pool it would need to
+repair, so the repair is one POST:
+
+```clojure
+(set-agent-send-off-executor! (java.util.concurrent.Executors/newCachedThreadPool))
+(set-agent-send-executor!
+ (java.util.concurrent.Executors/newFixedThreadPool
+  (+ 2 (.availableProcessors (Runtime/getRuntime)))))
+```
+
+Full story, and the attach-agent recipe a JVM started before that commit still
+needs: `holes/excursions/E-shutdown-agents-killed-the-pools.md`.
+
 ## Quick Start
 
 ```bash
