@@ -261,6 +261,127 @@ typed graph, pgvector lane, mutation receipts) and futon's APM memory
 (XTDB-backed store, pattern attachments, Lean-compiler witness). If either
 cannot be written down in it, the vocabulary is wrong rather than the system.
 
+## Requirements (pass 3, 2026-09-20)
+
+Pass 3 ran against the commercialization thread Rob opened in the room. Where a
+futon-side status is stated it was checked against a file or a live run, per the
+method; three claims made in the room turned out to be wrong when checked, and
+are recorded as corrections below rather than edited away.
+
+**R26. Refusal loci are plural, and a system names the layer each refusal acts
+at.** futon refuses *content* — `iatc_argcheck.bb` rejects a proof graph whose
+steps derive node 2 -> node 14 -> node 2, so the argument assumes what it proves
+(mark7probe-20260919b, S3: 121 accepted, 3 refused). mfuton refuses at four
+other loci: spec (hard-gated mission constraints), policy (19 `*_policy_test.py`
+suites instantiating policy as executable tests), runtime (PreToolUse hooks
+returning `permissionDecision: deny`), and live state (receipt skills checking
+the memory substrate and filesystem).
+Source: facadebootstrap 2026-09-20 12:33:59Z and 12:43:21Z; ivan 2026-09-20.
+The distinction that matters for a successor is not which system refuses more
+but **what a refusal is measured against**: mfuton's four loci all refuse
+against something *declared in advance*, so coverage is an authoring problem and
+scales with rules written; futon's content checker computes circularity on a
+case nobody declared, so coverage is a checker-generality problem. They fail
+differently and are budgeted differently.
+
+**R27. A refusal carries its remediation, or it accrues debt.** The operable
+unit is a six-stage loop: detect, typed reason, remediation instruction, tooling
+that performs it, independent violation search, legacy sweep. mfuton closes five
+with two operator-initiated — for the 800-line file cap: policy states the limit,
+a hook fires on an over-length write, the evolver is instructed to split, a
+governed algorithm plus `split-python-module-by-cst.bat` carry it out, test
+suites find violations independently, and operator-started burndown missions
+sweep legacy cases.
+Source: facadebootstrap 2026-09-20 12:43:21Z; ivan 2026-09-20 (calibrated by
+ivan as "governed and tooled but not autonomous").
+Futon-side status, checked against the live registry (41 subjects, 2026-09-20):
+8 of 33 refusals carry `:next-action` (`rerun-the-declared-namespace`,
+`reconcile-test-environment`); the 24 `stale-sha` rows carry `:closure-diff`
+naming the changed file but emit no instruction. See correction C3.
+
+**R28. Fill-forward versus sweep is a design disagreement a successor must
+settle, not inherit.** `futon3/library/test-registry/fill-forward-not-sweep`
+states futon's position: ledgers start empty and fill forward at exactly three
+moments (mint, observation, acceptance); "no scheduled process walks history or
+the codebase looking for entries to add", and "the registry has no entry for X"
+is a legitimate, permanent answer. Its violation signature names "a launch plan
+that begins by importing history" and "ledger growth proportional to elapsed
+time rather than to events". mfuton's burndown missions are exactly that sweep,
+and are held there as a virtue.
+Both positions are defensible and they are not composable: a successor that
+adopts mfuton's repair loop wholesale adopts a practice futon's library records
+as a violation. This is the sharpest architectural disagreement pass 3 found.
+
+**R29. Recorded is not surfaced.** futon1a invariant I3 (Evidence Pack,
+2026-02-25): *"Errors surface at the layer that caused them"*; I4: *"Any bug
+diagnosable in under 10 minutes."* The Matrix bridge recorded every routed
+message it failed to deliver from 2026-09-15 18:30Z onward — three bot
+identities mapped to agents deregistered from the roster — and surfaced none of
+it for four days. Nine `[accept failed]` lines sit in the room transcript
+itself. A receipt nobody reads is not observability, and by futon's own stated
+invariant this is a violation, not a missing feature.
+Source: observed and repaired 2026-09-20; the same shape recurs in the same
+subsystem (see pass log).
+
+**R30. Inbound admission needs a queue, not a busy check.** Extends R12.
+`ngircd_bridge.py:864` checks whether the target agent is mid-turn and, on
+refusal, discards the message; the only other branch interrupts the running
+turn and is gated to Codex agents. There is no outbox and no dead letter, and
+the bridge's own docstring concedes "the inherited in-memory queue is not a
+durable outbox". mfuton's `matrix-wait-for-room-message` is a sender-filtered
+listener with a since-token queue, so calls are not dropped.
+Source: facadebootstrap 2026-09-20 12:50:36Z; ivan 2026-09-20.
+The Agency already runs a durable queue (`durable-queue` and `drainer-v2`
+healthy, 47 unconsumed at time of check), so the missing piece is an outbox in
+front of the busy check, not a new mechanism.
+
+**R31. A capability claim cites an instance, not a count.** `futon3/library`
+holds 1,404 `.flexiarg` files; 7 carry a Toulmin `:claim`. futon3's own
+CLAUDE.md describes the library as structured arguments with
+`:claim`/`:ground`/`:warrant`/`:backing`/`:qualifier`/`:rebuttal` — a
+description of 0.5% of it. The argument content sits as prose in `@how`,
+duplicated into a trailing `! conclusion:` line; what is mechanically
+exploitable is the hotword/`patterns-index.tsv` layer, which does fire
+(496/535 PlanetMath entries tagged, 25 patterns at 27-291 hits each).
+Corollary, established in the room 2026-09-20 and adopted by ivan as a
+principle: **overstating against your own system corrupts the record as much as
+overselling it.** The target is calibration, not caution. Pass 3 produced three
+instances of the pessimistic error (C1-C3) against one of the optimistic.
+
+## Corrections to claims made in the room (pass 3)
+
+Recorded as deltas per the method; the room postings stand and were corrected
+in-thread.
+
+**C1 (supersedes an R27 filing).** I told the room futon lacks a legacy sweep
+and filed it as a capability to borrow from mfuton. `fill-forward-not-sweep`
+shows it is a *refused* design, not an oversight. The honest entry is a design
+disagreement (R28), not an asymmetry.
+
+**C2.** I described the registry's 24 stale warrants as debt "sitting there with
+nothing driving them back to green".
+`futon3/library/test-registry/rerun-when-the-warrant-fails` states the economy:
+execution is required per namespace exactly when the warrant fails or a
+structural lane demands it, and otherwise the lane is routine and the
+spot-check applies — "tests that pass against code that doesn't change become
+warrants and don't need to be rerun" (Joe, 2026-09-19). A stale warrant on a
+routine lane is the economy working, not debt accruing. What the number does
+measure is a repo under heavy concurrent change.
+
+**C3.** I told the room `stale-sha` refusals carry no remediation. The
+*pattern* specifies it — `rerun-when-the-warrant-fails` requires the declared
+namespace command when the record check refuses on a stale manifest. The
+*endpoint* does not emit it: `:next-action` appears on `environment-mismatch`
+rows and not on `stale-sha` rows. This is an implementation gap against a
+written spec, one field wide, not a conceptual absence.
+
+**Observation carried forward.** `test-registry/outlive-the-process` gives as
+its violation signature "a mint that succeeds in-process and 404s from the next
+one" — precisely the defect the 2026-09-19 validation-CLI lab diagnosed and
+fixed (`224da745`). The library named the failure mode before the incident
+occurred, which is the clearest evidence in this pass that the pattern layer
+does work the code layer relies on.
+
 ## Open questions carried to the next pass
 
 - Settled (fiona 22:50:50Z, now R17): Lean is a planned child after v1 is
@@ -286,6 +407,22 @@ cannot be written down in it, the vocabulary is wrong rather than the system.
   APM problem expands to.
 
 ## Pass log
+
+- Pass 3, 2026-09-20: read 78 messages from the homeserver, 2026-09-14 23:02:10Z
+  to 2026-09-20 13:07:36Z. Cursor: 1789909656377. Added R26-R31 from Rob's
+  commercialization thread (ivan 23 messages, facadebootstrap 6, Joe 7).
+  Deltas: ivan's pass-3 opening answer that mfuton is thin on content refusal
+  was withdrawn by Rob via facadebootstrap (12:33:59Z) and replaced by the
+  four-mechanism account now in R26; my own filing that futon lacks a legacy
+  sweep is superseded by C1. Grounding for R26-R31 was taken from
+  futon3/library/test-registry (11 patterns), futon3c CLAUDE.md I-6, the
+  2026-02-25 Evidence Pack (futon1a I3/I4), the mark7probe-20260919b bundle,
+  and a live registry report (41 subjects: 8 current, 24 stale, 9 unverifiable;
+  check 0.196 s, report 43.2 s cold / 36.1 s warm against a documented <=30 s
+  cache, so sequential callers can never hit it).
+  Nine `[accept failed]` lines in the room are the R29/R30 evidence; the bridge
+  was repaired mid-pass (three bot identities pointed at deregistered agents
+  since 2026-09-15 18:30Z).
 
 - Pass 1, 2026-09-14: read 141 messages, 2026-08-01 13:01Z to 09-14 22:50:16Z.
   Cursor: 1789426216261 (origin_server_ts of fucodex's Lean question).
