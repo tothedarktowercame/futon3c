@@ -2,9 +2,12 @@
 
 Joe, 2026-09-14, in the Matrix room *Private Federation Proof*
 (`!_qvu9Pec8-hw1-nsN18SA8uIChKlJPmS4f4ji3zajRw`): fucodex runs the inner loop
-(tight Q&A with @fiona, mfuton's representative); fuclaude (claude-16) runs the
-outer loop, synthesising those turns into shared design requirements for a
-possible successor system.
+(tight Q&A with @fiona, mfuton's representative); fuclaude runs the outer loop,
+synthesising those turns into shared design requirements for a possible
+successor system. (The agent behind `fuclaude` is whatever the bridge's
+`NICK_AGENT_MAP` currently names; the original pass-1 mapping to `claude-16` was
+retired 2026-09-20 when that agent was found deregistered. Do not cite a
+specific agent id here — it dates.)
 
 ## Method
 
@@ -381,6 +384,68 @@ one" — precisely the defect the 2026-09-19 validation-CLI lab diagnosed and
 fixed (`224da745`). The library named the failure mode before the incident
 occurred, which is the clearest evidence in this pass that the pattern layer
 does work the code layer relies on.
+
+## Conversational protocol (PROPOSED pass 4, awaiting mfuton-side agreement)
+
+Joe, 2026-09-20: the conversation's own protocol should be grounded in
+something, not improvised — and `futon4/holes/mission-lifecycle.md` can set up
+conversational passages rather than build code.
+
+**Why this one fits: the lifecycle names the error pass 3 kept making.** MAP is
+defined as research that "produces facts, not decisions — read code, call APIs,
+count things, check shapes", with the exit criterion that every MAP question has
+a concrete answer. Every correction in pass 3 (1,404 flexiargs -> 7 with
+`:claim`; 38 cry-wolf warrants -> 14; the legacy sweep as refused design; stale
+warrants as economy rather than debt) was a MAP finding that arrived *after* the
+claim it refuted had already been traded as a comparative conclusion. We were
+doing ARGUE moves on an unfinished MAP. The lifecycle's phase boundary is
+exactly the discipline that was missing.
+
+Second fit: ARGUE's first checklist item is a structured cross-reference against
+`futon3/library` — "not a post-hoc decoration; patterns you discover here may
+revise the DERIVE design". That is precisely the grounding step Joe asked for,
+already mandated as a phase requirement rather than a good habit.
+
+Third: HEAD's **anti-glibness discipline** ("what would make this mission
+superficial, rhetorical, or under-evidenced? Name the discipline that prevents
+that") is the calibration corollary in R31, already in the lifecycle.
+
+**Proposed passage structure for the commercialization mission:**
+
+| phase | what it means here | exit criterion |
+|---|---|---|
+| HEAD | Rob's and Joe's own words on why a company, kept unparaphrased | the operators recognise it as faithful |
+| IDENTIFY | the gap an offering would fill; scope in/out | Rob and Joe agree the gap is real and scoped |
+| MAP | what each system demonstrably does, checked against files and runs | every Q has a concrete answer; ready-vs-missing table complete |
+| DERIVE | what the combined offering actually is | someone could build it from the description |
+| ARGUE | why that shape is right; `futon3/library` cross-reference | an outsider understands it from the plain-language version |
+| VERIFY | claims re-checked against structural evidence | no claim rests on a count alone |
+| INSTANTIATE | a demonstration per completion criterion | each criterion has a concrete demo |
+| DOCUMENT | the record a buyer or a new collaborator can read | discoverable without the transcript |
+
+**Standing rules proposed with it:** state the current phase in each posting;
+no comparative claim before MAP's exit criterion is met; a MAP answer cites a
+file, a run or a message with its timestamp; corrections are deltas, never
+silent edits (the room's existing rule, Joe 2026-08-01); and the
+overstating-against-yourself corollary (R31) applies to both sides.
+
+**MAP questions proposed for the current phase (Q1-Q6):**
+
+- Q1. For each of the six repair-loop stages (detect / typed reason /
+  remediation instruction / tooling / independent search / sweep), which side
+  closes it, for which refusal kind, with one cited instance each?
+- Q2. Which invariants does each system state, and which are mechanically
+  checked rather than aspirational? (futon1a I0-I4, futon3c I-0 to I-6; mfuton's
+  equivalent set is not yet known to the futon side.)
+- Q3. Does mfuton have a phase/lifecycle concept for missions, and if so what
+  are its exit criteria? futon's is `futon4/holes/mission-lifecycle.md`.
+- Q4. What is the smallest adaptable unit of mfuton's agent-skill layer — could
+  futon adopt the plan/apply/verify + typed-receipt harness shape over its
+  existing `scripts/` without the surrounding governance?
+- Q5. Fill-forward versus sweep (R28): what does each side lose by adopting the
+  other's position? This is the one disagreement that cannot be composed away.
+- Q6. What does each side's memory hold that the other's does not, stated as
+  relations rather than technology?
 
 ## Open questions carried to the next pass
 
