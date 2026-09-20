@@ -1,0 +1,6 @@
+WARNING: Unknown module: org.apache.arrow.memory.core specified to --add-opens
+
+Testing futon3c.wm.run-participants-boundary-test
+
+Ran 1 tests containing 14 assertions.
+0 failures, 0 errors.
