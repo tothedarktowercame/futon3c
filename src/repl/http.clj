@@ -134,6 +134,25 @@
        "protocol, state-layout, and lifecycle changes require an external\n"
        "restart. Namespace removal/recreation is supported by neither profile."))
 
+(def ^:private pool-destruction-refusal
+  (str "REFUSED: this eval would destroy JVM-wide execution machinery.\n\n"
+       "(shutdown-agents) and (System/exit ...) are how a one-shot `clojure -M`\n"
+       "script ends. This is not a one-shot script: it is a server that has been\n"
+       "up for days, and both forms are irreversible from Clojure.\n\n"
+       "shutdown-agents shuts down clojure.lang.Agent/soloExecutor and\n"
+       "pooledExecutor, the pools behind every future, send, send-off and pmap in\n"
+       "the process. Nothing restarts them. Every later future is rejected with\n"
+       "RejectedExecutionException, including the one THIS endpoint evaluates in,\n"
+       "so the JVM can no longer even be talked to through /eval.\n\n"
+       "This happened on 2026-09-20 at 17:09:08Z: a scratch file evaluated here\n"
+       "ended with (shutdown-agents). Agency invoke rejected every task for the\n"
+       "next seven minutes (eight jobs failed, bells and bellbacks among them),\n"
+       "/eval and Drawbridge both answered only with the rejection, and the pools\n"
+       "had to be reinstalled by attaching a Java agent to the live process.\n\n"
+       "Drop the form. If you need the pools replaced rather than destroyed:\n"
+       "  (set-agent-send-off-executor! (java.util.concurrent.Executors/newCachedThreadPool))\n"
+       "A deliberate operator shutdown goes through the dev-admin surface."))
+
 (defn- request-profile [request]
   (if (= "/admin/eval" (:uri request)) :dev-admin :dev-serve))
 
@@ -149,6 +168,18 @@
      (or (str/includes? c "tools.namespace")
          (re-find #"\((?:[\w.-]+/)?refresh(?:-all|-dirs)?\s*[\)\s]" c)
          (re-find #"\((?:[\w.-]+/)?clear\s*\)" c)))))
+
+(defn- pool-destruction-attempt?
+  "True when CODE ends the JVM's shared execution machinery.
+
+   Textual like `refresh-attempt?` and for the same reason: it runs before any
+   parsing, and a false negative costs the running image. Both forms are the
+   tail of a standalone script, so they arrive by habit rather than intent."
+  [code]
+  (let [c (str code)]
+    (boolean
+     (or (re-find #"\((?:clojure\.core/)?shutdown-agents\s*\)" c)
+         (re-find #"\(System/exit\b" c)))))
 
 (defn- eval-handler
   "Ring handler for /eval. Accepts POST with Clojure code as body.
@@ -175,23 +206,48 @@
             {:status 403
              :headers {"content-type" "text/plain"}
              :body refresh-refusal})
+        (if (and (= :dev-serve profile) (pool-destruction-attempt? code))
+          (do
+            (eval-log! {:type :refused :profile profile :remote remote
+                        :reason :pool-destruction
+                        :bytes (count code) :code code})
+            {:status 403
+             :headers {"content-type" "text/plain"}
+             :body pool-destruction-refusal})
         (let [start-ns (System/nanoTime)]
           (eval-log! {:type :request :profile profile :remote remote
                       :bytes (count code) :code code})
           (try
-            (let [f (future
-                      (try
-                        {:ok true :value (binding [*ns* eval-sandbox-ns]
-                                           (load-string code))}
-                        (catch Throwable t
-                          {:ok false
-                           :error (.getMessage t)
-                           :type (.getName (class t))})))
-                  result (deref f eval-timeout-ms ::timeout)
+            (let [evaluate (fn []
+                             (try
+                               {:ok true :value (binding [*ns* eval-sandbox-ns]
+                                                  (load-string code))}
+                               (catch Throwable t
+                                 {:ok false
+                                  :error (.getMessage t)
+                                  :type (.getName (class t))})))
+                  ;; The timeout needs a second thread, and `future` takes it
+                  ;; from clojure.lang.Agent/soloExecutor — the pool a stray
+                  ;; (shutdown-agents) kills JVM-wide. When that pool is gone
+                  ;; every eval here is rejected, including the eval that would
+                  ;; reinstall it, so fall back to this thread and give up the
+                  ;; timeout rather than the endpoint (2026-09-20 17:09:08Z).
+                  [result on-request-thread?]
+                  (try
+                    (let [f (future (evaluate))
+                          r (deref f eval-timeout-ms ::timeout)]
+                      (when (= r ::timeout) (future-cancel f))
+                      [r false])
+                    (catch java.util.concurrent.RejectedExecutionException t
+                      (println "[dev] /eval: agent send-off pool rejected the task"
+                               "— evaluating on the request thread, no timeout."
+                               "Reinstall it with (set-agent-send-off-executor!"
+                               "(java.util.concurrent.Executors/newCachedThreadPool))."
+                               (.getMessage t))
+                      [(evaluate) true]))
                   elapsed-ms (long (/ (- (System/nanoTime) start-ns) 1000000))]
               (if (= result ::timeout)
-                (do (future-cancel f)
-                    (eval-log! {:type :response :profile profile :remote remote
+                (do (eval-log! {:type :response :profile profile :remote remote
                                 :elapsed-ms elapsed-ms
                                 :ok false :error "eval timeout"})
                     {:status 504
@@ -200,19 +256,21 @@
                 (do (eval-log! {:type :response :profile profile :remote remote
                                 :elapsed-ms elapsed-ms
                                 :ok (boolean (:ok result))
+                                :on-request-thread on-request-thread?
                                 :summary (if (:ok result)
                                            (truncate-str (pr-str (:value result)) eval-log-summary-chars)
                                            (truncate-str (str (:type result) ": " (:error result))
                                                          eval-log-summary-chars))})
                     {:status (if (:ok result) 200 500)
                      :headers {"content-type" "application/edn"}
-                     :body (pr-str result)})))
+                     :body (pr-str (cond-> result
+                                     on-request-thread? (assoc :on-request-thread true)))})))
             (catch Throwable t
               (eval-log! {:type :response :profile profile :remote remote :ok false
                           :error (.getMessage t) :exception-type (.getName (class t))})
               {:status 500
                :headers {"content-type" "application/edn"}
-               :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})}))))))))
+               :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})})))))))))
 
 (defn- nrepl-handler-with-refresh-guard
   "Refuse tools.namespace refresh before a Drawbridge request reaches nREPL.
