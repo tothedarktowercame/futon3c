@@ -642,13 +642,14 @@ Customize this variable to refine the vocabulary.  Unmatched text is unclassifie
       (when (file-exists-p file)
         (let* ((json-object-type 'alist) (json-array-type 'list)
                (json-key-type 'symbol) (data (json-read-file file)))
-          (unless (equal (alist-get 'version data) 1)
+          (unless (memq (alist-get 'version data) '(1 2))
             (user-error "Unsupported turn vocabulary version; live rules unchanged"))
           (setq session-mode-turn-vocabulary
-                (session-mode--validate-turn-vocabulary (alist-get 'rules data)))))
+                (session-mode--validate-turn-vocabulary (alist-get 'rules data))
+                session-mode-turn-corrections (alist-get 'corrections data))))
       (setq session-mode--vocabulary-loaded-file file))))
 
-(defun session-mode--save-live-vocabulary (rules)
+(defun session-mode--save-live-vocabulary (rules &optional corrections)
   "Atomically save RULES before publishing them in the running Emacs."
   (session-mode--validate-turn-vocabulary rules)
   (let* ((file (expand-file-name session-mode-turn-rules-file))
@@ -658,11 +659,13 @@ Customize this variable to refine the vocabulary.  Unmatched text is unclassifie
         (progn
           (setq temp (make-temp-file (expand-file-name ".turn-vocabulary-" directory)))
           (with-temp-file temp
-            (insert (json-encode `((version . 1) (rules . ,(vconcat (mapcar #'vconcat rules))))))
+            (insert (json-encode `((version . 2) (rules . ,(vconcat (mapcar #'vconcat rules)))
+                                   (corrections . ,(vconcat (or corrections session-mode-turn-corrections))))))
             (insert "\n"))
           (rename-file temp file t))
       (when (and temp (file-exists-p temp)) (delete-file temp))))
   (setq session-mode-turn-vocabulary rules
+        session-mode-turn-corrections (or corrections session-mode-turn-corrections)
         session-mode--vocabulary-loaded-file (expand-file-name session-mode-turn-rules-file)))
 
 (defun session-mode-turn-add-rule (tag phrase)
@@ -806,6 +809,16 @@ Use the real inserted span, including any agent-chat text transformations."
     (let ((start (copy-marker agent-chat--prompt-marker nil)))
       (unwind-protect
           (prog1 (funcall original name text)
+            (setq session-mode--last-operator-text
+                  (buffer-substring-no-properties
+                   (+ (marker-position start) (length name) 2)
+                   (- (marker-position agent-chat--prompt-marker) 2)))
+            (when session-mode--last-operator-region
+              (set-marker (car session-mode--last-operator-region) nil)
+              (set-marker (cdr session-mode--last-operator-region) nil))
+            (setq session-mode--last-operator-region
+                  (cons (copy-marker (+ (marker-position start) (length name) 2) t)
+                        (copy-marker (- (marker-position agent-chat--prompt-marker) 2) nil)))
             (mapc #'delete-overlay session-mode--sent-tag-overlays)
             (setq session-mode--sent-tag-overlays
                   (cdr (session-mode--paint-turn-tags
@@ -847,23 +860,104 @@ Kept separate from full session markup so typing never triggers retrieval."
       (when (session-mode--tag-input-start)
         (session-mode-turn-tags-mode (if global-session-mode-turn-tags-mode 1 -1))))))
 
+(defvar session-mode-turn-corrections nil
+  "Saved operator sentence labels; independent of inferred phrase cues.")
+(defvar-local session-mode--last-operator-text nil)
+(defvar-local session-mode--last-operator-region nil)
+
+(defun session-mode--refresh-sent-tags ()
+  "Reclassify the captured latest operator passage without changing its text."
+  (when (and session-mode-turn-tags-mode session-mode--last-operator-region
+             (eq (marker-buffer (car session-mode--last-operator-region)) (current-buffer))
+             (eq (marker-buffer (cdr session-mode--last-operator-region)) (current-buffer))
+             (equal session-mode--last-operator-text
+                    (buffer-substring-no-properties
+                     (car session-mode--last-operator-region)
+                     (cdr session-mode--last-operator-region))))
+    (mapc #'delete-overlay session-mode--sent-tag-overlays)
+    (setq session-mode--sent-tag-overlays
+          (cdr (session-mode--paint-turn-tags
+                (car session-mode--last-operator-region)
+                (cdr session-mode--last-operator-region) nil)))))
+
+(defun session-mode--sentences (text)
+  "Split TEXT with Emacs sentence motion; return nonempty sentence strings."
+  (with-temp-buffer
+    (insert text)
+    (goto-char (point-min))
+    (let ((sentence-end-double-space nil) result)
+      (while (< (point) (point-max))
+        (skip-chars-forward " \t\n")
+        (let ((start (point)))
+          (forward-sentence)
+          (when (= start (point)) (goto-char (point-max)))
+          (let ((sentence (string-trim (buffer-substring-no-properties start (point)))))
+            (unless (string-empty-p sentence) (push sentence result)))))
+      (nreverse result))))
+
+(defun session-mode-correct-sentences (text labels)
+  "Save ordered human LABELS for TEXT and reclassify its existing phrase cues.
+Also retain whole sentences as exact examples; no invented keyword extraction.
+A future refiner can learn new phrases from `session-mode-turn-corrections'."
+  (session-mode--load-live-vocabulary)
+  (let ((sentences (session-mode--sentences text)) (rules (copy-tree session-mode-turn-vocabulary))
+        (changes (make-hash-table :test #'equal)) pairs)
+    (unless (= (length sentences) (length labels))
+      (user-error "%d sentences but %d labels; nothing changed. Sentences: %s"
+                  (length sentences) (length labels) (string-join sentences " | ")))
+    (cl-mapc
+     (lambda (sentence label)
+       (session-mode--validate-turn-vocabulary (list (list label sentence)))
+       (push `((text . ,sentence) (label . ,label)) pairs)
+       ;; Reassign cues actually present; retain multiple human labels when the
+       ;; same phrase occurs in differently labelled sentences in this correction.
+       (dolist (phrase (cons sentence (mapcar (lambda (hit) (nth 3 hit))
+                                            (session-mode--turn-matches sentence))))
+         (let ((key (downcase phrase)))
+           (puthash key (cl-adjoin label (gethash key changes) :test #'equal) changes))))
+     sentences labels)
+    (setq rules
+          (delq nil (mapcar (lambda (entry)
+                             (let ((phrases (cl-remove-if
+                                             (lambda (p) (gethash (downcase p) changes)) (cdr entry))))
+                               (when phrases (cons (car entry) phrases)))) rules)))
+    (maphash (lambda (phrase tags)
+               (dolist (tag tags)
+                 (let ((entry (assoc tag rules)))
+                   (if entry (setcdr entry (append (cdr entry) (list phrase)))
+                     (setq rules (append rules (list (list tag phrase)))))))) changes)
+    (let* ((record `((at . ,(format-time-string "%FT%TZ" nil t))
+                     (author . "joe") (text . ,text)
+                     (sentences . ,(vconcat (nreverse pairs)))
+                     (method . "human-labels; existing-cue reassignment; exact-sentence examples")))
+           (records (append session-mode-turn-corrections (list record))))
+      (session-mode--save-live-vocabulary rules records))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when session-mode-turn-tags-mode
+          (session-mode-turn-tags-refresh)
+          (session-mode--refresh-sent-tags))))
+    (message "Saved sentence labels: %s; existing cues reclassified" (string-join labels " / "))))
+
 (defun session-mode--consume-tag-command (original &rest args)
-  "Handle a final-line !c TAG PHRASE locally before ORIGINAL sends input.
-A preceding draft is preserved and reclassified, never sent by this command.
-Malformed directives remain editable and never become an agent invocation."
+  "Handle final-line !c LABEL1 LABEL2 ... as ordered sentence supervision.
+Correct the preceding draft, or the latest operator turn captured by this mode.
+The directive never starts an agent turn and never sends a preceding draft."
   (let ((start (session-mode--tag-input-start)))
-    (if (not start)
-        (apply original args)
+    (if (not start) (apply original args)
       (let* ((text (string-trim-right (buffer-substring-no-properties start (point-max))))
              (line-start (or (and (string-match "[^\n]*\\'" text) (match-beginning 0)) 0))
              (line (string-trim (substring text line-start))))
-        (if (not (string-match-p "\\`!c\\(?:[ \t]\\|\\'\\)" line))
-            (apply original args)
-          (unless (string-match "\\`!c[ \t]+\\([[:alpha:]][[:alnum:]_-]*\\)[ \t]+\\(.+\\)\\'" line)
-            (user-error "Usage: !c TAG PHRASE (e.g. !c approve extend); nothing sent"))
-          (let ((tag (match-string 1 line)) (phrase (match-string 2 line)))
-            ;; Save must succeed before consuming even one character of input.
-            (session-mode-turn-add-rule tag phrase)
+        (if (not (string-match-p "\\`!c\\(?:[ \t]\\|\\'\\)" line)) (apply original args)
+          (let* ((labels (split-string (substring line 2) "[ \t]+" t))
+                 (draft (string-trim (substring text 0 line-start)))
+                 (target (if (string-empty-p draft) session-mode--last-operator-text draft)))
+            (unless (and labels (cl-every (lambda (label)
+                                           (string-match-p "\\`[[:alpha:]][[:alnum:]_-]*\\'" label)) labels))
+              (user-error "Usage: !c LABEL1 LABEL2 ... (one label per sentence); nothing sent"))
+            (unless target
+              (user-error "No captured operator turn; put !c beneath the text to classify"))
+            (session-mode-correct-sentences target (mapcar #'downcase labels))
             (delete-region (+ start line-start) (point-max))
             (unless session-mode-turn-tags-mode (session-mode-turn-tags-mode 1))
             (session-mode-turn-tags-refresh)))))))

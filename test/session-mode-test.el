@@ -110,58 +110,67 @@
   `(let* ((directory (make-temp-file "turn-rules-test-" t))
           (session-mode-turn-rules-file (expand-file-name "rules.json" directory))
           (session-mode--vocabulary-loaded-file nil)
+          (session-mode-turn-corrections nil)
           (session-mode-turn-vocabulary '(("agree" "I agree"))))
      (unwind-protect (progn ,@body) (delete-directory directory t))))
 
-(ert-deftest session-mode-live-command-preserves-unsent-draft-and-saves ()
+(ert-deftest session-mode-correction-labels-sentences-not-words ()
   (session-mode-test--with-rules
    (with-temp-buffer
      (session-mode-test--init)
-     (insert "Please extend this idea.\n!c approve extend")
-     ;; Real send entry point: the callback must never run for this local command.
-     (agent-chat-send-input (lambda (&rest _) (ert-fail "Command invoked agent")) "codex")
+     (insert "I agree with Foo. We could extend it.\n!c approve extend")
+     (agent-chat-send-input (lambda (&rest _) (ert-fail "Correction invoked agent")) "codex")
+     (should (equal session-mode--draft-tags '("approve" "extend")))
      (should (equal (buffer-substring-no-properties agent-chat--input-start (point-max))
-                    "Please extend this idea.\n"))
-     (should (equal session-mode--draft-tags '("approve")))
-     (should (= agent-chat--turn-counter 0))
-     (should (file-exists-p session-mode-turn-rules-file))
-     (setq session-mode-turn-vocabulary nil session-mode--vocabulary-loaded-file nil)
+                    "I agree with Foo. We could extend it.\n"))
+     (should-not (assoc "agree" session-mode-turn-vocabulary))
+     (should (member "i agree" (cdr (assoc "approve" session-mode-turn-vocabulary))))
+     ;; This is the exact previous misunderstanding: no extend -> approve rule.
+     (should-not (member "extend" (cdr (assoc "approve" session-mode-turn-vocabulary))))
+     (let* ((record (car session-mode-turn-corrections))
+            (pairs (alist-get 'sentences record)))
+       (should (equal (mapcar (lambda (pair) (alist-get 'label pair)) (append pairs nil))
+                      '("approve" "extend"))))
+     (setq session-mode-turn-vocabulary nil session-mode-turn-corrections nil
+           session-mode--vocabulary-loaded-file nil)
      (session-mode--load-live-vocabulary)
-     (should (equal (cdr (assoc "approve" session-mode-turn-vocabulary)) '("extend")))
-     (session-mode-turn-add-rule "approve" "EXTEND")
-     (should (= 1 (length (cdr (assoc "approve" session-mode-turn-vocabulary))))))))
+     (should (= 1 (length session-mode-turn-corrections)))
+     (should (assoc "approve" session-mode-turn-vocabulary)))))
 
-(ert-deftest session-mode-live-malformed-command-never-sends ()
+(ert-deftest session-mode-correction-mismatch-is-not-consumed ()
   (session-mode-test--with-rules
    (with-temp-buffer
      (session-mode-test--init)
-     (insert "!c approve")
-     (should-error (agent-chat-send-input (lambda (&rest _) (ert-fail "Invalid command invoked agent")) "codex") :type 'user-error)
-     (should (equal (buffer-substring-no-properties agent-chat--input-start (point-max)) "!c approve"))
-     (should-not (file-exists-p session-mode-turn-rules-file)))))
+     (insert "One sentence.\n!c disagree redirect explain")
+     (let ((before (buffer-string)))
+       (should-error (agent-chat-send-input (lambda (&rest _) (ert-fail "Invoked agent")) "codex") :type 'user-error)
+       (should (equal before (buffer-string)))
+       (should-not (file-exists-p session-mode-turn-rules-file))))))
 
-(ert-deftest session-mode-live-save-failure-leaves-draft-and-rules ()
+(ert-deftest session-mode-correction-standalone-targets-latest-operator-only ()
   (session-mode-test--with-rules
    (with-temp-buffer
      (session-mode-test--init)
-     ;; A real non-directory parent makes persistence fail, without a stub.
+     (agent-chat-insert-message "joe" "I agree. Please expand.")
+     (agent-chat-insert-message "codex" "An assistant response.")
+     (insert "!c approve extend")
+     (agent-chat-send-input (lambda (&rest _) (ert-fail "Invoked agent")) "codex")
+     (should (string-match-p (regexp-quote "turn tags: approve + extend")
+                            (overlay-get (car session-mode--sent-tag-overlays) 'after-string)))
+     (should (equal (alist-get 'text (car session-mode-turn-corrections))
+                    "I agree. Please expand."))
+     (should (string-empty-p (buffer-substring-no-properties agent-chat--input-start (point-max)))))))
+
+(ert-deftest session-mode-correction-save-failure-preserves-state ()
+  (session-mode-test--with-rules
+   (with-temp-buffer
+     (session-mode-test--init)
      (with-temp-file session-mode-turn-rules-file (insert "occupied"))
      (setq session-mode-turn-rules-file (concat session-mode-turn-rules-file "/rules.json")
            session-mode--vocabulary-loaded-file session-mode-turn-rules-file)
-     (insert "!c approve extend")
-     (let ((before (copy-tree session-mode-turn-vocabulary)))
-       (should-error (agent-chat-send-input (lambda (&rest _) (ert-fail "Failed save invoked agent")) "codex") :type 'file-error)
-       (should (equal session-mode-turn-vocabulary before))
-       (should (equal (buffer-substring-no-properties agent-chat--input-start (point-max)) "!c approve extend"))))))
-
-(ert-deftest session-mode-live-multiword-literal-and-ordinary-send-delegation ()
-  (session-mode-test--with-rules
-   (with-temp-buffer
-     (session-mode-test--init)
-     (insert "!c redirect take another approach\n\n")
-     (agent-chat-send-input (lambda (&rest _) (ert-fail "Command invoked agent")) "codex")
-     (should (equal (cdr (assoc "redirect" session-mode-turn-vocabulary)) '("take another approach")))
-     (insert "!continue is ordinary text")
-     (let (received)
-       (session-mode--consume-tag-command (lambda (&rest args) (setq received args)) 'normal 'args)
-       (should (equal received '(normal args)))))))
+     (insert "I agree.\n!c approve")
+     (let ((before (buffer-string)) (rules (copy-tree session-mode-turn-vocabulary)))
+       (should-error (agent-chat-send-input (lambda (&rest _) (ert-fail "Invoked agent")) "codex") :type 'file-error)
+       (should (equal before (buffer-string)))
+       (should (equal rules session-mode-turn-vocabulary))
+       (should-not session-mode-turn-corrections)))))

@@ -47,36 +47,41 @@ The tests use the real agent-chat initializer and insertion routine, including
 incoming messages shifting the prompt, mixed agreement/objection, negation,
 editing away an old tag, marker isolation, timer cleanup, and new-buffer enable.
 
-## Extend the vocabulary from the chat input
+## Correct sentence classifications with !c
 
-Enter `!c TAG PHRASE` and press Return. For example:
-
-```text
-!c approve extend
-!c redirect take another approach
-```
-
-The first tags the literal word “extend” as “approve”; the second tags a
-multiword phrase. Tags are extensible, not restricted to the original set.
-The command is handled locally; it does not send a turn to the agent.
-
-To classify a draft you're already writing, append the directive on its own
-last line:
+`!c` supplies **ordered labels for preceding sentences**, not a tag/keyword pair:
 
 ```text
-Please extend this idea.
+I agree with that plan. We could add a second example.
 !c approve extend
 ```
 
-Return saves the rule, removes only the command line, and refreshes the remaining
-**unsent** draft. Press Return again when ready to send the draft itself.
-Malformed commands remain in the input with a usage message. If saving fails,
-the input and live rules stay unchanged. Duplicate tag/phrase pairs are ignored
-case-insensitively. Ordinary text containing `!c` within a sentence is unaffected.
+Return labels sentence 1 `approve` and sentence 2 `extend`. The remaining draft
+stays unsent. A standalone `!c disagree redirect explain` labels the latest
+operator turn captured since enabling this version, ignoring intervening agent
+responses. Existing transcripts are not guessed or backfilled.
 
-The vocabulary is shared by active Emacs chat buffers. A JSON snapshot is saved
-atomically to `session-mode-turn-rules-file` (default
-`session-turn-vocabulary.json` inside `user-emacs-directory`; currently
-`~/.emacs-graph/session-turn-vocabulary.json` on Joe's Emacs) and loaded when tagging is enabled after
-a restart. This saves vocabulary, not chat text; nothing is evaluated as Lisp.
-These Emacs rules are still separate from the Marimo rating store.
+Sentence boundaries use Emacs sentence motion with single-space endings. If
+sentence/label counts differ, the command displays the detected sentences and
+changes nothing. Corrections are stored as ordered sentence text/label pairs
+with author and timestamp. Existing cue phrases actually found in a labelled
+sentence are reassigned to that label; the same phrase in several differently
+labelled sentences retains those several labels. The whole labelled sentence is
+also retained as an exact-match example. This updates active drafts and the
+latest captured operator passage. Labels are extensible.
+
+The previous `!c TAG PHRASE` interpretation is removed. Explicit vocabulary
+editing remains available through Customize and `session-mode-turn-add-rule`.
+
+Human labels are authoritative for the examples. Reassigning a phrase globally
+is still a generalization: a phrase can mean something different in another
+context. Exact sentence matches do not discover useful novel keywords. A small
+model such as Haiku could extract candidate phrase spans from the saved examples;
+**no model refinement is connected or claimed by this implementation**.
+
+Rules and correction records are saved atomically together as version-2 JSON in
+`session-mode-turn-rules-file` (inside `user-emacs-directory`, currently
+`~/.emacs-graph/session-turn-vocabulary.json`). The store now includes labelled
+passage text. Version-1 rule files remain readable. Save errors preserve both the
+input and live rules; the command never invokes the conversation agent. Emacs
+corrections remain separate from the Marimo rating store.
