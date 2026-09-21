@@ -274,3 +274,232 @@ dedicated tool-use evidence consumer if tool-uses are persisted with file paths.
 this mission's pattern); reviewer: claude-owner (author≠reviewer). Gates: clj-kondo + check-parens +
 tests; do NOT restart the JVM (dev.clj invoke path is boot-code — note next-restart; the clock-store +
 evidence-tagging can reload/verify via proof-eval.sh).
+
+## DIAGNOSIS 2026-09-21
+
+Discovery by codex-17, requested by claude-5 for Joe. No implementation or
+runtime reload in this handoff. Source inspected on master at `eca529f7`;
+the shared worktree also contains unrelated edits, including mission-mode.
+Service observations used GETs only, principally at 17:48–17:53 UTC.
+**Auto-clock exists, but it is conditional, split across independent stores,
+and incomplete across surfaces. It is not an automatic accounting contract.**
+
+### 1. Implementation, runtime evidence, and firing receipts
+
+Line references below are relative to futon3c unless a sibling is named.
+“Present” means source exists; “observed” means a persisted receipt exists.
+Neither source presence nor reflection of a Var establishes that every
+running closure or buffer has that version enabled.
+
+| Step | Code and wiring | Evidence / operational verdict |
+| --- | --- | --- |
+| INSTANTIATE-1: resolved mention | `emacs/agent-chat.el:1083` token extraction, `:1107` resolution, `:1231` application; operator-only call at `:2381`; witness fields at `:3025`. | **Observed working historically and yesterday**, not universal. 85 retained explicit-resolved-target witnesses since June 1; latest 2026-09-20T19:58:45.144316414Z, evidence `emacs-b76a80d7a6bf9dc7e462e13d9d731555`, M-a-wmc-scaling. A bell does not pass through this operator-turn trigger. |
+| INSTANTIATE-1.1: floor guard | `agent-chat.el:1264` requires campaign, mission, and excursion all empty for bare mentions. Arrow override at `:1251` deliberately permits switching. | **Present; guard execution today not observable.** Guard rejections emit no receipt, so there is no firing count for 1.1. 16 separate explicit-switch-arrow witnesses exist; latest 2026-08-27T14:00:28.695574630Z, `emacs-7778949f1799f242048d031df5f8f547`. |
+| INSTANTIATE-2: creation | `agent-chat.el:1158` creation-clock, `:1187` watcher; sibling `futon0/scripts/eoi-new:230` target, `:389`–`:391` watcher arm with source eoi-new-head. | **Present, no successful firing receipt found.** Zero creation-clock witnesses in the June-to-now Joe evidence population. Launching through another path or creating a file through an agent does not arm this launcher watcher. Zero receipts does not prove the function never ran. |
+| INSTANTIATE-3: Emacs saves | `agent-chat.el:1288` document resolution, `:1332` dominance, `:1352` reclock, `:1391` save recording, `:1422` after-save hook. Threshold 3 / 600 seconds, margin 2. | **Observed June 8–13, currently unverified.** Four edit-activity receipts, latest 2026-06-13T15:30:39.366339184Z, `e-d76158b3-23f3-410d-9d6f-5f08b50b36c7`, M-smart-emacs-cursor. Only matching mission/campaign/excursion documents count. Save recording visits chat buffers (`:1408`); this is not evidence identifying which agent wrote a file. |
+| INSTANTIATE-4: agent tools + explicit dispatch | `src/futon3c/agency/clock_store.clj:17`, `:59`, `:126`, `:180`, `:193`; `clock_lineage.clj:159`, `:177`; `dev/futon3c/dev.clj:1085`, `:1094`, `:1120`, Claude feeds `:3729` and `:3966`, Codex explicit dispatch `:4533`; HTTP preclock `src/futon3c/transport/http.clj:4728`, job path `:4876`, durable post-result dispatch `:4933`. | **Implemented beyond the stale “candidate” text; JVM functions loaded; partial surface coverage.** GET reflection exposes clock-store, clock-lineage, record-agent-tool-use!, record-agent-tool-details!. Durable agent-edit receipt latest 2026-09-14T23:05:37.797Z (claude-19, M-turns-first); durable dispatch receipt latest September 12, 17:34:18.250Z (codex-18, M-f11-find-production-successor). Claude Edit/Write/MultiEdit bodies feed edits; Codex exec/apply_patch has no equivalent feed. No current clock state was found in any of the 90 roster sessions. |
+
+Joe's Emacs process started September 8 at 13:59:19. This establishes neither
+buffer-local flags (`agent-chat.el:282`, `:285`) nor loaded definitions/hooks.
+There is no identified GET-only Emacs inspection endpoint. Under this
+handoff's no-eval/no-reload restriction, **today's exact Emacs loaded/active
+state remains unverified**, including the creation timer and after-save hook.
+The September 20 receipt is evidence of successful recent mention inference,
+not proof about every current buffer. JVM GET reflection establishes loaded
+Vars, not invocation of their callbacks today. Calling these steps all “dead”
+would go beyond the evidence.
+
+**Weekly retained receipt counts**, Monday UTC weeks, June 1 through
+September 21 17:48 UTC:
+
+- M = operator explicit-resolved-target; A = explicit-switch-arrow;
+  C = creation-clock; E = Emacs edit-activity.
+- D / T = currently retained durable clock/clocked-on rows whose latest
+  witness is dispatch-mission-id / agent-edit-activity, grouped by
+  clocked-at-ms. These are **not weekly firing totals**.
+
+| Week starting | M | A | C | E | D (retained) | T (retained) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2026-06-01 | 5 | 0 | 0 | 0 | 0 | 0 |
+| 2026-06-08 | 9 | 0 | 0 | 4 | 0 | 0 |
+| 2026-06-15 | 7 | 0 | 0 | 0 | 0 | 0 |
+| 2026-06-22 | 11 | 0 | 0 | 0 | 0 | 0 |
+| 2026-06-29 | 10 | 2 | 0 | 0 | 0 | 0 |
+| 2026-07-06 | 5 | 1 | 0 | 0 | 1 | 0 |
+| 2026-07-13 | 5 | 1 | 0 | 0 | 8 | 1 |
+| 2026-07-20 | 5 | 0 | 0 | 0 | 1 | 1 |
+| 2026-07-27 | 7 | 0 | 0 | 0 | 10 | 4 |
+| 2026-08-03 | 3 | 0 | 0 | 0 | 0 | 0 |
+| 2026-08-10 | 6 | 3 | 0 | 0 | 5 | 1 |
+| 2026-08-17 | 4 | 2 | 0 | 0 | 20 | 0 |
+| 2026-08-24 | 3 | 7 | 0 | 0 | 3 | 1 |
+| 2026-08-31 | 2 | 0 | 0 | 0 | 6 | 0 |
+| 2026-09-07 | 1 | 0 | 0 | 0 | 4 | 0 |
+| 2026-09-14 | 2 | 0 | 0 | 0 | 0 | 1 |
+| 2026-09-21 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+The operator population contains 105 witnesses: 85 M, 16 A, 0 C, 4 E.
+GET `:7073/api/alpha/hyperedges?type=clock%2Fclocked-on&limit=1000&include-total=true`
+returned 68 current rows with an exact count: 58 D, 9 T, and one
+selection-decision (September 2; outside the four rules). Hyperedge IDs are
+agent/target based and puts replace their current projection; retractions
+end validity. This endpoint's current rows are not an append-only firing log.
+Multiple targets still occur for some agents; do not assume one unambiguous
+restoration candidate per agent.
+
+A **complete weekly count of actual firings is not recoverable from this
+audit trail**. Emacs keeps only the last witness until the next user-turn,
+then clears it (`agent-chat.el:2385`); intervening firings can be overwritten
+or never sent. JVM `clock_store.clj:228` repeats its last witness on subsequent
+evidence without a firing ID/time or consume operation. The last-week invoke
+population has 304 dispatch-witness rows and 8 agent-edit-witness rows, which
+must not be reported as 304 and 8 transitions. The table's zeroes mean no
+retained receipts in that population, not proven inactivity. There is no
+receipt for a rejected floor check or for “no inferable mission.”
+
+### 2. Last-seven-day coverage
+
+Window: **[2026-09-14T17:48:00Z, 2026-09-21T17:48:00Z)**.
+Cursor-paginated GETs against `:7073/api/alpha/evidence`, `limit=1000`,
+`author=joe&since=2026-06-01` fetched 14,006 rows for history;
+`tags=invoke&since=2026-09-14T17:48:00Z` fetched 9,164 invoke-family rows.
+Applied the exact upper/lower timestamp bounds locally (the response included
+a Joe row just after the requested upper bound). Decoded EDN-string bodies
+as well as JSON-map bodies. “Mission” means nonempty mission-id or
+clocked-mission, not merely an excursion/campaign clock.
+
+| Recorded population / surface | Turns with mission / turns | Coverage |
+| --- | ---: | ---: |
+| Operator chat-turn, role=user, emacs-claude-repl | 236 / 1,369 | 17.24% |
+| Operator chat-turn, role=user, emacs-codex-repl | 18 / 161 | 11.18% |
+| Operator inbound, marimo | 0 / 5 | 0% |
+| JVM invoke-start, Surface: bell | 87 / 906 | 9.60% |
+| JVM invoke-start, Surface: emacs-repl | 57 / 1,526 | 3.74% |
+| JVM invoke-start, Surface: emacs-claude-repl | 0 / 20 | 0% |
+| JVM invoke-start, Surface: marimo | 0 / 18 | 0% |
+| JVM invoke-start, Surface: auto-bellback | 7 / 543 | 1.29% |
+| JVM invoke-start, Surface: whistle | 1 / 13 | 7.69% |
+
+These populations measure different recording boundaries and **must not be
+summed**: an operator turn can also produce an invocation, and resumed park
+text can be recorded as an operator turn. emacs-repl is a prompt-envelope
+surface, not a reliable model/type classifier. Other starts: matrix 41
+(0 mission, 3 other clock targets), unspecified 9 (0 mission). All starts
+total 3,076; completions 3,037, errors 33, retrieval events 3,018. Completions
+were not counted again as turns. All requested rows with a nonempty clock
+target also had a mission in this window; the three matrix rows are the
+exception outside the requested surfaces.
+
+Bell surface classification uses Surface in invoke-start prompt-preview.
+This is coverage among **retained recorded starts**, not proof every actual
+delivery was recorded. Joe's Marimo inbound population and JVM Marimo starts
+are both shown because their denominators differ. These numbers contradict
+“nothing ever clocks,” while substantiating very poor automatic coverage.
+
+### 3. Why today's roster is nil
+
+GET `/api/alpha/agents` at 17:48 UTC returned 90 registrations, all with
+mission-id nil (67 restored, 17 idle, 6 invoking). Separate session-specific
+GET `/api/alpha/agent-clock?agent-id=...&session-id=...` checks for all 90
+returned empty campaign/mission/excursion and no witness. The seven named
+agents—claude-3, claude-5, codex-13 through codex-17—are included. Thus this
+is not merely a roster display discrepancy today.
+
+There are three independent state locations:
+
+1. Emacs buffer clocks. Auto paths call set-clock! with suppress-callback
+   true (`agent-chat.el:1169`, `:1251`, `:1270`, `:1362`), so they do
+   not directly run the metadata/session update callbacks used by manual
+   clocking (`claude-repl.el:1627`, `codex-repl.el:4532`).
+   Codex's dispatch payload can still forward the buffer clock
+   (`codex-repl.el:3885`, `:3905`). Server synchronization
+   (`agent-chat.el:877`, `:912`) applies only nonempty responses, so an
+   empty server clock does not prove an empty Emacs clock.
+2. JVM clock-store's private `!sessions` atom (`clock_store.clj:20`),
+   keyed by agent/session, with an agent/nil fallback (`:216`). Invoke
+   evidence reads this store (`dev.clj:1068`); /agent-clock reads it
+   (`http.clj:6670`). It is not registry metadata.
+3. Roster projection reads external-invoke fields and agent metadata
+   (`registry.clj:1723`, `:1762`), **not clock-store**. Registration/
+   restoration imports only supplied metadata (`http.clj:4092`–`:4142`);
+   it does not infer or rehydrate a session clock.
+
+The serving JVM PID 4018538 started at **16:11:02 UTC**, cwd canonical
+futon3c, service futon3c-zone.service. Its journal reports
+`[dev] agent roster restore: restored=49 attempted=49`.
+Six of the seven selected agents registered around 16:11:16; codex-17's
+current registration is 17:10:32. A JVM restart necessarily discards the
+clock atom. `clock_lineage.clj:271` reconstitute reads durable lineage for
+a view; no startup path was found restoring that result into clock-store.
+
+**Established:** all current queried session clocks and roster mission fields
+are empty; restart loses RAM clocks; subsequent unlabelled dispatches do
+nothing; roster and invoke clocks use different readers.
+**Not established:** that these exact sessions had clocks before 16:11 and
+were cleared, rather than never acquiring one. Retained historical edges for
+claude-3/5 and codex-14/17 have different session IDs and cannot justify
+blindly restoring an old mission into today's session. The source plus
+observations support restart loss as a mechanism, not a fabricated
+before/after measurement.
+
+Durability is also partial: `clock_lineage.clj:76` requires a resolvable
+canonical substrate endpoint; `:133` skips persistence if absent and writes
+asynchronously otherwise. A durable edge is not a checked, replayable session
+decision stream. Roster repair alone would not fix automatic inference.
+
+### 4. Missing inference and the first fix
+
+**Dispatch lineage:** explicit --mission exists
+(`scripts/agency_send.py:31`, `:143`), with the HTTP/dev wire points above.
+No caller-clock inheritance exists in those paths. Caller and mesh provenance
+are available, but they are not consulted to choose a mission. Unlabelled
+dispatch from a clocked caller therefore loses an inference source that
+requires no operator naming. Inheritance must use the caller's exact session
+and clock at dispatch, not whichever session later occupies the agent ID.
+An explicit override must be resolved/validated; currently
+`clock_store.clj:193` normalizes dispatch IDs without filesystem resolution.
+
+**Activity:** Emacs doc saves and Claude native doc edits exist. Codex
+exec/apply_patch edits and associated source files do not feed clock inference.
+The association substrate is already partly built:
+`src/futon3c/watcher/file_ingest.clj:655` and `:696` project
+mission/code-paths into code/v05/file→mission edges, invoked at `:983`;
+`src/futon3c/aif/mission_delta_t.clj:39` consumes that relation elsewhere.
+These edges explicitly mean **mission mentions file**, not exclusive ownership.
+Neither clock-store nor Emacs's edit resolver consults them. Reuse that
+relation with session-attributed file activity, conservative dominance, and
+explicit ambiguity handling; do not treat a shared utility file as a unique
+mission claim. A global watcher seeing a write is insufficient attribution.
+
+**No inferable mission must be a recorded decision**, e.g.
+`{:status :unclocked :reason :no-inferable-mission ...}`, with distinct
+reasons for ambiguous candidates, unresolved explicit target, or unavailable
+inference evidence. Include agent, exact session, turn/job ID, time,
+considered sources and relevant provenance. Distinguish a known absence from
+an unavailable dependency. Do not silently preserve a stale unrelated target
+or invent a mission.
+
+**Proposed first fix: one behaviour—every accepted turn has one durable,
+explicit clock decision, including the negative decision.** Make this the
+turn-admission accounting contract across Emacs, bell, and Marimo; use
+existing resolved clock inputs for the positive case and explicit
+:unclocked/reason for the otherwise case. Use a stable turn/job identity for
+idempotent recording. This first handoff establishes observable completeness;
+it does not claim to improve inference coverage. Caller inheritance,
+agent code-file inference, and state restoration/projection are separate
+subsequent behaviours. Do not combine those repairs into this first fix.
+
+Acceptance must construct the current bad case: run a complete isolated
+session through each surface, with no manual clock, no named target, no
+inherited clock and no qualifying edits; finish it. Every accepted turn must
+have a persisted decision, and session history must end with explicit
+:unclocked/:no-inferable-mission rather than missing fields. Repeat with an
+existing valid resolved clock input and expect the positive decision. Read
+both cases back through a newly constructed real durable backend client;
+retry the same turn and assert no duplicate decision. If recording fails,
+assert it is surfaced as an accounting failure, not reported as a successful
+recorded decision. Keep absence and storage failure distinct.
+
+This is discovery only. Documentation validation: explicit-path diff review
+and git diff --check; no Clojure source was changed, and no live mutation,
+Emacs evaluation, JVM evaluation, reload, or deep-health request was used.
