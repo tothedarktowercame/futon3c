@@ -171,6 +171,46 @@ consistency (cheap, every cycle, never value evidence); L2 outcome-vs-prediction
 at pudding G1 (the arrow-witness binding, registry sorry #2). Each relocation costs the launderer
 more — which is the point.
 
+### Third sweep — the agent chat as crime scene (Joe, 2026-09-21)
+
+Joe (emacs-repl, 2026-09-21): *"I still haven't gotten into the 'Your Code as a Crime Scene'
+stuff that we keep circling, but now I am wondering if those ideas could be reapplied to
+'your agent chat as a crime scene'."*
+
+This answers the covert question from HEAD more directly than code instruments could. The
+original failure was at the prose layer, and the conversation is where that prose is written.
+Tornhill's instruments, pointed at the chat record instead of git, give the forensic mode aimed
+at authoring practice that §"The mashup" asked for.
+
+| Tornhill (code) | Agent chat | Existing data (2026-09-21) |
+|---|---|---|
+| Hotspot = churn × complexity | topics the operator keeps correcting: redirect/reject rate × turns, per mission or pattern | stance pilot (`futon0/analysis/audits/operator-reply-pilot-2026-09-21/`), pattern stages (`PATTERN-STAGES.md`); both provisional pending Joe's blind labels |
+| Temporal coupling | missions, patterns or agents recurring in the same turns; hidden coupling between lanes | pattern retrievals per turn; mesh edges (durable since futon3c eca529f7) |
+| Code age | claim age: a statement repeated after the system changed | casebook A2 (`futon0/analysis/business-models/CASEBOOK-agent-failure-modes.md`) |
+| Knowledge map / main developer | which seat holds the context for what | roster, session logs |
+| Knowledge loss (developer leaves) | compaction, or a seat retired mid-thread | `.pre-compact-*` transcript snapshots |
+| Conway / coordination needs | agent-to-agent traffic per mission | park/wake pilot (casebook E1), call graph |
+| Offender profiling | trace bad output to the instruction that started it | `futon0/analysis/audits/FORENSIC-autopilot-2026-09-21.md` (codex-26, 2026-09-13) |
+
+**Chained-claim verbs in chat.** The first sweep's verbs ("subsumes", "falls out of", "for
+free") occur far more in agent turns than in mission docs, and the chat record also shows whether
+the operator let them pass. A passed claim later shown false is a perfect crime with a timestamp
+and a witness. Candidate next step: run the first sweep's verb list over agent final turns, join
+each hit to the operator's next-turn stance, and live-check the accepted ones.
+
+**First two cases (both 2026-09-21, both perfect crimes in the Baudrillard sense — the evidence
+looked complete):**
+1. *Mesh edges looked recorded; they lived in an atom.* Live endpoint 23 edges, durable count 0
+   (`futon3c/holes/NOTE-agency-accounting-gaps-2026-09-21.md`, cfa2e00c). Casebook A5.
+2. *The Minard figure said Joe stopped working after 09-13; the instrument had stopped.* futon1b
+   pagination broke its newest-first contract (XTDB sort spill); caught only against an
+   independent transcript census (`futon0/analysis/audits/claude_operator_census.py`). Casebook C3.
+
+**Discipline carried over.** Chat instruments produce more high-definition pictures of the
+operator's work, and a stage-share table can stand in for understanding it. Every chat metric
+therefore needs a check against a source outside itself, as the transcript census checked the
+Minard figure — the same two-sided live-check as `subsumption-claim-discipline.flexiarg`.
+
 ---
 
 ## Appendix A. Cross-references
