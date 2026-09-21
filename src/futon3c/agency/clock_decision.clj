@@ -110,6 +110,20 @@
   (let [names ((requiring-resolve 'futon3c.agency.registry/addressable-names))]
     (reduce (fn [n aid] (+ n (:restored (restore! supplied aid)))) 0 names)))
 
+(defn dispatch-inheritance
+  "Capture the registered caller's positive decision at dispatch time.
+   Completion replies never carry a clock back to the original caller."
+  [backend caller surface]
+  (when (and (seq caller) (not= "auto-bellback" surface))
+    (when-let [agent ((requiring-resolve 'futon3c.agency.registry/get-agent) caller)]
+      (let [aid (get-in agent [:agent/id :id/value])
+            sid (:agent/session-id agent)
+            _ (when-not (clock/stored-state aid sid) (restore! backend aid sid))
+            d (:decision (clock/current-state aid sid))]
+        (when (and (= :clocked (:status d)) (some val (:clock d)))
+          {:clock (:clock d)
+           :evidence {:caller-id aid :caller-decision-id (:decision-id d)}})))))
+
 (defn- canonical [path] (.getCanonicalPath (io/file path)))
 
 (defn- catalog
@@ -154,7 +168,7 @@
 (defn decide
   "Precedence: explicit target/mention, current session, attributed activity,
    typed absence. Target ambiguity never chooses the first filesystem hit."
-  [{:keys [agent-id session-id mission-id text edited-path surface]}]
+  [{:keys [agent-id session-id mission-id text edited-path surface inherited-clock phase]}]
   (let [mentions (mentioned-ids text)
         ;; REPL payloads forward the buffer's OLD clock. A newly named target
         ;; in the operator text must supersede that carried value. For dispatch,
@@ -170,6 +184,11 @@
         (if (some #(not-any? #{%} (map :id targets)) ids)
           (unclocked :unresolvable-target {:targets (vec ids)})
           (choose-target targets 1 {:targets (vec ids)})))
+
+      (and inherited-clock (not= :activity phase)
+           (not= "auto-bellback" surface))
+      {:status :clocked :source :inherited :clock (:clock inherited-clock)
+       :evidence (:evidence inherited-clock)}
 
       (some val current)
       {:status :clocked :source 2 :clock current :evidence {:session-id session-id}}
@@ -265,6 +284,7 @@
                  :clock-error (atom nil)
                  :job-id (:dispatch-id options) :surface surface
                  :phase :accepted :text text
+                 :inherited-clock (:inherited-clock options)
                  :mission-id (or (:mission-id options)
                                  (when (map? prompt)
                                    (or (:mission-id prompt) (get prompt "mission-id"))))

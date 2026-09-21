@@ -1558,7 +1558,7 @@
 
 (defn- create-invoke-job-ledger!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
-           model]}]
+           model inherited-clock]}]
   (let [created-id (atom nil)]
     (try
       (update-invoke-jobs-ledger!
@@ -1608,6 +1608,7 @@
                                :result-summary nil
                                :artifact-ref nil
                                :execution {:executed? false :tool-events 0 :command-events 0}
+                               :inherited-clock inherited-clock
                                :invocation/model model
                                :delivery {:status "pending"}
                                :event-seq 0
@@ -1633,6 +1634,9 @@
 (defn- create-invoke-job!
   [request]
   (let [evidence-store (coordination-ledger/mesh-evidence-store (:evidence-store request))
+        request (assoc request :inherited-clock
+                       (clock-decision/dispatch-inheritance
+                        evidence-store (:caller request) (:surface request)))
         controller (configured-invoke-ingress-controller)
         job-id (if controller
                  (let [ticket (invoke-ingress/begin-creation! controller)
@@ -4798,7 +4802,9 @@
                          (invoke-agent-with-session-recovery!
                           aid effective-prompt
                           {:timeout-ms timeout-ms :model model
-                           :mission-id mission-id :evidence-store evidence-store} job-id)
+                           :mission-id mission-id :evidence-store evidence-store
+                           :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
+                                                    [:jobs job-id :inherited-clock])} job-id)
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -4917,7 +4923,9 @@
                             aid effective-prompt
                             {:timeout-ms timeout-ms
                              :model model :reasoning-effort reasoning-effort
-                             :mission-id mission-id :evidence-store evidence-store}
+                             :mission-id mission-id :evidence-store evidence-store
+                             :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
+                                                      [:jobs job-id :inherited-clock])}
                             job-id))
                          (finally
                            (if prev-sink

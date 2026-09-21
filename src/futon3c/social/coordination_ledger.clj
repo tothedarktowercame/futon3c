@@ -6,7 +6,8 @@
    wrapped invoke emits exactly one :invoke edge before the call and exactly one
    :invoke-result edge after the call, with nil/blank callers normalized to
    \"unknown\" rather than dropped."
-  (:require [clojure.string :as str]
+  (:require [futon3c.agency.clock-decision :as clock-decision]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend]
@@ -184,7 +185,9 @@
       (let [result (reg/invoke-agent!
                     to* prompt
                     (cond-> {:turn-id edge-id :surface surface*
-                             :evidence-store evidence-store}
+                             :evidence-store evidence-store
+                             :inherited-clock (clock-decision/dispatch-inheritance
+                                               evidence-store from* surface*)}
                       (some? timeout-ms) (assoc :timeout-ms timeout-ms)))]
         (record-invoke-edge! (assoc base
                                     :kind :invoke-result

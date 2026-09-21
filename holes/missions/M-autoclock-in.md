@@ -691,3 +691,31 @@ Emacs evidence URL pointing directly to futon1b would bypass that latter
 Agency endpoint, but it would not bypass invoke admission; this sample does
 not establish such a configuration. A new operator turn after reload is
 needed to measure live Emacs decision coverage. No surface code was changed.
+
+## INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)
+
+Job creation snapshots a registered caller's positive current decision into
+`:inherited-clock` in the durable job ledger. Execution uses that snapshot,
+not a later caller clock. Explicit targets take precedence; otherwise an
+inherited clock precedes the recipient's existing session/activity sources.
+The durable decision has `:source :inherited` and evidence containing
+`:caller-id` and `:caller-decision-id`. Unclocked callers supply no inheritance.
+The social mesh invoke wrapper carries the same snapshot. Auto-bellbacks are
+excluded at capture and decision time. Activity events subsequently use the
+normal session/activity precedence, rather than repeatedly applying inheritance.
+
+Tests: `futon3c.agency.clock-decision-test` 12 tests / 80 assertions pass
+(baseline 11 / 67), including a real-backend slow test through actual job
+creation and execution: caller switch while queued, explicit override, own
+negative reason, and no return-clock echo. `futon3c.social.coordination-ledger-test`
+5 / 23 pass (unchanged). `futon3c.transport.http-test` 128 / 654, 31 failures
+and 4 errors, matching the preceding FIX-2 run. Kondo and check-parens pass.
+
+Deployment: FIX 3 adds no records/types/protocols, but cannot independently
+hot-load over today's live FIX 1: the current `clock-decision` source also
+contains pending FIX 2's reference to `futon1b-backend/*query-cache-enabled*`,
+which does not exist in that JVM. Loading the backend would recreate its live
+record class. Therefore deploy with the already planned FIX-2 restart; do not
+attempt a bare hot load of master. After that restart, FIX-3a-only namespace
+reload order is `clock-decision`, `social.coordination-ledger`, `transport.http`
+(all under `futon3c`). No shared JVM mutation was performed.

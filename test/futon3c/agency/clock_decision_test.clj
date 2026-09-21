@@ -330,3 +330,64 @@
       (with-redefs [store/query* (fn [& _] (with-meta [] {:partial? true}))]
         (is (= :clock/recovery-incomplete
                (failure #(decision/restore! backend "clock-worker" "clock-session"))))))))
+
+(deftest ^:slow dispatch-inheritance-through-real-job-path
+  (with-docs
+    (fn [root _ _]
+      (spit (io/file root "holes" "missions" "M-override.md") "# override")
+      (let [start! (requiring-resolve 'futon1b-server/start-server!)
+            stop! (requiring-resolve 'futon1b-server/stop-server!)
+            server (start! {:store-dir (str (io/file root "inherit-substrate"))
+                            :bind-host "127.0.0.1" :port 0})
+            node @(var-get (requiring-resolve 'futon1b-server/!node))
+            backend (f1b/make-futon1b-backend
+                     (str "http://127.0.0.1:" (.getPort (.getAddress server))))]
+        (try
+          (binding [decision/*test-store* nil]
+            (with-redefs [http/invoke-jobs-store-path (constantly (str (io/file root "jobs.edn")))]
+              (http/reset-invoke-jobs!)
+              (register! (fn [_ sid] {:result "done" :session-id sid}))
+              (reg/register-agent! {:agent-id "caller" :type :claude :session-id "caller-session"
+                                    :capabilities [] :invoke-fn (fn [_ sid] {:result "done" :session-id sid})})
+              (let [caller-context (assoc (context "caller-positive") :agent-id "caller"
+                                          :session-id "caller-session" :text "M-clock-fixture"
+                                          :evidence-store backend)
+                    parent (decision/record! caller-context)
+                    dispatch (fn [surface mission]
+                               (let [request {:evidence-store backend :agent-id "clock-worker"
+                                              :caller "caller" :surface surface :prompt "Continue"
+                                              :mission-id mission}
+                                     id (#'http/create-invoke-job! request)]
+                                 [id request]))
+                    run (fn [[id request]]
+                          (is (:ok (:result (#'http/run-invoke-job! (assoc request :job-id id)))))
+                          (:decision (clock/current-state "clock-worker"
+                                                          (:agent/session-id (reg/get-agent "clock-worker")))))
+                    queued (dispatch "bell" nil)]
+                ;; Dispatch captures the clock before a later caller switch.
+                (decision/record! (assoc caller-context :turn-id "caller-negative" :text "M-missing"))
+                (let [d (run queued)]
+                  (is (= :inherited (:source d)))
+                  (is (= "M-clock-fixture" (get-in d [:clock :mission-id])))
+                  (is (= {:caller-id "caller" :caller-decision-id (:decision-id parent)} (:evidence d))))
+                (decision/record! (assoc caller-context :turn-id "caller-clocked-again"))
+                (is (= "M-override" (get-in (run (dispatch "bell" "M-override")) [:clock :mission-id])))
+                (is (= 1 (get-in (clock/current-state "clock-worker" "clock-session") [:decision :source])))
+                (decision/record! (assoc caller-context :turn-id "caller-unresolvable" :text "M-missing"))
+                (reg/update-agent! "clock-worker" :agent/session-id "empty-child")
+                (is (= [:unclocked :no-source 4]
+                       ((juxt :status :reason :source) (run (dispatch "bell" nil)))))
+                ;; A clocked returning worker must not clock its original caller.
+                (decision/record! (assoc (context "returning-worker") :session-id "empty-child"
+                                         :text "M-clock-fixture" :evidence-store backend))
+                (let [request {:evidence-store backend :agent-id "caller" :caller "clock-worker"
+                               :surface "auto-bellback" :prompt "Done"}
+                      id (#'http/create-invoke-job! request)]
+                  (is (nil? (:inherited-clock (#'http/get-invoke-job id))))
+                  (is (:ok (:result (#'http/run-invoke-job! (assoc request :job-id id)))))
+                  (is (= [:unclocked :no-source 4]
+                         ((juxt :status :reason :source)
+                          (:decision (clock/current-state "caller" "caller-session"))))))
+                (is (seq (store/query* (f1b/make-futon1b-backend (:base-url backend))
+                                       {:query/tags [:clock-decision] :query/author "clock-worker"}))))))
+          (finally (http/reset-invoke-jobs!) (stop! server) (.close ^java.lang.AutoCloseable node)))))))
