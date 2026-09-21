@@ -5,6 +5,7 @@
             [futon3c.agency.clock-decision :as decision]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.registry :as reg]
+            [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as store]
@@ -391,3 +392,50 @@
                 (is (seq (store/query* (f1b/make-futon1b-backend (:base-url backend))
                                        {:query/tags [:clock-decision] :query/author "clock-worker"}))))))
           (finally (http/reset-invoke-jobs!) (stop! server) (.close ^java.lang.AutoCloseable node)))))))
+
+
+(deftest ^:slow codex-exec-rollout-files-clock-a-complete-session
+  (with-docs
+    (fn [root source _]
+      (let [start! (requiring-resolve 'futon1b-server/start-server!)
+            stop! (requiring-resolve 'futon1b-server/stop-server!)
+            server (start! {:store-dir (str (io/file root "codex-substrate"))
+                            :bind-host "127.0.0.1" :port 0})
+            node @(var-get (requiring-resolve 'futon1b-server/!node))
+            backend (f1b/make-futon1b-backend
+                     (str "http://127.0.0.1:" (.getPort (.getAddress server))))
+            fixture (.getCanonicalPath (io/file "test/fixtures/codex/exec-apply-patch.jsonl"))]
+        (try
+          (binding [decision/*test-store* nil]
+            (register!
+             (fn [_ sid]
+               ;; A real subprocess writes in the declared mission tree and emits
+               ;; the captured Codex rollout. Tool-call JavaScript is never evaled.
+               (let [result (codex-cli/run-codex-stream!
+                             ["python3" "-c"
+                              (str "import sys,pathlib; sys.stdin.readline(); "
+                                   "pathlib.Path('src/work.clj').write_text('; codex edited\\n'); "
+                                   "lines=pathlib.Path(sys.argv[1]).read_text().splitlines(); "
+                                   "print('\\n'.join(lines+[lines[-1]]))")
+                              fixture]
+                             "Implement the work" {:cwd (str root)})]
+                 (is (= 0 (:exit result)))
+                 (is (nil? (:error-text result)))
+                 {:result "done" :session-id sid})))
+            (is (:ok (reg/invoke-agent! "clock-worker" "Implement the work"
+                                       {:turn-id "codex-rollout-turn" :surface "bell"
+                                        :evidence-store backend})))
+            (is (= "; codex edited\n" (slurp source)))
+            (let [reconstructed (f1b/make-futon1b-backend (:base-url backend))
+                  rows (store/query* reconstructed {:query/author "clock-worker"
+                                                     :query/tags [:clock-decision]})
+                  activities (filter #(= :activity (get-in % [:evidence/body :phase])) rows)
+                  activity (:evidence/body (first activities))]
+              (is (= 2 (count rows)))
+              (is (= 1 (count activities)) "duplicate receipt is idempotent")
+              (is (= 3 (:source activity)))
+              (is (= "M-clock-fixture" (get-in activity [:clock :mission-id])))
+              (is (= (str source) (get-in activity [:evidence :path])))
+              (is (= "M-clock-fixture"
+                     (get-in (reg/registry-status) [:agents "clock-worker" :mission-id])))))
+          (finally (stop! server) (.close ^java.lang.AutoCloseable node)))))))

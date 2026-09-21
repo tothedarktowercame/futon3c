@@ -6,7 +6,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.util.cwd :as cwd]))
+            [futon3c.util.cwd :as cwd]
+            [futon3c.agents.codex-activity :as codex-activity]))
 
 (defn- coerce-prompt
   [prompt]
@@ -379,7 +380,16 @@
         output-bytes* (atom 0)
         out-buf (StringBuilder.)
         err-buf (StringBuilder.)
+        consume-clock! (codex-activity/make-consumer (or (cwd/resolve-cwd cwd)
+                                                        (System/getProperty "user.dir")))
         handle-event! (fn [evt]
+                        (try
+                          (consume-clock! evt)
+                          (catch Exception e
+                            ;; Keep draining the process pipes. The activity
+                            ;; boundary also retains this error for turn finish.
+                            (swap! stream-errors* conj
+                                   {:stream :clock :error (exception-summary e)})))
                         (when (tool-event? evt)
                           (swap! tool-events* inc))
                         (when (command-event? evt)

@@ -719,3 +719,48 @@ record class. Therefore deploy with the already planned FIX-2 restart; do not
 attempt a bare hot load of master. After that restart, FIX-3a-only namespace
 reload order is `clock-decision`, `social.coordination-ledger`, `transport.http`
 (all under `futon3c`). No shared JVM mutation was performed.
+
+## INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)
+
+The Codex CLI stream reader now consumes completed file-change receipts and
+passes each witnessed path into the same `clock-decision/record-tool-use!`
+activity boundary used by Claude. It understands exec NDJSON
+`item.completed/file_change` and rollout `event_msg/item_completed/FileChange`,
+including patches nested inside `exec`. Relative paths resolve against the
+invocation cwd; absolute paths and move destinations retain their full names.
+Receipt thread identity or `thread.started` supplies the session. Each CLI
+invocation captures its admitted turn context, and item/path IDs make duplicate
+receipts idempotent. Proposed patches, failed receipts and command text do not
+assert writes. Shell commands without file-change receipts supply no witnessed
+path; repository-wide mtime changes are not attributed to an individual agent.
+
+Storage failures remain on the admitted turn and in the CLI error result while
+the reader continues draining stdout/stderr; losing a clock write cannot become
+a successful session merely because an event callback caught an exception.
+No new record, type or protocol is introduced, and existing Codex invoke
+factories reach the stream reader without an Emacs change.
+
+The provenance-documented fixture `test/fixtures/codex/exec-apply-patch.jsonl`
+is a real September 21 rollout excerpt, with only the edited path and receipt
+session ID substituted for an isolated test tree. The slow test runs an actual
+subprocess that writes that path and emits the captured events, through the
+production Codex stream reader inside registry admission. Starting unclocked,
+it ends clocked to the declared mission with source 3 and the exact path;
+a reconstructed real Futon1bBackend reads that decision. A duplicated receipt
+produces one activity decision. Fixture JavaScript is data, never executed.
+
+Validation, one namespace per invocation:
+
+- `futon3c.agency.clock-decision-test`: 13 tests / 90 assertions pass, including
+  all four real-backend slow tests (3a baseline: 12 / 80).
+- `futon3c.agents.codex-cli-test`: 21 / 110 pass, unchanged from baseline.
+- `futon3c.agents.codex-activity-test`: new namespace, 2 / 8 pass; completion
+  status, proposed calls, both receipt shapes, absolute map keys and moves.
+- Clj-kondo: zero errors/warnings; check-parens: OK.
+
+Deploy together with pending FIX 2 and 3a at the planned restart, for the
+backend-class reason documented above. Once FIX 2 is running, the class-safe
+FIX-3 reload order is `futon3c.agency.clock-decision`,
+`futon3c.social.coordination-ledger`, `futon3c.transport.http`,
+`futon3c.agents.codex-activity`, `futon3c.agents.codex-cli`. No `dev` or Emacs
+reload is required for the Codex consumer. The shared JVM was not mutated.
