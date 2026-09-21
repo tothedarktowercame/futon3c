@@ -615,6 +615,73 @@ Customize this variable to refine the vocabulary.  Unmatched text is unclassifie
   :type '(repeat (cons (string :tag "Tag") (repeat (string :tag "Phrase"))))
   :group 'session-mode)
 
+(defcustom session-mode-turn-rules-file
+  (expand-file-name "session-turn-vocabulary.json" user-emacs-directory)
+  "Saved live phrase vocabulary.  JSON data, never evaluated as Lisp."
+  :type 'file :group 'session-mode)
+(defvar session-mode--vocabulary-loaded-file nil)
+
+(defun session-mode--validate-turn-vocabulary (rules)
+  "Validate saved RULES before replacing any live vocabulary."
+  (unless (and (listp rules)
+               (cl-every (lambda (entry)
+                           (and (consp entry) (stringp (car entry))
+                                (string-match-p "\\`[[:alpha:]][[:alnum:]_-]*\\'" (car entry))
+                                (consp (cdr entry))
+                                (cl-every (lambda (phrase)
+                                            (and (stringp phrase)
+                                                 (not (string-empty-p (string-trim phrase)))))
+                                          (cdr entry)))) rules))
+    (user-error "Invalid saved turn vocabulary; live rules unchanged"))
+  rules)
+
+(defun session-mode--load-live-vocabulary ()
+  "Load saved phrase rules once per configured file."
+  (let ((file (expand-file-name session-mode-turn-rules-file)))
+    (unless (equal file session-mode--vocabulary-loaded-file)
+      (when (file-exists-p file)
+        (let* ((json-object-type 'alist) (json-array-type 'list)
+               (json-key-type 'symbol) (data (json-read-file file)))
+          (unless (equal (alist-get 'version data) 1)
+            (user-error "Unsupported turn vocabulary version; live rules unchanged"))
+          (setq session-mode-turn-vocabulary
+                (session-mode--validate-turn-vocabulary (alist-get 'rules data)))))
+      (setq session-mode--vocabulary-loaded-file file))))
+
+(defun session-mode--save-live-vocabulary (rules)
+  "Atomically save RULES before publishing them in the running Emacs."
+  (session-mode--validate-turn-vocabulary rules)
+  (let* ((file (expand-file-name session-mode-turn-rules-file))
+         (directory (file-name-directory file)) temp)
+    (make-directory directory t)
+    (unwind-protect
+        (progn
+          (setq temp (make-temp-file (expand-file-name ".turn-vocabulary-" directory)))
+          (with-temp-file temp
+            (insert (json-encode `((version . 1) (rules . ,(vconcat (mapcar #'vconcat rules))))))
+            (insert "\n"))
+          (rename-file temp file t))
+      (when (and temp (file-exists-p temp)) (delete-file temp))))
+  (setq session-mode-turn-vocabulary rules
+        session-mode--vocabulary-loaded-file (expand-file-name session-mode-turn-rules-file)))
+
+(defun session-mode-turn-add-rule (tag phrase)
+  "Add literal PHRASE under TAG, save it, and refresh all active drafts."
+  (interactive "sTag: \nsLiteral phrase: ")
+  (session-mode--load-live-vocabulary)
+  (setq tag (downcase (string-trim tag)) phrase (string-trim phrase))
+  (session-mode--validate-turn-vocabulary (list (list tag phrase)))
+  (let* ((rules (copy-tree session-mode-turn-vocabulary))
+         (entry (assoc tag rules)))
+    (unless (and entry (cl-find phrase (cdr entry) :test #'string-equal-ignore-case))
+      (if entry (setcdr entry (append (cdr entry) (list phrase)))
+        (setq rules (append rules (list (list tag phrase)))))
+      (session-mode--save-live-vocabulary rules)))
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when session-mode-turn-tags-mode (session-mode-turn-tags-refresh))))
+  (message "Phrase %S → %s; saved live vocabulary" phrase tag))
+
 (defface session-mode-turn-agree-face
   '((t :underline (:color "#27864b" :style wave)))
   "Provisional agreement phrase." :group 'session-mode)
@@ -756,6 +823,7 @@ Kept separate from full session markup so typing never triggers retrieval."
   :lighter " Tags"
   (if session-mode-turn-tags-mode
       (progn
+        (session-mode--load-live-vocabulary)
         (add-hook 'after-change-functions #'session-mode--tags-after-change nil t)
         (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
         (session-mode-turn-tags-refresh))
@@ -779,7 +847,29 @@ Kept separate from full session markup so typing never triggers retrieval."
       (when (session-mode--tag-input-start)
         (session-mode-turn-tags-mode (if global-session-mode-turn-tags-mode 1 -1))))))
 
+(defun session-mode--consume-tag-command (original &rest args)
+  "Handle a final-line !c TAG PHRASE locally before ORIGINAL sends input.
+A preceding draft is preserved and reclassified, never sent by this command.
+Malformed directives remain editable and never become an agent invocation."
+  (let ((start (session-mode--tag-input-start)))
+    (if (not start)
+        (apply original args)
+      (let* ((text (string-trim-right (buffer-substring-no-properties start (point-max))))
+             (line-start (or (and (string-match "[^\n]*\\'" text) (match-beginning 0)) 0))
+             (line (string-trim (substring text line-start))))
+        (if (not (string-match-p "\\`!c\\(?:[ \t]\\|\\'\\)" line))
+            (apply original args)
+          (unless (string-match "\\`!c[ \t]+\\([[:alpha:]][[:alnum:]_-]*\\)[ \t]+\\(.+\\)\\'" line)
+            (user-error "Usage: !c TAG PHRASE (e.g. !c approve extend); nothing sent"))
+          (let ((tag (match-string 1 line)) (phrase (match-string 2 line)))
+            ;; Save must succeed before consuming even one character of input.
+            (session-mode-turn-add-rule tag phrase)
+            (delete-region (+ start line-start) (point-max))
+            (unless session-mode-turn-tags-mode (session-mode-turn-tags-mode 1))
+            (session-mode-turn-tags-refresh)))))))
+
 (with-eval-after-load 'agent-chat
+  (advice-add 'agent-chat-send-input :around #'session-mode--consume-tag-command)
   (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
   (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message))
 

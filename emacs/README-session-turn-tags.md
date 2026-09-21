@@ -46,3 +46,37 @@ emacs -Q --batch -L emacs -l test/session-mode-test.el -f ert-run-tests-batch-an
 The tests use the real agent-chat initializer and insertion routine, including
 incoming messages shifting the prompt, mixed agreement/objection, negation,
 editing away an old tag, marker isolation, timer cleanup, and new-buffer enable.
+
+## Extend the vocabulary from the chat input
+
+Enter `!c TAG PHRASE` and press Return. For example:
+
+```text
+!c approve extend
+!c redirect take another approach
+```
+
+The first tags the literal word “extend” as “approve”; the second tags a
+multiword phrase. Tags are extensible, not restricted to the original set.
+The command is handled locally; it does not send a turn to the agent.
+
+To classify a draft you're already writing, append the directive on its own
+last line:
+
+```text
+Please extend this idea.
+!c approve extend
+```
+
+Return saves the rule, removes only the command line, and refreshes the remaining
+**unsent** draft. Press Return again when ready to send the draft itself.
+Malformed commands remain in the input with a usage message. If saving fails,
+the input and live rules stay unchanged. Duplicate tag/phrase pairs are ignored
+case-insensitively. Ordinary text containing `!c` within a sentence is unaffected.
+
+The vocabulary is shared by active Emacs chat buffers. A JSON snapshot is saved
+atomically to `session-mode-turn-rules-file` (default
+`session-turn-vocabulary.json` inside `user-emacs-directory`; currently
+`~/.emacs-graph/session-turn-vocabulary.json` on Joe's Emacs) and loaded when tagging is enabled after
+a restart. This saves vocabulary, not chat text; nothing is evaluated as Lisp.
+These Emacs rules are still separate from the Marimo rating store.
