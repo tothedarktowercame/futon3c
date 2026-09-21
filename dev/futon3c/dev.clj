@@ -61,6 +61,7 @@
             [futon3c.agency.invoke-controls :as invoke-controls]
             [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.clock-decision :as clock-decision]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.inbox-zero.witness :as inbox-zero-witness]
             [futon3c.inbox-zero.turn-promotion :as turn-promotion]
@@ -1084,7 +1085,8 @@
 
 (defn- record-dispatch-clock!
   [agent-id session-id prompt]
-  (when-let [mission-id (prompt-field* prompt :mission-id)]
+  (when-let [mission-id (when-not clock-decision/*turn*
+                         (prompt-field* prompt :mission-id))]
     ;; clock-dispatch! = set-dispatch-mission! + DURABLE persist (single-active via
     ;; durable-edge retract). Routing the prompt-sourced dispatch through it makes
     ;; those dispatches durable too, and shares ONE safe persist path with the
@@ -1093,16 +1095,7 @@
 
 (defn- record-agent-tool-use!
   [agent-id session-id tool-detail]
-  (try
-    ;; clock-edit! = record-tool-use! + DURABLE persist on an edit-activity switch
-    ;; (C-cascade-real D1/O3 slice 2). Resolves C-/M-/E- targets, so editing a
-    ;; campaign doc clocks onto campaign:<id>, survives teardown.
-    (clock-lineage/clock-edit! agent-id session-id tool-detail)
-    (catch Throwable t
-      (println (str "[auto-clock] agent tool-use reclock failed for "
-                    agent-id ": " (.getMessage t)))
-      (flush)
-      nil)))
+  (clock-decision/record-tool-use! agent-id session-id tool-detail))
 
 (defn- assistant-tool-details
   [assistant-event]
@@ -3948,7 +3941,7 @@ RESPOND WITH ONLY:
                                         ;; (→ *agents* buffer), like the cold
                                         ;; path's stdout loop does.
                                         :on-event
-                                        (fn [event]
+                                        (bound-fn [event]
                                           (when (= "assistant" (:type event))
                                             (let [content (get-in event [:message :content])
                                                   tools (when (sequential? content)

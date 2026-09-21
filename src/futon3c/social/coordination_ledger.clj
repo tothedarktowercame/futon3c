@@ -181,9 +181,11 @@
               :session-id edge-id :evidence-store evidence-store}]
     (record-invoke-edge! (assoc base :kind :invoke))
     (try
-      (let [result (if (some? timeout-ms)
-                     (reg/invoke-agent! to* prompt timeout-ms)
-                     (reg/invoke-agent! to* prompt))]
+      (let [result (reg/invoke-agent!
+                    to* prompt
+                    (cond-> {:turn-id edge-id :surface surface*
+                             :evidence-store evidence-store}
+                      (some? timeout-ms) (assoc :timeout-ms timeout-ms)))]
         (record-invoke-edge! (assoc base
                                     :kind :invoke-result
                                     :ok? (true? (:ok result))

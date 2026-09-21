@@ -21,6 +21,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.blackboard :as bb]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.transport.ws.invoke :as ws-invoke])
   (:import [java.time Instant]))
 
@@ -1104,9 +1105,15 @@
                           ;; Emacs watches this file → joe/visible-bell.
                           (future (ring-bell-file! aid-val)))]
          (mark-invoking!)
-         (let [invoke-result
+         (let [clock-context (volatile! nil)
+               invoke-result
            (try
-             (cond
+             (let [start! (requiring-resolve 'futon3c.agency.clock-decision/start!)
+                   turn-var (requiring-resolve 'futon3c.agency.clock-decision/*turn*)
+                   context (start! aid-val current-session prompt invoke-options)]
+               (vreset! clock-context context)
+               (with-bindings {turn-var context}
+                 (cond
                invoke-fn
                      (let [call-invoke (fn []
                                    ;; Prefer the 3-arity contract so the caller's
@@ -1139,13 +1146,17 @@
                                         ;; with the session-id it actually returns.
                                         (future
                                           (let [late (try @f (catch Throwable _ nil))]
-                                            (mark-idle! (:session-id late))))
+                                            (try
+                                              ((requiring-resolve 'futon3c.agency.clock-decision/finish!)
+                                               (:session-id late))
+                                              (finally (mark-idle! (:session-id late))))))
                                         {:error "timeout" :exit-code -1
                                          :timeout-ms timeout-ms :detached? true})
                                       v))
                                   (call-invoke))
                      {:keys [result session-id error]} result-map]
                  (when-not (:detached? result-map)
+                   ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
                    (mark-idle! session-id))
                  (if error
                    {:ok false
@@ -1174,6 +1185,7 @@
                (let [prompt-str (if (string? prompt) prompt (pr-str prompt))
                      response (ws-invoke/invoke! aid-val prompt-str current-session timeout-ms)
                      session-id (when (map? response) (:session-id response))]
+                 ((requiring-resolve 'futon3c.agency.clock-decision/finish!) session-id)
                  (mark-idle! session-id)
                  (cond
                    (= response ws-invoke/timeout-sentinel)
@@ -1213,15 +1225,18 @@
                           :agent-id aid-val
                           :invoke-route (:invoke-route routing-info)
                           :invoke-local? (:invoke-local? routing-info)
-                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))
+                          :invoke-ws-available? (:invoke-ws-available? routing-info))}))))
              (catch Exception e
                (mark-idle! nil)
                {:ok false
                 :error (make-social-error
-                        :invoke-exception
+                        (or (:error/code (ex-data e)) :invoke-exception)
                         (.getMessage e)
                         :agent-id aid-val
                         :exception-class (.getName (class e)))}))]
+           (when (and @clock-context
+                      (not (get-in invoke-result [:error :error/context :detached?])))
+             ((requiring-resolve 'futon3c.agency.clock-decision/end!) @clock-context))
            ;; Fire on-idle with outcome — after result is known.
            (fire-on-idle! aid-val invoke-result)
            invoke-result)))
@@ -1717,15 +1732,20 @@
                                  external-invoke-fresh-ms))
                         session-id (or (:session-id external-invoke)
                                        (:agent/session-id agent))
-                        campaign-id (or (:campaign-id external-invoke)
-                                        (get-in agent [:agent/metadata :campaign-id])
-                                        (get-in agent [:agent/metadata "campaign-id"]))
-                        mission-id (or (:mission-id external-invoke)
-                                       (get-in agent [:agent/metadata :mission-id])
-                                       (get-in agent [:agent/metadata "mission-id"]))
-                        excursion-id (or (:excursion-id external-invoke)
-                                         (get-in agent [:agent/metadata :excursion-id])
-                                         (get-in agent [:agent/metadata "excursion-id"]))
+                        decision (:decision (clock-store/current-state aid session-id))
+                        projected-clock (if decision (clock-store/current-clock aid session-id)
+                                            {:campaign-id (or (:campaign-id external-invoke)
+                                                              (get-in agent [:agent/metadata :campaign-id])
+                                                              (get-in agent [:agent/metadata "campaign-id"]))
+                                             :mission-id (or (:mission-id external-invoke)
+                                                             (get-in agent [:agent/metadata :mission-id])
+                                                             (get-in agent [:agent/metadata "mission-id"]))
+                                             :excursion-id (or (:excursion-id external-invoke)
+                                                               (get-in agent [:agent/metadata :excursion-id])
+                                                               (get-in agent [:agent/metadata "excursion-id"]))})
+                        campaign-id (:campaign-id projected-clock)
+                        mission-id (:mission-id projected-clock)
+                        excursion-id (:excursion-id projected-clock)
                         {:keys [queued-jobs running-jobs nonterminal-jobs
                                 unconsumed-count oldest-unconsumed-age-ms]}
                         (get invoke-job-counts aid {})

@@ -225,11 +225,27 @@
   [agent-id session-id]
   (:clock (current-state agent-id session-id)))
 
+(defn set-decision!
+  "Project a verified decision. Retried older events cannot undo a newer clock."
+  [agent-id session-id decision]
+  (swap! !sessions update (session-key agent-id session-id)
+         (fn [state]
+           (let [prior (get-in state [:decision :decided-at])]
+             (if (and prior
+                      (.isAfter (java.time.Instant/parse prior)
+                                (java.time.Instant/parse (:decided-at decision))))
+               state
+               (assoc (merge (empty-session-state) state)
+                      :clock (merge (empty-clock) (:clock decision))
+                      :last-auto-clock-witness nil
+                      :decision decision))))))
+
 (defn evidence-clock-fields
   "String-keyed fields suitable for invoke evidence bodies."
   [agent-id session-id]
-  (let [{:keys [clock last-auto-clock-witness]} (current-state agent-id session-id)]
+  (let [{:keys [clock last-auto-clock-witness decision]} (current-state agent-id session-id)]
     (cond-> {}
+      decision (assoc "clock-decision-id" (:decision-id decision))
       (:campaign-id clock) (assoc "clocked-campaign" (:campaign-id clock))
       (:mission-id clock) (assoc "mission-id" (:mission-id clock)
                                  "clocked-mission" (:mission-id clock))

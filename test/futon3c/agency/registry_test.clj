@@ -8,6 +8,8 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.clock-store :as clock]
+            [futon3c.agency.clock-decision :as decision]
             [futon3c.blackboard]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
@@ -18,9 +20,12 @@
   :each
   (fn [f]
     (reg/reset-registry!)
+    (clock/reset-store!)
     ;; Suppress live-file pollution during tests: hop! / hop-back!
     ;; would otherwise append entries to pilot-inhabitations.edn.
-    (binding [reg/*enable-hop-event-emission?* false]
+    (binding [reg/*enable-hop-event-emission?* false
+              decision/*test-store* (atom {:entries {} :order []})
+              decision/*repo-roots* {}]
       (f))))
 
 (deftest status-publication-can-suppress-uplink-echo

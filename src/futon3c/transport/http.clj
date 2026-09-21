@@ -77,7 +77,7 @@
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.bell-router :as bell-router]
-            [futon3c.agency.clock-lineage :as clock-lineage]
+            [futon3c.agency.clock-decision :as clock-decision]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.agency.followup-queue :as followup-queue]
@@ -2995,6 +2995,27 @@
         (cond-> (empty? (:tags entry))
           (dissoc :tags)))))
 
+(defn- operator-clock-decision!
+  [evidence-store entry]
+  (let [body (:body entry)
+        field (fn [k] (or (get body k) (get body (name k))))]
+    (when (and (= "chat-turn" (field :event)) (= "user" (field :role)))
+      (let [sid (:session-id entry)
+            agent (some (fn [id]
+                          (let [a (reg/get-agent id)]
+                            (when (and sid (= sid (:agent/session-id a)))
+                              (get-in a [:agent/id :id/value]))))
+                        (reg/addressable-names))
+            agent (or agent (field :agent-id)
+                      (second (re-matches #"(.+)-turn-[0-9]+" (or (field :turn-id) ""))))]
+        (clock-decision/record!
+         {:agent-id agent :session-id sid :turn-id (or (field :turn-id) (:evidence-id entry))
+          :surface (field :transport) :phase :operator
+          :text (field :text)
+          :mission-id (or (field :mission-id) (field :clocked-mission)
+                          (field :clocked-excursion) (field :clocked-campaign))
+          :evidence-store evidence-store})))))
+
 (defn- handle-evidence-create
   "POST /api/alpha/evidence — append one evidence entry."
   [request config]
@@ -3012,7 +3033,8 @@
                               :evidence-id evidence-id
                               :retry-after-seconds 5})
           (try
-            (let [result (boundary/append! evidence-store normalized)]
+            (let [_ (operator-clock-decision! evidence-store normalized)
+                  result (boundary/append! evidence-store normalized)]
               (if (:ok result)
                 (json-response 201 {:ok true
                                     :evidence/id (get-in result [:entry :evidence/id])
@@ -3023,6 +3045,9 @@
                                 :err (name (:error/code result))
                                 :trace-id (:trace-id result)
                                 :error result})))
+            (catch clojure.lang.ExceptionInfo e
+              (json-response 503 {:ok false :err (:error/code (ex-data e))
+                                  :message (.getMessage e)}))
             (finally
               (when evidence-id
                 (swap! !evidence-appends-in-flight disj evidence-id)))))))))
@@ -4725,19 +4750,6 @@
           first-result))
       first-result)))
 
-(defn- preclock-dispatch!
-  "Make a payload dispatch clock visible during the turn under the fallback
-   [agent-id nil] key. Durable lineage still happens post-turn with the real
-   session id."
-  [agent-id mission-id]
-  (when (some-> mission-id str str/trim not-empty)
-    (try
-      (clock-store/set-dispatch-mission! (str agent-id) nil mission-id)
-      (catch Throwable t
-        (println (str "[invoke] pre-clock failed: " (.getMessage t)))
-        (flush)
-        nil))))
-
 (defn- build-invoke-response
   "Run a direct invoke and convert it to a Ring response map."
   [{:keys [payload agent-id prompt evidence-store]}]
@@ -4768,7 +4780,6 @@
                         {:refusal :invoke-job-execution-reuse :job-id job-id})))
       (reset! execution-started? true)
       (register-job-worker! job-id (Thread/currentThread) nil)
-      (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
             ;; Announced jobs reach this direct-invoke boundary from the agent's
             ;; turn drainer. Give them the same ledger observability as bell jobs:
@@ -4787,7 +4798,7 @@
                          (invoke-agent-with-session-recovery!
                           aid effective-prompt
                           {:timeout-ms timeout-ms :model model
-                           :mission-id mission-id} job-id)
+                           :mission-id mission-id :evidence-store evidence-store} job-id)
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -4802,10 +4813,6 @@
                                               [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
-        ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
-        ;; the agent-session to that mission (in-RAM + async substrate write).
-        (when (and mission-id sid (:ok result))
-          (clock-lineage/clock-dispatch! (str agent-id) sid mission-id))
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
         (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
@@ -4873,7 +4880,6 @@
         (throw (ex-info "invoke job is already running or terminal"
                         {:refusal :invoke-job-execution-reuse :job-id job-id})))
       (reset! execution-started? true)
-      (preclock-dispatch! agent-id mission-id)
       (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
                          job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
                      ;; :edge (= job-id) is the join-key, carried on ALL surfaces; bell-router /
@@ -4911,7 +4917,7 @@
                             aid effective-prompt
                             {:timeout-ms timeout-ms
                              :model model :reasoning-effort reasoning-effort
-                             :mission-id mission-id}
+                             :mission-id mission-id :evidence-store evidence-store}
                             job-id))
                          (finally
                            (if prev-sink
@@ -4927,10 +4933,6 @@
                                               [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
-        ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
-        ;; the agent-session to that mission (in-RAM + async substrate write).
-        (when (and mission-id sid (:ok result))
-          (clock-lineage/clock-dispatch! (str agent-id) sid mission-id))
         (apply emit-invoke-evidence! evidence-store caller (str prompt) sid
                (or ev-opts []))
         (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
@@ -5867,7 +5869,10 @@
                                 turn-queue/*turn-id* (:id entry)]
                         (maybe-route-surface-writes
                          agent-id
-                         (reg/invoke-agent! aid effective-prompt timeout-ms)))
+                         (reg/invoke-agent! aid effective-prompt
+                                            {:timeout-ms timeout-ms :turn-id turn-id
+                                             :surface surface :mission-id mission-id
+                                             :evidence-store evidence-store})))
                       (finally
                         (reg/clear-invoke-event-sink! aid))))
                   :finalize-fn
@@ -5892,7 +5897,10 @@
                         (emit-terminal!
                          (maybe-route-surface-writes
                           agent-id
-                          (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms))))
+                          (reg/invoke-agent! (str agent-id) effective-prompt
+                                             {:timeout-ms timeout-ms :turn-id turn-id
+                                              :surface surface :mission-id mission-id
+                                              :evidence-store evidence-store}))))
                       (catch Throwable t
                         (sink-fn {:type "done" :ok false :error "invoke-error"
                                   :message (.getMessage t)}))

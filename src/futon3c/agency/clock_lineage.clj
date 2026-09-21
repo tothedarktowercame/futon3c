@@ -26,6 +26,10 @@
 
 (def ^:private FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
                            (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def ^:dynamic *substrate-url*
+  "Configured evidence authority for decision-driven graph projections."
+  nil)
+
 (def ^:private PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def clock-type "clock/clocked-on")
 
@@ -64,7 +68,7 @@
    — an unbounded `?end=` on a high-fan-in mission node made the store realize
    every edge and OOMed the serving JVMs (2026-07-21)."
   [ep]
-  (let [url  (str FUTON1A "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8")
+  (let [url  (str (or *substrate-url* FUTON1A) "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8")
                   "&limit=1&include-total=false")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
@@ -106,7 +110,7 @@
                   valid-time-ms (assoc "hx/valid-time" valid-time-ms)
                   op            (assoc "hx/op" op))
         resp (try
-               (http/post (str FUTON1A "/api/alpha/hyperedge")
+               (http/post (str (or *substrate-url* FUTON1A) "/api/alpha/hyperedge")
                           {:headers {"Content-Type" "application/json"
                                      "X-Penholder" PENHOLDER}
                            :body (json/generate-string payload)
@@ -199,7 +203,7 @@
   "GET futon1a for all currently-valid hyperedges of HX-TYPE (db-as-of now —
    retracted edges are excluded). Returns a seq of hyperedge maps, or []."
   [hx-type]
-  (let [url  (str FUTON1A "/api/alpha/hyperedges?type="
+  (let [url  (str (or *substrate-url* FUTON1A) "/api/alpha/hyperedges?type="
                   ;; limit is server-capped at 1000 and 400s above it
                   ;; (futon1b API-CONTRACT.md); 10000 made every reconstitute
                   ;; read silently [] via the error-swallowing fallback below.

@@ -503,3 +503,84 @@ recorded decision. Keep absence and storage failure distinct.
 This is discovery only. Documentation validation: explicit-path diff review
 and git diff --check; no Clojure source was changed, and no live mutation,
 Emacs evaluation, JVM evaluation, reload, or deep-health request was used.
+
+## INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)
+
+Implemented by codex-17 for claude-5's review. Registry invocation admission
+now computes and verifies a durable `:clock-decision` evidence entry before
+running the agent. Incoming operator `chat-turn` evidence uses the same
+resolver. The HTTP stream paths and social mesh wrapper forward surface,
+turn/job identity, explicit clock, and configured backend as applicable.
+Marimo invocations use this same admission boundary.
+
+Precedence is explicit resolved target, existing session clock, uniquely
+attributed Claude edit activity, then `:unclocked` with `:no-source`,
+`:ambiguous`, or `:unresolvable-target`. For REPL input, newly named targets
+supersede the stale buffer clock carried in the payload; explicit dispatch
+`--mission` remains authoritative. Explicit assignments replace the entire
+clock, rather than stacking campaign/mission/excursion fields.
+
+Activity consumes the existing Edit/Write/MultiEdit detail feed and the
+canonical mission parser's `:mission/code-paths`. An unclocked session clocks
+on a unique qualifying path at the tool event, without needing another user
+turn; shared-path ambiguity is recorded instead of guessed. The existing
+session clock takes precedence over activity, as specified in this handoff.
+The decision retains source number, path/targets, agent, session, surface,
+turn/job identity, phase, time, and stable decision ID. Admission and activity
+are separate append-only decisions for the same turn. When the runtime first
+supplies a session ID, a session-resolved decision joins it to that turn.
+
+Only a real Futon1bBackend is accepted in production. Unit tests explicitly
+bind volatile storage. RAM clock publication follows verified persistence;
+older retried decisions cannot roll back a newer clock. Roster projection
+reads the decision's session clock, and invoke evidence carries its decision
+ID. Existing mission-graph projection remains canonical-node guarded and
+uses the selected backend's URL. **FIX 2 must consider decision evidence,
+including negative decisions, rather than restoring solely from old positive
+hyperedges.** No startup restoration was added here.
+
+Warm callbacks preserve the exact turn binding; existing callbacks lacking
+that binding can resolve only a unique active agent/session invocation.
+Ambiguous callback ownership is refused. Callback accounting failures are
+retained on the invocation and surfaced when it finishes, including when the
+pouch's consumer catches the original exception. No Emacs source change or
+Emacs reload is required. Caller inheritance and the Codex edit feed remain
+FIX 3; neither was implemented.
+
+Validation (each namespace invoked separately):
+
+| Namespace | Tests / assertions | Result |
+| --- | ---: | --- |
+| `futon3c.agency.clock-decision-test` | 8 / 39 | Pass, including the isolated real-backend slow test |
+| `futon3c.agency.clock-store-test` | 7 / 16 | Pass |
+| `futon3c.agency.clock-lineage-test` | 7 / 18 | Pass |
+| `futon3c.agency.registry-test` | 54 / 207 | Pass |
+| `futon3c.agency.invariant-test` | 12 / 28 | Pass |
+| `futon3c.dev-test` | 24 / 98 | Pass |
+| `futon3c.social.coordination-ledger-test` | 5 / 23 | Pass |
+| `futon3c.social.whistles-test` | 12 / 42 | Pass |
+| `futon3c.transport.http-test` | 128 / 654 | 43 failures, 4 errors; identical failing-test counts on baseline |
+
+The slow test uses a real Futon1b server/XTDB node on an ephemeral loopback
+port, genuine fixture mission/source files, registry invocation, and a newly
+constructed client for read-back. It covers source-3 assignment after an
+actual file write, negative decisions on four invocation surfaces, roster
+visibility, and an operator's named target overriding a stale carried clock.
+The callback case deliberately removes the dynamic turn binding to exercise
+existing warm callbacks. Fast tests cover precedence, ambiguity, idempotent
+replay, production volatile-store refusal before execution, and a swallowed
+callback accounting error failing the session.
+
+Commands: `clojure -M:test -n <namespace>`; the focused namespace including
+its slow test used `clojure -M:test:test-all -n futon3c.agency.clock-decision-test`.
+HTTP baseline used the saved pre-change source/test files first on an isolated
+process's classpath; no checkout replacement or shared-runtime loading.
+Both HTTP runs have the same nine failing test names and per-test counts.
+clj-kondo: zero errors, the same three pre-existing dev.clj warnings on both
+baseline and changed files. check-parens and explicit-path diff check pass.
+No shared JVM or Emacs was mutated.
+
+Owner reload order from the canonical checkout:
+`futon3c.agency.clock-store`, `futon3c.agency.clock-lineage`,
+`futon3c.agency.clock-decision`, `futon3c.agency.registry`,
+`futon3c.social.coordination-ledger`, `futon3c.transport.http`, `futon3c.dev`.

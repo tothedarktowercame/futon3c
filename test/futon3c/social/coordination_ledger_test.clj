@@ -45,7 +45,11 @@
                                         :surface "irc"
                                         :prompt "do it"
                                         :timeout-ms 1234}))))
-    (is (= [["codex-2" "do it" 1234]] @calls))
+    (is (= ["codex-2" "do it"] (subvec (first @calls) 0 2)))
+    (is (= {:timeout-ms 1234 :surface "irc"}
+           (select-keys (nth (first @calls) 2) [:timeout-ms :surface])))
+    (is (= (get-in (first (mesh-entries)) [:evidence/body :edge/id])
+           (:turn-id (nth (first @calls) 2))))
     (let [kinds (mapv (comp :edge/kind :evidence/body) (reverse (mesh-entries)))]
       (is (= [:invoke :invoke-result] kinds)))))
 

@@ -13,6 +13,8 @@
    | A5 (bounded)  | R5              | Transient resources have lifecycle bounds |"
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.clock-decision :as decision]
+            [futon3c.agency.clock-store :as clock]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]))
 
@@ -25,7 +27,10 @@
   (fn [f]
     (reg/reset-registry!)
     (reg/set-on-invoke-complete! nil)
-    (f)))
+    (clock/reset-store!)
+    (binding [decision/*test-store* (atom {:entries {} :order []})
+              decision/*repo-roots* {}]
+      (f))))
 
 ;; =============================================================================
 ;; R1: Delivery Receipt — every operation returns typed result or SocialError

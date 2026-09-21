@@ -25,7 +25,6 @@
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
-            [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
             [clojure.java.io :as io]
             [clojure.string :as str])
@@ -1393,32 +1392,22 @@
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
 
-(deftest invoke-job-preclocks-payload-mission-before-turn
-  (testing "payload mission-id is visible under the fallback key during the turn"
-    (let [seen-during-turn (atom nil)
+(deftest invoke-job-forwards-explicit-clock-without-unvalidated-preclock
+  (testing "the shared decision boundary owns target validation and clock writes"
+    (let [seen (atom nil)
           job-id (#'http/create-invoke-job! {:agent-id "zai-preclock"
-                                             :prompt "check context"
-                                             :caller "test"
-                                             :surface "emacs-repl"})]
+                                            :prompt "check context" :caller "test"
+                                            :surface "emacs-repl"})]
       (with-redefs [http/invoke-agent-with-session-recovery!
-                    (fn [agent-id _prompt _timeout-ms _dispatch-id]
-                      (reset! seen-during-turn
-                              (clock-store/current-clock agent-id "real-session"))
-                      {:ok true :result "ok" :session-id "real-session"})
-                    clock-lineage/clock-dispatch!
-                    (fn [agent-id session-id mission-id]
-                      (clock-store/set-dispatch-mission! agent-id session-id mission-id))]
-        (let [result (#'http/run-invoke-job! {:job-id job-id
-                                              :agent-id "zai-preclock"
-                                              :prompt "check context"
-                                              :caller "test"
-                                              :surface "emacs-repl"
-                                              :mission-id "E-preclock"})]
-          (is (:ok result))
-          (is (= {:campaign-id nil :mission-id nil :excursion-id "E-preclock"}
-                 @seen-during-turn))
-          (is (= {:campaign-id nil :mission-id nil :excursion-id "E-preclock"}
-                 (clock-store/current-clock "zai-preclock" "real-session"))))))))
+                    (fn [_agent _prompt opts _dispatch-id]
+                      (reset! seen opts)
+                      {:ok true :result "ok" :session-id "real-session"})]
+        (is (:ok (#'http/run-invoke-job! {:job-id job-id :agent-id "zai-preclock"
+                                         :prompt "check context" :caller "test"
+                                         :surface "emacs-repl" :mission-id "E-preclock"})))
+        (is (= "E-preclock" (:mission-id @seen)))
+        (is (= (clock-store/empty-clock)
+               (clock-store/current-clock "zai-preclock" "real-session")))))))
 
 (deftest claude-invoke-recovers-from-missing-conversation-session
   (testing "Claude missing-conversation resume failure clears continuity and retries once"
