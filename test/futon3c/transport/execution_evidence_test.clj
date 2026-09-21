@@ -12,7 +12,8 @@
       :execution from recorded tool_use events before the gate check.
    2. FALLBACK: invoke-execution-evidence consults the ledger when
       self-reported evidence is absent/zero (may only UPGRADE)."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [clojure.string :as str]
             [futon3c.transport.http :as http]
@@ -30,7 +31,7 @@
 ;; =============================================================================
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (clock-store/reset-store!)

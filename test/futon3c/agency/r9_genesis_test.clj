@@ -1,11 +1,14 @@
 (ns futon3c.agency.r9-genesis-test
-  (:require [cheshire.core :as json] [clojure.java.io :as io]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json] [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon2.aif.r9-checker :as r9] [futon3c.agency.r9-authority :as r9-authority]
             [futon3c.agency.r9-genesis :as genesis]
             [futon3c.transport.http :as http])
   (:import (java.nio.charset StandardCharsets) (java.nio.file Files OpenOption StandardOpenOption)
            (java.security MessageDigest)))
+
+(clojure.test/use-fixtures :each mesh-fixtures/with-store)
 
 (defn- hex [bs] (apply str (map #(format "%02x" (bit-and 0xff %)) bs)))
 (defn- sha256 [path]

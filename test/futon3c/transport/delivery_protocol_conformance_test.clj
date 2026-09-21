@@ -4,7 +4,8 @@
   The job-state axis comes from the canonical producer vocabulary. Caller
   routes for the requested fixtures are read from the live registry; the absence of a
   first-class in-JVM route is recorded as an unconstructable matrix row."
-  (:require [clojure.java.io :as io]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.parked-on :as parked-on]
@@ -79,7 +80,7 @@
     :unregistered nil))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (let [ledger (java.io.File/createTempFile "delivery-conformance" ".edn")
           inbox (.toFile

@@ -9,7 +9,8 @@
 (use-fixtures :each
   (fn [f]
     (estore/reset-store!)
-    (f)))
+    (binding [ledger/*test-evidence-store* estore/!store]
+      (f))))
 
 (defn- mesh-entries []
   (estore/query {:query/type :coordination

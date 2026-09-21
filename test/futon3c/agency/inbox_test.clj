@@ -1,5 +1,6 @@
 (ns futon3c.agency.inbox-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.registry :as reg]
@@ -40,7 +41,7 @@
      (assoc-in ledger [:jobs job-id :created-at] (str instant)))))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (let [ledger (java.io.File/createTempFile "agency-inbox-test" ".edn")]
       (.delete ledger)

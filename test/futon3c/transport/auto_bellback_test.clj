@@ -1,5 +1,6 @@
 (ns futon3c.transport.auto-bellback-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
@@ -52,7 +53,7 @@
   {:body (json/generate-string m)})
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (let [tmp (java.io.File/createTempFile "auto-bellback" ".edn")]
       (.delete tmp)

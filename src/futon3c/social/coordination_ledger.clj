@@ -9,9 +9,43 @@
   (:require [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.futon1b-backend]
             [futon3c.evidence.store :as estore])
   (:import [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [futon3c.evidence.backend AtomBackend]
+           [futon3c.evidence.futon1b_backend Futon1bBackend]))
+
+(def ^:dynamic *test-evidence-store*
+  "Explicit unit-test store binding. Production never falls back to an atom."
+  nil)
+
+(defn- dev-evidence-store
+  "Read the existing boot authority without loading dev or creating a store."
+  []
+  (when-let [dev-ns (find-ns 'futon3c.dev)]
+    (when-let [store-var (ns-resolve dev-ns '!evidence-store)]
+      @(var-get store-var))))
+
+(defn mesh-evidence-store
+  "Resolve and validate the mesh backend before performing any work.
+   Omitted stores use dev's boot-configured authority. Volatile stores require
+   an explicit *test-evidence-store* binding; nil never selects estore/!store."
+  ([] (mesh-evidence-store nil))
+  ([store]
+   (let [store (or store *test-evidence-store* (dev-evidence-store))]
+     (if (or (instance? Futon1bBackend store)
+             (and *test-evidence-store*
+                  (or (instance? clojure.lang.IAtom store)
+                      (instance? AtomBackend store))))
+       store
+       (throw (ex-info "Mesh evidence requires the configured durable backend"
+                       {:error/code :mesh/non-durable-evidence-store
+                        :store-kind (cond
+                                      (nil? store) :missing
+                                      (instance? AtomBackend store) :atom-backend
+                                      (instance? clojure.lang.IAtom store) :raw-atom
+                                      :else :unsupported)}))))))
 
 (defn- now-str []
   (str (Instant/now)))
@@ -75,10 +109,9 @@
      :evidence/session-id edge-id*}))
 
 (defn record-invoke-edge!
-  "Append one mesh-edge evidence entry. Accepts optional :evidence-store for
-   tests; defaults to the process evidence store."
+  "Append a mesh edge to the explicit or boot-configured durable backend."
   [{:keys [evidence-store] :as edge}]
-  (boundary/append! (or evidence-store estore/!store)
+  (boundary/append! (mesh-evidence-store evidence-store)
                     (make-mesh-edge-evidence edge)))
 
 (defn- refuse-scheduled-dispatch!
@@ -180,8 +213,10 @@
 (defn recent-mesh-edges
   "Return recent social-layer mesh-edge records, newest first."
   ([] (recent-mesh-edges 50))
-  ([limit]
-   (->> (estore/query {:query/type :coordination
+  ([limit] (recent-mesh-edges limit nil))
+  ([limit evidence-store]
+   (->> (estore/query* (mesh-evidence-store evidence-store)
+                      {:query/type :coordination
                        :query/tags [:coordination :mesh-edge]
                        :query/limit (or limit 50)})
         (filter #(get-in % [:evidence/body :edge/from]))

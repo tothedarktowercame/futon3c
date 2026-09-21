@@ -4,7 +4,8 @@
    Tests the Ring handler directly (no actual HTTP server for most tests)
    to keep tests fast and deterministic. Invoke-path tests exercise a real
    local HTTP server because /api/alpha/invoke uses async channel semantics."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
@@ -85,7 +86,7 @@
       (is (= "job-config" (:dispatch-id @seen))))))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (reg/reset-registry!)
     (clock-store/reset-store!)

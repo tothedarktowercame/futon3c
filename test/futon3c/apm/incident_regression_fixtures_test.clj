@@ -1,5 +1,6 @@
 (ns futon3c.apm.incident-regression-fixtures-test
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.test :refer [deftest is testing]]
@@ -12,6 +13,8 @@
             [futon3c.apm.role-memory-search :as memory-search]
             [futon3c.apm.semantic-progress-watchdog :as watchdog]
             [futon3c.transport.http :as http]))
+
+(clojure.test/use-fixtures :each mesh-fixtures/with-store)
 
 (def incidents
   (-> "test/resources/apm-regressions/incidents-2026-08-27.edn"

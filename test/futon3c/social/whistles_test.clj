@@ -1,6 +1,7 @@
 (ns futon3c.social.whistles-test
   "Tests for whistle dispatcher — synchronous request-response coordination."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.social.whistles :as whistles]
             [futon3c.agency.registry :as registry]
             [futon3c.evidence.store :as estore]))
@@ -10,7 +11,7 @@
 ;; =============================================================================
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     (registry/reset-registry!)
     (estore/reset-store!)

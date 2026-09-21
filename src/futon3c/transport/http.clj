@@ -1632,7 +1632,8 @@
 
 (defn- create-invoke-job!
   [request]
-  (let [controller (configured-invoke-ingress-controller)
+  (let [evidence-store (coordination-ledger/mesh-evidence-store (:evidence-store request))
+        controller (configured-invoke-ingress-controller)
         job-id (if controller
                  (let [ticket (invoke-ingress/begin-creation! controller)
                        accepted-id (atom nil)]
@@ -1659,7 +1660,8 @@
     (try
       (coordination-ledger/record-invoke-edge!
        (cond-> {:from (or caller "http-caller") :to (str agent-id)
-                :surface (or surface "http") :kind :invoke :edge-id job-id}
+                :surface (or surface "http") :kind :invoke :edge-id job-id
+                :evidence-store evidence-store}
          ;; Warrant rides the handoff: the durable edge carries the handoff's
          ;; warrant status and entry ids, so the ledger answers "which handoffs
          ;; were warranted" without opening the registry.
@@ -4753,7 +4755,8 @@
                       str str/trim not-empty)
         ev-opts (when mission-id [:mission-id mission-id])
         execution-started? (atom false)
-        job-id (create-invoke-job! {:requested-job-id requested-job-id
+        job-id (create-invoke-job! {:evidence-store evidence-store
+                                    :requested-job-id requested-job-id
                                     :agent-id agent-id
                                     :prompt prompt
                                     :caller caller
@@ -5481,7 +5484,8 @@
               (if-not (:ok bridge)
                 (json-response (or (:status bridge) 400)
                                (select-keys bridge [:ok :err :message :thread-id :evidence-id]))
-                (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+                (let [job-id (create-invoke-job! {:evidence-store evidence-store
+                                                  :requested-job-id requested-job-id
                                                   :agent-id agent-id
                                                   :prompt prompt
                                                   :caller caller
@@ -5557,8 +5561,9 @@
    external surface announces acceptance.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"job-id\":\"optional\"}
    Returns immediately with the canonical queued job id and status URL."
-  [request _config]
-  (let [payload (parse-json-map (read-body request))]
+  [request config]
+  (let [evidence-store (evidence-store-for-config config)
+        payload (parse-json-map (read-body request))]
     (if (nil? payload)
       (json-response 400 {:ok false :err "invalid-json"
                           :message "Request body must be a JSON object"})
@@ -5611,7 +5616,8 @@
           :else
           (let [job-id (if existing
                          requested-job-id
-                         (create-invoke-job! {:requested-job-id requested-job-id
+                         (create-invoke-job! {:evidence-store evidence-store
+                                              :requested-job-id requested-job-id
                                               :agent-id agent-id
                                               :prompt prompt
                                               :caller caller
@@ -5969,7 +5975,8 @@
                           :value (:value warrant-normalized)})
 
       :else
-      (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
+      (let [job-id (create-invoke-job! {:evidence-store evidence-store
+                                        :requested-job-id requested-job-id
                                         :agent-id agent-id
                                         :prompt prompt
                                         :caller caller
@@ -6141,7 +6148,8 @@
                        (fn []
                          (try
                            (let [wait-ms (long (or timeout-ms default-async-invoke-timeout-ms))
-                                 job-id (create-invoke-job! {:agent-id agent-id
+                                 job-id (create-invoke-job! {:evidence-store evidence-store
+                                                            :agent-id agent-id
                                                             :prompt prompt
                                                             :caller caller
                                                             :surface "whistle"
@@ -6272,10 +6280,11 @@
   "GET /api/alpha/coordination/edges?limit=N — social-layer mesh edges.
    These are projected as outgoing coordination edges for mesh_trace.py; they
    complement the invoke-jobs ledger without replacing it."
-  [request]
+  [request config]
   (let [params (parse-query-params request)
         limit (or (parse-int (get params "limit")) 50)
-        edges (coordination-ledger/recent-mesh-edges limit)]
+        edges (coordination-ledger/recent-mesh-edges
+               limit (evidence-store-for-config config))]
     (json-response 200 {:ok true
                         :count (count edges)
                         :edges edges})))
@@ -9096,7 +9105,7 @@
       (handle-forward-model request config)
 
       (and (= :get method) (= "/api/alpha/coordination/edges" uri))
-      (handle-coordination-edges request)
+      (handle-coordination-edges request config)
 
       (and (= :get method) (= "/api/alpha/coordination/qa" uri))
       (handle-coordination-qa request)

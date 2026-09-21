@@ -1,5 +1,6 @@
 (ns futon3c.transport.invoke-ingress-integration-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [clojure.test :refer [deftest is]]
             [clojure.edn :as edn]
             [cheshire.core :as json]
             [futon3c.agency.invoke-ingress-controller :as ingress]
@@ -8,6 +9,8 @@
             [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.transport.http :as http])
   (:import (java.nio.file Files)))
+
+(clojure.test/use-fixtures :each mesh-fixtures/with-store)
 
 (defn- refusal [f]
   (:refusal (try (f) (catch clojure.lang.ExceptionInfo e (ex-data e)))))

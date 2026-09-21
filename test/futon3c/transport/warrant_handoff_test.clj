@@ -3,7 +3,8 @@
   is a typed 400 before any job exists; a valid one is accepted and the
   normalized warrants reach the delivered-turn header via
   wrap-surface-header. No live server, no real agent invocation."
-  (:require [cheshire.core :as json]
+  (:require [futon3c.social.mesh-test-fixtures :as mesh-fixtures]
+            [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
@@ -36,7 +37,7 @@
   (try (reg/unregister-agent! agent-id) (catch Throwable _)))
 
 (use-fixtures
-  :each
+  :each mesh-fixtures/with-store
   (fn [f]
     ;; Redirect the invoke-jobs ledger to a temp file (auto_bellback_test style)
     ;; so handler tests never touch real invoke state.
