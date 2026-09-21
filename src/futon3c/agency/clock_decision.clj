@@ -134,12 +134,23 @@
         roots (or *repo-roots*
                   (var-get (requiring-resolve
                             'futon3c.peripheral.mission-control-backend/default-repo-roots)))
-        files (for [[_ root] roots
+        ;; Mission control reads watcher-ingested substrate documents. Reuse
+        ;; that intake rule for top-level holes/ documents (no recursive walk).
+        top-level-doc? (apply some-fn
+                              (map requiring-resolve
+                                   ['futon3c.watcher.file-ingest/mission-doc-path?
+                                    'futon3c.watcher.file-ingest/excursion-doc-path?
+                                    'futon3c.watcher.file-ingest/campaign-doc-path?]))
+        top-level (for [[_ root] roots
+                        f (.listFiles (io/file root "holes"))
+                        :when (and (.isFile f) (top-level-doc? (.getPath f)))] f)
+        nested (for [[_ root] roots
                     dir ["missions" "campaigns" "excursions"]
                     :let [folder (io/file root "holes" dir)]
                     :when (.isDirectory folder)
                     f (file-seq folder)
                     :when (and (.isFile f) (re-matches #"[CME]-.+\.md" (.getName f)))] f)
+        files (concat top-level nested)
         signature (mapv (fn [f] [(canonical f) (.lastModified ^java.io.File f)
                                  (.length ^java.io.File f)]) files)]
     (if (= [roots signature] (:key @!catalog))

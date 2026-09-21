@@ -764,3 +764,37 @@ FIX-3 reload order is `futon3c.agency.clock-decision`,
 `futon3c.social.coordination-ledger`, `futon3c.transport.http`,
 `futon3c.agents.codex-activity`, `futon3c.agents.codex-cli`. No `dev` or Emacs
 reload is required for the Codex consumer. The shared JVM was not mutated.
+
+## Top-level catalog correction (2026-09-21)
+
+The clock catalog now includes direct `holes/[CME]-*.md` children, while
+preserving its recursive missions/campaigns/excursions scans. The added intake
+uses the public `mission-doc-path?`, `excursion-doc-path?`, and
+`campaign-doc-path?` predicates from `futon3c.watcher.file-ingest`. Mission
+control obtains top-level documents from this watcher-fed substrate inventory
+(`mission_control_backend.clj:989`); its filesystem fallback at line 828 is
+still missions-directory-only. No new independent top-level naming rule was
+introduced. Duplicate IDs remain ambiguous; unrelated directories directly
+under holes are not recursively scanned by this addition.
+
+The regression covers a top-level M-foo, nested M-bar, ignored archive/M-hidden,
+and a duplicate M-foo added after the catalog is cached. The real
+`/home/joe/code/futon2/holes/E-operator-as-attached-agent.md` resolves as source 1
+when the canonical futon2 root is explicitly configured. The changed clock
+namespace contains no record/type/protocol definitions; hot-load only
+`futon3c.agency.clock-decision`. No backend or watcher reload is required.
+
+**Separate deployment blocker found:** `/proc/392550/environ` shows the running
+JVM's FUTON3C_REPOS contains futon3c, futon3b, futon3a, futon5, futon3, futon4,
+and futon6, but not futon2 (nor futon0/futon1b). Reloading this catalog alone
+therefore cannot resolve the requested futon2 excursion. The owner must add
+futon2 to the configured roots as well. Unconfigured sibling auto-discovery
+instead includes worktree copies: the first real-default-roots test correctly
+refused this excursion as ambiguous. The real-file test explicitly supplies
+its canonical futon2 root; production discovery/ambiguity rules were not
+weakened to make it pass. Runtime/configuration was not modified in this handoff.
+
+Validation: `clojure -M:test:test-all -n futon3c.agency.clock-decision-test`:
+15 tests / 100 assertions pass (baseline 13 / 90 pass), including the existing
+real-backend slow tests and the real-file check. Clj-kondo: zero errors/warnings;
+check-parens: OK on both changed Clojure files.

@@ -439,3 +439,38 @@
               (is (= "M-clock-fixture"
                      (get-in (reg/registry-status) [:agents "clock-worker" :mission-id])))))
           (finally (stop! server) (.close ^java.lang.AutoCloseable node)))))))
+
+
+(deftest top-level-targets-share-ingestion-rule-and-duplicates-refuse
+  (with-docs
+    (fn [root _ _]
+      (let [top (io/file root "holes" "M-foo.md")
+            nested (io/file root "holes" "missions" "M-bar.md")
+            ignored (io/file root "holes" "archive" "M-hidden.md")]
+        (spit top "# top-level mission")
+        (spit nested "# nested mission")
+        (.mkdirs (.getParentFile ignored))
+        (spit ignored "# outside mission directories")
+        (binding [decision/*test-store* (atom {:entries {} :order []})]
+          (doseq [id ["M-foo" "M-bar"]]
+            (let [d (decision/record! (assoc (context id) :text id))]
+              (is (= 1 (:source d)))
+              (is (= id (get-in d [:clock :mission-id])))))
+          (is (= :unresolvable-target
+                 (:reason (decision/record! (assoc (context "hidden") :text "M-hidden")))))
+          ;; Adding a duplicate also exercises catalog cache invalidation.
+          (spit (io/file root "holes" "missions" "M-foo.md") "# duplicate")
+          (let [d (decision/record! (assoc (context "duplicate") :text "M-foo"))]
+            (is (= [:unclocked :ambiguous 4] ((juxt :status :reason :source) d)))
+            (is (= (clock/empty-clock) (clock/current-clock "clock-worker" "clock-session")))))))))
+
+(deftest ^:slow real-futon2-root-resolves-operator-as-attached-agent
+  ;; Explicit authority: unconfigured discovery also includes many worktrees.
+  ;; The running JVM currently omits futon2 from FUTON3C_REPOS (reported).
+  (binding [decision/*repo-roots* {:futon2 "/home/joe/code/futon2"}
+            decision/*test-store* (atom {:entries {} :order []})]
+    (is (.isFile (io/file "/home/joe/code/futon2/holes/E-operator-as-attached-agent.md")))
+    (let [d (decision/record! (assoc (context "real-top-level-excursion")
+                                   :mission-id "E-operator-as-attached-agent"))]
+      (is (= [:clocked 1] ((juxt :status :source) d)))
+      (is (= "E-operator-as-attached-agent" (get-in d [:clock :excursion-id]))))))
