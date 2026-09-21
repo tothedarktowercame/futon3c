@@ -22,6 +22,7 @@
 
 (require 'json)
 (require 'cl-lib)
+(require 'subr-x)
 (require 'agent-chat nil t)   ; for agent-chat--session-id / agent-chat--on-turn-end (soft)
 
 (defgroup session-mode nil
@@ -489,19 +490,22 @@ and explicit/cued counts.  Deterministic — the same spotter, summarized."
         (when (member type '("mission-clock" "mission-mention"))
           (session-mode--raise-overview (overlay-get ov 'session-mode-token))))))))
 
-(defvar session-mode--idle-timer nil)
+(defvar-local session-mode--idle-timer nil)
 
-(defun session-mode--after-change (&rest _)
-  "Debounced rescan as the buffer grows (new turns arrive)."
-  (when (timerp session-mode--idle-timer) (cancel-timer session-mode--idle-timer))
-  (let ((buf (current-buffer)))
-    (setq session-mode--idle-timer
-          (run-with-idle-timer
-           0.6 nil
-           (lambda ()
-             (when (buffer-live-p buf)
-               (with-current-buffer buf
-                 (when (bound-and-true-p session-mode) (session-mode-refresh)))))))))
+(defun session-mode--after-change (&rest changes)
+  "Rescan transcript changes; draft typing is handled by the local tagger."
+  (unless (and (session-mode--tag-input-start)
+               (numberp (car changes))
+               (>= (car changes) (session-mode--tag-input-start)))
+    (when (timerp session-mode--idle-timer) (cancel-timer session-mode--idle-timer))
+    (let ((buf (current-buffer)))
+      (setq session-mode--idle-timer
+            (run-with-idle-timer
+             0.6 nil
+             (lambda ()
+               (when (buffer-live-p buf)
+                 (with-current-buffer buf
+                   (when (bound-and-true-p session-mode) (session-mode-refresh))))))))))
 
 ;; Turn-end refresh.  claude-repl streams turn text with modification hooks
 ;; INHIBITED, so `after-change' never fires for a new turn; and a deferred
@@ -583,6 +587,7 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
   (if session-mode
       (progn
         (session-mode-refresh)
+        (session-mode-turn-tags-mode 1)
         (add-hook 'after-change-functions #'session-mode--after-change nil t)
         (add-hook 'post-command-hook #'session-mode--hover-post-command nil t)
         ;; Global, idempotent advice (a no-op in buffers without session-mode);
@@ -592,7 +597,191 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     (remove-hook 'post-command-hook #'session-mode--hover-post-command t)
     (when (timerp session-mode--idle-timer) (cancel-timer session-mode--idle-timer))
     (session-mode--hover-hide)
+    (unless global-session-mode-turn-tags-mode (session-mode-turn-tags-mode -1))
     (session-mode--clear)))
+
+;; --- Local passage tags: draft feedback, with no retrieval/model calls. ---
+(defcustom session-mode-turn-vocabulary
+  '(("agree" "I agree" "I approve" "that's a good fit")
+    ("object" "I disagree" "I don't agree" "I do not agree" "don't do that" "that's wrong")
+    ("continue" "please continue" "go on")
+    ("qualify" "but")
+    ("redirect" "instead" "rather than")
+    ("topic-switch" "unrelated question" "changing the subject"))
+  "Literal phrase cues, grouped by tag, matching the initial Marimo vocabulary.
+A turn may have several tags.  These are provisional cues, not inferred intent;
+quoted phrases and scope of negation still need the operator's judgment.
+Customize this variable to refine the vocabulary.  Unmatched text is unclassified."
+  :type '(repeat (cons (string :tag "Tag") (repeat (string :tag "Phrase"))))
+  :group 'session-mode)
+
+(defface session-mode-turn-agree-face
+  '((t :underline (:color "#27864b" :style wave)))
+  "Provisional agreement phrase." :group 'session-mode)
+(defface session-mode-turn-object-face
+  '((t :underline (:color "#c05050" :style wave)))
+  "Provisional objection phrase." :group 'session-mode)
+(defface session-mode-turn-other-face
+  '((t :underline (:color "#9270c9" :style wave)))
+  "Other provisional turn phrase." :group 'session-mode)
+
+(defvar-local session-mode--draft-tag-overlays nil)
+(defvar-local session-mode--sent-tag-overlays nil)
+(defvar-local session-mode--tag-timer nil)
+(defvar-local session-mode--draft-tags nil
+  "Current draft's distinct cue tags, in passage order.")
+(defvar session-mode-turn-tags-mode)
+(defvar global-session-mode-turn-tags-mode)
+
+(defun session-mode--turn-matches (text)
+  "Return (START END TAG PHRASE) matches in TEXT, with zero-based offsets.
+Match case-insensitively with word/underscore boundaries and either apostrophe.
+Literal phrases do not absorb their targets or force a single turn category."
+  (let ((case-fold-search t) hits)
+    (with-temp-buffer
+      ;; Fix boundaries independently of the conversation's major-mode syntax.
+      (set-syntax-table (standard-syntax-table))
+      (insert text)
+      (dolist (entry session-mode-turn-vocabulary)
+        (dolist (phrase (cdr entry))
+          (unless (string-empty-p phrase)
+            (goto-char (point-min))
+            (let ((regexp (replace-regexp-in-string
+                           "'" "['’]" (regexp-quote phrase) t t)))
+              (while (re-search-forward regexp nil t)
+                (let ((beg (match-beginning 0)) (end (match-end 0)))
+                  (when (and (or (= beg (point-min))
+                                 (not (string-match-p "[[:alnum:]_]"
+                                                      (char-to-string (char-before beg)))))
+                             (or (= end (point-max))
+                                 (not (string-match-p "[[:alnum:]_]"
+                                                      (char-to-string (char-after end))))))
+                    (push (list (1- beg) (1- end) (car entry)
+                                (buffer-substring-no-properties beg end)) hits)))))))))
+    (sort (delete-dups hits) (lambda (a b) (< (car a) (car b))))))
+
+(defun session-mode--tag-input-start ()
+  "Return this buffer's valid agent-chat draft start, or nil."
+  (when (and (boundp 'agent-chat--input-start)
+             (markerp agent-chat--input-start)
+             (eq (marker-buffer agent-chat--input-start) (current-buffer))
+             (<= (point-min) (marker-position agent-chat--input-start) (point-max)))
+    (marker-position agent-chat--input-start)))
+
+(defun session-mode--paint-turn-tags (beg end draft)
+  "Decorate BEG..END without changing text; return (TAGS . OVERLAYS).
+DRAFT selects the pre-send summary wording.  Only explicit matches get tags."
+  (let* ((text (buffer-substring-no-properties beg end))
+         (hits (session-mode--turn-matches text)) tags overlays)
+    (dolist (hit hits)
+      (let* ((tag (nth 2 hit))
+             (ov (make-overlay (+ beg (nth 0 hit)) (+ beg (nth 1 hit)) nil nil nil)))
+        (cl-pushnew tag tags :test #'equal)
+        (overlay-put ov 'session-mode-turn-tag tag)
+        (overlay-put ov 'priority 30)
+        (overlay-put ov 'face (pcase tag
+                               ("agree" 'session-mode-turn-agree-face)
+                               ("object" 'session-mode-turn-object-face)
+                               (_ 'session-mode-turn-other-face)))
+        (overlay-put ov 'help-echo (format "%s → %s (provisional phrase cue)" (nth 3 hit) tag))
+        (push ov overlays)))
+    (setq tags (nreverse tags))
+    (unless (string-empty-p (string-trim text))
+      (let ((summary (make-overlay end end nil nil nil)))
+        (overlay-put summary 'session-mode-turn-summary t)
+        (overlay-put summary 'after-string
+                     (propertize
+                      (format "\n  [%s tags: %s%s]"
+                              (if draft "draft" "turn")
+                              (if tags (string-join tags " + ") "unclassified — no phrase matches")
+                              (if tags " · provisional" ""))
+                      'face 'session-mode-sigil-face))
+        (push summary overlays)))
+    (cons tags overlays)))
+
+(defun session-mode--cancel-tag-timer ()
+  (when (timerp session-mode--tag-timer) (cancel-timer session-mode--tag-timer))
+  (setq session-mode--tag-timer nil))
+
+(defun session-mode-turn-tags-refresh ()
+  "Refresh only the local draft; never fetch evidence or scan the transcript."
+  (interactive)
+  (session-mode--cancel-tag-timer)
+  (mapc #'delete-overlay session-mode--draft-tag-overlays)
+  (setq session-mode--draft-tag-overlays nil session-mode--draft-tags nil)
+  (when (and session-mode-turn-tags-mode (session-mode--tag-input-start))
+    (save-match-data
+      (let ((result (session-mode--paint-turn-tags
+                     (session-mode--tag-input-start) (point-max) t)))
+        (setq session-mode--draft-tags (car result)
+              session-mode--draft-tag-overlays (cdr result))))))
+
+(defun session-mode--tags-after-change (&rest _)
+  "Debounce draft feedback independently in each conversation buffer."
+  (session-mode--cancel-tag-timer)
+  (setq session-mode--tag-timer
+        (run-with-idle-timer
+         0.15 nil
+         (lambda (buffer)
+           (when (buffer-live-p buffer)
+             (with-current-buffer buffer
+               (when session-mode-turn-tags-mode (session-mode-turn-tags-refresh)))))
+         (current-buffer))))
+
+(defun session-mode--tag-sent-message (original name text)
+  "Preserve tags on the latest operator message inserted by ORIGINAL.
+Use the real inserted span, including any agent-chat text transformations."
+  (if (not (and session-mode-turn-tags-mode
+                (equal name agent-chat-user-speaker)
+                (markerp agent-chat--prompt-marker)
+                (eq (marker-buffer agent-chat--prompt-marker) (current-buffer))))
+      (funcall original name text)
+    (let ((start (copy-marker agent-chat--prompt-marker nil)))
+      (unwind-protect
+          (prog1 (funcall original name text)
+            (mapc #'delete-overlay session-mode--sent-tag-overlays)
+            (setq session-mode--sent-tag-overlays
+                  (cdr (session-mode--paint-turn-tags
+                        (+ (marker-position start) (length name) 2)
+                        ;; agent-chat appends two newlines after message text.
+                        (- (marker-position agent-chat--prompt-marker) 2) nil)))
+            (session-mode-turn-tags-refresh))
+        (set-marker start nil)))))
+
+;;;###autoload
+(define-minor-mode session-mode-turn-tags-mode
+  "Highlight phrase cues and show multiple draft tags before sending.
+Also annotate the latest sent operator turn.  No model, network or text edits.
+Kept separate from full session markup so typing never triggers retrieval."
+  :lighter " Tags"
+  (if session-mode-turn-tags-mode
+      (progn
+        (add-hook 'after-change-functions #'session-mode--tags-after-change nil t)
+        (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
+        (session-mode-turn-tags-refresh))
+    (remove-hook 'after-change-functions #'session-mode--tags-after-change t)
+    (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
+    (session-mode--cancel-tag-timer)
+    (mapc #'delete-overlay (append session-mode--draft-tag-overlays session-mode--sent-tag-overlays))
+    (setq session-mode--draft-tag-overlays nil session-mode--sent-tag-overlays nil
+          session-mode--draft-tags nil)))
+
+(defun session-mode--tags-after-init (&rest _)
+  "Enable local tags after an agent-chat buffer creates its input marker."
+  (when global-session-mode-turn-tags-mode (session-mode-turn-tags-mode 1)))
+
+;;;###autoload
+(define-minor-mode global-session-mode-turn-tags-mode
+  "Enable local turn tags in current and future initialized agent-chat buffers."
+  :global t :group 'session-mode
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (session-mode--tag-input-start)
+        (session-mode-turn-tags-mode (if global-session-mode-turn-tags-mode 1 -1))))))
+
+(with-eval-after-load 'agent-chat
+  (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
+  (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message))
 
 (provide 'session-mode)
 ;;; session-mode.el ends here
