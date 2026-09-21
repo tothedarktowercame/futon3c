@@ -7,7 +7,7 @@
             [futon3c.agency.clock-lineage :as lineage]
             [futon3c.evidence.backend]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.futon1b-backend]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as store])
   (:import [java.time Instant]
            [java.util UUID]
@@ -38,6 +38,77 @@
       backend
       (throw (ex-info "Clock decisions require a durable evidence backend"
                       {:error/code :clock/non-durable-backend})))))
+
+(defn- recovery-rows
+  [backend query]
+  ;; Count the SQL-pushed predicates WITHOUT tags: tags are post-filtered in
+  ;; futon1b. Bound the entire sorted input, not just the matching decisions.
+  ;; 10k rows also fit the backend's 20-page request budget. Split wider ranges
+  ;; before any cursor walk; no page can encounter XTDB's 102,400-row spill.
+  (letfn [(read-window [q lo hi]
+            (if (> (store/count* backend (assoc (dissoc q :query/tags)
+                                                    :query/include-ephemeral? true)) 10000)
+              (let [mid (quot (+ lo hi) 2)]
+                (when (or (= mid lo) (= mid hi))
+                  (throw (ex-info "Clock recovery window cannot be safely subdivided"
+                                  {:error/code :clock/recovery-dense-window :query q})))
+                (let [at (str (Instant/ofEpochMilli mid))]
+                  (into (read-window (assoc q :query/before at) lo mid)
+                        (read-window (assoc q :query/since at) mid hi))))
+              (let [rows (store/query* backend q)]
+                (when (f1b/partial-result? rows)
+                  (throw (ex-info "Incomplete clock recovery evidence"
+                                  {:error/code :clock/recovery-incomplete :query q})))
+                rows)))]
+    ;; Uncached: a reconstructed client must observe external writers too.
+    (binding [f1b/*query-cache-enabled* false]
+      (read-window query 0 (.toEpochMilli (Instant/parse "9999-12-31T23:59:59Z"))))))
+
+(defn restore!
+  "Restore latest durable decision per exact (agent, session), including none.
+   With two arguments restore all sessions of one agent; three narrow to a
+   non-nil session. Nil session decisions use turn IDs in the envelope, so they
+   must be found by author and then selected by their body session identity.
+   Gather and validate every result before publishing any in-memory state."
+  ([supplied agent-id] (restore! supplied agent-id ::all))
+  ([supplied agent-id session-id]
+   (when-not (seq agent-id)
+     (throw (ex-info "Clock recovery requires an agent"
+                     {:error/code :clock/missing-identity})))
+   (let [backend (evidence-store supplied)
+         query (cond-> {:query/author agent-id :query/tags [:clock-decision]}
+                 (and session-id (not= ::all session-id))
+                 (assoc :query/session-id session-id))
+         rows (recovery-rows backend query)
+         decisions (->> rows (map :evidence/body)
+                        (filter #(and (= agent-id (:agent-id %))
+                                      (or (= ::all session-id)
+                                          (= session-id (:session-id %))))))
+         latest (reduce (fn [acc d]
+                          (when-not (and (contains? #{:clocked :unclocked} (:status d))
+                                         (string? (:decision-id d)))
+                            (throw (ex-info "Invalid durable clock decision"
+                                            {:error/code :clock/recovery-invalid-decision
+                                             :decision d})))
+                          (let [order (clock/decision-order d)
+                                key [(:agent-id d) (:session-id d)]
+                                prior (get acc key)]
+                            (if (or (nil? prior)
+                                    (pos? (compare order (clock/decision-order prior))))
+                              (assoc acc key d) acc)))
+                        {} decisions)]
+     (doseq [[[aid sid] d] latest]
+       (clock/set-decision! aid sid
+                            (if (= :unclocked (:status d))
+                              (assoc d :clock (clock/empty-clock)) d)))
+     {:restored (count latest)})))
+
+(defn restore-registered!
+  "Rebuild all saved sessions for currently registered agents. Called after
+   roster restoration and when constructing an HTTP client/handler."
+  [supplied]
+  (let [names ((requiring-resolve 'futon3c.agency.registry/addressable-names))]
+    (reduce (fn [n aid] (+ n (:restored (restore! supplied aid)))) 0 names)))
 
 (defn- canonical [path] (.getCanonicalPath (io/file path)))
 
@@ -136,6 +207,8 @@
                     {:error/code :clock/missing-identity
                      :agent-id agent-id :turn-id turn-id :surface surface})))
   (let [backend (evidence-store (:evidence-store context))
+        _ (when-not (clock/stored-state agent-id session-id)
+            (restore! backend agent-id session-id))
         eid (decision-id context)
         existing (store/get-entry* backend eid)
         decision (or (:evidence/body existing)

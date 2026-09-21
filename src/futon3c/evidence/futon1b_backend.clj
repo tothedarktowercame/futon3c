@@ -100,6 +100,10 @@
   (or (some-> (System/getenv "FUTON1B_QUERY_CACHE_TTL_MS") parse-long)
       60000))
 
+(def ^:dynamic *query-cache-enabled*
+  "Recovery reads must see writes made by other clients immediately."
+  true)
+
 (defonce ^:private !query-cache
   (atom {:generation 0 :entries {}}))
 
@@ -543,7 +547,7 @@
                       [nil])
           pages (mapv
                  (fn [ref-type]
-                   (fetch-entries
+                   ((if *query-cache-enabled* fetch-entries fetch-entries-uncached)
                     base-url
                     (cond-> params
                       ref-type (assoc-in [:query/subject :ref/type]

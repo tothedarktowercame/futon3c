@@ -9293,7 +9293,9 @@
 
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
-  (let [started-at (Instant/now)]
+  (let [started-at (Instant/now)
+        _ (when-let [backend (evidence-store-for-config config)]
+            (clock-decision/restore-registered! backend))]
     (with-meta
       (fn [request]
       (try

@@ -6,6 +6,7 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.clock-decision :as clock-decision]
             [futon3c.agency.roster-store :as roster-store]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
@@ -195,10 +196,11 @@
                       irc-interceptor (assoc :irc-interceptor irc-interceptor))
             {:keys [handler connections]} (make-ws-handler ws-opts)
             app (http/compose-http-websocket-handler http-handler handler)
-            result (http/start-server! app port)
             restore-report (roster-store/restore-on-boot!
                             #(restore-agent-via-handler! http-handler %))
-            coordinator-recovery (jit-coordinator/recover!)]
+            clock-restore (clock-decision/restore-registered! evidence-store)
+            coordinator-recovery (jit-coordinator/recover!)
+            result (http/start-server! app port)]
         ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!
         ;; has consumed the saved roster. Installing at registry ns-load fired the
         ;; watch's initial persist against the empty boot registry and clobbered
@@ -224,6 +226,7 @@
                         (pr-str coordinator-recovery))))
         (assoc result
                :ws-connections connections
+               :clock-restore clock-restore
                :agent-restore restore-report
                :coordinator-recovery coordinator-recovery)))))
 

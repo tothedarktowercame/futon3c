@@ -584,3 +584,110 @@ Owner reload order from the canonical checkout:
 `futon3c.agency.clock-store`, `futon3c.agency.clock-lineage`,
 `futon3c.agency.clock-decision`, `futon3c.agency.registry`,
 `futon3c.social.coordination-ledger`, `futon3c.transport.http`, `futon3c.dev`.
+
+
+## INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)
+
+Clock recovery now selects the maximum `(Instant(decided-at), decision-id)`
+for each exact `(agent, session)` in durable `:clock-decision` evidence. A
+latest `:unclocked` restores an empty clock and retains its decision/reason;
+it cannot resurrect an older positive clock or stale roster metadata.
+Live publication uses the same total order, including equal-time ID ties.
+Recovery gathers the result before publishing RAM state and refuses partial
+cursor results with `:clock/recovery-incomplete`.
+
+`clock-decision/restore!` accepts the configured durable backend and an agent,
+optionally a session. `restore-registered!` rebuilds every saved session for
+registered agents. Bootstrap calls it after roster restoration, before opening
+the HTTP listener or resuming queue drainers. Constructing an HTTP handler
+with a configured backend also restores registered agents, covering client
+reconstruction. A newly admitted turn whose exact session has no RAM state
+restores that session before deciding; later reconnects therefore cannot erase
+a saved clock by first writing a new `:no-source` decision. Unregistered
+historical agents are not scanned globally; their state is recovered when
+admitted, or through explicit `restore!`. Existing manual RAM clocks remain
+an input to admission. Recovery does not append new evidence.
+
+Ordering safety before and after futon1b `5d9938c`: reads are narrowed by
+agent author, optional session, and the clock-decision tag. Since tags and
+ephemeral exclusion are post-filters in futon1b, recovery first counts the
+agent/session/time predicates **without tags and including ephemeral rows**.
+A window exceeding 10,000 such rows is recursively divided by time before
+any evidence page is requested. Each resulting cursor walk stays below both
+the 102,400-row external-sort spill and the backend's 20-page budget. Latest
+selection happens in the client, by decision time and ID, never by taking the
+first returned row. A window still over the bound at millisecond resolution
+fails explicitly with `:clock/recovery-dense-window`; it is not partially
+restored. Recovery disables the short query cache so a new client observes
+external writers immediately. The same algorithm remains valid after the
+server ordering fix is deployed.
+
+Validation, one namespace per command (baseline is pre-FIX-2 source):
+
+| Namespace | Before | After |
+| --- | --- | --- |
+| `futon3c.agency.clock-decision-test` | 8 tests / 39 assertions, pass | 11 / 67, pass, including both real-backend slow tests |
+| `futon3c.agency.clock-store-test` | 7 / 16, pass | 7 / 16, pass |
+| `futon3c.agency.registry-test` | 54 / 207, pass | 54 / 207, pass |
+| `futon3c.evidence.futon1b-backend-test` | 22 / 94, pass | 22 / 94, pass |
+| `futon3c.dev.bootstrap-test` | 7 / 28, pass | 7 / 28, pass |
+| `futon3c.transport.http-test` | 128 / 654; 43 failures, 4 errors | 128 / 654; 31 failures, 4 errors |
+
+HTTP has no new failing test names/assertions: the 12 existing
+`portfolio-step-returns-recommendation` failures did not reproduce in the
+post-change run; the remaining baseline failures/errors reproduced. This
+handoff does not claim to repair that namespace's existing failures.
+Clj-kondo: zero errors/warnings on changed Clojure; check-parens: OK.
+
+The new isolated real-Futon1b test writes a positive decision, resets RAM,
+reconstructs the backend and HTTP handler, and checks both `/agent-clock` and
+the roster. It then writes a later negative decision directly through the
+real substrate (outside the backend's cache invalidation), repeats recovery,
+and checks that both projections clear despite stale roster metadata. A
+further admission after RAM teardown inherits its own recovered session
+clock as source 2. Unit coverage checks reversed insertion order, equal-time
+ID ties, separate sessions, bounded query subdivision, and partial-page refusal.
+The FIX-1 empty-session fixture now actually uses a different session ID:
+resetting RAM alone correctly no longer makes a durable session empty.
+
+Deployment: no shared JVM or Emacs was mutated. Namespace dependency order is
+`futon3c.evidence.futon1b-backend`, `futon3c.agency.clock-store`,
+`futon3c.agency.clock-decision`, `futon3c.social.coordination-ledger`,
+`futon3c.transport.http`, `futon3c.dev.bootstrap`. The ledger is unchanged but
+imports the durable backend class. **A bare hot reload with old backend
+instances is insufficient**: an isolated reload test confirmed that redefining
+`Futon1bBackend` makes the old instance fail `instance?`. A cold startup creates
+all clients correctly. Hot deployment must reconstruct the configured backend
+and replace its captured transport configurations as well as `dev/!evidence-store`
+(the existing HTTP `reconfigure-handler!` can rebuild its handler); old client
+references must not remain in pending invocations or WS configurations. This
+is a deployment constraint for the reviewing owner, not authorization to
+restart the shared JVM. No Emacs change is needed. FIX 3 inheritance and Codex
+edit activity remain untouched.
+
+### Surface check, 2026-09-21 18:47:40Z (report only)
+
+GET evidence with `tags=clock-decision&since=2026-09-21T18:33:00Z`
+returned three entries, no continuation: **bell 2, auto-bellback 1; Emacs,
+whistle and marimo 0**. The only Joe operator evidence in the same queried
+window was `emacs-c2e40242acc76ca0c25cb82ae0bf4253`, turn
+`claude-5-turn-42`, surface `emacs-claude-repl`, at **18:33:04.326568319Z**.
+The `futon3c-zone.service` journal records that turn entering
+`turn-drainer-claude-5` at **18:33:04.581487961Z** with surface `emacs-repl`.
+Claude's local session transcript
+`~/.claude/projects/-home-joe-code/de4c2047-bf32-4b18-bd55-8f97e94c6252.jsonl`
+records that same turn issuing the seven-namespace reload at
+**18:33:27.884Z**, then the probe command at 18:33:34.701Z. The first durable
+probe decision is at 18:33:46.694715951Z.
+
+Thus this sample is a turn admitted **before** its own reload, not evidence
+of an Emacs surface outside accepted-turn handling. Source paths are
+`emacs/claude-repl.el:1020` (POST invoke-stream),
+`src/futon3c/transport/http.clj:5872` and `:5900` (queued/direct registry
+invocation), and `src/futon3c/agency/registry.clj:1113` (decision admission).
+Operator evidence separately uses `emacs/claude-repl.el:795` and
+`src/futon3c/transport/http.clj:2998` (`operator-clock-decision!`). A configured
+Emacs evidence URL pointing directly to futon1b would bypass that latter
+Agency endpoint, but it would not bypass invoke admission; this sample does
+not establish such a configuration. A new operator turn after reload is
+needed to measure live Emacs decision coverage. No surface code was changed.

@@ -213,6 +213,16 @@
                           :new-target (clock-label new-clock)}))))
        k))))
 
+(defn stored-state
+  "Exact session state, without the legacy agent-wide fallback."
+  [agent-id session-id]
+  (get @!sessions (session-key agent-id session-id)))
+
+(defn decision-order
+  "Total chronological order shared by recovery and live publication."
+  [decision]
+  [(java.time.Instant/parse (:decided-at decision)) (:decision-id decision)])
+
 (defn current-state
   [agent-id session-id]
   (let [sessions @!sessions
@@ -230,10 +240,10 @@
   [agent-id session-id decision]
   (swap! !sessions update (session-key agent-id session-id)
          (fn [state]
-           (let [prior (get-in state [:decision :decided-at])]
+           (let [prior (:decision state)]
              (if (and prior
-                      (.isAfter (java.time.Instant/parse prior)
-                                (java.time.Instant/parse (:decided-at decision))))
+                      (pos? (compare (decision-order prior)
+                                     (decision-order decision))))
                state
                (assoc (merge (empty-session-state) state)
                       :clock (merge (empty-clock) (:clock decision))

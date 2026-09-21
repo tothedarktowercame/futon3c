@@ -133,6 +133,7 @@
             ;; Independent empty session: every accepted surface has a durable
             ;; negative decision. Registry state must not leak the prior mission.
             (clock/reset-store!)
+            (reg/update-agent! "clock-worker" :agent/session-id "empty-session")
             (reg/update-agent! "clock-worker" :agent/invoke-fn
                                (fn [_ sid] {:result "done" :session-id sid}))
             (doseq [surface ["bell" "whistle" "emacs-repl" "marimo"]]
@@ -147,6 +148,7 @@
               (is (every? #(= [:unclocked :no-source]
                               ((juxt :status :reason) (:evidence/body %))) absent)))
             ;; A stale carried REPL clock must lose to the newly named target.
+            (reg/update-agent! "clock-worker" :agent/session-id "clock-session")
             (clock/set-dispatch-mission! "clock-worker" "clock-session" "E-stale")
             ;; Operator evidence uses the same real authority and resolver.
             (let [handler (http/make-handler {:evidence-store backend})
@@ -212,3 +214,119 @@
         (is (= :unclocked
                (get-in (first (store/query* backend {:query/tags [:clock-decision]}))
                        [:evidence/body :status])))))))
+
+(deftest recovery-orders-ties-and-keeps-sessions-separate
+  (let [backend (atom {:entries {} :order []})
+        at "2026-09-21T18:33:00Z"
+        positive {:agent-id "clock-worker" :session-id "clock-session"
+                  :decision-id "a" :decided-at at :status :clocked
+                  :clock {:mission-id "M-before"}}
+        negative (assoc positive :decision-id "z" :status :unclocked :reason :no-source
+                                 :clock (clock/empty-clock))]
+    (binding [decision/*test-store* backend]
+      (doseq [d [negative positive (assoc positive :decision-id "other" :session-id "other")]]
+        (store/append* backend {:evidence/id (:decision-id d)
+                                :evidence/subject {:ref/type :agent :ref/id "clock-worker"}
+                                :evidence/type :coordination :evidence/claim-type :step
+                                :evidence/author "clock-worker" :evidence/at at
+                                :evidence/session-id (:session-id d)
+                                :evidence/tags [:clock-decision] :evidence/body d}))
+      (is (= {:restored 2} (decision/restore! backend "clock-worker")))
+      (is (= "z" (get-in (clock/current-state "clock-worker" "clock-session")
+                          [:decision :decision-id])))
+      (is (= "M-before" (:mission-id (clock/current-clock "clock-worker" "other"))))
+      (clock/set-decision! "clock-worker" "clock-session" positive)
+      (is (= (clock/empty-clock) (clock/current-clock "clock-worker" "clock-session"))))))
+
+(deftest ^:slow decisions-restore-after-restart-through-http-and-roster
+  (with-docs
+    (fn [root _ _]
+      (let [start! (requiring-resolve 'futon1b-server/start-server!)
+            stop! (requiring-resolve 'futon1b-server/stop-server!)
+            server (start! {:store-dir (str (io/file root "restore-substrate"))
+                            :bind-host "127.0.0.1" :port 0})
+            node @(var-get (requiring-resolve 'futon1b-server/!node))
+            base (str "http://127.0.0.1:" (.getPort (.getAddress server)))
+            backend (f1b/make-futon1b-backend base)
+            request {:request-method :get :uri "/api/alpha/agent-clock"
+                     :query-string "agent-id=clock-worker&session-id=clock-session"}
+            read-clock (fn [handler] (json/parse-string (:body (handler request)) true))]
+        (try
+          (binding [decision/*test-store* nil]
+            (register! (fn [_ sid] {:result "done" :session-id sid}))
+            (let [positive (decision/record! (assoc (context "positive")
+                                                   :text "M-clock-fixture"
+                                                   :evidence-store backend))]
+              (clock/reset-store!)
+              (is (= (clock/empty-clock) (clock/current-clock "clock-worker" "clock-session")))
+              ;; Rebuilding the configured HTTP client restores registered agents,
+              ;; exactly the helper called after roster restore during bootstrap.
+              (let [client (f1b/make-futon1b-backend base)
+                    handler (http/make-handler {:evidence-store client})]
+                (is (= "M-clock-fixture" (:mission-id (read-clock handler))))
+                (is (= "M-clock-fixture"
+                       (get-in (reg/registry-status) [:agents "clock-worker" :mission-id])))
+                (is (= (:decision-id positive)
+                       (get-in (clock/current-state "clock-worker" "clock-session")
+                               [:decision :decision-id]))))
+              ;; Warm the ordinary evidence cache; the next durable write is made
+              ;; outside this backend so its cache invalidation cannot help restore.
+              (store/query* backend {:query/author "clock-worker" :query/tags [:clock-decision]})
+              (let [negative (assoc positive :decision-id "external-unclocked"
+                                    :decided-at (str (java.time.Instant/now))
+                                    :status :unclocked :reason :no-source :source 4
+                                    :clock (clock/empty-clock))
+                    write! (requiring-resolve 'futon1b-evidence/write-evidence!)
+                    [status _] (write! node {:evidence/id (:decision-id negative)
+                                            :evidence/subject {:ref/type :agent :ref/id "clock-worker"}
+                                            :evidence/type :coordination :evidence/claim-type :step
+                                            :evidence/author "clock-worker"
+                                            :evidence/at (:decided-at negative)
+                                            :evidence/session-id "clock-session"
+                                            :evidence/tags [:clock-decision]
+                                            :evidence/body negative})]
+                (is (= 201 status))
+                (clock/reset-store!)
+                ;; Also prove stale roster metadata cannot resurrect the old clock.
+                (reg/update-agent! "clock-worker" :agent/metadata {:mission-id "M-stale"})
+                (let [client (f1b/make-futon1b-backend base)
+                      handler (http/make-handler {:evidence-store client})]
+                  (is (nil? (:mission-id (read-clock handler))))
+                  (is (nil? (get-in (reg/registry-status) [:agents "clock-worker" :mission-id])))
+                  (is (= [:unclocked :no-source "external-unclocked"]
+                         ((juxt :status :reason :decision-id)
+                          (:decision (clock/current-state "clock-worker" "clock-session")))))
+                  (is (= :unclocked
+                         (get-in (store/get-entry* client "external-unclocked")
+                                 [:evidence/body :status])))))
+              ;; A later reconnect need not have existed in the startup roster.
+              ;; Admission itself restores before calculating source 2.
+              (decision/record! (assoc (context "positive-again") :text "M-clock-fixture"
+                                       :evidence-store backend))
+              (clock/reset-store!)
+              (let [next (decision/record! (assoc (context "after-restart") :evidence-store backend))]
+                (is (= 2 (:source next)))
+                (is (= "M-clock-fixture" (get-in next [:clock :mission-id]))))))
+          (finally (stop! server) (.close ^java.lang.AutoCloseable node)))))))
+
+(deftest recovery-subdivides-before-reading-and-refuses-partial-pages
+  (let [backend (atom {:entries {} :order []})
+        reads (atom [])
+        expected {:query/author "clock-worker" :query/session-id "clock-session"
+                  :query/tags [:clock-decision]}]
+    (binding [decision/*test-store* backend]
+      (with-redefs [store/count* (fn [_ q]
+                                  (is (nil? (:query/tags q)))
+                                  (is (true? (:query/include-ephemeral? q)))
+                                  (if (or (:query/since q) (:query/before q)) 2 102401))
+                    store/query* (fn [_ q]
+                                   (swap! reads conj q)
+                                   (is (false? f1b/*query-cache-enabled*))
+                                   [])]
+        (is (= {:restored 0} (decision/restore! backend "clock-worker" "clock-session")))
+        (is (= 2 (count @reads)))
+        (is (every? #(= expected (select-keys % (keys expected))) @reads))
+        (is (= (:query/before (first @reads)) (:query/since (second @reads)))))
+      (with-redefs [store/query* (fn [& _] (with-meta [] {:partial? true}))]
+        (is (= :clock/recovery-incomplete
+               (failure #(decision/restore! backend "clock-worker" "clock-session"))))))))
