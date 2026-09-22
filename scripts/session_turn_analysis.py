@@ -29,7 +29,8 @@ def template(request):
         "fragment_shape": {"start": 0, "end": 0, "text": "exact source fragment",
                            "intent": "meaningful intent", "target": "what the intent concerns",
                            "rationale": "why this reading fits", "relations": ["goal"],
-                           "pattern_refs": [{"id": "family/name", "rationale": "fit after reading pattern"}]}}
+                           "pattern_refs": [], "display_cues": [{"start": 0, "end": 0, "text": "short keyword phrase"}],
+                           "no_surface_cue": "explain here only if display_cues is empty"}}
 
 
 def validate(request, analysis, library=LIBRARY):
@@ -69,6 +70,24 @@ def validate(request, analysis, library=LIBRARY):
             if not isinstance(roles, list) or not roles or any(r not in ROLES for r in roles):
                 raise ValueError("relations must name at least one documented structural role")
             item["relations"] = roles
+            cues = fragment.get("display_cues")
+            if not isinstance(cues, list):
+                raise ValueError("display_cues must be an explicit array, separate from interpretation spans")
+            checked_cues = []
+            for cue in cues:
+                a, b = cue.get("start"), cue.get("end")
+                if (type(a) is not int or type(b) is not int or not start <= a < b <= end
+                        or source[a:b] != cue.get("text")):
+                    raise ValueError("display cue offsets/text must match inside their interpretation span")
+                phrase = source[a:b]
+                if len(phrase) > 80 or len(phrase.split()) > 8 or "\n" in phrase:
+                    raise ValueError("display cues must be short keyword phrases (at most 8 words / 80 characters)")
+                checked_cues.append({"start": a, "end": b, "text": phrase})
+            no_cue = fragment.get("no_surface_cue", "")
+            if not checked_cues:
+                required_text(no_cue, "no_surface_cue when intent has no explicit keyword")
+            item["display_cues"] = checked_cues
+            item["no_surface_cue"] = no_cue
             refs = fragment.get("pattern_refs", [])
             if not isinstance(refs, list):
                 raise ValueError("pattern_refs must be an array")
@@ -87,8 +106,16 @@ def validate(request, analysis, library=LIBRARY):
                                      "status": "candidate", "source_sha256": hashlib.sha256(content.encode()).hexdigest()})
             item["pattern_refs"] = checked_refs
             checked.append(item)
+        # Check the union across all fragments so dividing a sentence into
+        # many short spans cannot recreate total underlining.
+        if len(source[sentence["start"]:sentence["end"]].split()) > 8:
+            covered = {i for item in checked for cue in item["display_cues"]
+                       for i in range(cue["start"], cue["end"]) if not source[i].isspace()}
+            total = sum(not c.isspace() for c in source[sentence["start"]:sentence["end"]])
+            if len(covered) > total / 2:
+                raise ValueError("display cues must leave most of a long sentence unmarked")
         canonical.append({"id": entry["id"], "fragments": checked, "unresolved_reason": reason})
-    return {"version": 1, "status": "analyzed", "method": "agent-interpretation",
+    return {"version": 2, "status": "analyzed", "method": "agent-interpretation",
             "human_approved": False, "labeller": labeller,
             "created_at": datetime.now(timezone.utc).isoformat(), "source_text": source,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),

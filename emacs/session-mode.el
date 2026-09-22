@@ -603,7 +603,7 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
 ;; --- Local passage tags: draft feedback, with no retrieval/model calls. ---
 (defconst session-mode-turn-intent-vocabulary
   '(("approve" "I agree" "I approve" "that's a good fit" "that's great" "looks good" "good news" "sounds good" "you're right" "Yes you can do this" "I definitely like the idea")
-    ("disagree" "I disagree" "I don't agree" "I do not agree" "that's wrong" "misunderstood my intent" "doesn't match my intent" "does not match my intent" "of no use whatsoever" "a bad design")
+    ("disagree" "I disagree" "I don't agree" "I do not agree" "that's wrong" "misunderstood my intent" "doesn't match my intent" "does not match my intent" "of no use whatsoever" "a bad design" "wasn't very useful" "was not very useful")
     ("clarify" "I don't understand" "help me understand" "I'd like to know" "I'd like to see some examples" "what's the story" "What gives" "I'm slightly confused" "How should we proceed" "what's our strategy")
     ("propose" "I suggest" "We could perhaps" "maybe we could" "Maybe we should" "I wonder if" "I think it would be good")
     ("extend" "in parallel" "Another thing we should pay attention to" "we should also" "we could also" "that's another analysis" "could be a further set of tasks")
@@ -613,9 +613,9 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     ("constrain" "don't do that" "I am not asking you to" "I don't want to spend" "please use aliases" "we will not do any deep dives" "I don't want a repeat" "not going to decide things by fiat")
     ("defer" "we'll do it when we get time" "we can come back to" "at some point" "for now" "defer processing")
     ("continue" "please continue" "go on" "get on with it" "let's continue" "Please do 1, 2, and 3")
-    ("redirect" "rather than" "let's trim" "we will instead focus" "I'd like to return to" "what we should do is" "I want to alter")
+    ("redirect" "rather than" "let's trim" "we will instead focus" "I'd like to return to" "what we should do is" "I want to alter" "I would want" "I would prefer" "what I want instead" "I meant that")
     ("explain" "here's why" "my main point" "what I mean" "the broader long term idea" "the use cases would be" "my use case")
-    ("report-problem" "is currently broken" "I still see an HTTP error" "it's broken" "login doesn't work" "overlaps existing UI elements" "point of major concern")
+    ("report-problem" "is currently broken" "I still see an HTTP error" "it's broken" "login doesn't work" "overlaps existing UI elements" "point of major concern" "not getting any markup" "totally underlined")
     ("collect" "collect information" "getting logs" "keep a record" "record the turns")
     ("qualify" "with the caveat" "to the extent that it is possible")
     ("ask-action" "can you please" "please publish" "please sort this out" "I would like to have" "please update"))

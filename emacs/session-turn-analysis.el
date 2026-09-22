@@ -9,10 +9,17 @@
   "Private durable records for operator passages, cues and agent interpretations."
   :type 'directory :group 'session-mode)
 
-(defcustom session-mode-turn-analyze-gaps t
-  "Ask the receiving agent to analyze sent turns with unmatched sentences.
-This uses the existing conversation call, never a separate model call."
-  :type 'boolean :group 'session-mode)
+(defcustom session-mode-turn-analysis-policy 'all
+  "Which sent operator turns request interpretation from their receiving agent.
+`all' analyzes every ordinary turn; `unmatched' requests only sentences with
+no lexical cues; `never' records structure without requesting interpretation."
+  :type '(choice (const all) (const unmatched) (const never)) :group 'session-mode)
+
+(defun session-mode--analysis-requested-p (record)
+  "Whether RECORD should request interpretation under the current policy."
+  (or (eq session-mode-turn-analysis-policy 'all)
+      (and (eq session-mode-turn-analysis-policy 'unmatched)
+           (> (length (alist-get 'unmatched record)) 0))))
 
 (defconst session-mode--analysis-tool
   (expand-file-name "../scripts/session_turn_analysis.py"
@@ -71,8 +78,7 @@ This uses the existing conversation call, never a separate model call."
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
-                      (analysis_status . ,(if (and session-mode-turn-analyze-gaps
-                                                  (> (length (alist-get 'unmatched record)) 0))
+                      (analysis_status . ,(if (session-mode--analysis-requested-p record)
                                              "requested" "not-requested")))))
       (condition-case err
           (with-temp-file path
@@ -85,10 +91,13 @@ This uses the existing conversation call, never a separate model call."
   "Give the current receiving agent a bounded task tied to PATH."
   (format
    (concat "\n\n[Session-mode structural analysis request — machine-added, not Joe's words]\n"
-           "Some sentences have no lexical cue. After handling the user's request, analyze this operator turn. "
+           "After handling the user's request, interpret the whole operator turn, including sentences with lexical cues. "
            "Do not delegate or start another conversation. Original text, offsets and unresolved sentences: %s\n"
            "Use python3 %s template REQUEST to obtain the JSON shape. "
            "Fill every sentence with one or more fragment annotations (multiple intents allowed), or an explicit unresolved reason. "
+           "Interpretation spans can cover full sentences, but are NEVER themselves displayed as underlines. "
+           "Each fragment must have a separate display_cues array of exact short keyword spans (at most 8 words / 80 characters each). "
+           "Leave most of each long sentence unmarked. If intent is implicit, use an empty display_cues array and explain no_surface_cue. "
            "Each fragment has exact source offsets/text, intent, target, rationale and relations "
            "(context, condition, contrast, action, rationale, goal, or dependency). "
            "Use meaningful intent vocabulary; do not treat conjunctions alone as intent. "
@@ -118,22 +127,29 @@ This uses the existing conversation call, never a separate model call."
                        session-mode--last-operator-region
                        (marker-buffer (car session-mode--last-operator-region)))
               (let ((base (marker-position (car session-mode--last-operator-region))))
+                ;; Refresh makes repeated callbacks idempotent and removes
+                ;; legacy full-interpretation underlines before painting cues.
+                (session-mode--refresh-sent-tags)
                 (dolist (sentence (alist-get 'sentences data))
                   (dolist (fragment (alist-get 'fragments sentence))
-                    (let ((start (alist-get 'start fragment)) (end (alist-get 'end fragment))
-                          (intent (alist-get 'intent fragment)))
-                      (when (and (integerp start) (integerp end) (<= 0 start) (< start end)
-                                 (<= end (length source))
-                                 (equal (substring source start end) (alist-get 'text fragment)))
-                        (let ((ov (make-overlay (+ base start) (+ base end))))
-                          (overlay-put ov 'session-mode-turn-tag intent)
-                          (overlay-put ov 'face '(:underline (:style wave :color "purple")))
-                          (overlay-put ov 'priority 31)
-                          (overlay-put ov 'help-echo
-                                       (format "%s → %s [agent %s; inferred]: %s"
-                                               (alist-get 'text fragment) intent
-                                               (alist-get 'labeller data) (alist-get 'rationale fragment)))
-                          (push ov session-mode--sent-tag-overlays)))))))))
+                    ;; No fallback for old results lacking explicit display cues.
+                    (dolist (cue (alist-get 'display_cues fragment))
+                      (let ((start (alist-get 'start cue)) (end (alist-get 'end cue))
+                            (intent (alist-get 'intent fragment)))
+                        (when (and (integerp start) (integerp end) (<= 0 start) (< start end)
+                                   (<= end (length source))
+                                   (<= (- end start) 80)
+                                   (<= (length (split-string (alist-get 'text cue))) 8)
+                                   (equal (substring source start end) (alist-get 'text cue)))
+                          (let ((ov (make-overlay (+ base start) (+ base end))))
+                            (overlay-put ov 'session-mode-turn-tag intent)
+                            (overlay-put ov 'face '(:underline (:style wave :color "purple")))
+                            (overlay-put ov 'priority 31)
+                            (overlay-put ov 'help-echo
+                                         (format "%s → %s [agent %s; inferred]: %s"
+                                                 (alist-get 'text cue) intent
+                                                 (alist-get 'labeller data) (alist-get 'rationale fragment)))
+                            (push ov session-mode--sent-tag-overlays))))))))))
         (error (message "Turn analysis display failed: %s" (error-message-string err)))))))
 
 (defun session-mode-inspect-turn-analysis ()
@@ -156,8 +172,7 @@ This uses the existing conversation call, never a separate model call."
          (condition-case err
              (progn
                (setq path (session-mode--record-turn sent))
-               (when (and session-mode-turn-analyze-gaps
-                          (> (length (alist-get 'unmatched (session-mode--structure-turn sent))) 0))
+               (when (session-mode--analysis-requested-p (session-mode--structure-turn sent))
                  (setq prompt (concat sent (session-mode--analysis-instruction path)))))
            (error (display-warning 'session-mode
                                    (format "Turn structure was NOT recorded: %s" (error-message-string err)))))

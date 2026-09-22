@@ -267,18 +267,21 @@
               (insert (json-encode
                        '((status . "analyzed") (source_text . "An unfamiliar request.") (labeller . "test-agent")
                          (sentences . [((fragments . [((start . 0) (end . 21) (text . "An unfamiliar request")
-                                                      (intent . "propose") (rationale . "fixture"))]))])))))
+                                                      (intent . "propose") (rationale . "fixture")
+                                                      (display_cues . [((start . 3) (end . 13) (text . "unfamiliar"))]))]))])))))
             (session-mode--display-analysis path)
             (should (equal before (buffer-string)))
             (should (= 1 (length session-mode--sent-tag-overlays)))
             (dolist (ov session-mode--sent-tag-overlays)
               (should (equal (overlay-get ov 'session-mode-turn-tag) "propose"))
+              (should (equal (buffer-substring-no-properties (overlay-start ov) (overlay-end ov)) "unfamiliar"))
               (should-not (overlay-get ov 'after-string))
               (should-not (overlay-get ov 'display)))))
       (delete-directory session-mode-turn-analysis-directory t))))
 
 (ert-deftest session-mode-structure-cued-turn-does-not-request-extra-analysis ()
-  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-cued-test" t)))
+  (let ((session-mode-turn-analysis-policy 'unmatched)
+        (session-mode-turn-analysis-directory (make-temp-file "turn-cued-test" t)))
     (unwind-protect
         (with-temp-buffer
           (session-mode-test--init)
@@ -309,3 +312,16 @@
             (should (string-match-p "NOT recorded" warning))
             (should-not session-mode--last-analysis-request)))
       (delete-file file))))
+
+(ert-deftest session-mode-redirection-cues-while-typing ()
+  (with-temp-buffer
+    (session-mode-test--init)
+    (insert "Even if the whole turn is processed I would want keyword based analysis.")
+    (session-mode-turn-tags-refresh)
+    (should (member "redirect" session-mode--draft-tags))
+    (should (equal (mapcar (lambda (ov) (buffer-substring-no-properties (overlay-start ov) (overlay-end ov)))
+                          session-mode--draft-tag-overlays) '("I would want")))))
+
+(ert-deftest session-mode-structure-default-interprets-even-cued-turns ()
+  (let ((session-mode-turn-analysis-policy 'all))
+    (should (session-mode--analysis-requested-p (session-mode--structure-turn "I agree.")))))

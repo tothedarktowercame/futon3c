@@ -17,7 +17,7 @@ class ValidationTest(unittest.TestCase):
                         "sentences": [{"id": "s1", "start": 0, "end": 19}]}
         self.fragment = {"start": 4, "end": 18, "text": "needs evidence", "intent": "verify",
                          "target": "claim", "rationale": "requires evidence", "relations": ["condition"],
-                         "pattern_refs": []}
+                         "pattern_refs": [], "display_cues": [{"start": 4, "end": 18, "text": "needs evidence"}]}
         self.data = {"labeller": "test-agent", "sentences": [
             {"id": "s1", "fragments": [self.fragment], "unresolved_reason": ""}]}
 
@@ -42,6 +42,19 @@ class ValidationTest(unittest.TestCase):
             analysis.validate(self.request, self.data)
         self.data["sentences"] = [{"id": "s1", "fragments": [], "unresolved_reason": "unclear target"}]
         self.assertEqual(analysis.validate(self.request, self.data)["sentences"][0]["unresolved_reason"], "unclear target")
+
+    def test_whole_sentence_display_is_rejected_but_full_analysis_is_allowed(self):
+        source = "Even if the whole turn is processed I would want keyword based analysis."
+        request = {"source_text": source, "offset_unit": "unicode-codepoints-zero-based-end-exclusive",
+                   "sentences": [{"id": "s1", "start": 0, "end": len(source)}]}
+        self.fragment.update(start=0, end=len(source), text=source,
+                             display_cues=[{"start": 0, "end": len(source), "text": source}])
+        with self.assertRaisesRegex(ValueError, "short keyword phrases"):
+            analysis.validate(request, self.data)
+        start = source.index("I would want")
+        self.fragment["display_cues"] = [{"start": start, "end": start+12, "text": "I would want"}]
+        result = analysis.validate(request, self.data)
+        self.assertEqual(result["sentences"][0]["fragments"][0]["text"], source)
 
     def test_publication_preserves_request_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:

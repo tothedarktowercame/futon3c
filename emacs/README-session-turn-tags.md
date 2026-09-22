@@ -22,7 +22,7 @@ Codex-14 has now labelled 20 recorded passage spans by intent and distilled
 approve, disagree, clarify, delegate, verify, prioritize, defer and others.
 Standalone “but” is no longer a cue. `C-c s i` describes the underlined phrase at
 point, or the draft’s recognized intents, in the echo area only on request.
-This is an agent-curated cue vocabulary. Sent turns with unmatched sentences now
+This is an agent-curated cue vocabulary. Sent turns now
 request additional interpretation from the conversation agent (see below). No model
 is called on each keystroke.
 
@@ -104,7 +104,7 @@ observations. A sentence without cues is `unresolved`; one with cues is only
 `cue-only`, not semantically classified. This is sentence-level gap detection:
 a recognized cue can still leave other clauses in that sentence uninterpreted.
 
-If any sentence has no cue, `session-mode-turn-analyze-gaps` (default t) appends a
+`session-mode-turn-analysis-policy` (default `all`) appends a
 bounded structural-analysis request to the existing receiving agent's prompt.
 There is no second invocation. Visible operator text and before-send evidence
 hooks are unchanged; the provider transcript includes the clearly delimited
@@ -130,10 +130,21 @@ Requested does not mean complete: agents may omit the task or lack filesystem
 access, leaving the request pending; there is no automatic retry worker.
 A storage failure warns without losing the operator's conversation turn.
 
-When a completed result exists at reply time, inferred fragments are underlined
+When a completed result exists at reply time, only explicit keyword cues are underlined
 on the latest sent turn. Their help text identifies the interpreting agent;
 `C-c s i` reads it on request. Draft layout stays unchanged. Use
 `C-c s a` (`session-mode-inspect-turn-analysis`) to open the latest result (or the
 uncompleted request). Only the latest sent turn gets overlays; durable records
-remain available for later analysis. Disable `session-mode-turn-analyze-gaps`
-to retain structural recording without asking agents for interpretations.
+remain available for later analysis. Set `session-mode-turn-analysis-policy` to `never` to retain structural recording
+without requesting interpretation, or `unmatched` to request it only for turns
+with unmatched sentences. The default analyzes all ordinary operator turns.
+
+Interpretation spans and `display_cues` are separate. A whole sentence may be
+interpreted, but it is never implicitly used as a display span. Each cue must
+be an exact source phrase, at most eight words and 80 characters. Their union
+must leave most of a long sentence unmarked; splitting it into many fragments
+does not evade that check. If no explicit cue expresses the inferred intent,
+the analysis records `no_surface_cue` rather than manufacturing a keyword.
+Older results without display cues remain inspectable but produce no inferred
+underlines. New default redirection cues include “I would want” and “I would
+prefer”; these are contextual hypotheses, not proof of redirection in every use.
