@@ -738,9 +738,9 @@ Literal phrases do not absorb their targets or force a single turn category."
              (<= (point-min) (marker-position agent-chat--input-start) (point-max)))
     (marker-position agent-chat--input-start)))
 
-(defun session-mode--paint-turn-tags (beg end draft)
+(defun session-mode--paint-turn-tags (beg end _draft)
   "Decorate BEG..END without changing text; return (TAGS . OVERLAYS).
-DRAFT selects the pre-send summary wording.  Only explicit matches get tags."
+Only underline existing characters: no inserted display strings or line shifts."
   (let* ((text (buffer-substring-no-properties beg end))
          (hits (session-mode--turn-matches text)) tags overlays)
     (dolist (hit hits)
@@ -756,17 +756,6 @@ DRAFT selects the pre-send summary wording.  Only explicit matches get tags."
         (overlay-put ov 'help-echo (format "%s → %s (provisional phrase cue)" (nth 3 hit) tag))
         (push ov overlays)))
     (setq tags (nreverse tags))
-    (unless (string-empty-p (string-trim text))
-      (let ((summary (make-overlay end end nil nil nil)))
-        (overlay-put summary 'session-mode-turn-summary t)
-        (overlay-put summary 'after-string
-                     (propertize
-                      (format "\n  [%s tags: %s%s]"
-                              (if draft "draft" "turn")
-                              (if tags (string-join tags " + ") "unclassified — no phrase matches")
-                              (if tags " · provisional" ""))
-                      'face 'session-mode-sigil-face))
-        (push summary overlays)))
     (cons tags overlays)))
 
 (defun session-mode--cancel-tag-timer ()
@@ -830,7 +819,7 @@ Use the real inserted span, including any agent-chat text transformations."
 
 ;;;###autoload
 (define-minor-mode session-mode-turn-tags-mode
-  "Highlight phrase cues and show multiple draft tags before sending.
+  "Underline phrase cues without inserting a draft classification summary.
 Also annotate the latest sent operator turn.  No model, network or text edits.
 Kept separate from full session markup so typing never triggers retrieval."
   :lighter " Tags"

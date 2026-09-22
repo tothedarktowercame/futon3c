@@ -12,17 +12,19 @@ and future initialized agent-chat REPL buffers. To enable it at Emacs startup:
 turns on this local component; it can be used independently of mission markup
 and retrieved-pattern sigils.
 
-While composing, matched phrases receive wavy underlines and a summary appears
-below the draft, for example:
+While composing, matched phrases receive underlines only. There is no draft or
+sent-turn summary string: the previous extra display line made terminal Emacs
+text move while typing. The overlays never add display characters or line breaks.
 
-    I agree with the plan about Foo but I disagree with the plan about Bar
-      [draft tags: agree + qualify + object · provisional]
+These matches are lexical cues, not an automated classification of intent.
+The intended next stage is agent classification of logged passages using a
+meaningful intent vocabulary and Joe's sentence corrections. It is not connected
+to this typing UI. Existing session logs and saved corrections remain available
+for that processing. No model is called on each keystroke.
 
-The summary is a multi-label classification of explicit cues, not a judgment of
-the whole turn's intent. No matches means unclassified, not “new.” Phrase matching
-is case-insensitive, checks boundaries, and accepts straight or curly apostrophes.
-Quotes and the scope of negation still require interpretation. Agreement and
-objection have distinct underline colours; hovering shows the phrase and tag.
+Phrase matching is case-insensitive, checks boundaries, and accepts straight or
+curly apostrophes. Quotes and negation still require interpretation. Agreement
+and objection have distinct underline colours; hovering shows the phrase and tag.
 
 `M-x customize-variable RET session-mode-turn-vocabulary` edits the literal
 vocabulary, initially the same as the Marimo prototype. Customize changes are
