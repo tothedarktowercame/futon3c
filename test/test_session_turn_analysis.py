@@ -56,6 +56,15 @@ class ValidationTest(unittest.TestCase):
         result = analysis.validate(request, self.data)
         self.assertEqual(result["sentences"][0]["fragments"][0]["text"], source)
 
+    def test_reusable_cue_requires_source_and_reuse_reason(self):
+        self.data["reusable_cues"] = [{"start": 4, "end": 18, "text": "needs evidence",
+                                      "intent": "verify", "rationale": "Explicit evidence request"}]
+        result = analysis.validate(self.request, self.data)
+        self.assertEqual(result["reusable_cues"][0]["intent"], "verify")
+        self.data["reusable_cues"][0]["text"] = "not actually said"
+        with self.assertRaisesRegex(ValueError, "exact source span"):
+            analysis.validate(self.request, self.data)
+
     def test_publication_preserves_request_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:
             request = Path(directory) / "turn.json"

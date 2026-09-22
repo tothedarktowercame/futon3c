@@ -636,6 +636,7 @@ corrections override the vocabulary and remain recorded as human labels."
   "Saved live phrase vocabulary.  JSON data, never evaluated as Lisp."
   :type 'file :group 'session-mode)
 (defvar session-mode--vocabulary-loaded-file nil)
+(defvar session-mode-learned-cues nil "Provenance for automatically acquired phrase hypotheses.")
 
 (defun session-mode--validate-turn-vocabulary (rules)
   "Validate saved RULES before replacing any live vocabulary."
@@ -662,10 +663,11 @@ corrections override the vocabulary and remain recorded as human labels."
             (user-error "Unsupported turn vocabulary version; live rules unchanged"))
           (setq session-mode-turn-vocabulary
                 (session-mode--validate-turn-vocabulary (alist-get 'rules data))
-                session-mode-turn-corrections (alist-get 'corrections data))))
+                session-mode-turn-corrections (alist-get 'corrections data)
+                session-mode-learned-cues (alist-get 'learned_cues data))))
       (setq session-mode--vocabulary-loaded-file file))))
 
-(defun session-mode--save-live-vocabulary (rules &optional corrections)
+(defun session-mode--save-live-vocabulary (rules &optional corrections learned)
   "Atomically save RULES before publishing them in the running Emacs."
   (session-mode--validate-turn-vocabulary rules)
   (let* ((file (expand-file-name session-mode-turn-rules-file))
@@ -676,12 +678,14 @@ corrections override the vocabulary and remain recorded as human labels."
           (setq temp (make-temp-file (expand-file-name ".turn-vocabulary-" directory)))
           (with-temp-file temp
             (insert (json-encode `((version . 2) (rules . ,(vconcat (mapcar #'vconcat rules)))
-                                   (corrections . ,(vconcat (or corrections session-mode-turn-corrections))))))
+                                   (corrections . ,(vconcat (or corrections session-mode-turn-corrections)))
+                                   (learned_cues . ,(vconcat (or learned session-mode-learned-cues))))))
             (insert "\n"))
           (rename-file temp file t))
       (when (and temp (file-exists-p temp)) (delete-file temp))))
   (setq session-mode-turn-vocabulary rules
         session-mode-turn-corrections (or corrections session-mode-turn-corrections)
+        session-mode-learned-cues (or learned session-mode-learned-cues)
         session-mode--vocabulary-loaded-file (expand-file-name session-mode-turn-rules-file)))
 
 (defun session-mode-turn-add-rule (tag phrase)

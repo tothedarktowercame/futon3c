@@ -84,8 +84,8 @@ Human labels are authoritative for the examples. Reassigning a phrase globally
 is still a generalization: a phrase can mean something different in another
 context. Exact sentence matches do not discover useful novel keywords. A small
 model such as Haiku could extract candidate phrase spans from the saved examples;
-**automatic vocabulary refinement is not connected**; the sent-turn analysis below
-adds separate interpretations without overriding human corrections.
+**explicit agent-proposed reusable cues are now connected** (see below);
+existing phrase assignments and human corrections take precedence.
 
 Rules and correction records are saved atomically together as version-2 JSON in
 `session-mode-turn-rules-file` (inside `user-emacs-directory`, currently
@@ -205,3 +205,27 @@ the two inputs. Compare exact ID overlap first; record broader conceptual matche
 as separately judged annotations. The embedding ranking is a comparator, not
 human ground truth. Existing records inspected here lack a verified exact link,
 so no recovery score is reported or implemented by this change.
+
+### Close the loop: analyzed cues become future draft cues
+
+A completed analysis may now include `reusable_cues`, separate from display
+spans. Each proposal includes exact source `start`, `end`, `text`, an `intent`,
+and a rationale for why the phrase is useful in future turns. The validator
+checks the source span and short-phrase constraints. When Emacs ingests the
+result it atomically saves previously unassigned phrases in the live vocabulary,
+with analysis-file and labeller provenance in `learned_cues`, and refreshes active
+drafts. Saved rules are loaded in subsequent sessions. Ordinary display cues are
+not automatically generalized; a project name need not become an intent keyword.
+
+Existing phrase assignments win, including human `!c` corrections. New learning
+is a provisional phrase hypothesis, not proof of intent in every quotation or
+negation. Agents can propose these cues through the analysis result; they need
+not edit the vocabulary file themselves. Results are ingested on the current
+turn's reply or navigation refresh; this is not a background sweep of all old
+records. `just testing → verify` is the first live example through this path.
+
+For that example, `apparatus/done-is-observed-running` is a contextual candidate:
+Joe checked whether a saved analysis actually changed live typing behaviour.
+It is not a universal synonym for testing, nor does a one-off check establish
+the standing comparator required by that pattern. Pattern IDs are not copied
+into global phrase rules: each turn still needs contextual alignment.

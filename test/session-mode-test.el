@@ -401,3 +401,34 @@
       (should-error (session-mode--consume-tag-command (lambda (&rest _) (setq called t))) :type 'user-error)
       (should-not called)
       (should (equal before (buffer-string))))))
+
+(ert-deftest session-mode-learned-cue-closes-next-draft-loop-and-persists ()
+  (let* ((dir (make-temp-file "learned-cue-test" t))
+         (session-mode-turn-rules-file (expand-file-name "rules.json" dir))
+         (session-mode--vocabulary-loaded-file nil)
+         (session-mode-turn-vocabulary '(("approve" "I agree")))
+         (session-mode-turn-corrections nil) (session-mode-learned-cues nil))
+    (unwind-protect
+        (progn
+          (session-mode--learn-analysis-cues
+           '((labeller . "test-agent")
+             (reusable_cues . (((text . "just testing") (intent . "verify")
+                               (rationale . "Explicit test intent"))))) "/example.analysis.json")
+          (should (equal (mapcar (lambda (h) (nth 2 h)) (session-mode--turn-matches "just testing")) '("verify")))
+          (setq session-mode-turn-vocabulary nil session-mode-learned-cues nil
+                session-mode--vocabulary-loaded-file nil)
+          (session-mode--load-live-vocabulary)
+          (should (equal (alist-get 'source (car session-mode-learned-cues)) "/example.analysis.json"))
+          (with-temp-buffer
+            (session-mode-test--init)
+            (insert "I am just testing again.")
+            (session-mode-turn-tags-refresh)
+            (should (equal session-mode--draft-tags '("verify"))))
+          ;; A conflicting later proposal cannot displace the existing assignment.
+          (session-mode--learn-analysis-cues
+           '((labeller . "other-agent")
+             (reusable_cues . (((text . "just testing") (intent . "clarify")
+                               (rationale . "Quoted here"))))) "/other.analysis.json")
+          (should (= 1 (length session-mode-learned-cues)))
+          (should (equal (mapcar (lambda (h) (nth 2 h)) (session-mode--turn-matches "just testing")) '("verify"))))
+      (delete-directory dir t))))

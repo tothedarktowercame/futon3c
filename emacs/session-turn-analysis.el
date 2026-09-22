@@ -107,7 +107,10 @@ no lexical cues; `never' records structure without requesting interpretation."
            "For pattern alignment, compare the full passage and target to the pattern context/IF/THEN, never match on the intent label alone. "
            "Suggested intents: %s. "
            "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "
-           "Record inferred interpretations, not human-approved labels; do not edit the cue vocabulary automatically. "
+           "Record inferred interpretations, not human-approved labels. "
+           "To improve future draft tagging, optionally propose top-level reusable_cues with exact start/end/text, intent and rationale for reuse. "
+           "Propose only short communicative phrases that generalize, not project names or arbitrary subject words. "
+           "Emacs persists unassigned phrases as provisional cue hypotheses with provenance; existing assignments and human corrections win. Do not edit the vocabulary file directly. "
            "Save the filled JSON to a temporary file and validate/publish with: "
            "python3 %s complete REQUEST ANALYSIS.json. Replace REQUEST with the record path above. "
            "If you cannot do this, say so; the record remains requested, never silently complete.\n"
@@ -140,6 +143,29 @@ no lexical cues; `never' records structure without requesting interpretation."
                                    (alist-get 'id ref) (alist-get 'rationale ref))) refs) "; ")
               "No justified flexiarg alignment recorded."))))
 
+(defun session-mode--learn-analysis-cues (data path)
+  "Persist explicitly proposed reusable cues in DATA, retaining PATH provenance.
+Existing phrase assignments, including human corrections, always take precedence."
+  (session-mode--load-live-vocabulary)
+  (let ((rules (copy-tree session-mode-turn-vocabulary))
+        (learned (copy-tree session-mode-learned-cues)) changed)
+    (dolist (cue (alist-get 'reusable_cues data))
+      (let ((phrase (alist-get 'text cue)) (intent (alist-get 'intent cue)))
+        (unless (cl-some (lambda (group) (member-ignore-case phrase (cdr group))) rules)
+          (session-mode--validate-turn-vocabulary (list (list intent phrase)))
+          (let ((group (assoc intent rules)))
+            (if group (setcdr group (append (cdr group) (list phrase)))
+              (setq rules (append rules (list (list intent phrase))))))
+          (push `((phrase . ,phrase) (intent . ,intent) (source . ,path)
+                  (labeller . ,(alist-get 'labeller data))
+                  (rationale . ,(alist-get 'rationale cue)) (method . "agent-inferred")) learned)
+          (setq changed t))))
+    (when changed
+      (session-mode--save-live-vocabulary rules nil learned)
+      (dolist (buffer (buffer-list))
+        (with-current-buffer buffer
+          (when session-mode-turn-tags-mode (session-mode-turn-tags-refresh)))))))
+
 (defun session-mode--display-analysis (path)
   "Underline validated agent fragments for the latest sent turn, if available."
   (let ((result (concat path ".analysis.json")))
@@ -154,6 +180,7 @@ no lexical cues; `never' records structure without requesting interpretation."
                        (equal source session-mode--last-operator-text)
                        session-mode--last-operator-region
                        (marker-buffer (car session-mode--last-operator-region)))
+              (session-mode--learn-analysis-cues data result)
               (setq session-mode--analysis-display-stamp
                     (list path (file-attribute-modification-time (file-attributes result))))
               (let ((base (marker-position (car session-mode--last-operator-region))))

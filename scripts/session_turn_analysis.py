@@ -23,7 +23,7 @@ def required_text(value, field):
 
 
 def template(request):
-    return {"labeller": "", "sentences": [
+    return {"labeller": "", "reusable_cues": [], "sentences": [
         {"id": sentence["id"], "fragments": [], "unresolved_reason": ""}
         for sentence in request["sentences"]],
         "fragment_shape": {"start": 0, "end": 0, "text": "exact source fragment",
@@ -115,8 +115,25 @@ def validate(request, analysis, library=LIBRARY):
             if len(covered) > total / 2:
                 raise ValueError("display cues must leave most of a long sentence unmarked")
         canonical.append({"id": entry["id"], "fragments": checked, "unresolved_reason": reason})
+    reusable = analysis.get("reusable_cues", [])
+    if not isinstance(reusable, list):
+        raise ValueError("reusable_cues must be an array")
+    learned = []
+    for cue in reusable:
+        start, end = cue.get("start"), cue.get("end")
+        if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(source)
+                or source[start:end] != cue.get("text")):
+            raise ValueError("reusable cue must be an exact source span")
+        phrase = source[start:end]
+        if len(phrase) > 80 or len(phrase.split()) > 8 or "\n" in phrase:
+            raise ValueError("reusable cue must be a short phrase")
+        intent = required_text(cue.get("intent"), "reusable cue intent")
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*", intent):
+            raise ValueError("invalid reusable intent")
+        learned.append({"start": start, "end": end, "text": phrase, "intent": intent,
+                        "rationale": required_text(cue.get("rationale"), "reuse rationale")})
     return {"version": 2, "status": "analyzed", "method": "agent-interpretation",
-            "human_approved": False, "labeller": labeller,
+            "human_approved": False, "labeller": labeller, "reusable_cues": learned,
             "created_at": datetime.now(timezone.utc).isoformat(), "source_text": source,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
             "offset_unit": request["offset_unit"], "sentences": canonical}
