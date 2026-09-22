@@ -206,3 +206,106 @@
                  '("approve" "delegate")))
   (should (member "clarify" (mapcar (lambda (hit) (nth 2 hit))
                                   (session-mode--turn-matches "Can you please help me understand the situation?")))))
+
+(ert-deftest session-mode-structure-retains-unmatched-sentences-and-offsets ()
+  (let* ((text "  I agree with Foo.\nA naïve 🐈 needs a different route.")
+         (record (session-mode--structure-turn text))
+         (sentences (append (alist-get 'sentences record) nil)))
+    (should (equal (append (alist-get 'unmatched record) nil) '("s2")))
+    (should (equal (alist-get 'status (cadr sentences)) "unresolved"))
+    (dolist (sentence sentences)
+      (should (equal (substring text (alist-get 'start sentence) (alist-get 'end sentence))
+                     (alist-get 'text sentence))))))
+
+(ert-deftest session-mode-structure-real-send-keeps-visible-text-and-evidence ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-analysis-test" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let ((text "A novel structural request.") sent observed callback)
+            ;; Only lifecycle effects unrelated to sending are disabled. Real
+            ;; agent-chat--start-turn, insertion and our advice execute together.
+            (cl-letf (((symbol-function 'agent-chat--maybe-auto-clock-from-turn) #'ignore)
+                      ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore))
+              (agent-chat--start-turn
+               (lambda (prompt reply) (setq sent prompt callback reply) nil)
+               "test-agent" (list :before-send (lambda (s) (setq observed s)))
+               text "joe" 'operator))
+            (should (equal observed text))
+            (should (equal session-mode--last-operator-text text))
+            (should (string-prefix-p text sent))
+            (should (string-match-p "structural analysis request" sent))
+            (should-not (string-match-p "structural analysis request" (buffer-string)))
+            (should callback)
+            (should (file-exists-p session-mode--last-analysis-request))
+            (should-not (file-exists-p (concat session-mode--last-analysis-request ".analysis.json")))
+            (let* ((json-object-type 'alist)
+                   (record (json-read-file session-mode--last-analysis-request)))
+              (should (equal (alist-get 'analysis_status record) "requested"))
+              (should (equal (alist-get 'source_text record) text))
+              (should (equal (alist-get 'turn_id record) "test-agent-turn-1")))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-structure-does-not-analyze-agent-bells ()
+  (with-temp-buffer
+    (session-mode-test--init)
+    (let ((call #'ignore) captured)
+      (session-mode--analyze-start-turn
+       (lambda (actual &rest _) (setq captured actual)) call "agent" nil "No cues here" "continuation" 'unsolicited)
+      (should (eq captured call))
+      (should-not session-mode--last-analysis-request))))
+
+(ert-deftest session-mode-structure-inferred-spans-do-not-reflow ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-display-test" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (agent-chat-insert-message "joe" "An unfamiliar request.")
+          (let ((path (session-mode--record-turn "An unfamiliar request."))
+                (before (buffer-string)))
+            (with-temp-file (concat path ".analysis.json")
+              (insert (json-encode
+                       '((status . "analyzed") (source_text . "An unfamiliar request.") (labeller . "test-agent")
+                         (sentences . [((fragments . [((start . 0) (end . 21) (text . "An unfamiliar request")
+                                                      (intent . "propose") (rationale . "fixture"))]))])))))
+            (session-mode--display-analysis path)
+            (should (equal before (buffer-string)))
+            (should (= 1 (length session-mode--sent-tag-overlays)))
+            (dolist (ov session-mode--sent-tag-overlays)
+              (should (equal (overlay-get ov 'session-mode-turn-tag) "propose"))
+              (should-not (overlay-get ov 'after-string))
+              (should-not (overlay-get ov 'display)))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-structure-cued-turn-does-not-request-extra-analysis ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "turn-cued-test" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let (sent)
+            (session-mode--analyze-start-turn
+             (lambda (call _name _hooks text _speaker _origin) (funcall call text #'ignore))
+             (lambda (prompt _callback) (setq sent prompt)) "agent" nil "I agree." "joe" 'operator)
+            (should (equal sent "I agree."))
+            (let* ((json-object-type 'alist)
+                   (record (json-read-file session-mode--last-analysis-request)))
+              (should (equal (alist-get 'analysis_status record) "not-requested")))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-structure-storage-failure-still-delivers-turn ()
+  ;; A real non-directory parent causes the real file operation to fail.
+  (let* ((file (make-temp-file "turn-storage-failure"))
+         (session-mode-turn-analysis-directory (expand-file-name "child" file)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let (sent warning)
+            (cl-letf (((symbol-function 'display-warning)
+                       (lambda (_type message &rest _) (setq warning message))))
+              (session-mode--analyze-start-turn
+               (lambda (call _name _hooks text _speaker _origin) (funcall call text #'ignore))
+               (lambda (prompt _callback) (setq sent prompt)) "agent" nil "Unfamiliar request." "joe" 'operator))
+            (should (equal sent "Unfamiliar request."))
+            (should (string-match-p "NOT recorded" warning))
+            (should-not session-mode--last-analysis-request)))
+      (delete-file file))))

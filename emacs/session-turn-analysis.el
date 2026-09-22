@@ -1,0 +1,179 @@
+;;; session-turn-analysis.el --- Standoff structure for sent turns -*- lexical-binding: t; -*-
+
+(require 'json)
+(require 'cl-lib)
+(require 'subr-x)
+
+(defcustom session-mode-turn-analysis-directory
+  (expand-file-name "session-turn-analysis" user-emacs-directory)
+  "Private durable records for operator passages, cues and agent interpretations."
+  :type 'directory :group 'session-mode)
+
+(defcustom session-mode-turn-analyze-gaps t
+  "Ask the receiving agent to analyze sent turns with unmatched sentences.
+This uses the existing conversation call, never a separate model call."
+  :type 'boolean :group 'session-mode)
+
+(defconst session-mode--analysis-tool
+  (expand-file-name "../scripts/session_turn_analysis.py"
+                    (file-name-directory (or load-file-name buffer-file-name))))
+(defvar-local session-mode--last-analysis-request nil)
+
+(defun session-mode--sentence-spans (text)
+  "Return sentence spans in TEXT, using zero-based Unicode character offsets."
+  (with-temp-buffer
+    (insert text)
+    (goto-char (point-min))
+    (let ((sentence-end-double-space nil) spans)
+      (while (< (point) (point-max))
+        (skip-chars-forward " \t\r\n")
+        (let ((start (point)))
+          (forward-sentence)
+          (when (= start (point)) (goto-char (point-max)))
+          (let* ((raw (buffer-substring-no-properties start (point)))
+                 (clean (string-trim-right raw)))
+            (unless (string-empty-p clean)
+              (push `((start . ,(1- start)) (end . ,(+ (1- start) (length clean)))
+                      (text . ,clean)) spans)))))
+      (nreverse spans))))
+
+(defun session-mode--structure-turn (text)
+  "Record sentence structure and lexical observations, not inferred intent."
+  (let ((matches (session-mode--turn-matches text)) (index 0) sentences gaps)
+    (dolist (span (session-mode--sentence-spans text))
+      (let* ((start (alist-get 'start span)) (end (alist-get 'end span))
+             (hits (cl-remove-if-not
+                    (lambda (h) (and (< (car h) end) (> (cadr h) start))) matches))
+             (sid (format "s%d" (cl-incf index))))
+        (unless hits (push sid gaps))
+        (push (append `((id . ,sid) (status . ,(if hits "cue-only" "unresolved"))
+                        (cues . ,(vconcat
+                                  (mapcar (lambda (h)
+                                            `((start . ,(car h)) (end . ,(cadr h))
+                                              (label . ,(nth 2 h))
+                                              (text . ,(substring text (car h) (cadr h)))
+                                              (method . "literal-phrase"))) hits)))) span)
+              sentences)))
+    `((version . 1) (source_text . ,text)
+      (offset_unit . "unicode-codepoints-zero-based-end-exclusive")
+      (sentences . ,(vconcat (nreverse sentences)))
+      (unmatched . ,(vconcat (nreverse gaps))))))
+
+(defun session-mode--record-turn (text)
+  "Persist TEXT's structure before requesting interpretation; return its path."
+  (let* ((record (session-mode--structure-turn text))
+         (directory (file-name-as-directory session-mode-turn-analysis-directory)))
+    (make-directory directory t)
+    (set-file-modes directory #o700)
+    (let ((path (make-temp-file (expand-file-name "turn-" directory) nil ".json"))
+          ;; Capture buffer-local identity before with-temp-file changes buffers.
+          (metadata `((created_at . ,(format-time-string "%FT%TZ" nil t))
+                      (agent_id . ,agent-chat--agent-id)
+                      (session_id . ,agent-chat--session-id)
+                      (turn_id . ,agent-chat--current-turn-id)
+                      (analysis_status . ,(if (and session-mode-turn-analyze-gaps
+                                                  (> (length (alist-get 'unmatched record)) 0))
+                                             "requested" "not-requested")))))
+      (condition-case err
+          (with-temp-file path
+            (let ((coding-system-for-write 'utf-8-unix))
+              (insert (json-encode (append record metadata)))))
+        (error (delete-file path) (signal (car err) (cdr err))))
+      (setq session-mode--last-analysis-request path))))
+
+(defun session-mode--analysis-instruction (path)
+  "Give the current receiving agent a bounded task tied to PATH."
+  (format
+   (concat "\n\n[Session-mode structural analysis request — machine-added, not Joe's words]\n"
+           "Some sentences have no lexical cue. After handling the user's request, analyze this operator turn. "
+           "Do not delegate or start another conversation. Original text, offsets and unresolved sentences: %s\n"
+           "Use python3 %s template REQUEST to obtain the JSON shape. "
+           "Fill every sentence with one or more fragment annotations (multiple intents allowed), or an explicit unresolved reason. "
+           "Each fragment has exact source offsets/text, intent, target, rationale and relations "
+           "(context, condition, contrast, action, rationale, goal, or dependency). "
+           "Use meaningful intent vocabulary; do not treat conjunctions alone as intent. "
+           "Suggested intents: %s. "
+           "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "
+           "Record inferred interpretations, not human-approved labels; do not edit the cue vocabulary automatically. "
+           "Save the filled JSON to a temporary file and validate/publish with: "
+           "python3 %s complete REQUEST ANALYSIS.json. Replace REQUEST with the record path above. "
+           "If you cannot do this, say so; the record remains requested, never silently complete.\n"
+           "[End structural analysis request]")
+   path (shell-quote-argument session-mode--analysis-tool)
+   (string-join (mapcar #'car session-mode-turn-vocabulary) ", ")
+   (shell-quote-argument session-mode--analysis-tool)))
+
+(defun session-mode--display-analysis (path)
+  "Underline validated agent fragments for the latest sent turn, if available."
+  (let ((result (concat path ".analysis.json")))
+    (when (and session-mode-turn-tags-mode
+               (equal path session-mode--last-analysis-request)
+               (file-exists-p result))
+      (condition-case err
+          (let* ((json-object-type 'alist) (json-array-type 'list)
+                 (data (json-read-file result))
+                 (source (alist-get 'source_text data)))
+            (when (and (equal (alist-get 'status data) "analyzed")
+                       (equal source session-mode--last-operator-text)
+                       session-mode--last-operator-region
+                       (marker-buffer (car session-mode--last-operator-region)))
+              (let ((base (marker-position (car session-mode--last-operator-region))))
+                (dolist (sentence (alist-get 'sentences data))
+                  (dolist (fragment (alist-get 'fragments sentence))
+                    (let ((start (alist-get 'start fragment)) (end (alist-get 'end fragment))
+                          (intent (alist-get 'intent fragment)))
+                      (when (and (integerp start) (integerp end) (<= 0 start) (< start end)
+                                 (<= end (length source))
+                                 (equal (substring source start end) (alist-get 'text fragment)))
+                        (let ((ov (make-overlay (+ base start) (+ base end))))
+                          (overlay-put ov 'session-mode-turn-tag intent)
+                          (overlay-put ov 'face '(:underline (:style wave :color "purple")))
+                          (overlay-put ov 'priority 31)
+                          (overlay-put ov 'help-echo
+                                       (format "%s → %s [agent %s; inferred]: %s"
+                                               (alist-get 'text fragment) intent
+                                               (alist-get 'labeller data) (alist-get 'rationale fragment)))
+                          (push ov session-mode--sent-tag-overlays)))))))))
+        (error (message "Turn analysis display failed: %s" (error-message-string err)))))))
+
+(defun session-mode-inspect-turn-analysis ()
+  "Open the latest structural record or completed agent interpretation."
+  (interactive)
+  (unless session-mode--last-analysis-request (user-error "No structural record in this buffer yet"))
+  (let ((result (concat session-mode--last-analysis-request ".analysis.json")))
+    (find-file-other-window (if (file-exists-p result) result session-mode--last-analysis-request))))
+
+(defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
+  "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
+  (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
+                (equal speaker agent-chat-user-speaker)
+                (not (agent-chat--walkie-command-p (string-trim text)))))
+      (funcall original call agent-name hooks text speaker origin)
+    (funcall
+     original
+     (lambda (sent callback)
+       (let ((path nil) (prompt sent) (buffer (current-buffer)))
+         (condition-case err
+             (progn
+               (setq path (session-mode--record-turn sent))
+               (when (and session-mode-turn-analyze-gaps
+                          (> (length (alist-get 'unmatched (session-mode--structure-turn sent))) 0))
+                 (setq prompt (concat sent (session-mode--analysis-instruction path)))))
+           (error (display-warning 'session-mode
+                                   (format "Turn structure was NOT recorded: %s" (error-message-string err)))))
+         (funcall call prompt
+                  (lambda (response)
+                    (when (and path (buffer-live-p buffer))
+                      (with-current-buffer buffer (session-mode--display-analysis path)))
+                    (funcall callback response)))))
+     agent-name hooks text speaker origin)))
+
+(with-eval-after-load 'agent-chat
+  (advice-add 'agent-chat--start-turn :around #'session-mode--analyze-start-turn))
+
+(with-eval-after-load 'session-mode
+  (define-key session-mode-turn-tags-mode-map (kbd "C-c s a")
+              #'session-mode-inspect-turn-analysis))
+
+(provide 'session-turn-analysis)
+;;; session-turn-analysis.el ends here

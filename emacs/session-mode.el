@@ -847,7 +847,8 @@ Use the real inserted span, including any agent-chat text transformations."
 ;;;###autoload
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
-Also annotate the latest sent operator turn.  No model, network or text edits.
+Also annotate the latest sent operator turn.  Drafts use local cues only;
+sent turns can request agent interpretation through `session-turn-analysis'.
 Kept separate from full session markup so typing never triggers retrieval."
   :lighter " Tags"
   :keymap (let ((map (make-sparse-keymap)))
@@ -985,6 +986,8 @@ The directive never starts an agent turn and never sends a preceding draft."
   (advice-add 'agent-chat-send-input :around #'session-mode--consume-tag-command)
   (advice-add 'agent-chat-init-buffer :after #'session-mode--tags-after-init)
   (advice-add 'agent-chat-insert-message :around #'session-mode--tag-sent-message))
+
+(require 'session-turn-analysis)
 
 (provide 'session-mode)
 ;;; session-mode.el ends here
