@@ -17,9 +17,12 @@ sent-turn summary string: the previous extra display line made terminal Emacs
 text move while typing. The overlays never add display characters or line breaks.
 
 These matches are lexical cues, not an automated classification of intent.
-The intended next stage is agent classification of logged passages using a
-meaningful intent vocabulary and Joe's sentence corrections. It is not connected
-to this typing UI. Existing session logs and saved corrections remain available
+Codex-14 has now labelled 20 recorded passage spans by intent and distilled
+105 phrases across 17 categories from the 100-turn pilot. The defaults include
+approve, disagree, clarify, delegate, verify, prioritize, defer and others.
+Standalone “but” is no longer a cue. `C-c s i` describes the underlined phrase at
+point, or the draft’s recognized intents, in the echo area only on request.
+This is an agent-curated vocabulary, not a background model inference service. Existing session logs and saved corrections remain available
 for that processing. No model is called on each keystroke.
 
 Phrase matching is case-insensitive, checks boundaries, and accepts straight or
@@ -27,7 +30,8 @@ curly apostrophes. Quotes and negation still require interpretation. Agreement
 and objection have distinct underline colours; hovering shows the phrase and tag.
 
 `M-x customize-variable RET session-mode-turn-vocabulary` edits the literal
-vocabulary, initially the same as the Marimo prototype. Customize changes are
+vocabulary. Its source default is `session-mode-turn-intent-vocabulary`; saved
+human corrections remain authoritative over the live snapshot. Customize changes are
 picked up on the next edit or `M-x session-mode-turn-tags-refresh`. Marimo edits
 and ratings are not automatically synchronized with this Emacs vocabulary.
 

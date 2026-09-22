@@ -601,17 +601,33 @@ glyphs, and (faintly) correction/reach cues — all from a controlled vocabulary
     (session-mode--clear)))
 
 ;; --- Local passage tags: draft feedback, with no retrieval/model calls. ---
+(defconst session-mode-turn-intent-vocabulary
+  '(("approve" "I agree" "I approve" "that's a good fit" "that's great" "looks good" "good news" "sounds good" "you're right" "Yes you can do this" "I definitely like the idea")
+    ("disagree" "I disagree" "I don't agree" "I do not agree" "that's wrong" "misunderstood my intent" "doesn't match my intent" "does not match my intent" "of no use whatsoever" "a bad design")
+    ("clarify" "I don't understand" "help me understand" "I'd like to know" "I'd like to see some examples" "what's the story" "What gives" "I'm slightly confused" "How should we proceed" "what's our strategy")
+    ("propose" "I suggest" "We could perhaps" "maybe we could" "Maybe we should" "I wonder if" "I think it would be good")
+    ("extend" "in parallel" "Another thing we should pay attention to" "we should also" "we could also" "that's another analysis" "could be a further set of tasks")
+    ("prioritize" "as a matter of priority" "please do that next step" "needs to be the next" "first instance" "we have 7 minutes")
+    ("delegate" "please bell" "you can bell" "let's ask" "ask Zai" "we should ask" "should be sent to" "for dispatches" "you will be responsible for")
+    ("verify" "we should check" "we need to check" "we need to be able to validate" "we'll have to check" "we have to audit" "I want a reproduction")
+    ("constrain" "don't do that" "I am not asking you to" "I don't want to spend" "please use aliases" "we will not do any deep dives" "I don't want a repeat" "not going to decide things by fiat")
+    ("defer" "we'll do it when we get time" "we can come back to" "at some point" "for now" "defer processing")
+    ("continue" "please continue" "go on" "get on with it" "let's continue" "Please do 1, 2, and 3")
+    ("redirect" "rather than" "let's trim" "we will instead focus" "I'd like to return to" "what we should do is" "I want to alter")
+    ("explain" "here's why" "my main point" "what I mean" "the broader long term idea" "the use cases would be" "my use case")
+    ("report-problem" "is currently broken" "I still see an HTTP error" "it's broken" "login doesn't work" "overlaps existing UI elements" "point of major concern")
+    ("collect" "collect information" "getting logs" "keep a record" "record the turns")
+    ("qualify" "with the caveat" "to the extent that it is possible")
+    ("ask-action" "can you please" "please publish" "please sort this out" "I would like to have" "please update"))
+  "Agent-curated intent phrases from recorded operator turns (2026-09-22).
+See analysis/audits/intent-vocabulary-2026-09-22.md in futon0 for evidence.
+Single conjunctions such as but do not identify intent.")
+
 (defcustom session-mode-turn-vocabulary
-  '(("agree" "I agree" "I approve" "that's a good fit")
-    ("object" "I disagree" "I don't agree" "I do not agree" "don't do that" "that's wrong")
-    ("continue" "please continue" "go on")
-    ("qualify" "but")
-    ("redirect" "instead" "rather than")
-    ("topic-switch" "unrelated question" "changing the subject"))
-  "Literal phrase cues, grouped by tag, matching the initial Marimo vocabulary.
-A turn may have several tags.  These are provisional cues, not inferred intent;
-quoted phrases and scope of negation still need the operator's judgment.
-Customize this variable to refine the vocabulary.  Unmatched text is unclassified."
+  (copy-tree session-mode-turn-intent-vocabulary)
+  "Literal phrases grouped by communicative intent; multiple tags can apply.
+These are agent-inferred cues, not verified whole-turn intent.  Operator !c
+corrections override the vocabulary and remain recorded as human labels."
   :type '(repeat (cons (string :tag "Tag") (repeat (string :tag "Phrase"))))
   :group 'session-mode)
 
@@ -750,8 +766,8 @@ Only underline existing characters: no inserted display strings or line shifts."
         (overlay-put ov 'session-mode-turn-tag tag)
         (overlay-put ov 'priority 30)
         (overlay-put ov 'face (pcase tag
-                               ("agree" 'session-mode-turn-agree-face)
-                               ("object" 'session-mode-turn-object-face)
+                               ((or "agree" "approve") 'session-mode-turn-agree-face)
+                               ((or "object" "disagree") 'session-mode-turn-object-face)
                                (_ 'session-mode-turn-other-face)))
         (overlay-put ov 'help-echo (format "%s → %s (provisional phrase cue)" (nth 3 hit) tag))
         (push ov overlays)))
@@ -817,12 +833,26 @@ Use the real inserted span, including any agent-chat text transformations."
             (session-mode-turn-tags-refresh))
         (set-marker start nil)))))
 
+(defun session-mode-describe-turn-intent ()
+  "Show matched intent cues on request, without inserting display text."
+  (interactive)
+  (let ((hits (seq-filter (lambda (o) (overlay-get o 'session-mode-turn-tag))
+                          (overlays-at (point)))))
+    (if hits
+        (message "%s" (string-join (mapcar (lambda (o) (overlay-get o 'help-echo)) hits) "; "))
+      (message "Draft intent cues: %s"
+               (if session-mode--draft-tags (string-join session-mode--draft-tags ", ")
+                 "no recognized phrase; intent not inferred")))))
+
 ;;;###autoload
 (define-minor-mode session-mode-turn-tags-mode
   "Underline phrase cues without inserting a draft classification summary.
 Also annotate the latest sent operator turn.  No model, network or text edits.
 Kept separate from full session markup so typing never triggers retrieval."
   :lighter " Tags"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c s i") #'session-mode-describe-turn-intent)
+            map)
   (if session-mode-turn-tags-mode
       (progn
         (session-mode--load-live-vocabulary)
