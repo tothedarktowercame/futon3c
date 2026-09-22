@@ -148,3 +148,19 @@ the analysis records `no_surface_cue` rather than manufacturing a keyword.
 Older results without display cues remain inspectable but produce no inferred
 underlines. New default redirection cues include “I would want” and “I would
 prefer”; these are contextual hypotheses, not proof of redirection in every use.
+
+### Pattern hints in the minibuffer
+
+On an analyzed keyword, `C-c s i` shows the interpreted target and any recorded
+flexiarg candidate ID with its fit rationale. A cue such as “I wonder if” is a
+speech-act hint; the full proposal, its object, constraints and success criterion
+are the input to pattern alignment. The analysis prompt now asks for substantive
+keyword spans and comparisons to each pattern's context/IF/THEN. No candidate
+means “No justified flexiarg alignment recorded”, not a fabricated nearest match.
+Inferred hints take precedence over overlapping provisional lexical hints.
+
+Navigation and the describe command pick up results that were saved after the
+reply callback. The file timestamp is cached; an unchanged result is not
+repainted. This refresh does not run on ordinary insertion/newline commands.
+Pattern matching itself still belongs to the receiving agent; the local UI
+only displays saved candidates, and does not run retrieval on each keystroke.

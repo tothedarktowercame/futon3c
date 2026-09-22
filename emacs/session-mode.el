@@ -836,8 +836,11 @@ Use the real inserted span, including any agent-chat text transformations."
 (defun session-mode-describe-turn-intent ()
   "Show matched intent cues on request, without inserting display text."
   (interactive)
+  (session-mode--refresh-analysis-on-navigation)
   (let ((hits (seq-filter (lambda (o) (overlay-get o 'session-mode-turn-tag))
                           (overlays-at (point)))))
+    (when (seq-some (lambda (o) (overlay-get o 'session-mode-inferred)) hits)
+      (setq hits (seq-filter (lambda (o) (overlay-get o 'session-mode-inferred)) hits)))
     (if hits
         (message "%s" (string-join (mapcar (lambda (o) (overlay-get o 'help-echo)) hits) "; "))
       (message "Draft intent cues: %s"
@@ -857,10 +860,13 @@ Kept separate from full session markup so typing never triggers retrieval."
   (if session-mode-turn-tags-mode
       (progn
         (session-mode--load-live-vocabulary)
+        (setq session-mode--analysis-display-stamp nil)
         (add-hook 'after-change-functions #'session-mode--tags-after-change nil t)
         (add-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer nil t)
+        (add-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation nil t)
         (session-mode-turn-tags-refresh))
     (remove-hook 'after-change-functions #'session-mode--tags-after-change t)
+    (remove-hook 'post-command-hook #'session-mode--refresh-analysis-on-navigation t)
     (remove-hook 'kill-buffer-hook #'session-mode--cancel-tag-timer t)
     (session-mode--cancel-tag-timer)
     (mapc #'delete-overlay (append session-mode--draft-tag-overlays session-mode--sent-tag-overlays))

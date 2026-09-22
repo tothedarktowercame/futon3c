@@ -101,6 +101,8 @@ no lexical cues; `never' records structure without requesting interpretation."
            "Each fragment has exact source offsets/text, intent, target, rationale and relations "
            "(context, condition, contrast, action, rationale, goal, or dependency). "
            "Use meaningful intent vocabulary; do not treat conjunctions alone as intent. "
+           "Select content-bearing cues naming the action, object, constraint or success criterion, not just discourse openers like I wonder if. "
+           "For pattern alignment, compare the full passage and target to the pattern context/IF/THEN, never match on the intent label alone. "
            "Suggested intents: %s. "
            "Candidate flexiarg refs are optional: read any cited canonical pattern and explain the fit; do not invent IDs. "
            "Record inferred interpretations, not human-approved labels; do not edit the cue vocabulary automatically. "
@@ -111,6 +113,30 @@ no lexical cues; `never' records structure without requesting interpretation."
    path (shell-quote-argument session-mode--analysis-tool)
    (string-join (mapcar #'car session-mode-turn-vocabulary) ", ")
    (shell-quote-argument session-mode--analysis-tool)))
+
+(defvar-local session-mode--analysis-display-stamp nil)
+
+(defun session-mode--refresh-analysis-on-navigation ()
+  "Pick up late-written results when navigating, without work on typing."
+  (when (and session-mode-turn-tags-mode session-mode--last-analysis-request
+             (not (memq this-command '(self-insert-command newline newline-and-indent))))
+    (let* ((path session-mode--last-analysis-request)
+           (attrs (file-attributes (concat path ".analysis.json")))
+           (stamp (and attrs (list path (file-attribute-modification-time attrs)))))
+      (when (and stamp (not (equal stamp session-mode--analysis-display-stamp)))
+        (session-mode--display-analysis path)))))
+
+(defun session-mode--fragment-help (fragment labeller)
+  "Describe FRAGMENT's meaning and candidate patterns independently of its cue."
+  (let ((refs (alist-get 'pattern_refs fragment)))
+    (format "%s: %s [agent %s; inferred]. %s"
+            (alist-get 'intent fragment) (alist-get 'target fragment) labeller
+            (if refs
+                (string-join
+                 (mapcar (lambda (ref)
+                           (format "Flexiarg candidate %s — %s"
+                                   (alist-get 'id ref) (alist-get 'rationale ref))) refs) "; ")
+              "No justified flexiarg alignment recorded."))))
 
 (defun session-mode--display-analysis (path)
   "Underline validated agent fragments for the latest sent turn, if available."
@@ -126,6 +152,8 @@ no lexical cues; `never' records structure without requesting interpretation."
                        (equal source session-mode--last-operator-text)
                        session-mode--last-operator-region
                        (marker-buffer (car session-mode--last-operator-region)))
+              (setq session-mode--analysis-display-stamp
+                    (list path (file-attribute-modification-time (file-attributes result))))
               (let ((base (marker-position (car session-mode--last-operator-region))))
                 ;; Refresh makes repeated callbacks idempotent and removes
                 ;; legacy full-interpretation underlines before painting cues.
@@ -145,10 +173,9 @@ no lexical cues; `never' records structure without requesting interpretation."
                             (overlay-put ov 'session-mode-turn-tag intent)
                             (overlay-put ov 'face '(:underline (:style wave :color "purple")))
                             (overlay-put ov 'priority 31)
+                            (overlay-put ov 'session-mode-inferred t)
                             (overlay-put ov 'help-echo
-                                         (format "%s → %s [agent %s; inferred]: %s"
-                                                 (alist-get 'text cue) intent
-                                                 (alist-get 'labeller data) (alist-get 'rationale fragment)))
+                                         (session-mode--fragment-help fragment (alist-get 'labeller data)))
                             (push ov session-mode--sent-tag-overlays))))))))))
         (error (message "Turn analysis display failed: %s" (error-message-string err)))))))
 

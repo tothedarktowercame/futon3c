@@ -325,3 +325,41 @@
 (ert-deftest session-mode-structure-default-interprets-even-cued-turns ()
   (let ((session-mode-turn-analysis-policy 'all))
     (should (session-mode--analysis-requested-p (session-mode--structure-turn "I agree.")))))
+
+(ert-deftest session-mode-pattern-help-uses-target-and-fit-not-opener ()
+  (let ((help (session-mode--fragment-help
+               '((intent . "verify") (target . "remaining proof obligations")
+                 (pattern_refs . (((id . "agent/evidence-over-assertion")
+                                   (rationale . "Require proof artifacts as evidence for completion."))))) "test-agent")))
+    (should (string-match-p "remaining proof obligations" help))
+    (should (string-match-p "Flexiarg candidate agent/evidence-over-assertion" help))
+    (should (string-match-p "proof artifacts" help)))
+  (should (string-match-p "No justified flexiarg alignment"
+                         (session-mode--fragment-help '((intent . "propose") (target . "an experiment")) "test-agent"))))
+
+(ert-deftest session-mode-navigation-loads-late-analysis-without-repainting-typing ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "late-analysis" t)))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (agent-chat-insert-message "joe" "An unfamiliar request.")
+          (let ((path (session-mode--record-turn "An unfamiliar request."))
+                (this-command 'forward-char))
+            (session-mode--refresh-analysis-on-navigation)
+            (should-not session-mode--analysis-display-stamp)
+            (with-temp-file (concat path ".analysis.json")
+              (insert (json-encode
+                       '((status . "analyzed") (source_text . "An unfamiliar request.") (labeller . "test-agent")
+                         (sentences . [((fragments . [((start . 0) (end . 22) (text . "An unfamiliar request.")
+                                                      (intent . "propose") (target . "request")
+                                                      (display_cues . [((start . 3) (end . 13) (text . "unfamiliar"))]))]))])))))
+            (let ((this-command 'self-insert-command))
+              (session-mode--refresh-analysis-on-navigation)
+              (should-not session-mode--analysis-display-stamp))
+            (session-mode--refresh-analysis-on-navigation)
+            (should session-mode--analysis-display-stamp)
+            (should (= 1 (length session-mode--sent-tag-overlays)))
+            (let ((ov (car session-mode--sent-tag-overlays)))
+              (session-mode--refresh-analysis-on-navigation)
+              (should (eq ov (car session-mode--sent-tag-overlays))))))
+      (delete-directory session-mode-turn-analysis-directory t))))
