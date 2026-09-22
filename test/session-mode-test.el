@@ -363,3 +363,41 @@
               (session-mode--refresh-analysis-on-navigation)
               (should (eq ov (car session-mode--sent-tag-overlays))))))
       (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-failure-marker-forces-analysis-and-records-feedback ()
+  (let ((session-mode-turn-analysis-directory (make-temp-file "failed-tag-test" t))
+        (session-mode-turn-analysis-policy 'never))
+    (unwind-protect
+        (with-temp-buffer
+          (session-mode-test--init)
+          (let (sent observed)
+            (cl-letf (((symbol-function 'agent-chat--maybe-auto-clock-from-turn) #'ignore)
+                      ((symbol-function 'agent-chat-start-turn-commit-window!) #'ignore))
+              (agent-chat--start-turn
+               (lambda (prompt _reply) (setq sent prompt) nil)
+               "test-agent" (list :before-send (lambda (s) (setq observed s)))
+               "A new learning loop. !x" "joe" 'operator))
+            (should (equal observed "A new learning loop."))
+            (should (equal session-mode--last-operator-text observed))
+            (should (string-match-p "Operator !x feedback: tagging failed" sent))
+            (let* ((json-object-type 'alist) (json-false nil)
+                   (record (json-read-file session-mode--last-analysis-request)))
+              (should (eq t (alist-get 'tagging_failed record)))
+              (should (equal (alist-get 'original_text record) "A new learning loop. !x"))
+              (should (equal (alist-get 'analysis_status record) "requested")))))
+      (delete-directory session-mode-turn-analysis-directory t))))
+
+(ert-deftest session-mode-failure-marker-is-only-a-final-token ()
+  (should (equal (session-mode--split-failure-marker "Try this.\n!x\n") '("Try this." . t)))
+  (should (equal (session-mode--split-failure-marker "Could I use !x or something?") '("Could I use !x or something?")))
+  (should (equal (session-mode--split-failure-marker "The literal is \"!x\"") '("The literal is \"!x\"")))
+  (should-error (session-mode--split-failure-marker "!x") :type 'user-error))
+
+(ert-deftest session-mode-bare-failure-marker-preserves-draft ()
+  (with-temp-buffer
+    (session-mode-test--init)
+    (insert "!x")
+    (let ((before (buffer-string)) called)
+      (should-error (session-mode--consume-tag-command (lambda (&rest _) (setq called t))) :type 'user-error)
+      (should-not called)
+      (should (equal before (buffer-string))))))

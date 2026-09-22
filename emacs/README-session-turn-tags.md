@@ -164,3 +164,44 @@ reply callback. The file timestamp is cached; an unchanged result is not
 repainted. This refresh does not run on ordinary insertion/newline commands.
 Pattern matching itself still belongs to the receiving agent; the local UI
 only displays saved candidates, and does not run retrieval on each keystroke.
+
+### Flag a tagging failure with !x
+
+End a draft with a separate `!x` token, on the same line or a final line:
+
+```
+Could this become a learning loop? !x
+```
+
+Send normally. The marker is removed from the conversational text and retained
+in the structural record as `tagging_failed: true`, alongside `original_text`.
+It forces a request for substantive keyword interpretation even with policy
+`never` or a successful lexical match. It does not create another agent call;
+results arrive through the agent answering the turn. This is explicit negative
+feedback, not a correct label and not an automatic vocabulary update. Analysis
+is already requested on every ordinary turn by default; `!x` distinguishes the
+ones the operator says failed. A bare `!x` asks for preceding draft text and
+preserves the input. Quoted or mid-sentence mentions remain ordinary text.
+
+### Comparing with embedding retrieval: current limits
+
+Read-only discovery on 2026-09-22: querying
+`GET /api/alpha/evidence?tag=context-retrieval&session-id=01a0c489-1ec2-7553-9e83-52d0f2bea66e&limit=3`
+returned three records, each with three ranked IDs/scores. In these records,
+`evidence/body` is an EDN string, not a JSON object. The `query` preview is 100
+characters and mostly the routing envelope. Do not join it by the first words
+of a turn or equate its numeric turn with the Emacs turn ID.
+
+`dev/futon3c/dev.clj`, `emit-context-evidence!` and `context-retrieval!`, confirms
+that retrieval runs after the agent reply. Its query combines up to 200
+characters of extracted user text with up to 200 of the response, and persists
+only a 100-character preview. The sampled previews begin with the routing header;
+that is a retrieval-input issue to investigate separately, not evidence of a
+semantic match. No retrieval service was changed for the !x implementation.
+
+A valid comparison must bind the evidence ID to the exact operator source/turn,
+freeze the agent candidates before revealing the embedding top three, and name
+the two inputs. Compare exact ID overlap first; record broader conceptual matches
+as separately judged annotations. The embedding ranking is a comparator, not
+human ground truth. Existing records inspected here lack a verified exact link,
+so no recovery score is reported or implemented by this change.

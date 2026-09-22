@@ -66,7 +66,7 @@ no lexical cues; `never' records structure without requesting interpretation."
       (sentences . ,(vconcat (nreverse sentences)))
       (unmatched . ,(vconcat (nreverse gaps))))))
 
-(defun session-mode--record-turn (text)
+(defun session-mode--record-turn (text &optional failed original-text)
   "Persist TEXT's structure before requesting interpretation; return its path."
   (let* ((record (session-mode--structure-turn text))
          (directory (file-name-as-directory session-mode-turn-analysis-directory)))
@@ -75,10 +75,12 @@ no lexical cues; `never' records structure without requesting interpretation."
     (let ((path (make-temp-file (expand-file-name "turn-" directory) nil ".json"))
           ;; Capture buffer-local identity before with-temp-file changes buffers.
           (metadata `((created_at . ,(format-time-string "%FT%TZ" nil t))
+                      (tagging_failed . ,(if failed t :json-false))
+                      (original_text . ,(or original-text text))
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
-                      (analysis_status . ,(if (session-mode--analysis-requested-p record)
+                      (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
                                              "requested" "not-requested")))))
       (condition-case err
           (with-temp-file path
@@ -186,21 +188,36 @@ no lexical cues; `never' records structure without requesting interpretation."
   (let ((result (concat session-mode--last-analysis-request ".analysis.json")))
     (find-file-other-window (if (file-exists-p result) result session-mode--last-analysis-request))))
 
+(defun session-mode--split-failure-marker (text)
+  "Return (clean-text . failed) for a final standalone !x token in TEXT.
+An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
+  (let ((trimmed (string-trim-right text)))
+    (if (string-match "\\(?:\\`\\|[ \t\n]\\)!x\\'" trimmed)
+        (let ((clean (string-trim-right (substring trimmed 0 (match-beginning 0)))))
+          (when (string-empty-p (string-trim clean))
+            (user-error "Put !x after the turn whose tagging failed; nothing sent"))
+          (cons clean t))
+      (cons text nil))))
+
 (defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
   "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
   (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
                 (equal speaker agent-chat-user-speaker)
                 (not (agent-chat--walkie-command-p (string-trim text)))))
       (funcall original call agent-name hooks text speaker origin)
-    (funcall
+    (let* ((marked (session-mode--split-failure-marker text))
+           (failed (cdr marked)))
+     (funcall
      original
      (lambda (sent callback)
        (let ((path nil) (prompt sent) (buffer (current-buffer)))
          (condition-case err
              (progn
-               (setq path (session-mode--record-turn sent))
-               (when (session-mode--analysis-requested-p (session-mode--structure-turn sent))
-                 (setq prompt (concat sent (session-mode--analysis-instruction path)))))
+               (setq path (session-mode--record-turn sent failed text))
+               (when (or failed (session-mode--analysis-requested-p (session-mode--structure-turn sent)))
+                 (setq prompt (concat sent (session-mode--analysis-instruction path)
+                                      (when failed
+                                        "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))
            (error (display-warning 'session-mode
                                    (format "Turn structure was NOT recorded: %s" (error-message-string err)))))
          (funcall call prompt
@@ -208,7 +225,7 @@ no lexical cues; `never' records structure without requesting interpretation."
                     (when (and path (buffer-live-p buffer))
                       (with-current-buffer buffer (session-mode--display-analysis path)))
                     (funcall callback response)))))
-     agent-name hooks text speaker origin)))
+     agent-name hooks (car marked) speaker origin))))
 
 (with-eval-after-load 'agent-chat
   (advice-add 'agent-chat--start-turn :around #'session-mode--analyze-start-turn))

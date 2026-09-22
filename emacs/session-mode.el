@@ -974,6 +974,8 @@ The directive never starts an agent turn and never sends a preceding draft."
       (let* ((text (string-trim-right (buffer-substring-no-properties start (point-max))))
              (line-start (or (and (string-match "[^\n]*\\'" text) (match-beginning 0)) 0))
              (line (string-trim (substring text line-start))))
+        ;; Validate before agent-chat deletes the input region on send.
+        (when session-mode-turn-tags-mode (session-mode--split-failure-marker text))
         (if (not (string-match-p "\\`!c\\(?:[ \t]\\|\\'\\)" line)) (apply original args)
           (let* ((labels (split-string (substring line 2) "[ \t]+" t))
                  (draft (string-trim (substring text 0 line-start)))
