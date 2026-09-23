@@ -116,7 +116,19 @@ def validate(request, analysis, library=LIBRARY):
                        for i in range(cue["start"], cue["end"]) if not source[i].isspace()}
             total = sum(not c.isspace() for c in source[sentence["start"]:sentence["end"]])
             if len(covered) > total / 2:
-                raise ValueError("display cues must leave most of a long sentence unmarked")
+                # Say which sentence and by how much. The bare refusal cost
+                # claude-1 a dozen retries and kimi-1 two on its first turn:
+                # the rule is easy to satisfy and impossible to aim at when
+                # the error names neither the sentence nor the overshoot.
+                budget = total // 2
+                marked = sorted(cue["text"] for item in checked
+                                for cue in item["display_cues"])
+                raise ValueError(
+                    f"display cues must leave most of a long sentence unmarked: "
+                    f"{sentence['id']} marks {len(covered)} of {total} non-space "
+                    f"characters ({100 * len(covered) // total}%); drop about "
+                    f"{len(covered) - budget} to get under half. Cues on it: "
+                    + ", ".join(repr(m) for m in marked))
         canonical.append({"id": entry["id"], "fragments": checked, "unresolved_reason": reason})
     reusable = analysis.get("reusable_cues", [])
     if not isinstance(reusable, list):
