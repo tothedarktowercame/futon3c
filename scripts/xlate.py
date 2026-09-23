@@ -20,6 +20,11 @@ import json, math, os, re, sys, time
 from collections import Counter, defaultdict
 
 LIB = "/home/joe/code/futon3/library"
+# Proposed patterns that no one has admitted to the library. They are indexed
+# alongside it so a translator meets an existing proposal before minting a
+# second one for the same move -- which is how a vocabulary doubles without
+# anybody deciding to grow it.
+CANDIDATES = "/home/joe/code/storage/operator-turns/candidates"
 CACHE = os.path.expanduser("~/.cache/xlate-index.json")
 CJK = r"一-鿿㐀-䶿"
 WORD = re.compile(r"[a-z0-9']+|[%s]" % CJK)
@@ -39,17 +44,21 @@ def tokens(text):
     return out
 
 
-def walk():
-    for root, _, files in os.walk(LIB):
-        for f in files:
-            if f.endswith(".flexiarg"):
-                yield os.path.join(root, f)
+def walk(roots=(LIB,)):
+    for base in roots:
+        if not os.path.isdir(base):
+            continue
+        for root, _, files in os.walk(base):
+            for f in files:
+                if f.endswith(".flexiarg"):
+                    yield os.path.join(root, f)
 
 
-def build_index():
+def build_index(roots=(LIB,), mark=""):
     docs = {}
-    for path in walk():
-        pid = os.path.relpath(path, LIB)[:-len(".flexiarg")]
+    for path in walk(roots):
+        base = LIB if path.startswith(LIB) else CANDIDATES
+        pid = mark + os.path.relpath(path, base)[:-len(".flexiarg")]
         text = open(path, encoding="utf-8", errors="replace").read()
         parts, title = [], ""
         for i, rx in enumerate(FIELDS):
@@ -63,15 +72,21 @@ def build_index():
     return docs
 
 
-def load_index():
-    newest = max(os.path.getmtime(p) for p in walk())
-    if os.path.exists(CACHE):
-        c = json.load(open(CACHE))
+def load_index(with_candidates=False):
+    roots = (LIB, CANDIDATES) if with_candidates else (LIB,)
+    newest = max(os.path.getmtime(p) for p in walk(roots))
+    cache = CACHE + (".cand" if with_candidates else "")
+    if os.path.exists(cache):
+        c = json.load(open(cache))
         if c.get("newest", 0) >= newest:
             return c["docs"]
-    docs = build_index()
-    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-    json.dump({"newest": newest, "docs": docs}, open(CACHE, "w"))
+    docs = build_index((LIB,))
+    if with_candidates:
+        # "?" marks a proposal in every listing: it is a name someone wanted,
+        # not a name the library has agreed to.
+        docs.update(build_index((CANDIDATES,), mark="?"))
+    os.makedirs(os.path.dirname(cache), exist_ok=True)
+    json.dump({"newest": newest, "docs": docs}, open(cache, "w"))
     return docs
 
 
@@ -94,10 +109,12 @@ def bm25(query, docs, n=8, k1=1.5, b=0.75):
 
 
 def cmd_find(args):
-    n = 8
+    n, cands = 8, False
+    if "--with-candidates" in args:
+        cands = True; args = [a for a in args if a != "--with-candidates"]
     if "-n" in args:
         i = args.index("-n"); n = int(args[i + 1]); args = args[:i] + args[i + 2:]
-    docs = load_index()
+    docs = load_index(cands)
     for pid, s in bm25(" ".join(args), docs, n):
         print(f"{s:7.2f}  {pid}\n         {docs[pid]['title'][:100]}")
 
@@ -201,8 +218,67 @@ def cmd_lint(args):
     return 1 if problems else 0
 
 
+def cmd_census(args):
+    """What the whole corpus of interpreted turns has used, and what it wanted.
+
+    The global cascade is the union of every turn's, and the question it has
+    to answer is which names are load-bearing, which are proposals, and which
+    proposals have recurred often enough to be admitted. Counting is the only
+    honest way to know -- a proposal that has come up once is a guess, and the
+    same proposal from three independent turns is a pattern the library is
+    missing.
+    """
+    import collections, glob as _glob
+    records = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
+    cited, proposed, turns = collections.Counter(), collections.Counter(), 0
+    holes = 0
+    for path in _glob.glob(f"{records}/*.analysis.json"):
+        data = json.load(open(path, encoding="utf-8"))
+        turns += 1
+        for sentence in data.get("sentences", []):
+            for frag in sentence.get("fragments", []):
+                refs = frag.get("pattern_refs", [])
+                if refs:
+                    for r in refs:
+                        cited[r["id"]] += 1
+                else:
+                    holes += 1
+        side = path[:-len(".analysis.json")] + ".candidates.json"
+        if os.path.exists(side):
+            for c in json.load(open(side, encoding="utf-8")).get("candidates", []):
+                proposed[c["id"]] += 1
+
+    # descendants: patterns whose @why rests on this one
+    children = collections.Counter()
+    for path in walk():
+        text = open(path, encoding="utf-8", errors="replace").read()
+        m = re.search(r"^@why (.+)$", text, re.M)
+        if m:
+            for token in m.group(1).split():
+                children[token.strip("[](),;")] += 1
+
+    print(f"{turns} interpreted turns; {sum(cited.values())} citations of "
+          f"{len(cited)} patterns; {holes} fragments with no pattern")
+    print("\nCited patterns (times cited / descendants in library):")
+    for pid, n in cited.most_common(20):
+        mark = "" if os.path.exists(f"{LIB}/{pid}.flexiarg") else "  UNRESOLVED"
+        print(f"  {n:3d} / {children.get(pid, 0):<3d}  {pid}{mark}")
+    if proposed:
+        print("\nProposed but unminted (times proposed; 3 admits under "
+              "cascade-construction/lift-when-three-align):")
+        for pid, n in proposed.most_common():
+            ripe = "  RIPE" if n >= 3 else ""
+            here = f"{CANDIDATES}/{pid}.flexiarg"
+            print(f"  {n:3d}  {pid}{ripe}"
+                  f"{'' if os.path.exists(here) else '  (no draft written)'}")
+    else:
+        print("\nNo candidates proposed yet.")
+    return 0
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     cmd, rest = sys.argv[1], sys.argv[2:]
-    sys.exit({"find": cmd_find, "offsets": cmd_offsets, "lint": cmd_lint}[cmd](rest) or 0)
+    sys.exit({"find": cmd_find, "offsets": cmd_offsets, "lint": cmd_lint,
+              "census": cmd_census}[cmd](rest) or 0)

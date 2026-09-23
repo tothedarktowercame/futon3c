@@ -69,6 +69,12 @@ def load(path):
     analysis_path = path + ".analysis.json"
     analysis = (json.load(open(analysis_path, encoding="utf-8"))
                 if os.path.exists(analysis_path) else None)
+    # Proposed patterns for the fragments nothing in the library named. They
+    # sit beside the record, never in library/: a proposal is a name someone
+    # wanted, and admitting it is a separate act.
+    side = path + ".candidates.json"
+    if os.path.exists(side):
+        record["_candidates"] = json.load(open(side, encoding="utf-8")).get("candidates", [])
     return record, analysis
 
 
@@ -308,6 +314,7 @@ def feed_entry(name, record, analysis):
                       "relations": f.get("relations", []),
                       "patterns": [{"id": r["id"], "why": r.get("rationale", "")}
                                    for r in f.get("pattern_refs", [])]})
+    side = os.path.join(os.path.dirname(record.get("_path", "")) or "", "")
     authored = authored_cascade(name)
     return {"name": name, "at": record.get("created_at", ""),
             "agent": record.get("agent_id", ""),
@@ -317,7 +324,8 @@ def feed_entry(name, record, analysis):
             "sexp": (tokenise_authored(authored["text"]) if authored
                      else derived_cascade(name, frags) if frags else None),
             "sexp-by": (authored or {}).get("by", "derived from the annotation"
-                                            if frags else None)}
+                                            if frags else None),
+            "candidates": record.get("_candidates", [])}
 
 
 def summarise(name, record, analysis):
