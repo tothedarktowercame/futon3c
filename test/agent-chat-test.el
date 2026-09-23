@@ -574,3 +574,18 @@ promoted (and must not wipe a bare campaign down to the bare mention)."
           (should inserted))))))
 
 ;;; agent-chat-test.el ends here
+
+(ert-deftest agent-chat-surface-marker-splits-only-a-prefix ()
+  "A leading surface marker is metadata; the same glyph mid-sentence is text.
+voxterm prepends the speaking-head marker to a dictated turn so the operator
+can see which surface he is on. It must not reach the evidence text, and it
+must not eat a character he meant to write."
+  (should (equal (agent-chat-split-surface-marker "🗣 the turn text")
+                 '(dictated . "the turn text")))
+  (should (equal (agent-chat-split-surface-marker "the turn text")
+                 '(nil . "the turn text")))
+  (should (equal (agent-chat-split-surface-marker "talk about 🗣 emoji")
+                 '(nil . "talk about 🗣 emoji")))
+  ;; the marker's trailing space goes with it, not into the text
+  (should (equal (cdr (agent-chat-split-surface-marker "🗣    spaced out"))
+                 "spaced out")))

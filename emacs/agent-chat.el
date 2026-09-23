@@ -3128,6 +3128,25 @@ under outbox/failed and return nil."
                  (message "agent-chat affect live runner: %s"
                           (string-trim event)))))))))
 
+(defcustom agent-chat-surface-markers '(("\N{SPEAKING HEAD IN SILHOUETTE}" . dictated))
+  "Alist of (MARKER . SURFACE) prefixes that say how a turn was produced.
+voxterm prepends the speaking-head marker to the first chunk of a dictated
+turn so the surface is visible in the buffer. It is a property of the turn,
+not a word in it, so it is stripped before the text is recorded and the
+surface travels as metadata instead."
+  :type '(alist :key-type string :value-type symbol)
+  :group 'agent-chat)
+
+(defun agent-chat-split-surface-marker (text)
+  "Return (SURFACE . STRIPPED) for TEXT, with SURFACE nil when unmarked.
+Only a leading marker counts: the same character typed mid-sentence is a
+character the operator meant to write."
+  (let ((hit (seq-find (lambda (cell) (string-prefix-p (car cell) text))
+                       agent-chat-surface-markers)))
+    (if hit
+        (cons (cdr hit) (string-trim-left (substring text (length (car hit)))))
+      (cons nil text))))
+
 (defun agent-chat-emit-turn-evidence!
     (evidence-url timeout log-turns sid role text assistant-author transport tags session-var last-id-var)
   "Emit turn evidence for ROLE and TEXT using the shared evidence helpers."
@@ -3138,7 +3157,9 @@ under outbox/failed and return nil."
              (not (string-empty-p sid))
              (agent-chat-evidence-enabled-p evidence-url))
     (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
-    (let* ((trimmed (string-trim text))
+    (let* ((split (agent-chat-split-surface-marker (string-trim text)))
+           (surface (car split))
+           (trimmed (cdr split))
            (is-user (string= role "user"))
            (is-error (string-prefix-p "[Error" trimmed))
            (claim-type (cond
@@ -3161,7 +3182,12 @@ under outbox/failed and return nil."
                                          (turn-id . ,agent-chat--current-turn-id)
                                          (text . ,trimmed))
                                        (agent-chat--mission-body-fields)))
-                      (tags . ,(apply #'vector (append tags (list role-tag)))))))
+                      ;; The surface rides in the tags, not in the body: it is
+                      ;; metadata about the turn, and the text stays the text.
+                      (tags . ,(apply #'vector
+                                      (append tags (list role-tag)
+                                              (when surface
+                                                (list (symbol-name surface)))))))))
       (when (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
         (setq payload (append payload

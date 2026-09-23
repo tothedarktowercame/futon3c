@@ -67,8 +67,16 @@ no lexical cues; `never' records structure without requesting interpretation."
       (unmatched . ,(vconcat (nreverse gaps))))))
 
 (defun session-mode--record-turn (text &optional failed original-text)
-  "Persist TEXT's structure before requesting interpretation; return its path."
-  (let* ((record (session-mode--structure-turn text))
+  "Persist TEXT's structure before requesting interpretation; return its path.
+A leading surface marker is stripped first, so `source_text' and every offset
+computed against it describe what the operator said rather than how it
+reached the buffer. The surface itself is kept in the record's metadata."
+  (let* ((split (agent-chat-split-surface-marker text))
+         (surface (car split))
+         (text (cdr split))
+         (original-text (and original-text
+                             (cdr (agent-chat-split-surface-marker original-text))))
+         (record (session-mode--structure-turn text))
          (directory (file-name-as-directory session-mode-turn-analysis-directory)))
     (make-directory directory t)
     (set-file-modes directory #o700)
@@ -80,6 +88,7 @@ no lexical cues; `never' records structure without requesting interpretation."
                       (agent_id . ,agent-chat--agent-id)
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
+                      (surface . ,(if surface (symbol-name surface) "typed"))
                       (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
                                              "requested" "not-requested")))))
       (condition-case err
