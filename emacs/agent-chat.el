@@ -1752,9 +1752,17 @@ and changes no text, only the face property."
       (goto-char (point-min))
       (while (not (eobp))
         (let ((start (point))
-              (end (or (next-single-property-change (point) 'face) (point-max))))
-          (when (eq (get-text-property (point) 'face) 'agent-chat-text-face)
-            (put-text-property start end 'face agent-chat--text-face)
+              (end (min (or (next-single-property-change (point) 'face)
+                            (point-max))
+                        (or (next-single-property-change (point) 'font-lock-face)
+                            (point-max)))))
+          ;; Match on either property: refontification strips `face' while
+          ;; leaving `font-lock-face', so a run may carry the old face in
+          ;; only one of the two.
+          (when (or (eq (get-text-property start 'face) 'agent-chat-text-face)
+                    (eq (get-text-property start 'font-lock-face)
+                        'agent-chat-text-face))
+            (agent-chat--bake-face start end agent-chat--text-face)
             (setq n (+ n (- end start))))
           (goto-char end))))
     (message "agent-chat: refaced %d chars to %s"
@@ -1785,8 +1793,8 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
             ;; O(overlay-count) and accumulate into thousands over a session,
             ;; freezing the buffer for seconds per turn.  Text-props render
             ;; identically at near-zero redisplay cost (E-repl-redisplay, 2026-07-01).
-            (put-text-property name-start name-end 'face face)
-            (put-text-property name-end text-end 'face agent-chat--text-face)
+            (agent-chat--bake-face name-start name-end face)
+            (agent-chat--bake-face name-end text-end agent-chat--text-face)
             (agent-chat--decorate-markdown-links name-end text-end)
             ;; Highlight tool-use lines in orange.
             ;; Matches: [Read], [Edit], [Bash], [Glob], [Grep], [Write],
@@ -1798,8 +1806,8 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
               (while (re-search-forward
                       "^\\(?:\\[[A-Z][A-Za-z]*\\]\\|\\(?:Using\\|Reading\\|Editing\\|Searching\\|Inspecting\\) [A-Z][A-Za-z]*\\)"
                       text-end t)
-                (put-text-property (line-beginning-position) (line-end-position)
-                                   'face 'agent-chat-tool-line-face)))))))
+                (agent-chat--bake-face (line-beginning-position) (line-end-position)
+                                       'agent-chat-tool-line-face)))))))
     (when at-end
       (agent-chat-scroll-to-bottom))))
 
@@ -1885,9 +1893,20 @@ Optional FACE overrides `agent-chat-thinking-face'."
       (let ((name-start (point)))
         (insert (format "%s: " name))
         (let ((name-end (point)))
-          (put-text-property name-start name-end 'face name-face)
+          (agent-chat--bake-face name-start name-end name-face)
           (setq agent-chat--streaming-marker (copy-marker (point)))
           (setq agent-chat--streaming-started t))))))
+
+(defun agent-chat--bake-face (start end face)
+  "Apply FACE from START to END as both `face' and `font-lock-face'.
+Refontification strips `face' properties font-lock believes it owns
+(jit-lock unfontifies a region before fontifying it), which is how
+insert-time faces were silently reverting to the default. It never
+touches `font-lock-face', which renders wherever font-lock has not
+painted its own `face' — so the baked face survives, while font-lock
+keywords (tool lines, markdown) still win where they match."
+  (put-text-property start end 'face face)
+  (put-text-property start end 'font-lock-face face))
 
 (defun agent-chat-stream-text (text &optional face)
   "Insert TEXT at the streaming marker with FACE or text face."
@@ -1900,8 +1919,8 @@ Optional FACE overrides `agent-chat-thinking-face'."
         (goto-char (marker-position agent-chat--streaming-marker))
         (let ((start (point)))
           (insert text)
-          (put-text-property start (point)
-                             'face (or face agent-chat--text-face))
+          (agent-chat--bake-face start (point)
+                                 (or face agent-chat--text-face))
           (set-marker agent-chat--streaming-marker (point))))
       (agent-chat-scroll-to-bottom))))
 

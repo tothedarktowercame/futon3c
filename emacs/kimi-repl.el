@@ -349,7 +349,11 @@ must never break buffer setup."
   (setq-local line-move-visual nil)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0)
-  (font-lock-add-keywords nil kimi-repl--font-lock-keywords))
+  ;; KEYWORDS-ONLY is the t: with no font-lock-defaults, font-lock also runs
+  ;; syntactic fontification under the standard syntax table, which paints
+  ;; every double-quoted span of Kimi's prose font-lock-string-face (green in
+  ;; Joe's theme) over the yellow body face. Chat prose is not code.
+  (setq-local font-lock-defaults '(kimi-repl--font-lock-keywords t)))
 
 (defun kimi-repl--build-modeline ()
   "Build Kimi REPL modeline text."
