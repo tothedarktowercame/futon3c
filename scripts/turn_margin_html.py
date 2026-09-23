@@ -72,16 +72,22 @@ def load(path):
     return record, analysis
 
 
-def fragments(analysis):
-    """Every annotated fragment, in source order, with a stable id."""
+def fragments(analysis, prefix=""):
+    """Every annotated fragment, in source order, with a stable id.
+
+    The id carries the turn, because every turn has a sentence called s1: on
+    a page holding one turn a bare n-s1-0 is unique, and in the feed it
+    collides with the same id in forty other turns, so clicking a cue lit
+    notes in every one of them.
+    """
     out = []
     for sentence in (analysis or {}).get("sentences", []):
         for i, frag in enumerate(sentence.get("fragments", [])):
             frag = dict(frag)
-            frag["id"] = f"n-{sentence['id']}-{i}"
+            frag["id"] = f"{prefix}n-{sentence['id']}-{i}"
             out.append(frag)
         if not sentence.get("fragments") and sentence.get("unresolved_reason"):
-            out.append({"id": f"n-{sentence['id']}-u", "unresolved": True,
+            out.append({"id": f"{prefix}n-{sentence['id']}-u", "unresolved": True,
                         "start": sentence.get("start", 0), "end": sentence.get("end", 0),
                         "rationale": sentence["unresolved_reason"]})
     return sorted(out, key=lambda f: f.get("start", 0))
@@ -110,7 +116,7 @@ def mark_prose(source, frags):
 
 def render(record, analysis, name):
     source = record.get("source_text", "")
-    frags = fragments(analysis) if analysis else []
+    frags = fragments(analysis, prefix=f"{name}-") if analysis else []
     notes = []
     for frag in frags:
         if frag.get("unresolved"):
@@ -239,7 +245,7 @@ def feed_entry(name, record, analysis):
     text and an empty note list, which is the honest shape of `requested'.
     """
     source = record.get("source_text", "")
-    frags = fragments(analysis) if analysis else []
+    frags = fragments(analysis, prefix=f"{name}-") if analysis else []
     cuts = sorted((c["start"], c["end"], f["id"])
                   for f in frags for c in f.get("display_cues", []))
     runs, at = [], 0
