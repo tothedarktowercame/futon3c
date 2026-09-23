@@ -250,7 +250,7 @@ An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
           (cons clean t))
       (cons text nil))))
 
-(defcustom session-mode-analysis-agent "kimi-2"
+(defcustom session-mode-analysis-agent "kimi-1"
   "Agent id that interprets operator turns, or nil for the receiving agent.
 One delegate across every lane (Joe, 2026-09-23): turn tagging is a
 structure with exactly one producer, and eight seats producing it in
