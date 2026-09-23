@@ -108,6 +108,27 @@ def validate(request, analysis, library=LIBRARY):
                 checked_refs.append({"id": pid, "rationale": required_text(ref.get("rationale"), "pattern fit"),
                                      "status": "candidate", "source_sha256": hashlib.sha256(content.encode()).hexdigest()})
             item["pattern_refs"] = checked_refs
+
+            # What the translator considered and turned down. A citation says
+            # one pattern fits; a rejection says a near neighbour does not, and
+            # why. Retrieval returns a top hit for every query, so the second
+            # kind is what tells the boundary between two patterns -- and until
+            # now it survived only in the reply prose and was thrown away.
+            rejected = fragment.get("pattern_rejections", [])
+            if not isinstance(rejected, list):
+                raise ValueError("pattern_rejections must be an array")
+            checked_rejections = []
+            for ref in rejected:
+                pid = required_text(ref.get("id"), "rejected pattern id")
+                path = (library / (pid + ".flexiarg")).resolve()
+                if not path.is_relative_to(library.resolve()) or not path.is_file():
+                    raise ValueError(f"unknown rejected pattern: {pid}")
+                checked_rejections.append(
+                    {"id": pid,
+                     "reason": required_text(ref.get("reason"),
+                                             "why the rejected pattern does not fit"),
+                     "query": (ref.get("query") or "").strip()})
+            item["pattern_rejections"] = checked_rejections
             checked.append(item)
         # Check the union across all fragments so dividing a sentence into
         # many short spans cannot recreate total underlining.
