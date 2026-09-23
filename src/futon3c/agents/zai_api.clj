@@ -17,11 +17,15 @@
             [futon3c.peripheral.pull-receipts :as pull-receipts]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools])
-  (:import [java.net URI]
+  (:import [java.awt Image]
+           [java.awt.image BufferedImage]
+           [java.io ByteArrayOutputStream]
+           [java.net URI]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
             HttpResponse$BodyHandlers]
            [java.time Duration]
-           [java.util UUID]))
+           [java.util Base64 UUID]
+           [javax.imageio ImageIO]))
 
 (def ^:private default-base-url
   "https://api.z.ai/api/coding/paas/v4")
@@ -110,6 +114,11 @@
                  {:command {:type "string"}
                   :timeout_ms {:type "integer"}}
                  ["command"])}
+   {:name "view_image"
+    :description "Look at a local image file — a screenshot, a rendered page, a diagram. Use it after capturing a screenshot (Playwright, scrot, import) to see what is actually on screen instead of inferring it from the DOM or from what you expected to happen. PNG, JPEG, GIF, WebP and BMP; SVG is not an image input, read it with read_file and reason about the XML."
+    :parameters (json-schema
+                 {:path {:type "string" :description "Path to the image, relative to the agent cwd unless absolute."}}
+                 ["path"])}
    {:name "reflect_namespaces"
     :description "List loaded Clojure namespaces in the JVM."
     :parameters (json-schema
@@ -329,27 +338,37 @@
 (def ^:private orientation-tool-names
   #{"boot_context" "repo_contract"})
 
+(def ^:private vision-tool-names
+  "Offered only by a provider that accepts image input. Z.AI's GLM seats have
+   never been sent one, so their tool list must stay byte-identical."
+  #{"view_image"})
+
 (defn- specs-for-mode
   "Tool specs for a §8.4 condition. :full (default) — everything;
    :files — no memory family (orientation + files remain: condition b);
-   :none — no memory family, no orientation tools (condition a)."
-  [memory-mode]
-  (case (or memory-mode :full)
-    :none (remove #(or (memory-family-tool-names (:name %))
-                       (orientation-tool-names (:name %)))
-                  tool-specs)
-    :files (remove #(memory-family-tool-names (:name %)) tool-specs)
-    tool-specs))
+   :none — no memory family, no orientation tools (condition a).
+   VISION? adds the vision family; it defaults off so a provider that cannot
+   take an image is never offered a tool it would fail."
+  ([memory-mode] (specs-for-mode memory-mode false))
+  ([memory-mode vision?]
+   (cond->> (case (or memory-mode :full)
+              :none (remove #(or (memory-family-tool-names (:name %))
+                                 (orientation-tool-names (:name %)))
+                            tool-specs)
+              :files (remove #(memory-family-tool-names (:name %)) tool-specs)
+              tool-specs)
+     (not vision?) (remove #(vision-tool-names (:name %))))))
 
 (defn- openai-tools
-  ([] (openai-tools :full))
-  ([memory-mode]
+  ([] (openai-tools :full false))
+  ([memory-mode] (openai-tools memory-mode false))
+  ([memory-mode vision?]
    (mapv (fn [{:keys [name description parameters]}]
            {:type "function"
             :function {:name name
                        :description description
                        :parameters parameters}})
-         (specs-for-mode memory-mode))))
+         (specs-for-mode memory-mode vision?))))
 
 (defn- parse-arguments [s]
   (cond
@@ -418,6 +437,130 @@
                               'futon3c.agency.clock-store/current-clock)]
       (:mission-id (current-clock agent-id session-id)))
     (catch Throwable _ nil)))
+
+(def ^:private image-mime-types
+  {"png" "image/png" "jpg" "image/jpeg" "jpeg" "image/jpeg" "gif" "image/gif"
+   "webp" "image/webp" "bmp" "image/bmp" "heic" "image/heic" "heif" "image/heif"})
+
+(def max-image-dimensions
+  "Moonshot's recommendation: past 4K a larger image only costs more time to
+   process, it does not improve understanding. So downscale rather than refuse."
+  [4096 2160])
+
+(def default-max-image-bytes
+  "Cap on one encoded image. Not the vendor's limit (100MB per request body) —
+   a limit on what is reasonable to spend context on for a single look."
+  (* 8 1024 1024))
+
+(def default-retained-images
+  "How many images stay inline in the conversation. Every earlier one is
+   replaced by its caption. A screenshot loop that kept them all would resend
+   every megabyte of every screenshot on every subsequent round."
+  2)
+
+(defn- scale-to-fit
+  [^BufferedImage img max-w max-h]
+  (let [w (.getWidth img)
+        h (.getHeight img)
+        ratio (min (/ (double max-w) w) (/ (double max-h) h))
+        w* (max 1 (int (Math/floor (* w ratio))))
+        h* (max 1 (int (Math/floor (* h ratio))))
+        out (BufferedImage. w* h* BufferedImage/TYPE_INT_RGB)
+        g (.createGraphics out)]
+    (try
+      (.drawImage g (.getScaledInstance img w* h* Image/SCALE_SMOOTH) 0 0 nil)
+      (finally (.dispose g)))
+    out))
+
+(defn- png-bytes [^BufferedImage img]
+  (let [out (ByteArrayOutputStream.)]
+    (ImageIO/write img "png" out)
+    (.toByteArray out)))
+
+(defn- read-image-part
+  "Read PATH as image content parts for one tool result.
+
+   Returns {:ok true :content-parts [image text]} or {:ok false :error msg}.
+   The trailing text part is the caption: it names the file and size, and it is
+   what survives when the image is later elided, so the conversation keeps a
+   record that the look happened.
+
+   Formats the decoder cannot open (WebP, HEIC) pass through byte-for-byte with
+   no dimension check rather than failing — the model accepts them, we simply
+   cannot measure or downscale them here."
+  [cwd path max-bytes]
+  (let [f (io/file (if (str/starts-with? (str path) "/")
+                     (str path)
+                     (str (io/file cwd (str path)))))
+        ext (some-> (re-find #"\.([A-Za-z0-9]+)$" (.getName f)) second str/lower-case)
+        mime (get image-mime-types ext)]
+    (cond
+      (str/blank? (str path)) {:ok false :error "view_image needs a path"}
+      (not (.exists f)) {:ok false :error (str "no such file: " (.getPath f))}
+      (= "svg" ext)
+      {:ok false
+       :error (str "SVG is not an image input for this model. Read " (.getPath f)
+                   " with read_file and reason about the XML source instead.")}
+      (nil? mime)
+      {:ok false
+       :error (str "not a supported image type: ." (or ext "(none)")
+                   ". Supported: " (str/join ", " (sort (distinct (keys image-mime-types)))))}
+      :else
+      (try
+        (let [raw (java.nio.file.Files/readAllBytes (.toPath f))
+              decoded (try (ImageIO/read f) (catch Throwable _ nil))
+              [max-w max-h] max-image-dimensions
+              oversized? (and decoded (or (> (.getWidth decoded) max-w)
+                                          (> (.getHeight decoded) max-h)))
+              bytes* (if oversized? (png-bytes (scale-to-fit decoded max-w max-h)) raw)
+              mime* (if oversized? "image/png" mime)
+              dims (when decoded
+                     (if oversized?
+                       (let [s (scale-to-fit decoded max-w max-h)]
+                         [(.getWidth s) (.getHeight s)])
+                       [(.getWidth decoded) (.getHeight decoded)]))]
+          (if (> (count bytes*) max-bytes)
+            {:ok false
+             :error (str (.getPath f) " encodes to " (quot (count bytes*) 1024)
+                         "KB, over the " (quot max-bytes 1024)
+                         "KB per-image limit. Crop it or screenshot a smaller"
+                         " region, then call view_image again.")}
+            {:ok true
+             :content-parts
+             [{:type "image_url"
+               :image_url {:url (str "data:" mime* ";base64,"
+                                     (.encodeToString (Base64/getEncoder) bytes*))}}
+              {:type "text"
+               :text (str "viewed " (.getPath f)
+                          (when dims (str " (" (first dims) "x" (second dims) ")"))
+                          " " (quot (count bytes*) 1024) "KB"
+                          (when oversized? " — downscaled to fit 4096x2160"))}]}))
+        (catch Throwable t
+          {:ok false :error (str "could not read " (.getPath f) ": " (.getMessage t))})))))
+
+(defn- image-part? [p]
+  (and (map? p) (= "image_url" (or (:type p) (get p "type")))))
+
+(defn- elide-stale-images
+  "Keep the RETAIN most recent images inline; drop earlier ones, leaving their
+   caption text behind so the record of the look survives."
+  [messages retain]
+  (let [budget (volatile! retain)]
+    (->> (reverse messages)
+         (mapv (fn [m]
+                 (let [content (:content m)]
+                   (if-not (and (sequential? content) (some image-part? content))
+                     m
+                     (if (pos? @budget)
+                       (do (vswap! budget dec) m)
+                       (assoc m :content
+                              (mapv (fn [p]
+                                      (if (image-part? p)
+                                        p
+                                        (update p :text str " — image elided from context; call view_image again to look at it now")))
+                                    (remove image-part? content))))))))
+         reverse
+         vec)))
 
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
@@ -503,6 +646,10 @@
                               [(:command args)
                                (cond-> {}
                                  (:timeout_ms args) (assoc :timeout-ms (:timeout_ms args)))])
+
+          "view_image"
+          (read-image-part cwd (:path args)
+                           (or (:max-image-bytes ctx) default-max-image-bytes))
 
           "reflect_namespaces"
           (tools/execute-tool backend :reflect-namespaces
@@ -713,7 +860,12 @@
      :message {:role "tool"
                :tool_call_id (:id tool-call)
                :name name
-               :content (result-string result)}
+               ;; A vision tool returns an array of content parts. Kimi accepts
+               ;; image parts in a tool-role message (verified live 2026-09-23),
+               ;; so a screenshot arrives as the result of the tool that took
+               ;; it — no synthetic user turn in the middle of the loop.
+               :content (or (and (map? result) (:content-parts result))
+                            (result-string result))}
      :result result
      :error? (and (map? result) (false? (:ok result)))}))
 
@@ -736,7 +888,7 @@
 
 (defn- chat!
   [client {:keys [api-key base-url model max-tokens timeout-ms memory-mode
-                  sampling env-prefix]} messages]
+                  sampling env-prefix vision?]} messages]
   (let [{:keys [temperature thinking reasoning-effort]} (or sampling default-sampling)
         env-prefix (or env-prefix "ZAI")
         thinking-env (getenv (str env-prefix "_THINKING_TYPE"))
@@ -744,7 +896,7 @@
         body (json/generate-string
               (cond-> {:model (or model default-model)
                        :messages messages
-                       :tools (openai-tools memory-mode)
+                       :tools (openai-tools memory-mode vision?)
                        :tool_choice "auto"
                        ;; 8192: 4096 truncated large tool-call arguments in
                        ;; transit (zai-10's write_file loop, claude-18's
@@ -1365,6 +1517,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :calls (transcript-calls details executed)
                                    :usage usage})
                   (swap! !messages into (mapv :message executed))
+              (swap! !messages elide-stale-images
+                     (or (:retained-images opts) default-retained-images))
                   (recur (dec remaining) (str final-text text) auto-continues true
                          (inc round-n) report-reserved?)))
                 (do
@@ -1382,6 +1536,7 @@ CALLS contains maps of tool name, arguments, and result digest."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
            api-key api-key-fn api-key-hint base-url model timeout-ms request-timeout-ms
            turn-timeout-ms max-tokens temperature sampling session-id-prefix env-prefix
+           vision? max-image-bytes retained-images
            irc-send-fn irc-recent-fn
            memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
     :or {agent-id "zai" memory-mode :full}}]
@@ -1458,11 +1613,14 @@ CALLS contains maps of tool name, arguments, and result digest."
               :sampling (cond-> (merge default-sampling sampling)
                           (some? temperature) (assoc :temperature temperature))
               :env-prefix env-prefix
+              :vision? (boolean vision?)
+              :retained-images (or retained-images default-retained-images)
               :timeout-ms request-timeout-ms
               :memory-mode memory-mode}
         profile* (resolve-profile profile)
         tool-opts {:irc-send-fn irc-send-fn
                    :irc-recent-fn irc-recent-fn
+                   :max-image-bytes (or max-image-bytes default-max-image-bytes)
                    :agent-id agent-id
                    :cwd cwd*
                    :evidence-store evidence-store

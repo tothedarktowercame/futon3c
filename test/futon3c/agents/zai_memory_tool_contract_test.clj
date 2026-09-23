@@ -172,8 +172,14 @@
            (is (= {} (edn/read-string (:args call)))))))
     (is (= registered
            (set (map #(get-in % [:function :name])
-                     (#'zai/openai-tools :full))))
-        "The exercised names are exactly the tools exposed to the runner")))
+                     (#'zai/openai-tools :full true))))
+        "The exercised names are exactly the tools exposed to the runner")
+    ;; The vision family is the one conditionally-exposed group: a provider
+    ;; that cannot take an image must not be offered a tool it would fail.
+    (is (= (set (remove @#'zai/vision-tool-names registered))
+           (set (map #(get-in % [:function :name])
+                     (#'zai/openai-tools :full false))))
+        "A non-vision provider is offered every tool EXCEPT the vision family")))
 
 (deftest runner-records-r16-ask-and-yield-decision-witnesses
   (doseq [[expected-arm inputs]

@@ -71,4 +71,8 @@
            :env-prefix "KIMI"
            :base-url (or base-url (getenv "KIMI_BASE_URL") default-base-url)
            :model (or model (getenv "KIMI_MODEL") default-model)
+           ;; Every model on this plan reports supports_image_in, and the
+           ;; endpoint accepts image parts inside a tool-role result (verified
+           ;; live 2026-09-23), so a kimi seat gets view_image.
+           :vision? true
            :sampling (merge default-sampling sampling)})))

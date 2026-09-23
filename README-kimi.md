@@ -33,6 +33,36 @@ Bells (`scripts/agency_send.py --to kimi-1 --kind bell --mode work`) and
 `M-x kimi-repl-attach-agent` attaches `*kimi-repl:kimi-1*` to the seat's
 server-side session.
 
+## Vision
+
+A kimi seat gets a `view_image` tool: it reads a local image file and hands it
+to the model as an `image_url` content part. The point is the feedback loop —
+screenshot a page with Playwright, then LOOK at it, rather than inferring what
+rendered from the DOM.
+
+```
+run_shell   node pw-shot.mjs        # writes /tmp/shot.png
+view_image  /tmp/shot.png           # the model sees the pixels
+```
+
+- **The image rides in the tool result.** Kimi accepts `image_url` parts inside
+  a `tool`-role message (verified live 2026-09-23), which is not something the
+  OpenAI dialect guarantees; it means a screenshot arrives as the result of the
+  tool that took it, with no synthetic user turn spliced into the loop.
+- **Only vision providers are offered it.** `:vision?` gates the tool family, so
+  a Z.AI seat's tool list is byte-identical to what it was.
+- **PNG, JPEG, GIF, WebP, BMP, HEIC/HEIF. Not SVG** — the vendor rejects SVG as
+  image input, so the tool says so and points at `read_file` instead.
+- **Oversized images are downscaled, not refused** (4096x2160; past that a
+  larger image costs processing time and buys no understanding). Formats the
+  JVM decoder cannot open pass through byte-for-byte, unmeasured.
+- **Only the two most recent images stay inline.** Earlier ones are replaced by
+  their caption (`viewed /tmp/shot.png (1280x720) 9KB — image elided…`). A
+  screenshot loop that kept them all would resend every megabyte of every
+  screenshot on every later round; the caption keeps the record that the look
+  happened. Tune with `:retained-images`, and the per-image cap with
+  `:max-image-bytes` (default 8MB).
+
 ## Configuration
 
 | what | default | override |
