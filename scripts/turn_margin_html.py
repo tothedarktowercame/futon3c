@@ -204,36 +204,76 @@ def authored_cascade(name):
     return None
 
 
-def derived_cascade(name, frags):
-    """The analysis as an s-expression.
+LIB = "/home/joe/code/futon3/library"
 
-    Not a translation -- nobody wrote this, it is the annotation restated in
-    cascade form so the shape is visible beside the prose. A fragment that
-    resolved to patterns carries them; one that did not becomes a HOLE with
-    its target as :wanted, which is the honest rendering: the library has no
-    name for what that fragment did.
+
+def resolves(pid):
+    return "/" in pid and os.path.exists(f"{LIB}/{pid}.flexiarg")
+
+
+def tok(text, kind, note=None):
+    t = {"t": text, "k": kind}
+    if note:
+        t["n"] = note
+    return t
+
+
+def derived_cascade(name, frags):
+    """The analysis as s-expression tokens, each tagged with what it is.
+
+    Not a translation -- nobody wrote this. It is the annotation restated in
+    cascade form, tokenised so the reader can see at a glance which parts
+    retrieved a design pattern and which are only textual markup: a resolving
+    pattern id and a HOLE read differently, and an intent with neither is
+    markup wearing a cascade's shape.
     """
-    lines = [f"(cascade {name} :derived-from analysis"]
+    out = [tok("(cascade ", "punct"), tok(name, "name"),
+           tok(" :derived-from analysis", "kw"), tok("\n", "punct")]
     for f in frags:
         if f.get("unresolved"):
             continue
-        intent = f.get("intent", "?")
+        note = f["id"]
         target = (f.get("target") or "").replace('"', "'")
+        out += [tok("  (", "punct", note),
+                tok(f.get("intent", "?"), "intent", note)]
+        for cue in f.get("display_cues", []):
+            out.append(tok(f' "{cue["text"]}"', "cue", note))
         refs = f.get("pattern_refs", [])
-        cues = " ".join(f'"{c["text"]}"' for c in f.get("display_cues", []))
-        head = f"  ({intent}"
-        if cues:
-            head += f" {cues}"
         if refs:
-            lines.append(head)
             for r in refs:
-                lines.append(f"    {r['id']}")
-            lines.append(f"    :target \"{target}\")")
+                out += [tok("\n    ", "punct", note),
+                        tok(r["id"], "pattern" if resolves(r["id"]) else "dangling", note)]
+            out += [tok("\n    :target ", "kw", note),
+                    tok(f'"{target}"', "str", note), tok(")", "punct", note)]
         else:
-            lines.append(head)
-            lines.append(f"    (HOLE :wanted \"{target}\"))")
-    lines.append(")")
-    return "\n".join(lines)
+            out += [tok("\n    (", "punct", note), tok("HOLE", "hole", note),
+                    tok(" :wanted ", "kw", note), tok(f'"{target}"', "str", note),
+                    tok("))", "punct", note)]
+        out.append(tok("\n", "punct"))
+    out.append(tok(")", "punct"))
+    return out
+
+
+TOKEN = re.compile(r"""(?P<str>"[^"]*")|(?P<kw>:[\w-]+)|(?P<sym>[^\s()\[\]{}"]+)|(?P<punct>.)""",
+                   re.S)
+
+
+def tokenise_authored(text):
+    """Lex someone's hand-written cascade well enough to colour it.
+
+    No note ids: an authored cascade was not derived from the annotation, so
+    its parts do not correspond to cues and clicking one cannot light it.
+    """
+    out = []
+    for m in TOKEN.finditer(text):
+        kind, value = m.lastgroup, m.group(0)
+        if kind == "sym":
+            kind = ("hole" if value.startswith("HOLE")
+                    else "pattern" if resolves(value.strip("()[],"))
+                    else "dangling" if "/" in value
+                    else "sym")
+        out.append(tok(value, kind))
+    return out
 
 
 def feed_entry(name, record, analysis):
@@ -274,8 +314,8 @@ def feed_entry(name, record, analysis):
             "surface": record.get("surface", "unrecorded"),
             "labeller": (analysis or {}).get("labeller"),
             "runs": runs, "notes": notes,
-            "sexp": (authored or {}).get("text")
-                    or (derived_cascade(name, frags) if frags else None),
+            "sexp": (tokenise_authored(authored["text"]) if authored
+                     else derived_cascade(name, frags) if frags else None),
             "sexp-by": (authored or {}).get("by", "derived from the annotation"
                                             if frags else None)}
 

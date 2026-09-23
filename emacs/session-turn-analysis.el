@@ -277,12 +277,29 @@ state -- never silently complete."
                  "The turn, its sentence offsets and its metadata (including which "
                  "surface it came from) are in the record named below. Read it first.\n"
                  (session-mode--analysis-instruction path)
-                 "\n\nTwo things the instruction above does not say, because it was "
-                 "written for an agent that had just received the turn in conversation:\n"
+                 "\n\nThree things the instruction above does not say, because it "
+                 "was written for an agent that had just received the turn in "
+                 "conversation:\n"
                  "- You did NOT receive this turn. Everything you know about it is in "
                  "the record, so read the whole file rather than the first sentence.\n"
                  "- Joe is not waiting on a reply. Publish the analysis with the "
-                 "complete subcommand and bell nothing back unless you could not.\n"))
+                 "complete subcommand and bell nothing back unless you could not.\n"
+                 "- SEARCH THE PATTERN LIBRARY FOR EVERY FRAGMENT. The instruction "
+                 "calls pattern_refs optional; they are the point. An analysis of "
+                 "intents and cues alone is textual markup -- it says what Joe did "
+                 "without saying which named way of acting he invoked, and the "
+                 "library exists to name those. Use:\n"
+                 "    python3 /home/joe/code/futon3c/scripts/xlate.py find "
+                 "\"defer a decision, sort it out later\" -n 8\n"
+                 "  BM25 over 1,400 patterns, 0.3s, works in Chinese too. Measured "
+                 "recall@5 is about 0.29, so a miss is normal: try two or three "
+                 "phrasings of the MOVE (not of Joe's words) before concluding "
+                 "nothing fits. Read the candidate's context/IF/THEN before citing "
+                 "it -- an id that does not fit is worse than none, and the tool "
+                 "will reject one that does not resolve to a file.\n"
+                 "  Leaving pattern_refs empty is a real finding when the library "
+                 "has no name for the move. Leaving it empty without searching is "
+                 "not; it is the difference the feed now shows Joe in colour.\n"))
          (process-connection-type nil))
     (condition-case err
         (make-process
