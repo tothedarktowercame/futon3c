@@ -14,7 +14,7 @@ Marked spans are underlined in the prose; hovering or clicking one highlights
 its note. Most of a turn stays unmarked, which is the point -- the underlines
 are the operative part and the rest is the surplus they sit in.
 """
-import argparse, glob, html, json, os, sys
+import argparse, glob, html, json, os, re, sys
 from datetime import datetime, timezone
 
 DEFAULT_RECORDS = os.path.expanduser("~/.emacs-graph/session-turn-analysis")
@@ -184,6 +184,96 @@ tick();
 """
 
 
+TRANSLATIONS = "/home/joe/code/storage/operator-turns/translations"
+
+
+def authored_cascade(name):
+    """A cascade someone actually wrote for this turn, if one exists."""
+    for path in sorted(glob.glob(f"{TRANSLATIONS}/{name}.*.md")):
+        text = open(path, encoding="utf-8").read()
+        block = re.search(r"```(?:clojure|lisp)?\n(\(cascade.*?)```", text, re.S)
+        if block:
+            return {"by": os.path.basename(path).split(".")[-2],
+                    "text": block.group(1).rstrip()}
+    return None
+
+
+def derived_cascade(name, frags):
+    """The analysis as an s-expression.
+
+    Not a translation -- nobody wrote this, it is the annotation restated in
+    cascade form so the shape is visible beside the prose. A fragment that
+    resolved to patterns carries them; one that did not becomes a HOLE with
+    its target as :wanted, which is the honest rendering: the library has no
+    name for what that fragment did.
+    """
+    lines = [f"(cascade {name} :derived-from analysis"]
+    for f in frags:
+        if f.get("unresolved"):
+            continue
+        intent = f.get("intent", "?")
+        target = (f.get("target") or "").replace('"', "'")
+        refs = f.get("pattern_refs", [])
+        cues = " ".join(f'"{c["text"]}"' for c in f.get("display_cues", []))
+        head = f"  ({intent}"
+        if cues:
+            head += f" {cues}"
+        if refs:
+            lines.append(head)
+            for r in refs:
+                lines.append(f"    {r['id']}")
+            lines.append(f"    :target \"{target}\")")
+        else:
+            lines.append(head)
+            lines.append(f"    (HOLE :wanted \"{target}\"))")
+    lines.append(")")
+    return "\n".join(lines)
+
+
+def feed_entry(name, record, analysis):
+    """A turn with its annotations inline, for a feed that never navigates.
+
+    The margin pages hand the reader a link per turn; this hands them the
+    turn. Cues are pre-sliced into runs so the client renders spans without
+    re-deriving offsets, and an un-interpreted turn still appears -- with its
+    text and an empty note list, which is the honest shape of `requested'.
+    """
+    source = record.get("source_text", "")
+    frags = fragments(analysis) if analysis else []
+    cuts = sorted((c["start"], c["end"], f["id"])
+                  for f in frags for c in f.get("display_cues", []))
+    runs, at = [], 0
+    for start, end, note in cuts:
+        if start < at:
+            continue
+        if start > at:
+            runs.append({"t": source[at:start]})
+        runs.append({"t": source[start:end], "n": note})
+        at = end
+    if at < len(source):
+        runs.append({"t": source[at:]})
+
+    notes = []
+    for f in frags:
+        notes.append({"id": f["id"],
+                      "intent": "unresolved" if f.get("unresolved") else f.get("intent"),
+                      "target": f.get("target", ""),
+                      "rationale": f.get("rationale", ""),
+                      "relations": f.get("relations", []),
+                      "patterns": [{"id": r["id"], "why": r.get("rationale", "")}
+                                   for r in f.get("pattern_refs", [])]})
+    authored = authored_cascade(name)
+    return {"name": name, "at": record.get("created_at", ""),
+            "agent": record.get("agent_id", ""),
+            "surface": record.get("surface", "unrecorded"),
+            "labeller": (analysis or {}).get("labeller"),
+            "runs": runs, "notes": notes,
+            "sexp": (authored or {}).get("text")
+                    or (derived_cascade(name, frags) if frags else None),
+            "sexp-by": (authored or {}).get("by", "derived from the annotation"
+                                            if frags else None)}
+
+
 def summarise(name, record, analysis):
     head = record.get("source_text", "").strip().replace("\n", " ")
     return {"name": name, "at": record.get("created_at", ""),
@@ -198,6 +288,8 @@ def write_session_log(a, written):
     mine.sort(key=lambda w: w[1].get("created_at", ""), reverse=True)
     rows = [summarise(n, r, x) for n, r, x in mine]
 
+    json.dump([feed_entry(n, r, x) for n, r, x in mine],
+              open(os.path.join(a.out, f"feed-{a.agent}.json"), "w"))
     manifest = f"session-{a.agent}.json"
     json.dump(rows, open(os.path.join(a.out, manifest), "w"), indent=1)
 
