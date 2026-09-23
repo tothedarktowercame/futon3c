@@ -92,6 +92,7 @@
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.agents.zai-api :as zai-api]
+            [futon3c.agents.kimi-api :as kimi-api]
             [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
@@ -1089,8 +1090,9 @@
    Loop-safety is unchanged: bellback jobs carry caller \"auto-bellback\"
    (unregistered + excluded), so a bellback never bellbacks.
    Widened to :zai 2026-07-04 (M-custom-harness slice-2 live test: a zai
-   bell completed but no completion bell routed back to the caller)."
-  #{:codex :claude :zai})
+   bell completed but no completion bell routed back to the caller).
+   Widened to :kimi 2026-09-23: same harness, same silent-completion hazard."
+  #{:codex :claude :zai :kimi})
 
 (defn- same-agent-id?
   [a b]
@@ -3526,6 +3528,7 @@
   {:claude [:explore :edit :test :coordination/execute]
    :codex  [:edit :test :coordination/execute]
    :zai    [:explore :edit :test :coordination/execute]
+   :kimi   [:explore :edit :test :coordination/execute]
    :tickle [:mission-control :discipline :coordination/execute]})
 
 (defn- project-dir-slug
@@ -3585,6 +3588,7 @@
     :claude (format "/tmp/futon-session-id-%s" agent-id)
     :codex (format "/tmp/futon-codex-session-id-%s" agent-id)
     :zai (format "/tmp/futon-zai-session-id-%s" agent-id)
+    :kimi (format "/tmp/futon-kimi-session-id-%s" agent-id)
     nil))
 
 (defn- make-session-id-atom
@@ -3668,16 +3672,39 @@
           (flush)
           nil))
 
+      :kimi
+      (try
+        (kimi-api/make-invoke-fn
+         (cond-> {:agent-id agent-id
+                  :session-file session-file
+                  :session-id-atom sid-atom
+                  :initial-session-id initial-session-id
+                  :evidence-store evidence-store
+                  :irc-send-fn irc-send-fn
+                  :request-timeout-ms (or request-timeout-ms
+                                          zai-api/default-request-timeout-ms)
+                  :turn-timeout-ms (or turn-timeout-ms
+                                       zai-api/default-turn-timeout-ms)}
+           model (assoc :model model)
+           memory-domain (assoc :memory-domain memory-domain)
+           requested-cwd (assoc :cwd requested-cwd)))
+        (catch Throwable t
+          (println (str "[kimi] failed to build invoke-fn for " agent-id ": " (.getMessage t)))
+          (flush)
+          nil))
+
       nil)))
 
 (defn- frame-seat-timeout-policy [agent-id agent-type]
-  {:request-timeout-ms (if (= :zai agent-type)
+  ;; :kimi runs the same harness as :zai, so it carries the same per-request
+  ;; HTTP envelope and the same source stamp.
+  {:request-timeout-ms (if (#{:zai :kimi} agent-type)
                          zai-api/default-request-timeout-ms
                          :not-applicable)
    :turn-timeout-ms (if (str/ends-with? agent-id "-student")
                       1800000
                       zai-api/default-turn-timeout-ms)
-   :request/source (if (= :zai agent-type)
+   :request/source (if (#{:zai :kimi} agent-type)
                      :zai-api/default-request-timeout-ms
                      :not-applicable)
    :turn/source (if (str/ends-with? agent-id "-student")
@@ -3982,11 +4009,10 @@
                                   not-empty)
                     session-file (default-session-file-for-agent agent-type agent-id)]
                 (when ghost
-                  (when-let [stale-sf (case agent-type
-                                        :claude (format "/tmp/futon-session-id-%s" ghost)
-                                        :codex (format "/tmp/futon-codex-session-id-%s" ghost)
-                                        :zai (format "/tmp/futon-zai-session-id-%s" ghost)
-                                        nil)]
+                  ;; Same table as the fresh path: a second copy here drifted
+                  ;; (it never learned :kimi) the moment a type was added.
+                  (when-let [stale-sf (default-session-file-for-agent
+                                       agent-type ghost)]
                     (let [f (java.io.File. stale-sf)]
                       (when (.exists f) (.delete f))))
                   (reg/unregister-agent! ghost))

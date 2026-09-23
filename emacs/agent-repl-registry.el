@@ -113,6 +113,13 @@ destroys the item: worse than never polling at all."
      :sender #'zai-repl--call
      :api-url-var nil
      :hooks nil))
+  (when (fboundp 'kimi-repl--call)
+    (agent-repl-register!
+     'kimi-repl-mode
+     :agent-name "kimi"
+     :sender #'kimi-repl--call
+     :api-url-var nil
+     :hooks nil))
   (when (fboundp 'codex-repl--call-codex-async)
     (agent-repl-register!
      'codex-repl-mode
@@ -136,6 +143,7 @@ destroys the item: worse than never polling at all."
 (agent-repl-registry-install-defaults!)
 (with-eval-after-load 'claude-repl (agent-repl-registry-install-defaults!))
 (with-eval-after-load 'zai-repl (agent-repl-registry-install-defaults!))
+(with-eval-after-load 'kimi-repl (agent-repl-registry-install-defaults!))
 (with-eval-after-load 'codex-repl (agent-repl-registry-install-defaults!))
 
 (provide 'agent-repl-registry)

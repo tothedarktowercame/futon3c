@@ -725,9 +725,23 @@
       (and (string? reasoning) (not (str/blank? reasoning))) reasoning
       :else "")))
 
+(def default-sampling
+  "The sampling block Z.AI wants. A provider sharing this harness supplies its
+   own :sampling map; a key whose value is nil omits that field from the request
+   body entirely, which is how a provider that REFUSES a field (Kimi rejects any
+   explicit temperature) gets a valid request rather than a 400."
+  {:temperature 0.2
+   :thinking {:type "disabled"}
+   :reasoning-effort "none"})
+
 (defn- chat!
-  [client {:keys [api-key base-url model max-tokens temperature timeout-ms memory-mode]} messages]
-  (let [body (json/generate-string
+  [client {:keys [api-key base-url model max-tokens timeout-ms memory-mode
+                  sampling env-prefix]} messages]
+  (let [{:keys [temperature thinking reasoning-effort]} (or sampling default-sampling)
+        env-prefix (or env-prefix "ZAI")
+        thinking-env (getenv (str env-prefix "_THINKING_TYPE"))
+        effort-env (getenv (str env-prefix "_REASONING_EFFORT"))
+        body (json/generate-string
               (cond-> {:model (or model default-model)
                        :messages messages
                        :tools (openai-tools memory-mode)
@@ -735,14 +749,12 @@
                        ;; 8192: 4096 truncated large tool-call arguments in
                        ;; transit (zai-10's write_file loop, claude-18's
                        ;; diagnosis 2026-07-04) — big file writes need headroom.
-                       :max_tokens (or max-tokens 8192)
-                       :temperature (or temperature 0.2)
-                       :thinking {:type "disabled"}
-                       :reasoning_effort "none"}
-                (getenv "ZAI_THINKING_TYPE")
-                (assoc-in [:thinking :type] (getenv "ZAI_THINKING_TYPE"))
-                (getenv "ZAI_REASONING_EFFORT")
-                (assoc :reasoning_effort (getenv "ZAI_REASONING_EFFORT"))))
+                       :max_tokens (or max-tokens 8192)}
+                (some? temperature) (assoc :temperature temperature)
+                (some? thinking) (assoc :thinking thinking)
+                (some? reasoning-effort) (assoc :reasoning_effort reasoning-effort)
+                thinking-env (assoc-in [:thinking :type] thinking-env)
+                effort-env (assoc :reasoning_effort effort-env)))
         req (-> (HttpRequest/newBuilder (URI/create (chat-url base-url)))
                 (.timeout (Duration/ofMillis
                            (long (or timeout-ms default-request-timeout-ms))))
@@ -1368,8 +1380,9 @@ CALLS contains maps of tool name, arguments, and result digest."
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
-           api-key base-url model timeout-ms request-timeout-ms turn-timeout-ms
-           max-tokens temperature irc-send-fn irc-recent-fn
+           api-key api-key-fn api-key-hint base-url model timeout-ms request-timeout-ms
+           turn-timeout-ms max-tokens temperature sampling session-id-prefix env-prefix
+           irc-send-fn irc-recent-fn
            memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
     :or {agent-id "zai" memory-mode :full}}]
   (when-not evidence-store
@@ -1379,12 +1392,19 @@ CALLS contains maps of tool name, arguments, and result digest."
                            (memory-provisioning/domain-for agent-id)
                            :zaif-work)
         client (HttpClient/newHttpClient)
-        key (or api-key (resolve-api-key))
+        ;; A provider sharing this harness resolves its OWN key. Falling back to
+        ;; resolve-api-key here would hand a Kimi seat the Z.AI key and bill the
+        ;; wrong subscription while looking like it worked.
+        resolve-key (or api-key-fn resolve-api-key)
+        key-hint (or api-key-hint
+                     "Z.AI API key missing; set ZAI_API_KEY or create ~/.zaikey or ~/.zai-key")
+        sid-prefix (or session-id-prefix "zai-")
+        key (or api-key (resolve-key))
         cwd* (or cwd (System/getProperty "user.dir"))
         sid0 (or initial-session-id
                  (when (and session-file (.exists (io/file session-file)))
                    (some-> session-file slurp str/trim not-empty))
-                 (str "zai-" (UUID/randomUUID)))
+                 (str sid-prefix (UUID/randomUUID)))
         !session-id (or session-id-atom (atom sid0))
         ;; This is deliberately distinct from !session-id. The registry reset
         ;; hook clears !session-id before the next invoke; retaining the last
@@ -1435,7 +1455,9 @@ CALLS contains maps of tool name, arguments, and result digest."
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
               :max-tokens max-tokens
-              :temperature temperature
+              :sampling (cond-> (merge default-sampling sampling)
+                          (some? temperature) (assoc :temperature temperature))
+              :env-prefix env-prefix
               :timeout-ms request-timeout-ms
               :memory-mode memory-mode}
         profile* (resolve-profile profile)
@@ -1450,10 +1472,10 @@ CALLS contains maps of tool name, arguments, and result digest."
       ([prompt incoming-session-id]
        (invoke prompt incoming-session-id {}))
       ([prompt incoming-session-id invoke-context]
-       (let [key* (or key (resolve-api-key))
+       (let [key* (or key (resolve-key))
             sid (or incoming-session-id @!session-id
-                    (str "zai-" (UUID/randomUUID)))
-            turn-id (str "zai-turn-" (UUID/randomUUID))
+                    (str sid-prefix (UUID/randomUUID)))
+            turn-id (str sid-prefix "turn-" (UUID/randomUUID))
             ;; Agency supplies its job id through the three-arity invoke seam.
             ;; Direct calls have no Agency job, so their generated turn id is
             ;; the dispatch id and the turn-start record binds them explicitly.
@@ -1496,11 +1518,11 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; running headless while the registry stayed :invoking and new
             ;; turns queued forever. The flag is checked every tool round.
             !interrupted (atom false)
-            interrupt-token (str "zai-invoke-" (UUID/randomUUID))]
+            interrupt-token (str sid-prefix "invoke-" (UUID/randomUUID))]
         (if-not key*
           {:result nil
            :session-id sid
-           :error "Z.AI API key missing; set ZAI_API_KEY or create ~/.zaikey or ~/.zai-key"}
+           :error key-hint}
           (do
         ;; Session rotation (reg/reset-session!): a fresh session must not
         ;; inherit the old conversation, and the unbounded !messages vector

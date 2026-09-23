@@ -597,6 +597,8 @@ the current \"Cooked for\" line."
                 ('claude-repl-mode (list "claude" 'claude-repl--build-modeline))
                 ('codex-repl-mode (list "codex" 'codex-repl--build-modeline))
                 ('zai-repl-mode (list nil 'zai-repl--build-modeline))
+                ;; Flat-rate coding subscription: modeline only, no cost vendor.
+                ('kimi-repl-mode (list nil 'kimi-repl--build-modeline))
                 (_ (user-error "Not an agent REPL buffer: %s" major-mode)))))
     (setq-local agent-chat--modeline-fn (cadr spec))
     (setq-local agent-chat--cost-vendor (car spec))

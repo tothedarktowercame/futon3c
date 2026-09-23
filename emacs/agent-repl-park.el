@@ -43,7 +43,7 @@
   :type 'number :group 'agent-repl-park)
 
 (defcustom agent-repl-park-participating-modes
-  '(claude-repl-mode zai-repl-mode codex-repl-mode)
+  '(claude-repl-mode zai-repl-mode kimi-repl-mode codex-repl-mode)
   "Major modes whose buffers participate in parked-on resume delivery.
 Mode symbols do not load their defining libraries; an absent frontend is inert."
   :type '(repeat symbol) :group 'agent-repl-park)
