@@ -61,8 +61,10 @@ def harvest_invokes():
             if not (eid and at) or eid.group(1) in seen:
                 continue
             seen.add(eid.group(1))
+            sess = re.search(r':evidence/session-id "([^"]+)"', e)
             rec = {"id": eid.group(1), "at": at.group(1),
-                   "agent": agent.group(1) if agent else None}
+                   "agent": agent.group(1) if agent else None,
+                   "session": sess.group(1) if sess else None}
             for k, rx in HEAD.items():
                 m = rx.search(e)
                 rec[k.lower()] = m.group(1).strip() if m else None
@@ -87,12 +89,15 @@ def main():
         for r in invokes:
             f.write(json.dumps(r) + "\n")
 
-    # index invokes by agent, sorted by time, for a nearest-in-time lookup
-    by_agent = {}
+    # Index by session, not by agent.  turn-id is not a key: 6,182 distinct
+    # values over 16,505 turn records, and 3,280 records carry none at all,
+    # so an agent name parsed out of it smears the join.  The evidence
+    # session-id is on both sides of the join and is stable.
+    by_session = {}
     for r in invokes:
-        if r["agent"] and r["at"]:
-            by_agent.setdefault(r["agent"], []).append((ts(r["at"]), r))
-    for v in by_agent.values():
+        if r["session"] and r["at"]:
+            by_session.setdefault(r["session"], []).append((ts(r["at"]), r))
+    for v in by_session.values():
         v.sort()
 
     turns = [json.loads(l) for l in open(TURNS)]
@@ -100,10 +105,10 @@ def main():
     out = []
     for t in turns:
         tid, at = t.get("turn_id"), t.get("at")
-        agent = re.sub(r"-turn-\d+$", "", tid) if tid else None
+        sess = t.get("session")
         origin = caller = surface = None
-        if agent and at and agent in by_agent:
-            arr = by_agent[agent]
+        if sess and at and sess in by_session:
+            arr = by_session[sess]
             k = ts(at)
             i = bisect_left(arr, (k,))
             best, bestd = None, MATCH_WINDOW
@@ -116,7 +121,8 @@ def main():
                 origin, caller, surface = best["origin"], best["caller"], best["surface"]
         label = origin or "unmatched"
         counts[label] = counts.get(label, 0) + 1
-        out.append({"turn_id": tid, "at": at, "agent": agent, "origin": origin,
+        out.append({"evidence_id": t.get("id"), "turn_id": tid, "at": at,
+                    "session": sess, "origin": origin,
                     "caller": caller, "surface": surface,
                     "words": len((t.get("text") or "").split())})
 
