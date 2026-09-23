@@ -371,6 +371,7 @@ must never break buffer setup."
          :session-id (kimi-repl--session-id)
          :modeline-fn #'kimi-repl--build-modeline
          :face-alist `(("kimi" . kimi-repl-kimi-face))
+         :text-face 'kimi-repl-string-face
          :agent-name "kimi"
          :agent-id kimi-repl-agent-id
          :campaign-id agent-chat--campaign-id

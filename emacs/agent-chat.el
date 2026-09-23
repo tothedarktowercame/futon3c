@@ -191,6 +191,10 @@ to this many attempts, then retain the record as a terminal failure."
 (defvar agent-chat--last-evidence-delivery-outcome nil
   "Outcome of the most recent evidence post: acked, queued, or failed.")
 
+(defvar-local agent-chat--text-face 'agent-chat-text-face
+  "Per-agent body-text face (set from :text-face at setup;
+defaults to the shared agent-chat-text-face).")
+
 (defvar-local agent-chat--face-alist nil
   "Alist mapping speaker name to face, e.g. ((\"claude\" . face)).")
 
@@ -1758,7 +1762,7 @@ Runs `agent-chat--insert-message-hook' which may transform TEXT."
             ;; freezing the buffer for seconds per turn.  Text-props render
             ;; identically at near-zero redisplay cost (E-repl-redisplay, 2026-07-01).
             (put-text-property name-start name-end 'face face)
-            (put-text-property name-end text-end 'face 'agent-chat-text-face)
+            (put-text-property name-end text-end 'face agent-chat--text-face)
             (agent-chat--decorate-markdown-links name-end text-end)
             ;; Highlight tool-use lines in orange.
             ;; Matches: [Read], [Edit], [Bash], [Glob], [Grep], [Write],
@@ -1873,7 +1877,7 @@ Optional FACE overrides `agent-chat-thinking-face'."
         (let ((start (point)))
           (insert text)
           (put-text-property start (point)
-                             'face (or face 'agent-chat-text-face))
+                             'face (or face agent-chat--text-face))
           (set-marker agent-chat--streaming-marker (point))))
       (agent-chat-scroll-to-bottom))))
 
@@ -2534,6 +2538,7 @@ CONFIG keys:
   :modeline-fn - 0-arg function returning modeline string
   :prompt-face - face for the \"> \" prompt
   :face-alist  - alist of (name . face) for speakers
+  :text-face   - face for agent body text (default agent-chat-text-face)
   :agent-name  - \"claude\" or \"codex\"
   :agent-id    - registry agent-id (e.g. \"claude-1\") for walkie-talkie
   :campaign-id - optional campaign id clocked into this session
@@ -2547,6 +2552,7 @@ CONFIG keys:
         (modeline-fn (plist-get config :modeline-fn))
         (prompt-face (or (plist-get config :prompt-face) 'agent-chat-prompt-face))
         (face-alist (plist-get config :face-alist))
+        (text-face (or (plist-get config :text-face) 'agent-chat-text-face))
         (agent-name (plist-get config :agent-name))
         (agent-id (plist-get config :agent-id))
         (campaign-id (plist-get config :campaign-id))
@@ -2559,7 +2565,8 @@ CONFIG keys:
         (evidence-timeout (plist-get config :evidence-timeout)))
     ;; Set buffer-local state
     (setq agent-chat--face-alist
-          (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
+          (append face-alist (list (cons "joe" 'agent-chat-joe-face)))
+    (setq agent-chat--text-face text-face)
     (setq agent-chat--agent-name agent-name)
     (setq agent-chat--agent-id agent-id)
     (setq agent-chat--campaign-id (agent-chat-normalize-campaign-id campaign-id))
