@@ -59,6 +59,15 @@ look like it worked.
 - These models reason by default (effort `high` on k3, `max` on
   `kimi-for-coding`). A multi-round tool loop pays that on every round, so the
   default here is effort `low`: reasoning stays on, the per-round tax does not.
-- `GET /coding/v1/me` reports the account and plan level. There is no usage or
-  quota endpoint, so Kimi has no voxterm `/usage` panel — unlike Claude, Codex
-  and Z.AI, there is nothing to read.
+- `GET /coding/v1/me` reports the account and plan level (`user_level_name`,
+  e.g. `Ultra`).
+- `GET /coding/v1/usages` reports the quota, and voxterm's `/usage` panel reads
+  it. Two views arrive in one response and they can disagree: `limits[]` is the
+  windowed form (`limit`/`remaining`/`resetTime`) and `usages.*` is a
+  convenience ratio that has been seen reporting 0 for an exhausted window
+  (MoonshotAI/kimi-code#3951), so `limits[]` wins for any window it covers.
+- **Kimi's long window is a MONTH, not a week**: this plan reports a 5-hour
+  pool and `limit_month_total` / `limit_month_code` (a 7-day window exists on
+  some plans and is preferred when present). The usage strip therefore leads
+  with each provider's `lead_*` — longest window it actually bills on, plus its
+  name — rather than calling a month a week.
