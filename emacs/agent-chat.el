@@ -1752,7 +1752,7 @@ and changes no text, only the face property."
       (goto-char (point-min))
       (while (not (eobp))
         (let ((start (point))
-              (end (or (next-single-property-change (point) 'face) (point-max)))
+              (end (or (next-single-property-change (point) 'face) (point-max))))
           (when (eq (get-text-property (point) 'face) 'agent-chat-text-face)
             (put-text-property start end 'face agent-chat--text-face)
             (setq n (+ n (- end start))))
@@ -2589,7 +2589,7 @@ CONFIG keys:
         (evidence-timeout (plist-get config :evidence-timeout)))
     ;; Set buffer-local state
     (setq agent-chat--face-alist
-          (append face-alist (list (cons "joe" 'agent-chat-joe-face)))
+          (append face-alist (list (cons "joe" 'agent-chat-joe-face))))
     (setq agent-chat--text-face text-face)
     (setq agent-chat--agent-name agent-name)
     (setq agent-chat--agent-id agent-id)
