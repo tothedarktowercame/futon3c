@@ -8840,6 +8840,16 @@
                                    click-id issued-at
                                    (when (nonblank-string? (:issuing-caller payload))
                                      (:issuing-caller payload))))))
+                  ;; A rationed click must not be spent on a run that cannot
+                  ;; reach selection for a reason knowable now: every cast
+                  ;; seat on the roster and invoke-ready BEFORE the issue
+                  ;; callback (and its budget append) can fire.
+                  _ (when (and (not commissioned?) (not prepared))
+                      (when-let [refusal ((requiring-resolve
+                                           'futon3c.wm.runner-service/cast-preflight-refusal)
+                                          legacy-opts)]
+                        (throw (ex-info "WM click refused: a cast seat cannot be invoked"
+                                        refusal))))
                   result (if commissioned?
                            (click! {:config config :issuer-provenance issuer-provenance})
                            (click! opts))
@@ -8860,7 +8870,8 @@
                            {:error (or (some-> (:error data) name)
                                        "wm-click-start-failed")
                             :message (.getMessage throwable)
-                            :details (select-keys data [:authorization :allocated :consumed :renewal])})))))))
+                            :details (select-keys data [:authorization :allocated :consumed :renewal
+                                                        :unready :cause])})))))))
 
 (defn- handle-wm-click-status
   []

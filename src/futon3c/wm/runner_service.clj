@@ -161,6 +161,79 @@
       (catch Throwable _
         bound-opts))))
 
+;; ---------------------------------------------------------------------------
+;; Cast preflight. A rationed ordinary click is consumed before the worker
+;; starts, and failed runs never refund a grant -- so a run that cannot reach
+;; selection for a reason knowable before it starts must be refused BEFORE the
+;; issue callback fires. On 2026-09-23 a bare POST spent click
+;; wm-click-ff7c0384 on default repair-reviewer codex-24, which is on no
+;; roster; the run ended :agent-unavailable 45 seconds later and the ledger
+;; kept the spend (claude-5's incident report).
+;;
+;; The readiness rule is the one already in use, not a new one: the runner's
+;; own available? requires presence + invoke-ready? + status "idle", and
+;; futon2/scripts/wm_click.sh additionally accepts "restored" (the runner
+;; wakes restored seats itself; rejecting them blocked every click after any
+;; server restart -- codex-15 went accepted -> text in nine seconds from
+;; "restored", claude-4 2026-09-19). A BUSY seat is different for the two
+;; callers: the script waits, the endpoint has no waiting semantics, so the
+;; endpoint refuses with :busy and lets the caller retry.
+;; ---------------------------------------------------------------------------
+
+(def ^:dynamic *roster-fn*
+  "Roster lookup for cast preflight, one argument (agency-base), returning the
+   /api/alpha/agents :agents map. Bound in tests; nil means resolve futon2's
+   agent-roster through *resolve-var* at call time, exactly as the runner
+   itself would read it."
+  nil)
+
+(defn cast-preflight-refusal
+  "Resolve the cast exactly as the runner will (same binding + config merge),
+   read the roster, and return nil when every seat is invoke-ready -- or a
+   typed refusal {:status 409 :error :wm-click-cast-not-invoke-ready
+   :unready {role {:seat ... :reason ...}}} naming each offending seat.
+   Reasons: :absent (not on the roster), :not-invoke-ready, :busy (registered
+   but invoking -- the endpoint refuses rather than waits), or the observed
+   status keyword. Only the three cast seats are checked, and only when they
+   resolve to names; a configuration that cannot name a seat at all is the
+   runner's to surface, not a preflight invention."
+  [opts]
+  (let [configured (configured-runner-opts opts)
+        seats (->> [[:author (:author configured)]
+                    [:reviewer (:reviewer configured)]
+                    [:repair-reviewer (:repair-reviewer configured)]]
+                   (filter (fn [[_ seat]] (and (string? seat)
+                                               (not (str/blank? seat))))))]
+    (when (seq seats)
+      (let [roster-fn (or *roster-fn*
+                          (*resolve-var* 'futon2.aif.full-loop-runner/agent-roster))
+            roster (try
+                     (when roster-fn (roster-fn (:agency-base configured)))
+                     (catch Throwable throwable
+                       (throw (ex-info "WM click refused: Agency roster unreadable, casting cannot be checked"
+                                       {:status 503
+                                        :error :wm-click-roster-unavailable
+                                        :cause (.getMessage throwable)}))))
+            unready (into {}
+                          (keep (fn [[role seat]]
+                                  (let [record (or (get roster (keyword seat))
+                                                   (get roster seat))
+                                        status (some-> (:status record) name)]
+                                    (cond
+                                      (nil? record)
+                                      [role {:seat seat :reason :absent}]
+                                      (not (true? (:invoke-ready? record)))
+                                      [role {:seat seat :reason :not-invoke-ready}]
+                                      (= "invoking" status)
+                                      [role {:seat seat :reason :busy}]
+                                      (not (contains? #{"idle" "restored"} status))
+                                      [role {:seat seat :reason (keyword (or status "unknown"))}]
+                                      :else nil))))
+                          seats)]
+        (when (seq unready)
+          {:status 409 :error :wm-click-cast-not-invoke-ready
+           :unready unready})))))
+
 (defn- append-phase!
   [phase-log event]
   (when phase-log
