@@ -250,6 +250,55 @@ An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
           (cons clean t))
       (cons text nil))))
 
+(defcustom session-mode-analysis-agent nil
+  "Agent id that interprets operator turns, or nil for the receiving agent.
+With nil the structural analysis request rides on the prompt of whichever
+agent Joe is talking to, so the interpretation costs that agent part of its
+turn. Set to an agent id -- \"kimi-2\" -- and the request is dispatched to
+that seat instead as a work bell, leaving the conversation uninterrupted.
+The record is written either way; only who fills it changes."
+  :type '(choice (const :tag "The receiving agent" nil) string)
+  :group 'session-mode)
+
+(defcustom session-mode-analysis-sender "agency_send.py"
+  "Path to futon3c's agency_send.py, used when delegating the analysis."
+  :type 'string
+  :group 'session-mode)
+
+(defun session-mode--dispatch-analysis (path)
+  "Ask `session-mode-analysis-agent' to interpret the turn recorded at PATH.
+Fire and forget: the dispatch must not delay the conversation, and a seat
+that is busy or absent leaves the record `requested', which is the honest
+state -- never silently complete."
+  (let* ((agent session-mode-analysis-agent)
+         (brief (concat
+                 "Interpret one operator turn. This is the whole task; there is no "
+                 "conversation attached to it.\n\n"
+                 "The turn, its sentence offsets and its metadata (including which "
+                 "surface it came from) are in the record named below. Read it first.\n"
+                 (session-mode--analysis-instruction path)
+                 "\n\nTwo things the instruction above does not say, because it was "
+                 "written for an agent that had just received the turn in conversation:\n"
+                 "- You did NOT receive this turn. Everything you know about it is in "
+                 "the record, so read the whole file rather than the first sentence.\n"
+                 "- Joe is not waiting on a reply. Publish the analysis with the "
+                 "complete subcommand and bell nothing back unless you could not.\n"))
+         (process-connection-type nil))
+    (condition-case err
+        (make-process
+         :name "session-analysis-dispatch"
+         :buffer (get-buffer-create " *session-analysis-dispatch*")
+         :noquery t
+         :command (list "sh" "-c"
+                        (format "printf %%s %s | python3 %s --to %s --from %s --kind bell --type request --mode work"
+                                (shell-quote-argument brief)
+                                (shell-quote-argument session-mode-analysis-sender)
+                                (shell-quote-argument agent)
+                                (shell-quote-argument (or agent-chat--agent-id "emacs")))))
+      (error (display-warning 'session-mode
+                              (format "Analysis dispatch to %s failed: %s"
+                                      agent (error-message-string err)))))))
+
 (defun session-mode--analyze-start-turn (original call agent-name hooks text speaker origin)
   "Wrap only ordinary operator CALLs; keep visible text and hooks unchanged."
   (if (not (and session-mode-turn-tags-mode (eq origin 'operator)
@@ -265,7 +314,11 @@ An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
          (condition-case err
              (progn
                (setq path (session-mode--record-turn sent failed text))
-               (when (or failed (session-mode--analysis-requested-p (session-mode--structure-turn sent)))
+               (when (and path session-mode-analysis-agent)
+                 (session-mode--dispatch-analysis path))
+               (when (and (not session-mode-analysis-agent)
+                          (or failed (session-mode--analysis-requested-p
+                                      (session-mode--structure-turn sent))))
                  (setq prompt (concat sent (session-mode--analysis-instruction path)
                                       (when failed
                                         "\nOperator !x feedback: tagging failed. Prioritize substantive keyword analysis of this turn; explain any remaining unclassified passages.\n")))))
