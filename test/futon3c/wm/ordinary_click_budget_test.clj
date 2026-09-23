@@ -19,7 +19,12 @@
     (mapv #(json/parse-string % true) (remove str/blank? (str/split-lines (slurp budget/*ledger-path*))))
     []))
 
-(deftest issued-before-failure-and-sixth-refused
+;; The allocation is DATA (budget/allocated), renewed whenever Joe grants
+;; more; what this test pins is the behaviour at the boundary -- every click
+;; up to the allocation issues and is charged before the worker runs, and the
+;; one after it refuses with 409. Writing the allocation as a literal here
+;; made the test fail on renewal-6 (7 clicks) for no defect at all.
+(deftest issued-up-to-the-allocation-then-refused
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
                       "ordinary-click-test" (make-array java.nio.file.attribute.FileAttribute 0)))
         production ["/home/joe/code/futon2/data/wm-repair-obligations"
@@ -44,7 +49,7 @@
                         reg/mark-agent-idle! (fn [& _])
                         reg/clear-external-invoke! (fn [& _])]
             (reset! service/!status service/initial-status)
-            (dotimes [n 5]
+            (dotimes [n budget/allocated]
               (let [response (h {:request-method :post :uri "/api/alpha/wm/click"
                                  :body (json/generate-string
                                         (cond-> {:trigger "duree-click-on-demand"}
@@ -60,14 +65,18 @@
               (is (= "ordinary-click-budget-exhausted" (:error body)))
               (is (= budget/authorization (get-in body [:details :authorization])))
               (is (= "Joe" (get-in body [:details :renewal])))
-              (is (= 5 (count (rows))))
-              (is (= 5 (count @observed))))
-            (is (= [1 2 3 4 5] (mapv #(count (:rows %)) @observed)))
+              (is (= budget/allocated (count (rows))))
+              (is (= budget/allocated (count @observed))))
+            (is (= (vec (range 1 (inc budget/allocated)))
+                   (mapv #(count (:rows %)) @observed)))
             (is (every? #(= (:click-id %) (:click-id (last (:rows %)))) @observed))
             (is (= "codex-34" (:caller (first (rows)))))
             (is (= "caller-unknown" (:caller (second (rows)))))
-            (println "EXECUTION-RECEIPT" (pr-str {:issued 5 :failed-after-issue 5
-                                                 :sixth-status 409 :worker-entry-counts [1 2 3 4 5]}))))))
+            (println "EXECUTION-RECEIPT"
+                     (pr-str {:issued budget/allocated
+                              :failed-after-issue budget/allocated
+                              :one-past-allocation-status 409
+                              :worker-entry-counts (vec (range 1 (inc budget/allocated)))}))))))
     (is (= before (mapv files production)))
     (println "PRODUCTION-STORE-COUNTS" (pr-str {:before before :after (mapv files production)}))))
 
@@ -86,10 +95,10 @@
       (let [attempts (mapv (fn [n] (future (try (budget/consume! (str n) (str (java.time.Instant/now)) nil)
                                               :issued
                                               (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
-                           (range 12))
+                           (range (+ budget/allocated 7)))
             outcomes (frequencies (mapv deref attempts))]
-        (is (= {:issued 5 :ordinary-click-budget-exhausted 7} outcomes))
-        (is (= 5 (count (rows))))))))
+        (is (= {:issued budget/allocated :ordinary-click-budget-exhausted 7} outcomes))
+        (is (= budget/allocated (count (rows))))))))
 
 (deftest busy-click-does-not-consume
   (let [h (http/make-handler {}) calls (atom 0)]
