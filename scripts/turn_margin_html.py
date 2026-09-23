@@ -287,6 +287,34 @@ def tokenise_authored(text):
     return out
 
 
+CAND_DIR = "/home/joe/code/storage/operator-turns/candidates"
+
+
+def compact_candidate(c):
+    """A proposal shown as a lineage, not as a printed pattern.
+
+    Joe: "we don't need to have the whole design pattern printed out in the
+    3rd column, because in such cases we would have too many". What a reader
+    needs at a glance is where the proposal hangs -- which known pattern it
+    descends from, or that it claims to be a new root. The body stays in the
+    file and on the turn's own page.
+    """
+    parent = c.get("parent")
+    if not parent:
+        # a candidate written as a flexiarg carries its ancestry in @why
+        path = f"{CAND_DIR}/{c['id']}.flexiarg"
+        if os.path.exists(path):
+            m = re.search(r"^@why (.+)$", open(path, encoding="utf-8").read(), re.M)
+            if m:
+                parent = m.group(1).strip("[] ").split()[0]
+    return {"id": c["id"], "title": c.get("title", ""),
+            "fragment": c.get("fragment"),
+            "parent": parent,
+            "parent-known": bool(parent) and os.path.exists(
+                f"{LIB}/{parent}.flexiarg") if parent else False,
+            "why": (c.get("then") or c.get("because") or "")[:220]}
+
+
 def feed_entry(name, record, analysis):
     """A turn with its annotations inline, for a feed that never navigates.
 
@@ -330,7 +358,7 @@ def feed_entry(name, record, analysis):
                      else derived_cascade(name, frags) if frags else None),
             "sexp-by": (authored or {}).get("by", "derived from the annotation"
                                             if frags else None),
-            "candidates": record.get("_candidates", [])}
+            "candidates": [compact_candidate(c) for c in record.get("_candidates", [])]}
 
 
 def summarise(name, record, analysis):
