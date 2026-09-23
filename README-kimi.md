@@ -47,6 +47,18 @@ A keyless Kimi seat refuses the turn. It deliberately does NOT fall through to
 the Z.AI key resolver: that would run the seat on the wrong subscription and
 look like it worked.
 
+## Documentation
+
+Mirrored locally at `~/code/refs-external/kimi-api-docs` (`./refresh.sh` to
+re-fetch): the vendor's own machine-readable docs — `llms.txt` index,
+`llms-full.txt` for grepping, `openapi.json`, and every page as markdown.
+
+Read the base URL before trusting a page: those docs describe the
+pay-as-you-go platform (`api.moonshot.ai/v1`), not the coding plan we run on.
+The request shapes are shared; the constraints are not identical, and the
+coding endpoint is the more permissive of the two. The mirror's README records
+where they diverge and what that means for this provider.
+
 ## Provider facts, verified live 2026-09-23
 
 - Models: `k3` (1M ctx), `k3-256k`, `kimi-for-coding` (K2.8 Preview, 1M ctx),
