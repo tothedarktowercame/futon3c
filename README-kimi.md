@@ -33,6 +33,15 @@ Bells (`scripts/agency_send.py --to kimi-1 --kind bell --mode work`) and
 `M-x kimi-repl-attach-agent` attaches `*kimi-repl:kimi-1*` to the seat's
 server-side session.
 
+From a terminal, `ck` is the kimi sibling of `cr` / `cx` / `cz` — it lives at
+`scripts/ck` with `~/bin/ck` symlinked to it:
+
+```
+ck            # attach the highest existing kimi-N (mint one if there is none)
+ck new        # mint the smallest unused kimi-N and open a fresh lane
+ck -a kimi-5  # target a specific lane, registering it if new
+```
+
 ## Vision
 
 A kimi seat gets a `view_image` tool: it reads a local image file and hands it
