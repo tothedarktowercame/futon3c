@@ -147,12 +147,94 @@ pattern. Most of a turn is deliberately left unmarked. Click one to light its no
 <script>{JS}</script></body></html>"""
 
 
+SESSION_JS = """
+// Plain JS on purpose: the page is one static file with no build step, and
+// the requirement is that a turn appears without a reload, not a toolchain.
+const seen = new Set([...document.querySelectorAll('[data-turn]')]
+                     .map(n => n.dataset.turn));
+async function tick() {
+  try {
+    const r = await fetch(MANIFEST + '?t=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) return;
+    const turns = await r.json();
+    const log = document.getElementById('log');
+    for (const t of turns) {
+      const existing = document.querySelector(`[data-turn="${t.name}"]`);
+      if (existing) {
+        // an interpretation can land long after the turn did
+        if (existing.dataset.state !== t.state) {
+          existing.dataset.state = t.state;
+          existing.querySelector('.state').textContent = t.state;
+        }
+        continue;
+      }
+      seen.add(t.name);
+      const p = document.createElement('p');
+      p.className = 'note fresh';
+      p.dataset.turn = t.name;
+      p.dataset.state = t.state;
+      p.innerHTML = `<a href="${t.name}.html">${t.name}</a> — ${t.head}` +
+                    `<br><span class="rel">${t.at} · <span class="state">${t.state}</span></span>`;
+      log.prepend(p);
+    }
+  } catch (e) { /* a missed poll is not an event */ }
+}
+setInterval(tick, POLL * 1000);
+tick();
+"""
+
+
+def summarise(name, record, analysis):
+    head = record.get("source_text", "").strip().replace("\n", " ")
+    return {"name": name, "at": record.get("created_at", ""),
+            "head": html.escape(head[:140] + ("…" if len(head) > 140 else "")),
+            "state": "interpreted by " + analysis["labeller"] if analysis
+                     else "not yet interpreted"}
+
+
+def write_session_log(a, written):
+    """A log for one agent's turns that appends without a reload."""
+    mine = [(n, r, x) for n, r, x in written if r.get("agent_id") == a.agent]
+    mine.sort(key=lambda w: w[1].get("created_at", ""), reverse=True)
+    rows = [summarise(n, r, x) for n, r, x in mine]
+
+    manifest = f"session-{a.agent}.json"
+    json.dump(rows, open(os.path.join(a.out, manifest), "w"), indent=1)
+
+    body = "".join(
+        f'<p class="note" data-turn="{r["name"]}" data-state="{r["state"]}">'
+        f'<a href="{r["name"]}.html">{r["name"]}</a> — {r["head"]}<br>'
+        f'<span class="rel">{r["at"]} · <span class="state">{r["state"]}</span></span></p>'
+        for r in rows)
+    page = os.path.join(a.out, f"session-{a.agent}.html")
+    open(page, "w", encoding="utf-8").write(
+        f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(a.agent)} — turn log</title><style>{CSS}
+.fresh {{ animation: lit 2.5s ease-out; }}
+@keyframes lit {{ from {{ background: #fbe6dd; }} to {{ background: transparent; }} }}
+</style></head><body>
+<h1>{html.escape(a.agent)} — turn log</h1>
+<p class="meta">Newest first. The page asks for new turns every {a.poll}s; nothing to reload.
+Interpretation lands later than the turn, so a row's state changes in place.</p>
+<div class="notes" id="log">{body}</div>
+<script>const MANIFEST = {json.dumps(manifest)}, POLL = {a.poll};{SESSION_JS}</script>
+</body></html>""")
+    print(page)
+    print(os.path.join(a.out, manifest))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("records", nargs="*")
     ap.add_argument("--latest", type=int, metavar="N")
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--records-dir", default=DEFAULT_RECORDS)
+    ap.add_argument("--agent", metavar="AGENT_ID",
+                    help="also write a live session log for this agent: "
+                         "session-<agent>.html plus the manifest it polls")
+    ap.add_argument("--poll", type=int, default=10, metavar="SECONDS",
+                    help="how often the session log asks for the manifest")
     a = ap.parse_args()
 
     paths = list(a.records)
@@ -181,6 +263,9 @@ def main():
                     f'{html.escape(head)}<br>'
                     f'<span class="rel">{html.escape(record.get("created_at",""))} · '
                     f'{"interpreted" if analysis else "not yet interpreted"}</span></p>')
+    if a.agent:
+        write_session_log(a, written)
+
     index = os.path.join(a.out, "index.html")
     open(index, "w", encoding="utf-8").write(
         f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">

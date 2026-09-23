@@ -289,6 +289,20 @@ state -- never silently complete."
          :name "session-analysis-dispatch"
          :buffer (get-buffer-create " *session-analysis-dispatch*")
          :noquery t
+         :sentinel
+         (lambda (proc event)
+           ;; A dispatch that fails must say so. The first live run bounced with
+           ;; HTTP 404 -- the delegate seat had left the registry -- and the
+           ;; traceback landed in a hidden buffer where nobody would look. That
+           ;; is 象/两种规格 on the sending side: delivery is not accomplishment,
+           ;; and a silent failure is the one that costs a day.
+           (when (and (memq (process-status proc) '(exit signal))
+                      (/= (process-exit-status proc) 0))
+             (display-warning
+              'session-mode
+              (format "Analysis dispatch to %s failed (%s). The record stays `requested'."
+                      session-mode-analysis-agent (string-trim event))
+              :warning)))
          :command (list "sh" "-c"
                         (format "printf %%s %s | python3 %s --to %s --from %s --kind bell --type request --mode work"
                                 (shell-quote-argument brief)
