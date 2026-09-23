@@ -184,15 +184,30 @@ Existing phrase assignments, including human corrections, always take precedence
       (condition-case err
           (let* ((json-object-type 'alist) (json-array-type 'list)
                  (data (json-read-file result))
-                 (source (alist-get 'source_text data)))
+                 (source (alist-get 'source_text data))
+                 ;; The buffer keeps the surface marker voxterm inserted; the
+                 ;; record does not, so compare on the stripped text and shift
+                 ;; the paint origin past the marker. Without this every
+                 ;; dictated turn fails the comparison and loses both its
+                 ;; underlines and its cues.
+                 (sent (or session-mode--last-operator-text ""))
+                 (stripped (cdr (agent-chat-split-surface-marker sent)))
+                 (marker-width (- (length sent) (length stripped))))
+            (when (equal (alist-get 'status data) "analyzed")
+              ;; Learning is not a side effect of painting. A proposed cue is
+              ;; vocabulary with provenance and it must survive a turn whose
+              ;; underlines cannot be drawn -- a later turn already sent, a
+              ;; region whose markers have gone. Measured 2026-09-23: 10 of 38
+              ;; analyses learned nothing for exactly that reason.
+              (session-mode--learn-analysis-cues data result))
             (when (and (equal (alist-get 'status data) "analyzed")
-                       (equal source session-mode--last-operator-text)
+                       (equal source stripped)
                        session-mode--last-operator-region
                        (marker-buffer (car session-mode--last-operator-region)))
-              (session-mode--learn-analysis-cues data result)
               (setq session-mode--analysis-display-stamp
                     (list path (file-attribute-modification-time (file-attributes result))))
-              (let ((base (marker-position (car session-mode--last-operator-region))))
+              (let ((base (+ (marker-position (car session-mode--last-operator-region))
+                             marker-width)))
                 ;; Refresh makes repeated callbacks idempotent and removes
                 ;; legacy full-interpretation underlines before painting cues.
                 (session-mode--refresh-sent-tags)
