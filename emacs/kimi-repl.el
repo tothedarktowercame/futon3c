@@ -71,6 +71,13 @@ which is meagre for an interactive turn.  Kept below the 3660s curl
   "Face for Kimi responses."
   :group 'kimi-repl)
 
+(defface kimi-repl-string-face
+  '((t :foreground "yellow"))
+  "Face for Kimi's plain response text (the string body), so it is
+distinguishable from the shared agent-chat text face the other harness
+REPLs use (Joe, 2026-09-23)."
+  :group 'kimi-repl)
+
 (defface kimi-repl-tool-line-face
   '((t :inverse-video t))
   "Face for tool-use lines in Kimi REPLs.
@@ -207,7 +214,7 @@ must never break buffer setup."
           (setcar streamed-text-cell t))
         (unless agent-chat--streaming-started
           (agent-chat-begin-streaming-message "kimi"))
-        (agent-chat-stream-text txt)))
+        (agent-chat-stream-text txt 'kimi-repl-string-face)))
      ((equal type "tool_use")
       (kimi-repl--stream-tool-use json-obj))
      ((equal type "tool_result")
