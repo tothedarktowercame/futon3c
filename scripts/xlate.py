@@ -116,6 +116,10 @@ def cmd_offsets(args):
 
 SPAN = re.compile(r"\[(\d+)\s*,\s*(\d+)\]")
 PID = re.compile(r"(?<![\w/])([a-z0-9-]+|[%s]+)/([a-z0-9'-]+|[%s'-]+)" % (CJK, CJK))
+# 轻 tentative ("we could", "maybe"), 平 plain, 强 insistent ("I'm telling
+# you", repetition, rebuke). Latin spellings accepted so a cascade can be
+# written without a CJK keyboard.
+FORCE_VALUES = {"轻", "平", "强", "light", "plain", "strong"}
 HOLE = re.compile(r"(HOLE-?\d+)\b(.{0,400}?)(?=HOLE-?\d+\b|\n\n|\Z)", re.S)
 
 
@@ -150,6 +154,20 @@ def lint_text(text, src=None):
             covered |= {i for i in range(a, b) if not src[i].isspace()}
         total = sum(not c.isspace() for c in src)
         coverage = (len(covered), total)
+
+    # Force is the illocutionary strength of an act -- 象/言即行's third
+    # envelope field. Joe's ruling, 2026-09-23: this project uses "force" in
+    # the speech-act sense only; the Alexandrian sense stays in + HOWEVER:.
+    # A declared force must be carried by words in the turn, not by the
+    # translator's impression of the tone, so it owes a span.
+    for m in re.finditer(r":force\s+(\S+)", text):
+        value = m.group(1).strip("\"'()[]{},;")
+        if value not in FORCE_VALUES:
+            problems.append(f"unknown force {value!r}: "
+                            f"expected one of {' '.join(sorted(FORCE_VALUES))}")
+    if ":force " in text and ":force-span" not in text:
+        problems.append("declared :force with no :force-span -- "
+                        "force is a span of the turn, not a reading of its tone")
 
     holes = {}
     for name, body in HOLE.findall(text):
