@@ -250,8 +250,12 @@ An inline mention or quoted !x is ordinary text.  A marker alone needs a draft."
           (cons clean t))
       (cons text nil))))
 
-(defcustom session-mode-analysis-agent nil
+(defcustom session-mode-analysis-agent "kimi-2"
   "Agent id that interprets operator turns, or nil for the receiving agent.
+One delegate across every lane (Joe, 2026-09-23): turn tagging is a
+structure with exactly one producer, and eight seats producing it in
+parallel is the arrangement delegation exists to end -- see
+cycle-machine/single-producer.
 With nil the structural analysis request rides on the prompt of whichever
 agent Joe is talking to, so the interpretation costs that agent part of its
 turn. Set to an agent id -- \"kimi-2\" -- and the request is dispatched to
