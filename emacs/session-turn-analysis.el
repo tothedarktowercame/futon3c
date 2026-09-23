@@ -369,7 +369,13 @@ state -- never silently complete."
          (condition-case err
              (progn
                (setq path (session-mode--record-turn sent failed text))
-               (when (and path session-mode-analysis-agent)
+               ;; Never ask a seat to interpret a turn addressed to itself. It
+               ;; arrives as work while the same words are arriving as
+               ;; conversation, and the seat cannot tell which of the two it
+               ;; is answering.
+               (when (and path session-mode-analysis-agent
+                          (not (equal session-mode-analysis-agent
+                                      agent-chat--agent-id)))
                  (session-mode--dispatch-analysis path))
                (when (and (not session-mode-analysis-agent)
                           (or failed (session-mode--analysis-requested-p
