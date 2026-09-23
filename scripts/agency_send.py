@@ -16,7 +16,7 @@ for ANY characters:
 --ref ask-...  -> ArSE thread / referent for answer or routed query
 --dry-run prints the payload instead of sending.
 """
-import sys, json, argparse, time, urllib.request
+import os, sys, json, argparse, time, urllib.request
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--to", required=True, help="recipient agent-id")
@@ -61,6 +61,14 @@ ap.add_argument("--timeout-ms", type=int,
                      "a turn hitting the cap is abandoned as state=failed and its "
                      "result is lost. Pass 0 to defer to the server default."
                      % (BELL_DEFAULT_TIMEOUT_MS, BELL_DEFAULT_TIMEOUT_MS // 60000))
+ap.add_argument("--cascade", metavar="PATH",
+                help="a pattern cascade (S-expression) to carry as the bell's body, "
+                     "per library/象/言即行: the illocutionary type rides on the "
+                     "envelope (--type) and the content rides in the cascade. It is "
+                     "linted before send -- every pattern id must resolve to a file "
+                     "and every hole must be typed -- and an invalid cascade is "
+                     "REFUSED here rather than delivered for the receiver to guess at. "
+                     "Prose on stdin becomes context beneath it, and may be empty.")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
 ap.add_argument("--warrant", action="append", metavar="ENTRY_ID:NAMESPACE:LANE:BASE_SHA",
                 help="test-registry warrant riding this handoff (repeatable). "
@@ -70,8 +78,51 @@ ap.add_argument("--warrant", action="append", metavar="ENTRY_ID:NAMESPACE:LANE:B
 a = ap.parse_args()
 
 prompt = sys.stdin.read()
+
+CASCADE_HEADER = (
+    "This dispatch carries a PATTERN CASCADE, not prose instructions.\n"
+    "Read it as library/象/言即行 specifies: the illocutionary type is on the\n"
+    "envelope (type=%s), and what to do is the cascade below. Every id in it\n"
+    "resolves to /home/joe/code/futon3/library/<id>.flexiarg -- read the ones\n"
+    "you act on. A (join ...) is ONE move made of several patterns, not a\n"
+    "sequence. A HOLE is a place the library cannot name yet: do not guess a\n"
+    "nearby pattern, and do not stop -- record it and carry on.\n"
+    "If the cascade does not determine an action, bell %s back with a typed\n"
+    "refusal naming which part underdetermined it, per\n"
+    "library/translation/route-the-untranslatable. Do not improvise.\n")
+
+cascade = None
+if a.cascade:
+    try:
+        cascade = open(a.cascade, encoding="utf-8").read().strip()
+    except OSError as e:
+        sys.exit(f"agency_send: cannot read cascade {a.cascade}: {e}")
+    if not cascade:
+        sys.exit(f"agency_send: cascade {a.cascade} is empty")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import xlate
+    except ImportError as e:
+        sys.exit(f"agency_send: cannot load the cascade linter (xlate.py): {e}")
+    problems, stats = xlate.lint_text(cascade)
+    if problems:
+        # 言即行's own rule, applied to itself: a dispatch whose body cannot be
+        # acted on refuses at the sender rather than arriving for the receiver
+        # to guess at.
+        print("agency_send: REFUSED -- the cascade does not lint:", file=sys.stderr)
+        for p in problems:
+            print(f"  {p}", file=sys.stderr)
+        sys.exit(2)
+    print(f"agency_send: cascade ok -- {len(stats['cited'])} cited ids, "
+          f"{len(stats['candidates'])} candidates, {len(stats['holes'])} holes",
+          file=sys.stderr)
+    prompt = (CASCADE_HEADER % (a.type or "request", a.frm or "the caller")
+              + "\n--- CASCADE ---\n" + cascade + "\n--- END CASCADE ---\n"
+              + (("\nContext from the caller:\n" + prompt.strip() + "\n")
+                 if prompt.strip() else ""))
+
 if not prompt.strip():
-    sys.exit("agency_send: empty prompt on stdin")
+    sys.exit("agency_send: empty prompt on stdin (and no --cascade)")
 
 # Loud-failure for the load-bearing mesh edge (M-agency-hardening): a bell
 # without --from logs as 'http-caller' with NO mesh edge, so auto-bellback has
@@ -122,6 +173,11 @@ if a.park:
     print(note % a.surface, file=sys.stderr)
 
 body = {"agent-id": a.to, "prompt": prompt}
+if cascade:
+    # The body of the record, not only of the prompt: a cascade is the thing
+    # that was said, and a job whose cascade is only inside a rendered prompt
+    # cannot be re-linted later.
+    body["cascade"] = cascade
 if a.warrant:
     warrants = []
     for spec in a.warrant:

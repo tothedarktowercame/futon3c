@@ -119,57 +119,68 @@ PID = re.compile(r"(?<![\w/])([a-z0-9-]+|[%s]+)/([a-z0-9'-]+|[%s'-]+)" % (CJK, C
 HOLE = re.compile(r"(HOLE-?\d+)\b(.{0,400}?)(?=HOLE-?\d+\b|\n\n|\Z)", re.S)
 
 
-def cmd_lint(args):
-    """Check a cascade against the contract: ids resolve, spans are real,
-    holes are typed.  Candidate ids -- a hole's proposed filler -- are
-    expected not to resolve, so they are reported separately rather than as
-    errors.  A slash inside prose is not an id: the family has to be a real
-    directory under library/, which is what tells `regress/vacuity` apart
-    from `cascades/declared-skeleton`."""
-    path, turn = args[0], None
-    if "--turn" in args:
-        turn = args[args.index("--turn") + 1]
-    text = open(path, encoding="utf-8").read()
-    bad = 0
+def lint_text(text, src=None):
+    """Check a cascade. Returns (problems, stats) and prints nothing.
 
+    Candidate ids -- a hole's proposed filler -- are expected not to resolve,
+    so they are reported separately rather than as errors. A slash inside
+    prose is not an id: the family has to be a real directory under library/,
+    which is what tells `regress/vacuity` from `cascades/declared-skeleton`.
+    """
+    problems = []
     families = {d for d in os.listdir(LIB) if os.path.isdir(f"{LIB}/{d}")}
-    candidates = {m for m in re.findall(r":candidate\s+([^\s)]+)", text)}
-    cited = {f"{a}/{b}" for a, b in PID.findall(text)
-             if a in families} - candidates
+    candidates = set(re.findall(r":candidate\s+([^\s)]+)", text))
+    cited = {f"{a}/{b}" for a, b in PID.findall(text) if a in families} - candidates
     for pid in sorted(cited):
         if not os.path.exists(f"{LIB}/{pid}.flexiarg"):
-            print(f"UNRESOLVED id: {pid}"); bad += 1
-    for pid in sorted(candidates):
-        mark = "already in library" if os.path.exists(f"{LIB}/{pid}.flexiarg") else "new"
-        print(f"candidate: {pid} ({mark})")
+            problems.append(f"unresolved id: {pid}")
 
-    if turn:
-        src = json.load(open(turn))["source_text"]
+    if text.count("(") != text.count(")"):
+        problems.append(f"unbalanced parens: {text.count('(')} open, "
+                        f"{text.count(')')} close")
+
+    coverage = None
+    if src is not None:
         covered = set()
         for a, b in SPAN.findall(text):
             a, b = int(a), int(b)
             if b > len(src) or a >= b:
-                print(f"BAD span [{a},{b}] (source is {len(src)} chars)"); bad += 1
+                problems.append(f"bad span [{a},{b}] (source is {len(src)} chars)")
                 continue
             covered |= {i for i in range(a, b) if not src[i].isspace()}
         total = sum(not c.isspace() for c in src)
-        # Reported, not failed: the sparsity rule governs the operative marks
-        # shown to the operator, and a cascade file carries fragment spans too.
-        print(f"spans cover {len(covered)}/{total} non-space chars "
-              f"({100 * len(covered) / total:.0f}%)")
+        coverage = (len(covered), total)
 
     holes = {}
     for name, body in HOLE.findall(text):
-        holes.setdefault(name, "")
-        if len(body) > len(holes[name]):
+        if len(body) > len(holes.get(name, "")):
             holes[name] = body
     for name, body in sorted(holes.items()):
         if ":wanted" in body and not any(k in body for k in
                                          (":discharge", ":candidate", ":reason")):
-            print(f"UNTYPED hole {name}: no :discharge/:candidate/:reason"); bad += 1
-    print(f"{len(cited)} cited ids, {len(candidates)} candidates, "
-          f"{len(holes)} holes, {bad} problem(s)")
-    return 1 if bad else 0
+            problems.append(f"untyped hole {name}: no :discharge/:candidate/:reason")
+
+    return problems, {"cited": sorted(cited), "candidates": sorted(candidates),
+                      "holes": sorted(holes), "coverage": coverage}
+
+
+def cmd_lint(args):
+    path, turn = args[0], None
+    if "--turn" in args:
+        turn = args[args.index("--turn") + 1]
+    src = json.load(open(turn))["source_text"] if turn else None
+    problems, stats = lint_text(open(path, encoding="utf-8").read(), src)
+    for p in problems:
+        print(p.upper() if p.startswith(("unresolved", "bad", "untyped")) else p)
+    for c in stats["candidates"]:
+        mark = "already in library" if os.path.exists(f"{LIB}/{c}.flexiarg") else "new"
+        print(f"candidate: {c} ({mark})")
+    if stats["coverage"]:
+        cov, total = stats["coverage"]
+        print(f"spans cover {cov}/{total} non-space chars ({100 * cov / total:.0f}%)")
+    print(f"{len(stats['cited'])} cited ids, {len(stats['candidates'])} candidates, "
+          f"{len(stats['holes'])} holes, {len(problems)} problem(s)")
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":
