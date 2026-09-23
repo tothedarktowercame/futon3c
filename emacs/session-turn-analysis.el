@@ -80,17 +80,20 @@ A block runs to a closing >>> or, failing that, to the end of the turn."
   (if (not (string-match-p (concat "^[ \t]*" session-mode--quote-fence)
                            (or text "")))
       text
-    (let ((lines (split-string (or text "") "\n"))
-          (fence (concat "^[ \t]*" session-mode--quote-fence "[ \t]*$"))
-          (in-quote nil) (out '()))
+    (let* ((lines (split-string (or text "") "\n"))
+           ;; The fence opens whether or not the quoted material starts on the
+           ;; same line: Joe writes both ">>>" alone and ">>> Here's a ..."
+           (opens (concat "^[ \t]*" session-mode--quote-fence))
+           (closes (concat "^[ \t]*" session-mode--quote-fence "[ \t]*$"))
+           (in-quote nil) (out '()))
       (dolist (line lines)
         (cond
-         ((and (not in-quote) (string-match-p fence line))
-          (setq in-quote t)
-          (push "QUOTE" out))
-         ((and in-quote (string-match-p fence line))
+         ((and in-quote (string-match-p closes line))
           (setq in-quote nil))
          (in-quote nil)                 ; swallowed: it is not Joe speaking
+         ((string-match-p opens line)
+          (setq in-quote t)
+          (push "QUOTE" out))
          (t (push line out))))
       (string-trim (string-join (nreverse out) "\n")))))
 
