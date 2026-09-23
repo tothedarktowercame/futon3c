@@ -326,6 +326,7 @@ must never break buffer setup."
 (define-key kimi-repl-mode-map (kbd "C-c C-c") #'agent-chat-interrupt)
 (define-key kimi-repl-mode-map (kbd "C-c C-k") #'kimi-repl-clear)
 (define-key kimi-repl-mode-map (kbd "C-c C-n") #'kimi-repl-new-session)
+(define-key kimi-repl-mode-map (kbd "C-c C-f") #'agent-chat-reface-buffer)
 (define-key kimi-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key kimi-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key kimi-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)

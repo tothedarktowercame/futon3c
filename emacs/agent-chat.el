@@ -1736,6 +1736,30 @@ _x_/_X_: ✘ correction   _v_/_V_: ✓ approval   _i_/_I_: 💡 idea-to-explore 
     (setq agent-chat--turn-git-heads nil)
     commits))
 
+(defun agent-chat-reface-buffer ()
+  "Re-apply the per-agent body-text face to existing text.
+Body faces are baked as text-properties at insert time, so changing
+:text-face (or loading a new definition) does not recolor text already
+in the buffer; font-lock will not either, by design. This walks the
+buffer and re-propertizes every run still carrying the shared
+agent-chat-text-face to the current agent-chat--text-face. Intended for
+interactive use after a face change (Joe, 2026-09-23); reads no state
+and changes no text, only the face property."
+  (interactive)
+  (let ((inhibit-read-only t)
+        (n 0))
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (let ((start (point))
+              (end (or (next-single-property-change (point) 'face) (point-max)))
+          (when (eq (get-text-property (point) 'face) 'agent-chat-text-face)
+            (put-text-property start end 'face agent-chat--text-face)
+            (setq n (+ n (- end start))))
+          (goto-char end))))
+    (message "agent-chat: refaced %d chars to %s"
+             n (or agent-chat--text-face 'agent-chat-text-face))))
+
 (defun agent-chat-insert-message (name text)
   "Insert a message from NAME with TEXT above the prompt.
 Uses `agent-chat--face-alist' to pick the name face.
