@@ -18,6 +18,7 @@ confusable in the corpus they both feed.
 import argparse, json, os, re, sys
 
 CORPUS = "/home/joe/code/storage/operator-turns/operator-turns-filtered.jsonl"
+ORIGINS = "/home/joe/code/storage/operator-turns/turn-origins.jsonl"
 OUT = "/home/joe/code/storage/operator-turns/batches"
 
 # Sentence splitting mirrors what the live recorder does: break on terminal
@@ -42,17 +43,41 @@ def sentences_of(text):
     return out
 
 
+def origins():
+    """turn_id -> operator | agent | harness, from the invoke-start join."""
+    out = {}
+    if os.path.exists(ORIGINS):
+        for line in open(ORIGINS, encoding="utf-8"):
+            r = json.loads(line)
+            out[r.get("turn_id") or r.get("id")] = r.get("origin")
+    return out
+
+
 def load(a):
     rows = [json.loads(l) for l in open(CORPUS, encoding="utf-8")]
     rows = [r for r in rows if a.frm <= (r.get("at") or "")[:10] <= a.to]
     rows = [r for r in rows if (r.get("text") or "").strip()]
+    # A turn recorded under Joe's name is not always Joe: agent- and
+    # harness-injected turns wear the same speaker through the Agency wiring.
+    # They are few (56 of 3,415 in the audit window) and they are exactly the
+    # ones that would teach the replay an agent's dispatch/review rhythm as if
+    # it were the operator's. Unmatched turns are KEPT -- 30% of the window has
+    # no invoke-start record to join against, and discarding them would throw
+    # away real operator turns to avoid a handful of impostors.
+    org = origins()
+    for r in rows:
+        r["_origin"] = org.get(r.get("turn_id")) or "unmatched"
+    if not a.all_origins:
+        rows = [r for r in rows if r["_origin"] in ("operator", "unmatched")]
     rows.sort(key=lambda r: r["at"])
     return rows
 
 
 def cmd_plan(a):
+    import collections
     rows = load(a)
-    print(f"{len(rows)} operator turns in {a.frm}..{a.to}")
+    print(f"{len(rows)} turns in {a.frm}..{a.to} "
+          f"({dict(collections.Counter(r['_origin'] for r in rows))})")
     print(f"{(len(rows) + a.block - 1) // a.block} blocks of {a.block}")
     words = sum(len((r.get('text') or '').split()) for r in rows)
     print(f"{words} words, median {sorted(len((r.get('text') or '').split()) for r in rows)[len(rows)//2]} per turn")
@@ -77,7 +102,8 @@ def cmd_build(a):
                   # an id, so fall back to the transport id it was stored under
                   "agent_id": (row.get("turn_id") or "").rsplit("-turn-", 1)[0] or "unknown",
                   "session_id": row.get("session"), "turn_id": row.get("turn_id"),
-                  "surface": "historical", "analysis_status": "requested"}
+                  "surface": "historical", "origin": row["_origin"],
+                  "analysis_status": "requested"}
         path = os.path.join(directory, f"{(row.get('turn_id') or row['id'])}.json")
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(record, fh)
@@ -109,5 +135,7 @@ if __name__ == "__main__":
     ap.add_argument("--to", default="2026-09-21")
     ap.add_argument("--block", type=int, default=100)
     ap.add_argument("--index", type=int, default=0)
+    ap.add_argument("--all-origins", action="store_true",
+                    help="include agent- and harness-injected turns too")
     a = ap.parse_args()
     {"plan": cmd_plan, "build": cmd_build, "status": cmd_status}[a.cmd](a)
