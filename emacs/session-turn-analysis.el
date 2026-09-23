@@ -66,6 +66,34 @@ no lexical cues; `never' records structure without requesting interpretation."
       (sentences . ,(vconcat (nreverse sentences)))
       (unmatched . ,(vconcat (nreverse gaps))))))
 
+(defconst session-mode--quote-fence ">>>"
+  "Line that opens, and optionally closes, a block quote in an operator turn.")
+
+(defun session-mode--elide-quotes (text)
+  "Replace >>> blocks in TEXT with the single word QUOTE.
+
+Joe's convention (2026-09-23): a >>> block is material he is showing the
+agent -- a snippet, a rendering, someone else's words -- not something he
+said. Interpreting it would tag its contents as his speech acts, so the
+record keeps a placeholder and the interpretation has nothing to mistake.
+A block runs to a closing >>> or, failing that, to the end of the turn."
+  (if (not (string-match-p (concat "^[ \t]*" session-mode--quote-fence)
+                           (or text "")))
+      text
+    (let ((lines (split-string (or text "") "\n"))
+          (fence (concat "^[ \t]*" session-mode--quote-fence "[ \t]*$"))
+          (in-quote nil) (out '()))
+      (dolist (line lines)
+        (cond
+         ((and (not in-quote) (string-match-p fence line))
+          (setq in-quote t)
+          (push "QUOTE" out))
+         ((and in-quote (string-match-p fence line))
+          (setq in-quote nil))
+         (in-quote nil)                 ; swallowed: it is not Joe speaking
+         (t (push line out))))
+      (string-trim (string-join (nreverse out) "\n")))))
+
 (defun session-mode--record-turn (text &optional failed original-text)
   "Persist TEXT's structure before requesting interpretation; return its path.
 A leading surface marker is stripped first, so `source_text' and every offset
@@ -73,7 +101,7 @@ computed against it describe what the operator said rather than how it
 reached the buffer. The surface itself is kept in the record's metadata."
   (let* ((split (agent-chat-split-surface-marker text))
          (surface (car split))
-         (text (cdr split))
+         (text (session-mode--elide-quotes (cdr split)))
          (original-text (and original-text
                              (cdr (agent-chat-split-surface-marker original-text))))
          (record (session-mode--structure-turn text))
@@ -288,6 +316,13 @@ state -- never silently complete."
                  "the record, so read the whole file rather than the first sentence.\n"
                  "- Joe is not waiting on a reply. Publish the analysis with the "
                  "complete subcommand and bell nothing back unless you could not.\n"
+                 "- A WEAK CITATION IS WORSE THAN AN EMPTY ONE. BM25 always "
+                 "returns a top hit; that a pattern scored first does not mean it "
+                 "fits. Read its context/IF/THEN and ask whether the operator's "
+                 "move is the move it describes -- 'kimi-3 is available' is not "
+                 "data-mining/fan-out-independent-runs-across-devices, which is "
+                 "about idle GPUs on a rented box. Prefer an honest empty with a "
+                 "candidate.\n"
                  "- SEARCH THE PATTERN LIBRARY FOR EVERY FRAGMENT. The instruction "
                  "calls pattern_refs optional; they are the point. An analysis of "
                  "intents and cues alone is textual markup -- it says what Joe did "
@@ -304,6 +339,10 @@ state -- never silently complete."
                  "  Leaving pattern_refs empty is a real finding when the library "
                  "has no name for the move. Leaving it empty without searching is "
                  "not; it is the difference the feed now shows Joe in colour.\n"
+- EVERY fragment whose pattern_refs you leave empty OWES A CANDIDATE, or an "
+                 "explicit sentence in your reply saying why it does not (too thin, "
+                 "a garble, already proposed elsewhere). Silence on a hole is the "
+                 "one outcome that teaches nobody anything.\n"
                  "- WHEN NOTHING FITS, PROPOSE ONE. Write the candidates to "
                  "RECORD.candidates.json beside the record, as\n"
                  "    {\"for\": \"<turn-id>\", \"by\": \"<your agent id>\", "
