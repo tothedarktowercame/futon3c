@@ -72,8 +72,13 @@ def load(path):
     # Proposed patterns for the fragments nothing in the library named. They
     # sit beside the record, never in library/: a proposal is a name someone
     # wanted, and admitting it is a separate act.
-    side = path + ".candidates.json"
-    if os.path.exists(side):
+    # Two spellings in the wild: kimi-2 wrote RECORD.json.candidates.json and
+    # kimi-1 wrote RECORD.candidates.json. The brief says the first; accept
+    # both rather than dropping a proposal over a filename.
+    side = next((c for c in (path + ".candidates.json",
+                             path[:-len(".json")] + ".candidates.json")
+                 if os.path.exists(c)), None)
+    if side:
         record["_candidates"] = json.load(open(side, encoding="utf-8")).get("candidates", [])
     return record, analysis
 
