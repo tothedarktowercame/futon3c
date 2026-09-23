@@ -500,7 +500,12 @@ the id is display-only, so a failed read must never break buffer setup."
   (setq-local line-move-visual nil)
   (setq-local scroll-conservatively 101)
   (setq-local scroll-margin 0)
-  (font-lock-add-keywords nil zai-repl--font-lock-keywords))
+  ;; KEYWORDS-ONLY is the t: with no font-lock-defaults, font-lock also runs
+  ;; syntactic fontification under the standard syntax table, which paints
+  ;; every double-quoted span of the reply font-lock-string-face (green in
+  ;; Joe's theme) over the body face. Chat prose is not code. (Same fix as
+  ;; kimi-repl-mode, which was cloned from this mode.)
+  (setq-local font-lock-defaults '(zai-repl--font-lock-keywords t)))
 
 (defun zai-repl--build-modeline ()
   "Build Z.AI REPL modeline text."
