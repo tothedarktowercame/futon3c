@@ -94,7 +94,10 @@ def validate(request, analysis, library=LIBRARY):
             checked_refs = []
             for ref in refs:
                 pid = required_text(ref.get("id"), "pattern id")
-                if not re.fullmatch(r"[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)+", pid):
+                # CJK is allowed: library/象/ is a real pattern family, and an
+                # id that only accepts ASCII would quietly rule it out.
+                if not re.fullmatch(
+                        r"[\w-]+(?:/[\w'-]+)+", pid, re.UNICODE):
                     raise ValueError("invalid canonical pattern id")
                 path = (library / (pid + ".flexiarg")).resolve()
                 if not path.is_relative_to(library.resolve()) or not path.is_file():
