@@ -338,6 +338,22 @@ def feed_entry(name, record, analysis):
     if at < len(source):
         runs.append({"t": source[at:]})
 
+    # Put the quoted blocks back for DISPLAY only. The interpreter saw QUOTE in
+    # their place, so no fragment can point into them; the reader should still
+    # see what Joe pasted, and it is usually code.
+    quotes = list(record.get("quotes") or [])
+    if quotes:
+        expanded = []
+        for run in runs:
+            parts = re.split(r"(?m)^QUOTE$", run["t"])
+            for i, part in enumerate(parts):
+                if i:
+                    expanded.append({"t": quotes.pop(0) if quotes else "",
+                                     "q": True})
+                if part:
+                    expanded.append(dict(run, t=part))
+        runs = expanded
+
     notes = []
     for f in frags:
         notes.append({"id": f["id"],

@@ -69,6 +69,13 @@ no lexical cues; `never' records structure without requesting interpretation."
 (defconst session-mode--quote-fence ">>>"
   "Line that opens, and optionally closes, a block quote in an operator turn.")
 
+(defvar session-mode--last-quotes nil
+  "Quoted blocks removed from the most recent turn, in the order they appeared.
+The interpretation must not see them -- they are not Joe speaking -- but the
+feed shows them, so the text has to survive somewhere. Kept beside the record
+rather than inside `source_text', whose offsets every fragment is checked
+against.")
+
 (defun session-mode--elide-quotes (text)
   "Replace >>> blocks in TEXT with the single word QUOTE.
 
@@ -77,6 +84,7 @@ agent -- a snippet, a rendering, someone else's words -- not something he
 said. Interpreting it would tag its contents as his speech acts, so the
 record keeps a placeholder and the interpretation has nothing to mistake.
 A block runs to a closing >>> or, failing that, to the end of the turn."
+  (setq session-mode--last-quotes nil)   ; a turn with no quote clears the last
   (if (not (string-match-p (concat "^[ \t]*" session-mode--quote-fence)
                            (or text "")))
       text
@@ -85,16 +93,25 @@ A block runs to a closing >>> or, failing that, to the end of the turn."
            ;; same line: Joe writes both ">>>" alone and ">>> Here's a ..."
            (opens (concat "^[ \t]*" session-mode--quote-fence))
            (closes (concat "^[ \t]*" session-mode--quote-fence "[ \t]*$"))
-           (in-quote nil) (out '()))
+           (in-quote nil) (out '()) (quoted '()) (current '()))
       (dolist (line lines)
         (cond
          ((and in-quote (string-match-p closes line))
-          (setq in-quote nil))
-         (in-quote nil)                 ; swallowed: it is not Joe speaking
+          (setq in-quote nil)
+          (push (string-join (nreverse current) "\n") quoted)
+          (setq current nil))
+         (in-quote (push line current))  ; kept aside: it is not Joe speaking
          ((string-match-p opens line)
           (setq in-quote t)
+          ;; content may follow the fence on its own line
+          (let ((rest (string-trim (replace-regexp-in-string
+                                    (concat "^[ \t]*" session-mode--quote-fence)
+                                    "" line))))
+            (when (not (string-empty-p rest)) (push rest current)))
           (push "QUOTE" out))
          (t (push line out))))
+      (when current (push (string-join (nreverse current) "\n") quoted))
+      (setq session-mode--last-quotes (nreverse quoted))
       (string-trim (string-join (nreverse out) "\n")))))
 
 (defun session-mode--record-turn (text &optional failed original-text)
@@ -120,6 +137,7 @@ reached the buffer. The surface itself is kept in the record's metadata."
                       (session_id . ,agent-chat--session-id)
                       (turn_id . ,agent-chat--current-turn-id)
                       (surface . ,(if surface (symbol-name surface) "typed"))
+                      (quotes . ,(vconcat session-mode--last-quotes))
                       (analysis_status . ,(if (or failed (session-mode--analysis-requested-p record))
                                              "requested" "not-requested")))))
       (condition-case err
