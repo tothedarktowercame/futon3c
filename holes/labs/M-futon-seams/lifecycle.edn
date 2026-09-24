@@ -20,7 +20,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "4b3034af9723c1662346c472e80d395fcd6c42881d15fd140901863213760d2f"
+           :sha256 "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :status-line "HEAD complete; IDENTIFY complete; INSTANTIATE-1 complete for instance 4 (enacted as chosen after a first wrong-grain attempt); MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
@@ -130,9 +130,10 @@
    :exit-line 293
    :status :not-started
    :mission-anchor {:start 27934 :end 27945 :quote "## DOCUMENT"}
-   :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/."
-   :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}]
-   :artefacts []}]
+   :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/. A second exit criterion is PROPOSED but not adopted (Rob via Joe, 2026-09-24): discharge DOCUMENT by building a seam for the annotation-of-user-inputs feature, so the documentation is a worked example rather than prose about seams."
+   :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}
+              {:kind :proposal :what "Rob via Joe: discharge DOCUMENT by extracting the turn->record and record->dispatch seam from the annotation feature. Evidence it is a seam and not a tidy-up: the >>> convention exists in the Emacs path only, so the same turn recorded live and recorded through turn_batch.py mean different things."}]
+   :artefacts [{:note "document-proposal" :why "Rob's proposed exit criterion, and the drift that motivates it"}]}]
 
  :overall
  {:status-line-says :IDENTIFY

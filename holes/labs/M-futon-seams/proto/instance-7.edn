@@ -9,7 +9,7 @@
 ;; chosen by flattening decides which of them happens inside a finite horizon.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 7
- :mission-sha "4b3034af9723c1662346c472e80d395fcd6c42881d15fd140901863213760d2f"
+ :mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
 
  :tokens
  {:writers-enumerated

@@ -347,3 +347,41 @@ built without knowing it exists. **Not started.**
 The only rendered account is the working page at
 `zone.hyperreal.enterprises/wip/seams.html`, reachable by URL alone. Nothing
 navigates to it and there is no docbook entry.
+
+### Proposed additional exit criterion (Rob, via Joe, 2026-09-24)
+
+Rob's suggestion: DOCUMENT should be discharged by **building a seam, in this
+mission's sense, for the annotation-of-user-inputs feature** — the loop that
+records each operator turn, has a delegate agent interpret it into intents,
+cues and pattern citations, and renders it. Documenting the mission by
+extracting one seam is a working example rather than prose about seams, and
+the feature is one this mission's instance 7 already names.
+
+**What the seam would be**, from what the feature is today:
+
+- `emacs/session-turn-analysis.el` — 497 lines, of which 48 touch buffers,
+  overlays, points, markers, faces or windows. The other nine tenths is a
+  turn parser, a record writer, a delegate dispatcher and the cue-vocabulary
+  learner, none of which needs an editor.
+- The record format has **five** readers or writers: that file,
+  `scripts/session_turn_analysis.py` (the validator), `scripts/turn_batch.py`
+  (the historical path), `scripts/turn_margin_html.py` (the renderer) and
+  `scripts/xlate.py`. They agree by convention.
+- The boundary: **turn → record** (parse, split into sentences with exact
+  offsets, extract quoted regions) and **record → dispatch** (choose a
+  delegate, build the brief, deliver it, report failure). Both are pure
+  functions over text plus one I/O call.
+
+**The evidence that the convention is already drifting**, which is what makes
+this a seam rather than a tidy-up: the `>>>` block-quote convention is
+implemented in the Emacs path alone. A turn recorded live has its quoted
+block replaced by the token `QUOTE` and the text preserved beside the record;
+the same turn recorded through `turn_batch.py` keeps the quoted block inline
+as though the operator had said it. Two paths, one format, different meanings
+for the same input. The sentence splitters were checked against each other on
+abbreviations, decimals and URLs and agree there — so the drift is in what
+each path knows about the format, not in how each parses a sentence.
+
+This is recorded as **proposed**, not adopted. It changes what DOCUMENT has
+to do, and the mission's IDENTIFY exit deliberately scopes work to one
+instance at a time.
