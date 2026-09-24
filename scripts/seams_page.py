@@ -46,24 +46,41 @@ STANDS = {
 def short(pid):
     return pid.split("/", 1)[1] if "/" in pid else pid
 
-def svg(b):
-    """Layer the patterns by longest-path depth and draw the above-relation."""
+def svg(b, vertical=False):
+    """Layer the patterns by longest-path depth and draw the above-relation.
+
+    vertical=True lays the depths DOWN the page instead of across it, which is
+    the shape a margin column can hold: six depths across needs 1540px and is
+    illegible in a margin, while six depths down needs about 420 and reads at
+    full margin width without enlarging."""
     pats, above = b["patterns"], b["above"]
     layers = {}
     for pid, p in sorted(pats.items()):
         layers.setdefault(p["depth"], []).append(pid)
-    COLW, ROWH, BW, BH = 250, 118, 196, 74
-    # A hole gets its own column past the deepest pattern: it is not produced
-    # by anything, so placing it among the produced nodes would imply an edge.
+    # A hole gets its own lane past the deepest pattern: it is not produced by
+    # anything, so placing it among the produced nodes would imply an edge.
     open_holes = [h for h in (b.get("holes") or []) if h.get("status") != "closed"]
-    cols = max(layers) + 1 + (1 if open_holes else 0)
-    width = COLW * cols + 130
-    height = ROWH * max(len(v) for v in layers.values()) + 60
+    depths = max(layers) + 1
+    widest = max(len(v) for v in layers.values())
     pos = {}
-    for d, ids in layers.items():
-        top = (height - ROWH * len(ids)) / 2
-        for i, pid in enumerate(ids):
-            pos[pid] = (54 + d * COLW, top + i * ROWH + 20)
+    if vertical:
+        COLW, ROWH, BW, BH = 210, 104, 190, 72
+        lanes = widest + (1 if open_holes else 0)
+        width = COLW * lanes + 56
+        height = ROWH * depths + 44
+        for d, ids in layers.items():
+            left = (COLW * widest - COLW * len(ids)) / 2
+            for i, pid in enumerate(ids):
+                pos[pid] = (28 + left + i * COLW, 22 + d * ROWH)
+    else:
+        COLW, ROWH, BW, BH = 250, 118, 196, 74
+        cols = depths + (1 if open_holes else 0)
+        width = COLW * cols + 130
+        height = ROWH * widest + 60
+        for d, ids in layers.items():
+            top = (height - ROWH * len(ids)) / 2
+            for i, pid in enumerate(ids):
+                pos[pid] = (54 + d * COLW, top + i * ROWH + 20)
 
     out = [f'<svg viewBox="0 0 {width} {height}" class="lattice" '
            f'role="img" aria-label="pattern semilattice for instance {b["instance"]}">']
@@ -72,12 +89,19 @@ def svg(b):
     for e in above:
         cx, cy = pos[e["context"]]
         px, py = pos[e["pattern"]]
-        x1, y1 = cx + BW, cy + BH / 2
-        x2, y2 = px, py + BH / 2
-        mid = (x1 + x2) / 2
         dash = ' stroke-dasharray="5 4"' if e["kind"] == "jointly-with" else ""
+        if vertical:
+            x1, y1 = cx + BW / 2, cy + BH
+            x2, y2 = px + BW / 2, py
+            mid = (y1 + y2) / 2
+            d = f"M{x1} {y1} C{x1} {mid} {x2} {mid} {x2} {y2}"
+        else:
+            x1, y1 = cx + BW, cy + BH / 2
+            x2, y2 = px, py + BH / 2
+            mid = (x1 + x2) / 2
+            d = f"M{x1} {y1} C{mid} {y1} {mid} {y2} {x2} {y2}"
         out.append(
-            f'<path d="M{x1} {y1} C{mid} {y1} {mid} {y2} {x2} {y2}" fill="none" '
+            f'<path d="{d}" fill="none" '
             f'stroke="#8a8578" stroke-width="1.4"{dash} marker-end="url(#a)">'
             f'<title>{html.escape(e["kind"])} — {html.escape(e["via"])}</title></path>')
     for pid, (x, y) in pos.items():
@@ -93,8 +117,10 @@ def svg(b):
             f'<text x="{x+10}" y="{y+56}" class="nprod">⊢ {html.escape(prod)}</text></g>')
     for k, h in enumerate(h for h in (b.get("holes") or [])
                           if h.get("status") != "closed"):
-        x = 54 + (max(layers) + 1) * COLW
-        y = (height - BH) / 2 + k * ROWH
+        if vertical:
+            x, y = 28 + widest * COLW, 22 + k * ROWH
+        else:
+            x, y = 54 + depths * COLW, (height - BH) / 2 + k * ROWH
         out.append(
             f'<g class="node"><title>{html.escape(h["why-not-citable"])}</title>'
             f'<rect x="{x}" y="{y}" width="{BW}" height="{BH}" rx="3" fill="#fffdf5" '
@@ -114,6 +140,17 @@ def svg(b):
         if mc[0] not in pos or mc[1] not in pos:
             continue
         (x1, y1), (x2, y2) = pos[mc[0]], pos[mc[1]]
+        if vertical:
+            my = max(y1, y2) + BH + 14
+            out.append(
+                f'<path d="M{x1+BW/2} {y1+BH} C{x1+BW/2} {my} {x2+BW/2} {my} {x2+BW/2} {y2+BH}" '
+                f'fill="none" stroke="{C["hole"]}" stroke-width="1.6" stroke-dasharray="3 3">'
+                f'<title>no meet: maximal units of the common part of '
+                f'{html.escape(short(m["pair"][0]))} and {html.escape(short(m["pair"][1]))}'
+                f'</title></path>'
+                f'<text x="{(x1+x2)/2+BW/2}" y="{my+11}" class="nmeet" '
+                f'text-anchor="middle">no meet</text>')
+            continue
         cx = max(x1, x2) + BW + 26
         out.append(
             f'<path d="M{x1+BW} {y1+BH/2} C{cx} {y1+BH/2} {cx} {y2+BH/2} {x2+BW} {y2+BH/2}" '
@@ -131,6 +168,16 @@ def svg(b):
                 continue
             conf_seen.add(key)
             (x1, y1), (x2, y2) = pos[a_id], pos[b_id]
+            if vertical:
+                my = min(y1, y2) - 13
+                out.append(
+                    f'<path d="M{x1+BW/2} {y1} C{x1+BW/2} {my} {x2+BW/2} {my} {x2+BW/2} {y2}" '
+                    f'fill="none" stroke="{C["accent"]}" stroke-width="2" stroke-dasharray="6 3">'
+                    f'<title>conflicting frontier: each produces a token the other forbids '
+                    f'({html.escape(", ".join(short(t) for t in toks))})</title></path>'
+                    f'<text x="{(x1+x2)/2+BW/2}" y="{my-3}" class="nconf" '
+                    f'text-anchor="middle">conflict</text>')
+                continue
             cx = min(x1, x2) - 24
             out.append(
                 f'<path d="M{x1} {y1+BH/2} C{cx} {y1+BH/2} {cx} {y2+BH/2} {x2} {y2+BH/2}" '

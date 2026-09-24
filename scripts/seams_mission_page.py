@@ -158,7 +158,21 @@ def resolve_sentinels(rendered):
 
 # ---------------------------------------------------------------- page
 
-def note_html(n, figures):
+def figure_html(key, svg, cap, num, anchor_id):
+    """A numbered figure at full margin width, level with what it illustrates."""
+    marks = "".join(f'<li>{html.escape(m)}</li>' for m in cap.get("marks", []))
+    return (f'<figure class="marginfig" id="fig-{num}" data-anchor="{html.escape(anchor_id)}" '
+            f'data-fig="{html.escape(key)}">'
+            f'<div class="figbody" title="click to enlarge">{svg}'
+            f'<span class="figopen">enlarge ⤢</span></div>'
+            f'<figcaption><span class="fignum">Figure {num}</span> '
+            f'{html.escape(cap.get("what", key))} — instance {cap.get("instance", "?")}. '
+            f'{html.escape(cap.get("sub", ""))}'
+            + (f'<ul class="figmarks">{marks}</ul>' if marks else "")
+            + '</figcaption></figure>')
+
+
+def note_html(n, figures=None):
     col = n.get("column", "pattern")
     cls = "note col-" + ("a" if col == "pattern" else "b")
     if n.get("status") != "reviewed":
@@ -179,14 +193,9 @@ def note_html(n, figures):
         bits.append(f'<p class="nstale">anchor no longer holds — {html.escape(n["_stale"])}. '
                     f'Recorded quote: “{html.escape(n["anchor"]["quote"][:80])}”</p>')
     bits.append(f'<p class="nbody">{html.escape(n.get("body",""))}</p>')
-    fig = n.get("figure")
-    if fig and fig in figures:
-        # The rail is ~20rem and the lattice is up to 1540px: in the rail it is
-        # a thumbnail that says "there is a shape here", and the shape itself is
-        # readable in an overlay. Both are the same SVG, emitted once.
-        bits.append(f'<div class="nfig" data-fig="{html.escape(fig)}" '
-                    f'title="click to open full width">{figures[fig]}'
-                    f'<span class="figopen">open ⤢</span></div>')
+    ref = n.get("_figref")
+    if ref:
+        bits.append(f'<p class="nseefig">See <a href="#fig-{ref}">Figure {ref}</a> above.</p>')
     if n.get("refs"):
         bits.append('<p class="nrefs">' +
                     " · ".join(f"<code>{html.escape(r)}</code>" for r in n["refs"]) + "</p>")
@@ -207,7 +216,7 @@ def main():
     notes = edn_to_json(ANNOTATIONS)
     notes.sort(key=lambda n: (n["anchor"]["start"], n["id"]))
 
-    figures = {}
+    figures, captions = {}, {}
     bundle = os.path.join("/tmp", "seams-bundle.json")
     r = sh("bb", "holes/labs/M-futon-seams/build_page.clj", bundle, *CASCADES)
     if r.returncode == 0 and os.path.exists(bundle):
@@ -216,7 +225,30 @@ def main():
         for b in json.load(open(bundle)):
             cand = str(b.get("candidate") or "")
             key = f"instance-{b['instance']}{'b' if 'b-observe' in cand else ''}"
-            figures[key] = seams_page.svg(b)
+            figures[key] = seams_page.svg(b, vertical=True)
+            marks = []
+            miss = (b.get("meets") or {}).get("missing") or []
+            if miss:
+                pairs = {tuple(m["maximal-common"]) for m in miss}
+                for mc in sorted(pairs):
+                    marks.append("missing meet, amber dashed: the maximal common units are "
+                                 + " and ".join(seams_page.short(x) for x in mc))
+            confs = {tuple(sorted((a, bb))) for w in b.get("wide-states", [])
+                     for a, bb, _ in w.get("conflicts", [])}
+            for c in sorted(confs):
+                marks.append("conflicting frontier, red dashed: "
+                             + " and ".join(seams_page.short(x) for x in c)
+                             + " each produce a token the other forbids")
+            for h in (b.get("holes") or []):
+                if h.get("status") != "closed":
+                    marks.append("unproduced want: " + seams_page.short(h["token"]))
+            captions[key] = {
+                "what": "Pattern cascade" + (f", candidate {cand.split('/')[-1]}" if cand else ""),
+                "instance": b["instance"],
+                "sub": (f"{len(b['patterns'])} patterns, {len(b['above'])} edges, "
+                        f"{b['linear-extensions']} linear extensions; depth downward, "
+                        f"solid = differentiates, dashed = jointly with"),
+                "marks": marks}
 
     # the wiring diagrams: the construction beside the argument
     import seams_wiring
@@ -228,6 +260,20 @@ def main():
         suffix = "b" if "b-observe" in cand else ""
         key = f"wiring-{w['instance']}{suffix}"
         figures[key] = seams_wiring.svg(w)
+        devs = [n for n in w["nodes"] if n.get("role") == "deviation"]
+        marks = []
+        if w.get("derived"):
+            marks.append("derived from the cascade and plan-only: nothing here is built, "
+                         "so every interior node is hungry")
+        for d in devs:
+            marks.append("deviation node, red and below the path: "
+                         + d["form"][:90] + " — licensed by nothing in the cascade")
+        captions[key] = {
+            "what": "Wiring diagram" + (" (derived)" if w.get("derived") else ""),
+            "instance": w["instance"],
+            "sub": ("boundary ports left and right; solid green carries a witness, "
+                    "amber dashed carries what it owes; ⊢ names the licensing pattern"),
+            "marks": marks}
 
     marked, live, stale = place_anchors(text, notes)
     blocks = [resolve_sentinels(b) for b in render_markdown(marked)]
@@ -238,18 +284,29 @@ def main():
     # the passage it belongs to, which is the behaviour a phone needs.
     placed = set()
     body_parts = []
+    fignum = 0
     for b in blocks:
         body_parts.append(b)
         for n in notes:
             if n["id"] in placed:
                 continue
             if f'id="anc-{n["id"]}"' in b:
-                body_parts.append(note_html(n, figures))
+                # A figure is its own element at full margin width, numbered in
+                # document order so a reference to it is stable, and the note
+                # that used to contain it now points at it.
+                fig = n.get("figure")
+                if fig and fig in figures:
+                    fignum += 1
+                    n["_figref"] = fignum
+                    body_parts.append(figure_html(fig, figures[fig],
+                                                  captions.get(fig, {}), fignum,
+                                                  n["id"]))
+                body_parts.append(note_html(n))
                 placed.add(n["id"])
     # a note whose anchor is stale has no span in the text; keep it visible
     for n in notes:
         if n["id"] not in placed:
-            body_parts.append(note_html(n, figures))
+            body_parts.append(note_html(n))
     body = "\n".join(body_parts)
 
     cols = {"a": [n for n in notes if n.get("column") == "pattern"],
@@ -315,6 +372,22 @@ li { margin:0 0 .3rem; }
 .note.lit { background:#fbe6dd; }
 .note.inmargin { position:absolute; margin:0; width:calc(50% - .8rem); }
 .note.inmargin.col-b { left:calc(50% + .8rem); }
+
+/* A figure gets the WHOLE margin, not half of it, and is legible there
+   without enlarging: the cascades are laid out depth-downward for exactly
+   this reason. Clicking still opens it larger for detail. */
+.marginfig { margin:1.2rem 0 1.4rem; padding:0; }
+.marginfig.inmargin { position:absolute; width:100%; margin:0; }
+.figbody { position:relative; border:1px solid #eae6d8; background:#fff;
+           padding:.4rem; cursor:zoom-in; overflow:hidden; }
+.figbody svg { display:block; width:100%; height:auto; }
+.marginfig figcaption { font-size:.68rem; line-height:1.45; color:#666;
+                        padding:.35rem .1rem 0; }
+.fignum { font-variant:small-caps; letter-spacing:.06em; color:#333; font-weight:600; }
+.figmarks { margin:.25rem 0 0; padding-left:1rem; }
+.figmarks li { margin:0 0 .15rem; color:#8a5a12; }
+.nseefig { margin:.35rem 0 0; font-size:.7rem; }
+.nseefig a { color:#b8431f; }
 .nhead { margin:0 0 .25rem; font-size:.63rem; font-family:ui-monospace,Menlo,monospace; }
 .nid { color:#555; } .nauth { color:#aaa; margin-left:.4rem; }
 .ndraft { color:#a8791d; margin-left:.4rem; font-variant:small-caps; letter-spacing:.05em; }
@@ -376,7 +449,7 @@ function layout() {
   const margin = document.querySelector('.margin');
   const main = document.querySelector('.main');
   const wide = window.matchMedia('(min-width: 80rem)').matches;
-  const notes = [...document.querySelectorAll('.note')];
+  const notes = [...document.querySelectorAll('.note, .marginfig')];
   if (!wide) {
     notes.forEach(n => {
       n.classList.remove('inmargin');
@@ -394,21 +467,26 @@ function layout() {
     n.classList.add('inmargin');
   });
   notes.forEach(n => {
+    const fig = n.classList.contains('marginfig');
     const col = n.classList.contains('col-b') ? 'b' : 'a';
     const anc = document.getElementById('anc-' + n.dataset.anchor);
-    const want = anc ? anc.getBoundingClientRect().top + window.scrollY - mtop : bottom[col];
-    const y = Math.max(want, bottom[col] + 12);
+    const floor = fig ? Math.max(bottom.a, bottom.b) : bottom[col];
+    const want = anc ? anc.getBoundingClientRect().top + window.scrollY - mtop : floor;
+    const y = Math.max(want, floor + 12);
     n.style.top = y + 'px';
-    bottom[col] = y + n.offsetHeight;
+    if (fig) { bottom.a = bottom.b = y + n.offsetHeight; }
+    else { bottom[col] = y + n.offsetHeight; }
   });
   margin.style.minHeight = Math.max(bottom.a, bottom.b, main.offsetHeight) + 'px';
 }
 document.addEventListener('click', e => {
-  const open = e.target.closest('.nfig');
+  const open = e.target.closest('.figbody');
   if (open) {
     const m = document.createElement('div');
     m.className = 'figmodal';
-    m.innerHTML = '<span class="figcap">' + open.dataset.fig + '</span>'
+    const host = open.closest('.marginfig');
+    m.innerHTML = '<span class="figcap">' + (host ? host.id.replace('fig-', 'Figure ') : '')
+                + ' — ' + (host ? host.dataset.fig : '') + '</span>'
                 + open.querySelector('svg').outerHTML;
     m.addEventListener('click', () => m.remove());
     document.body.appendChild(m);
