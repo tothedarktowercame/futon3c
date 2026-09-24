@@ -37,6 +37,16 @@
    :thinking nil
    :reasoning-effort "low"})
 
+(def default-context-policy
+  "Context-carry gate for kimi seats (zai-api/context-carry-decision). A new
+   job runs on the seat's earlier conversation only when it is clocked to the
+   same mission and the conversation is under :cap-tokens; below :floor-tokens
+   carrying is cheap and always allowed. On 2026-09-24 the seats carried one
+   session all day and opened jobs at 166k-335k tokens, which exhausted the
+   5-hour quota twice (holes/labs/kimi-5h-limit-2026-09-24.md)."
+  {:floor-tokens 32000
+   :cap-tokens 128000})
+
 (def api-key-hint
   "Kimi API key missing; set KIMI_API_KEY or create ~/.kimikey")
 
@@ -60,7 +70,7 @@
 
    Takes the same option map as `zai-api/make-invoke-fn`; anything the caller
    supplies wins over the Kimi defaults applied here."
-  [{:keys [agent-id base-url model sampling] :as opts
+  [{:keys [agent-id base-url model sampling context-policy] :as opts
     :or {agent-id "kimi"}}]
   (zai-api/make-invoke-fn
    (merge opts
@@ -75,4 +85,5 @@
            ;; endpoint accepts image parts inside a tool-role result (verified
            ;; live 2026-09-23), so a kimi seat gets view_image.
            :vision? true
-           :sampling (merge default-sampling sampling)})))
+           :sampling (merge default-sampling sampling)
+           :context-policy (merge default-context-policy context-policy)})))

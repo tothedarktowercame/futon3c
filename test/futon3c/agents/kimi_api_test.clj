@@ -4,6 +4,7 @@
    the sampling block Kimi accepts."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.agency.clock-store :as clock]
             [futon3c.agents.kimi-api :as kimi]
             [futon3c.agents.zai-api :as zai]))
 
@@ -91,3 +92,149 @@
           result (invoke "work" nil)]
       (is (nil? (:result result)))
       (is (= kimi/api-key-hint (:error result))))))
+
+;; --- Context-carry gate --------------------------------------------------
+;; 2026-09-24: every kimi seat kept one conversation across all its dispatches,
+;; so kimi-4 opened a M-futon-seams job carrying 335k tokens of other missions'
+;; history and Kimi's 5-hour quota refused it. These pin that a job runs on
+;; carried history only when it is clocked to the mission that history is for.
+
+(deftest context-carry-decision-table
+  (let [policy {:floor-tokens 1000 :cap-tokens 5000}
+        decide #(:reason (zai/context-carry-decision policy %))]
+    (is (= :below-floor (decide {:carried-tokens nil :job-mission nil})))
+    (is (= :below-floor (decide {:carried-tokens 999 :job-mission nil
+                                 :context-mission "M-a"})))
+    (is (= :unclocked-job (decide {:carried-tokens 1000 :job-mission nil
+                                   :context-mission "M-a"})))
+    (is (= :unclocked-job (decide {:carried-tokens 1000 :job-mission nil
+                                   :context-mission nil}))
+        "two unclocked jobs are not the same mission")
+    (is (= :mission-change (decide {:carried-tokens 1000 :job-mission "M-b"
+                                    :context-mission "M-a"})))
+    (is (= :mission-change (decide {:carried-tokens 1000 :job-mission "M-b"
+                                    :context-mission nil})))
+    (is (= :same-mission (decide {:carried-tokens 4999 :job-mission "M-a"
+                                  :context-mission "M-a"})))
+    (is (= :over-cap (decide {:carried-tokens 5000 :job-mission "M-a"
+                              :context-mission "M-a"})))))
+
+(defn- usage-response [text input-tokens]
+  (assoc (text-response text)
+         :usage {:prompt_tokens input-tokens :completion_tokens 100
+                 :total_tokens (+ input-tokens 100)}))
+
+(defn- run-jobs
+  "Run each job [prompt mission input-tokens] on INVOKE. The model answers
+   with the given usage. Returns the message vectors the model was sent."
+  [invoke jobs]
+  (let [sent (atom [])
+        usage (atom nil)]
+    (with-redefs [zai/chat! (fn [_client _opts messages]
+                              (swap! sent conj messages)
+                              (usage-response "done" @usage))]
+      (doseq [[prompt mission tokens] jobs]
+        (reset! usage tokens)
+        (invoke prompt nil (cond-> {} mission (assoc :mission-id mission)))))
+    @sent))
+
+(defn- compactions [store]
+  (->> (:order @store)
+       (map #(get-in @store [:entries %]))
+       (filter #(= :context-compaction (get-in % [:evidence/body :event])))
+       (mapv :evidence/body)))
+
+(deftest a-mission-change-clears-carried-history
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [_ second-job] (run-jobs invoke [["first" "M-a" 200000]
+                                         ["second" "M-b" 200000]])]
+    (is (= 2 (count second-job))
+        "system message plus the new job only; the M-a exchange is gone")
+    (is (str/starts-with? (:content (last second-job)) "[Context:"))
+    (is (str/ends-with? (:content (last second-job)) "second"))
+    (is (= [{:reason :mission-change :carried-tokens 200100
+             :context-mission "M-a" :job-mission "M-b"}]
+           (mapv #(select-keys % [:reason :carried-tokens
+                                  :context-mission :job-mission])
+                 (compactions store))))))
+
+(deftest the-same-mission-keeps-history-under-the-cap
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [first-job second-job] (run-jobs invoke [["first" "M-a" 60000]
+                                                 ["second" "M-a" 60000]])]
+    (is (= 2 (count first-job)))
+    (is (= 4 (count second-job))
+        "system, first prompt, first answer, second prompt")
+    (is (= "second" (:content (last second-job))))
+    (is (empty? (compactions store)))))
+
+(deftest the-same-mission-is-cleared-over-the-cap
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [_ second-job] (run-jobs invoke [["first" "M-a" 130000]
+                                         ["second" "M-a" 1000]])]
+    (is (= 2 (count second-job)))
+    (is (= [:over-cap] (mapv :reason (compactions store))))))
+
+(deftest an-unclocked-job-starts-fresh
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [_ second-job] (run-jobs invoke [["first" "M-a" 60000]
+                                         ["second" nil 60000]])]
+    (is (= 2 (count second-job)))
+    (is (= [:unclocked-job] (mapv :reason (compactions store))))))
+
+(deftest small-carried-history-is-kept-across-missions
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [_ second-job] (run-jobs invoke [["first" "M-a" 5000]
+                                         ["second" "M-b" 5000]])]
+    (is (= 4 (count second-job)))
+    (is (empty? (compactions store)))))
+
+(deftest the-gate-reads-the-job-clock-from-the-clock-store
+  ;; Live kimi jobs carry no :mission-id in the invoke context; their clock
+  ;; decision is projected to clock-store at admission and the harness reads
+  ;; it there. Drive the gate through that path, not the dispatch field.
+  (clock/reset-store!)
+  (try
+    (let [store (atom {:entries {} :order []})
+          invoke (make-invoke {:evidence-store store})
+          sent (atom [])
+          clock! (fn [n mission]
+                   (clock/set-decision!
+                    "kimi-test" "kimi-sid-test"
+                    {:decision-id (str "d" n)
+                     :decided-at (str "2026-09-24T00:00:0" n "Z")
+                     :clock {:mission-id mission}}))]
+      (with-redefs [zai/chat! (fn [_ _ messages]
+                                (swap! sent conj messages)
+                                (usage-response "done" 60000))]
+        (clock! 1 "M-a")
+        (invoke "first" nil)
+        (clock! 2 "M-a")
+        (invoke "second" nil)
+        (clock! 3 "M-b")
+        (invoke "third" nil))
+      (is (= [2 4 2] (mapv count @sent)))
+      (is (= [{:reason :mission-change :context-mission "M-a"
+               :job-mission "M-b"}]
+             (mapv #(select-keys % [:reason :context-mission :job-mission])
+                   (compactions store)))))
+    (finally
+      (clock/reset-store!))))
+
+(deftest zai-seats-without-a-policy-keep-their-history
+  (let [store (atom {:entries {} :order []})
+        invoke (zai/make-invoke-fn {:agent-id "zai-test"
+                                    :api-key "test-key"
+                                    :initial-session-id "zai-sid-test"
+                                    :evidence-store store
+                                    :memory-mode :none
+                                    :cwd "/tmp"})
+        [_ second-job] (run-jobs invoke [["first" "M-a" 200000]
+                                         ["second" "M-b" 200000]])]
+    (is (= 4 (count second-job)))
+    (is (empty? (compactions store)))))

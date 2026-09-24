@@ -1132,6 +1132,57 @@
             :dispatch-id (str dispatch-id)
             :turn-id (str turn-id)}})))
 
+(defn context-carry-decision
+  "Decide whether a new job may run on the conversation a seat already holds.
+
+   Every tool round re-sends the whole conversation, so a seat that keeps one
+   session across unrelated dispatches pays for all of them on every request
+   (kimi-4, 2026-09-24: its 15:44 job opened at 335k tokens of earlier
+   missions' history and was refused by Kimi's 5-hour limit; see
+   holes/labs/kimi-5h-limit-2026-09-24.md). The job's clock is what says
+   whether that history is relevant: carried context is kept only for a job
+   clocked to the mission the context belongs to, and only under CAP-TOKENS.
+   An unclocked job cannot claim continuity, so it starts fresh.
+
+   Returns {:action :keep|:compact :reason kw}."
+  [{:keys [floor-tokens cap-tokens]}
+   {:keys [carried-tokens context-mission job-mission]}]
+  (cond
+    (or (nil? carried-tokens) (< carried-tokens floor-tokens))
+    {:action :keep :reason :below-floor}
+
+    (nil? job-mission)
+    {:action :compact :reason :unclocked-job}
+
+    (not= job-mission context-mission)
+    {:action :compact :reason :mission-change}
+
+    (>= carried-tokens cap-tokens)
+    {:action :compact :reason :over-cap}
+
+    :else
+    {:action :keep :reason :same-mission}))
+
+(defn- estimate-context-tokens
+  "Rough token count of MESSAGES (4 chars per token), used when no provider
+   usage has been seen since the conversation last changed shape."
+  [messages]
+  (quot (reduce + 0 (map (comp count pr-str) messages)) 4))
+
+(defn- persist-context-compaction!
+  [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
+           carried-tokens context-mission job-mission]}]
+  (persist-transcript-safely!
+   agent-id evidence-store
+   (transcript-entry
+    {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+     :event :context-compaction
+     :body {:reason (:reason decision)
+            :carried-tokens carried-tokens
+            :context-mission context-mission
+            :job-mission job-mission
+            :dispatch-id (str dispatch-id)}})))
+
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
@@ -1437,6 +1488,10 @@ CALLS contains maps of tool name, arguments, and result digest."
             (let [usage (normalized-usage resp)
                   _ (when usage
                       (sink! agent-id (assoc usage :type "usage")))
+                  _ (when-let [!context-tokens (:!context-tokens ctx)]
+                      (when-let [in (:cost/input-tokens usage)]
+                        (reset! !context-tokens
+                                (+ in (or (:cost/output-tokens usage) 0)))))
                   message (get-in resp [:choices 0 :message])
                   text (assistant-text message)
                   tool-calls (seq (:tool_calls message))]
@@ -1538,7 +1593,8 @@ CALLS contains maps of tool name, arguments, and result digest."
            turn-timeout-ms max-tokens temperature sampling session-id-prefix env-prefix
            vision? max-image-bytes retained-images
            irc-send-fn irc-recent-fn
-           memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
+           memory-mode memory-domain auto-continue-max profile zaif-inputs-fn
+           context-policy]
     :or {agent-id "zai" memory-mode :full}}]
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
@@ -1566,6 +1622,11 @@ CALLS contains maps of tool name, arguments, and result digest."
         ;; inhabited id lets that invoke prove rotation and discard the old
         ;; conversation instead of silently falling back to sid0.
         !last-session-id (atom sid0)
+        ;; Context-carry gate (context-carry-decision); inert without a
+        ;; :context-policy. Tokens come from the last round's provider usage;
+        ;; the mission is the clock of the job that built the conversation.
+        !context-tokens (atom nil)
+        !context-mission (atom nil)
         backend (real-backend/make-real-backend
                  {:cwd cwd*
                   :timeout-ms 30000
@@ -1690,7 +1751,8 @@ CALLS contains maps of tool name, arguments, and result digest."
         ;; kept the whole history). Truncate to the system message.
         (let [prev-sid @!last-session-id]
           (when (and prev-sid sid (not= prev-sid sid))
-            (swap! !messages #(vec (take 1 %)))))
+            (swap! !messages #(vec (take 1 %)))
+            (reset! !context-tokens nil)))
         (reset! !session-id sid)
         (reset! !last-session-id sid)
         (when session-file (spit session-file sid))
@@ -1714,14 +1776,50 @@ CALLS contains maps of tool name, arguments, and result digest."
                 (when-not (str/blank? rehydration)
                   (swap! !messages update-in [0 :content] str "\n\n" rehydration)))
               (catch Throwable _))))
-        (persist-turn-start! {:evidence-store evidence-store
-                              :agent-id agent-id
-                              :sid sid
-                              :dispatch-id dispatch-id
-                              :turn-id turn-id
-                              :profile profile*
-                              :prompt prompt})
-        (swap! !messages conj {:role "user" :content (str prompt)})
+        (let [carried (when (> (count @!messages) 1)
+                        (or @!context-tokens
+                            (estimate-context-tokens (rest @!messages))))
+              context-mission @!context-mission
+              decision (when context-policy
+                         (context-carry-decision
+                          context-policy
+                          {:carried-tokens carried
+                           :context-mission context-mission
+                           :job-mission clocked-mission}))
+              compact? (= :compact (:action decision))
+              prompt* (if compact?
+                        (str "[Context: this seat's earlier conversation ("
+                             carried " tokens, "
+                             (or context-mission "unclocked") ") was cleared "
+                             "before this job (" (name (:reason decision)) "). "
+                             "If you need earlier work, read it from files, "
+                             "mission_orientation or tool_history.]\n\n"
+                             prompt)
+                        prompt)]
+          (when compact?
+            (swap! !messages #(vec (take 1 %)))
+            (reset! !context-tokens nil)
+            (persist-context-compaction!
+             {:evidence-store evidence-store :agent-id agent-id :sid sid
+              :turn-id turn-id :profile profile* :dispatch-id dispatch-id
+              :decision decision :carried-tokens carried
+              :context-mission context-mission :job-mission clocked-mission})
+            (sink! agent-id {:type "text"
+                             :text (str "[context compacted: "
+                                        (name (:reason decision)) ", "
+                                        carried " tokens dropped]")}))
+          ;; The job now running owns the conversation: after a compaction
+          ;; it is the only occupant, under the floor it is the latest, and
+          ;; on :same-mission the value is unchanged.
+          (reset! !context-mission clocked-mission)
+          (persist-turn-start! {:evidence-store evidence-store
+                                :agent-id agent-id
+                                :sid sid
+                                :dispatch-id dispatch-id
+                                :turn-id turn-id
+                                :profile profile*
+                                :prompt prompt*})
+          (swap! !messages conj {:role "user" :content (str prompt*)}))
         (invoke-controls/register!
          agent-id interrupt-token
          {:interrupt!
@@ -1740,6 +1838,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                              :opts opts
                              :api-key key*
                              :!messages !messages
+                             :!context-tokens !context-tokens
                              :backend backend
                              :tool-opts tool-opts
                              :agent-id agent-id
