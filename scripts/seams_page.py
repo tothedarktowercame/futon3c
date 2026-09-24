@@ -86,7 +86,13 @@ def svg(b, vertical=False):
     widest = max(len(v) for v in layers.values())
     pos = {}
     if vertical:
-        COLW, ROWH, BW, BH = 210, 122, 190, 92
+        # Height follows the produced-token count: one token per line, because
+        # a single joined line truncated ("one-producer, protocol…") and a
+        # truncated token name is not a token name.
+        maxprod = max(len(q["produces"]) for q in pats.values())
+        COLW, BW = 210, 190
+        BH = 66 + 13 * maxprod
+        ROWH = BH + 30
         lanes = widest + (1 if open_holes else 0)
         width = COLW * lanes + 56
         height = ROWH * depths + 44
@@ -128,7 +134,7 @@ def svg(b, vertical=False):
             f'<title>{html.escape(e["kind"])} — {html.escape(e["via"])}</title></path>')
     for pid, (x, y) in pos.items():
         p = pats[pid]
-        prod = ", ".join(short(t) for t in p["produces"])
+        prods = [short(t) for t in sorted(p["produces"])]
         lines = wrap_id(short(pid))
         ids = "".join(
             f'<text x="{x+10}" y="{y+35+i*15}" class="nid">{html.escape(l)}</text>'
@@ -139,9 +145,12 @@ def svg(b, vertical=False):
             f'<rect x="{x}" y="{y}" width="{BW}" height="{BH}" rx="3" fill="#fff" '
             f'stroke="{C["pattern"]}" stroke-width="1.2"/>'
             f'<text x="{x+10}" y="{y+19}" class="nfam">{html.escape(pid.split("/")[0])}/</text>'
-            + ids +
-            f'<text x="{x+10}" y="{y+BH-9}" class="nprod">⊢ '
-            f'{html.escape(prod[:22] + ("…" if len(prod) > 22 else ""))}</text></g>')
+            + ids
+            + "".join(
+                f'<text x="{x+10}" y="{y+BH-11-13*(len(prods)-1-i)}" class="nprod">'
+                f'{"⊢ " if i == 0 else "  "}{html.escape(t)}</text>'
+                for i, t in enumerate(prods))
+            + "</g>")
     for k, h in enumerate(h for h in (b.get("holes") or [])
                           if h.get("status") != "closed"):
         if vertical:

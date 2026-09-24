@@ -86,9 +86,9 @@
    :evidence [{:kind :artefact :ref "proto/meets.clj" :what "the restricted semilattice condition, computed"}
               {:kind :artefact :ref "proto/kernels.clj" :what "three kernels over every linear extension"}
               {:kind :discrepancy :what "inevitability is not argued; two candidates are compared on one number"}]
-   :artefacts [{:figure "instance-5" :why "a cascade whose construction forks and does not rejoin"}
+   :artefacts [{:figure "instance-5" :why "the widest list-kernel spread in the set: p(all wants) 0.168 to 0.797 across 48 linear extensions"}
                {:figure "instance-6" :why "the conflicting frontier, and the one real missing meet"}
-               {:figure "instance-7" :why "the instance the mission calls still compounding"}
+               {:figure "instance-7" :why "the instance the mission calls still compounding; co-application reaches all wants at 0.853 where every linear extension reaches 0"}
                {:figure "wiring-5"} {:figure "wiring-6"} {:figure "wiring-7"}
                {:note "i5-cascade"} {:note "i5-adapter"} {:note "i5-spread"}
                {:note "i5-wiring"} {:note "i6-cascade"} {:note "i6-conflict"}

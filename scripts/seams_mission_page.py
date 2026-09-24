@@ -263,7 +263,7 @@ def figure_html(key, svg, cap, num, anchor_id, full_width=False):
             f'<figcaption><span class="fignum">Figure {num}</span> '
             f'{html.escape(cap.get("what", key))} — instance {cap.get("instance", "?")}. '
             f'{html.escape(cap.get("sub", ""))}'
-            + (f' <span class="figwhy">{html.escape(cap["why"])}</span>'
+            + (f' <span class="figwhy">— {html.escape(cap["why"])}.</span>'
                if cap.get("why") else "")
             + (f'<ul class="figmarks">{marks}</ul>' if marks else "")
             + '</figcaption></figure>')
