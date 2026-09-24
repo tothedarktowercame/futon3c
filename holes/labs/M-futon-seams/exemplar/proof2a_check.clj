@@ -110,9 +110,11 @@
   (let [c (cascade-of cand) pred (:prediction cand) rec (:construction-receipt cand)
         problems (atom []) findings (atom [])
         fail #(swap! problems conj (str "W_0 " cid ": " %))]
-    (when (and (not= :machine-constructed (:kind rec)) (not (replayed? cid)))
+    ;; The receipt's :kind is a claim; the replay record is the evidence. A
+    ;; receipt saying :machine-constructed without a reproducing replay fails.
+    (when-not (replayed? cid)
       (if *require-machine-construction*
-        (fail (str "construction receipt is " (:kind rec) "; PROOF-2a W_0 requires :machine-constructed (replay of the constructor on the recorded interpretations)"))
+        (fail (str "construction receipt is " (:kind rec) "; no replay of the constructor on the recorded interpretations reproduces this candidate (PROOF-2a W_0)"))
         (swap! findings conj {:kind :construction-not-machine :candidate cid :receipt-kind (:kind rec)})))
     (doseq [[pid i] (:interpretations cand)
             :let [path (get-in i [:receipt :source :path]) f (when path (str "/home/joe/code/" path))]]
