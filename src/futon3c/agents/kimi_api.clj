@@ -38,13 +38,17 @@
    :reasoning-effort "low"})
 
 (def default-context-policy
-  "Work-target gate for kimi seats (zai-api/context-carry-decision). A job must
-   name its mission, excursion or ticket; when the target changes, the seat's
-   conversation is cleared before the job runs, and a same-target conversation
-   past :cap-tokens is cleared too. On 2026-09-24 the seats carried one session
-   across all their dispatches and opened jobs at 166k-335k tokens, which
-   exhausted the 5-hour quota twice (holes/labs/kimi-5h-limit-2026-09-24.md)."
-  {:cap-tokens 128000})
+  "Requisition gate for kimi seats (zai-api/requisition-decision and
+   context-carry-decision). Every call carries a line
+   `Requisition: <M-*|E-*|T-*> — <purpose>`; when the target changes, the
+   seat's conversation is cleared before the job runs. :cap-tokens is a
+   placeholder: a same-target conversation past it is cleared until
+   same-target compaction exists. k3's context is 1,048,576 tokens, so 512k
+   leaves a long job ~500k of room to grow. On 2026-09-24 the seats carried
+   one session across all their dispatches and opened jobs at 166k-335k
+   tokens, which exhausted the 5-hour quota twice
+   (holes/labs/kimi-5h-limit-2026-09-24.md)."
+  {:cap-tokens 512000})
 
 (def api-key-hint
   "Kimi API key missing; set KIMI_API_KEY or create ~/.kimikey")

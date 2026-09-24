@@ -16,7 +16,7 @@ for ANY characters:
 --ref ask-...  -> ArSE thread / referent for answer or routed query
 --dry-run prints the payload instead of sending.
 """
-import os, sys, json, argparse, time, urllib.request
+import os, re, sys, json, argparse, time, urllib.request
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--to", required=True, help="recipient agent-id")
@@ -31,10 +31,12 @@ ap.add_argument("--ref", help="typed-bell referent, usually an ArSE thread id")
 ap.add_argument("--mission", help="mission-id this dispatch works on; the server clocks the "
                 "recipient's session to it (durable lineage, http.clj clock-dispatch!) so the "
                 "agent appears on the live EFE map without a manual clock-in")
-ap.add_argument("--target", help="mission, excursion or ticket this dispatch works on "
-                "(M-*, E-*, T-*). Kimi seats refuse work without one and clear their "
-                "conversation when it changes. An M-* target also clocks the recipient "
-                "like --mission.")
+ap.add_argument("--requisition", metavar='"M-foo — purpose"',
+                help="requisition line for Kimi seats: a mission, excursion or ticket "
+                "(M-*, E-*, T-*) and a one-line purpose. Written into the prompt as "
+                "'Requisition: ...'; Kimi seats refuse calls without one and clear "
+                "their conversation when the target changes. An M-* target also "
+                "clocks the recipient like --mission.")
 ap.add_argument("--mode", choices=["work", "brief"],
                 help="explicit invoke-job mode; when omitted the server retains its legacy "
                      "prompt-text classification fallback")
@@ -176,6 +178,14 @@ if a.park:
     note = PARK_BUFFER_NOTE if buffer_surface(a.surface) else PARK_CLI_NOTE
     print(note % a.surface, file=sys.stderr)
 
+if a.requisition:
+    req = a.requisition.strip()
+    parts = req.split(None, 1)
+    purpose = re.sub(r"^(—|–|--|-)\s*", "", parts[1]).strip() if len(parts) > 1 else ""
+    if not (re.fullmatch(r"[MET]-[A-Za-z0-9][A-Za-z0-9._-]*", parts[0]) and purpose):
+        sys.exit('--requisition must look like "M-foo — purpose" (M-*, E-* or T-*)')
+    prompt = "Requisition: " + req + "\n\n" + prompt
+
 body = {"agent-id": a.to, "prompt": prompt}
 if cascade:
     # The body of the record, not only of the prompt: a cascade is the thing
@@ -202,10 +212,10 @@ if a.ref:
     body["ref"] = a.ref
 if a.mission:
     body["mission-id"] = a.mission
-if a.target:
-    body["work-target"] = a.target
-    if a.target.startswith("M-") and not a.mission:
-        body["mission-id"] = a.target
+if a.requisition:
+    req_target = a.requisition.split()[0]
+    if a.mission is None and req_target.startswith("M-"):
+        body["mission-id"] = req_target
 if a.mode:
     body["mode"] = a.mode
 # Explicit --timeout-ms always wins; 0 means "defer to the server default".

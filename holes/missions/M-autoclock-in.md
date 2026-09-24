@@ -799,58 +799,58 @@ Validation: `clojure -M:test:test-all -n futon3c.agency.clock-decision-test`:
 real-backend slow tests and the real-file check. Clj-kondo: zero errors/warnings;
 check-parens: OK on both changed Clojure files.
 
-## INSTANTIATE-8 — kimi seats work per named target (claude-11, 2026-09-24)
+## INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)
 
 Every kimi seat kept one conversation across all its dispatches, so jobs
 opened at 166k-335k tokens of other work and exhausted Kimi's 5-hour quota
 twice on 2026-09-24 (`holes/labs/kimi-5h-limit-2026-09-24.md`).
 
-**Joe's rule:** to do work on a Kimi seat, pass the mission, excursion or
-ticket name; if it changes, compact.
+**Rule (Joe, 2026-09-24):** each call to a Kimi seat carries a one-line
+requisition naming its mission, excursion or ticket; when the target
+changes, the conversation is cleared.
 
-A first cut (`65b1f708`) inferred the target from the job's clock decision
-and only cleared above a token floor. Joe rejected that: the target must be
-passed, not inferred. It was replaced by:
+    Requisition: M-futon-seams — prototype PROOF-2a examples
 
-- `agency_send.py --target M-*|E-*|T-*` → payload `work-target`. The server
-  also accepts `ticket-id`, `excursion-id` and `mission-id`, in that order
-  after `work-target` (`http.clj` `payload-work-target`). An `M-*` target
-  also sets `mission-id`, so the recipient is clocked as before.
-- The target travels explicitly through every job path (bell, whistle,
-  whistle-stream, invoke, invoke-stream, announce→activate) into the seat's
-  invoke context with the caller. It is also stored on the job record.
-- `zai-api/context-carry-decision` with kimi's `{:cap-tokens 128000}`:
-  - no target → refused before any model call (`:work-target-required`);
-  - a name that is not `holes/**/<name>.md` in a canonical futon repo →
-    refused (`:work-target-unresolved`);
-  - a different target from the one that built the conversation → cleared
-    (`:target-change`);
-  - the same target → kept, unless it has grown past the cap (`:over-cap`).
-  - Replies to the seat's own bells (`auto-bellback`) and park resumes carry
-    no target and continue the seat's current one.
-- "Compact" is implemented as clear: a conversation about another target is
-  not summarised into the next one. The new prompt says what was cleared.
-  Each clear writes a `:context-compaction` evidence record.
+How the design got here, so the discarded versions aren't rebuilt:
 
-zai seats have no policy and are unchanged.
+1. `65b1f708`: the target was inferred from the recipient job's clock.
+   Rejected because work must *pass* a target.
+2. `2242fa4c`: a `work-target` payload field, plumbed through every http.clj
+   job path. Superseded, and its http.clj part removed.
+3. `80428193`: the caller's clock was the default target. Superseded because
+   it lets a stale clock drift silently: the caller never states anything.
+4. **Current:** the requisition line. It sits in the prompt, so it works on
+   every transport with no plumbing, and the caller restates its target on
+   every call.
 
-**Clock as the default target (Joe, 2026-09-24).** "The calling agent should
-clock in on something and then just send that as its work target." A job
-with no named target now takes the caller's clock at dispatch time
-(`:inherited-clock`, INSTANTIATE-7a): its excursion if set, else its mission.
-The seat's own clock is never used, because it is left over from its
-previous job and would never change. With neither a named target nor a
-clock, the job is refused and the caller's current session gets a typed
-followup (`:kimi-work-target`, through the inbox-zero followup queue, one
-outstanding per session): "You can't use a Kimi seat without a work
-target…".
+Mechanics (`zai-api` `parse-requisition` / `requisition-decision` /
+`context-carry-decision`, enabled by kimi-api's `:context-policy`):
 
-**Open: clock drift.** This makes the gate only as good as the caller's
-clock. Seen live at 16:20Z: claude-10 was clocked to M-futon-seams by a
-mention in its operator turn, and claude-1 by inheritance from a claude-10
-dispatch. Joe (2026-09-24): inheritance reclocking the recipient is wanted,
-not a defect: a bell carries its sender's clock to whoever does the work.
-What remains open is a clock that stays put while the work moves to another
-topic without naming a target: the same target keeps being sent, so the
-conversation is never cleared. The 128k cap is the backstop for that until
-reclocking tracks the work.
+- **Parsing.** A line starting `Requisition:` (a `>` quote prefix is
+  allowed), then the target, then an optional dash, then the purpose. The
+  purpose is required. Repeated lines naming the same target are fine, so a
+  forwarded bell may quote one; lines naming different targets are refused.
+  A mention in prose, the payload `mission-id`, or the caller's clock is not
+  a requisition.
+- **Resolving.** The target must be `holes/**/<name>.md` in a canonical
+  futon repo (worktrees excluded). Campaigns don't count.
+- **Refusal.** Refused before any model call. The caller's session gets a
+  typed `:kimi-work-target` followup through the inbox-zero followup queue,
+  one outstanding per session. It suggests the caller's clock as the target
+  when there is one, and says to clock in when there isn't.
+- **Clock side effect** (wanted by Joe). A requisition for something other
+  than the caller's clock sends one reminder per session and target: "If
+  your work has moved to X, clock in on it". `agency_send.py
+  --requisition "M-foo — purpose"` writes the line and, for M-*, sets
+  `mission-id`, so the recipient is clocked too.
+- **Target change** → cleared. **Same target** → kept. A same-target
+  conversation past `:cap-tokens` (512k, a placeholder: k3's context is
+  1,048,576) is cleared until same-target compaction exists.
+- **Continuations.** Replies to the seat's own bells (`auto-bellback`) and
+  park resumes need no requisition; they continue the seat's target.
+- **Evidence.** Every turn-start records the requisition, and every clearing
+  writes a `:context-compaction` record with target and purpose.
+
+Inherited reclocking is wanted (Joe): a bell carries its sender's clock to
+whoever does the work. Open: same-target compaction by summary, to replace
+clear-at-cap.

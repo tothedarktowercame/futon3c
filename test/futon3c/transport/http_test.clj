@@ -1944,37 +1944,6 @@
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
 
-(deftest bell-work-target-reaches-the-seat
-  ;; Kimi seats refuse work without a target (zai-api/context-carry-decision);
-  ;; this pins that the target a dispatcher names in the bell payload, and the
-  ;; caller, arrive in the seat's invoke context through the real bell path.
-  (let [seen (atom [])]
-    (reg/register-agent!
-     {:agent-id {:id/value "kimi-target-probe" :id/type :continuity}
-      :type :kimi
-      :invoke-fn (fn [_prompt _session-id ctx]
-                   (swap! seen conj (select-keys ctx [:work-target :caller]))
-                   {:result "ok" :session-id nil})
-      :capabilities [:explore :edit]})
-    (let [handler (make-handler)
-          bell (fn [extra]
-                 (let [job-id (:job-id (parse-body
-                                        (post handler "/api/alpha/bell"
-                                              (json/generate-string
-                                               (merge {"agent-id" "kimi-target-probe"
-                                                       "caller" "claude-test"
-                                                       "prompt" "target probe"}
-                                                      extra)))))]
-                   (wait-for-job-state handler job-id 2000)
-                   job-id))]
-      (bell {"work-target" "T-some-ticket"})
-      (bell {"excursion-id" "E-some-excursion"})
-      (bell {})
-      (is (= ["T-some-ticket" "E-some-excursion" nil]
-             (mapv :work-target @seen)))
-      (is (= ["claude-test" "claude-test" "claude-test"]
-             (mapv :caller @seen))))))
-
 (deftest bell-rejects-unregistered-recipients-before-creating-jobs
   (let [handler (make-handler)
         bell (fn [agent-id]

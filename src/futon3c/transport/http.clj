@@ -470,7 +470,7 @@
                           :bellback-of :mode :state :created-at :started-at :finished-at
                           :terminal-code :terminal-message :session-id :trace-id
                           :result-summary :artifact-ref :execution :invocation/model
-                          :delivery :event-seq :auto-bellback :work-target])
+                          :delivery :event-seq :auto-bellback])
         (update :terminal-message #(when % (subs (str %) 0 (min 220 (count (str %))))))
         (assoc :events (->> [(first events) (last events)]
                             (keep event-edge)
@@ -1559,18 +1559,9 @@
                                      :invocation/model]))
        :source (if job :hot-ledger :commission-archive)})))
 
-;; A dispatch names the mission, excursion or ticket it works on. Target-gated
-;; seats (kimi) refuse work without one and keep their conversation per target.
-(defn- payload-work-target
-  [payload]
-  (some (fn [k]
-          (some-> (or (get payload k) (get payload (name k)))
-                  str str/trim not-empty))
-        [:work-target :ticket-id :excursion-id :mission-id]))
-
 (defn- create-invoke-job-ledger!
   [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode
-           model inherited-clock work-target]}]
+           model inherited-clock]}]
   (let [created-id (atom nil)]
     (try
       (update-invoke-jobs-ledger!
@@ -1626,8 +1617,7 @@
                                :event-seq 0
                                :events []}
                         bell-type (assoc :bell-type bell-type)
-                        (some? ref) (assoc :ref (str ref))
-                        work-target (assoc :work-target (str work-target)))]
+                        (some? ref) (assoc :ref (str ref)))]
              (reset! created-id job-id)
                (-> ledger
                    (assoc :next-seq next-seq)
@@ -4847,7 +4837,6 @@
         job-id (create-invoke-job! {:evidence-store evidence-store
                                     :requested-job-id requested-job-id
                                     :agent-id agent-id
-                                    :work-target (payload-work-target payload)
                                     :prompt prompt
                                     :caller caller
                                     :surface surface
@@ -4877,8 +4866,6 @@
                           aid effective-prompt
                           {:timeout-ms timeout-ms :model model
                            :mission-id mission-id :evidence-store evidence-store
-                           :caller caller
-                           :work-target (payload-work-target payload)
                            :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
                                                     [:jobs job-id :inherited-clock])} job-id)
                          (finally
@@ -4954,7 +4941,7 @@
    Call run-invoke-job! rather than this: the wrapper refuses jobs that already
    reached a terminal state while they sat in the queue."
   [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
-           model reasoning-effort warrants work-target]}]
+           model reasoning-effort warrants]}]
   (let [ev-opts (when mission-id [:mission-id mission-id])
         execution-started? (atom false)]
     (try
@@ -5000,7 +4987,6 @@
                             {:timeout-ms timeout-ms
                              :model model :reasoning-effort reasoning-effort
                              :mission-id mission-id :evidence-store evidence-store
-                             :caller caller :work-target work-target
                              :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
                                                       [:jobs job-id :inherited-clock])}
                             job-id))
@@ -5574,7 +5560,6 @@
                 (let [job-id (create-invoke-job! {:evidence-store evidence-store
                                                   :requested-job-id requested-job-id
                                                   :agent-id agent-id
-                                                  :work-target (payload-work-target payload)
                                                   :prompt prompt
                                                   :caller caller
                                                   :surface surface
@@ -5594,7 +5579,6 @@
                                                   :model model
                                                   :reasoning-effort reasoning-effort
                                                   :mission-id mission-id
-                                                  :work-target (payload-work-target payload)
                                                   :evidence-store evidence-store}))
                       deliver-result (fn [result]
                                        (record-bell-completion-delivery!
@@ -5708,7 +5692,6 @@
                          (create-invoke-job! {:evidence-store evidence-store
                                               :requested-job-id requested-job-id
                                               :agent-id agent-id
-                                              :work-target (payload-work-target payload)
                                               :prompt prompt
                                               :caller caller
                                               :surface surface
@@ -5960,8 +5943,6 @@
                          (reg/invoke-agent! aid effective-prompt
                                             {:timeout-ms timeout-ms :turn-id turn-id
                                              :surface surface :mission-id mission-id
-                                             :caller caller
-                                             :work-target (payload-work-target payload)
                                              :evidence-store evidence-store})))
                       (finally
                         (reg/clear-invoke-event-sink! aid))))
@@ -5990,8 +5971,6 @@
                           (reg/invoke-agent! (str agent-id) effective-prompt
                                              {:timeout-ms timeout-ms :turn-id turn-id
                                               :surface surface :mission-id mission-id
-                                              :caller caller
-                                              :work-target (payload-work-target payload)
                                               :evidence-store evidence-store}))))
                       (catch Throwable t
                         (sink-fn {:type "done" :ok false :error "invoke-error"
@@ -6078,7 +6057,6 @@
       (let [job-id (create-invoke-job! {:evidence-store evidence-store
                                         :requested-job-id requested-job-id
                                         :agent-id agent-id
-                                        :work-target (payload-work-target payload)
                                         :prompt prompt
                                         :caller caller
                                         :surface "whistle"
@@ -6130,7 +6108,6 @@
                                          :warrants warrant-normalized
                                          :timeout-ms timeout-ms
                                          :mission-id mission-id
-                                         :work-target (payload-work-target payload)
                                          :evidence-store evidence-store})))
             (.submit invoke-executor
                      ^Runnable
@@ -6252,7 +6229,6 @@
                            (let [wait-ms (long (or timeout-ms default-async-invoke-timeout-ms))
                                  job-id (create-invoke-job! {:evidence-store evidence-store
                                                             :agent-id agent-id
-                                                            :work-target (payload-work-target payload)
                                                             :prompt prompt
                                                             :caller caller
                                                             :surface "whistle"
@@ -6265,7 +6241,6 @@
                                                            :surface "whistle"
                                                            :warrants warrant-normalized
                                                            :timeout-ms wait-ms
-                                                           :work-target (payload-work-target payload)
                                                            :evidence-store evidence-store})
                                  deliver! #(deliver completed %)]
                              (if (turn-queue/drainer-v2-enabled?)

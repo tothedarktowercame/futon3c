@@ -22,10 +22,10 @@
            :cwd "/tmp"}
           opts)))
 
-(def ^:private live-target
-  "Kimi seats refuse work without a target; this one exists on this machine
-   (a-live-target-resolves-on-this-machine)."
-  {:work-target "M-autoclock-in"})
+(def ^:private requisition
+  "Kimi seats refuse calls without a requisition line; M-autoclock-in exists
+   on this machine (a-live-target-resolves-on-this-machine)."
+  "Requisition: M-autoclock-in — kimi-api-test\n\n")
 
 (defn- capture-opts
   "Run one turn and return the opts map zai-api handed to chat!."
@@ -34,7 +34,7 @@
     (with-redefs [zai/chat! (fn [_client opts _messages]
                               (reset! seen opts)
                               (text-response "done"))]
-      (invoke "work" nil live-target))
+      (invoke (str requisition "work") nil))
     @seen))
 
 (deftest kimi-turns-address-the-kimi-coding-endpoint
@@ -74,9 +74,9 @@
         invoke (make-invoke {:initial-session-id "kimi-old"
                              :session-id-atom session-id})]
     (with-redefs [zai/chat! (fn [_ _ _] (text-response "done"))]
-      (let [first-result (invoke "first" nil live-target)]
+      (let [first-result (invoke (str requisition "first") nil)]
         (reset! session-id nil)
-        (let [second-result (invoke "second" nil live-target)]
+        (let [second-result (invoke (str requisition "second") nil)]
           (is (= "kimi-old" (:session-id first-result)))
           (is (str/starts-with? (:session-id second-result) "kimi-"))
           (is (not= (:session-id first-result) (:session-id second-result))))))))
@@ -99,32 +99,67 @@
       (is (nil? (:result result)))
       (is (= kimi/api-key-hint (:error result))))))
 
-;; --- Work-target gate ----------------------------------------------------
+;; --- Requisition gate ----------------------------------------------------
 ;; 2026-09-24: every kimi seat kept one conversation across all its dispatches,
 ;; so kimi-4 opened a job carrying 335k tokens of earlier work and Kimi's
-;; 5-hour quota refused it. Joe's rule: work on a kimi seat names its mission,
-;; excursion or ticket; when the target changes, the conversation is cleared.
+;; 5-hour quota refused it. Joe's rule: each call carries a one-line
+;; requisition naming its mission, excursion or ticket and a purpose; when the
+;; target changes, the conversation is cleared.
+
+(def ^:private wrapped-bell
+  ;; The shape a bell prompt has by the time it reaches the seat.
+  (str "--- CURRENT TURN ---\nSurface: bell\nFrom: claude-10\nTo: kimi-4\n"
+       "Type: request\n---\n\n%s\n\nThe actual request text, which may "
+       "mention M-other-mission in passing.\n"))
+
+(deftest requisition-lines-parse-inside-a-wrapped-prompt
+  (let [parse #(zai/parse-requisition (format wrapped-bell %))]
+    (is (= {:target "M-futon-seams" :purpose "prototype PROOF-2a"}
+           (parse "Requisition: M-futon-seams — prototype PROOF-2a")))
+    (is (= {:target "T-tick" :purpose "fix it"} (parse "Requisition: T-tick -- fix it")))
+    (is (= {:target "E-ex" :purpose "look"} (parse "> Requisition: E-ex - look"))
+        "a quoted line still counts")
+    (is (= {:target "M-futon-seams" :purpose nil} (parse "Requisition: M-futon-seams")))
+    (is (nil? (parse "Please work on M-futon-seams.")) "a mention is not a requisition")
+    (is (nil? (zai/parse-requisition "We need a requisition: M-a — x"))
+        "only a line that starts with the keyword")
+    (is (= {:error :ambiguous :targets ["M-a" "M-b"]}
+           (parse "Requisition: M-a — x\nRequisition: M-b — y")))
+    (is (= {:target "M-a" :purpose "x"}
+           (parse "Requisition: M-a — x\n> Requisition: M-a — x"))
+        "a forwarded copy of the same requisition is fine")))
+
+(deftest requisition-decision-table
+  (let [known #{"M-a" "E-b" "T-c"}
+        decide #(:reason (zai/requisition-decision (assoc % :resolve-fn known)))]
+    (is (= :requisition-required (decide {:requisition nil})))
+    (is (= :continuation (decide {:requisition nil :continuation? true})))
+    (is (= :requisitioned (decide {:requisition {:target "M-a" :purpose "p"}
+                                   :continuation? true}))
+        "a continuation may still requisition")
+    (is (= :requisition-ambiguous (decide {:requisition {:error :ambiguous}})))
+    (is (= :requisition-purpose-required (decide {:requisition {:target "M-a"}})))
+    (is (= :requisition-unresolved (decide {:requisition {:target "M-nope" :purpose "p"}})))
+    (is (= :requisition-unresolved (decide {:requisition {:target "C-camp" :purpose "p"}}))
+        "campaigns are not work targets")
+    (is (= :requisitioned (decide {:requisition {:target "T-c" :purpose "p"}})))))
 
 (deftest context-carry-decision-table
   (let [policy {:cap-tokens 5000}
         decide #(:reason (zai/context-carry-decision policy %))]
-    (is (= :work-target-required (decide {:job-target nil})))
-    (is (= :work-target-unresolved (decide {:job-target "M-nope"
-                                            :target-resolved? false})))
-    (is (= :fresh (decide {:job-target "M-a" :target-resolved? true
-                           :carried-tokens nil})))
-    (is (= :target-change (decide {:job-target "T-b" :target-resolved? true
-                                   :carried-tokens 10 :context-target "M-a"}))
+    (is (= :fresh (decide {:job-target "M-a" :carried-tokens nil})))
+    (is (= :target-change (decide {:job-target "T-b" :carried-tokens 10
+                                   :context-target "M-a"}))
         "any change clears, however small the conversation")
-    (is (= :same-target (decide {:job-target "M-a" :target-resolved? true
-                                 :carried-tokens 4999 :context-target "M-a"})))
-    (is (= :over-cap (decide {:job-target "M-a" :target-resolved? true
-                              :carried-tokens 5000 :context-target "M-a"})))
-    (is (= :continuation (decide {:job-target nil :continuation? true
-                                  :carried-tokens 4999 :context-target "M-a"}))
-        "a bell reply to the seat continues its target without naming one")
-    (is (= :over-cap (decide {:job-target nil :continuation? true
-                              :carried-tokens 5000 :context-target "M-a"})))))
+    (is (= :same-target (decide {:job-target "M-a" :carried-tokens 4999
+                                 :context-target "M-a"})))
+    (is (= :over-cap (decide {:job-target "M-a" :carried-tokens 5000
+                              :context-target "M-a"})))
+    (is (= :same-target (decide {:job-target nil :carried-tokens 4999
+                                 :context-target "M-a"}))
+        "a continuation keeps the seat's target")
+    (is (= :over-cap (decide {:job-target nil :carried-tokens 5000
+                              :context-target "M-a"})))))
 
 (deftest work-targets-resolve-only-in-canonical-repos
   (let [root (.toFile (java.nio.file.Files/createTempDirectory
@@ -143,8 +178,7 @@
       (is (zai/resolve-work-target "T-tick" root))
       (is (nil? (zai/resolve-work-target "M-worktree-only" root)))
       (is (nil? (zai/resolve-work-target "M-absent" root)))
-      (is (nil? (zai/resolve-work-target "C-campaign" root))
-          "campaigns are not work targets")
+      (is (nil? (zai/resolve-work-target "C-campaign" root)))
       (is (nil? (zai/resolve-work-target "M-../../etc/passwd" root))))))
 
 (deftest a-live-target-resolves-on-this-machine
@@ -154,6 +188,9 @@
   (assoc (text-response text)
          :usage {:prompt_tokens input-tokens :completion_tokens 100
                  :total_tokens (+ input-tokens 100)}))
+
+(defn- req [target prompt]
+  (str "Requisition: " target " — test purpose\n\n" prompt))
 
 (defn- run-jobs
   "Run each job [prompt invoke-context input-tokens] on INVOKE; the model
@@ -178,103 +215,68 @@
        (filter #(= :context-compaction (get-in % [:evidence/body :event])))
        (mapv :evidence/body)))
 
-(deftest the-callers-clock-is-the-default-target
-  ;; Joe (2026-09-24): the caller clocks in and sends that as the target.
-  ;; :inherited-clock is the caller's clock captured when the job was created.
-  (let [store (atom {:entries {} :order []})
-        invoke (make-invoke {:evidence-store store})
-        clocked (fn [clock] {:caller "claude-x" :inherited-clock {:clock clock}})
+(deftest a-call-without-a-requisition-is-refused-before-any-model-call
+  (let [invoke (make-invoke {})
         [results sent]
-        (run-jobs invoke [["first" (clocked {:mission-id "M-a"}) 1000]
-                          ["second" (clocked {:mission-id "M-a"}) 1000]
-                          ["third" (clocked {:mission-id "M-a" :excursion-id "E-b"}) 1000]
-                          ["fourth" (assoc (clocked {:mission-id "M-a"})
-                                           :work-target "T-c") 1000]])]
-    (is (every? #(= "done" (:result %)) results))
-    (is (= [2 4 2 2] (mapv count sent))
-        "same clock keeps; the excursion is more specific; a named target beats the clock")
-    (is (= [{:reason :target-change :context-target "M-a" :job-target "E-b"
-             :target-source :caller-clock}
-            {:reason :target-change :context-target "E-b" :job-target "T-c"
-             :target-source :dispatch}]
-           (mapv #(select-keys % [:reason :context-target :job-target :target-source])
-                 (compactions store))))))
+        (run-jobs invoke [["work on M-a please" {:caller "claude-10"} 1000]
+                          ["work" {:work-target "M-a"} 1000]
+                          ["work" {:mission-id "M-a"} 1000]])]
+    (is (empty? sent) "a mention, a payload field or a dispatch mission is not a requisition")
+    (doseq [r results]
+      (is (nil? (:result r)))
+      (is (str/includes? (:error r) "without a requisition")))))
 
-(deftest a-campaign-clock-is-not-a-work-target
+(deftest the-refusal-suggests-the-callers-clock
   (let [invoke (make-invoke {})
-        [[result] sent] (run-jobs invoke [["work" {:inherited-clock
-                                                   {:clock {:campaign-id "C-x"}}} 1000]])]
-    (is (empty? sent))
-    (is (str/includes? (:error result) "without a work target"))))
+        [[clocked unclocked] _]
+        (run-jobs invoke [["work" {:inherited-clock {:clock {:mission-id "M-a"}}} 1000]
+                          ["work" {} 1000]])]
+    (is (str/includes? (:error clocked) "your clock says M-a"))
+    (is (str/includes? (:error clocked) "Requisition: M-a — <purpose>"))
+    (is (str/includes? (:error unclocked) "You are not clocked in"))))
 
-(deftest a-refusal-reminds-the-caller-like-inbox-zero
-  (let [f (java.io.File/createTempFile "kimi-followups" ".edn")]
-    (.delete f)
-    (binding [followups/*path-override* (.getPath f)]
-      (followups/clear!)
-      (reg/register-agent! {:agent-id {:id/value "claude-kimi-caller" :id/type :continuity}
-                            :type :claude
-                            :session-id "caller-session-1"
-                            :invoke-fn (fn [_ _] {:result "ok"})
-                            :capabilities [:explore]})
-      (try
-        (let [invoke (make-invoke {})]
-          (run-jobs invoke [["one" {:caller "claude-kimi-caller"} 1000]
-                            ["two" {:caller "claude-kimi-caller"} 1000]])
-          (let [queued (get-in (followups/snapshot)
-                               [:queued ["claude-kimi-caller" "caller-session-1"]])]
-            (is (= 1 (count queued)) "one outstanding reminder per caller session")
-            (is (= :kimi-work-target (:type (first queued))))
-            (is (str/starts-with? (:prompt (first queued))
-                                  "You can't use a Kimi seat without a work target"))))
-        (finally
-          (reg/deregister-agent! "claude-kimi-caller")
-          (followups/clear!)
-          (.delete f))))))
-
-(deftest work-without-a-target-is-refused-before-any-model-call
+(deftest a-requisition-without-purpose-or-for-an-unknown-target-is-refused
   (let [invoke (make-invoke {})
-        [[result] sent] (run-jobs invoke [["work" {:caller "claude-10"} 1000]])]
+        [[no-purpose unknown] sent]
+        (run-jobs invoke [["Requisition: M-a\n\nwork" {} 1000]
+                          [(req "M-aif-full-loop-70" "work") {} 1000]])]
     (is (empty? sent))
-    (is (nil? (:result result)))
-    (is (str/includes? (:error result) "without a work target"))))
-
-(deftest an-unknown-target-is-refused
-  (let [invoke (make-invoke {})
-        [[result] sent] (run-jobs invoke [["work" {:work-target "M-aif-full-loop-70"} 1000]])]
-    (is (empty? sent))
-    (is (str/includes? (:error result) "M-aif-full-loop-70"))))
+    (is (str/includes? (:error no-purpose) "has no purpose"))
+    (is (str/includes? (:error unknown) "M-aif-full-loop-70"))))
 
 (deftest a-target-change-clears-the-conversation
   (let [store (atom {:entries {} :order []})
         invoke (make-invoke {:evidence-store store})
         [_ [first-job second-job third-job]]
-        (run-jobs invoke [["first" {:work-target "M-a"} 1000]
-                          ["second" {:work-target "M-a"} 1000]
-                          ["third" {:work-target "T-c"} 1000]])]
+        (run-jobs invoke [[(req "M-a" "first") {} 1000]
+                          [(req "M-a" "second") {} 1000]
+                          [(req "T-c" "third") {} 1000]])]
     (is (= [2 4 2] (mapv count [first-job second-job third-job]))
         "same target keeps the exchange; the new target starts from the system message")
     (is (str/starts-with? (:content (last third-job)) "[Context:"))
     (is (str/ends-with? (:content (last third-job)) "third"))
-    (is (= [{:reason :target-change :context-target "M-a" :job-target "T-c"}]
-           (mapv #(select-keys % [:reason :context-target :job-target])
+    (is (= [{:reason :target-change :context-target "M-a" :job-target "T-c"
+             :purpose "test purpose"}]
+           (mapv #(select-keys % [:reason :context-target :job-target :purpose])
                  (compactions store))))))
 
-(deftest mission-id-counts-as-the-target
+(deftest turn-start-records-the-requisition
   (let [store (atom {:entries {} :order []})
-        invoke (make-invoke {:evidence-store store})
-        [_ sent] (run-jobs invoke [["first" {:mission-id "M-a"} 1000]
-                                   ["second" {:work-target "E-b"} 1000]])]
-    (is (= [2 2] (mapv count sent)))
-    (is (= [:target-change] (mapv :reason (compactions store))))))
+        invoke (make-invoke {:evidence-store store})]
+    (run-jobs invoke [[(req "E-b" "go") {} 1000]])
+    (is (= [{:reason :requisitioned :target "E-b" :purpose "test purpose"}]
+           (->> (:order @store)
+                (map #(get-in @store [:entries % :evidence/body]))
+                (filter #(= :turn-start (:event %)))
+                (mapv :requisition))))))
 
 (deftest a-bell-reply-continues-the-seats-target
   (let [store (atom {:entries {} :order []})
         invoke (make-invoke {:evidence-store store})
         [[_ reply-result] sent]
-        (run-jobs invoke [["first" {:work-target "M-a"} 1000]
+        (run-jobs invoke [[(req "M-a" "first") {} 1000]
                           ["reply" {:caller "auto-bellback"} 1000]
-                          ["next" {:work-target "M-a"} 1000]])]
+                          [(req "M-a" "next") {} 1000]])]
     (is (= "done" (:result reply-result)))
     (is (= [2 4 6] (mapv count sent))
         "the reply and the next same-target job both run on the M-a conversation")
@@ -283,12 +285,57 @@
 (deftest a-same-target-conversation-past-the-cap-is-cleared
   (let [store (atom {:entries {} :order []})
         invoke (make-invoke {:evidence-store store})
-        [_ sent] (run-jobs invoke [["first" {:work-target "M-a"} 130000]
-                                   ["second" {:work-target "M-a"} 1000]])]
+        [_ sent] (run-jobs invoke [[(req "M-a" "first") {} 600000]
+                                   [(req "M-a" "second") {} 1000]])]
     (is (= [2 2] (mapv count sent)))
     (is (= [:over-cap] (mapv :reason (compactions store))))))
 
-(deftest zai-seats-need-no-target-and-keep-their-history
+(deftest the-kimi-cap-leaves-room-for-long-jobs
+  ;; k3 and kimi-for-coding report context_length 1048576 (2026-09-24).
+  (is (= 512000 (:cap-tokens kimi/default-context-policy))))
+
+(defn- with-caller [agent-id session f]
+  (let [file (java.io.File/createTempFile "kimi-followups" ".edn")]
+    (.delete file)
+    (binding [followups/*path-override* (.getPath file)]
+      (followups/clear!)
+      (reg/register-agent! {:agent-id {:id/value agent-id :id/type :continuity}
+                            :type :claude
+                            :session-id session
+                            :invoke-fn (fn [_ _] {:result "ok"})
+                            :capabilities [:explore]})
+      (try
+        (f #(get-in (followups/snapshot) [:queued [agent-id session]]))
+        (finally
+          (reg/deregister-agent! agent-id)
+          (followups/clear!)
+          (.delete file))))))
+
+(deftest a-refusal-reminds-the-caller-like-inbox-zero
+  (with-caller "claude-kimi-caller" "caller-session-1"
+    (fn [queued]
+      (run-jobs (make-invoke {}) [["one" {:caller "claude-kimi-caller"} 1000]
+                                  ["two" {:caller "claude-kimi-caller"} 1000]])
+      (is (= 1 (count (queued))) "one outstanding reminder per caller session")
+      (is (= :kimi-work-target (:type (first (queued)))))
+      (is (str/starts-with? (:prompt (first (queued)))
+                            "You can't use a Kimi seat without a requisition")))))
+
+(deftest a-requisition-off-the-callers-clock-reminds-it-to-reclock
+  (with-caller "claude-kimi-caller" "caller-session-2"
+    (fn [queued]
+      (let [ctx {:caller "claude-kimi-caller"
+                 :inherited-clock {:clock {:mission-id "M-a"}}}]
+        (run-jobs (make-invoke {}) [[(req "M-a" "on the clock") ctx 1000]
+                                    [(req "T-c" "off the clock") ctx 1000]
+                                    [(req "T-c" "again") ctx 1000]])
+        (is (= [(str "You requisitioned kimi-test for T-c while clocked on M-a. "
+                     "If your work has moved to T-c, clock in on it so your "
+                     "clock says what you are doing.")]
+               (mapv :prompt (queued)))
+            "none for the clocked target; one per session for the other")))))
+
+(deftest zai-seats-need-no-requisition-and-keep-their-history
   (let [store (atom {:entries {} :order []})
         invoke (zai/make-invoke-fn {:agent-id "zai-test"
                                     :api-key "test-key"
@@ -297,6 +344,6 @@
                                     :memory-mode :none
                                     :cwd "/tmp"})
         [_ sent] (run-jobs invoke [["first" {} 200000]
-                                   ["second" {:work-target "M-a"} 200000]])]
+                                   [(req "M-a" "second") {} 200000]])]
     (is (= [2 4] (mapv count sent)))
     (is (empty? (compactions store)))))

@@ -1120,13 +1120,14 @@
 
 (defn- persist-turn-start!
   "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
-  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt]}]
+  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt requisition]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
      :body {:prompt (str prompt)
+            :requisition requisition
             :prompt-chars (count (str prompt))
             ;; Explicit join: Agency dispatch id -> this generated turn id.
             :dispatch-id (str dispatch-id)
@@ -1134,10 +1135,15 @@
 
 (def ^:private work-target-re #"^[MET]-[A-Za-z0-9][A-Za-z0-9._-]*$")
 
+(def ^:private requisition-line-re
+  ;; "Requisition: M-foo — purpose". The separator may be an em or en dash,
+  ;; "--" or "-"; anything after it is the purpose.
+  #"(?m)^[ \t>]*Requisition:[ \t]*(\S+)[ \t]*(?:—|–|--|-)?[ \t]*(.*?)[ \t]*$")
+
 (def continuation-callers
   "Callers whose jobs continue the seat's current work rather than start new
    work: the reply to a bell the seat sent, and a park it set. They carry no
-   target of their own and inherit the seat's."
+   requisition of their own and inherit the seat's target."
   #{"auto-bellback" "parked-resume"})
 
 (defn- canonical-holes-dirs
@@ -1163,81 +1169,120 @@
                    ["" "missions" "excursions" "tickets"]))
            (canonical-holes-dirs root)))))
 
-(defn clock-work-target
-  "The work target a caller's clock names: its excursion, else its mission.
-   A bare campaign is not a work target."
+(defn parse-requisition
+  "Read the caller's requisition from PROMPT: a line
+   `Requisition: <M-*|E-*|T-*> — <purpose>`.
+
+   Returns nil when there is no such line, {:target :purpose} for one target
+   (repeated lines naming the same target are fine: a forwarded bell may
+   quote one), or {:error :ambiguous :targets [...]} when lines disagree."
+  [prompt]
+  (let [lines (re-seq requisition-line-re (str prompt))
+        targets (distinct (map second lines))]
+    (cond
+      (empty? lines) nil
+      (next targets) {:error :ambiguous :targets (vec targets)}
+      :else {:target (first targets)
+             :purpose (some #(not-empty (nth % 2)) lines)})))
+
+(defn- clock-work-target
+  "The target a caller's clock names: its excursion, else its mission."
   [clock]
   (some #(some-> (get clock %) str str/trim not-empty)
         [:excursion-id :mission-id]))
 
-(defn job-work-target
-  "The target a job on a gated seat works on, and where it came from: named in
-   the dispatch, else the caller's clock at dispatch time (Joe, 2026-09-24:
-   the caller clocks in and that is what it sends). Never the seat's own
-   clock: that is left over from its previous job and would never change."
-  [invoke-context]
-  (if-let [named (some-> (or (:work-target invoke-context)
-                             (:mission-id invoke-context))
-                         str str/trim not-empty)]
-    {:target named :source :dispatch}
-    (when-let [clocked (clock-work-target
-                        (:clock (:inherited-clock invoke-context)))]
-      {:target clocked :source :caller-clock})))
+(def requisition-format
+  "Requisition: <M-*|E-*|T-*> — <one-line purpose>")
 
-(def missing-work-target-message
-  (str "You can't use a Kimi seat without a work target. Clock in on the "
-       "mission or excursion you are working on (your dispatches then carry "
-       "it), or name it with agency_send.py --target M-*/E-*/T-*. The seat "
-       "keeps its conversation per target and clears it when the target "
-       "changes, so keep your clock on what you are actually doing."))
+(defn- missing-requisition-message
+  [caller-target]
+  (str "You can't use a Kimi seat without a requisition. Put one line in the "
+       "call: `" requisition-format "`"
+       (if caller-target
+         (str " — your clock says " caller-target "; if that is what this is: "
+              "`Requisition: " caller-target " — <purpose>`.")
+         ". You are not clocked in: clock in on what you are working on.")
+       " The seat keeps its conversation per target and clears it when the "
+       "target changes."))
 
-(defn- notify-missing-work-target!
-  "Queue a typed followup to the caller's current session, the way inbox zero
-   reminds a seat of uncommitted work. One outstanding reminder per session."
-  [agent-id caller]
+(defn- requisition-error-message
+  [agent-id requisition target]
+  (case (:reason requisition)
+    :requisition-required (missing-requisition-message target)
+    :requisition-ambiguous
+    (str "Requisition lines name different targets "
+         (pr-str (:targets requisition)) "; name one.")
+    :requisition-purpose-required
+    (str "Requisition for " (:target requisition) " has no purpose. Use `"
+         requisition-format "`.")
+    :requisition-unresolved
+    (str "No holes/**/" (:target requisition) ".md in a canonical futon repo; "
+         "requisition an existing mission, excursion or ticket.")
+    (str agent-id " refused the requisition: " (pr-str requisition))))
+
+(defn- enqueue-caller-followup!
+  "Queue a typed followup to CALLER's current session, the way inbox zero
+   reminds a seat of uncommitted work. DEDUPE-TAG keeps one outstanding."
+  [caller dedupe-tag prompt metadata]
   (try
     (when-let [agent ((requiring-resolve 'futon3c.agency.registry/get-agent)
                       (str caller))]
       (when-let [session (some-> (:agent/session-id agent) str not-empty)]
         ((requiring-resolve 'futon3c.agency.followup-queue/enqueue!)
          {:agent (str caller) :session session :type :kimi-work-target
-          :dedupe-key (str "kimi-work-target:" caller ":" session)
-          :prompt (str missing-work-target-message
-                       " (Refused by " agent-id ".)")
-          :metadata {:refused-by (str agent-id)}})))
+          :dedupe-key (str "kimi-work-target:" caller ":" session ":" dedupe-tag)
+          :prompt prompt
+          :metadata metadata})))
     (catch Throwable _ nil)))
 
+(defn requisition-decision
+  "Admit or refuse a job on a requisition-gated seat. Continuations without a
+   requisition inherit the seat's target. Returns {:action :admit|:refuse
+   :reason kw :target :purpose}."
+  [{:keys [requisition continuation? resolve-fn]
+    :or {resolve-fn resolve-work-target}}]
+  (cond
+    (and continuation? (nil? requisition))
+    {:action :admit :reason :continuation}
+
+    (nil? requisition)
+    {:action :refuse :reason :requisition-required}
+
+    (:error requisition)
+    {:action :refuse :reason :requisition-ambiguous :targets (:targets requisition)}
+
+    (not (re-matches work-target-re (:target requisition)))
+    {:action :refuse :reason :requisition-unresolved :target (:target requisition)}
+
+    (str/blank? (:purpose requisition))
+    {:action :refuse :reason :requisition-purpose-required :target (:target requisition)}
+
+    (not (resolve-fn (:target requisition)))
+    {:action :refuse :reason :requisition-unresolved :target (:target requisition)}
+
+    :else
+    {:action :admit :reason :requisitioned
+     :target (:target requisition) :purpose (:purpose requisition)}))
+
 (defn context-carry-decision
-  "Decide what a job on a target-gated seat runs on.
+  "Decide what an admitted job on a requisition-gated seat runs on.
 
    Every tool round re-sends the whole conversation, so a seat that keeps one
    session across unrelated dispatches pays for all of them on every request
    (kimi-4, 2026-09-24: its 15:44 job opened at 335k tokens of earlier work
    and was refused by Kimi's 5-hour limit; see
-   holes/labs/kimi-5h-limit-2026-09-24.md). Joe's rule (2026-09-24): work on
-   such a seat names its mission, excursion or ticket, and when the target
-   changes the conversation is cleared. CAP-TOKENS additionally clears a
-   same-target conversation that has grown past it.
+   holes/labs/kimi-5h-limit-2026-09-24.md). Joe's rule (2026-09-24): each
+   call requisitions its mission, excursion or ticket, and when the target
+   changes the conversation is cleared. CAP-TOKENS also clears a same-target
+   conversation past it (a placeholder until same-target compaction exists).
 
-   Returns {:action :refuse|:keep|:compact :reason kw}."
-  [{:keys [cap-tokens]}
-   {:keys [job-target target-resolved? continuation? carried-tokens context-target]}]
+   Returns {:action :keep|:compact :reason kw}."
+  [{:keys [cap-tokens]} {:keys [job-target carried-tokens context-target]}]
   (cond
-    (and continuation? (nil? job-target))
-    (if (and carried-tokens cap-tokens (>= carried-tokens cap-tokens))
-      {:action :compact :reason :over-cap}
-      {:action :keep :reason :continuation})
-
-    (nil? job-target)
-    {:action :refuse :reason :work-target-required}
-
-    (not target-resolved?)
-    {:action :refuse :reason :work-target-unresolved}
-
     (nil? carried-tokens)
     {:action :keep :reason :fresh}
 
-    (not= job-target context-target)
+    (and job-target (not= job-target context-target))
     {:action :compact :reason :target-change}
 
     (and cap-tokens (>= carried-tokens cap-tokens))
@@ -1254,7 +1299,7 @@
 
 (defn- persist-context-compaction!
   [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
-           carried-tokens context-target job-target target-source]}]
+           carried-tokens context-target job-target purpose]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
@@ -1264,7 +1309,7 @@
             :carried-tokens carried-tokens
             :context-target context-target
             :job-target job-target
-            :target-source target-source
+            :purpose purpose
             :dispatch-id (str dispatch-id)}})))
 
 (defn- persist-round!
@@ -1791,21 +1836,18 @@ CALLS contains maps of tool name, arguments, and result digest."
                              dispatch-mission :dispatch/mission-id
                              clocked-mission :clock-store/current-clock
                              :else :d10/unclocked)
-            ;; Work-target gate: named in the dispatch, else the caller's
-            ;; clock at dispatch time.
-            {job-target :target target-source :source}
-            (job-work-target invoke-context)
+            ;; Requisition gate: the caller names its target in the call.
             continuation? (contains? continuation-callers
                                      (some-> (:caller invoke-context) str))
-            refusal (when context-policy
-                      (let [d (context-carry-decision
-                               context-policy
-                               {:job-target job-target
-                                :target-resolved? (boolean
-                                                   (some-> job-target
-                                                           resolve-work-target))
-                                :continuation? continuation?})]
-                        (when (= :refuse (:action d)) d)))
+            admission (when context-policy
+                        (requisition-decision
+                         {:requisition (parse-requisition prompt)
+                          :continuation? continuation?}))
+            refusal (when (= :refuse (:action admission)) admission)
+            job-target (:target admission)
+            purpose (:purpose admission)
+            caller-target (clock-work-target
+                           (:clock (:inherited-clock invoke-context)))
             runner-budget (:student-runner-budget invoke-context)
             call-timeout-ms
             (or (:timeout-ms invoke-context)
@@ -1844,16 +1886,14 @@ CALLS contains maps of tool name, arguments, and result digest."
            :error key-hint}
 
           refusal
-          (do
-            (when (= :work-target-required (:reason refusal))
-              (notify-missing-work-target! agent-id (:caller invoke-context)))
+          (let [message (requisition-error-message agent-id refusal caller-target)]
+            (enqueue-caller-followup!
+             (:caller invoke-context) "requisition-refused"
+             (str message " (Refused by " agent-id ".)")
+             {:refused-by (str agent-id) :reason (:reason refusal)})
             {:result nil
              :session-id sid
-             :error (if (= :work-target-required (:reason refusal))
-                      (str agent-id ": " missing-work-target-message)
-                      (str agent-id " refuses work target " (pr-str job-target)
-                           " (from " (name target-source) "): no holes/**/"
-                           job-target ".md in a canonical futon repo."))})
+             :error (str agent-id ": " message)})
 
           :else
           (do
@@ -1898,8 +1938,6 @@ CALLS contains maps of tool name, arguments, and result digest."
                          (context-carry-decision
                           context-policy
                           {:job-target job-target
-                           :target-resolved? true
-                           :continuation? continuation?
                            :carried-tokens carried
                            :context-target context-target}))
               compact? (= :compact (:action decision))
@@ -1920,22 +1958,39 @@ CALLS contains maps of tool name, arguments, and result digest."
               :turn-id turn-id :profile profile* :dispatch-id dispatch-id
               :decision decision :carried-tokens carried
               :context-target context-target :job-target job-target
-              :target-source target-source})
+              :purpose purpose})
             (sink! agent-id {:type "text"
                              :text (str "[context compacted: "
                                         (name (:reason decision)) ", "
                                         carried " tokens dropped]")}))
-          ;; A continuation keeps the seat's target; any other job's named
-          ;; target now owns the conversation.
-          (when-not (and continuation? (nil? job-target))
+          ;; A continuation keeps the seat's target; a requisition's target
+          ;; now owns the conversation.
+          (when job-target
             (reset! !context-target job-target))
+          ;; Side effect Joe wants: callers keep their own clock current. A
+          ;; requisition for something other than the caller's clock gets one
+          ;; reminder per caller session and target.
+          (when (and job-target (not= job-target caller-target)
+                     (not continuation?))
+            (enqueue-caller-followup!
+             (:caller invoke-context) (str "clock:" job-target)
+             (str "You requisitioned " agent-id " for " job-target
+                  (if caller-target
+                    (str " while clocked on " caller-target ".")
+                    " while not clocked in.")
+                  " If your work has moved to " job-target
+                  ", clock in on it so your clock says what you are doing.")
+             {:requisitioned job-target :caller-clock caller-target}))
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
                                 :sid sid
                                 :dispatch-id dispatch-id
                                 :turn-id turn-id
                                 :profile profile*
-                                :prompt prompt*})
+                                :prompt prompt*
+                                :requisition (when admission
+                                               (select-keys admission
+                                                            [:reason :target :purpose]))})
           (swap! !messages conj {:role "user" :content (str prompt*)}))
         (invoke-controls/register!
          agent-id interrupt-token
