@@ -1203,7 +1203,7 @@
          (str " — your clock says " caller-target "; if that is what this is: "
               "`Requisition: " caller-target " — <purpose>`.")
          ". You are not clocked in: clock in on what you are working on.")
-       " The seat keeps its conversation per target and clears it when the "
+       " The seat keeps its conversation per target and compacts it when the "
        "target changes."))
 
 (defn- requisition-error-message
