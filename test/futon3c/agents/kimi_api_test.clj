@@ -4,6 +4,8 @@
    the sampling block Kimi accepts."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.agency.followup-queue :as followups]
+            [futon3c.agency.registry :as reg]
             [futon3c.agents.kimi-api :as kimi]
             [futon3c.agents.zai-api :as zai]))
 
@@ -176,12 +178,66 @@
        (filter #(= :context-compaction (get-in % [:evidence/body :event])))
        (mapv :evidence/body)))
 
+(deftest the-callers-clock-is-the-default-target
+  ;; Joe (2026-09-24): the caller clocks in and sends that as the target.
+  ;; :inherited-clock is the caller's clock captured when the job was created.
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        clocked (fn [clock] {:caller "claude-x" :inherited-clock {:clock clock}})
+        [results sent]
+        (run-jobs invoke [["first" (clocked {:mission-id "M-a"}) 1000]
+                          ["second" (clocked {:mission-id "M-a"}) 1000]
+                          ["third" (clocked {:mission-id "M-a" :excursion-id "E-b"}) 1000]
+                          ["fourth" (assoc (clocked {:mission-id "M-a"})
+                                           :work-target "T-c") 1000]])]
+    (is (every? #(= "done" (:result %)) results))
+    (is (= [2 4 2 2] (mapv count sent))
+        "same clock keeps; the excursion is more specific; a named target beats the clock")
+    (is (= [{:reason :target-change :context-target "M-a" :job-target "E-b"
+             :target-source :caller-clock}
+            {:reason :target-change :context-target "E-b" :job-target "T-c"
+             :target-source :dispatch}]
+           (mapv #(select-keys % [:reason :context-target :job-target :target-source])
+                 (compactions store))))))
+
+(deftest a-campaign-clock-is-not-a-work-target
+  (let [invoke (make-invoke {})
+        [[result] sent] (run-jobs invoke [["work" {:inherited-clock
+                                                   {:clock {:campaign-id "C-x"}}} 1000]])]
+    (is (empty? sent))
+    (is (str/includes? (:error result) "without a work target"))))
+
+(deftest a-refusal-reminds-the-caller-like-inbox-zero
+  (let [f (java.io.File/createTempFile "kimi-followups" ".edn")]
+    (.delete f)
+    (binding [followups/*path-override* (.getPath f)]
+      (followups/clear!)
+      (reg/register-agent! {:agent-id {:id/value "claude-kimi-caller" :id/type :continuity}
+                            :type :claude
+                            :session-id "caller-session-1"
+                            :invoke-fn (fn [_ _] {:result "ok"})
+                            :capabilities [:explore]})
+      (try
+        (let [invoke (make-invoke {})]
+          (run-jobs invoke [["one" {:caller "claude-kimi-caller"} 1000]
+                            ["two" {:caller "claude-kimi-caller"} 1000]])
+          (let [queued (get-in (followups/snapshot)
+                               [:queued ["claude-kimi-caller" "caller-session-1"]])]
+            (is (= 1 (count queued)) "one outstanding reminder per caller session")
+            (is (= :kimi-work-target (:type (first queued))))
+            (is (str/starts-with? (:prompt (first queued))
+                                  "You can't use a Kimi seat without a work target"))))
+        (finally
+          (reg/deregister-agent! "claude-kimi-caller")
+          (followups/clear!)
+          (.delete f))))))
+
 (deftest work-without-a-target-is-refused-before-any-model-call
   (let [invoke (make-invoke {})
         [[result] sent] (run-jobs invoke [["work" {:caller "claude-10"} 1000]])]
     (is (empty? sent))
     (is (nil? (:result result)))
-    (is (str/includes? (:error result) "refuses work without a target"))))
+    (is (str/includes? (:error result) "without a work target"))))
 
 (deftest an-unknown-target-is-refused
   (let [invoke (make-invoke {})

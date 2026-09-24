@@ -1163,6 +1163,50 @@
                    ["" "missions" "excursions" "tickets"]))
            (canonical-holes-dirs root)))))
 
+(defn clock-work-target
+  "The work target a caller's clock names: its excursion, else its mission.
+   A bare campaign is not a work target."
+  [clock]
+  (some #(some-> (get clock %) str str/trim not-empty)
+        [:excursion-id :mission-id]))
+
+(defn job-work-target
+  "The target a job on a gated seat works on, and where it came from: named in
+   the dispatch, else the caller's clock at dispatch time (Joe, 2026-09-24:
+   the caller clocks in and that is what it sends). Never the seat's own
+   clock: that is left over from its previous job and would never change."
+  [invoke-context]
+  (if-let [named (some-> (or (:work-target invoke-context)
+                             (:mission-id invoke-context))
+                         str str/trim not-empty)]
+    {:target named :source :dispatch}
+    (when-let [clocked (clock-work-target
+                        (:clock (:inherited-clock invoke-context)))]
+      {:target clocked :source :caller-clock})))
+
+(def missing-work-target-message
+  (str "You can't use a Kimi seat without a work target. Clock in on the "
+       "mission or excursion you are working on (your dispatches then carry "
+       "it), or name it with agency_send.py --target M-*/E-*/T-*. The seat "
+       "keeps its conversation per target and clears it when the target "
+       "changes, so keep your clock on what you are actually doing."))
+
+(defn- notify-missing-work-target!
+  "Queue a typed followup to the caller's current session, the way inbox zero
+   reminds a seat of uncommitted work. One outstanding reminder per session."
+  [agent-id caller]
+  (try
+    (when-let [agent ((requiring-resolve 'futon3c.agency.registry/get-agent)
+                      (str caller))]
+      (when-let [session (some-> (:agent/session-id agent) str not-empty)]
+        ((requiring-resolve 'futon3c.agency.followup-queue/enqueue!)
+         {:agent (str caller) :session session :type :kimi-work-target
+          :dedupe-key (str "kimi-work-target:" caller ":" session)
+          :prompt (str missing-work-target-message
+                       " (Refused by " agent-id ".)")
+          :metadata {:refused-by (str agent-id)}})))
+    (catch Throwable _ nil)))
+
 (defn context-carry-decision
   "Decide what a job on a target-gated seat runs on.
 
@@ -1210,7 +1254,7 @@
 
 (defn- persist-context-compaction!
   [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
-           carried-tokens context-target job-target]}]
+           carried-tokens context-target job-target target-source]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
@@ -1220,6 +1264,7 @@
             :carried-tokens carried-tokens
             :context-target context-target
             :job-target job-target
+            :target-source target-source
             :dispatch-id (str dispatch-id)}})))
 
 (defn- persist-round!
@@ -1746,11 +1791,10 @@ CALLS contains maps of tool name, arguments, and result digest."
                              dispatch-mission :dispatch/mission-id
                              clocked-mission :clock-store/current-clock
                              :else :d10/unclocked)
-            ;; Work-target gate. The target is named by the dispatcher
-            ;; (:work-target, else :mission-id), never inferred.
-            job-target (some-> (or (:work-target invoke-context)
-                                   (:mission-id invoke-context))
-                               str str/trim not-empty)
+            ;; Work-target gate: named in the dispatch, else the caller's
+            ;; clock at dispatch time.
+            {job-target :target target-source :source}
+            (job-work-target invoke-context)
             continuation? (contains? continuation-callers
                                      (some-> (:caller invoke-context) str))
             refusal (when context-policy
@@ -1800,16 +1844,16 @@ CALLS contains maps of tool name, arguments, and result digest."
            :error key-hint}
 
           refusal
-          {:result nil
-           :session-id sid
-           :error (if (= :work-target-required (:reason refusal))
-                    (str agent-id " refuses work without a target: name the "
-                         "mission, excursion or ticket (M-*, E-*, T-*) with "
-                         "agency_send.py --target, or \"work-target\" in the "
-                         "payload. The seat's conversation is kept per target.")
-                    (str agent-id " refuses work target " (pr-str job-target)
-                         ": no holes/**/" job-target ".md in a canonical "
-                         "futon repo."))}
+          (do
+            (when (= :work-target-required (:reason refusal))
+              (notify-missing-work-target! agent-id (:caller invoke-context)))
+            {:result nil
+             :session-id sid
+             :error (if (= :work-target-required (:reason refusal))
+                      (str agent-id ": " missing-work-target-message)
+                      (str agent-id " refuses work target " (pr-str job-target)
+                           " (from " (name target-source) "): no holes/**/"
+                           job-target ".md in a canonical futon repo."))})
 
           :else
           (do
@@ -1875,7 +1919,8 @@ CALLS contains maps of tool name, arguments, and result digest."
              {:evidence-store evidence-store :agent-id agent-id :sid sid
               :turn-id turn-id :profile profile* :dispatch-id dispatch-id
               :decision decision :carried-tokens carried
-              :context-target context-target :job-target job-target})
+              :context-target context-target :job-target job-target
+              :target-source target-source})
             (sink! agent-id {:type "text"
                              :text (str "[context compacted: "
                                         (name (:reason decision)) ", "

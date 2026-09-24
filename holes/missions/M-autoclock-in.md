@@ -833,3 +833,24 @@ passed, not inferred. It was replaced by:
   Each clear writes a `:context-compaction` evidence record.
 
 zai seats have no policy and are unchanged.
+
+**Clock as the default target (Joe, 2026-09-24).** "The calling agent should
+clock in on something and then just send that as its work target." A job
+with no named target now takes the caller's clock at dispatch time
+(`:inherited-clock`, INSTANTIATE-7a): its excursion if set, else its mission.
+The seat's own clock is never used, because it is left over from its
+previous job and would never change. With neither a named target nor a
+clock, the job is refused and the caller's current session gets a typed
+followup (`:kimi-work-target`, through the inbox-zero followup queue, one
+outstanding per session): "You can't use a Kimi seat without a work
+target…".
+
+**Open: clock drift.** This makes the gate only as good as the caller's
+clock. Seen live at 16:20Z: claude-10 was clocked to M-futon-seams by a
+mention in its operator turn, and claude-1 was clocked to M-futon-seams
+*by inheritance* from a claude-10 dispatch. Every kimi call claude-1 makes
+(per-turn analysis included) would therefore carry M-futon-seams until
+something reclocks it. A clock that doesn't follow the work means the same
+target is sent while the topic moves on, so the conversation is never
+cleared. The 128k cap is the only backstop for that until reclocking tracks
+the work.
