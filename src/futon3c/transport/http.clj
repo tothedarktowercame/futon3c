@@ -8852,7 +8852,19 @@
                      (assoc :trigger (keyword (:trigger payload)))
 
                      (true? (:measured-acquisition payload))
-                     (assoc :measured-acquisition? true))
+                     (assoc :measured-acquisition? true)
+
+                     ;; A flight (futon2.aif.flight): the click assembles
+                     ;; only the flight's target with the flight's wants.
+                     ;; Sent as an EDN string so keyword tokens survive the
+                     ;; JSON boundary; read with clojure.edn (no eval).
+                     (nonblank-string? (:flight-edn payload))
+                     (assoc :flight (let [f (edn/read-string (:flight-edn payload))]
+                                      (when-not (and (map? f) (nonblank-string? (:target f))
+                                                     (vector? (:wants f)))
+                                        (throw (ex-info "flight-edn must be a map with :target and :wants"
+                                                        {:status 400 :error :invalid-flight-edn})))
+                                      f)))
               _ (when (and (true? (:r10-commissioned payload))
                            (contains? payload :run4-pin-ref))
                   (throw (ex-info "R10 commissioned click cannot carry a RUN4 pin"
