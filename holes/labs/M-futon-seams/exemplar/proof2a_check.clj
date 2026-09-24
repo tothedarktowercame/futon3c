@@ -13,6 +13,10 @@
                 "/proto/kernels_lib.clj"))
 
 (def LIB "/home/joe/code/futon3/library")
+;; PROOF-2a W_0 requires :machine-constructed. A hand-built candidate fails W_0.
+;; The falsifiers bind this false so each bad extract tests the condition it
+;; names, not the construction condition every hand-built record already fails.
+(def ^:dynamic *require-machine-construction* true)
 (defn sha256 [f]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
     (apply str (map #(format "%02x" %) (.digest md (java.nio.file.Files/readAllBytes (.toPath (java.io.File. f))))))))
@@ -90,8 +94,9 @@
         problems (atom []) findings (atom [])
         fail #(swap! problems conj (str "W_0 " cid ": " %))]
     (when (not= :machine-constructed (:kind rec))
-      (swap! findings conj {:kind :construction-not-machine :candidate cid :receipt-kind (:kind rec)
-                            :note "PROOF-2a W_0 requires :machine-constructed; this clause is not satisfied by this record"}))
+      (if *require-machine-construction*
+        (fail (str "construction receipt is " (:kind rec) "; PROOF-2a W_0 requires :machine-constructed (replay of the constructor on the recorded interpretations)"))
+        (swap! findings conj {:kind :construction-not-machine :candidate cid :receipt-kind (:kind rec)})))
     (doseq [[pid i] (:interpretations cand)
             :let [path (get-in i [:receipt :source :path]) f (when path (str "/home/joe/code/" path))]]
       (when (str/blank? (str (:author i))) (fail (str pid " has no interpretation author")))
@@ -182,13 +187,16 @@
       {:keys [problems findings]} (check rec)]
   (println "PROOF-2a check:" f)
   (println (if (empty? problems) "  W_t, W_0: PASS" (str "  FAIL (" (count problems) ")")))
+  (let [rest-problems (binding [*require-machine-construction* false] (:problems (check rec)))]
+    (println "  with the construction condition set aside:" (if (empty? rest-problems) "PASS" (str "FAIL (" (count rest-problems) ")"))))
   (doseq [p problems] (println "   -" p))
   (println "  findings (typed, not failures):" (count findings))
   (doseq [x findings] (println "   -" (pr-str x)))
   (println "  falsifiers (each bad extract must fail):")
   (let [vac (atom 0)]
     (doseq [[label bad] (falsifiers rec)]
-      (let [caught (seq (:problems (check bad)))]
+      (let [caught (binding [*require-machine-construction* false] (seq (:problems (check bad))))]
         (when-not caught (swap! vac inc))
         (println "   " (if caught "caught " "VACUOUS") label)))
     (System/exit (if (or (seq problems) (pos? @vac)) 1 0))))
+;; Exit 1 on this record today is expected: both candidates are hand-built.
