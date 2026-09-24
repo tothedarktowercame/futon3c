@@ -25,6 +25,7 @@ MISSION = "holes/missions/M-futon-seams.md"
 ANNOTATIONS = "holes/labs/M-futon-seams/annotations.edn"
 CASCADES = ["holes/labs/M-futon-seams/proto/instance-4.edn",
             "holes/labs/M-futon-seams/proto/instance-5.edn",
+            "holes/labs/M-futon-seams/proto/instance-6.edn",
             "holes/labs/M-futon-seams/proto/instance-7.edn"]
 
 OPEN, CLOSE = "\x00", "\x01"          # anchor sentinels, absent from markdown

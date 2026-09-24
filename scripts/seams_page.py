@@ -16,6 +16,7 @@ C = {"pattern": "#1b6b3a", "hole": "#a8791d", "accent": "#b8431f",
 
 TITLES = {4: "Provider versus role",
           5: "Transport and Room",
+          6: "Prompts as an interface",
           7: "Editor coupling"}
 
 STANDS = {
@@ -30,6 +31,11 @@ STANDS = {
      "<code>ws.clj</code>; <b>16 hardcoded <code>#futon</code> literals</b> pin the room; and Matrix "
      "reaches the system through <code>matrix-ircd</code>, impersonating the transport the code "
      "insists on."),
+ 6: ("The couplings were hardcoded not only in code but <b>in the prompt text given to agents</b> — "
+     "&ldquo;tell claude-5 to do blah and store it at /home/joe&rdquo;. The retrofit left the "
+     "original in place and added a mode flag, a shadow module mirroring the call sites, and "
+     "regex interception of natural language at runtime. Both versions are live at once. This is "
+     "the only one of the four cascades that exercises a <b>conflict</b>."),
  7: ("<b>30 <code>.el</code> files, 23,325 lines.</b> <code>session-turn-analysis.el</code> is "
      "<b>497 lines of which 48</b> touch buffers, overlays, points, markers, faces or windows — "
      "about a tenth. The turn record format already has <b>three writers</b> (elisp, "
@@ -145,12 +151,20 @@ def instance_section(b):
             f'<span class="evia">{html.escape(e["via"])}</span></p>')
 
     wide = []
-    for w in b["wide-states"][:6]:
+    for w in sorted(b["wide-states"], key=lambda w: not w.get("conflicts"))[:6]:
         st = ", ".join(short(s) for s in w["state"]) or "∅ (the initial state)"
         fr = " · ".join(short(f) for f in w["frontier"])
-        wide.append(f'<p class="wide"><span class="wstate">{html.escape(st)}</span><br>'
+        conf = ""
+        if w.get("conflicts"):
+            pairs = "; ".join(
+                f'{html.escape(short(a))} produces {html.escape(", ".join(short(t) for t in toks))}, '
+                f'which {html.escape(short(b))} forbids'
+                for a, b, toks in w["conflicts"])
+            conf = f'<br><span class="wconf">CONFLICT — {pairs}</span>'
+        wide.append(f'<p class="wide{" hasconf" if w.get("conflicts") else ""}">'
+                    f'<span class="wstate">{html.escape(st)}</span><br>'
                     f'<span class="wfront">both enabled, neither above the other: '
-                    f'{html.escape(fr)}</span></p>')
+                    f'{html.escape(fr)}</span>{conf}</p>')
 
     holes = ""
     for h in (b.get("holes") or []):
@@ -260,6 +274,8 @@ td { padding:.3rem .7rem .3rem 0; border-bottom:1px solid #f0ece0; vertical-alig
 .wide { font-size:.73rem; margin:0 0 .8rem; break-inside:avoid; max-width:none; }
 .wstate { font-family:ui-monospace,Menlo,monospace; color:#777; }
 .wfront { color:#b8431f; }
+.wconf { color:#8a2a12; font-weight:600; }
+.wide.hasconf { background:#fbe6dd; padding:.4rem .5rem; border-left:2px solid #b8431f; }
 .note { font-size:.8rem; color:#555; }
 .runs td:first-child, .runs th:first-child { text-align:right; padding-right:1.2rem; }
 .runs td { font-family:ui-monospace,Menlo,monospace; font-size:.74rem; }

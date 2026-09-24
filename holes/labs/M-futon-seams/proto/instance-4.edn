@@ -76,15 +76,15 @@
              :author "claude-1"}
    :forces "When several files each fill the structure from their own reading of the counterpart's semantics, each fills it differently and no single reading is checkable."}
 
-  :memory/no-tightening-while-held
+  :gauntlet/placenta-transfer
   {:guard {:needs #{:sites-enumerated :one-producer} :forbids #{}}
    :produces #{:caller-converted}
-   :receipt {:source {:path "futon3/library/memory/no-tightening-while-held.flexiarg"
-                      :sha256 "c331922e1542c5eb2bf83f5ddeaf3eb9c2bdbd823d3f2f4b17d827593e70d52d"}
-             :reading "Seats hold live bindings under the string reading. Converting a caller narrows what a valid binding is, which is a tightening — so it is done without invalidating what running seats already hold."
-             :scope "The pattern is about schema narrowing at write time; a call-site conversion is the same narrowing applied to an implicit schema."
+   :receipt {:source {:path "futon3/library/gauntlet/placenta-transfer.flexiarg"
+                      :sha256 "9771eca50e93c42de6b1ea22e188c770635d62830ca190f5ae4ca18056a069cd"}
+             :reading "Its conclusion IS the conversion move: identify which functions the human is performing as a surrogate for missing infrastructure and transfer them one at a time to the system. The function here is resolving which seat plays a role, and the mission records Joe performing it by hand four times in one evening. Converting a caller is that transfer, once."
+             :scope "The pattern's wider list of AIF functions the operator carries does not transfer; only the identify-and-move-one discipline is used."
              :author "claude-1"}
-   :forces "A write-time tightening looks like a boundary crossed once. It is not: records are persisted and re-validated later, so state agents already hold is retroactively invalidated."}
+   :forces "The human is currently performing multiple AIF functions simultaneously, as a surrogate for infrastructure that does not exist yet."}
 
   :translation/test-by-reproducing-behaviour
   {:guard {:needs #{:caller-converted} :forbids #{}}
@@ -116,14 +116,14 @@
    :kind :differentiates
    :via "Once a binding is a record, asking who may write it is the next distinction; with no record there is no producer question to ask."}
   {:context :or3/count-every-card-back
-   :pattern :memory/no-tightening-while-held
+   :pattern :gauntlet/placenta-transfer
    :kind :jointly-with
    :via "You cannot convert callers safely without knowing which callers exist; the enumeration and the single resolver jointly enable the conversion, and neither alone does."}
   {:context :cycle-machine/single-producer
-   :pattern :memory/no-tightening-while-held
+   :pattern :gauntlet/placenta-transfer
    :kind :jointly-with
    :via "There must be something to convert callers TO before converting them; this is the second of the two joint contexts."}
-  {:context :memory/no-tightening-while-held
+  {:context :gauntlet/placenta-transfer
    :pattern :translation/test-by-reproducing-behaviour
    :kind :differentiates
    :via "A converted caller is what the redirect test has to act on; before that there is nothing whose behaviour could follow a rebinding."}

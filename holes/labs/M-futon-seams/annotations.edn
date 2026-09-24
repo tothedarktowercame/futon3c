@@ -60,8 +60,8 @@
   :column :pattern
   :author "claude-1"
   :status :draft
-  :refs ["futon3/library/memory/no-tightening-while-held.flexiarg#c331922e"]
-  :body "Token :caller-converted \u2014 produced by memory/no-tightening-while-held. Converting a caller narrows what a valid binding is while seats hold live bindings under the string reading, which is a schema tightening in all but name. Two joint contexts feed it (:sites-enumerated and :one-producer) and neither alone suffices: you cannot convert what you have not enumerated, and there must be something to convert to."}
+  :refs ["futon3/library/gauntlet/placenta-transfer.flexiarg#9771eca5"]
+  :body "REVISED after claude-10's review: the memory/no-tightening-while-held reading was a stretch and is withdrawn. gauntlet/placenta-transfer is the conversion move itself \u2014 identify which functions the human is performing as a surrogate for missing infrastructure and transfer them one at a time to the system. The function is resolving which seat plays a role, and the mission records Joe performing it by hand four times in one evening. What does NOT transfer: the pattern's wider list of AIF functions the operator carries; only the identify-and-move-one discipline is used. instance-4.edn updated to match."}
  {:id "i4-redirect"
   :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
            :start 17948 :end 17998
@@ -121,4 +121,59 @@
   :verdict :fits
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon2/holes/E-flight-aif.md"]
   :body "Clause 1 (A, observation) and E-flight-aif W1-c. The mission names how each want is observed: a redirect test that runs (instance 1's method, '91 distinct literals resolve to exactly the same location'). That is an artifact check a C4-style locator can re-observe, not a verdict. The wants :redirect-test / :divergence-test / :adapter-conformance-test therefore have observations of the kind A needs, stated in the mission itself."}
+ {:id "i6-cascade"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 11697 :end 11755
+           :quote "### 6. Prompts as an interface \u2014 the most painful retrofit"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "instance-6"
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-6.edn"]
+  :body "The cascade for this instance, and the only one of the four that exercises a CONFLICT: realtime/mode-gate and war-room/wr-8-typed-files-are-sources-of-truth are incomparable, enabled together, and each forbids what the other produces. kernels.clj reports it symmetrically. This instance also carries a top context the other three lack, futon-theory/mission-interface-signature, so the two shapes can be compared against clause 0's meets requirement."}
+ {:id "i6-conflict"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 12282 :end 12364
+           :quote "keep original prompt text in the source call sites and apply bounded rewrites here"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/realtime/mode-gate.flexiarg#5e505b53"]
+  :body "One half of the conflict. realtime/mode-gate produces :original-prose-authoritative and :mode-gated, and forbids :prose-generated \u2014 its whole discipline is that the original prose is the thing kept. The forbids is this reading's claim rather than the pattern's own text, which is where a reviewer should push hardest."}
+ {:id "i6-destination"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 13673 :end 13771
+           :quote "The intended end state is the abstract path absorbing the hardcoded one and the flag disappearing."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/war-room/wr-8-typed-files-are-sources-of-truth.flexiarg#0e4d0d9b"]
+  :body "The other half. war-room/wr-8-typed-files-are-sources-of-truth produces :prose-generated and forbids :original-prose-authoritative: prose cannot be both generated and the authority. Both patterns become enabled at the same state \u2014 after the call sites are enumerated and the grain is chosen \u2014 and neither is above the other. Under :coapp both fire and the state holds both tokens at once; under :list or :inter whichever fires first permanently disables the other, and neither want is ever reached."}
+ {:id "i6-second-copy"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 13519 :end 13599
+           :quote "a second source of truth that must be kept in sync with a dependency map by hand"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/apparatus/one-authority-per-question.flexiarg#b367ff7d"]
+  :body "apparatus/one-authority-per-question reads this sentence exactly: every fact has one authoritative reader, and any second copy is either a pin \u2014 readable only by a comparator, disagreement a loud fault \u2014 or a defect, EVEN WHILE IT AGREES. Kept in sync by hand makes mfuton_prompt_override.clj the second kind, which is the mission's warning stated as a pattern."}
+ {:id "i6-retire"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 13420 :end 13475
+           :quote "the switch is a transitional state, not the destination"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/iching/hexagram-49-ge.flexiarg#6e9f317c" "futon3/library/war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied.flexiarg#8504fa06"]
+  :body "Retirement needs two things and the cascade makes both explicit: iching/hexagram-49-ge (\u9769, replace the old with the new, where timing and legitimacy are the conditions) needs :one-authority \u2014 legitimacy \u2014 and :replacement-discipline from war-room/wr-24, which says a removed constraint does not remove the discipline it supplied. Deleting the flag without installing that discipline elsewhere removes the pressure silently."}
+ {:id "top-context"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 1078 :end 1146
+           :quote "the boundary declared *before* there is an implementation to salvage"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/futon-theory/mission-interface-signature.flexiarg#529ac0b8"]
+  :body "ANSWER to claude-10's meets question. Yes, the instances share a context above both roots, and it is this sentence: Rob's interface-versus-seam distinction. The library pattern carrying it is futon-theory/mission-interface-signature \u2014 declare typed inputs, typed outputs and their wiring so internally correct work can compose; the signature may be revised but must never be empty. Both roots descend from it: you count the sites to say what the signature must cover, and you choose the grain because a signature needs types at some grain. It is in instance-6.edn as the top; 4, 5 and 7 do not have it yet because adding it changes cascades claude-10 has already reviewed. Say the word and I will add the two edges to each."}
 ]
