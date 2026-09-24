@@ -798,3 +798,31 @@ Validation: `clojure -M:test:test-all -n futon3c.agency.clock-decision-test`:
 15 tests / 100 assertions pass (baseline 13 / 90 pass), including the existing
 real-backend slow tests and the real-file check. Clj-kondo: zero errors/warnings;
 check-parens: OK on both changed Clojure files.
+
+## INSTANTIATE-8 — the clock decides what a kimi seat carries (claude-11, 2026-09-24)
+
+First consumer that *acts* on the job clock rather than recording it. Every
+kimi seat kept one conversation across all its dispatches, so jobs opened at
+166k-335k tokens of other missions' history and exhausted Kimi's 5-hour quota
+twice on 2026-09-24 (`holes/labs/kimi-5h-limit-2026-09-24.md`). Joe: block
+new jobs that don't compact, and use this to make autoclock work on Kimi.
+
+`zai-api/context-carry-decision` (opt-in `:context-policy`, on for kimi at
+32k floor / 128k cap, `65b1f708`): before a job runs, the carried
+conversation is kept only if it is under the floor, or the job's clock (the
+dispatch `:mission-id`, else `clock-store/current-clock` for the seat's
+session, which is where admission projects the decision) equals the mission
+that built the conversation and it is under the cap. Otherwise it is cleared,
+the prompt says so, and a `:context-compaction` evidence record names the
+reason (`:mission-change`, `:unclocked-job`, `:over-cap`). An unclocked job
+cannot claim continuity, so an unresolvable target now costs the job its
+carried context: that is the enforcement.
+
+Consequence for the open gaps above: jobs on futon2 missions (e.g.
+`M-evaluate-policies`) resolve `unresolvable-target` while futon2 is missing
+from the JVM's FUTON3C_REPOS, so on kimi they always start fresh.
+
+Tests: `futon3c.agents.kimi-api-test` 14 / 42, including the clock-store
+path; `futon3c.agents.zai-api-test` 20 / 105 unchanged; kondo and
+check-parens clean. Hot-loaded from master; seats built before the reload
+keep their old invoke closures until re-registered.
