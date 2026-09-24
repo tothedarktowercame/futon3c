@@ -2008,7 +2008,7 @@ Returns non-nil once prompt markers are installed."
       (setq-local agent-chat--prompt-marker (copy-marker (point) t))
       (setq-local agent-chat--separator-start (copy-marker (point)))
       (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
-      (insert (propertize "> " 'face 'agent-chat-prompt-face))
+      (agent-chat--insert-prompt)
       ;; Input-start must stay fixed at prompt boundary while user types.
       (setq-local agent-chat--input-start (copy-marker (point)))
       (set-marker-insertion-type agent-chat--prompt-marker t)

@@ -815,6 +815,25 @@ the current \"Cooked for\" line."
            fill-column
            80)))
 
+(defun agent-chat--insert-prompt (&optional face)
+  "Insert the \"> \" prompt at point, read-only, in FACE.
+Read-only because the prompt is the wall between typed input and the
+transcript: \"M-12 M-DEL\" at the input line once killed backward through
+\"> \", the turn-end rule and half the Cooked line, leaving claude-10 with no
+prompt (2026-09-24).  Not front-sticky, so messages still insert at
+`agent-chat--prompt-marker' just before it; rear-nonsticky, so typed input
+after it is neither read-only nor prompt-faced.  Face as a TEXT-PROPERTY, not
+an overlay: as an overlay it ballooned to span the whole buffer once the
+text-face overlays were removed, painting everything prompt-face orange
+\(2026-07-02)."
+  (let ((start (point)))
+    (insert "> ")
+    (add-text-properties
+     start (point)
+     `(face ,(or face 'agent-chat-prompt-face)
+       read-only "Agent REPL prompt is read-only; type after \"> \""
+       rear-nonsticky (face read-only)))))
+
 (defun agent-chat--ensure-prompt-markers! ()
   "Ensure prompt markers are usable, repairing from the live prompt if needed."
   (let (prompt-pos)
@@ -844,7 +863,7 @@ the current \"Cooked for\" line."
             (goto-char (point-max))
             (unless (bolp) (insert "\n"))
             (setq prompt-pos (point))
-            (insert "> ")))))
+            (agent-chat--insert-prompt)))))
     (when prompt-pos
       (setq agent-chat--prompt-marker (copy-marker prompt-pos t))
       (setq agent-chat--separator-start (copy-marker prompt-pos))
@@ -2641,7 +2660,8 @@ CHAT-BUFFER is the chat buffer. HOOKS is the hooks plist."
   (when (process-live-p agent-chat--pending-process)
     (kill-process agent-chat--pending-process)
     (setq agent-chat--pending-process nil))
-  (erase-buffer)
+  (let ((inhibit-read-only t))
+    (erase-buffer))
   (funcall init-fn))
 
 (defun agent-chat-init-buffer (config)
@@ -2719,15 +2739,7 @@ CONFIG keys:
     (setq agent-chat--prompt-marker (point-marker))
     (setq agent-chat--separator-start (point-marker))
     (insert (propertize (make-string 72 ?─) 'face 'font-lock-comment-face) "\n")
-    (let ((prompt-start (point)))
-      (insert "> ")
-      ;; Face as a TEXT-PROPERTY, not an overlay.  As an overlay it ballooned to
-      ;; span the whole buffer once the text-face overlays were removed (inserted
-      ;; message text got absorbed into the prompt overlay), painting everything
-      ;; prompt-face orange (2026-07-02).  Text-props can't grow on insertion;
-      ;; rear-nonsticky keeps typed input from inheriting the face.
-      (put-text-property prompt-start (point) 'face prompt-face)
-      (put-text-property prompt-start (point) 'rear-nonsticky '(face)))
+    (agent-chat--insert-prompt prompt-face)
     (setq agent-chat--input-start (point-marker))
     (set-marker-insertion-type agent-chat--input-start nil)
     ;; Marker advances when messages are inserted
