@@ -111,7 +111,7 @@ def render_markdown(text):
                 and not re.match(r"^\s*([-*]|\d+\.)\s+", lines[i]):
             para.append(lines[i]); i += 1
         out.append(f"<p>{inline(' '.join(para))}</p>")
-    return "\n".join(out)
+    return out
 
 
 # ---------------------------------------------------------------- anchors
@@ -211,24 +211,37 @@ def main():
             figures[f"instance-{b['instance']}"] = seams_page.svg(b)
 
     marked, live, stale = place_anchors(text, notes)
-    body = resolve_sentinels(render_markdown(marked))
+    blocks = [resolve_sentinels(b) for b in render_markdown(marked)]
+
+    # Each note is emitted in the flow, directly after the block its anchor
+    # sits in. On a wide screen the script lifts it into the margin and levels
+    # it with the anchor; on a narrow one it stays where it is and folds under
+    # the passage it belongs to, which is the behaviour a phone needs.
+    placed = set()
+    body_parts = []
+    for b in blocks:
+        body_parts.append(b)
+        for n in notes:
+            if n["id"] in placed:
+                continue
+            if f'id="anc-{n["id"]}"' in b:
+                body_parts.append(note_html(n, figures))
+                placed.add(n["id"])
+    # a note whose anchor is stale has no span in the text; keep it visible
+    for n in notes:
+        if n["id"] not in placed:
+            body_parts.append(note_html(n, figures))
+    body = "\n".join(body_parts)
 
     cols = {"a": [n for n in notes if n.get("column") == "pattern"],
             "b": [n for n in notes if n.get("column") == "proof2a"]}
-    # Notes are emitted into their rails server-side: the page is readable with
-    # no JavaScript at all, and the script only sets each note's vertical offset.
-    rail_a = "".join(note_html(n, figures) for n in notes
-                     if n.get("column") != "proof2a")
-    rail_b = "".join(note_html(n, figures) for n in notes
-                     if n.get("column") == "proof2a")
 
     counts = (f'{len(notes)} notes — {len(cols["a"])} pattern, {len(cols["b"])} PROOF-2a; '
               f'{sum(1 for n in notes if n.get("status") == "reviewed")} reviewed, '
               f'{len(stale)} with a stale anchor')
 
     open(a.out, "w", encoding="utf-8").write(PAGE.format(
-        css=CSS, js=JS, body=body, rail_a=rail_a, rail_b=rail_b,
-        rev=html.escape(revlabel),
+        css=CSS, js=JS, body=body, rev=html.escape(revlabel),
         sha=sha[:16], counts=html.escape(counts),
         mission=html.escape(MISSION)))
     print(a.out)
@@ -238,99 +251,125 @@ def main():
 
 
 CSS = """
-:root { --measure: 34rem; --gutter: 1.8rem; --colw: 20rem; }
+/* Mission left, a WIDE margin right: the margin is a working second column,
+   not a gutter. The text keeps a reading measure and the margin takes all the
+   rest, which is the arrangement the mark7 typeset previews use. */
+:root { --measure: 33rem; --gutter: 2.4rem; --pad: 3vw;
+        --margin-w: max(26rem, calc(100vw - 2*var(--pad) - var(--measure) - var(--gutter))); }
 *,*::before,*::after { box-sizing:border-box; }
-body { margin:0; padding:2.5rem 3vw 8rem; background:#fffff8; color:#111;
-       font:1.02rem/1.62 et-book, Palatino, "Palatino Linotype", Georgia, serif; }
-.page { position:relative; display:grid; grid-template-columns:
-        var(--measure) var(--colw) var(--colw); column-gap:var(--gutter);
-        align-items:start; }
-.main { grid-column:1; }
-.rail { position:relative; }
-.rail-a { grid-column:2; }
-.rail-b { grid-column:3; }
-.railhead { position:sticky; top:0; background:#fffff8; padding:.2rem 0 .4rem;
-            font-size:.68rem; font-variant:small-caps; letter-spacing:.07em;
-            color:#999; border-bottom:1px solid #eae6d8; z-index:2; }
-h1 { font-size:1.55rem; font-weight:400; margin:0 0 .2rem; }
-h2 { font-size:1.15rem; font-weight:400; margin:2.2rem 0 .5rem;
+body { margin:0; padding:2.5rem var(--pad) 8rem; background:#fffff8; color:#111;
+       font:1.04rem/1.65 et-book, Palatino, "Palatino Linotype", Georgia, serif; }
+.page { display:grid; grid-template-columns: var(--measure) var(--margin-w);
+        column-gap:var(--gutter); align-items:start; }
+.main { grid-column:1; min-width:0; }
+.margin { grid-column:2; position:relative; min-width:0; }
+.mhead { position:sticky; top:0; z-index:3; background:#fffff8; margin:0;
+         padding:.15rem 0 .35rem; border-bottom:1px solid #eae6d8;
+         font-size:.66rem; font-variant:small-caps; letter-spacing:.08em; color:#999;
+         display:grid; grid-template-columns:1fr 1fr; column-gap:1.6rem; }
+.mh-a { color:#1b6b3a; } .mh-b { color:#2a4d8f; }
+h1 { font-size:1.6rem; font-weight:400; margin:0 0 .2rem; }
+h2 { font-size:1.18rem; font-weight:400; margin:2.4rem 0 .5rem;
      border-bottom:1px solid #e6e2d4; padding-bottom:.25rem; }
-h3 { font-size:.98rem; font-weight:600; margin:1.6rem 0 .4rem; }
-p { margin:0 0 .85rem; }
+h3 { font-size:1rem; font-weight:600; margin:1.7rem 0 .4rem; }
+p { margin:0 0 .88rem; }
 code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.85em; }
-pre.code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.72rem;
+pre.code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.71rem;
            line-height:1.5; background:#f4f2ea; border-left:3px solid #c9c4b0;
            padding:.6rem .8rem; overflow-x:auto; white-space:pre-wrap; }
-blockquote { margin:0 0 .85rem; padding-left:.9rem; border-left:3px solid #c9c4b0;
-             color:#444; }
-ul,ol { margin:0 0 .85rem; padding-left:1.2rem; }
+blockquote { margin:0 0 .88rem; padding-left:.9rem; border-left:3px solid #c9c4b0; color:#444; }
+ul,ol { margin:0 0 .88rem; padding-left:1.2rem; }
 li { margin:0 0 .3rem; }
 .anchor { border-bottom:1.5px solid #b8431f; cursor:pointer; }
 .anchor.lit { background:#fbe6dd; }
-.note { position:absolute; width:100%; font-size:.72rem; line-height:1.45;
-        border-left:2px solid #ddd; padding:.15rem 0 .15rem .6rem; color:#333; }
+
+/* A note lives in the flow and is lifted into the margin by the script when
+   there is room. Both states are readable; only one is Tufte. */
+.note { font-size:.74rem; line-height:1.5; border-left:2px solid #ddd;
+        padding:.2rem 0 .2rem .65rem; color:#333; margin:.7rem 0 1rem 1.2rem;
+        background:#fffff8; }
 .note.col-a { border-left-color:#1b6b3a; }
 .note.col-b { border-left-color:#2a4d8f; }
 .note.draft { background:repeating-linear-gradient(135deg,transparent,transparent 8px,
-              rgba(0,0,0,.018) 8px, rgba(0,0,0,.018) 16px); }
+              rgba(0,0,0,.02) 8px, rgba(0,0,0,.02) 16px); }
 .note.stale { border-left-color:#b8431f; background:#fdf1ec; }
 .note.lit { background:#fbe6dd; }
-.nhead { margin:0 0 .25rem; font-size:.62rem; font-family:ui-monospace,Menlo,monospace; }
-.nid { color:#555; }
-.nauth { color:#aaa; margin-left:.4rem; }
+.note.inmargin { position:absolute; margin:0; width:calc(50% - .8rem); }
+.note.inmargin.col-b { left:calc(50% + .8rem); }
+.nhead { margin:0 0 .25rem; font-size:.63rem; font-family:ui-monospace,Menlo,monospace; }
+.nid { color:#555; } .nauth { color:#aaa; margin-left:.4rem; }
 .ndraft { color:#a8791d; margin-left:.4rem; font-variant:small-caps; letter-spacing:.05em; }
 .verdict { margin-left:.4rem; font-variant:small-caps; letter-spacing:.05em; }
-.v-fits { color:#1b6b3a; } .v-breaks { color:#b8431f; } .v-missing-field { color:#a8791d; }
+.v-fits { color:#1b6b3a; } .v-breaks { color:#b8431f; font-weight:700; }
+.v-missing-field { color:#a8791d; }
 .nbody { margin:0; }
 .nstale { margin:0 0 .3rem; color:#b8431f; font-size:.68rem; }
 .nrefs { margin:.3rem 0 0; color:#999; font-size:.62rem; word-break:break-all; }
 .nfig { margin:.4rem 0; overflow:hidden; cursor:zoom-in; position:relative;
         border:1px solid #eae6d8; background:#fff; padding:.2rem; }
-.figopen { position:absolute; right:.25rem; bottom:.2rem; font-size:.58rem;
-           color:#999; font-family:ui-monospace,Menlo,monospace;
-           background:#fffff8; padding:0 .2rem; }
+.nfig svg { width:100%; height:auto; min-width:0; }
+.figopen { position:absolute; right:.25rem; bottom:.2rem; font-size:.58rem; color:#999;
+           font-family:ui-monospace,Menlo,monospace; background:#fffff8; padding:0 .2rem; }
 .figmodal { position:fixed; inset:0; background:rgba(255,255,248,.97); z-index:50;
             display:flex; align-items:center; justify-content:center; padding:3vw;
             cursor:zoom-out; }
 .figmodal svg { width:100%; max-width:1600px; height:auto; }
 .figmodal .figcap { position:absolute; top:1.2rem; left:3vw; font-size:.72rem;
                     color:#888; font-family:ui-monospace,Menlo,monospace; }
-.nfig svg { width:100%; height:auto; min-width:0; }
-.nfig .nid, .nfig .nfam, .nfig .nprod, .nfig .nhole { font-size:9px; }
 .masthead { max-width:var(--measure); }
-.sub { color:#666; font-size:.8rem; margin-bottom:.4rem; }
+.sub { color:#666; font-size:.82rem; margin-bottom:.4rem; }
 .prov { color:#999; font-size:.68rem; font-family:ui-monospace,Menlo,monospace;
         margin-bottom:2rem; }
+.prov a { color:#777; }
 footer { margin-top:5rem; padding-top:1rem; border-top:1px solid #e6e2d4;
          color:#999; font-size:.7rem; }
-@media (max-width:78rem) {
+footer a { color:#999; }
+
+/* Narrow: one column, and every note stays exactly where the flow put it --
+   under the passage it annotates, never hidden. */
+@media (max-width:80rem) {
   .page { grid-template-columns:1fr; }
-  .rail { display:none; }
-  .note { position:static; width:auto; margin:.6rem 0; }
+  .margin { display:none; }
+  .note { margin-left:.8rem; }
 }
 """
 
 JS = """
-// Place each note beside its anchor, stacking downward so two notes anchored
-// close together do not overlap. Layout only -- the note's column and order
-// come from the data, not from here.
+// Lift each note into the wide margin and level it with its anchor. Two
+// sub-columns inside the one margin: the pattern working on the left, the
+// PROOF-2a reading on the right. Notes that would collide stack downward.
+// With the script off, or on a narrow screen, notes stay in the flow under
+// the passage they annotate -- which is why they are emitted there.
 function layout() {
-  const wide = window.matchMedia('(min-width: 78rem)').matches;
-  const rails = {a: document.querySelector('.rail-a'), b: document.querySelector('.rail-b')};
-  if (!wide) return;
-  const bottom = {a: 0, b: 0};
-  document.querySelectorAll('.note').forEach(n => {
-    const col = n.classList.contains('col-a') ? 'a' : 'b';
+  const margin = document.querySelector('.margin');
+  const main = document.querySelector('.main');
+  const wide = window.matchMedia('(min-width: 80rem)').matches;
+  const notes = [...document.querySelectorAll('.note')];
+  if (!wide) {
+    notes.forEach(n => {
+      n.classList.remove('inmargin');
+      const anc = document.getElementById('anc-' + n.dataset.anchor);
+      const host = anc ? anc.closest('.main > *') : null;
+      if (host && host.nextSibling !== n) host.after(n);
+      n.style.top = '';
+    });
+    return;
+  }
+  const mtop = margin.getBoundingClientRect().top + window.scrollY;
+  const bottom = {a: 34, b: 34};   // clear the sticky column heads
+  notes.forEach(n => {
+    if (n.parentElement !== margin) margin.appendChild(n);
+    n.classList.add('inmargin');
+  });
+  notes.forEach(n => {
+    const col = n.classList.contains('col-b') ? 'b' : 'a';
     const anc = document.getElementById('anc-' + n.dataset.anchor);
-    const rail = rails[col];
-    const top = anc ? anc.getBoundingClientRect().top + window.scrollY
-                      - rail.getBoundingClientRect().top - window.scrollY : bottom[col];
-    const y = Math.max(top, bottom[col] + 10);
+    const want = anc ? anc.getBoundingClientRect().top + window.scrollY - mtop : bottom[col];
+    const y = Math.max(want, bottom[col] + 12);
     n.style.top = y + 'px';
     bottom[col] = y + n.offsetHeight;
   });
-  rails.a.style.minHeight = bottom.a + 'px';
-  rails.b.style.minHeight = bottom.b + 'px';
+  margin.style.minHeight = Math.max(bottom.a, bottom.b, main.offsetHeight) + 'px';
 }
 document.addEventListener('click', e => {
   const open = e.target.closest('.nfig');
@@ -365,12 +404,15 @@ two columns: <b>the pattern working</b> — cascade nodes, work-state tokens, co
 edges — and <b>the PROOF-2a reading</b> of the same span: which clause or data shape it
 exercises, and whether this example fits the shape, breaks it, or needs a field that does
 not exist. Breaks are the evidence worth most. Click a marked span or a note to pair them.</p>
-<p class="prov">{mission} at {rev} · sha256 {sha}… · {counts}</p>
+<p class="prov">{mission} at {rev} · sha256 {sha}… · {counts}<br>
+kernel tables, conflict states and the full-size lattices:
+<a href="seams-kernels.html">seams-kernels.html</a></p>
 </div>
 <div class="page">
   <article class="main">{body}</article>
-  <div class="rail rail-a"><p class="railhead">the pattern working</p>{rail_a}</div>
-  <div class="rail rail-b"><p class="railhead">the PROOF-2a reading</p>{rail_b}</div>
+  <div class="margin" aria-hidden="false">
+    <p class="mhead"><span class="mh-a">the pattern working</span><span class="mh-b">the PROOF-2a reading</span></p>
+  </div>
 </div>
 <footer>Generated by <code>scripts/seams_mission_page.py</code> from
 <code>{mission}</code> and <code>holes/labs/M-futon-seams/annotations.edn</code>.
