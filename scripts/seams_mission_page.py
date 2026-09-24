@@ -20,6 +20,9 @@ annotation, which is the thing a reader needs to see.
 """
 import argparse, html, json, os, re, subprocess, sys, hashlib
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mission_anchors import heading_changed
+
 REPO = "/home/joe/code/futon3c"
 MISSION = "holes/missions/M-futon-seams.md"
 ANNOTATIONS = "holes/labs/M-futon-seams/annotations.edn"
@@ -140,6 +143,15 @@ def place_anchors(text, notes):
         a = n["anchor"]
         s, e, q = a["start"], a["end"], a["quote"]
         if text[s:e] == q:
+            moved_section = heading_changed(text, a)
+            if moved_section:
+                # The quote is where it was and the section around it is not.
+                # Drawn flagged rather than silently: a note read under the
+                # wrong phase is worse than one that says it is unsure.
+                n["_stale"] = (f"still at its offsets, but the section changed — "
+                               f"recorded under “{moved_section[0]}”, now under "
+                               f"“{moved_section[1]}”")
+                stale.append(n)
             live.append(n)
         else:
             found = text.find(q)

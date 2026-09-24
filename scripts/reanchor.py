@@ -6,6 +6,12 @@
 An anchor whose quote is no longer at its offsets is FLAGGED by the page
 generator, never moved by it. This moves them, deliberately and with a report.
 
+An anchor also records the HEADING it fell under. A quote can be unchanged
+and unique and still have moved between sections -- from DERIVE to ARGUE, say
+-- and a note silently re-pointed under a different phase misleads whoever
+reads it there. So a move that would change the note's heading is reported
+and left for a decision, exactly as a changed quote is.
+
 `--author X` moves only X's notes. `--author all` moves anyone's, which is
 safe for the case it is meant for: an edit earlier in the mission shifts every
 later offset by a constant, and re-pointing an UNCHANGED, UNIQUE quote cannot
@@ -13,7 +19,10 @@ change what a note says — it is provably the same text at a new address. What
 is never moved is a note whose quote has changed, or occurs more than once;
 those need a decision, and are reported instead.
 """
-import argparse, hashlib, json, re, subprocess, sys
+import argparse, hashlib, json, os, re, subprocess, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mission_anchors import heading_for
 
 MISSION = "holes/missions/M-futon-seams.md"
 ANN = "holes/labs/M-futon-seams/annotations.edn"
@@ -51,6 +60,13 @@ def main():
             continue
         s = hits[0]
         e = s + len(anc["quote"])
+        was, now = anc.get("heading"), heading_for(text, s)
+        if was is not None and now != was:
+            print(f"  LEAVE {n['id']} — heading changed, needs a decision:")
+            print(f"           was  {was}")
+            print(f"           now  {now}")
+            skipped += 1
+            continue
         print(f"  MOVE  {n['id']} {anc['start']}..{anc['end']} -> {s}..{e}")
         moves.append((anc["start"], anc["end"], s, e))
         moved += 1

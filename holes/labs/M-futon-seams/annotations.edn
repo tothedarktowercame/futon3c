@@ -10,6 +10,7 @@
  {:id "i4-cascade"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 8630 :end 8689
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role \u2014 an identifier carrying a decision"}
   :column :pattern
   :author "claude-1"
@@ -20,6 +21,7 @@
  {:id "i4-sites-enumerated"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9221 :end 9269
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**51 provider-literal agent ids** across `src/`."}
   :column :pattern
   :author "claude-1"
@@ -29,6 +31,7 @@
  {:id "i4-grain"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9687 :end 9736
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**What the interface would be:** a role registry."}
   :column :pattern
   :author "claude-1"
@@ -38,6 +41,7 @@
  {:id "i4-binding"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9737 :end 9857
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "Roles resolve to seats; seats declare provider and availability; code asks for a role instead of pattern-matching an id."}
   :column :pattern
   :author "claude-1"
@@ -47,6 +51,7 @@
  {:id "i4-one-producer"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9881 :end 10046
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself"}
   :column :pattern
   :author "claude-1"
@@ -56,6 +61,7 @@
  {:id "i4-convert"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 18349 :end 18396
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "at least one existing caller is converted to it"}
   :column :pattern
   :author "claude-1"
@@ -65,6 +71,7 @@
  {:id "i4-redirect"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 18433 :end 18483
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "redirect the binding and confirm behaviour follows"}
   :column :pattern
   :author "claude-1"
@@ -74,6 +81,7 @@
  {:id "p2a-i4-kernel"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 8630 :end 8689
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role — an identifier carrying a decision"}
   :column :proof2a
   :author "claude-10"
@@ -84,6 +92,7 @@
  {:id "p2a-roots"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 17734 :end 17794
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "Pick one instance and declare its interface — not all eight."}
   :column :proof2a
   :author "claude-10"
@@ -94,6 +103,7 @@
  {:id "p2a-i5-unproduced"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 10138 :end 10198
+           :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "### 5. Transport and Room — the seam that was never declared"}
   :column :proof2a
   :author "claude-10"
@@ -104,6 +114,7 @@
  {:id "p2a-i7-carrier"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 14199 :end 14249
+           :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "### 7. Editor coupling — the one still compounding"}
   :column :proof2a
   :author "claude-10"
@@ -114,6 +125,7 @@
  {:id "p2a-redirect-observation"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 18508 :end 18583
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "An interface with no second implementation and no redirect test is a guess."}
   :column :proof2a
   :author "claude-10"
@@ -124,6 +136,7 @@
  {:id "i6-cascade"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 12123 :end 12181
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "### 6. Prompts as an interface \u2014 the most painful retrofit"}
   :column :pattern
   :author "claude-1"
@@ -134,6 +147,7 @@
  {:id "i6-conflict"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 12708 :end 12790
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "keep original prompt text in the source call sites and apply bounded rewrites here"}
   :column :pattern
   :author "claude-1"
@@ -143,6 +157,7 @@
  {:id "i6-destination"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 14099 :end 14197
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "The intended end state is the abstract path absorbing the hardcoded one and the flag disappearing."}
   :column :pattern
   :author "claude-1"
@@ -152,6 +167,7 @@
  {:id "i6-second-copy"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 13945 :end 14025
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "a second source of truth that must be kept in sync with a dependency map by hand"}
   :column :pattern
   :author "claude-1"
@@ -161,6 +177,7 @@
  {:id "i6-retire"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 13846 :end 13901
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "the switch is a transitional state, not the destination"}
   :column :pattern
   :author "claude-1"
@@ -170,6 +187,7 @@
  {:id "top-context"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 1504 :end 1572
+           :heading "## HEAD (Rob, 2026-09-24, verbatim sense)"
            :quote "the boundary declared *before* there is an implementation to salvage"}
   :column :pattern
   :author "claude-1"
@@ -179,6 +197,7 @@
  {:id "p2a-i6-conflict"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 12123 :end 12181
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "### 6. Prompts as an interface — the most painful retrofit"}
   :column :proof2a
   :author "claude-10"
@@ -189,6 +208,7 @@
  {:id "p2a-carrier-meets"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 1504 :end 1572
+           :heading "## HEAD (Rob, 2026-09-24, verbatim sense)"
            :quote "the boundary declared *before* there is an implementation to salvage"}
   :column :proof2a
   :author "claude-10"
@@ -199,6 +219,7 @@
  {:id "i5-adapter"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 10350 :end 10398
+           :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "finally ran a `matrix-ircd` adapter to mimic IRC"}
   :column :pattern
   :author "claude-1"
@@ -208,6 +229,7 @@
  {:id "i5-spread"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 10801 :end 10881
+           :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "**16 hardcoded `\"#futon\"`-style channel literals** across `src/` and `scripts/`."}
   :column :pattern
   :author "claude-1"
@@ -217,6 +239,7 @@
  {:id "exemplar-click"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 17734 :end 17794
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "Pick one instance and declare its interface \u2014 not all eight."}
   :column :pattern
   :author "claude-1"
@@ -226,6 +249,7 @@
  {:id "exemplar-two-orderings"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 4126 :end 4167
+           :heading "## Cost ordering (use this to prioritise)"
            :quote "## Cost ordering (use this to prioritise)"}
   :column :pattern
   :author "claude-1"
@@ -235,6 +259,7 @@
  {:id "exemplar-lowest-score"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 17862 :end 17878
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "smallest surface"}
   :column :pattern
   :author "claude-1"
@@ -244,6 +269,7 @@
  {:id "outcome-grain"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 8630 :end 8689
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role \u2014 an identifier carrying a decision"}
   :column :pattern
   :author "claude-1"
@@ -253,6 +279,7 @@
  {:id "outcome-unbound"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 18349 :end 18396
+           :heading "## IDENTIFY exit (when picked up)"
            :quote "at least one existing caller is converted to it"}
   :column :pattern
   :author "claude-1"
@@ -262,6 +289,7 @@
  {:id "i4-wiring"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9687 :end 9736
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**What the interface would be:** a role registry."}
   :column :pattern
   :author "claude-1"
@@ -272,6 +300,7 @@
  {:id "i4b-cascade"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 9858 :end 10047
+           :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "Evidence it is needed: the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself."}
   :column :pattern
   :author "claude-1"
@@ -282,6 +311,7 @@
  {:id "i5-cascade"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 10138 :end 10198
+           :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "### 5. Transport and Room \u2014 the seam that was never declared"}
   :column :pattern
   :author "claude-1"
@@ -292,6 +322,7 @@
  {:id "i5-wiring"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 11501 :end 11560
+           :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "**What the interface would be, none of it provider-named:**"}
   :column :pattern
   :author "claude-1"
@@ -302,6 +333,7 @@
  {:id "i6-wiring"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 13066 :end 13243
+           :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "The retrofit needed: a mode flag the whole system consults; a shadow module mirroring the call sites; both versions live at once; and pattern-matching of prompt text at runtime."}
   :column :pattern
   :author "claude-1"
@@ -312,6 +344,7 @@
  {:id "i7-cascade"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 14199 :end 14249
+           :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "### 7. Editor coupling \u2014 the one still compounding"}
   :column :pattern
   :author "claude-1"
@@ -322,6 +355,7 @@
  {:id "i7-wiring"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 15647 :end 15792
+           :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "**Where the seam goes:** `turn \u2192 record` (parse, split, offsets, quotes) and `record \u2192 dispatch` (choose delegate, build brief, deliver, report)."}
   :column :pattern
   :author "claude-1"
@@ -332,6 +366,7 @@
  {:id "enactment-as-chosen"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 25609 :end 25668
+           :heading "## INSTANTIATE \u2014 demonstrations"
            :quote "All three are\nnow observed met, each by a check recorded in"}
   :column :pattern
   :author "claude-1"
@@ -341,6 +376,7 @@
  {:id "enactment-residual"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 27679 :end 27747
+           :heading "## INSTANTIATE \u2014 demonstrations"
            :quote "counts **43 seat literals across 12 files** and **one routing site**"}
   :column :pattern
   :author "claude-1"
@@ -350,6 +386,7 @@
  {:id "document-proposal"
   :anchor {:mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
            :start 29723 :end 29795
+           :heading "### Proposed additional exit criterion (Rob, via Joe, 2026-09-24)"
            :quote "the `>>>` block-quote convention is\nimplemented in the Emacs path alone."}
   :column :pattern
   :author "claude-1"
