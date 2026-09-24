@@ -474,3 +474,28 @@
                                    :mission-id "E-operator-as-attached-agent"))]
       (is (= [:clocked 1] ((juxt :status :source) d)))
       (is (= "E-operator-as-attached-agent" (get-in d [:clock :excursion-id]))))))
+
+(deftest tickets-are-clock-targets
+  ;; Joe (2026-09-24): a kimi requisition may name a ticket and its reminder
+  ;; asks the caller to clock onto it, so T- docs resolve like M-/E-/C-.
+  (with-docs
+    (fn [root _ _]
+      (let [nested (io/file root "holes" "tickets" "T-fix-thing.md")
+            top (io/file root "holes" "T-top-ticket.md")]
+        (.mkdirs (.getParentFile nested))
+        (spit nested "# ticket")
+        (spit top "# top-level ticket")
+        (binding [decision/*test-store* (atom {:entries {} :order []})]
+          (doseq [id ["T-fix-thing" "T-top-ticket"]]
+            (let [d (decision/record! (assoc (context id)
+                                             :surface "emacs-repl"
+                                             :text (str "You requisitioned kimi-1 for " id ".")))]
+              (is (= [:clocked 1] ((juxt :status :source) d)))
+              (is (= {:campaign-id nil :mission-id nil :excursion-id nil :ticket-id id}
+                     (clock/current-clock "clock-worker" "clock-session")))))
+          (is (= :unresolvable-target
+                 (:reason (decision/record! (assoc (context "missing") :text "T-missing")))))
+          (is (= "T-fix-thing"
+                 (get (do (decision/record! (assoc (context "again") :text "T-fix-thing"))
+                          (clock/evidence-clock-fields "clock-worker" "clock-session"))
+                      "clocked-ticket"))))))))

@@ -143,13 +143,15 @@
                                     'futon3c.watcher.file-ingest/campaign-doc-path?]))
         top-level (for [[_ root] roots
                         f (.listFiles (io/file root "holes"))
-                        :when (and (.isFile f) (top-level-doc? (.getPath f)))] f)
+                        :when (and (.isFile f)
+                                   (or (top-level-doc? (.getPath f))
+                                       (re-matches #"T-.+\.md" (.getName f))))] f)
         nested (for [[_ root] roots
-                    dir ["missions" "campaigns" "excursions"]
+                    dir ["missions" "campaigns" "excursions" "tickets"]
                     :let [folder (io/file root "holes" dir)]
                     :when (.isDirectory folder)
                     f (file-seq folder)
-                    :when (and (.isFile f) (re-matches #"[CME]-.+\.md" (.getName f)))] f)
+                    :when (and (.isFile f) (re-matches #"[CMET]-.+\.md" (.getName f)))] f)
         files (concat top-level nested)
         signature (mapv (fn [f] [(canonical f) (.lastModified ^java.io.File f)
                                  (.length ^java.io.File f)]) files)]
@@ -174,7 +176,7 @@
     (unclocked :ambiguous (assoc evidence :candidates (mapv :id targets)))))
 
 (defn- mentioned-ids [text]
-  (distinct (re-seq #"(?<![A-Za-z0-9_-])[MCE]-[A-Za-z0-9][A-Za-z0-9_-]*" (or text ""))))
+  (distinct (re-seq #"(?<![A-Za-z0-9_-])[MCET]-[A-Za-z0-9][A-Za-z0-9_-]*" (or text ""))))
 
 (defn decide
   "Precedence: explicit target/mention, current session, attributed activity,

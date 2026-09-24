@@ -34,14 +34,17 @@
 (def clock-type "clock/clocked-on")
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-(def ^:private kind->prefix {:mission "M" :campaign "C" :excursion "E"})
-(def ^:private kind->subdir {:mission "missions" :campaign "campaigns" :excursion "excursions"})
+(def ^:private kind->prefix {:mission "M" :campaign "C" :excursion "E" :ticket "T"})
+(def ^:private kind->subdir {:mission "missions" :campaign "campaigns" :excursion "excursions"
+                             :ticket "tickets"})
 
 (defn target-kind+id
-  "The clock's single-active [kind id] (excursion > mission > campaign — most
-   specific wins, matching clock-store's label precedence), or nil for no target."
-  [{:keys [campaign-id mission-id excursion-id]}]
+  "The clock's single-active [kind id] (ticket > excursion > mission > campaign
+   — most specific wins, matching clock-store's label precedence), or nil for
+   no target."
+  [{:keys [campaign-id mission-id excursion-id ticket-id]}]
   (cond
+    ticket-id    [:ticket ticket-id]
     excursion-id [:excursion excursion-id]
     mission-id   [:mission mission-id]
     campaign-id  [:campaign campaign-id]
@@ -152,6 +155,7 @@
                      (:mission-id new-clock)   (assoc "mission-id" (:mission-id new-clock))
                      (:campaign-id new-clock)  (assoc "campaign-id" (:campaign-id new-clock))
                      (:excursion-id new-clock) (assoc "excursion-id" (:excursion-id new-clock))
+                     (:ticket-id new-clock)    (assoc "ticket-id" (:ticket-id new-clock))
                      witness                   (assoc "witness" witness))]
       (future
         (try
@@ -233,7 +237,8 @@
                    :let [props   (:hx/props e)
                          target  (or (prop props :mission-id)
                                      (prop props :campaign-id)
-                                     (prop props :excursion-id))
+                                     (prop props :excursion-id)
+                                     (prop props :ticket-id))
                          canon   (first (remove #(str/starts-with? (str %) "agent:")
                                                 (:hx/endpoints e)))
                          agent   (prop props :agent-id)

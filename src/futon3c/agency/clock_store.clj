@@ -34,6 +34,9 @@
 
 (defn empty-clock
   []
+  ;; A ticket clock (Joe, 2026-09-24: tickets are clock targets, since a kimi
+  ;; requisition may name one) adds :ticket-id; it is absent otherwise, so
+  ;; existing clock maps keep their shape.
   {:campaign-id nil
    :mission-id nil
    :excursion-id nil})
@@ -58,7 +61,7 @@
       :else (recur (.getParentFile f)))))
 
 (defn resolve-clock-target-file
-  "Resolve FILE-PATH to an existing C-/M-/E-.md doc target by exact basename.
+  "Resolve FILE-PATH to an existing C-/M-/E-/T-.md doc target by exact basename.
    Returns a single-active clock target map, or nil when the path is not a
    witnessed mission/campaign/excursion doc."
   [file-path]
@@ -67,7 +70,7 @@
       (when (and (.exists file)
                  (.isFile file)
                  (parent-segment? file "holes"))
-        (when-let [[_ id] (re-matches #"^([CME]-[^/]+)\.md$" (.getName file))]
+        (when-let [[_ id] (re-matches #"^([CMET]-[^/]+)\.md$" (.getName file))]
           (let [canonical (.getCanonicalPath file)]
             (case (first id)
               \C {:id id
@@ -82,23 +85,30 @@
                   :kind :excursion
                   :file canonical
                   :clock {:campaign-id nil :mission-id nil :excursion-id id}}
+              \T {:id id
+                  :kind :ticket
+                  :file canonical
+                  :clock {:campaign-id nil :mission-id nil :excursion-id nil
+                          :ticket-id id}}
               nil)))))))
 
 (defn- clock-label
   [clock]
-  (or (:excursion-id clock)
+  (or (:ticket-id clock)
+      (:excursion-id clock)
       (:mission-id clock)
       (:campaign-id clock)
       "no mission"))
 
 (defn- dispatch-clock
   [target-id]
-  (let [target-id (if (re-matches #"^[MEC]-.+" target-id)
+  (let [target-id (if (re-matches #"^[MECT]-.+" target-id)
                     target-id
                     (str "M-" target-id))]
     (case (first target-id)
       \C {:campaign-id target-id :mission-id nil :excursion-id nil}
       \E {:campaign-id nil :mission-id nil :excursion-id target-id}
+      \T {:campaign-id nil :mission-id nil :excursion-id nil :ticket-id target-id}
       {:campaign-id nil :mission-id target-id :excursion-id nil})))
 
 (defn- prune-events
@@ -260,4 +270,5 @@
       (:mission-id clock) (assoc "mission-id" (:mission-id clock)
                                  "clocked-mission" (:mission-id clock))
       (:excursion-id clock) (assoc "clocked-excursion" (:excursion-id clock))
+      (:ticket-id clock) (assoc "clocked-ticket" (:ticket-id clock))
       last-auto-clock-witness (assoc "auto-clock-witness" last-auto-clock-witness))))

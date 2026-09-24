@@ -1187,10 +1187,11 @@
              :purpose (some #(not-empty (nth % 2)) lines)})))
 
 (defn- clock-work-target
-  "The target a caller's clock names: its excursion, else its mission."
+  "The target a caller's clock names: its ticket, else its excursion, else its
+   mission."
   [clock]
   (some #(some-> (get clock %) str str/trim not-empty)
-        [:excursion-id :mission-id]))
+        [:ticket-id :excursion-id :mission-id]))
 
 (def requisition-format
   "Requisition: <M-*|E-*|T-*> — <one-line purpose>")
@@ -2090,14 +2091,9 @@ CALLS contains maps of tool name, arguments, and result digest."
                   (if caller-target
                     ", which is not what your clock said."
                     " while not clocked in.")
-                  (if (str/starts-with? job-target "T-")
-                    ;; Clock decisions recognise only C-/M-/E- names.
-                    (str " Tickets are not clock targets: if your work has "
-                         "moved, clock onto the mission or excursion "
-                         job-target " belongs to.")
-                    (str " If your work has moved to " job-target
-                         ", this reminder clocks you onto it; if it hasn't, "
-                         "clock back onto what you are doing.")))
+                  " If your work has moved to " job-target
+                  ", this reminder clocks you onto it; if it hasn't, "
+                  "clock back onto what you are doing.")
              {:requisitioned job-target :caller-clock caller-target}))
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
