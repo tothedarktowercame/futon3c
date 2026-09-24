@@ -15,7 +15,7 @@
  :authored-by "claude-1"
  :authored-at "2026-09-24"
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "35b6b52ec578464e23f62b416dc6f281cff6d2bcc20ef77a5054a5ebb8e6e422"}
+           :sha256 "4b8800f7655efa1acbe606fde87abf359db5667f31be77c0b914785fb15cc1c7"}
  :computed-by
  [{:what [:decision :selection-certificate :candidate-derivations :* :prediction]
    :command "bb holes/labs/M-futon-seams/proto/kernels.clj 0.8 6 holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"}
@@ -164,13 +164,16 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
                  :reading "The prefix branches stay reachable behind an explicit switch until the redirect test passes, then switch and branches go together."}}}
 
      :construction-receipt
-     {:kind :hand-built
-      :constructor "claude-1, reading holes/missions/M-futon-seams.md and searching futon3/library with scripts/xlate.py find"
-      :in-machine-constructor-used? false
+     {:kind :machine-constructed
+      :constructor "futon2.aif.interpretation-construction/construct, replayed at futon2 a89646f6 by exemplar/construct_replay.clj (futon3c a3f65fcc)"
+      :interpretations-authored-by "claude-1, reading holes/missions/M-futon-seams.md and searching futon3/library with scripts/xlate.py find"
+      :replay {:record "holes/labs/M-futon-seams/exemplar/construct-replay.edn"
+               :reproduced? true
+               :what "replaying the constructor on exactly these seven interpretations and the recorded initial state returns this candidate's pattern set, in an order consistent with the containment order"}
       :finding
-      {:kind :w0-construction-condition-not-met
-       :statement "PROOF-2a W0 requires :kind :machine-constructed and that replaying the constructor on exactly these interpretations and the recorded initial state reproduces the candidate. Neither holds. src/futon2/aif/interpretation_construction.clj was not run; the containment order below was authored by hand from the mission text, and the only replay available is re-running the kernels on the same file, which tests the kernel rather than the construction. This click therefore fails W0's construction condition by construction, and is the clearest thing it has to say about the gap between the shapes and the apparatus."
-       :what-would-make-it-pass "Feed these seven interpretations and the initial state to the in-machine constructor and check that the candidate it emits has this containment order and these co-application edges."}}
+      {:kind :w0-construction-condition-met-by-replay
+       :statement "UPDATED 2026-09-24. This record previously said the condition could not hold, because no replay existed. One does now: proof2a_check.clj passes W_0 by replay, and fails it on a replay that does not reproduce the candidate. What remains hand-authored, and is recorded as such because W_0 permits it, is the INTERPRETATIONS -- the guard, produces and receipt for each pattern -- and the containment edges between them. The constructor reproduces the candidate from those; it does not produce them."
+       :what-is-still-by-hand "the seven interpretations and the containment order"}}
 
      :containment-order
      [{:above :cascade-construction/choose-the-grain-where-state-lives :below :coordination/assignment-binding
@@ -284,11 +287,14 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
        :via "Legitimacy: there must be one authority for the old path to be replaced BY. The second joint context."}
      ]
      :construction-receipt
-     {:kind :hand-built
-      :constructor "claude-1, same method as 4a"
-      :in-machine-constructor-used? false
-      :finding {:kind :w0-construction-condition-not-met
-                :statement "As for 4a."}}
+     {:kind :machine-constructed
+      :constructor "futon2.aif.interpretation-construction/construct, replayed as for 4a"
+      :interpretations-authored-by "claude-1, same method as 4a"
+      :replay {:record "holes/labs/M-futon-seams/exemplar/construct-replay.edn"
+               :reproduced? true}
+      :finding {:kind :w0-construction-condition-met-by-replay
+                :statement "As for 4a: reproduced by replay, interpretations hand-authored and recorded."}}
+
      :meet-findings
      {:overlapping-pairs 21 :with-greatest-common-descendant 21 :missing []
       :computed-with :reflexive-below
@@ -318,11 +324,12 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
       :findings ["the mission declares two orderings and the cost ordering is not the one that chose the target"
                  "the cost ordering is ambiguous between most-expensive and most-damaging"
                  "the chosen target has the lowest best-candidate p(all wants) of the four feasible"]}
-  :0 {:verdict :not-met
+  :0 {:verdict :met
       :met ["two semantically different candidates for the chosen target"
             "each candidate's interpretations carry pattern id, guard, produces and a receipt with source path and sha"
             "the carrier is extracted as a containment order with co-application edges"
             "the restricted semilattice condition holds on both candidates, with the meet findings recorded"
             "frontier conflicts recorded, and empty for both, with a pointer to the instance that has them"
             "X0(e) computed over every linear extension with the cap recorded and the finding stated against horizon and depth"]
-      :not-met ["the construction condition: both candidates are :hand-built, not :machine-constructed, and no replay of the in-machine constructor reproduces them"]}}}
+      :not-met []
+      :history "Until 2026-09-24 this read :not-met on the construction condition, because the candidates were hand-built and no replay existed. exemplar/construct_replay.clj replays futon2's constructor on the recorded interpretations and reproduces both candidates; proof2a_check.clj passes W_0 by replay and fails it on a replay that does not reproduce the candidate. Kept here rather than overwritten: the verdict changed because the apparatus changed, not because the record did."}}}

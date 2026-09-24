@@ -312,10 +312,19 @@ and the chosen target with its candidate field.
 **Tool:** by hand. **Check:** `holes/labs/M-futon-seams/exemplar/proof2a_check.clj`
 (clause T and clause 0, with nine falsifiers).
 
-*What the check found, and it is the honest result:* clause 0 **fails**,
-because both candidates are `:hand-built` rather than machine-constructed and
-no replay of a constructor reproduces them. The click says so in its own
-`:construction-receipt` rather than claiming otherwise.
+*What the check found, twice.* When this click was first recorded, clause 0
+**failed**: both candidates were hand-built and no replay of a constructor
+existed, and the click said so in its own `:construction-receipt`. Since
+`exemplar/construct_replay.clj` (futon3c `a3f65fcc`) replays futon2's
+`interpretation-construction/construct` on the recorded interpretations and
+reproduces both candidates, clause 0 now **passes by replay** —
+`proof2a_check.clj` passes W₀ and fails it on a replay that does not reproduce
+the candidate. What remains hand-authored, and is recorded as such because W₀
+permits it, is the **interpretations** and the containment edges. The
+constructor reproduces a candidate from those; it does not produce them.
+
+The verdict changed because the apparatus changed, not because the record did.
+Both readings are kept in `click-001.edn` for that reason.
 
 ### 7. Predict
 
@@ -342,11 +351,19 @@ in the second are recorded too: `realtime/mode-gate` was done before its guard
 held, and the rotation roster was left because it cycles seats rather than
 looking a role up.
 
-**The gap this step still has:** nothing requires the enactment to be the
-chosen candidate. Clause 4's Q-link joins action → outcome → next belief, where
-"action" means the selected candidate, and no clause checks that what was done
-*is* that candidate. The conformance block is a record made after the fact by
-whoever enacted it, not a check anything enforces.
+**What checks this step now, and what still does not.** Clause C
+(`proof2a_check.clj`, W_c, since futon3c `401469fd`) checks the enactment
+record against the chosen candidate: it passes on `click-001-enactment.edn`,
+and fails on the first attempt alone, on attempts with their checks removed,
+and on an untyped deviation. So "the change that was made is the chosen
+candidate" is now a checkable claim, where at the time of the first enactment
+it was not.
+
+It remains a check on a **record**, made after the fact by whoever enacted the
+change, rather than a guard during enactment. Nothing stops an agent building
+something else; what exists is a check that notices afterwards, and it notices
+only what the record says. A deviation left out of the record is invisible to
+it.
 
 ### 9. Observe, and update the belief
 
@@ -365,15 +382,19 @@ whoever enacted it, not a check anything enforces.
 | **3 choose the grain** | **yes** | **no** |
 | 4 write the cascade | yes (retrieval tooled) | yes, `cascade_check.py` |
 | 5 write the wiring | no (derived) | yes, `wiring_check.py` |
-| 6 choose the target | yes | yes, `proof2a_check.clj` |
+| 6 choose the target | yes | yes, `proof2a_check.clj` (W₀ by replay) |
 | 7 predict | no (`kernels.clj`) | yes, clause 4 |
-| **8 enact** | **yes** | wants checked; **conformance not** |
+| **8 enact** | **yes** | wants checked; conformance checked **on the record** (clause C) |
 | 9 observe | no (`clauses_1_6.clj`) | yes, clause statuses |
 
-Two steps have no check and both are where instance 4 went wrong: choosing the
-grain, and binding the enactment to the candidate that was chosen. They are the
-same failure seen twice — a human judgement with nothing downstream that would
-notice it being made differently.
+**One step has no check at all: choosing the grain.** Step 8 had none when
+instance 4 was enacted, which is why it built the provider grain; clause C
+closed that gap afterwards and would now catch the same mistake — on the
+record. Step 3 is still open, and it is the earlier of the two: the grain is
+chosen before any artefact exists to compare it against, so a check for it has
+to compare the cascade's own answer with the grain the enactment operates on.
+That is the one remaining place in this method where a human judgement is made
+and nothing downstream would notice it being made differently.
 
 ## ARGUE — why this design
 
