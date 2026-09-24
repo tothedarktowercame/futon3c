@@ -11,36 +11,36 @@
 ;; instance -- and deleting it would delete the evidence.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 5
- :mission-sha "892aa8ae38b4bde192b64a909e93e54cb1258a0c5393abf3d4eb06d9a2fd3bb6"
+ :mission-sha "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
 
  :tokens
  {:literals-enumerated
   {:statement "The 16 hardcoded #futon channel literals across src/ and scripts/ are listed."
-   :cue [10803 10815]}
+   :cue [11038 11050]}
   :grain-chosen
   {:statement "The grain is the Room, not the connection and not the server process: a Room is what a message is addressed to and what membership is a property of."
-   :cue [11561 11594]}
+   :cue [11796 11829]}
   :message-typed
   {:statement "A Message is a typed value — author, body, time, thread ref — rather than a line of text whose shape each transport guesses."
-   :cue [11561 11594]}
+   :cue [11796 11829]}
   :line-contract
   {:statement "What a transport must carry in one indivisible unit is stated, so an adapter knows what it may not fragment."
-   :cue [11561 11594]}
+   :cue [11796 11829]}
   :protocol-declared
   {:statement "Room, Message and Command exist as a declared interface that an adapter can implement."
-   :cue [11561 11594]}
+   :cue [11796 11829]}
   :one-producer
   {:statement "Room state has exactly one producer; no transport module maintains its own parallel notion of who is present."
-   :cue [11561 11594]}
+   :cue [11796 11829]}
   :migration-declared
   {:statement "Moving a running session from one transport to another is a recorded migration with an authoritative channel at every moment."
-   :cue [2592 2603]}
+   :cue [2827 2838]}
   :adapter-conformance-test
   {:statement "An adapter is tested by reproducing behaviour known from another adapter, with a falsifier a wrong adapter would fail."
-   :cue [18433 18483]}
+   :cue [18668 18718]}
   :impersonation-retired
   {:statement "matrix-ircd is no longer needed: Matrix reaches the system as an adapter rather than by pretending to be IRC."
-   :cue [2592 2603]}}
+   :cue [2827 2838]}}
 
  :initial #{}
  :want #{:protocol-declared :adapter-conformance-test :impersonation-retired}

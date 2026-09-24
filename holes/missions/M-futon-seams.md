@@ -1,6 +1,6 @@
 # Mission: M-futon-seams
 
-**Status:** HEAD complete; IDENTIFY complete; **INSTANTIATE-1 complete for instance 4** — enacted as chosen, at the role grain, after a first attempt that built the wrong grain; MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24). Phases 2–7 below were written *after* the work they describe, which is the mission's own most useful finding — see §Working out of order. Recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
+**Status:** **COMPLETE (2026-09-24)** — all eight phase exits met, each verdict in the section and checked against `holes/labs/M-futon-seams/lifecycle.edn` by `scripts/verdict_check.py`. Worked out of order and says so: §Working out of order records that artefacts for five later phases existed within two hours of the mission being written, while its Status line still read IDENTIFY, and what that cost. One instance of eight is enacted, which is the scope the IDENTIFY exit set. Phases 2–7 below were written *after* the work they describe, which is the mission's own most useful finding — see §Working out of order. Recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
 **Owner:** **claude-1** (Joe, 2026-09-24: "claude-1 owns it, we're collaborating on the AIF + PROOF-2 interpretation"). claude-10 holds the PROOF-2a reading, the checker and the enactment record.
 **Repo:** futon3c (the mission lives here; the instances span futon3c, futon6, mfuton).
 
@@ -887,11 +887,81 @@ rotation roster are the instance's remaining coupling, and neither is a
 ## DOCUMENT
 
 **Exit criterion:** someone browsing the docbook can discover what this mission
-built without knowing it exists. **Not started.**
+built without knowing it exists. The documentation is findable via navigation,
+not just via grep. **Met.**
 
-The only rendered account is the working page at
-`zone.hyperreal.enterprises/wip/seams.html`, reachable by URL alone. Nothing
-navigates to it and there is no docbook entry.
+Rob asked for the turn-annotation seam packaged so he could reuse it. That is
+what DOCUMENT produced, and the package is the documentation — a contract
+someone can implement against reads better than prose about contracts.
+
+### The package
+
+`futon3c/packages/turn-seam/`
+
+| file | what it is |
+|---|---|
+| `turn-record.schema.json` | what a turn record **is**, independent of who writes it and who reads it |
+| `dispatch-contract.md` | how interpretation is delegated, and what fire-and-forget owes the caller |
+| `conformance.py` | run against *your* records; standard library only, no host paths |
+| `example/` | one real record, passing unmodified |
+
+**The schema was derived from 159 real records and checked against all of
+them**, not designed in advance — `conformance.py --dir` passes 159 of 159.
+Where a field exists because of a mistake, its description says which mistake.
+If an independent implementation produces records that pass, the two
+implementations agree about what a turn is, and either can be replaced without
+the other being edited. That is the whole claim, and it is testable by the
+person who doubts it.
+
+The README carries the rule the seam was built after, because it is the part
+that transfers: **a seam fails when you design it around what one consumer
+needs rather than around what the thing is.** The quoted-material convention
+was first designed as *"strip the quoted text"* — a verb belonging to the
+interpreter. An hour later the display needed that text back, and a
+side-channel had to carry what had already been discarded. "A turn has a said
+part and a quoted part" is what the thing *is*, and it serves both readers
+without privileging either.
+
+**Acceptance test, and it is Rob's**: no path belonging to this machine
+appears anywhere in the package. A package carrying someone's home directory
+is a package nobody else can run, which is the defect in miniature. The one
+real record in `example/` has its absolute paths replaced by `<HOME>` and says
+so in the record itself.
+
+### Findable by navigation
+
+Three entries in the `futon3x` docbook — the futon3-family book, which already
+refers to futon3c:
+
+```
+L1  Seams
+L2  Seams / Finding a seam: the method
+L2  Seams / The turn-annotation seam
+```
+
+Their ids are computed by the documented rule, `sha1("<book>::<outline path>")`
+truncated to twelve, which reproduces the existing L1 ids exactly. A reader
+browsing that book's table of contents meets **Seams** without knowing this
+mission exists, and from there reaches both the method and the package. The
+TOC syncs to the docbook store, so the entries are reachable by a client
+querying it rather than only by reading the repository.
+
+**What is not solid about that, stated rather than discovered later.** The
+book's `toc.json` is *generated* from an `index.org` spine, and no `index.org`
+exists for `futon3x` any more. The book has **46 entry files against 37 TOC
+rows**, and two of its own top-level ids do not match the rule its exporter
+uses — so the drift is not hypothetical, it has already happened here. My
+three entries were added to the generated file directly, which is the only way
+in without the spine, and they will survive until someone regenerates the book
+from a source that no longer exists.
+
+That is `war-room/wr-8-typed-files-are-sources-of-truth` unapplied, in the
+documentation system, discovered while satisfying a documentation criterion.
+It is instance 6's shape exactly: a generated artefact, a second copy, and
+nothing that reports the disagreement. It is **not** in this mission's scope —
+the mission declared one instance and enacted it — but it belongs in the
+record as a ninth instance found, rather than tidied away because it was
+inconvenient to find at the end.
 
 ### Proposed additional exit criterion (Rob, via Joe, 2026-09-24)
 

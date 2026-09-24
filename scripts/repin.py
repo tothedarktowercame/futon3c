@@ -71,6 +71,13 @@ def main():
     # 2. phase anchors, by finding each stored quote afresh
     life = open(LIFECYCLE, encoding="utf-8").read()
     moved = missing = 0
+    # Collect first, apply RIGHT TO LEFT. Rewriting left to right invalidates
+    # every match position after the first, which is how this corrupted
+    # lifecycle.edn on 2026-09-24 -- it wrote ":start58540 :end 585516",
+    # eating a space and splicing two numbers. The same silent-replacement
+    # shape as reanchor.py's collision and the stale DERIVE verdict: an edit
+    # applied at a position computed before an earlier edit moved it.
+    edits = []
     for m in re.finditer(r'\{:id (:\w+) .*?:mission-anchor \{:start (\d+) :end (\d+) '
                          r':quote ("(?:[^"\\]|\\.)*")', life, re.S):
         pid, quote = m.group(1), json.loads(m.group(4))
@@ -80,11 +87,10 @@ def main():
             missing += 1
             continue
         if at != int(m.group(2)):
-            life = (life[:m.start(2)] + str(at) + " :end " + str(at + len(quote))
-                    + life[m.end(3):])
+            edits.append((m.start(2), m.end(3), f"{at} :end {at + len(quote)}"))
             moved += 1
-            # offsets shifted; restart the scan
-            return_to = True
+    for a, b, repl in sorted(edits, reverse=True):
+        life = life[:a] + repl + life[b:]
     print(f"  phase anchors: {moved} moved, {missing} left")
     if not DRY:
         open(LIFECYCLE, "w", encoding="utf-8").write(life)

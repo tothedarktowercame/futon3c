@@ -15,7 +15,7 @@
  :authored-by "claude-1"
  :authored-at "2026-09-24"
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "892aa8ae38b4bde192b64a909e93e54cb1258a0c5393abf3d4eb06d9a2fd3bb6"}
+           :sha256 "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"}
  :computed-by
  [{:what [:decision :selection-certificate :candidate-derivations :* :prediction]
    :command "bb holes/labs/M-futon-seams/proto/kernels.clj 0.8 6 holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"}
@@ -45,16 +45,16 @@
    :exclusions
    [{:target :inst/i1 :reason :no-candidate-field
      :what-would-make-feasible "Author its cascade. The instance is well evidenced -- futon6 6007937, 228 occurrences across 130 scripts, with the regression at 115554f -- but no proto-cascade-v1 file exists for it, so no candidate can be constructed and no G computed."
-     :cue [4164 4186]}
+     :cue [4399 4421]}
     {:target :inst/i2 :reason :no-candidate-field
      :what-would-make-feasible "Author its cascade. Note this instance is recorded as already DONE (22 thin wrappers in scripts/windows), so its cascade would be a retrospective reading rather than a plan; that may make it the wrong kind of target rather than merely an unbuilt one."
-     :cue [6508 6528]}
+     :cue [6743 6763]}
     {:target :inst/i3 :reason :no-candidate-field
      :what-would-make-feasible "Author its cascade. Same caveat as inst/2 and stronger: the mission records this interface as having worked, so there is no want left unproduced."
-     :cue [7576 7597]}
+     :cue [7811 7832]}
     {:target :inst/i8 :reason :no-candidate-field
      :what-would-make-feasible "Author its cascade. Unlike 1-3 this one is live and unresolved (xtdb 40 times in src/ including social/shapes.clj), so it is a genuine candidate that simply has not been written."
-     :cue [15682 15699]}]
+     :cue [15917 15934]}]
 
    :cost-ordering
    {:ranking [{:rank 1 :kind :declare-the-interface-first :cost :free}

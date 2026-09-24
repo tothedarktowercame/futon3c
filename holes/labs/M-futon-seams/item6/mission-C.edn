@@ -20,47 +20,47 @@
 ;;
 ;; Authored by claude-1 (owner), 2026-09-24, for PROOF-2a item 6. DRAFT.
 {:schema :m-futon-seams/mission-C-v1
- :mission-sha "892aa8ae38b4bde192b64a909e93e54cb1258a0c5393abf3d4eb06d9a2fd3bb6"
+ :mission-sha "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
 
  :outcomes
  {:second-implementation-is-cheap
   {:statement "A second implementation of any component can be built without the first having to be rewritten and without the second having to impersonate it."
-   :cue [2536 2589]
+   :cue [2771 2824]
    :cue-quote "every later implementation must impersonate the first"
    :who "whoever brings the second implementation — Rob concretely, anyone later in principle"
    :checkable-by "an implementation of the declared interface that touches no existing caller"}
 
   :rob-can-run-the-stack
   {:statement "Rob can run futon3c on his own setup — his provider, his shell, his transport, his editor — without transcribing or impersonating anything."
-   :cue [2696 2791]
+   :cue [2931 3026]
    :cue-quote "Rob could not use futon3c's agent roles because the code reads the provider out of the agent id"
    :who "Rob"
    :checkable-by "Rob runs the affected surface on his machine with no futon3c change and no shim process"}
 
   :joe-can-use-robs-work
   {:statement "Joe can use a component Rob built, against the store and stack he already runs, without it being rewritten for him."
-   :cue [2793 2856]
+   :cue [3028 3091]
    :cue-quote "Joe could not use Rob's memory MCP because it is neo4j-specific"
    :who "Joe"
    :checkable-by "the mfuton memory MCP answering against XTDB with no change to its call sites"}
 
   :no-drifting-forks
   {:statement "Two implementations of one thing do not drift apart, because there is one authority for what the thing is rather than a convention two places keep by hand."
-   :cue [2992 3092]
+   :cue [3227 3327]
    :cue-quote "Two implementations that have already drifted cost more to unify than one implementation plus a stub"
    :who "the system, and whoever later has to unify them"
    :checkable-by "a conformance test that a drifted implementation fails"}
 
   :coupling-visible-to-tooling
   {:statement "A coupling — a path, a role, a provider — can be found by a tool rather than only by reading, so it cannot be reintroduced unnoticed."
-   :cue [13465 13581]
+   :cue [13700 13816]
    :cue-quote "With hardcoded code you can grep for the literal; with a hardcoded prompt you must match natural language at runtime"
    :who "the system, and whoever maintains it"
    :checkable-by "grep or a linter finding every occurrence; the prompt case is the one where it currently cannot"}
 
   :vs-code-implementation-possible
   {:statement "A non-Emacs client can reuse the core functionality rather than copy-pasting interactions, so the two do not evolve separately."
-   :cue [14506 14569]
+   :cue [14741 14804]
    :cue-quote "wants a seam inserted so later implementations are less painful"
    :who "Rob"
    :source "Rob's interview, 2026-09-24, recorded in this mission's instance 7: he did not build the TypeScript version because there was nothing to build against, and copy-pasted into webhooks instead"
@@ -104,7 +104,7 @@
  :preference
  {:status :unstated
   :weights {}
-  :cue [17734 17794]
+  :cue [17969 18029]
   :cue-quote "Pick one instance and declare its interface \u2014 not all eight."
   :note "The mission states no relative weight between these outcomes, and inventing one would decide the ranking rather than report it. What it does state is two ORDERINGS, neither of which is a weighting over outcomes:
 (1) the IDENTIFY exit ranks three instances -- 4, then 5, then 7 -- and its stated reasons mix value with cost: 'smallest surface' is a cost claim, 'unblocks provider substitution for Rob immediately' and 'retires matrix-ircd and the don't-start-an-IRC-server flag together' are value claims, and 'do before a VS Code implementation exists, not after' is a claim about the cost RISING with time rather than about value at all.
