@@ -16,7 +16,7 @@
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
  :candidate :4b-observe-first
- :mission-sha "93c192896babc3cd01006f8416e04de05d782b43acc08318b397b4859c789de5"
+ :mission-sha "845c270c1007857ea57dd9ec4a900a42c605446ebddd757369ba58f91352e5ea"
 
  :tokens
  {:sites-enumerated

@@ -670,6 +670,10 @@ Seven checks run, and each exists because it caught something:
   eyeballed. **40 measurements, 0 failing**.
 - `holes/labs/M-futon-seams/proto/meets.clj` — the restricted semilattice
   condition, computed rather than assumed.
+- `exemplar/check-ledger.edn` (claude-10) — every check run recorded with what
+  was true, so the checks themselves can be scored. It found a grep regex that
+  passed when the truth was false, which is the cell an error-rate table exists
+  to expose.
 
 ### Risks that cannot be checked statically, and what was done about each
 
@@ -680,7 +684,8 @@ Seven checks run, and each exists because it caught something:
 | Does a grain declaration correspond to real code? | **yes** | `grain_check.py` resolves the named resolver and compares its argument list; tested against a renamed function and a drifted arglist |
 | Do the recorded predictions reproduce? | **yes** | clause 4 recomputes from the recorded inputs: 0.260 against the recorded 0.26 |
 | **Is a coupling carried in prompt text really invisible to tooling?** | **yes** | `exemplar/spike-prompt-coupling.edn` — see below |
-| Are the check error rates real? | **no** | `check-ledger.edn` has 22 rows and no ground truth on any of them; clause 1 is `:declared` for exactly this reason. Being measured by kimi-3 under claude-8's H-witness packet — **not this mission's to close** |
+| Does the check ledger's truth stand up? | **partly** | the population exists and the rates are computed from it; the independence of each source is the part still being assessed, elsewhere |
+| Are the check error rates real? | **yes** | `exemplar/check-ledger.edn`: 22 rows, each carrying `:truth` and a `:truth-source`, 19 sources distinct. Clause 1 (A) reads `:measured-from-check-ledger`, not `:declared` — per-kind rates come from counts. Open question, not an absent one: whether each `:truth-source` is independent of the check it judges. kimi-3 is filtering on exactly that under claude-8's H-witness packet |
 
 **The prompt-coupling spike.** Instance 6 *claims* a coupling in prompt text is
 invisible to tooling. That is a claim, so it was tried: change
