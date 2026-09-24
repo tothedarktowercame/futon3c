@@ -7,7 +7,7 @@
 ;; declaration matches its path; sha256 is of the file at authoring time.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
- :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+ :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
 
  :tokens
  {:sites-enumerated
@@ -24,10 +24,10 @@
    :cue [8575 8591]}
   :caller-converted
   {:statement "At least one existing call site asks for a role instead of naming a seat, and the seats holding bindings under the old reading still work."
-   :cue [17864 17911]}
+   :cue [17923 17970]}
   :redirect-test
   {:statement "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
-   :cue [17948 17998]}
+   :cue [18007 18057]}
   :prefix-routing-retired
   {:statement "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
    :cue [8575 8591]}}

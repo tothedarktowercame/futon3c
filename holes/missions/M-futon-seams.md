@@ -160,7 +160,7 @@ Rob's counter-example in the same system: he *did* properly abstract publishing 
 
 Pick one instance and declare its interface — not all eight. The candidates in cost order:
 
-1. **Role registry** (instance 4) — smallest surface, 51 literals plus two `starts-with?` branches, and it unblocks provider substitution for Rob immediately.
+1. **Role registry** (instance 4) — smallest surface, 51 literals plus three sites that route on the provider (two `starts-with?` and one `=` on a file name), and it unblocks provider substitution for Rob immediately.
 2. **Room/Message/Command** (instance 5) — larger, but it retires `matrix-ircd` and the "don't start an IRC server" flag together.
 3. **Turn→record / record→dispatch** (instance 7) — do before a VS Code implementation exists, not after.
 

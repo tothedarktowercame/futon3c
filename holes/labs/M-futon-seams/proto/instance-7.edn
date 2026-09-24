@@ -9,7 +9,7 @@
 ;; chosen by flattening decides which of them happens inside a finite horizon.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 7
- :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+ :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
 
  :tokens
  {:writers-enumerated
@@ -29,13 +29,13 @@
    :cue [15062 15089]}
   :falsifier-named
   {:statement "A concrete input a wrong implementation fails is named: a >>> fence with content on the same line, which the elisp handles and an independent reimplementation did not."
-   :cue [17948 17998]}
+   :cue [18007 18057]}
   :divergence-test
   {:statement "The extracted core is run where behaviour is known, and any disagreement between a caller and the core is attributed to one side."
-   :cue [17948 17998]}
+   :cue [18007 18057]}
   :writers-converted
   {:statement "The existing writers call the core instead of reimplementing it, without invalidating records already written under the old reading."
-   :cue [17864 17911]}}
+   :cue [17923 17970]}}
 
  :initial #{}
  :want #{:record-schema-declared :divergence-test :writers-converted}

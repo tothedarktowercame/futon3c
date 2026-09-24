@@ -34,9 +34,26 @@ def edn(path):
     return json.loads(r.stdout)
 
 
+MISSION = "/home/joe/code/futon3c/holes/missions/M-futon-seams.md"
+
+
 def check(path):
     c = edn(path)
     bad, notes = [], []
+
+    # A :cue is an anchor into the mission exactly as an annotation's is, but
+    # it carries no quote to re-check, so the most that can be verified is the
+    # sha it was taken against and that the spans are inside the file.
+    if os.path.isfile(MISSION):
+        text = open(MISSION, encoding="utf-8").read()
+        now = hashlib.sha256(text.encode()).hexdigest()
+        if c.get("mission-sha") and c["mission-sha"] != now:
+            bad.append(f"mission-sha {c['mission-sha'][:12]}… but the mission is now "
+                       f"{now[:12]}… — every :cue may have moved")
+        for tok, meta in (c.get("tokens") or {}).items():
+            cue = meta.get("cue")
+            if cue and (cue[0] < 0 or cue[1] > len(text) or cue[0] >= cue[1]):
+                bad.append(f"token {tok}: cue {cue} is outside the mission")
     pats = c.get("patterns", {})
     declared = set(c.get("tokens", {}))
     used = set(c.get("initial", [])) | set(c.get("want", []))

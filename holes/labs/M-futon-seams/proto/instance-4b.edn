@@ -1,0 +1,146 @@
+;; M-futon-seams instance 4, SECOND CANDIDATE — observe first, then switch.
+;; Same target and the same three wants as instance-4.edn; a different route.
+;;
+;; Candidate A (instance-4.edn) is registry-first: name the grain, make the
+;; binding a record, give it one producer, then transfer a caller. Candidate B
+;; is the route Rob actually took in instance 6: derive a read-only view of
+;; role-to-seat from what already exists, put routing through it behind an
+;; explicit switch, make that the single authority, and only then convert and
+;; retire. Neither is the mission's recommendation -- the mission names the
+;; exit, not the order -- so both are honest readings of it.
+;;
+;; The contrast is the point. A branches at the root and its frontier is wide;
+;; B is nearly a chain, where clause 0 says a precedence list is the chain case
+;; of the containment order and all three kernels must agree.
+;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
+{:schema :m-futon-seams/proto-cascade-v1
+ :instance 4
+ :candidate :4b-observe-first
+ :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+
+ :tokens
+ {:sites-enumerated
+  {:statement "Every site that names a provider is listed: the 51 provider-literal agent ids in src/ and the three that route on a prefix."
+   :cue [8797 8826]}
+  :roles-observable
+  {:statement "A read-only view of which seat is playing which role exists, derived from the seats that already exist. Nothing routes through it yet."
+   :cue [9294 9309]}
+  :routing-gated
+  {:statement "Routing through the role view is reachable behind an explicit switch, with the string reading still live beside it."
+   :cue [17923 17970]}
+  :one-routing-path
+  {:statement "Each agent-id resolves to exactly one routing path at a time, and the authority for that is a single source rather than a priority order over independent stores."
+   :cue [8575 8591]}
+  :caller-converted
+  {:statement "At least one existing call site asks for a role instead of naming a seat."
+   :cue [17923 17970]}
+  :redirect-test
+  {:statement "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
+   :cue [18007 18057]}
+  :prefix-routing-retired
+  {:statement "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
+   :cue [8575 8591]}}
+
+ :initial #{}
+ :want #{:caller-converted :redirect-test :prefix-routing-retired}
+
+ :patterns
+ {:or3/count-every-card-back
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:sites-enumerated}
+   :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                      :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+             :reading "Same reading as in candidate A: the 51 literals and three prefix branches are counted back before any is changed."
+             :scope "Counting discipline only."
+             :author "claude-1"}
+   :forces "Synthesis is where attribution dies — by the time a clean list exists nobody can say which item came from where."}
+
+  :peripherals/read-only-first-then-extend
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:roles-observable}
+   :receipt {:source {:path "futon3/library/peripherals/read-only-first-then-extend.flexiarg"
+                      :sha256 "ffe10550fc9d3c85725b0a086a1e9e3c5eae2f93319a67e90a073698022a1180"}
+             :reading "The move that makes this candidate different from A: the first instantiation of the role view observes and displays and does not write, so what a binding actually needs is learned from watching before anything routes through it. A read-only view can be built from the seats that exist today without deciding anything."
+             :scope "Written for a new peripheral; the reading applies it to a new indirection. Its irreversibility argument transfers directly — a wrong role binding misroutes work, a wrong role display is ignorable."
+             :author "claude-1"}
+   :forces "Writing is irreversible in ways that observing is not: a misshapen observation produces a confusing display the operator can ignore."}
+
+  :realtime/mode-gate
+  {:guard {:needs #{:sites-enumerated :roles-observable} :forbids #{}}
+   :produces #{:routing-gated}
+   :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                      :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+             :reading "Routing through the view becomes reachable only behind an explicit switch, with the string reading still live beside it. This is what Rob did in instance 6, and the mission's warning about that instance applies here too: the switch is a transitional state, not the destination."
+             :scope "The pattern gates code-changing actions behind an explicit mode; here it gates which routing path is authoritative."
+             :author "claude-1"}
+   :forces "In mixed-mode conversation agents may act as if they have execution authority while the human is still orienting."}
+
+  :agency/single-routing-authority
+  {:guard {:needs #{:routing-gated} :forbids #{}}
+   :produces #{:one-routing-path}
+   :receipt {:source {:path "futon3/library/agency/single-routing-authority.flexiarg"
+                      :sha256 "df6bf568dee5ded23e3cf08530605b12abe375a3351676fe082305713a1dbf07"}
+             :reading "The library already states this instance's requirement in the agency family: each agent-id resolves to exactly one routing path at a time, and the authority is a single source of truth rather than a priority cascade across independent stores. Candidate A reaches the same place through cycle-machine/single-producer, which is the general form; this is the domain-specific one and it names the failure modes."
+             :scope "Verbatim; it is about agent routing, which is what this instance is about."
+             :author "claude-1"}
+   :forces "The same agent-id can appear in registry, local-handlers and connected-agents at once; routing picks the first match and the others are neither consulted nor cleaned up, so messages go to dead tiers while live ones are ignored."}
+
+  :gauntlet/placenta-transfer
+  {:guard {:needs #{:one-routing-path} :forbids #{}}
+   :produces #{:caller-converted}
+   :receipt {:source {:path "futon3/library/gauntlet/placenta-transfer.flexiarg"
+                      :sha256 "9771eca50e93c42de6b1ea22e188c770635d62830ca190f5ae4ca18056a069cd"}
+             :reading "Same reading as candidate A: the function the human performs as a surrogate — deciding which seat plays a role — is transferred to the system one caller at a time. In this candidate it happens later, after the authority exists rather than before."
+             :scope "Only the identify-and-move-one discipline is used."
+             :author "claude-1"}
+   :forces "The human is currently performing multiple AIF functions simultaneously, as a surrogate for infrastructure that does not exist yet."}
+
+  :translation/test-by-reproducing-behaviour
+  {:guard {:needs #{:caller-converted} :forbids #{}}
+   :produces #{:redirect-test}
+   :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                      :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+             :reading "The mission's stated acceptance method, unchanged between the candidates: redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail."
+             :scope "Verbatim."
+             :author "claude-1"}
+   :forces "Easy fixtures confirm rather than test, and a disagreement does not say which side erred."}
+
+  :iching/hexagram-49-ge
+  {:guard {:needs #{:redirect-test :one-routing-path} :forbids #{}}
+   :produces #{:prefix-routing-retired}
+   :receipt {:source {:path "futon3/library/iching/hexagram-49-ge.flexiarg"
+                      :sha256 "6e9f317cd451a4863296c0ed5d8e8158f2ec728ed245405fdb2d512da4dc0631"}
+             :reading "革: replace the old with the new, where timing and legitimacy are the conditions. Legitimacy is the single authority; timing is the test having passed. Candidate A reaches retirement through realtime/mode-gate instead, which is the weaker reading — a gate closing is not the same act as a replacement."
+             :scope "Read for its timing and legitimacy conditions only."
+             :author "claude-1"}
+   :forces "Premature revolution causes chaos."}}
+
+ :above
+ [{:context :or3/count-every-card-back
+   :pattern :realtime/mode-gate
+   :kind :jointly-with
+   :via "A switch over routing must know every site that routes; one of two joint contexts."}
+  {:context :peripherals/read-only-first-then-extend
+   :pattern :realtime/mode-gate
+   :kind :jointly-with
+   :via "And there must be a view to route through. The second joint context, and the one that makes this candidate observe-first rather than registry-first."}
+  {:context :realtime/mode-gate
+   :pattern :agency/single-routing-authority
+   :kind :differentiates
+   :via "Asking which path is authoritative only has an answer once there are two paths and a switch between them."}
+  {:context :agency/single-routing-authority
+   :pattern :gauntlet/placenta-transfer
+   :kind :differentiates
+   :via "Transferring the resolution off the operator requires somewhere single to transfer it to."}
+  {:context :gauntlet/placenta-transfer
+   :pattern :translation/test-by-reproducing-behaviour
+   :kind :differentiates
+   :via "A converted caller is what the redirect test acts on."}
+  {:context :translation/test-by-reproducing-behaviour
+   :pattern :iching/hexagram-49-ge
+   :kind :jointly-with
+   :via "Timing: the test must have passed. One of two joint contexts."}
+  {:context :agency/single-routing-authority
+   :pattern :iching/hexagram-49-ge
+   :kind :jointly-with
+   :via "Legitimacy: there must be one authority for the old path to be replaced BY. The second joint context."}]}

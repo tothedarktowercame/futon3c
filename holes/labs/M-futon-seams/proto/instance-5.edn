@@ -11,7 +11,7 @@
 ;; instance -- and deleting it would delete the evidence.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 5
- :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+ :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
 
  :tokens
  {:literals-enumerated
@@ -37,7 +37,7 @@
    :cue [2166 2177]}
   :adapter-conformance-test
   {:statement "An adapter is tested by reproducing behaviour known from another adapter, with a falsifier a wrong adapter would fail."
-   :cue [17948 17998]}
+   :cue [18007 18057]}
   :impersonation-retired
   {:statement "matrix-ircd is no longer needed: Matrix reaches the system as an adapter rather than by pretending to be IRC."
    :cue [2166 2177]}}
