@@ -80,7 +80,7 @@
   :status :reviewed
   :verdict :breaks
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/kernels.clj#a56d6969" "futon3c/holes/labs/M-futon-seams/proto/instance-4.edn#10501d40"]
-  :body "Clause 0, X0(e) and the kernel choice. Three of eleven reachable states have two incomparable patterns enabled at once. At theta 0.8, horizon 6: co-application reaches all wants with p 0.26; the list kernel (every linear extension) and interleaving reach them with p 0. At horizon 14 all three give 0.998-1.0. So the semilattice changes the RATE at which wants are reached, not whether they can be. X0(e) as written (flatten; if nothing changes, the semilattice did no work) BREAKS: on a click whose horizon exceeds the cascade's depth, flattening changes nothing whatever the structure. The finding has to be stated relative to the horizon. Interleaving tracks the list kernel, not co-application: the choice that matters is one pattern per step versus several."}
+  :body "Clause 0, X0(e) and the kernel choice. Three of eleven reachable states have two incomparable patterns enabled at once. At theta 0.8, horizon 6: co-application reaches all wants with p 0.26; the list kernel (every linear extension) and interleaving reach them with p 0. At horizon 14 all three give 0.998-1.0. So the semilattice changes the RATE at which wants are reached, not whether they can be. X0(e) as written (flatten; if nothing changes, the semilattice did no work) BREAKS: on a click whose horizon exceeds the cascade's depth, flattening changes nothing whatever the structure. The finding has to be stated relative to the horizon. Interleaving tracks the list kernel, not co-application: the choice that matters is one pattern per step versus several. Instance 5 (after 3f72bdc2) adds a second way X0(e) misleads: at horizon 8 the list kernel reaches all wants with p between 0.168 and 0.797 across its 48 linear extensions, a factor of 4.7 set by an order nobody chose. A click that flattens and recomputes sees a plausible number, not an obviously wrong one. X0(e) should compare against the spread over linear extensions, not one flattening."}
  {:id "p2a-roots"
   :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
            :start 17308 :end 17368
@@ -202,7 +202,7 @@
            :quote "finally ran a `matrix-ircd` adapter to mimic IRC"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/software-design/adapter-pattern.flexiarg#9cd1c225"]
   :body "software-design/adapter-pattern now produces :impersonation-retired, and its THEN is the discriminator: create a dedicated adapter translating between the EXPECTED interface and the dependency's, and keep that adapter as THE ONLY integration boundary. matrix-ircd fails the second clause \u2014 it is a boundary stacked under IRC's own shape \u2014 so satisfying the pattern retires the impersonation rather than sanctioning it. The guard needs :protocol-declared, and that dependency is the finding: with no declared interface, 'translate to the expected interface' has no referent except whatever the first implementation does. The same pattern, before and after the declaration, produces the impersonation or the seam."}
  {:id "i5-spread"
@@ -211,7 +211,7 @@
            :quote "**16 hardcoded `\"#futon\"`-style channel literals** across `src/` and `scripts/`."}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
   :body "With the hole closed, instance 5 became the widest :list spread in the set \u2014 p(all wants) ranges 0.168 to 0.797 across its 48 linear extensions at horizon 8, a factor of 4.7 depending on which arbitrary order the flattening picks. Instance 6 shows a linear extension reaching the wants with probability zero; this shows it reaching them with a probability that depends on a choice nobody made deliberately. For clause 0's X0(e) the second may be the more common failure."}
 ]
