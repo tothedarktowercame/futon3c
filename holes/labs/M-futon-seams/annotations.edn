@@ -1,0 +1,74 @@
+;; Annotations for the M-futon-seams working page.
+;; One entry per margin note. :anchor is an exact span of the mission file
+;; at the recorded sha; the generator re-checks quote == mission[start:end]
+;; at render time and flags a note whose anchor has moved rather than
+;; silently relocating it.
+;; column :pattern = the pattern working (column a).
+;; column :proof2a = the PROOF-2a reading (column b), authored by claude-10.
+;; status :draft until claude-10 reviews.
+[
+ {:id "i4-cascade"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 8204 :end 8263
+           :quote "### 4. Provider vs role \u2014 an identifier carrying a decision"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "instance-4"
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-4.edn"]
+  :body "The cascade for this instance, seven patterns deep. Roots are the two moves that need nothing: count the sites, and decide what grain the state lives at. Everything else descends from one of them. Diagram and per-edge reasons are in instance-4.edn; the kernel numbers are on the companion page."}
+ {:id "i4-sites-enumerated"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 8795 :end 8843
+           :quote "**51 provider-literal agent ids** across `src/`."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/or3/count-every-card-back.flexiarg#9de888f5"]
+  :body "Token :sites-enumerated \u2014 every site that names a provider is listed, the 51 literals plus the three that route on a prefix. Produced by or3/count-every-card-back, read as the counting discipline only: the workshop setting the pattern is written for does not transfer. A root of the cascade; it needs nothing and nothing needs it until conversion."}
+ {:id "i4-grain"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 9261 :end 9310
+           :quote "**What the interface would be:** a role registry."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg#4736e726"]
+  :body "Token :roles-named \u2014 produced by cascade-construction/choose-the-grain-where-state-lives. The grain question asked of this seam: does the state one dispatch changes live at the provider, the seat, or the role? At the role. The evidence is in the mission's own history \u2014 the delegate moved across four seats in one evening while the role never changed."}
+ {:id "i4-binding"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 9311 :end 9431
+           :quote "Roles resolve to seats; seats declare provider and availability; code asks for a role instead of pattern-matching an id."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/coordination/assignment-binding.flexiarg#d20124da"]
+  :body "Token :binding-recorded \u2014 produced by coordination/assignment-binding, whose move is exactly this one level up: an explicit record binding an agent to a task, with a conflicting assignment treated as a gate rejection rather than last-writer-wins. Edge from :roles-named, kind :differentiates \u2014 choosing the role as the grain is what makes a binding record about roles at all."}
+ {:id "i4-one-producer"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 9455 :end 9620
+           :quote "the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/cycle-machine/single-producer.flexiarg#97338952"]
+  :body "Token :one-producer \u2014 produced by cycle-machine/single-producer. This sentence is the instance's own evidence for it: the guard exists because the role-to-seat fact has no single producer, so the dispatcher re-derives it by comparing strings. Three sites derive it independently today; the pattern's requirement is exactly one, with a contract test against the real counterpart."}
+ {:id "i4-convert"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 17864 :end 17911
+           :quote "at least one existing caller is converted to it"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/memory/no-tightening-while-held.flexiarg#c331922e"]
+  :body "Token :caller-converted \u2014 produced by memory/no-tightening-while-held. Converting a caller narrows what a valid binding is while seats hold live bindings under the string reading, which is a schema tightening in all but name. Two joint contexts feed it (:sites-enumerated and :one-producer) and neither alone suffices: you cannot convert what you have not enumerated, and there must be something to convert to."}
+ {:id "i4-redirect"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 17948 :end 17998
+           :quote "redirect the binding and confirm behaviour follows"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/translation/test-by-reproducing-behaviour.flexiarg#60442e77"]
+  :body "Token :redirect-test \u2014 produced by translation/test-by-reproducing-behaviour. The mission already names this method in its IDENTIFY exit; the pattern is that method, and its falsifier requirement is the part the mission states loosely. A test a wrong indirection would also pass shows nothing."}
+]
