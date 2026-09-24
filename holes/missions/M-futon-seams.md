@@ -216,27 +216,164 @@ What is missing to close this phase: a cascade for instance 8, which is the
 only live unresolved instance without one; and this table moved from a click's
 `:exclusions` into the mission, which is what has now been done.
 
-## DERIVE — the design
+## DERIVE — the method
 
 **Exit criterion:** someone could implement the mission from the DERIVE section
-alone. **Not met for the mission; met for instance 4.**
+alone, without needing to ask clarifying questions. **Met for the tooled steps;
+not met for four steps that are done by hand**, two of which have no check at
+all. Those are named below rather than glossed.
 
-The design is not prose here; it is five cascades in
-`holes/labs/M-futon-seams/proto/`, each pattern carrying a guard over work-state
-tokens, the tokens it produces, and a receipt naming the library file, the
-sha256 of the bytes read, the reading, and a scope limit saying what of the
-pattern does *not* transfer. Instance 4 has two candidate routes —
-registry-first (`instance-4.edn`) and observe-first (`instance-4b.edn`) — which
-differ in four of seven patterns rather than in ordering.
+What this mission develops is a **capability**, not a list of instances: find
+an undeclared seam, choose how to declare it, do it, and check what was done.
+The procedure below is that capability written out, in the order it actually
+ran on instance 4. Instance 4 is the worked illustration; the steps are the
+subject.
 
-`wiring/instance-N-wiring.edn` gives each cascade's construction as token flow:
-a box's input ports are the tokens it needs, its outputs the tokens it
-produces, an edge carries one named token, and a token a box forbids is an
-inhibitor port. Dangling outputs and unfed wants are recorded, not hidden.
+A step that went wrong is kept as a step. Step 3 is where instance 4 lost a
+day's work, and the shape of the loss is the reason step 8 has a check now.
 
-Why the exit is not met for the mission: only instance 4 has been worked to a
-decision, and the cascades live in `holes/labs` rather than here. An
-implementer would have to be told where to look.
+### 1. Someone hits the coupling
+
+**In:** a person who could not do something — Rob had only Codex and the code
+was hardcoded to talk to Claude. **Out:** an instance section in this mission,
+in the operator's own words. **Tool:** none. An interview, by hand.
+**Check:** none needed at this step, but nothing in it may be asserted: every
+claim it makes becomes step 2's input.
+
+### 2. Measure it
+
+**In:** the claim. **Out:** counts and paths in the instance section — for
+instance 4, *51 provider-literal agent ids* and *three sites that route on the
+provider*, each checked against the working tree.
+**Tool:** `grep`, by hand at the time; now
+`holes/labs/M-futon-seams/exemplar/enumerate_sites.py`, which emits
+`exemplar/sites.edn`. **Check:** re-run the command and get the same number.
+The count is a token later, so it has to be re-derivable, not remembered.
+
+*This step catches an over-claim.* The mission first said "two `starts-with?`
+branches"; the enumeration found a third routing site of a different shape, and
+the mission was corrected rather than the count rounded.
+
+### 3. Choose the grain — **by hand, and unchecked**
+
+**In:** the measured sites. **Out:** a statement of what the state one change
+alters actually belongs to. For instance 4: the **role**, not the seat and not
+the provider. **Tool:** none. **Check:** **none exists.**
+
+This is the step instance 4 got wrong, and it is worth being exact about how.
+The grain was chosen correctly in the cascade — `cascade-construction/choose-the-grain-where-state-lives`
+answered "at the role" — and then the first enactment read the *defect
+description* in §4 instead, which describes providers being parsed out of ids,
+and built a provider lookup. Nothing compared the two. A check for this step
+would compare the grain named in the cascade against the grain the enactment
+operates on; there is no such check today.
+
+### 4. Write the cascade
+
+**In:** the instance section and the grain. **Out:**
+`holes/labs/M-futon-seams/proto/instance-4.edn` — patterns with a guard over
+work-state tokens, the tokens each produces, and a receipt naming the library
+file, the sha256 of the bytes read, the reading, and a **scope limit** saying
+what of the pattern does *not* transfer.
+**Tool:** `scripts/xlate.py find "<the move>" --with-candidates` for retrieval;
+the authoring is by hand. **Check:** `scripts/cascade_check.py` — every id
+resolves, its declaration matches its path, every receipt sha still matches the
+file's bytes, every token used is declared, wants with no producer are reported.
+
+*The worked illustration, instance 4:* two candidate routes, not one.
+`instance-4.edn` is registry-first (name the grain, make the binding a record,
+give it one producer, transfer a caller, test, retire) and `instance-4b.edn` is
+observe-first (a read-only role view, routing behind a switch, then the single
+authority). They differ in four of seven patterns, which is what makes them two
+candidates rather than two orderings.
+
+### 5. Write the wiring
+
+**In:** the cascade. **Out:** `holes/labs/M-futon-seams/wiring/instance-4-wiring.edn`
+— the construction as token flow: each box's input ports are the tokens it
+needs, its outputs the tokens it produces, and a token it forbids is an
+inhibitor port. **Tool:** `scripts/wiring_from_cascade.py` derives it; an
+enacted instance gets satiety filled in by hand from its outcome record.
+**Check:** `scripts/wiring_check.py`, which derives the edges the *cascade*
+implies and compares in both directions.
+
+*This step catches a wiring that is internally consistent and wrong.* The first
+version drew an edge from every cascade leaf to the want-port, captioned "what
+it produces is wanted directly" — false for three of instance 5's four leaves.
+The check exists because that version passed inspection.
+
+### 6. Choose the target and record the click
+
+**In:** the cascades that exist. **Out:**
+`holes/labs/M-futon-seams/exemplar/click-001.edn` — every target considered,
+partitioned into feasible and excluded with a typed reason and what would make
+each feasible, the declared cost ordering and how it entered, the score inputs,
+and the chosen target with its candidate field.
+**Tool:** by hand. **Check:** `holes/labs/M-futon-seams/exemplar/proof2a_check.clj`
+(clause T and clause 0, with nine falsifiers).
+
+*What the check found, and it is the honest result:* clause 0 **fails**,
+because both candidates are `:hand-built` rather than machine-constructed and
+no replay of a constructor reproduces them. The click says so in its own
+`:construction-receipt` rather than claiming otherwise.
+
+### 7. Predict
+
+**In:** the chosen candidate, a per-pattern success rate θ, a horizon.
+**Out:** `:prediction` inside the click — for instance 4, p(all wants) 0.26 at
+θ 0.8, horizon 6, with the spread over every linear extension recorded.
+**Tool:** `bb holes/labs/M-futon-seams/proto/kernels.clj θ horizon FILE`, and
+`proto/meets.clj` for the semilattice condition.
+**Check:** clause 4 later recomputes the prediction from the recorded inputs
+and compares; on instance 4 it reproduced (0.260 against 0.26).
+
+### 8. Enact — **by hand, and this is where conformance is decided**
+
+**In:** the chosen candidate. **Out:** commits, plus
+`holes/labs/M-futon-seams/exemplar/click-001-enactment.edn`: one row per
+attempt with the pattern it enacted, and a `:conformance` block naming every
+deviation. **Tool:** an agent, by hand. **Check:** each want token's own check
+— for instance 4, two tests and a grep.
+
+*Both runs are recorded.* The first (`exemplar/click-001-outcome.edn`,
+`8e5c431e`) built the provider grain and returned all three wants `:partial`.
+The second enacted the cascade as chosen and all three are met. The deviations
+in the second are recorded too: `realtime/mode-gate` was done before its guard
+held, and the rotation roster was left because it cycles seats rather than
+looking a role up.
+
+**The gap this step still has:** nothing requires the enactment to be the
+chosen candidate. Clause 4's Q-link joins action → outcome → next belief, where
+"action" means the selected candidate, and no clause checks that what was done
+*is* that candidate. The conformance block is a record made after the fact by
+whoever enacted it, not a check anything enforces.
+
+### 9. Observe, and update the belief
+
+**In:** the enactment's observations. **Out:**
+`holes/labs/M-futon-seams/exemplar/click-001-clauses.edn`.
+**Tool:** `bb holes/labs/M-futon-seams/exemplar/clauses_1_6.clj`.
+**Check:** the clause statuses themselves, which say which inputs were
+*declared* rather than measured.
+
+### What is by hand, and what has no check
+
+| step | by hand | has a check |
+|---|---|---|
+| 1 hit the coupling | yes | n/a |
+| 2 measure | no (`enumerate_sites.py`) | yes, re-run it |
+| **3 choose the grain** | **yes** | **no** |
+| 4 write the cascade | yes (retrieval tooled) | yes, `cascade_check.py` |
+| 5 write the wiring | no (derived) | yes, `wiring_check.py` |
+| 6 choose the target | yes | yes, `proof2a_check.clj` |
+| 7 predict | no (`kernels.clj`) | yes, clause 4 |
+| **8 enact** | **yes** | wants checked; **conformance not** |
+| 9 observe | no (`clauses_1_6.clj`) | yes, clause statuses |
+
+Two steps have no check and both are where instance 4 went wrong: choosing the
+grain, and binding the enactment to the candidate that was chosen. They are the
+same failure seen twice — a human judgement with nothing downstream that would
+notice it being made differently.
 
 ## ARGUE — why this design
 
