@@ -25,6 +25,15 @@
    :command "python3 scripts/cascade_check.py holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"
    :note "checks each id resolves, its id line matches its path under @arg/@flexiarg/@multiarg, and each receipt sha256 still matches the file's bytes"}]
 
+ ;; RECORD COMPLETENESS (after claude-10's P0 findings, 2026-09-24): both
+ ;; candidates carry their interpretations, containment order and
+ ;; co-application edges inline, so each is recomputable from this file alone
+ ;; without reading the cascade it came from. :source :sha256 pins the cascade
+ ;; file's bytes at the click, so a later edit to instance-4.edn or
+ ;; instance-4b.edn shows as drift rather than passing unnoticed. Verified:
+ ;; each inlined derivation reproduces its cascade's ids, guards, produces,
+ ;; receipt shas and edge count.
+ ;;
  ;; NOTE ON NAMING: the request specified targets :inst/1 .. :inst/8. EDN
  ;; rejects those -- a keyword's name may not begin with a digit -- so they are
  ;; :inst/i1 .. :inst/i8 here, and the candidates :cand/a-… and :cand/b-… for the same reason. Small, but it is the kind of thing a spec only
@@ -104,7 +113,8 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
    {:cand/a-registry-first
     {:target :inst/i4
      :source {:path "holes/labs/M-futon-seams/proto/instance-4.edn"
-              :sha256 :see-cascade-check
+              :sha256 "8a8f7528ded74de1309a7b55c57aa0cdfccfef180081e3c272f4add1aacfce1b"
+              :pinned-at "2026-09-24, the click"
               :schema :m-futon-seams/proto-cascade-v1}
      :route "Registry-first: name the grain, make the role-to-seat binding a record, give it exactly one producer, then transfer one caller and test."
      :initial #{}
@@ -199,19 +209,78 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
     :cand/b-observe-first
     {:target :inst/i4
      :source {:path "holes/labs/M-futon-seams/proto/instance-4b.edn"
-              :sha256 :see-cascade-check
+              :sha256 "64fd0b2b500490c3930c96a520df52e62cf4e5327f01f9c95ebdb1c9641b3daa"
+              :pinned-at "2026-09-24, the click"
               :schema :m-futon-seams/proto-cascade-v1}
      :route "Observe-first: build a read-only role-to-seat view from the seats that exist, put routing through it behind a switch, make that the single routing authority, then convert a caller, test, and replace."
      :semantic-difference "Not a reordering of the same moves. 4a declares a binding record before anything observes; 4b derives a view from what exists and learns the binding's shape from watching, which is the route Rob actually took in instance 6. They share three patterns and differ in four, and 4b uses the domain-specific agency/single-routing-authority where 4a uses the general cycle-machine/single-producer."
      :initial #{}
      :want #{:caller-converted :redirect-test :prefix-routing-retired}
-     :interpretations-summary
-     {:count 7
-      :shared-with-4a [:or3/count-every-card-back :gauntlet/placenta-transfer
-                       :translation/test-by-reproducing-behaviour :realtime/mode-gate]
-      :only-in-4b [:peripherals/read-only-first-then-extend :agency/single-routing-authority
-                   :iching/hexagram-49-ge]
-      :note "Full interpretations with guards, produces and receipts are in the source file; cascade_check.py verifies every sha256 there against the library bytes."}
+     :interpretations
+     {
+      :agency/single-routing-authority
+      {:guard {:needs #{:routing-gated}, :forbids #{}} :produces #{:one-routing-path}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/agency/single-routing-authority.flexiarg"
+                          :sha256 "df6bf568dee5ded23e3cf08530605b12abe375a3351676fe082305713a1dbf07"}
+                 :reading "The library already states this instance's requirement in the agency family: each agent-id resolves to exactly one routing path at a time, and the authority is a single source of truth rather than a priority cascade across independent stores. Candidate A reaches the same place through cycle-machine/single-producer, which is the general form; this is the domain-specific one and it names the failure modes."}}
+      :gauntlet/placenta-transfer
+      {:guard {:needs #{:one-routing-path}, :forbids #{}} :produces #{:caller-converted}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/gauntlet/placenta-transfer.flexiarg"
+                          :sha256 "9771eca50e93c42de6b1ea22e188c770635d62830ca190f5ae4ca18056a069cd"}
+                 :reading "Same reading as candidate A: the function the human performs as a surrogate — deciding which seat plays a role — is transferred to the system one caller at a time. In this candidate it happens later, after the authority exists rather than before."}}
+      :iching/hexagram-49-ge
+      {:guard {:needs #{:redirect-test :one-routing-path}, :forbids #{}} :produces #{:prefix-routing-retired}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/iching/hexagram-49-ge.flexiarg"
+                          :sha256 "6e9f317cd451a4863296c0ed5d8e8158f2ec728ed245405fdb2d512da4dc0631"}
+                 :reading "革: replace the old with the new, where timing and legitimacy are the conditions. Legitimacy is the single authority; timing is the test having passed. Candidate A reaches retirement through realtime/mode-gate instead, which is the weaker reading — a gate closing is not the same act as a replacement."}}
+      :or3/count-every-card-back
+      {:guard {:needs #{}, :forbids #{}} :produces #{:sites-enumerated}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                          :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+                 :reading "Same reading as in candidate A: the 51 literals and three prefix branches are counted back before any is changed."}}
+      :peripherals/read-only-first-then-extend
+      {:guard {:needs #{}, :forbids #{}} :produces #{:roles-observable}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/peripherals/read-only-first-then-extend.flexiarg"
+                          :sha256 "ffe10550fc9d3c85725b0a086a1e9e3c5eae2f93319a67e90a073698022a1180"}
+                 :reading "The move that makes this candidate different from A: the first instantiation of the role view observes and displays and does not write, so what a binding actually needs is learned from watching before anything routes through it. A read-only view can be built from the seats that exist today without deciding anything."}}
+      :realtime/mode-gate
+      {:guard {:needs #{:roles-observable :sites-enumerated}, :forbids #{}} :produces #{:routing-gated}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                          :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+                 :reading "Routing through the view becomes reachable only behind an explicit switch, with the string reading still live beside it. This is what Rob did in instance 6, and the mission's warning about that instance applies here too: the switch is a transitional state, not the destination."}}
+      :translation/test-by-reproducing-behaviour
+      {:guard {:needs #{:caller-converted}, :forbids #{}} :produces #{:redirect-test}
+       :author "claude-1"
+       :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                          :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+                 :reading "The mission's stated acceptance method, unchanged between the candidates: redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail."}}
+      }
+     :containment-order
+     [
+      {:above :realtime/mode-gate :below :agency/single-routing-authority
+       :via "Asking which path is authoritative only has an answer once there are two paths and a switch between them."}
+      {:above :agency/single-routing-authority :below :gauntlet/placenta-transfer
+       :via "Transferring the resolution off the operator requires somewhere single to transfer it to."}
+      {:above :gauntlet/placenta-transfer :below :translation/test-by-reproducing-behaviour
+       :via "A converted caller is what the redirect test acts on."}
+     ]
+     :co-application-edges
+     [
+      {:above :or3/count-every-card-back :below :realtime/mode-gate :kind :jointly-with
+       :via "A switch over routing must know every site that routes; one of two joint contexts."}
+      {:above :peripherals/read-only-first-then-extend :below :realtime/mode-gate :kind :jointly-with
+       :via "And there must be a view to route through. The second joint context, and the one that makes this candidate observe-first rather than registry-first."}
+      {:above :translation/test-by-reproducing-behaviour :below :iching/hexagram-49-ge :kind :jointly-with
+       :via "Timing: the test must have passed. One of two joint contexts."}
+      {:above :agency/single-routing-authority :below :iching/hexagram-49-ge :kind :jointly-with
+       :via "Legitimacy: there must be one authority for the old path to be replaced BY. The second joint context."}
+     ]
      :construction-receipt
      {:kind :hand-built
       :constructor "claude-1, same method as 4a"
