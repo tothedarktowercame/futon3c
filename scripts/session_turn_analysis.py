@@ -103,7 +103,11 @@ def validate(request, analysis, library=LIBRARY):
                 if not path.is_relative_to(library.resolve()) or not path.is_file():
                     raise ValueError(f"unknown canonical pattern: {pid}")
                 content = path.read_text()
-                if not re.search(r"^@flexiarg\s+" + re.escape(pid) + r"\s*$", content, re.M):
+                # The loader (futon3a projection.clj) accepts @arg, @flexiarg
+                # and @multiarg as the id line; requiring @flexiarg alone made
+                # 28 library patterns uncitable (software-design/adapter-pattern
+                # among them) while the store ingested them fine.
+                if not re.search(r"^@(?:arg|flexiarg|multiarg)\s+" + re.escape(pid) + r"\s*$", content, re.M):
                     raise ValueError(f"pattern declaration does not match: {pid}")
                 checked_refs.append({"id": pid, "rationale": required_text(ref.get("rationale"), "pattern fit"),
                                      "status": "candidate", "source_sha256": hashlib.sha256(content.encode()).hexdigest()})
