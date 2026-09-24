@@ -7,7 +7,7 @@
 ;; declaration matches its path; sha256 is of the file at authoring time.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
- :mission-sha "2bb7d721ef7319a2d29e1d82e464850b2f1f3ea91b5e09b8b9e3a203b10d62f0"
+ :mission-sha "4b3034af9723c1662346c472e80d395fcd6c42881d15fd140901863213760d2f"
 
  :tokens
  {:sites-enumerated

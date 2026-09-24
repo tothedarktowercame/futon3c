@@ -277,22 +277,11 @@ Four checks run and have each caught real defects:
 - `scripts/check_seams_layout.js` — the rendering, measured rather than
   eyeballed. 40 measurements, 0 failing.
 
-PROOF-2a clauses 1–6 over this click (`exemplar/clauses_1_6.clj` →
-`click-001-clauses.edn`, claude-10):
-
-- **1 (A)** — check error rates are **declared**, not measured; W1's
-  measured-rate side is not met, because no population of check outcomes
-  against known ground truth exists.
-- **2 (D)** — the posterior over want-states is computed from the prior and the
-  observations, not copied from the facts: **0.985** on all three wants met.
-- **3 (F)** — free energy **1.382** (**1.99 bits** of surprise); q is the exact
-  update, so F = −log P(o).
-- **4 (Q)** — the click's recorded prediction **reproduces** (0.260 against the
-  0.26 in `click-001.edn`), and the link runs action → outcome → next belief.
-- **5 (B)** — per-pattern Beta update from a declared prior (mean 0.8, 5
-  pseudo-trials): the grain pattern falls to **0.714** for failing once, the
-  other six rise to **0.833**. The next click would predict **0.286**.
-- **6** — E not measured; C, A declared; D, F computed; Q linked.
+PROOF-2a clauses 1–6 have been computed over this click by claude-10 —
+`exemplar/clauses_1_6.clj` → `click-001-clauses.edn`, covering the check
+error rates, the posterior over want-states, free energy, the
+action→outcome→belief link, the per-pattern Beta update and the summary.
+The results are in that file rather than restated here.
 
 DERIVE revisions recorded: the reflexive-descendants correction, which
 reduced five missing meets to one (`4d748660`); `software-design/adapter-pattern`

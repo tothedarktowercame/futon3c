@@ -20,7 +20,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "2bb7d721ef7319a2d29e1d82e464850b2f1f3ea91b5e09b8b9e3a203b10d62f0"
+           :sha256 "4b3034af9723c1662346c472e80d395fcd6c42881d15fd140901863213760d2f"
            :status-line "HEAD complete; IDENTIFY complete; INSTANTIATE-1 complete for instance 4 (enacted as chosen after a first wrong-grain attempt); MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
@@ -105,16 +105,15 @@
               {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
               {:kind :artefact :ref "exemplar/proof2a_check.clj" :what "W_t passes, W_0 fails on construction, nine falsifiers caught"}
               {:kind :commit :ref "4d748660" :what "a DERIVE revision: four of five missing meets were a definition artefact"}
-              {:kind :artefact :ref "exemplar/click-001-clauses.edn" :what "PROOF-2a clauses 1-6 over this click: D 0.985, F 1.382 (1.99 bits), Q reproduces the prediction, B moves the grain pattern to 0.714"}]
+              {:kind :artefact :ref "exemplar/click-001-clauses.edn" :what "PROOF-2a clauses 1-6 computed over this click (results in the file, not restated on the page)"}]
    :artefacts [{:note "p2a-i4-kernel"} {:note "p2a-roots"} {:note "p2a-i5-unproduced"}
-               {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}
-               {:note "clauses-1-6" :why "the six clauses computed over this click"}]}
+               {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}]}
 
   {:id :INSTANTIATE :n 6 :title "INSTANTIATE — a demonstration for every completion criterion"
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :exit-met
-   :mission-anchor {:start 25887 :end 25918 :quote "## INSTANTIATE — demonstrations"}
+   :mission-anchor {:start 25228 :end 25259 :quote "## INSTANTIATE — demonstrations"}
    :because "Met for instance 4, which is the scope the IDENTIFY exit set. All three want tokens are observed met with a recorded check each -- two tests and a grep -- and the mission now carries the four commands that reproduce them. NOT met for the mission: seven instances remain unenacted. Two residual couplings are recorded as deviations rather than closed: the library-loop adapter's check on the codex binary name, and tickle_orchestrate's rotation roster, which lists seats to cycle rather than looking a role up."
    :evidence [{:kind :commit :ref "eafd07b7" :what "resources/roles.edn, roles/seat-for, request-review! asks for :reviewer, redirect test"}
               {:kind :commit :ref "d6927670" :what "tickle's implementer default and mentor resolve through seat-for"}
@@ -124,15 +123,13 @@
    :artefacts [{:note "outcome-grain" :why "the first attempt, which built the wrong grain"}
                {:note "outcome-unbound" :why "nothing checked the enactment against the candidate"}
                {:note "enactment-as-chosen" :why "the second run, enacted as the cascade specified"}
-               {:note "enactment-residual" :why "what is left: the binary-name site and the roster"}
-               {:note "p2a-clauses-underprediction"}
-               {:note "p2a-clauses-declared"}]}
+               {:note "enactment-residual" :why "what is left: the binary-name site and the roster"}]}
 
   {:id :DOCUMENT :n 7 :title "DOCUMENT — findable without knowing the mission exists"
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
-   :mission-anchor {:start 28593 :end 28604 :quote "## DOCUMENT"}
+   :mission-anchor {:start 27934 :end 27945 :quote "## DOCUMENT"}
    :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/."
    :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}]
    :artefacts []}]
