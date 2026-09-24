@@ -19,11 +19,15 @@
   ;; each remains in the ledger citing the authority in force when it was
   ;; spent.
   ;;
-  ;; The grant does not restart the machine. Grounding has misreported since
-  ;; 2026-09-23 17:44 (entity :props read back as a string, so :resolved? is
-  ;; false about a commit the entity does name), and whether an open stop-line
-  ;; blocks clicking at all is an open question with Joe. Both are recorded in
-  ;; the authorization document.
+  ;; The grant does not restart the machine. The grounding misreport that ran
+  ;; from 2026-09-23 17:44 (entity :props read back as a string, so :resolved?
+  ;; was false about a commit the entity does name) is repaired and loaded.
+  ;; What holds the clicks now is Joe's stop-line rule, settled 2026-09-24:
+  ;; "if there is a stop-line, in my vocabulary that means the system should be
+  ;; repaired from outside." An open stop-line stops the line -- it is not
+  ;; per-defect -- so no click issues while the board is dirty. 35 open
+  ;; :machine-failure findings stand. The authorization document carries the
+  ;; board and the repair route.
   {:path "futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-7-2026-09-24.md"
    :sha "b31ecb66"})
 (def allocated
