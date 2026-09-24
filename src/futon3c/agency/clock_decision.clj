@@ -187,16 +187,31 @@
         ;; in the operator text must supersede that carried value. For dispatch,
         ;; the explicit --mission option remains authoritative.
         operator? (contains? #{"emacs-repl" "emacs-claude-repl" "emacs-codex-repl"} surface)
+        current (clock/current-clock agent-id session-id)
+        clocked? (some val current)
+        ;; Bells and bellbacks mention mission names in passing, so there a
+        ;; mention only fills an empty clock; operator turns (Joe's, and the
+        ;; followup reminders posted as Joe) switch it (Joe, 2026-09-24).
         ids (cond (and operator? (seq mentions)) mentions
                   (seq mission-id) [mission-id]
-                  :else mentions)
-        current (clock/current-clock agent-id session-id)]
+                  clocked? nil
+                  :else mentions)]
     (cond
       (seq ids)
-      (let [targets (filterv #(some #{(:id %)} ids) (catalog))]
-        (if (some #(not-any? #{%} (map :id targets)) ids)
-          (unclocked :unresolvable-target {:targets (vec ids)})
-          (choose-target targets 1 {:targets (vec ids)})))
+      (let [targets (filterv #(some #{(:id %)} ids) (catalog))
+            decided (if (some #(not-any? #{%} (map :id targets)) ids)
+                      (unclocked :unresolvable-target {:targets (vec ids)})
+                      (choose-target targets 1 {:targets (vec ids)}))]
+        ;; A name that does not resolve, or several that do, keeps a current
+        ;; clock instead of emptying it; the refusal stays in the evidence.
+        ;; (claude-8, 2026-09-24: "M-f11" shorthand in a bell wiped a correct
+        ;; E-cascade-real clock, so every requisition drew a reminder.)
+        (if (and clocked? (= :unclocked (:status decided)))
+          {:status :clocked :source 2 :clock current
+           :evidence {:session-id session-id
+                      :kept-despite (assoc (:evidence decided)
+                                           :reason (:reason decided))}}
+          decided))
 
       (and inherited-clock (not= :activity phase)
            (not= "auto-bellback" surface))

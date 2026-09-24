@@ -25,6 +25,12 @@
   {:agent-id "clock-worker" :session-id "clock-session" :turn-id id
    :surface "bell" :phase :accepted :text "Please continue the work."})
 
+(defn- operator [id text]
+  (assoc (context id) :surface "emacs-repl" :text text))
+
+(defn- kept-because [d]
+  (get-in d [:evidence :kept-despite :reason]))
+
 (defn- failure [f]
   (try (f) nil (catch clojure.lang.ExceptionInfo e (:error/code (ex-data e)))))
 
@@ -73,24 +79,51 @@
         (f root source mission))
       (finally (doseq [file (reverse (file-seq root))] (io/delete-file file true))))))
 
-(deftest exact-mention-overrides-stale-clock-and-ambiguity-refuses
+(deftest exact-mention-overrides-stale-clock-and-refusals-keep-it
   (with-docs
     (fn [root _ _]
-      (let [backend (atom {:entries {} :order []})]
+      (let [backend (atom {:entries {} :order []})
+            fixture {:mission-id "M-clock-fixture" :campaign-id nil :excursion-id nil}]
         (binding [decision/*test-store* backend]
           (clock/set-dispatch-mission! "clock-worker" "clock-session" "E-stale")
-          (let [d (decision/record! (assoc (context "mention") :text "Do M-clock-fixture."))]
+          (let [d (decision/record! (operator "mention" "Do M-clock-fixture."))]
             (is (= 1 (:source d)))
-            (is (= {:mission-id "M-clock-fixture" :campaign-id nil :excursion-id nil}
-                   (clock/current-clock "clock-worker" "clock-session"))))
+            (is (= fixture (clock/current-clock "clock-worker" "clock-session"))))
+          ;; Joe (2026-09-24): an ambiguous or unresolvable name records its
+          ;; refusal but leaves a current clock where it was.
           (spit (io/file root "holes" "missions" "M-other.md") "# other")
-          (is (= :ambiguous
-                 (:reason (decision/record!
-                           (assoc (context "ambiguous") :text "M-clock-fixture and M-other")))))
-          (is (= :unresolvable-target
-                 (:reason (decision/record!
-                           (assoc (context "unknown") :mission-id "M-missing")))))
-          (is (= 3 (count (store/query* backend {:query/tags [:clock-decision]})))))))))
+          (let [d (decision/record! (operator "ambiguous" "M-clock-fixture and M-other"))]
+            (is (= [:clocked :ambiguous] [(:status d) (kept-because d)])))
+          (let [d (decision/record! (assoc (context "unknown") :mission-id "M-missing"))]
+            (is (= [:clocked :unresolvable-target] [(:status d) (kept-because d)])))
+          (is (= fixture (clock/current-clock "clock-worker" "clock-session")))
+          (is (= 3 (count (store/query* backend {:query/tags [:clock-decision]}))))
+          ;; With no clock (a fresh session), a refusal still leaves it unclocked.
+          (is (= [:unclocked :unresolvable-target]
+                 ((juxt :status :reason)
+                  (decision/record! (assoc (operator "fresh" "M-missing")
+                                           :session-id "fresh-session"))))))))))
+
+(deftest bell-mentions-fill-an-empty-clock-but-do-not-switch
+  ;; claude-8 (2026-09-24): bellbacks naming M-futon-seams in passing kept
+  ;; moving its E-cascade-real clock.
+  (with-docs
+    (fn [root _ _]
+      (spit (io/file root "holes" "missions" "M-other.md") "# other")
+      (binding [decision/*test-store* (atom {:entries {} :order []})]
+        (doseq [surface ["bell" "auto-bellback"]
+                :let [sid (str surface "-session")
+                      turn (fn [id text] (assoc (context id) :session-id sid
+                                                :surface surface :text text))]]
+          (let [d (decision/record! (turn (str surface "-fill") "M-clock-fixture"))]
+            (is (= [:clocked 1] ((juxt :status :source) d))))
+          (let [d (decision/record! (turn (str surface "-pass") "see M-other"))]
+            (is (= [:clocked 2] ((juxt :status :source) d)))
+            (is (= "M-clock-fixture"
+                   (:mission-id (clock/current-clock "clock-worker" sid))))))
+        (decision/record! (assoc (context "seed") :surface "bell" :text "M-clock-fixture"))
+        (let [d (decision/record! (operator "switch" "move to M-other"))]
+          (is (= [:clocked 1 "M-other"] [(:status d) (:source d) (get-in d [:clock :mission-id])])))))))
 
 (deftest ^:slow complete-session-decisions-roundtrip-real-backend
   (with-docs
@@ -453,16 +486,19 @@
         (spit ignored "# outside mission directories")
         (binding [decision/*test-store* (atom {:entries {} :order []})]
           (doseq [id ["M-foo" "M-bar"]]
-            (let [d (decision/record! (assoc (context id) :text id))]
+            (let [d (decision/record! (operator id id))]
               (is (= 1 (:source d)))
               (is (= id (get-in d [:clock :mission-id])))))
           (is (= :unresolvable-target
-                 (:reason (decision/record! (assoc (context "hidden") :text "M-hidden")))))
+                 (kept-because (decision/record! (operator "hidden" "M-hidden")))))
           ;; Adding a duplicate also exercises catalog cache invalidation.
           (spit (io/file root "holes" "missions" "M-foo.md") "# duplicate")
-          (let [d (decision/record! (assoc (context "duplicate") :text "M-foo"))]
-            (is (= [:unclocked :ambiguous 4] ((juxt :status :reason :source) d)))
-            (is (= (clock/empty-clock) (clock/current-clock "clock-worker" "clock-session")))))))))
+          (let [d (decision/record! (operator "duplicate" "M-foo"))]
+            (is (= [:clocked :ambiguous 2] [(:status d) (kept-because d) (:source d)]))
+            (is (= "M-bar" (:mission-id (clock/current-clock "clock-worker" "clock-session")))))
+          (let [d (decision/record! (assoc (operator "duplicate-fresh" "M-foo")
+                                           :session-id "fresh-session"))]
+            (is (= [:unclocked :ambiguous 4] ((juxt :status :reason :source) d)))))))))
 
 (deftest ^:slow real-futon2-root-resolves-operator-as-attached-agent
   ;; Explicit authority: unconfigured discovery also includes many worktrees.
@@ -487,15 +523,13 @@
         (spit top "# top-level ticket")
         (binding [decision/*test-store* (atom {:entries {} :order []})]
           (doseq [id ["T-fix-thing" "T-top-ticket"]]
-            (let [d (decision/record! (assoc (context id)
-                                             :surface "emacs-repl"
-                                             :text (str "You requisitioned kimi-1 for " id ".")))]
+            (let [d (decision/record! (operator id (str "You requisitioned kimi-1 for " id ".")))]
               (is (= [:clocked 1] ((juxt :status :source) d)))
               (is (= {:campaign-id nil :mission-id nil :excursion-id nil :ticket-id id}
                      (clock/current-clock "clock-worker" "clock-session")))))
           (is (= :unresolvable-target
-                 (:reason (decision/record! (assoc (context "missing") :text "T-missing")))))
+                 (kept-because (decision/record! (operator "missing" "T-missing")))))
           (is (= "T-fix-thing"
-                 (get (do (decision/record! (assoc (context "again") :text "T-fix-thing"))
+                 (get (do (decision/record! (operator "again" "T-fix-thing"))
                           (clock/evidence-clock-fields "clock-worker" "clock-session"))
                       "clocked-ticket"))))))))
