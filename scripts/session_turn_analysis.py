@@ -15,13 +15,15 @@ from datetime import datetime, timezone
 LIBRARY = Path(__file__).resolve().parents[2] / "futon3" / "library"
 ROLES = {"context", "condition", "contrast", "action", "rationale", "goal", "dependency"}
 
-MIN_CUE_BUDGET = 40
-"""Non-space characters of cue a sentence may carry however short it is.
+MIN_CUE_WORDS = 2
+"""Words of cue a sentence may carry however short it is.
 
-The coverage rule is that cues leave most of a sentence unmarked, which is
-right for a long one and wrong for a short one: half of a 64-character
-sentence is 32, and two ordinary cue phrases are already 37. About two
-modest cues, so a short sentence can still be marked where it matters."""
+Coverage is counted in WORDS, not characters. The rule's purpose is that the
+display is not a wall of highlight, and what a reader sees marked is words.
+Characters got it wrong three times: twice by refusing two ordinary cue
+phrases in a short sentence, and once on `here: <url>`, where the only cue
+worth making is a 48-character token that cannot be shortened and is a single
+visual object. Two words, so a two-word sentence can still be marked."""
 
 
 def required_text(value, field):
@@ -147,17 +149,17 @@ def validate(request, analysis, library=LIBRARY):
         # Check the union across all fragments so dividing a sentence into
         # many short spans cannot recreate total underlining.
         if len(source[sentence["start"]:sentence["end"]].split()) > 8:
-            covered = {i for item in checked for cue in item["display_cues"]
-                       for i in range(cue["start"], cue["end"]) if not source[i].isspace()}
-            total = sum(not c.isspace() for c in source[sentence["start"]:sentence["end"]])
-            # Half of a long sentence is generous; half of a short one is not
-            # two cue phrases. kimi-1 dropped a correct cue from "I'd like to
-            # move that through section by section to a successful conclusion"
-            # -- 37 of 64 characters, 57% -- because the rule was written for
-            # long sentences and applied to every sentence. The floor is about
-            # two modest cues, and 85% of a short sentence is still refused.
-            budget = max(total // 2, MIN_CUE_BUDGET)
-            if len(covered) > budget:
+            covered = sum(len(cue["text"].split())
+                          for item in checked for cue in item["display_cues"])
+            total = len(source[sentence["start"]:sentence["end"]].split())
+            # At most half a sentence's WORDS, and at least two however short
+            # it is. Counting characters refused three correct markings: two
+            # short sentences carrying two ordinary cue phrases, and
+            # "here: <url>", whose only useful cue is one 48-character token.
+            # Counting words accepts all three and still refuses marking 7 of
+            # 10 words, which is what the rule is for.
+            budget = max(total // 2, MIN_CUE_WORDS)
+            if covered > budget:
                 # Say which sentence and by how much. The bare refusal cost
                 # claude-1 a dozen retries and kimi-1 two on its first turn:
                 # the rule is easy to satisfy and impossible to aim at when
@@ -166,9 +168,9 @@ def validate(request, analysis, library=LIBRARY):
                                 for cue in item["display_cues"])
                 raise ValueError(
                     f"display cues must leave most of a sentence unmarked: "
-                    f"{sentence['id']} marks {len(covered)} of {total} non-space "
-                    f"characters ({100 * len(covered) // total}%); the budget here "
-                    f"is {budget}, so drop about {len(covered) - budget}. "
+                    f"{sentence['id']} marks {covered} of {total} words "
+                    f"({100 * covered // total}%); the budget here is {budget} "
+                    f"words, so drop about {covered - budget}. "
                     f"Cues on it: " + ", ".join(repr(m) for m in marked))
         canonical.append({"id": entry["id"], "fragments": checked, "unresolved_reason": reason})
     reusable = analysis.get("reusable_cues", [])
