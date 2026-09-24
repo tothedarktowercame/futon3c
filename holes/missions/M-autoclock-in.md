@@ -843,14 +843,26 @@ Mechanics (`zai-api` `parse-requisition` / `requisition-decision` /
   your work has moved to X, clock in on it". `agency_send.py
   --requisition "M-foo — purpose"` writes the line and, for M-*, sets
   `mission-id`, so the recipient is clocked too.
-- **Target change** → cleared. **Same target** → kept. A same-target
-  conversation past `:cap-tokens` (512k, a placeholder: k3's context is
-  1,048,576) is cleared until same-target compaction exists.
+- **Target change** → compacted. **Same target** → kept, and compacted
+  once it passes `:cap-tokens` (512k, a placeholder: k3's context is
+  1,048,576).
+- **Compaction is by summary** (Joe, 2026-09-24). Kimi's own compaction is
+  a CLI/desktop feature, not an API one, so the harness does what Kimi Code's
+  `/compact` does. It renders the conversation as plain text, with old tool
+  results micro-compacted to 2000 chars head+tail, and makes one call to the
+  same model with no tools, asking for a summary: tasks and state,
+  decisions, paths/ids, results, open items, next step. For a target change
+  it is also told to keep only what could matter to the next target. The
+  job then starts from the system prompt plus that summary. If the summary
+  call fails, the seat falls back to a clear and says so in the prompt and
+  the evidence (`:method :summary|:clear`, `:summary-usage`,
+  `:summary-error`).
 - **Continuations.** Replies to the seat's own bells (`auto-bellback`) and
   park resumes need no requisition; they continue the seat's target.
 - **Evidence.** Every turn-start records the requisition, and every clearing
   writes a `:context-compaction` record with target and purpose.
 
 Inherited reclocking is wanted (Joe): a bell carries its sender's clock to
-whoever does the work. Open: same-target compaction by summary, to replace
-clear-at-cap.
+whoever does the work. Open: a live check of the summary call against Kimi
+(written while the 5-hour window was exhausted), and compaction inside a
+single long job.

@@ -192,16 +192,28 @@
 (defn- req [target prompt]
   (str "Requisition: " target " — test purpose\n\n" prompt))
 
+(def ^:private !summary-calls (atom []))
+
+(defn- summary-call? [messages]
+  (str/starts-with? (str (:content (first messages))) "You are compacting"))
+
 (defn- run-jobs
   "Run each job [prompt invoke-context input-tokens] on INVOKE; the model
-   answers with that usage. Returns [results message-vectors-sent]."
-  [invoke jobs]
+   answers with that usage. Summary calls answer \"SUMMARY-TEXT\" (or
+   SUMMARY-RESPONSE when given) and are recorded in !summary-calls, not in
+   the job messages. Returns [results message-vectors-sent]."
+  [invoke jobs & {:keys [summary-response]}]
   (let [sent (atom [])
         usage (atom nil)
         results (atom [])]
-    (with-redefs [zai/chat! (fn [_client _opts messages]
-                              (swap! sent conj messages)
-                              (usage-response "done" @usage))
+    (reset! !summary-calls [])
+    (with-redefs [zai/chat! (fn [_client opts messages]
+                              (if (summary-call? messages)
+                                (do (swap! !summary-calls conj {:opts opts :messages messages})
+                                    (or summary-response
+                                        (usage-response "SUMMARY-TEXT" 5000)))
+                                (do (swap! sent conj messages)
+                                    (usage-response "done" @usage))))
                   zai/resolve-work-target (fn [t] (when (#{"M-a" "E-b" "T-c"} t)
                                                     (str "/holes/" t ".md")))]
       (doseq [[prompt ctx tokens] jobs]
@@ -254,11 +266,60 @@
     (is (= [2 4 2] (mapv count [first-job second-job third-job]))
         "same target keeps the exchange; the new target starts from the system message")
     (is (str/starts-with? (:content (last third-job)) "[Context:"))
+    (is (str/includes? (:content (last third-job))
+                       "[Summary of the earlier conversation]\nSUMMARY-TEXT\n[End of summary]"))
     (is (str/ends-with? (:content (last third-job)) "third"))
+    (is (= 1 (count @!summary-calls)))
     (is (= [{:reason :target-change :context-target "M-a" :job-target "T-c"
-             :purpose "test purpose"}]
-           (mapv #(select-keys % [:reason :context-target :job-target :purpose])
+             :purpose "test purpose" :method :summary :summary-chars 12}]
+           (mapv #(select-keys % [:reason :context-target :job-target :purpose
+                                  :method :summary-chars])
                  (compactions store))))))
+
+(deftest the-summary-call-sends-a-plain-transcript-without-tools
+  (let [invoke (make-invoke {})
+        big (apply str (repeat 10000 "x"))]
+    (with-redefs [zai/chat! (fn [_ opts messages]
+                              (if (summary-call? messages)
+                                (do (swap! !summary-calls conj {:opts opts :messages messages})
+                                    (usage-response "SUMMARY-TEXT" 5000))
+                                (if (= "tool" (:role (last messages)))
+                                  (usage-response "done" 1000)
+                                  (assoc-in (usage-response "" 1000)
+                                            [:choices 0 :message :tool_calls]
+                                            [{:id "c1" :type "function"
+                                              :function {:name "read_file"
+                                                         :arguments "{\"path\":\"/tmp/x\"}"}}]))))
+                  zai/resolve-work-target (fn [t] (when (#{"M-a" "T-c"} t) t))]
+      (with-redefs-fn {#'zai/execute-tool
+                       (fn [& _]
+                         {:detail {} :result {:ok true}
+                          :message {:role "tool" :tool_call_id "c1"
+                                    :name "read_file" :content big}})}
+        (fn []
+          (reset! !summary-calls [])
+          (invoke (req "M-a" "read a big file") nil {})
+          (invoke (req "T-c" "something else") nil {}))))
+    (let [{:keys [opts messages]} (first @!summary-calls)
+          transcript (:content (second messages))]
+      (is (true? (:no-tools? opts)) "the summary must answer in text")
+      (is (= 2 (count messages)) "instruction plus one plain-text transcript")
+      (is (str/includes? (:content (first messages)) "different target (T-c)"))
+      (is (str/includes? transcript "[tool call read_file]"))
+      (is (str/includes? transcript "chars elided") "old tool output is micro-compacted")
+      (is (< (count transcript) 5000)))))
+
+(deftest a-failed-summary-falls-back-to-a-clear
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        [_ [_ second-job]]
+        (run-jobs invoke [[(req "M-a" "first") {} 1000]
+                          [(req "T-c" "second") {} 1000]]
+                  :summary-response {:error {:message "HTTP 403"}})]
+    (is (= 2 (count second-job)))
+    (is (str/includes? (:content (last second-job)) "cleared (summary failed: "))
+    (is (not (str/includes? (:content (last second-job)) "[Summary of")))
+    (is (= [:clear] (mapv :method (compactions store))))))
 
 (deftest turn-start-records-the-requisition
   (let [store (atom {:entries {} :order []})
@@ -288,7 +349,9 @@
         [_ sent] (run-jobs invoke [[(req "M-a" "first") {} 600000]
                                    [(req "M-a" "second") {} 1000]])]
     (is (= [2 2] (mapv count sent)))
-    (is (= [:over-cap] (mapv :reason (compactions store))))))
+    (is (str/includes? (get-in (first @!summary-calls) [:messages 0 :content])
+                       "continues the same target"))
+    (is (= [[:over-cap :summary]] (mapv (juxt :reason :method) (compactions store))))))
 
 (deftest the-kimi-cap-leaves-room-for-long-jobs
   ;; k3 and kimi-for-coding report context_length 1048576 (2026-09-24).

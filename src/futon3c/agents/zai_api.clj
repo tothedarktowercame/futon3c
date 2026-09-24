@@ -888,7 +888,7 @@
 
 (defn- chat!
   [client {:keys [api-key base-url model max-tokens timeout-ms memory-mode
-                  sampling env-prefix vision?]} messages]
+                  sampling env-prefix vision? no-tools?]} messages]
   (let [{:keys [temperature thinking reasoning-effort]} (or sampling default-sampling)
         env-prefix (or env-prefix "ZAI")
         thinking-env (getenv (str env-prefix "_THINKING_TYPE"))
@@ -896,12 +896,13 @@
         body (json/generate-string
               (cond-> {:model (or model default-model)
                        :messages messages
-                       :tools (openai-tools memory-mode vision?)
-                       :tool_choice "auto"
                        ;; 8192: 4096 truncated large tool-call arguments in
                        ;; transit (zai-10's write_file loop, claude-18's
                        ;; diagnosis 2026-07-04) — big file writes need headroom.
                        :max_tokens (or max-tokens 8192)}
+                ;; A summary call sends plain text and must answer in text.
+                (not no-tools?) (assoc :tools (openai-tools memory-mode vision?)
+                                       :tool_choice "auto")
                 (some? temperature) (assoc :temperature temperature)
                 (some? thinking) (assoc :thinking thinking)
                 (some? reasoning-effort) (assoc :reasoning_effort reasoning-effort)
@@ -1297,9 +1298,90 @@
   [messages]
   (quot (reduce + 0 (map (comp count pr-str) messages)) 4))
 
+(def ^:private micro-compact-chars
+  "Tool results longer than this are cut to head and tail before a summary
+   call (Kimi Code's \"micro compaction\"). Carried context is mostly file
+   reads and command output; the summary needs their gist, not their bytes."
+  2000)
+
+(def ^:private summary-input-chars
+  "Ceiling on the rendered transcript sent for summary; the oldest part is
+   dropped past it."
+  1200000)
+
+(defn- micro-compact [text]
+  (let [text (str text)
+        n (count text)]
+    (if (<= n micro-compact-chars)
+      text
+      (str (subs text 0 (quot micro-compact-chars 2))
+           "\n[... " (- n micro-compact-chars) " chars elided ...]\n"
+           (subs text (- n (quot micro-compact-chars 2)))))))
+
+(defn- render-message [{:keys [role content tool_calls name]}]
+  (let [text (if (string? content)
+               content
+               (str/join "\n" (keep #(when (= "text" (:type %)) (:text %)) content)))]
+    (case role
+      "tool" (str "[tool result" (when name (str " " name)) "]\n" (micro-compact text))
+      "assistant" (str "[assistant]\n" text
+                       (apply str
+                              (for [tc tool_calls]
+                                (str "\n[tool call " (get-in tc [:function :name]) "] "
+                                     (micro-compact (get-in tc [:function :arguments]))))))
+      (str "[" role "]\n" text))))
+
+(defn render-transcript
+  "Plain-text rendering of MESSAGES (system message excluded) for a summary
+   call, tool results micro-compacted."
+  [messages]
+  (let [text (str/join "\n\n" (map render-message messages))
+        n (count text)]
+    (if (<= n summary-input-chars)
+      text
+      (str "[... earliest " (- n summary-input-chars) " chars dropped ...]\n"
+           (subs text (- n summary-input-chars))))))
+
+(defn summary-instruction
+  [{:keys [agent-id context-target job-target reason]}]
+  (str "You are compacting the working conversation of " agent-id
+       ", an agent in Joe's Futon Agency, so it can continue without the full "
+       "history. The conversation below was about "
+       (or context-target "no named target") ". "
+       (if (= :target-change reason)
+         (str "The next job is about a different target (" job-target "): keep "
+              "what could matter to it, and record briefly what was done.")
+         "The next job continues the same target: keep everything needed to carry on.")
+       "\n\nWrite a summary it can work from:\n"
+       "- the task(s) and where each stands;\n"
+       "- decisions made and why;\n"
+       "- files read or changed (paths), commits, ids, numbers that matter;\n"
+       "- results of commands or checks that matter;\n"
+       "- open questions, the to-do list and the next step.\n"
+       "Be specific and terse. No preamble. At most about 1500 words."))
+
+(defn- summarize-conversation!
+  "One model call that summarizes MESSAGES (system message excluded).
+   Returns {:summary text :usage map} or {:error msg}."
+  [client opts api-key messages ctx]
+  (try
+    (let [resp (chat! client
+                      (assoc opts :api-key api-key :no-tools? true :max-tokens 4096)
+                      [{:role "system" :content (summary-instruction ctx)}
+                       {:role "user"
+                        :content (str "Conversation to summarize:\n\n"
+                                      (render-transcript messages))}])
+          text (some-> (get-in resp [:choices 0 :message :content]) str str/trim)]
+      (cond
+        (:error resp) {:error (result-string (:error resp))}
+        (str/blank? text) {:error "empty summary"}
+        :else {:summary text :usage (normalized-usage resp)}))
+    (catch Throwable t
+      {:error (.getMessage t)})))
+
 (defn- persist-context-compaction!
   [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
-           carried-tokens context-target job-target purpose]}]
+           carried-tokens context-target job-target purpose summary-result]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
@@ -1310,6 +1392,10 @@
             :context-target context-target
             :job-target job-target
             :purpose purpose
+            :method (if (:summary summary-result) :summary :clear)
+            :summary-chars (some-> (:summary summary-result) count)
+            :summary-usage (:usage summary-result)
+            :summary-error (:error summary-result)
             :dispatch-id (str dispatch-id)}})))
 
 (defn- persist-round!
@@ -1941,16 +2027,35 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :carried-tokens carried
                            :context-target context-target}))
               compact? (= :compact (:action decision))
+              ;; Summary compaction (Joe, 2026-09-24), as Kimi Code's /compact
+              ;; does client-side: one call to the same model, then continue
+              ;; from the summary. A failed summary falls back to a clear.
+              summary-result (when compact?
+                               (report-activity! agent-id "compacting context")
+                               (summarize-conversation!
+                                client opts key* (rest @!messages)
+                                {:agent-id agent-id :reason (:reason decision)
+                                 :context-target context-target
+                                 :job-target job-target}))
               prompt* (if compact?
                         (str "[Context: this seat's earlier conversation ("
                              carried " tokens, "
-                             (or context-target "no target") ") was cleared "
-                             "before this job (" (name (:reason decision)) "). "
-                             "If you need earlier work, read it from files, "
-                             "mission_orientation or tool_history.]\n\n"
+                             (or context-target "no target") ") was "
+                             (if (:summary summary-result)
+                               "compacted"
+                               (str "cleared (summary failed: "
+                                    (:error summary-result) ")"))
+                             " before this job (" (name (:reason decision)) "). "
+                             "For detail, read files, mission_orientation or "
+                             "tool_history.]\n\n"
+                             (when-let [summary (:summary summary-result)]
+                               (str "[Summary of the earlier conversation]\n"
+                                    summary "\n[End of summary]\n\n"))
                              prompt)
                         prompt)]
           (when compact?
+            (when-let [usage (:usage summary-result)]
+              (sink! agent-id (assoc usage :type "usage")))
             (swap! !messages #(vec (take 1 %)))
             (reset! !context-tokens nil)
             (persist-context-compaction!
@@ -1958,11 +2063,14 @@ CALLS contains maps of tool name, arguments, and result digest."
               :turn-id turn-id :profile profile* :dispatch-id dispatch-id
               :decision decision :carried-tokens carried
               :context-target context-target :job-target job-target
-              :purpose purpose})
+              :purpose purpose :summary-result summary-result})
             (sink! agent-id {:type "text"
-                             :text (str "[context compacted: "
-                                        (name (:reason decision)) ", "
-                                        carried " tokens dropped]")}))
+                             :text (str "[context "
+                                        (if (:summary summary-result)
+                                          "compacted to a summary"
+                                          "cleared")
+                                        ": " (name (:reason decision)) ", "
+                                        carried " tokens]")}))
           ;; A continuation keeps the seat's target; a requisition's target
           ;; now owns the conversation.
           (when job-target
