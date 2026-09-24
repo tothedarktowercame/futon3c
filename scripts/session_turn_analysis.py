@@ -15,6 +15,14 @@ from datetime import datetime, timezone
 LIBRARY = Path(__file__).resolve().parents[2] / "futon3" / "library"
 ROLES = {"context", "condition", "contrast", "action", "rationale", "goal", "dependency"}
 
+MIN_CUE_BUDGET = 40
+"""Non-space characters of cue a sentence may carry however short it is.
+
+The coverage rule is that cues leave most of a sentence unmarked, which is
+right for a long one and wrong for a short one: half of a 64-character
+sentence is 32, and two ordinary cue phrases are already 37. About two
+modest cues, so a short sentence can still be marked where it matters."""
+
 
 def required_text(value, field):
     if not isinstance(value, str) or not value.strip():
@@ -29,7 +37,9 @@ def template(request):
         "fragment_shape": {"start": 0, "end": 0, "text": "exact source fragment",
                            "intent": "meaningful intent", "target": "what the intent concerns",
                            "rationale": "why this reading fits", "relations": ["goal"],
-                           "pattern_refs": [], "display_cues": [{"start": 0, "end": 0, "text": "short keyword phrase"}],
+                           "pattern_refs": [{"id": "family/pattern-name",
+                                             "rationale": "why this pattern fits this fragment"}],
+                           "display_cues": [{"start": 0, "end": 0, "text": "short keyword phrase"}],
                            "no_surface_cue": "explain here only if display_cues is empty"}}
 
 
@@ -140,20 +150,26 @@ def validate(request, analysis, library=LIBRARY):
             covered = {i for item in checked for cue in item["display_cues"]
                        for i in range(cue["start"], cue["end"]) if not source[i].isspace()}
             total = sum(not c.isspace() for c in source[sentence["start"]:sentence["end"]])
-            if len(covered) > total / 2:
+            # Half of a long sentence is generous; half of a short one is not
+            # two cue phrases. kimi-1 dropped a correct cue from "I'd like to
+            # move that through section by section to a successful conclusion"
+            # -- 37 of 64 characters, 57% -- because the rule was written for
+            # long sentences and applied to every sentence. The floor is about
+            # two modest cues, and 85% of a short sentence is still refused.
+            budget = max(total // 2, MIN_CUE_BUDGET)
+            if len(covered) > budget:
                 # Say which sentence and by how much. The bare refusal cost
                 # claude-1 a dozen retries and kimi-1 two on its first turn:
                 # the rule is easy to satisfy and impossible to aim at when
                 # the error names neither the sentence nor the overshoot.
-                budget = total // 2
                 marked = sorted(cue["text"] for item in checked
                                 for cue in item["display_cues"])
                 raise ValueError(
-                    f"display cues must leave most of a long sentence unmarked: "
+                    f"display cues must leave most of a sentence unmarked: "
                     f"{sentence['id']} marks {len(covered)} of {total} non-space "
-                    f"characters ({100 * len(covered) // total}%); drop about "
-                    f"{len(covered) - budget} to get under half. Cues on it: "
-                    + ", ".join(repr(m) for m in marked))
+                    f"characters ({100 * len(covered) // total}%); the budget here "
+                    f"is {budget}, so drop about {len(covered) - budget}. "
+                    f"Cues on it: " + ", ".join(repr(m) for m in marked))
         canonical.append({"id": entry["id"], "fragments": checked, "unresolved_reason": reason})
     reusable = analysis.get("reusable_cues", [])
     if not isinstance(reusable, list):
