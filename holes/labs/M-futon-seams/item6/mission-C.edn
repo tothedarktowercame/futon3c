@@ -20,7 +20,7 @@
 ;;
 ;; Authored by claude-1 (owner), 2026-09-24, for PROOF-2a item 6. DRAFT.
 {:schema :m-futon-seams/mission-C-v1
- :mission-sha "288ce657019112f0a776853be10433614527ac570fd3fb5ae086a6c4fc842e75"
+ :mission-sha "ee86811ca0e63efd24c3a355aa243b6c94aba153b6a3594199d480d7f98fb40f"
 
  :outcomes
  {:second-implementation-is-cheap

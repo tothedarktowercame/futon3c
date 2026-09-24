@@ -483,6 +483,17 @@ def main():
     cols = {"a": [n for n in notes if n.get("column") == "pattern"],
             "b": [n for n in notes if n.get("column") == "proof2a"]}
 
+    # Prose and data drifting apart is this mission's own defect, and it
+    # happened here: DERIVE read :exit-met in lifecycle.edn while its section
+    # still said otherwise, and the page rendered the contradiction until an
+    # outside reader found it. Refuse rather than render it again.
+    vc = subprocess.run([sys.executable,
+                         os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "verdict_check.py")],
+                        capture_output=True, text=True)
+    if vc.returncode:
+        sys.exit("seams_mission_page: " + vc.stdout.strip())
+
     counts = (f'{len(notes)} notes — {len(cols["a"])} pattern, {len(cols["b"])} PROOF-2a; '
               f'{sum(1 for n in notes if n.get("status") == "reviewed")} reviewed, '
               f'{len(stale)} with a stale anchor; '

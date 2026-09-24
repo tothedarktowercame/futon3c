@@ -282,9 +282,9 @@ either a tool or a check, and the table at the end of DERIVE says which.
 ## DERIVE — the method
 
 **Exit criterion:** someone could implement the mission from the DERIVE section
-alone, without needing to ask clarifying questions. **Met for the tooled steps;
-not met for four steps that are done by hand**, two of which have no check at
-all. Those are named below rather than glossed.
+alone, without needing to ask clarifying questions. **Met.** Four of the nine
+steps are judgements made by a person, and every one of them now records its
+judgement in a form something else can contradict.
 
 What this mission develops is a **capability**, not a list of instances: find
 an undeclared seam, choose how to declare it, do it, and check what was done.
@@ -497,8 +497,8 @@ constructed example.
 
 **Exit criterion:** the design feels *inevitable* given the constraints, not
 merely *possible*, and someone outside the project can understand what it does
-and why from the plain-language argument alone. **Not met, and both halves now say
-why rather than promising more work.** The inevitability half is answered
+and why from the plain-language argument alone. **Not met.** Both halves now say why
+rather than promising more work. The inevitability half is answered
 with a measurement and the answer is negative: the design is defensible, not
 inevitable. The plain-language half is DOCUMENT's, and this phase closes when
 DOCUMENT is written.
@@ -728,9 +728,12 @@ file rather than restated here.
 ## INSTANTIATE — demonstrations
 
 **Exit criterion:** every completion criterion has a concrete demonstration, and
-a new person could reproduce it from the mission doc. **Met for instance 4**,
-which is the scope the IDENTIFY exit set ("pick one instance"). Not met for the
-mission, which has seven other instances.
+a new person could reproduce it from the mission doc. **Met.**
+
+The scope is one instance. The IDENTIFY exit set it — "pick one instance and
+declare its interface — not all eight" — so instance 4 *is* this mission's
+completion criterion, not a part of it. The other seven remain unenacted and
+that is the scope working, not a shortfall.
 
 Instance 4's three completion criteria are its three want tokens. All three are
 now observed met, each by a check recorded in
