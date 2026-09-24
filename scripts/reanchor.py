@@ -4,10 +4,14 @@
   reanchor.py --author claude-1 [--apply]
 
 An anchor whose quote is no longer at its offsets is FLAGGED by the page
-generator, never moved by it. This moves them, deliberately and with a
-report, and only for the author named: another agent's notes are that
-agent's to re-point. A quote that no longer occurs, or occurs more than
-once, is left alone and reported — it needs a human decision, not an offset.
+generator, never moved by it. This moves them, deliberately and with a report.
+
+`--author X` moves only X's notes. `--author all` moves anyone's, which is
+safe for the case it is meant for: an edit earlier in the mission shifts every
+later offset by a constant, and re-pointing an UNCHANGED, UNIQUE quote cannot
+change what a note says — it is provably the same text at a new address. What
+is never moved is a note whose quote has changed, or occurs more than once;
+those need a decision, and are reported instead.
 """
 import argparse, hashlib, json, re, subprocess, sys
 
@@ -36,7 +40,7 @@ def main():
         anc = n["anchor"]
         if text[anc["start"]:anc["end"]] == anc["quote"]:
             continue
-        if n.get("author") != a.author:
+        if a.author != "all" and n.get("author") != a.author:
             print(f"  LEAVE {n['id']} — {n.get('author')}'s note, not mine to move")
             skipped += 1
             continue
@@ -73,7 +77,7 @@ def main():
             capture_output=True, text=True).stdout)
         still = [n["id"] for n in again
                  if text[n["anchor"]["start"]:n["anchor"]["end"]] != n["anchor"]["quote"]
-                 and n.get("author") == a.author]
+                 and (a.author == "all" or n.get("author") == a.author)]
         if still:
             print(f"  NOT FIXED, run again: {', '.join(still)}")
             sys.exit(1)

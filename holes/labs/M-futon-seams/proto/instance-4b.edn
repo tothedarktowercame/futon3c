@@ -16,30 +16,30 @@
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
  :candidate :4b-observe-first
- :mission-sha "a011e029047b5681571e0c6d68e559e6cc697ce33670a703c88e15b2d04fffa7"
+ :mission-sha "2bb7d721ef7319a2d29e1d82e464850b2f1f3ea91b5e09b8b9e3a203b10d62f0"
 
  :tokens
  {:sites-enumerated
   {:statement "Every site that names a provider is listed: the 51 provider-literal agent ids in src/ and the three that route on a prefix."
-   :cue [9130 9159]}
+   :cue [9223 9252]}
   :roles-observable
   {:statement "A read-only view of which seat is playing which role exists, derived from the seats that already exist. Nothing routes through it yet."
-   :cue [9627 9642]}
+   :cue [9720 9735]}
   :routing-gated
   {:statement "Routing through the role view is reachable behind an explicit switch, with the string reading still live beside it."
-   :cue [18256 18303]}
+   :cue [18349 18396]}
   :one-routing-path
   {:statement "Each agent-id resolves to exactly one routing path at a time, and the authority for that is a single source rather than a priority order over independent stores."
-   :cue [8908 8924]}
+   :cue [9001 9017]}
   :caller-converted
   {:statement "At least one existing call site asks for a role instead of naming a seat."
-   :cue [18256 18303]}
+   :cue [18349 18396]}
   :redirect-test
   {:statement "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
-   :cue [18340 18390]}
+   :cue [18433 18483]}
   :prefix-routing-retired
   {:statement "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
-   :cue [8908 8924]}}
+   :cue [9001 9017]}}
 
  :initial #{}
  :want #{:caller-converted :redirect-test :prefix-routing-retired}

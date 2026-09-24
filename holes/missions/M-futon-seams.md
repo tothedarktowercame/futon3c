@@ -1,6 +1,6 @@
 # Mission: M-futon-seams
 
-**Status:** HEAD complete; IDENTIFY complete; MAP/DERIVE/ARGUE/VERIFY in progress on **instance 4 only**; INSTANTIATE-1 taken out of order (2026-09-24). Phases 2–7 below were written *after* the work they describe, which is the mission's own most useful finding — see §Working out of order. Recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
+**Status:** HEAD complete; IDENTIFY complete; **INSTANTIATE-1 complete for instance 4** — enacted as chosen, at the role grain, after a first attempt that built the wrong grain; MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24). Phases 2–7 below were written *after* the work they describe, which is the mission's own most useful finding — see §Working out of order. Recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
 **Owner:** **claude-1** (Joe, 2026-09-24: "claude-1 owns it, we're collaborating on the AIF + PROOF-2 interpretation"). claude-10 holds the PROOF-2a reading, the checker and the enactment record.
 **Repo:** futon3c (the mission lives here; the instances span futon3c, futon6, mfuton).
 
@@ -277,6 +277,23 @@ Four checks run and have each caught real defects:
 - `scripts/check_seams_layout.js` — the rendering, measured rather than
   eyeballed. 40 measurements, 0 failing.
 
+PROOF-2a clauses 1–6 over this click (`exemplar/clauses_1_6.clj` →
+`click-001-clauses.edn`, claude-10):
+
+- **1 (A)** — check error rates are **declared**, not measured; W1's
+  measured-rate side is not met, because no population of check outcomes
+  against known ground truth exists.
+- **2 (D)** — the posterior over want-states is computed from the prior and the
+  observations, not copied from the facts: **0.985** on all three wants met.
+- **3 (F)** — free energy **1.382** (**1.99 bits** of surprise); q is the exact
+  update, so F = −log P(o).
+- **4 (Q)** — the click's recorded prediction **reproduces** (0.260 against the
+  0.26 in `click-001.edn`), and the link runs action → outcome → next belief.
+- **5 (B)** — per-pattern Beta update from a declared prior (mean 0.8, 5
+  pseudo-trials): the grain pattern falls to **0.714** for failing once, the
+  other six rise to **0.833**. The next click would predict **0.286**.
+- **6** — E not measured; C, A declared; D, F computed; Q linked.
+
 DERIVE revisions recorded: the reflexive-descendants correction, which
 reduced five missing meets to one (`4d748660`); `software-design/adapter-pattern`
 becoming citable and closing instance 5's unproduced want; and
@@ -285,25 +302,53 @@ becoming citable and closing instance 5's unproduced want; and
 ## INSTANTIATE — demonstrations
 
 **Exit criterion:** every completion criterion has a concrete demonstration, and
-a new person could reproduce it from the mission doc. **Not met.**
+a new person could reproduce it from the mission doc. **Met for instance 4**,
+which is the scope the IDENTIFY exit set ("pick one instance"). Not met for the
+mission, which has seven other instances.
 
-One instance has been enacted. `futon3c.agency.roles` (futon3c `8e5c431e`,
-claude-10) gives one function answering which provider an agent is; both
-`str/starts-with?` provider branches in `transport/http.clj` now call it; a
-redirect test passes in `roles_test` and 8 of its 14 assertions fail against
-the old definitions, so it is a real falsifier.
+Instance 4's three completion criteria are its three want tokens. All three are
+now observed met, each by a check recorded in
+`exemplar/click-001-enactment.edn`:
 
-Against instance 4's three completion criteria, all three are `:partial`:
+| want | check | result |
+|---|---|---|
+| `caller-converted` | test | passed — `request-review!` asks for `:reviewer`; tickle's implementer default and mentor resolve through `roles/seat-for` |
+| `redirect-test` | test | passed — rebinding `:reviewer` from claude-1 to oxf-codex-7 changes which seat is asked, and the same test fails against the old code |
+| `prefix-routing-retired` | grep | passed — no `str/starts-with?` provider branch remains |
 
-- `caller-converted` — two call sites converted, but they ask for a *provider*,
-  not a role.
-- `redirect-test` — re-declaring a provider for a fixed id changes both routing
-  decisions; rebinding a *role* cannot be tested, because roles do not exist.
-- `prefix-routing-retired` — no `str/starts-with?` provider branch remains, but
-  the library-loop adapter still requires the literal codex binary.
+Reproduce it without help:
 
-A new person could not reproduce this from the mission doc, which until now did
-not mention it.
+```
+git -C /home/joe/code/futon3c show eafd07b7 d6927670 139caa97
+clojure -M:test -n futon3c.agency.roles-test
+python3 holes/labs/M-futon-seams/exemplar/enumerate_sites.py
+bb holes/labs/M-futon-seams/exemplar/clauses_1_6.clj
+```
+
+**The first attempt built the wrong thing, and that record stays.**
+`exemplar/click-001-outcome.edn` is the enactment at `8e5c431e`: it read the
+registered `:agent/type` and answered which **provider** an agent is, where the
+chosen cascade had specified the **role** grain. All three wants came back
+`:partial`. It is kept rather than replaced because it is the mission's
+evidence for why phase order is not ceremony — the implementer worked from
+this mission's defect description rather than from a DERIVE that had met its
+exit, and built a reasonable thing that was not the chosen thing.
+
+`exemplar/click-001-enactment.edn` records the whole sequence: 8 attempts, 7
+succeeding, with the grain step failing once (attempt 1) and succeeding at
+attempt 3. Two conformance deviations are recorded rather than smoothed:
+
+- **step order** — `realtime/mode-gate` (retire the prefix routing) was done in
+  attempt 1, before its guard `:redirect-test` held; the cascade orders it last.
+- **scope** — `tickle_orchestrate`'s rotation roster still names seats. It lists
+  seats to cycle rather than looking a role up, so it was left.
+
+**What remains for this instance.** `exemplar/sites.edn` (from
+`enumerate_sites.py`, which is the `:sites-enumerated` token made checkable)
+counts **43 seat literals across 12 files** and **one routing site**: the
+library-loop adapter's check on the codex binary name. That site and the
+rotation roster are the instance's remaining coupling, and neither is a
+`str/starts-with?` on an agent id.
 
 ## DOCUMENT
 
