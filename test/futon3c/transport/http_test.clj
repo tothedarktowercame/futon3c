@@ -1944,6 +1944,28 @@
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
 
+(deftest bell-caller-reaches-the-seat
+  ;; Requisition-gated seats (kimi) exempt auto-bellbacks and send reminders
+  ;; to the caller, so the caller must arrive in the seat's invoke context
+  ;; through the real bell path, not only in unit tests that supply it.
+  (let [seen (atom [])]
+    (reg/register-agent!
+     {:agent-id {:id/value "kimi-caller-probe" :id/type :continuity}
+      :type :kimi
+      :invoke-fn (fn [_prompt _session-id ctx]
+                   (swap! seen conj (:caller ctx))
+                   {:result "ok" :session-id nil})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)
+          job-id (:job-id (parse-body
+                           (post handler "/api/alpha/bell"
+                                 (json/generate-string
+                                  {"agent-id" "kimi-caller-probe"
+                                   "caller" "claude-test"
+                                   "prompt" "caller probe"}))))]
+      (wait-for-job-state handler job-id 2000)
+      (is (= ["claude-test"] @seen)))))
+
 (deftest bell-rejects-unregistered-recipients-before-creating-jobs
   (let [handler (make-handler)
         bell (fn [agent-id]

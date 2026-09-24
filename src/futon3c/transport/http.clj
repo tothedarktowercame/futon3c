@@ -4866,6 +4866,9 @@
                           aid effective-prompt
                           {:timeout-ms timeout-ms :model model
                            :mission-id mission-id :evidence-store evidence-store
+                           ;; Requisition-gated seats (kimi) exempt replies
+                           ;; to their own bells and remind the caller.
+                           :caller caller
                            :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
                                                     [:jobs job-id :inherited-clock])} job-id)
                          (finally
@@ -4987,6 +4990,7 @@
                             {:timeout-ms timeout-ms
                              :model model :reasoning-effort reasoning-effort
                              :mission-id mission-id :evidence-store evidence-store
+                             :caller caller
                              :inherited-clock (get-in (ensure-invoke-jobs-ledger!)
                                                       [:jobs job-id :inherited-clock])}
                             job-id))
@@ -5943,6 +5947,7 @@
                          (reg/invoke-agent! aid effective-prompt
                                             {:timeout-ms timeout-ms :turn-id turn-id
                                              :surface surface :mission-id mission-id
+                                             :caller caller
                                              :evidence-store evidence-store})))
                       (finally
                         (reg/clear-invoke-event-sink! aid))))
@@ -5971,6 +5976,7 @@
                           (reg/invoke-agent! (str agent-id) effective-prompt
                                              {:timeout-ms timeout-ms :turn-id turn-id
                                               :surface surface :mission-id mission-id
+                                              :caller caller
                                               :evidence-store evidence-store}))))
                       (catch Throwable t
                         (sink-fn {:type "done" :ok false :error "invoke-error"
