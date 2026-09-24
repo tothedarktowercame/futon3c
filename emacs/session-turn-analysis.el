@@ -318,6 +318,15 @@ The record is written either way; only who fills it changes."
   :type 'string
   :group 'session-mode)
 
+(defcustom session-mode-analysis-requisition
+  "M-futon-seams — interpret one operator turn into intents, cues and pattern citations"
+  "Requisition line sent with every turn-analysis brief.
+A seat may refuse work that does not name what it is for; this says so in
+one line. The default names the mission the turn-annotation work belongs
+to, which is where the record format and this dispatcher are specified."
+  :type 'string
+  :group 'session-mode)
+
 (defun session-mode--dispatch-analysis (path)
   "Ask `session-mode-analysis-agent' to interpret the turn recorded at PATH.
 Fire and forget: the dispatch must not delay the conversation, and a seat
@@ -325,6 +334,12 @@ that is busy or absent leaves the record `requested', which is the honest
 state -- never silently complete."
   (let* ((agent session-mode-analysis-agent)
          (brief (concat
+                 ;; A requisition line, because a seat may refuse work without
+                 ;; one. kimi-1 began refusing on 2026-09-24 and every dispatch
+                 ;; to it failed: the brief had no way to say what the work was
+                 ;; for. Stated here rather than assumed, and harmless to a seat
+                 ;; that does not read it.
+                 "Requisition: " session-mode-analysis-requisition "\n\n"
                  "Interpret one operator turn. This is the whole task; there is no "
                  "conversation attached to it.\n\n"
                  "The turn, its sentence offsets and its metadata (including which "
