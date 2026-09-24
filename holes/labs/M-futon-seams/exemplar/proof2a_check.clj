@@ -92,11 +92,25 @@
 (defn norm-meets [xs] (set (map (fn [x] {:pair (set (:pair x)) :maximal-common (set (:maximal-common x))}) xs)))
 (defn close? [a b] (and (number? a) (number? b) (< (Math/abs (- (double a) (double b))) 1e-3)))
 
+;; A hand-built candidate meets W_0's construction condition when the War
+;; Machine's constructor, replayed on exactly its recorded interpretations and
+;; initial state, returns the same pattern set in an order that is a linear
+;; extension of the recorded containment order (construct-replay.edn, written
+;; by construct_replay.clj). The containment edges themselves are authored, not
+;; constructed: the constructor returns a precedence, not an order.
+(def replay
+  (let [f (java.io.File. (str (.getParentFile (java.io.File. (System/getProperty "babashka.file"))) "/construct-replay.edn"))]
+    (when (.exists f) (edn/read-string (slurp f)))))
+(defn replayed? [cid]
+  (boolean (some (fn [r] (and (= cid (:candidate r)) (= :constructed (:constructor-status r))
+                              (some #(and (:same-pattern-set? %) (:respects-containment-order? %)) (:constructed r))))
+                 (:replays replay))))
+
 (defn check-0 [cid cand]
   (let [c (cascade-of cand) pred (:prediction cand) rec (:construction-receipt cand)
         problems (atom []) findings (atom [])
         fail #(swap! problems conj (str "W_0 " cid ": " %))]
-    (when (not= :machine-constructed (:kind rec))
+    (when (and (not= :machine-constructed (:kind rec)) (not (replayed? cid)))
       (if *require-machine-construction*
         (fail (str "construction receipt is " (:kind rec) "; PROOF-2a W_0 requires :machine-constructed (replay of the constructor on the recorded interpretations)"))
         (swap! findings conj {:kind :construction-not-machine :candidate cid :receipt-kind (:kind rec)})))
