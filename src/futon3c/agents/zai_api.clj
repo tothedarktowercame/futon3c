@@ -1193,6 +1193,18 @@
   (some #(some-> (get clock %) str str/trim not-empty)
         [:ticket-id :excursion-id :mission-id]))
 
+(defn- caller-clock
+  "The registered CALLER's clock as it stands now, else INHERITED's. The
+   inherited clock is the caller's decision when the job was created, which
+   can be minutes stale by the time a queued job starts (claude-8,
+   2026-09-24: a reminder quoted a clock already replaced)."
+  [caller inherited]
+  (or (when-let [agent (some-> caller not-empty
+                               ((requiring-resolve 'futon3c.agency.registry/get-agent)))]
+        ((requiring-resolve 'futon3c.agency.clock-store/current-clock)
+         (get-in agent [:agent/id :id/value]) (:agent/session-id agent)))
+      (:clock inherited)))
+
 (def requisition-format
   "Requisition: <M-*|E-*|T-*> — <one-line purpose>")
 
@@ -1934,7 +1946,8 @@ CALLS contains maps of tool name, arguments, and result digest."
             job-target (:target admission)
             purpose (:purpose admission)
             caller-target (clock-work-target
-                           (:clock (:inherited-clock invoke-context)))
+                           (caller-clock (some-> (:caller invoke-context) str)
+                                         (:inherited-clock invoke-context)))
             runner-budget (:student-runner-budget invoke-context)
             call-timeout-ms
             (or (:timeout-ms invoke-context)

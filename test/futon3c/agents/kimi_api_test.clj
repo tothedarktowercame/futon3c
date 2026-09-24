@@ -4,6 +4,7 @@
    the sampling block Kimi accepts."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.followup-queue :as followups]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.kimi-api :as kimi]
@@ -371,6 +372,7 @@
         (f #(get-in (followups/snapshot) [:queued [agent-id session]]))
         (finally
           (reg/deregister-agent! agent-id)
+          (clock-store/reset-store!)
           (followups/clear!)
           (.delete file))))))
 
@@ -387,8 +389,11 @@
 (deftest a-requisition-off-the-callers-clock-reminds-it-to-reclock
   (with-caller "claude-kimi-caller" "caller-session-2"
     (fn [queued]
+      ;; The reminder reads the caller's clock when the job starts; the
+      ;; job's inherited clock (a snapshot from creation) is stale here.
+      (clock-store/set-dispatch-mission! "claude-kimi-caller" "caller-session-2" "M-a")
       (let [ctx {:caller "claude-kimi-caller"
-                 :inherited-clock {:clock {:mission-id "M-a"}}}]
+                 :inherited-clock {:clock {:mission-id "M-stale"}}}]
         (run-jobs (make-invoke {}) [[(req "M-a" "on the clock") ctx 1000]
                                     [(req "T-c" "off the clock") ctx 1000]
                                     [(req "T-c" "again") ctx 1000]])
