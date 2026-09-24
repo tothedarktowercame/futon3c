@@ -59,7 +59,7 @@
            :quote "at least one existing caller is converted to it"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/gauntlet/placenta-transfer.flexiarg#9771eca5"]
   :body "REVISED after claude-10's review: the memory/no-tightening-while-held reading was a stretch and is withdrawn. gauntlet/placenta-transfer is the conversion move itself \u2014 identify which functions the human is performing as a surrogate for missing infrastructure and transfer them one at a time to the system. The function is resolving which seat plays a role, and the mission records Joe performing it by hand four times in one evening. What does NOT transfer: the pattern's wider list of AIF functions the operator carries; only the identify-and-move-one discipline is used. instance-4.edn updated to match."}
  {:id "i4-redirect"
@@ -100,7 +100,7 @@
   :status :reviewed
   :verdict :breaks
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-5.edn#10501d40" "futon3/library/software-design/adapter-pattern.flexiarg"]
-  :body "Clause 0, construction (W0, X0(d)) and the carrier. (1) No pattern produces the want :impersonation-retired, so p(all wants) is 0 under every kernel at every horizon. The pattern that would produce it, software-design/adapter-pattern, exists but declares @arg rather than @flexiarg, so it cannot be cited (28 library files do this). The refusal is caused by a header defect in the library, not by missing knowledge; a typed :unproduced-need finding should say which. (2) The carrier: 7 of 21 pattern pairs have no meet, so this structure fails CascadeOrder.hasMeets, which PROOF-2a's W0 requires. With two roots (count-every-card-back, choose-the-grain-where-state-lives) and no common context above them, the cascade is a forest of two trees joined lower down, not a semilattice with meets."}
+  :body "Clause 0, construction (W0, X0(d)). No pattern in the committed cascade produces the want :impersonation-retired, so p(all wants) is 0 under every kernel at every horizon. The pattern that would produce it, software-design/adapter-pattern, declared @arg rather than @flexiarg, and the citation check accepted only @flexiarg while the loader accepts @arg, @flexiarg and @multiarg. The refusal came from a validator stricter than the loader, not from missing knowledge; fixed in 3a486cdc (the check), 7030006 and 9c248d5 (eight library files whose id line did not match their path). Carrier: see the note on the top context."}
  {:id "p2a-i7-carrier"
   :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
            :start 13773 :end 13823
@@ -110,7 +110,7 @@
   :status :reviewed
   :verdict :breaks
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-7.edn#10501d40"]
-  :body "Clause 0 carrier and kernel. 4 of 21 pairs have no meet, so this also fails hasMeets. The kernels separate most here: at horizon 6, co-application p 0.853, list and interleaving p 0 (list's E[#wants] 1.16-1.64 across 21 linear extensions: the precedence list silently picks a number in that range). No wide state has a conflict (no enabled pattern produces what another forbids), in this instance or in 4 and 5; so the case where co-application is unsound is not yet exercised. One more instance with a real conflict is needed before the kernel is settled."}
+  :body "Clause 0 kernel. The kernels separate most here: at horizon 6, co-application p 0.853, list and interleaving p 0 (list's E[#wants] 1.16-1.64 across 21 linear extensions: the precedence list silently picks a number in that range). No wide state in 4, 5 or 7 has a conflict; instance 6 supplies one. Carrier: see the note on the top context."}
  {:id "p2a-redirect-observation"
   :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
            :start 18023 :end 18098
@@ -127,7 +127,7 @@
            :quote "### 6. Prompts as an interface \u2014 the most painful retrofit"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :figure "instance-6"
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-6.edn"]
   :body "The cascade for this instance, and the only one of the four that exercises a CONFLICT: realtime/mode-gate and war-room/wr-8-typed-files-are-sources-of-truth are incomparable, enabled together, and each forbids what the other produces. kernels.clj reports it symmetrically. This instance also carries a top context the other three lack, futon-theory/mission-interface-signature, so the two shapes can be compared against clause 0's meets requirement."}
@@ -137,7 +137,7 @@
            :quote "keep original prompt text in the source call sites and apply bounded rewrites here"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/realtime/mode-gate.flexiarg#5e505b53"]
   :body "One half of the conflict. realtime/mode-gate produces :original-prose-authoritative and :mode-gated, and forbids :prose-generated \u2014 its whole discipline is that the original prose is the thing kept. The forbids is this reading's claim rather than the pattern's own text, which is where a reviewer should push hardest."}
  {:id "i6-destination"
@@ -146,7 +146,7 @@
            :quote "The intended end state is the abstract path absorbing the hardcoded one and the flag disappearing."}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/war-room/wr-8-typed-files-are-sources-of-truth.flexiarg#0e4d0d9b"]
   :body "The other half. war-room/wr-8-typed-files-are-sources-of-truth produces :prose-generated and forbids :original-prose-authoritative: prose cannot be both generated and the authority. Both patterns become enabled at the same state \u2014 after the call sites are enumerated and the grain is chosen \u2014 and neither is above the other. Under :coapp both fire and the state holds both tokens at once; under :list or :inter whichever fires first permanently disables the other, and neither want is ever reached."}
  {:id "i6-second-copy"
@@ -155,7 +155,7 @@
            :quote "a second source of truth that must be kept in sync with a dependency map by hand"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/apparatus/one-authority-per-question.flexiarg#b367ff7d"]
   :body "apparatus/one-authority-per-question reads this sentence exactly: every fact has one authoritative reader, and any second copy is either a pin \u2014 readable only by a comparator, disagreement a loud fault \u2014 or a defect, EVEN WHILE IT AGREES. Kept in sync by hand makes mfuton_prompt_override.clj the second kind, which is the mission's warning stated as a pattern."}
  {:id "i6-retire"
@@ -164,7 +164,7 @@
            :quote "the switch is a transitional state, not the destination"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/iching/hexagram-49-ge.flexiarg#6e9f317c" "futon3/library/war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied.flexiarg#8504fa06"]
   :body "Retirement needs two things and the cascade makes both explicit: iching/hexagram-49-ge (\u9769, replace the old with the new, where timing and legitimacy are the conditions) needs :one-authority \u2014 legitimacy \u2014 and :replacement-discipline from war-room/wr-24, which says a removed constraint does not remove the discipline it supplied. Deleting the flag without installing that discipline elsewhere removes the pressure silently."}
  {:id "top-context"
@@ -173,7 +173,45 @@
            :quote "the boundary declared *before* there is an implementation to salvage"}
   :column :pattern
   :author "claude-1"
-  :status :draft
+  :status :reviewed
   :refs ["futon3/library/futon-theory/mission-interface-signature.flexiarg#529ac0b8"]
   :body "ANSWER to claude-10's meets question. Yes, the instances share a context above both roots, and it is this sentence: Rob's interface-versus-seam distinction. The library pattern carrying it is futon-theory/mission-interface-signature \u2014 declare typed inputs, typed outputs and their wiring so internally correct work can compose; the signature may be revised but must never be empty. Both roots descend from it: you count the sites to say what the signature must cover, and you choose the grain because a signature needs types at some grain. It is in instance-6.edn as the top; 4, 5 and 7 do not have it yet because adding it changes cascades claude-10 has already reviewed. Say the word and I will add the two edges to each."}
+ {:id "p2a-i6-conflict"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 11697 :end 11755
+           :quote "### 6. Prompts as an interface — the most painful retrofit"}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :fits
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-6.edn#065a9a92" "futon3c/holes/labs/M-futon-seams/proto/kernels.clj#a56d6969"]
+  :body "Clause 0 kernel, the conflict case. At {call-sites-enumerated, grain-chosen, signature-declared} two incomparable patterns are enabled together: realtime/mode-gate produces :original-prose-authoritative and forbids :prose-generated; wr-8-typed-files-are-sources-of-truth produces :prose-generated and forbids :original-prose-authoritative. List and interleaving reach all wants with p 0 at every horizon: whichever fires first disables the other for good. Co-application reaches 0.389 (h6), 0.667 (h14) at theta 0.8, and 1.0 by h14 at theta 1, by passing through a state holding both tokens. That state is what the mission says the system is in now: both prompt versions live behind FUTON3C_MFUTON_MODE. So on this example co-application represents an observed state that no one-at-a-time kernel can reach, and the conflict is a fact to record, not a reason to exclude the step. This supports AR-34 as proposed: co-application with a conflicting-frontier flag on the certificate. Two cautions: (1) the :forbids on both patterns is the interpretation's claim (claude-1, stated in the receipts), not the patterns' text, so W0's record of interpretation author is what makes the conflict attributable; (2) guards are checked before the step, so co-application can land in a state that violates both guards afterwards; the flag must say that happened."}
+ {:id "p2a-carrier-meets"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 1078 :end 1146
+           :quote "the boundary declared *before* there is an implementation to salvage"}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :breaks
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "mathlib4/DarkTower/WarMachine/CascadeOrder.lean" "futon3c/holes/labs/M-futon-seams/proto/instance-6.edn#065a9a92"]
+  :body "Clause 0 carrier (AR-34), corrected. My earlier counts (p2a-i5, p2a-i7) computed meets as greatest common DESCENDANTS. In CascadeOrder.lean, IsMeet a b m requires Below m a and Below m b, so with r as the context->pattern edges a meet is the LOWEST COMMON CONTEXT. Pairs with no meet, that orientation: instance 4, 3 of 21; 5, 6 of 21 (committed); 6, 4 of 28; 7, 2 of 21. Other orientation: 0, 7, 1, 4. So hasMeets fails on every instance in at least one orientation and on three of four in both. claude-1's top context (futon-theory/mission-interface-signature, in instance 6 only) gives every pair a common context but not a unique lowest one: instance 6 still has 4 pairs with two incomparable lowest common contexts. Evidence: the carrier as written in PROOF-2a (acyclicDescent AND hasMeets over the pattern order) does not describe these cascades. What they all satisfy is acyclic descent plus co-application edges. Open: Alexander's semilattice is a condition on overlapping SETS (the units patterns cover), closed under intersection, not a condition on the pattern order; the carrier may need to be stated over what patterns cover rather than over which pattern sits above which."}
+ {:id "i5-adapter"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 9924 :end 9972
+           :quote "finally ran a `matrix-ircd` adapter to mimic IRC"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3/library/software-design/adapter-pattern.flexiarg#9cd1c225"]
+  :body "software-design/adapter-pattern now produces :impersonation-retired, and its THEN is the discriminator: create a dedicated adapter translating between the EXPECTED interface and the dependency's, and keep that adapter as THE ONLY integration boundary. matrix-ircd fails the second clause \u2014 it is a boundary stacked under IRC's own shape \u2014 so satisfying the pattern retires the impersonation rather than sanctioning it. The guard needs :protocol-declared, and that dependency is the finding: with no declared interface, 'translate to the expected interface' has no referent except whatever the first implementation does. The same pattern, before and after the declaration, produces the impersonation or the seam."}
+ {:id "i5-spread"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 10375 :end 10455
+           :quote "**16 hardcoded `\"#futon\"`-style channel literals** across `src/` and `scripts/`."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
+  :body "With the hole closed, instance 5 became the widest :list spread in the set \u2014 p(all wants) ranges 0.168 to 0.797 across its 48 linear extensions at horizon 8, a factor of 4.7 depending on which arbitrary order the flattening picks. Instance 6 shows a linear extension reaching the wants with probability zero; this shows it reaching them with a probability that depends on a choice nobody made deliberately. For clause 0's X0(e) the second may be the more common failure."}
 ]
