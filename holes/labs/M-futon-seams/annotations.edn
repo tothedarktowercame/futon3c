@@ -288,7 +288,7 @@
   :status :draft
   :figure "instance-5"
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
-  :body "The cascade for instance 5, with the amber connector marking a MISSING MEET: three overlapping pairs share the same two maximal common units, realtime/transport-pivot and translation/test-by-reproducing-behaviour, and neither is below the other. Clause 0 asks that an overlapping pair's common part be a single pattern of the cascade. Here the construction forks into a migration discipline and a conformance test with nothing joining them \u2014 which is honest, since the two genuinely do not depend on each other, and is exactly the typed finding clause 0 says to record rather than repair."}
+  :body "The cascade for instance 5. It has NO missing meet, and the correction is worth recording: an earlier run of meets.clj reported three, all of them comparable pairs \u2014 one pattern below the other \u2014 which the strict reading of descendants dropped from their own common part. In containment terms if A contains B then A meet B = B, which is in the cascade. Recomputed with reflexive descendants, matching CascadeOrder.Below in the PROOF-2a Lean module (a = b OR Reach r a b): 19 overlapping pairs, 19 with a greatest common descendant. Across all five cascades the strict reading showed five missing meets and the reflexive one shows one. Which is the kind of definition a formalisation exists to fix, and the reason a finding computed before it is fixed is worth very little. Found by claude-10."}
  {:id "i5-wiring"
   :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
            :start 11075 :end 11134
@@ -318,7 +318,7 @@
   :status :draft
   :figure "instance-7"
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-7.edn"]
-  :body "The cascade for instance 7, with its own missing meet marked: two overlapping pairs share the maximal units contracts/every-entry-has-a-falsifier and memory/no-tightening-while-held. The construction forks into naming a falsifier and converting the writers, and the two never rejoin. Same shape as instance 5's, and the same clause-0 finding."}
+  :body "The cascade for instance 7. Like instance 5 it has no missing meet: the two pairs an earlier run reported were comparable, and a comparable pair meets at its lower unit. 17 overlapping pairs, 17 with a greatest common descendant, computed reflexively. The one real missing meet in this mission is instance 6's, where two incomparable roots have a common part whose maximal units are exactly the two patterns that conflict \u2014 the missing meet and the conflict turn out to be the same fact."}
  {:id "i7-wiring"
   :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
            :start 15221 :end 15366

@@ -12,9 +12,16 @@
 (require '[clojure.edn :as edn] '[clojure.set :as set])
 
 (defn below
-  "Strict descendants of ID: everything the unit contains, transitively."
+  "Descendants of ID, REFLEXIVELY: the unit contains itself.
+   This is not a detail. With strict descendants a COMPARABLE pair loses the
+   lower unit from its common part, so A above B reports as having no meet
+   when in containment terms A ∩ B = B, which is in the cascade. Reflexive
+   matches CascadeOrder's Below in the PROOF-2a Lean module (a = b ∨ Reach r
+   a b), and it is exactly the kind of definition a formalisation has to fix
+   before a finding computed from it means anything -- these three files
+   reported five missing meets under the strict reading and one under this."
   [children id]
-  (loop [seen #{} frontier (get children id #{})]
+  (loop [seen #{id} frontier (get children id #{})]
     (if (empty? frontier) seen
         (recur (into seen frontier)
                (set/difference (reduce set/union #{} (map #(get children % #{}) frontier))

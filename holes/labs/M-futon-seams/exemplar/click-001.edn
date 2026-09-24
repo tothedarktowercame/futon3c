@@ -188,8 +188,10 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
        :via "And there must be something to convert to."}]
 
      :meet-findings
-     {:overlapping-pairs 15 :with-greatest-common-descendant 15 :missing []
-      :statement "Every overlapping pair has a greatest common descendant that is itself a pattern of the cascade, so the restricted semilattice condition of clause 0 holds. The two roots overlap (they share every pattern below placenta-transfer) and their meet is gauntlet/placenta-transfer."}
+     {:overlapping-pairs 21 :with-greatest-common-descendant 21 :missing []
+      :computed-with :reflexive-below
+      :statement "Every overlapping pair has a greatest common descendant that is itself a pattern of the cascade, so the restricted semilattice condition of clause 0 holds. The two roots overlap (they share every pattern below placenta-transfer) and their meet is gauntlet/placenta-transfer."
+      :definition-note "Recomputed 2026-09-24 with REFLEXIVE descendants, matching CascadeOrder.Below in the PROOF-2a Lean module (a = b OR Reach r a b). The earlier figures here (15 and 15) came from a strict reading, under which a comparable pair loses its lower unit from the common part and reports as missing a meet even though in containment terms A meet B = B. Under the strict reading these files showed five missing meets across instances 5, 6 and 7; under the reflexive one there is exactly one, in instance 6. The finding changed with the definition, which is what a formalisation is for."}
 
      :frontier-conflicts
      {:conflicting-states 0 :pairs []
@@ -288,7 +290,8 @@ Worse, the ordering is ambiguous in the direction that matters. 'Worst' can mean
       :finding {:kind :w0-construction-condition-not-met
                 :statement "As for 4a."}}
      :meet-findings
-     {:overlapping-pairs 15 :with-greatest-common-descendant 15 :missing []
+     {:overlapping-pairs 21 :with-greatest-common-descendant 21 :missing []
+      :computed-with :reflexive-below
       :statement "The restricted condition holds here too."}
      :frontier-conflicts {:conflicting-states 0 :pairs []}
      :prediction

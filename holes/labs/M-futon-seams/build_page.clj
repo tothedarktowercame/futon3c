@@ -7,8 +7,11 @@
 (require '[clojure.edn :as edn] '[clojure.set :as set] '[cheshire.core :as j])
 (load-file (str (System/getProperty "user.dir") "/holes/labs/M-futon-seams/proto/kernels_lib.clj"))
 
-(defn- strict-below [children id]
-  (loop [seen #{} frontier (get children id #{})]
+(defn- below
+  "Reflexive descendants: a unit contains itself. See proto/meets.clj for why
+   the strict reading reported comparable pairs as missing a meet."
+  [children id]
+  (loop [seen #{id} frontier (get children id #{})]
     (if (empty? frontier) seen
         (recur (into seen frontier)
                (set/difference (reduce set/union #{} (map #(get children % #{}) frontier)) seen)))))
@@ -21,7 +24,7 @@
   (let [ids (vec (sort (keys pats)))
         children (reduce (fn [m {:keys [context pattern]}]
                            (update m context (fnil conj #{}) pattern)) {} above)
-        desc (into {} (for [i ids] [i (strict-below children i)]))
+        desc (into {} (for [i ids] [i (below children i)]))
         rows (for [a ids b ids :when (neg? (compare (str a) (str b)))
                    :let [common (set/intersection (desc a) (desc b))]
                    :when (seq common)]
