@@ -11,7 +11,7 @@
 ;; instance -- and deleting it would delete the evidence.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 5
- :mission-sha "ee86811ca0e63efd24c3a355aa243b6c94aba153b6a3594199d480d7f98fb40f"
+ :mission-sha "119e4edecf9700bc438c179554e177deff0efeb6b4cfe0c0b25432dc1dbd3ec9"
 
  :tokens
  {:literals-enumerated

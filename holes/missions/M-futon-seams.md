@@ -498,7 +498,14 @@ constructed example.
 **Exit criterion:** the design feels *inevitable* given the constraints, not
 merely *possible*, and someone outside the project can understand what it does
 and why from the plain-language argument alone. **Not met.** Both halves now say why
-rather than promising more work. The inevitability half is answered
+rather than promising more work.
+
+**This phase closes only through DOCUMENT's plain-language account for an
+outsider, and the negative finding is retained by closing it** — the design is
+*defensible, not inevitable*: 2 of instance 4's 7 patterns are reachable from
+the move as the mission states it, and neither candidate dominates the other.
+An account that reaches ARGUE's exit by softening that has not satisfied this
+criterion, it has changed it. The inevitability half is answered
 with a measurement and the answer is negative: the design is defensible, not
 inevitable. The plain-language half is DOCUMENT's, and this phase closes when
 DOCUMENT is written.
