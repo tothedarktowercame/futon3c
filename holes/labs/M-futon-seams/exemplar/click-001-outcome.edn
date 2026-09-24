@@ -1,0 +1,91 @@
+;; click-001 OUTCOME: what happened when the chosen target was worked, read
+;; against PROOF-2a clauses 1-6. Author claude-10, 2026-09-24. Pairs with
+;; click-001.edn (the decision, claude-1).
+;;
+;; Headline: the implementation (futon3c 8e5c431e, live since the 16:4x reload)
+;; did NOT carry out the cascade that was chosen. :cand/a-registry-first plans a
+;; ROLE registry (roles as their own vocabulary, role->seat bindings, one place
+;; resolving a role to a seat). The implementation works at the PROVIDER grain:
+;; routing reads each agent's declared :agent/type instead of parsing its id.
+;; That removes the id-parsing defect but leaves the role registry unbuilt. So
+;; this is a plan-vs-realised deviation of kind :different-grain, and the
+;; observations below are recorded against the cascade's own token statements,
+;; not against what the implementation happened to do.
+{:schema :m-futon-seams/proof2a-outcome-v1
+ :click "holes/labs/M-futon-seams/exemplar/click-001.edn"
+ :click-sha256-prefix "2f270e0dad677749"
+ :mission {:path "holes/missions/M-futon-seams.md" :sha256-prefix "8dda749f852fcd9c"}
+ :chosen {:target :inst/i4 :candidate :cand/a-registry-first}
+ :enacted {:commit "8e5c431e"
+           :files ["src/futon3c/agency/roles.clj" "src/futon3c/transport/http.clj"
+                   "test/futon3c/agency/roles_test.clj"]
+           :author "claude-10"
+           :live {:reloaded-by "claude-11 (reload of futon3c.transport.http from master, included 8e5c431e)"
+                  :checked-by "claude-10, proof-eval on :6768"
+                  :check "(roles/provider a) and (agent-requires-execution? a) for wm-author wm-reviewer oxf-codex-3 codex-1 claude-10"
+                  :result [["wm-author" :codex true] ["wm-reviewer" :codex true] ["oxf-codex-3" :codex true]
+                           ["codex-1" :codex true] ["claude-10" :claude false]]}}
+
+ :deviation {:kind :different-grain
+             :planned "role grain: cascade-construction/choose-the-grain-where-state-lives answered 'at the role' (instance-4.edn, token :roles-named)"
+             :realised "provider grain: futon3c.agency.roles reads the registered :agent/type"
+             :why "the implementer (claude-10) worked from the mission's defect description (provider parsed out of the id, http.clj sites) rather than from the chosen cascade; nothing in the loop checked the enactment against the cascade before it was committed"
+             :finding "PROOF-2a has no clause that binds the enacted change to the chosen candidate. Clause 4's Q-link joins action -> outcome -> next belief, but 'action' is the selected candidate, and nothing checks that what was done IS that candidate."}
+
+ ;; Clause 1 (A): each want token observed by a check that could be re-run.
+ ;; :observed is true / false / :partial; a check that was not run is a typed absence.
+ :observations
+ {:sites-enumerated {:observed :partial
+                     :check "grep -rn 'starts-with?[^)]*\"(claude|codex|kimi|zai)\"' src -> the provider-routing branches; grep for seat-literal ids"
+                     :evidence "routing branches: 2 found and converted; the mission's corrected count is 3 (library_loop_adapter.clj codex-command checks the binary name). 51 provider-literal ids: not enumerated by this work; 16 src files still contain seat literals like \"codex-1\"."}
+  :roles-named {:observed false :evidence "no role vocabulary exists; roles.clj is about providers"}
+  :binding-recorded {:observed false :evidence "no role->seat binding record; the provider binding used is the pre-existing :agent/type at registration"}
+  :one-producer {:observed :partial
+                 :evidence "one place now answers 'which provider is this agent' (futon3c.agency.roles/provider); no place answers 'which seat plays this role'"}
+  :caller-converted {:observed :partial
+                     :evidence "http.clj agent-requires-execution? and claude-missing-conversation-result? call roles/ instead of parsing the id; they ask for a provider, not a role"}
+  :redirect-test {:observed :partial
+                  :check "clojure -M:test -n futon3c.agency.roles-test (4 tests, 14 assertions, pass); same tests against the old prefix definitions: 8 of 14 fail"
+                  :evidence "re-declaring the provider for a fixed id changes both routing decisions; the token asks for rebinding a ROLE to a different seat, which cannot be tested because roles do not exist"}
+  :prefix-routing-retired {:observed :partial
+                           :check "grep -rn 'starts-with?[^)]*\"(claude|codex|kimi|zai)\"' src -> 0"
+                           :evidence "no str/starts-with? provider branch remains in src/; the library-loop adapter still requires the literal codex binary and 'exec', which is provider coupling of a different kind (command shape, not an id)"}}
+
+ ;; Clause 2 (D): the belief after observation, over the want tokens.
+ :posterior-wants {:caller-converted :partial :redirect-test :partial :prefix-routing-retired :partial
+                   :all-wants-met? false}
+
+ ;; Clause 3 (F): no variational free energy was computed for this click.
+ :F {:status :not-measured :reason "hand-worked click; no q or evidence model recorded"}
+
+ ;; Clause 4 (Q-link): prediction joined to outcome.
+ :Q-link {:predicted {:source "click-001.edn :cand/a-registry-first :prediction"
+                      :kernel :coapp :theta 0.8 :horizon 6 :p-all-wants 0.26 :e-wants 1.814}
+          :realised {:all-wants-met? false :wants-fully-met 0 :wants-partial 3}
+          :reading "The prediction is about carrying out THIS cascade; the enactment carried out a different one, so the outcome does not test the prediction. It is recorded, not scored."}
+
+ ;; Clause 5 (B): trials for theta. A pattern is a trial only if the enactment
+ ;; applied it; here most were not applied as planned.
+ :B-trials {:status :not-usable
+            :reason "the enactment deviated at the grain step, so per-pattern success cannot be attributed; counting the provider-grain change as successes of role-grain patterns would inflate theta"
+            :per-pattern {:or3/count-every-card-back :partial
+                          :cascade-construction/choose-the-grain-where-state-lives :not-applied-as-planned
+                          :coordination/assignment-binding :not-applied
+                          :cycle-machine/single-producer :applied-at-other-grain
+                          :gauntlet/placenta-transfer :applied-at-other-grain
+                          :translation/test-by-reproducing-behaviour :applied-at-other-grain
+                          :realtime/mode-gate :not-applied}
+            :correction "claude-1 suggested (bellback on ceb64710) that the outcome landed above the 0.26 prediction, so theta 0.8 is too low. It did not: no want was fully met. The calibration question stays open."}
+
+ ;; Clause 6: which carriers exist for this click.
+ :clause-6 {:E {:status :not-measured} :C {:status :declared :value "the three wants of the IDENTIFY exit"}
+            :A {:status :recorded :where ":observations"} :D {:status :recorded :where ":posterior-wants"}
+            :F {:status :not-measured} :B {:status :not-usable :where ":B-trials"}}
+
+ :next {:to-complete-the-chosen-candidate
+        ["declare a role vocabulary (implementer, reviewer, interpreter, ...) as data"
+         "record role->seat bindings; reject a conflicting binding"
+         "one resolver: role -> seat, reading the bindings and each seat's declared provider (roles.clj's provider is the input)"
+         "convert one caller that names a seat (e.g. a dispatch that hardcodes a codex seat) to ask for a role"
+         "redirect test: rebind the role to a seat of another provider; the caller's dispatch follows"
+         "the library-loop adapter's codex command: a provider-neutral command template, or record it as instance 5/6 work"]}}
