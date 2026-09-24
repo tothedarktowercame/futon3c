@@ -45,8 +45,11 @@ const TOLERANCE = 0.10;
     }
 
     const measured = await page.evaluate(() => {
+      // A MISSION paragraph: a direct child of .main. Phase and table-of-
+      // contents paragraphs are nested and set smaller, and measuring one of
+      // those compares a figure against the wrong text.
       const bodyPx = parseFloat(getComputedStyle(
-        document.querySelector('.main p')).fontSize);
+        document.querySelector('.main > p')).fontSize);
       const margin = document.querySelector('.margin');
       const mBox = margin.getBoundingClientRect();
       const wide = getComputedStyle(margin).display !== 'none';

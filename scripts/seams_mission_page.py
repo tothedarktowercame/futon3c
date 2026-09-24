@@ -23,6 +23,7 @@ import argparse, html, json, os, re, subprocess, sys, hashlib
 REPO = "/home/joe/code/futon3c"
 MISSION = "holes/missions/M-futon-seams.md"
 ANNOTATIONS = "holes/labs/M-futon-seams/annotations.edn"
+LIFECYCLE = "holes/labs/M-futon-seams/lifecycle.edn"
 CASCADES = ["holes/labs/M-futon-seams/proto/instance-4.edn",
             "holes/labs/M-futon-seams/proto/instance-4b.edn",
             "holes/labs/M-futon-seams/proto/instance-5.edn",
@@ -166,6 +167,78 @@ def resolve_sentinels(rendered):
 
 # ---------------------------------------------------------------- page
 
+STATUS_LABEL = {"exit-met": "exit met", "in-progress": "in progress",
+                "not-started": "not started"}
+
+
+def toc_html(life):
+    """One row per lifecycle phase, with the phase's own exit criterion and
+    the evidence the status was read from. Status comes from the criterion
+    against the evidence; where that disagrees with the mission's Status line
+    the row says so."""
+    rows = []
+    for ph in life["phases"]:
+        st = ph["status"]
+        ev = "".join(
+            f'<li><span class="evkind">{html.escape(e["kind"])}</span> '
+            + (f'<code>{html.escape(e["ref"])}</code> — ' if e.get("ref") else "")
+            + html.escape(e["what"]) + "</li>"
+            for e in ph.get("evidence", []))
+        arte = len(ph.get("artefacts", []))
+        rows.append(
+            f'<tr class="ph-{st}">'
+            f'<td class="phname"><a href="#anc-phase-{ph["id"]}">{html.escape(ph["title"])}</a>'
+            + ('' if ph.get("mission-anchor") else
+               ' <span class="nosec">no section in the mission</span>') +
+            f'</td>'
+            f'<td class="phstat"><span class="dot d-{st}"></span>'
+            f'{STATUS_LABEL[st]}</td>'
+            f'<td class="phexit">“{html.escape(ph["exit"])}”'
+            f'<span class="exitsrc">mission-lifecycle.md:{ph["exit-line"]}</span></td>'
+            f'<td class="phwhy">{html.escape(ph["because"])}'
+            + (f'<ul class="phev">{ev}</ul>' if ev else "")
+            + (f'<p class="phart">{arte} artefact{"s" if arte != 1 else ""} '
+               f'in the margin below</p>' if arte else "")
+            + '</td></tr>')
+    o = life["overall"]
+    return (f'<section class="toc" id="toc">'
+            f'<h2>Where this mission stands</h2>'
+            f'<p class="tocnote">Status per phase is read from that phase\'s exit criterion in '
+            f'<code>futon4/holes/mission-lifecycle.md</code> against the evidence, not from the '
+            f'mission\'s Status line. The mission\'s Status line says '
+            f'<b>{html.escape(life["mission"]["status-line"])}</b>. '
+            f'Nothing here advances it: that is the owner\'s act, and the owner is unassigned.</p>'
+            f'<div class="tocwrap"><table class="toctable"><thead><tr><th>phase</th><th>status</th>'
+            f'<th>exit criterion</th><th>read from</th></tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table></div>'
+            f'<p class="tocfind"><b>Overall.</b> {html.escape(o["finding"])}</p>'
+            f'</section>')
+
+
+def phase_section(ph, in_mission):
+    """A heading in the main column for each phase, so its artefacts have a
+    place to sit. Where the mission has written the phase, this points at it;
+    where it has not, the placeholder says so and is drawn as a placeholder --
+    it is not mission text and must not read as any."""
+    st = ph["status"]
+    if in_mission:
+        body = (f'<p class="phbody">Written in the mission above, at '
+                f'<code>{html.escape(ph["mission-anchor"]["quote"])}</code>. '
+                f'{html.escape(ph["because"])}</p>')
+        cls = "phase inmission"
+    else:
+        body = (f'<p class="phbody"><b>Not yet written in the mission.</b> '
+                f'{html.escape(ph["because"])}</p>')
+        cls = "phase placeholder"
+    return (f'<section class="{cls}">'
+            f'<h2 id="anc-phase-{ph["id"]}" class="phhead" data-note="phase-{ph["id"]}">'
+            f'<span class="phn">{ph["n"]}</span> {html.escape(ph["title"])}'
+            f'<span class="dot d-{st}"></span>'
+            f'<span class="phstatword">{STATUS_LABEL[st]}</span></h2>'
+            f'<p class="phexit2">Exit criterion: “{html.escape(ph["exit"])}”</p>'
+            + body + '</section>')
+
+
 def figure_width(svg):
     """The width at which this drawing's labels come out at body size."""
     m = re.search(r'viewBox="0 0 ([0-9.]+) ([0-9.]+)"', svg)
@@ -184,11 +257,13 @@ def figure_html(key, svg, cap, num, anchor_id):
             f'<figcaption><span class="fignum">Figure {num}</span> '
             f'{html.escape(cap.get("what", key))} — instance {cap.get("instance", "?")}. '
             f'{html.escape(cap.get("sub", ""))}'
+            + (f' <span class="figwhy">{html.escape(cap["why"])}</span>'
+               if cap.get("why") else "")
             + (f'<ul class="figmarks">{marks}</ul>' if marks else "")
             + '</figcaption></figure>')
 
 
-def note_html(n, figures=None):
+def note_html(n, figures=None, anchor_override=None):
     col = n.get("column", "pattern")
     cls = "note col-" + ("a" if col == "pattern" else "b")
     if n.get("status") != "reviewed":
@@ -211,12 +286,20 @@ def note_html(n, figures=None):
     bits.append(f'<p class="nbody">{html.escape(n.get("body",""))}</p>')
     ref = n.get("_figref")
     if ref:
-        bits.append(f'<p class="nseefig">See <a href="#fig-{ref}">Figure {ref}</a> above.</p>')
+        bits.append(f'<p class="nseefig">See <a href="#fig-{ref}">Figure {ref}</a> '
+                    f'{n.get("_figdir", "below")}.</p>')
     if n.get("refs"):
         bits.append('<p class="nrefs">' +
                     " · ".join(f"<code>{html.escape(r)}</code>" for r in n["refs"]) + "</p>")
+    if n.get("_why"):
+        bits.insert(1, f'<p class="nwhy">{html.escape(n["_why"])}</p>')
+    if n.get("_at-phase"):
+        bits.append(f'<p class="natphase">placed at {html.escape(n["_at-phase"])}; '
+                    f'anchored in the mission at '
+                    f'<a href="#anc-{html.escape(n["id"])}">its span</a></p>')
     return (f'<aside class="{cls}" id="note-{html.escape(n["id"])}" '
-            f'data-anchor="{html.escape(n["id"])}">' + "".join(bits) + "</aside>")
+            f'data-anchor="{html.escape(anchor_override or n["id"])}">'
+            + "".join(bits) + "</aside>")
 
 
 def main():
@@ -231,6 +314,17 @@ def main():
     sha = hashlib.sha256(text.encode()).hexdigest()
     notes = edn_to_json(ANNOTATIONS)
     notes.sort(key=lambda n: (n["anchor"]["start"], n["id"]))
+    life = edn_to_json(LIFECYCLE)
+    # Which phase claims each note and each figure. An artefact is placed
+    # beside the phase that produced it, in phase order, rather than beside
+    # whichever mission sentence happens to mention it.
+    note_phase, fig_phase = {}, {}
+    for ph in life["phases"]:
+        for art in ph.get("artefacts", []):
+            if art.get("note"):
+                note_phase[art["note"]] = ph["id"]
+            if art.get("figure"):
+                fig_phase[art["figure"]] = ph["id"]
 
     figures, captions = {}, {}
     bundle = os.path.join("/tmp", "seams-bundle.json")
@@ -307,28 +401,55 @@ def main():
     # sits in. On a wide screen the script lifts it into the margin and levels
     # it with the anchor; on a narrow one it stays where it is and folds under
     # the passage it belongs to, which is the behaviour a phone needs.
+    # Figures are numbered by walking the phases in order, BEFORE the body is
+    # assembled, so a note at a mission span knows whether its figure is above
+    # it or below it. They all sit in phase sections after the mission text,
+    # so a span-anchored note points down and a note beside its own figure
+    # points up.
+    fignums = {}
+    for ph in sorted(life["phases"], key=lambda q: q["n"]):
+        for art in ph.get("artefacts", []):
+            fig = art.get("figure")
+            if fig and fig in figures:
+                fignums[fig] = len(fignums) + 1
+    for n in notes:
+        fig = n.get("figure")
+        if fig in fignums:
+            n["_figref"] = fignums[fig]
+            n["_figdir"] = "above" if n["id"] in note_phase else "below"
+
     placed = set()
     body_parts = []
-    fignum = 0
     for b in blocks:
         body_parts.append(b)
         for n in notes:
-            if n["id"] in placed:
-                continue
+            if n["id"] in placed or n["id"] in note_phase:
+                continue          # a claimed note waits for its phase
             if f'id="anc-{n["id"]}"' in b:
-                # A figure is its own element at full margin width, numbered in
-                # document order so a reference to it is stable, and the note
-                # that used to contain it now points at it.
-                fig = n.get("figure")
-                if fig and fig in figures:
-                    fignum += 1
-                    n["_figref"] = fignum
-                    body_parts.append(figure_html(fig, figures[fig],
-                                                  captions.get(fig, {}), fignum,
-                                                  n["id"]))
                 body_parts.append(note_html(n))
                 placed.add(n["id"])
-    # a note whose anchor is stale has no span in the text; keep it visible
+
+    # Phase order after the mission text: the War Machine works a mission
+    # phase by phase, so the artefacts appear where they would have been made.
+    by_id = {n["id"]: n for n in notes}
+    for ph in sorted(life["phases"], key=lambda p: p["n"]):
+        body_parts.append(phase_section(ph, bool(ph.get("mission-anchor"))))
+        for art in ph.get("artefacts", []):
+            fig = art.get("figure")
+            if fig and fig in figures:
+                cap = dict(captions.get(fig, {}))
+                cap["phase"] = ph["id"]
+                cap["why"] = art.get("why", "")
+                body_parts.append(figure_html(fig, figures[fig], cap,
+                                              fignums[fig], f"phase-{ph['id']}"))
+            nid = art.get("note")
+            if nid and nid in by_id and nid not in placed:
+                n = dict(by_id[nid])
+                n["_at-phase"] = ph["id"]
+                n["_why"] = art.get("why", "")
+                body_parts.append(note_html(n, anchor_override=f"phase-{ph['id']}"))
+                placed.add(nid)
+
     for n in notes:
         if n["id"] not in placed:
             body_parts.append(note_html(n))
@@ -342,7 +463,7 @@ def main():
               f'{len(stale)} with a stale anchor')
 
     open(a.out, "w", encoding="utf-8").write(PAGE.format(
-        css=CSS, js=JS, body=body, rev=html.escape(revlabel),
+        css=CSS, js=JS, body=body, toc=toc_html(life), rev=html.escape(revlabel),
         sha=sha[:16], counts=html.escape(counts),
         mission=html.escape(MISSION)))
     print(a.out)
@@ -460,6 +581,58 @@ li { margin:0 0 .3rem; }
 .figmodal svg { width:100%; max-width:1600px; height:auto; }
 .figmodal .figcap { position:absolute; top:1.2rem; left:3vw; font-size:.72rem;
                     color:#888; font-family:ui-monospace,Menlo,monospace; }
+/* The table of contents: the mission's standing, read from the lifecycle's
+   own exit criteria. It spans both columns because it is about the whole
+   document, not about any span of it. */
+.toc { max-width:none; margin:0 0 2.8rem; }
+/* The table is four columns of prose. On a narrow screen it scrolls inside
+   its own box rather than making the whole document scroll sideways. */
+.tocwrap { overflow-x:auto; max-width:100%; }
+.toctable { min-width:46rem; }
+.toc h2 { margin:0 0 .3rem; border:0; }
+.tocnote { font-size:.8rem; color:#666; max-width:48rem; }
+.toctable { border-collapse:collapse; font-size:.74rem; width:100%; max-width:none; }
+.toctable th { text-align:left; font-variant:small-caps; letter-spacing:.05em;
+               color:#888; border-bottom:1px solid #ddd; padding:.3rem .8rem .3rem 0;
+               font-weight:600; }
+.toctable td { padding:.45rem .8rem .45rem 0; border-bottom:1px solid #f0ece0;
+               vertical-align:top; }
+.phname { width:15rem; } .phname a { color:#111; text-decoration:none;
+          border-bottom:1px solid #ddd; }
+.nosec { color:#a8791d; font-size:.66rem; display:block; }
+.phstat { width:7rem; white-space:nowrap; }
+.phexit { width:22rem; color:#444; font-style:italic; }
+.exitsrc { display:block; font-style:normal; color:#aaa; font-size:.64rem;
+           font-family:ui-monospace,Menlo,monospace; }
+.phwhy { color:#333; }
+.phev { margin:.3rem 0 0; padding-left:1rem; font-size:.68rem; color:#666; }
+.evkind { font-variant:small-caps; letter-spacing:.04em; color:#999; }
+.phart { margin:.3rem 0 0; font-size:.66rem; color:#1b6b3a; }
+.dot { display:inline-block; width:.55rem; height:.55rem; border-radius:50%;
+       margin-right:.35rem; vertical-align:baseline; }
+.d-exit-met { background:#1b6b3a; }
+.d-in-progress { background:#a8791d; }
+.d-not-started { background:#ccc; }
+
+/* A phase section. One that the mission has written points at it; one it has
+   not is a PLACEHOLDER -- dashed and tinted, so it cannot be read as mission
+   text that happens to be short. */
+.phase { margin:2.2rem 0 1rem; }
+.phase.placeholder { border-left:3px dashed #c9c4b0; padding:.5rem 0 .4rem .9rem;
+                     background:#fbfaf3; }
+.phase.inmission { border-left:3px solid #e6e2d4; padding:.5rem 0 .4rem .9rem; }
+.phhead { font-size:1.05rem; margin:0 0 .3rem; border:0; padding:0; }
+.phn { display:inline-block; min-width:1.4rem; color:#aaa;
+       font-family:ui-monospace,Menlo,monospace; font-size:.8rem; }
+.phstatword { font-size:.68rem; color:#888; font-variant:small-caps;
+              letter-spacing:.05em; }
+.phexit2 { font-size:.74rem; color:#666; font-style:italic; margin:0 0 .4rem; }
+.phbody { font-size:.82rem; color:#444; margin:0; }
+.nwhy { margin:0 0 .3rem; font-size:.7rem; color:#1b6b3a; }
+.natphase { margin:.3rem 0 0; font-size:.63rem; color:#999; }
+.natphase a { color:#999; }
+.figwhy { color:#1b6b3a; }
+
 .masthead { max-width:var(--measure); }
 .sub { color:#666; font-size:.82rem; margin-bottom:.4rem; }
 .prov { color:#999; font-size:.68rem; font-family:ui-monospace,Menlo,monospace;
@@ -557,6 +730,7 @@ not exist. Breaks are the evidence worth most. Click a marked span or a note to 
 kernel tables, conflict states and the full-size lattices:
 <a href="seams-kernels.html">seams-kernels.html</a></p>
 </div>
+{toc}
 <div class="page">
   <article class="main">{body}</article>
   <div class="margin" aria-hidden="false">
