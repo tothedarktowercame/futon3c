@@ -55,7 +55,8 @@ def svg(b):
     COLW, ROWH, BW, BH = 250, 118, 196, 74
     # A hole gets its own column past the deepest pattern: it is not produced
     # by anything, so placing it among the produced nodes would imply an edge.
-    cols = max(layers) + 1 + (1 if b.get("holes") else 0)
+    open_holes = [h for h in (b.get("holes") or []) if h.get("status") != "closed"]
+    cols = max(layers) + 1 + (1 if open_holes else 0)
     width = COLW * cols + 40
     height = ROWH * max(len(v) for v in layers.values()) + 60
     pos = {}
@@ -90,7 +91,8 @@ def svg(b):
             f'<text x="{x+10}" y="{y+19}" class="nfam">{html.escape(pid.split("/")[0])}/</text>'
             f'<text x="{x+10}" y="{y+35}" class="nid">{html.escape(short(pid))}</text>'
             f'<text x="{x+10}" y="{y+56}" class="nprod">⊢ {html.escape(prod)}</text></g>')
-    for k, h in enumerate(b.get("holes") or []):
+    for k, h in enumerate(h for h in (b.get("holes") or [])
+                          if h.get("status") != "closed"):
         x = 30 + (max(layers) + 1) * COLW
         y = (height - BH) / 2 + k * ROWH
         out.append(
@@ -168,6 +170,12 @@ def instance_section(b):
 
     holes = ""
     for h in (b.get("holes") or []):
+        if h.get("status") == "closed":
+            holes += (f'<div class="holebox closed"><p class="hh">Closed hole: '
+                      f'<code>{html.escape(short(h["token"]))}</code></p>'
+                      f'<p>{html.escape(h.get("closed-by",""))}</p>'
+                      f'<p class="hc">{html.escape(h["consequence"])}</p></div>')
+            continue
         holes = (f'<div class="holebox"><p class="hh">Unproduced want: '
                  f'<code>{html.escape(short(h["token"]))}</code></p>'
                  f'<p>{html.escape(h["wanted"])}</p>'
@@ -280,6 +288,8 @@ td { padding:.3rem .7rem .3rem 0; border-bottom:1px solid #f0ece0; vertical-alig
 .runs td:first-child, .runs th:first-child { text-align:right; padding-right:1.2rem; }
 .runs td { font-family:ui-monospace,Menlo,monospace; font-size:.74rem; }
 .runs tr.gap td { background:#fbe6dd; }
+.holebox.closed { background:#f6f8f4; border-left-color:#1b6b3a; }
+.holebox.closed .hh { color:#1b6b3a; }
 .holebox { background:#fffdf5; border-left:3px solid #a8791d; padding:.7rem .9rem;
            margin:1rem 0; max-width:var(--measure); font-size:.8rem; }
 .holebox p { margin:.3rem 0; }

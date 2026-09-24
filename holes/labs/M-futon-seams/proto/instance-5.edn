@@ -3,9 +3,12 @@
 ;; literals are hardcoded, irc.clj sits as a peer of http.clj rather than as
 ;; an implementation, and Matrix reaches the system by impersonating IRC.
 ;; Authored by claude-1, 2026-09-24, for PROOF-2a clause 0 X0(e).
-;; NOTE the :holes key: one want has no producer, because the pattern that
-;; would produce it is in the library and is not citable. kernels.clj ignores
-;; :holes; it is recorded so the unproduced want is visible rather than absent.
+;; REVISED 2026-09-24 after 3a486cdc: the citation check now accepts @arg,
+;; @flexiarg and @multiarg as the loader always did, so
+;; software-design/adapter-pattern is citable and the hole closes. The
+;; :holes entry is kept, marked :closed, because the finding it records is
+;; about the validator having been stricter than the loader -- not about this
+;; instance -- and deleting it would delete the evidence.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 5
  :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
@@ -43,12 +46,14 @@
  :want #{:protocol-declared :adapter-conformance-test :impersonation-retired}
 
  :holes
- [{:token :impersonation-retired
+ [{:status :closed
+   :closed-by "software-design/adapter-pattern, citable since 3a486cdc"
+   :token :impersonation-retired
    :wanted "Integrate a second transport without changing the existing callers — the adapter move."
    :nearest "software-design/adapter-pattern"
    :nearest-sha256 "9cd1c225c5ad3f5eb25f7cc238b6880c05fb48d84da18cc7e2dc97b6f67c4200"
    :why-not-citable "The file exists at futon3/library/software-design/adapter-pattern.flexiarg and declares @arg, not @flexiarg. 28 library files declare @arg; a citation of this id fails the same check session_turn_analysis.py applies, so the interpretation cannot carry a receipt that resolves."
-   :consequence "No pattern in this cascade produces :impersonation-retired. The want is unreachable by construction, which is a typed finding about the library rather than about the instance."}]
+   :consequence "While it stood: no pattern produced :impersonation-retired and the want was unreachable by construction. The finding was about the validator, not the library and not this instance -- the loader had always read @arg. Kept as a record of a check that was stricter than the thing it was checking for."}]
 
  :patterns
  {:or3/count-every-card-back
@@ -111,6 +116,16 @@
              :author "claude-1"}
    :forces "Switching midstream creates split-brain conversation, duplicated messages, and uncertainty about the authoritative channel."}
 
+  :software-design/adapter-pattern
+  {:guard {:needs #{:protocol-declared :adapter-conformance-test} :forbids #{}}
+   :produces #{:impersonation-retired}
+   :receipt {:source {:path "futon3/library/software-design/adapter-pattern.flexiarg"
+                      :sha256 "9cd1c225c5ad3f5eb25f7cc238b6880c05fb48d84da18cc7e2dc97b6f67c4200"}
+             :reading "Its THEN is the discriminator: create a dedicated adapter that translates between the EXPECTED interface and the dependency's, and keep that adapter as THE ONLY integration boundary. matrix-ircd fails the second clause -- it is a boundary stacked under another boundary, IRC's own shape -- so satisfying this pattern is what retires the impersonation rather than what sanctions it."
+             :scope "Needs :protocol-declared, and that dependency is the finding: applied with no declared interface, 'translate to the expected interface' has no referent except whatever the first implementation happens to do, which is how matrix-ircd was the reasonable move at the time. The same pattern before and after the declaration produces the impersonation or the seam."
+             :author "claude-1"}
+   :forces "Sprinkling translation code across callers causes duplication and brittle coupling, so the translation has to live somewhere -- and where it lives is the whole question."}
+
   :translation/test-by-reproducing-behaviour
   {:guard {:needs #{:protocol-declared} :forbids #{}}
    :produces #{:adapter-conformance-test}
@@ -145,4 +160,12 @@
   {:context :cycle-machine/single-producer
    :pattern :translation/test-by-reproducing-behaviour
    :kind :differentiates
-   :via "Conformance can only be tested against something declared; this and the migration discipline are independent of each other."}]}
+   :via "Conformance can only be tested against something declared; this and the migration discipline are independent of each other."}
+  {:context :cycle-machine/single-producer
+   :pattern :software-design/adapter-pattern
+   :kind :jointly-with
+   :via "An adapter needs an expected interface to translate to. One of two joint contexts, and the one whose absence produced matrix-ircd."}
+  {:context :translation/test-by-reproducing-behaviour
+   :pattern :software-design/adapter-pattern
+   :kind :jointly-with
+   :via "And the pattern's own next-step requires contract tests around the adapter to prove compatibility. Retiring the impersonation on an untested adapter would move the risk rather than remove it."}]}
