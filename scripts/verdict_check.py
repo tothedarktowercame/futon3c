@@ -26,11 +26,10 @@ LIFECYCLE = os.path.join(REPO, "holes/labs/M-futon-seams/lifecycle.edn")
 
 VERDICT = {"Met.": "exit-met", "Not met.": "in-progress", "Not started.": "not-started"}
 
-NO_VERDICT = {"HEAD", "IDENTIFY"}
-"""Sections that predate the phase write-ups and carry the operator's voice
-rather than a verdict. Their status is read from the evidence in
-lifecycle.edn, and adding a verdict line to Rob's HEAD to satisfy a checker
-would be the checker deciding the prose."""
+# Which phases carry a verdict line is declared per phase in lifecycle.edn as
+# :verdict-source, not listed here. It was a hardcoded set until 2026-09-24 --
+# a property of a phase living in a script, which is the defect this mission
+# is about, in the tooling that checks this mission.
 
 
 def main():
@@ -45,6 +44,10 @@ def main():
         anc = ph.get("mission-anchor")
         if not anc:
             continue
+        if not ph.get("verdict-source"):
+            bad.append(f"{ph['id']}: no :verdict-source — say whether its "
+                       f"verdict is :prose or :data-only")
+            continue
         # the section runs from its heading to the next one
         start = anc["start"]
         nxt = re.search(r"\n## ", text[anc["end"]:])
@@ -56,8 +59,8 @@ def main():
                 bad.append(f"{ph['id']}: partial verdict {loose.group(0)!r} — "
                            f"a reader cannot act on it; put the qualification "
                            f"in the paragraph and make the verdict exact")
-            elif ph["id"] in NO_VERDICT:
-                pass     # a section written before the phase write-ups
+            elif ph.get("verdict-source") == "data-only":
+                pass     # closure recorded in lifecycle.edn and nowhere else
             else:
                 bad.append(f"{ph['id']}: no verdict line at all")
             continue

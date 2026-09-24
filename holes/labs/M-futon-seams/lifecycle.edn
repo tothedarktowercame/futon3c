@@ -13,6 +13,19 @@
 ;; smoothed away. Phases 2-7 are now written in the mission itself, so every
 ;; row below anchors to a real span and none is a placeholder.
 ;;
+;; :verdict-source says WHERE a phase's verdict is written. :prose means the
+;; section carries an exact **Met.** / **Not met.** / **Not started.** line and
+;; scripts/verdict_check.py holds it to agree with :status here. :data-only
+;; means the phase has no exit-criterion paragraph and no verdict line, so its
+;; closure is recorded here and nowhere else -- HEAD and IDENTIFY, which
+;; predate the phase write-ups and carry the operator's voice.
+;;
+;; This was a hardcoded name list inside verdict_check.py until 2026-09-24,
+;; which is this mission's own defect in its own tooling: a property of a
+;; phase, living in a script instead of being declared. A reader that sees
+;; only prose, or only data, misreads the mission; now either can discover
+;; which phases it cannot see.
+;;
 ;; :mission-anchor is an exact span of the mission at the recorded sha, as the
 ;; annotations are. A phase with none gets a PLACEHOLDER in the page -- a
 ;; heading that says the mission has not written this phase yet, drawn so it
@@ -26,6 +39,7 @@
 
  :phases
  [{:id :HEAD :n 0 :title "HEAD — operator-shape intake"
+   :verdict-source :data-only
    :exit "The operator recognises the HEAD as faithful to the mission's live shape, and the carried-forward tensions are named well enough that IDENTIFY can proceed without pretending the unknowns have already been settled."
    :exit-line 45
    :status :exit-met
@@ -36,6 +50,7 @@
    :artefacts []}
 
   {:id :IDENTIFY :n 1 :title "IDENTIFY — the gap, scoped"
+   :verdict-source :data-only
    :exit "A human has read the proposal and agrees the gap is real and the scope is right."
    :exit-line 68
    :status :exit-met
@@ -49,6 +64,7 @@
                {:note "exemplar-lowest-score" :why "the chosen target scores lowest of the four feasible"}]}
 
   {:id :MAP :n 2 :title "MAP — what exists, what is missing"
+   :verdict-source :prose
    :exit "Every MAP question has a concrete answer. The \"ready vs missing\" table is complete."
    :exit-line 113
    :status :exit-met
@@ -60,6 +76,7 @@
    :artefacts [{:note "top-context" :why "the shared context above both roots, answered for the whole inventory"}]}
 
   {:id :DERIVE :n 3 :title "DERIVE — the method, from a hit coupling to a checked enactment"
+   :verdict-source :prose
    :exit "Someone could implement the mission from the DERIVE section alone, without needing to ask clarifying questions."
    :exit-line 153
    :status :exit-met
@@ -79,6 +96,7 @@
                {:note "i4-wiring"}]}
 
   {:id :ARGUE :n 4 :title "ARGUE — which patterns, and why those"
+   :verdict-source :prose
    :exit "The design feels inevitable given the constraints, not merely possible. And someone outside the project can understand what it does and why from the plain-language argument alone."
    :exit-line 191
    :status :in-progress
@@ -99,6 +117,7 @@
                {:note "i6-wiring"} {:note "i7-cascade"} {:note "i7-wiring"}]}
 
   {:id :VERIFY :n 5 :title "VERIFY — checked against structural constraints"
+   :verdict-source :prose
    :exit "The design has been checked against available structural constraints. Any risks that can't be verified statically have been spiked. DERIVE revisions (if any) are recorded."
    :exit-line 231
    :status :exit-met
@@ -118,6 +137,7 @@
                {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}]}
 
   {:id :INSTANTIATE :n 6 :title "INSTANTIATE — a demonstration for every completion criterion"
+   :verdict-source :prose
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :exit-met
@@ -134,6 +154,7 @@
                {:note "enactment-residual" :why "what is left: the binary-name site and the roster"}]}
 
   {:id :DOCUMENT :n 7 :title "DOCUMENT — findable without knowing the mission exists"
+   :verdict-source :prose
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
