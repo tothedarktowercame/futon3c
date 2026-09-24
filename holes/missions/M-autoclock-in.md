@@ -799,30 +799,37 @@ Validation: `clojure -M:test:test-all -n futon3c.agency.clock-decision-test`:
 real-backend slow tests and the real-file check. Clj-kondo: zero errors/warnings;
 check-parens: OK on both changed Clojure files.
 
-## INSTANTIATE-8 — the clock decides what a kimi seat carries (claude-11, 2026-09-24)
+## INSTANTIATE-8 — kimi seats work per named target (claude-11, 2026-09-24)
 
-First consumer that *acts* on the job clock rather than recording it. Every
-kimi seat kept one conversation across all its dispatches, so jobs opened at
-166k-335k tokens of other missions' history and exhausted Kimi's 5-hour quota
-twice on 2026-09-24 (`holes/labs/kimi-5h-limit-2026-09-24.md`). Joe: block
-new jobs that don't compact, and use this to make autoclock work on Kimi.
+Every kimi seat kept one conversation across all its dispatches, so jobs
+opened at 166k-335k tokens of other work and exhausted Kimi's 5-hour quota
+twice on 2026-09-24 (`holes/labs/kimi-5h-limit-2026-09-24.md`).
 
-`zai-api/context-carry-decision` (opt-in `:context-policy`, on for kimi at
-32k floor / 128k cap, `65b1f708`): before a job runs, the carried
-conversation is kept only if it is under the floor, or the job's clock (the
-dispatch `:mission-id`, else `clock-store/current-clock` for the seat's
-session, which is where admission projects the decision) equals the mission
-that built the conversation and it is under the cap. Otherwise it is cleared,
-the prompt says so, and a `:context-compaction` evidence record names the
-reason (`:mission-change`, `:unclocked-job`, `:over-cap`). An unclocked job
-cannot claim continuity, so an unresolvable target now costs the job its
-carried context: that is the enforcement.
+**Joe's rule:** to do work on a Kimi seat, pass the mission, excursion or
+ticket name; if it changes, compact.
 
-Consequence for the open gaps above: jobs on futon2 missions (e.g.
-`M-evaluate-policies`) resolve `unresolvable-target` while futon2 is missing
-from the JVM's FUTON3C_REPOS, so on kimi they always start fresh.
+A first cut (`65b1f708`) inferred the target from the job's clock decision
+and only cleared above a token floor. Joe rejected that: the target must be
+passed, not inferred. It was replaced by:
 
-Tests: `futon3c.agents.kimi-api-test` 14 / 42, including the clock-store
-path; `futon3c.agents.zai-api-test` 20 / 105 unchanged; kondo and
-check-parens clean. Hot-loaded from master; seats built before the reload
-keep their old invoke closures until re-registered.
+- `agency_send.py --target M-*|E-*|T-*` → payload `work-target`. The server
+  also accepts `ticket-id`, `excursion-id` and `mission-id`, in that order
+  after `work-target` (`http.clj` `payload-work-target`). An `M-*` target
+  also sets `mission-id`, so the recipient is clocked as before.
+- The target travels explicitly through every job path (bell, whistle,
+  whistle-stream, invoke, invoke-stream, announce→activate) into the seat's
+  invoke context with the caller. It is also stored on the job record.
+- `zai-api/context-carry-decision` with kimi's `{:cap-tokens 128000}`:
+  - no target → refused before any model call (`:work-target-required`);
+  - a name that is not `holes/**/<name>.md` in a canonical futon repo →
+    refused (`:work-target-unresolved`);
+  - a different target from the one that built the conversation → cleared
+    (`:target-change`);
+  - the same target → kept, unless it has grown past the cap (`:over-cap`).
+  - Replies to the seat's own bells (`auto-bellback`) and park resumes carry
+    no target and continue the seat's current one.
+- "Compact" is implemented as clear: a conversation about another target is
+  not summarised into the next one. The new prompt says what was cleared.
+  Each clear writes a `:context-compaction` evidence record.
+
+zai seats have no policy and are unchanged.

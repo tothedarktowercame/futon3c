@@ -1132,36 +1132,75 @@
             :dispatch-id (str dispatch-id)
             :turn-id (str turn-id)}})))
 
+(def ^:private work-target-re #"^[MET]-[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+(def continuation-callers
+  "Callers whose jobs continue the seat's current work rather than start new
+   work: the reply to a bell the seat sent, and a park it set. They carry no
+   target of their own and inherit the seat's."
+  #{"auto-bellback" "parked-resume"})
+
+(defn- canonical-holes-dirs
+  "holes/ directories of the canonical futon checkouts under ROOT. Worktree
+   copies (futon3c-foo, futon2-fix-10d-baseline, ...) are excluded: a target
+   that exists only in a worktree is not work the seat can be pointed at."
+  [root]
+  (->> (.listFiles (io/file root))
+       (filter #(re-matches #"futon\d+[a-z]?" (.getName ^java.io.File %)))
+       (map #(io/file % "holes"))
+       (filter #(.isDirectory ^java.io.File %))))
+
+(defn resolve-work-target
+  "Return the path of the M-/E-/T- doc named TARGET, or nil. Exact name only:
+   holes/<TARGET>.md or holes/<kind>/<TARGET>.md in a canonical futon repo."
+  ([target] (resolve-work-target target "/home/joe/code"))
+  ([target root]
+   (when (and (string? target) (re-matches work-target-re target))
+     (some (fn [holes]
+             (some (fn [sub]
+                     (let [f (io/file holes sub (str target ".md"))]
+                       (when (.isFile f) (.getPath f))))
+                   ["" "missions" "excursions" "tickets"]))
+           (canonical-holes-dirs root)))))
+
 (defn context-carry-decision
-  "Decide whether a new job may run on the conversation a seat already holds.
+  "Decide what a job on a target-gated seat runs on.
 
    Every tool round re-sends the whole conversation, so a seat that keeps one
    session across unrelated dispatches pays for all of them on every request
-   (kimi-4, 2026-09-24: its 15:44 job opened at 335k tokens of earlier
-   missions' history and was refused by Kimi's 5-hour limit; see
-   holes/labs/kimi-5h-limit-2026-09-24.md). The job's clock is what says
-   whether that history is relevant: carried context is kept only for a job
-   clocked to the mission the context belongs to, and only under CAP-TOKENS.
-   An unclocked job cannot claim continuity, so it starts fresh.
+   (kimi-4, 2026-09-24: its 15:44 job opened at 335k tokens of earlier work
+   and was refused by Kimi's 5-hour limit; see
+   holes/labs/kimi-5h-limit-2026-09-24.md). Joe's rule (2026-09-24): work on
+   such a seat names its mission, excursion or ticket, and when the target
+   changes the conversation is cleared. CAP-TOKENS additionally clears a
+   same-target conversation that has grown past it.
 
-   Returns {:action :keep|:compact :reason kw}."
-  [{:keys [floor-tokens cap-tokens]}
-   {:keys [carried-tokens context-mission job-mission]}]
+   Returns {:action :refuse|:keep|:compact :reason kw}."
+  [{:keys [cap-tokens]}
+   {:keys [job-target target-resolved? continuation? carried-tokens context-target]}]
   (cond
-    (or (nil? carried-tokens) (< carried-tokens floor-tokens))
-    {:action :keep :reason :below-floor}
+    (and continuation? (nil? job-target))
+    (if (and carried-tokens cap-tokens (>= carried-tokens cap-tokens))
+      {:action :compact :reason :over-cap}
+      {:action :keep :reason :continuation})
 
-    (nil? job-mission)
-    {:action :compact :reason :unclocked-job}
+    (nil? job-target)
+    {:action :refuse :reason :work-target-required}
 
-    (not= job-mission context-mission)
-    {:action :compact :reason :mission-change}
+    (not target-resolved?)
+    {:action :refuse :reason :work-target-unresolved}
 
-    (>= carried-tokens cap-tokens)
+    (nil? carried-tokens)
+    {:action :keep :reason :fresh}
+
+    (not= job-target context-target)
+    {:action :compact :reason :target-change}
+
+    (and cap-tokens (>= carried-tokens cap-tokens))
     {:action :compact :reason :over-cap}
 
     :else
-    {:action :keep :reason :same-mission}))
+    {:action :keep :reason :same-target}))
 
 (defn- estimate-context-tokens
   "Rough token count of MESSAGES (4 chars per token), used when no provider
@@ -1171,7 +1210,7 @@
 
 (defn- persist-context-compaction!
   [{:keys [evidence-store agent-id sid turn-id profile dispatch-id decision
-           carried-tokens context-mission job-mission]}]
+           carried-tokens context-target job-target]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
@@ -1179,8 +1218,8 @@
      :event :context-compaction
      :body {:reason (:reason decision)
             :carried-tokens carried-tokens
-            :context-mission context-mission
-            :job-mission job-mission
+            :context-target context-target
+            :job-target job-target
             :dispatch-id (str dispatch-id)}})))
 
 (defn- persist-round!
@@ -1622,11 +1661,11 @@ CALLS contains maps of tool name, arguments, and result digest."
         ;; inhabited id lets that invoke prove rotation and discard the old
         ;; conversation instead of silently falling back to sid0.
         !last-session-id (atom sid0)
-        ;; Context-carry gate (context-carry-decision); inert without a
+        ;; Work-target gate (context-carry-decision); inert without a
         ;; :context-policy. Tokens come from the last round's provider usage;
-        ;; the mission is the clock of the job that built the conversation.
+        ;; the target is the one named by the job that built the conversation.
         !context-tokens (atom nil)
-        !context-mission (atom nil)
+        !context-target (atom nil)
         backend (real-backend/make-real-backend
                  {:cwd cwd*
                   :timeout-ms 30000
@@ -1707,6 +1746,22 @@ CALLS contains maps of tool name, arguments, and result digest."
                              dispatch-mission :dispatch/mission-id
                              clocked-mission :clock-store/current-clock
                              :else :d10/unclocked)
+            ;; Work-target gate. The target is named by the dispatcher
+            ;; (:work-target, else :mission-id), never inferred.
+            job-target (some-> (or (:work-target invoke-context)
+                                   (:mission-id invoke-context))
+                               str str/trim not-empty)
+            continuation? (contains? continuation-callers
+                                     (some-> (:caller invoke-context) str))
+            refusal (when context-policy
+                      (let [d (context-carry-decision
+                               context-policy
+                               {:job-target job-target
+                                :target-resolved? (boolean
+                                                   (some-> job-target
+                                                           resolve-work-target))
+                                :continuation? continuation?})]
+                        (when (= :refuse (:action d)) d)))
             runner-budget (:student-runner-budget invoke-context)
             call-timeout-ms
             (or (:timeout-ms invoke-context)
@@ -1738,10 +1793,25 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; turns queued forever. The flag is checked every tool round.
             !interrupted (atom false)
             interrupt-token (str sid-prefix "invoke-" (UUID/randomUUID))]
-        (if-not key*
+        (cond
+          (not key*)
           {:result nil
            :session-id sid
            :error key-hint}
+
+          refusal
+          {:result nil
+           :session-id sid
+           :error (if (= :work-target-required (:reason refusal))
+                    (str agent-id " refuses work without a target: name the "
+                         "mission, excursion or ticket (M-*, E-*, T-*) with "
+                         "agency_send.py --target, or \"work-target\" in the "
+                         "payload. The seat's conversation is kept per target.")
+                    (str agent-id " refuses work target " (pr-str job-target)
+                         ": no holes/**/" job-target ".md in a canonical "
+                         "futon repo."))}
+
+          :else
           (do
         ;; Session rotation (reg/reset-session!): a fresh session must not
         ;; inherit the old conversation, and the unbounded !messages vector
@@ -1779,18 +1849,20 @@ CALLS contains maps of tool name, arguments, and result digest."
         (let [carried (when (> (count @!messages) 1)
                         (or @!context-tokens
                             (estimate-context-tokens (rest @!messages))))
-              context-mission @!context-mission
+              context-target @!context-target
               decision (when context-policy
                          (context-carry-decision
                           context-policy
-                          {:carried-tokens carried
-                           :context-mission context-mission
-                           :job-mission clocked-mission}))
+                          {:job-target job-target
+                           :target-resolved? true
+                           :continuation? continuation?
+                           :carried-tokens carried
+                           :context-target context-target}))
               compact? (= :compact (:action decision))
               prompt* (if compact?
                         (str "[Context: this seat's earlier conversation ("
                              carried " tokens, "
-                             (or context-mission "unclocked") ") was cleared "
+                             (or context-target "no target") ") was cleared "
                              "before this job (" (name (:reason decision)) "). "
                              "If you need earlier work, read it from files, "
                              "mission_orientation or tool_history.]\n\n"
@@ -1803,15 +1875,15 @@ CALLS contains maps of tool name, arguments, and result digest."
              {:evidence-store evidence-store :agent-id agent-id :sid sid
               :turn-id turn-id :profile profile* :dispatch-id dispatch-id
               :decision decision :carried-tokens carried
-              :context-mission context-mission :job-mission clocked-mission})
+              :context-target context-target :job-target job-target})
             (sink! agent-id {:type "text"
                              :text (str "[context compacted: "
                                         (name (:reason decision)) ", "
                                         carried " tokens dropped]")}))
-          ;; The job now running owns the conversation: after a compaction
-          ;; it is the only occupant, under the floor it is the latest, and
-          ;; on :same-mission the value is unchanged.
-          (reset! !context-mission clocked-mission)
+          ;; A continuation keeps the seat's target; any other job's named
+          ;; target now owns the conversation.
+          (when-not (and continuation? (nil? job-target))
+            (reset! !context-target job-target))
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
                                 :sid sid

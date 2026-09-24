@@ -31,6 +31,10 @@ ap.add_argument("--ref", help="typed-bell referent, usually an ArSE thread id")
 ap.add_argument("--mission", help="mission-id this dispatch works on; the server clocks the "
                 "recipient's session to it (durable lineage, http.clj clock-dispatch!) so the "
                 "agent appears on the live EFE map without a manual clock-in")
+ap.add_argument("--target", help="mission, excursion or ticket this dispatch works on "
+                "(M-*, E-*, T-*). Kimi seats refuse work without one and clear their "
+                "conversation when it changes. An M-* target also clocks the recipient "
+                "like --mission.")
 ap.add_argument("--mode", choices=["work", "brief"],
                 help="explicit invoke-job mode; when omitted the server retains its legacy "
                      "prompt-text classification fallback")
@@ -198,6 +202,10 @@ if a.ref:
     body["ref"] = a.ref
 if a.mission:
     body["mission-id"] = a.mission
+if a.target:
+    body["work-target"] = a.target
+    if a.target.startswith("M-") and not a.mission:
+        body["mission-id"] = a.target
 if a.mode:
     body["mode"] = a.mode
 # Explicit --timeout-ms always wins; 0 means "defer to the server default".

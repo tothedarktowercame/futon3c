@@ -38,14 +38,13 @@
    :reasoning-effort "low"})
 
 (def default-context-policy
-  "Context-carry gate for kimi seats (zai-api/context-carry-decision). A new
-   job runs on the seat's earlier conversation only when it is clocked to the
-   same mission and the conversation is under :cap-tokens; below :floor-tokens
-   carrying is cheap and always allowed. On 2026-09-24 the seats carried one
-   session all day and opened jobs at 166k-335k tokens, which exhausted the
-   5-hour quota twice (holes/labs/kimi-5h-limit-2026-09-24.md)."
-  {:floor-tokens 32000
-   :cap-tokens 128000})
+  "Work-target gate for kimi seats (zai-api/context-carry-decision). A job must
+   name its mission, excursion or ticket; when the target changes, the seat's
+   conversation is cleared before the job runs, and a same-target conversation
+   past :cap-tokens is cleared too. On 2026-09-24 the seats carried one session
+   across all their dispatches and opened jobs at 166k-335k tokens, which
+   exhausted the 5-hour quota twice (holes/labs/kimi-5h-limit-2026-09-24.md)."
+  {:cap-tokens 128000})
 
 (def api-key-hint
   "Kimi API key missing; set KIMI_API_KEY or create ~/.kimikey")
