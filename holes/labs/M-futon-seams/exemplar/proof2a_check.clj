@@ -45,7 +45,11 @@
 (defn cascade-of [cand]
   (let [interp (:interpretations cand)]
     {:patterns (into {} (for [[k v] interp] [k (select-keys v [:guard :produces])]))
-     :above (mapv (fn [{:keys [above below]}] {:context above :pattern below}) (:containment-order cand))
+     ;; :co-application-edges (:jointly-with, a second parent) are containment
+     ;; edges too: in Alexander a unit sits above another exactly when it
+     ;; contains it, whichever parent it is.
+     :above (mapv (fn [{:keys [above below]}] {:context above :pattern below})
+                  (concat (:containment-order cand) (:co-application-edges cand)))
      :initial (set (:initial cand)) :want (set (:want cand))}))
 
 (defn desc-fn [c]
@@ -72,6 +76,11 @@
     (set (for [s reach :let [f (frontier pats anc s) cs (conflicts pats f)] :when (seq cs)]
            {:state (set s) :pairs (set (map (fn [[p q x]] [p q (set x)]) cs))}))))
 
+(defn- findings-seq
+  "Accept a bare vector of findings, or a summary map carrying them
+   (:missing for meets, :pairs-by-state/:states for conflicts)."
+  [x k]
+  (cond (map? x) (get x k []) :else x))
 (defn norm-conflicts [xs] (set (map (fn [x] {:state (set (:state x)) :pairs (set (map (fn [[p q t]] [p q (set t)]) (:pairs x)))}) xs)))
 (defn norm-meets [xs] (set (map (fn [x] {:pair (set (:pair x)) :maximal-common (set (:maximal-common x))}) xs)))
 (defn close? [a b] (and (number? a) (number? b) (< (Math/abs (- (double a) (double b))) 1e-3)))
@@ -91,15 +100,17 @@
             (not (str/starts-with? (sha256 f) (str (get-in i [:receipt :source :sha256])))) (fail (str pid " receipt sha256 does not match the file"))
             (str/blank? (str (get-in i [:receipt :source :sha256]))) (fail (str pid " receipt has no sha256"))))
     ;; An empty :initial is legitimate (nothing done yet); an absent one is not.
+    (when (empty? (:interpretations cand))
+      (fail "candidate carries no :interpretations, so it cannot be recomputed from the record (P_0 requires them in :candidate-derivations)"))
     (when (or (not (contains? cand :initial)) (empty? (:want c))) (fail "candidate has no :initial key or an empty :want, so the kernel cannot be recomputed"))
     (when-not (acyclic? c) (fail "containment order has a cycle"))
     (let [mf (meet-findings c)]
-      (when (not= mf (norm-meets (:meet-findings cand)))
+      (when (not= mf (norm-meets (findings-seq (:meet-findings cand) :missing)))
         (fail (str "recorded :meet-findings differ from recomputed " (pr-str mf))))
       (doseq [m mf] (swap! findings conj (assoc m :kind :missing-meet :candidate cid))))
-    (when (and (seq (:want c)) (acyclic? c))
+    (when (and (seq (:want c)) (seq (:interpretations cand)) (acyclic? c))
       (let [fc (frontier-conflicts c)]
-        (when (not= fc (norm-conflicts (:frontier-conflicts cand)))
+        (when (not= fc (norm-conflicts (findings-seq (:frontier-conflicts cand) :states)))
           (fail (str "recorded :frontier-conflicts differ from recomputed (X_0(f)) " (pr-str fc)))))
       (if (absent? pred)
         (swap! findings conj {:kind :prediction-absent :candidate cid :status (:status pred)})
