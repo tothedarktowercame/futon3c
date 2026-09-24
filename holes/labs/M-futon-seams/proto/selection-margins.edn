@@ -1,0 +1,83 @@
+;; Could the library have been searched INTO these patterns, or did it take
+;; someone who already knew them?
+;;
+;; For each of instance 4's seven cascade slots, scripts/xlate.py find is run
+;; twice: once with the move stated in the MISSION's vocabulary, once with it
+;; stated in the PATTERN's own. Rank is the chosen pattern's position in the
+;; results; nil means it did not appear in them at all.
+;;
+;; The queries are recorded verbatim so anyone can judge whether they were
+;; leading, and re-run them. Reproduce with proto/selection_margins.py.
+;;
+;; This is a RECONSTRUCTION. The original selection recorded no rejected
+;; candidates, so this cannot show how the patterns were actually found. It
+;; shows only what retrieval offers today for each phrasing.
+;;
+;; claude-1, 2026-09-24, for ARGUE.
+{:schema :m-futon-seams/selection-margins-v1
+ :instance "4"
+ :tool "scripts/xlate.py find (BM25 over 1411 patterns plus proposals)"
+ :measured "2026-09-24"
+ :slots
+ [
+  {:pattern :cascade-construction/choose-the-grain-where-state-lives
+   :from-the-problem {:query "does the state a dispatch decision changes belong to the provider, the seat, or the role"
+                     :rank nil :score nil
+                     :top-hit :war-room/wr-27-a-loop-is-born-instrumented-for-its-gain
+                     :top-score 18.67}
+   :from-the-name {:query "choose the grain where the cascade's state naturally lives"
+                  :rank 1 :score 48.44}}
+
+  {:pattern :coordination/assignment-binding
+   :from-the-problem {:query "make the assignment of a worker to a duty an explicit record rather than an inference"
+                     :rank 1 :score 20.39
+                     :top-hit :coordination/assignment-binding
+                     :top-score 20.39}
+   :from-the-name {:query "assignment binding: bind the assignment as a record"
+                  :rank 1 :score 41.19}}
+
+  {:pattern :cycle-machine/single-producer
+   :from-the-problem {:query "exactly one place may write this state and everything else reads it"
+                     :rank nil :score nil
+                     :top-hit :test-registry/rerun-when-the-warrant-fails
+                     :top-score 16.66}
+   :from-the-name {:query "single producer: one writer for the state, all others read"
+                  :rank 2 :score 17.10}}
+
+  {:pattern :or3/count-every-card-back
+   :from-the-problem {:query "enumerate every site that hardcodes the thing before changing any of them"
+                     :rank nil :score nil
+                     :top-hit :plos-npt-with-small-n/site-case-data-display
+                     :top-score 14.17}
+   :from-the-name {:query "count every card back before you act on the deck"
+                  :rank 1 :score 36.28}}
+
+  {:pattern :gauntlet/placenta-transfer
+   :from-the-problem {:query "move callers from the old way to the new one without a flag day"
+                     :rank nil :score nil
+                     :top-hit :iching/hexagram-49-ge
+                     :top-score 19.44}
+   :from-the-name {:query "placenta transfer: carry the caller across to the new source"
+                  :rank 3 :score 12.78}}
+
+  {:pattern :translation/test-by-reproducing-behaviour
+   :from-the-problem {:query "test an indirection by rebinding it and confirming behaviour follows"
+                     :rank 1 :score 19.48
+                     :top-hit :translation/test-by-reproducing-behaviour
+                     :top-score 19.48}
+   :from-the-name {:query "test by reproducing behaviour known from elsewhere"
+                  :rank 2 :score 20.77}}
+
+  {:pattern :realtime/mode-gate
+   :from-the-problem {:query "retire the old path once the new one is proven"
+                     :rank nil :score nil
+                     :top-hit :iching/hexagram-49-ge
+                     :top-score 18.42}
+   :from-the-name {:query "mode gate: gate the old mode off once the new one holds"
+                  :rank 1 :score 24.51}}
+ ]
+ :summary
+ {:slots 7
+  :found-from-the-problem 2
+  :found-from-the-name 7
+  :statement "Two of seven chosen patterns are reachable from the move stated in the mission's own words; five do not appear in the results at all. All seven are reachable once the query uses the pattern's vocabulary. The selection was made by someone who already knew the library, not by searching it."}}

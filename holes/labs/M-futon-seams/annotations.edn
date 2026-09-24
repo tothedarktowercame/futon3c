@@ -8,7 +8,7 @@
 ;; status :draft until claude-10 reviews.
 [
  {:id "i4-cascade"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 8630 :end 8689
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role \u2014 an identifier carrying a decision"}
@@ -19,7 +19,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-4.edn"]
   :body "The cascade for this instance, seven patterns deep. Roots are the two moves that need nothing: count the sites, and decide what grain the state lives at. Everything else descends from one of them. Diagram and per-edge reasons are in instance-4.edn; the kernel numbers are on the companion page."}
  {:id "i4-sites-enumerated"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9221 :end 9269
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**51 provider-literal agent ids** across `src/`."}
@@ -29,7 +29,7 @@
   :refs ["futon3/library/or3/count-every-card-back.flexiarg#9de888f5"]
   :body "Token :sites-enumerated \u2014 every site that names a provider is listed, the 51 literals plus the three that route on a prefix. Produced by or3/count-every-card-back, read as the counting discipline only: the workshop setting the pattern is written for does not transfer. A root of the cascade; it needs nothing and nothing needs it until conversion."}
  {:id "i4-grain"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9687 :end 9736
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**What the interface would be:** a role registry."}
@@ -39,7 +39,7 @@
   :refs ["futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg#4736e726"]
   :body "Token :roles-named \u2014 produced by cascade-construction/choose-the-grain-where-state-lives. The grain question asked of this seam: does the state one dispatch changes live at the provider, the seat, or the role? At the role. The evidence is in the mission's own history \u2014 the delegate moved across four seats in one evening while the role never changed."}
  {:id "i4-binding"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9737 :end 9857
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "Roles resolve to seats; seats declare provider and availability; code asks for a role instead of pattern-matching an id."}
@@ -49,7 +49,7 @@
   :refs ["futon3/library/coordination/assignment-binding.flexiarg#d20124da"]
   :body "Token :binding-recorded \u2014 produced by coordination/assignment-binding, whose move is exactly this one level up: an explicit record binding an agent to a task, with a conflicting assignment treated as a gate rejection rather than last-writer-wins. Edge from :roles-named, kind :differentiates \u2014 choosing the role as the grain is what makes a binding record about roles at all."}
  {:id "i4-one-producer"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9881 :end 10046
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself"}
@@ -59,7 +59,7 @@
   :refs ["futon3/library/cycle-machine/single-producer.flexiarg#97338952"]
   :body "Token :one-producer \u2014 produced by cycle-machine/single-producer. This sentence is the instance's own evidence for it: the guard exists because the role-to-seat fact has no single producer, so the dispatcher re-derives it by comparing strings. Three sites derive it independently today; the pattern's requirement is exactly one, with a contract test against the real counterpart."}
  {:id "i4-convert"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 18349 :end 18396
            :heading "## IDENTIFY exit (when picked up)"
            :quote "at least one existing caller is converted to it"}
@@ -69,7 +69,7 @@
   :refs ["futon3/library/gauntlet/placenta-transfer.flexiarg#9771eca5"]
   :body "REVISED after claude-10's review: the memory/no-tightening-while-held reading was a stretch and is withdrawn. gauntlet/placenta-transfer is the conversion move itself \u2014 identify which functions the human is performing as a surrogate for missing infrastructure and transfer them one at a time to the system. The function is resolving which seat plays a role, and the mission records Joe performing it by hand four times in one evening. What does NOT transfer: the pattern's wider list of AIF functions the operator carries; only the identify-and-move-one discipline is used. instance-4.edn updated to match."}
  {:id "i4-redirect"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 18433 :end 18483
            :heading "## IDENTIFY exit (when picked up)"
            :quote "redirect the binding and confirm behaviour follows"}
@@ -79,7 +79,7 @@
   :refs ["futon3/library/translation/test-by-reproducing-behaviour.flexiarg#60442e77"]
   :body "Token :redirect-test \u2014 produced by translation/test-by-reproducing-behaviour. The mission already names this method in its IDENTIFY exit; the pattern is that method, and its falsifier requirement is the part the mission states loosely. A test a wrong indirection would also pass shows nothing."}
  {:id "p2a-i4-kernel"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 8630 :end 8689
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role — an identifier carrying a decision"}
@@ -90,7 +90,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/kernels.clj#a56d6969" "futon3c/holes/labs/M-futon-seams/proto/instance-4.edn#10501d40"]
   :body "Clause 0, X0(e) and the kernel choice. Three of eleven reachable states have two incomparable patterns enabled at once. At theta 0.8, horizon 6: co-application reaches all wants with p 0.26; the list kernel (every linear extension) and interleaving reach them with p 0. At horizon 14 all three give 0.998-1.0. So the semilattice changes the RATE at which wants are reached, not whether they can be. X0(e) as written (flatten; if nothing changes, the semilattice did no work) BREAKS: on a click whose horizon exceeds the cascade's depth, flattening changes nothing whatever the structure. The finding has to be stated relative to the horizon. Interleaving tracks the list kernel, not co-application: the choice that matters is one pattern per step versus several. Instance 5 (after 3f72bdc2) adds a second way X0(e) misleads: at horizon 8 the list kernel reaches all wants with p between 0.168 and 0.797 across its 48 linear extensions, a factor of 4.7 set by an order nobody chose. A click that flattens and recomputes sees a plausible number, not an obviously wrong one. X0(e) should compare against the spread over linear extensions, not one flattening."}
  {:id "p2a-roots"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 17734 :end 17794
            :heading "## IDENTIFY exit (when picked up)"
            :quote "Pick one instance and declare its interface — not all eight."}
@@ -101,7 +101,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-4.edn#10501d40" "futon3c/holes/labs/M-futon-seams/proto/instance-5.edn#10501d40" "futon3c/holes/labs/M-futon-seams/proto/instance-7.edn#10501d40"]
   :body "Clause T. This sentence is a target choice: eight candidates considered, one to be chosen, with the cost ordering below as the reason. Clause T's shape fits (considered, feasible, chosen). What it lacks is the score: PROOF-2a leaves 'G per target' as a missing definition, and the mission ranks by cost to retrofit (free / mechanical / worst), which is neither a feasibility exclusion nor a G. The target field needs a place for a declared cost ordering and a statement of how it enters the choice."}
  {:id "p2a-i5-unproduced"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 10138 :end 10198
            :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "### 5. Transport and Room — the seam that was never declared"}
@@ -112,7 +112,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-5.edn#10501d40" "futon3/library/software-design/adapter-pattern.flexiarg"]
   :body "Clause 0, construction (W0, X0(d)). No pattern in the committed cascade produces the want :impersonation-retired, so p(all wants) is 0 under every kernel at every horizon. The pattern that would produce it, software-design/adapter-pattern, declared @arg rather than @flexiarg, and the citation check accepted only @flexiarg while the loader accepts @arg, @flexiarg and @multiarg. The refusal came from a validator stricter than the loader, not from missing knowledge; fixed in 3a486cdc (the check), 7030006 and 9c248d5 (eight library files whose id line did not match their path). Carrier: see the note on the top context."}
  {:id "p2a-i7-carrier"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 14199 :end 14249
            :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "### 7. Editor coupling — the one still compounding"}
@@ -123,7 +123,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-7.edn#10501d40"]
   :body "Clause 0 kernel. The kernels separate most here: at horizon 6, co-application p 0.853, list and interleaving p 0 (list's E[#wants] 1.16-1.64 across 21 linear extensions: the precedence list silently picks a number in that range). No wide state in 4, 5 or 7 has a conflict; instance 6 supplies one. Carrier: see the note on the top context."}
  {:id "p2a-redirect-observation"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 18508 :end 18583
            :heading "## IDENTIFY exit (when picked up)"
            :quote "An interface with no second implementation and no redirect test is a guess."}
@@ -134,7 +134,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon2/holes/E-flight-aif.md"]
   :body "Clause 1 (A, observation) and E-flight-aif W1-c. The mission names how each want is observed: a redirect test that runs (instance 1's method, '91 distinct literals resolve to exactly the same location'). That is an artifact check a C4-style locator can re-observe, not a verdict. The wants :redirect-test / :divergence-test / :adapter-conformance-test therefore have observations of the kind A needs, stated in the mission itself."}
  {:id "i6-cascade"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 12123 :end 12181
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "### 6. Prompts as an interface \u2014 the most painful retrofit"}
@@ -145,7 +145,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-6.edn"]
   :body "The cascade for this instance, and the only one of the four that exercises a CONFLICT: realtime/mode-gate and war-room/wr-8-typed-files-are-sources-of-truth are incomparable, enabled together, and each forbids what the other produces. kernels.clj reports it symmetrically. This instance also carries a top context the other three lack, futon-theory/mission-interface-signature, so the two shapes can be compared against clause 0's meets requirement."}
  {:id "i6-conflict"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 12708 :end 12790
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "keep original prompt text in the source call sites and apply bounded rewrites here"}
@@ -155,7 +155,7 @@
   :refs ["futon3/library/realtime/mode-gate.flexiarg#5e505b53"]
   :body "One half of the conflict. realtime/mode-gate produces :original-prose-authoritative and :mode-gated, and forbids :prose-generated \u2014 its whole discipline is that the original prose is the thing kept. The forbids is this reading's claim rather than the pattern's own text, which is where a reviewer should push hardest."}
  {:id "i6-destination"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 14099 :end 14197
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "The intended end state is the abstract path absorbing the hardcoded one and the flag disappearing."}
@@ -165,7 +165,7 @@
   :refs ["futon3/library/war-room/wr-8-typed-files-are-sources-of-truth.flexiarg#0e4d0d9b"]
   :body "The other half. war-room/wr-8-typed-files-are-sources-of-truth produces :prose-generated and forbids :original-prose-authoritative: prose cannot be both generated and the authority. Both patterns become enabled at the same state \u2014 after the call sites are enumerated and the grain is chosen \u2014 and neither is above the other. Under :coapp both fire and the state holds both tokens at once; under :list or :inter whichever fires first permanently disables the other, and neither want is ever reached."}
  {:id "i6-second-copy"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 13945 :end 14025
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "a second source of truth that must be kept in sync with a dependency map by hand"}
@@ -175,7 +175,7 @@
   :refs ["futon3/library/apparatus/one-authority-per-question.flexiarg#b367ff7d"]
   :body "apparatus/one-authority-per-question reads this sentence exactly: every fact has one authoritative reader, and any second copy is either a pin \u2014 readable only by a comparator, disagreement a loud fault \u2014 or a defect, EVEN WHILE IT AGREES. Kept in sync by hand makes mfuton_prompt_override.clj the second kind, which is the mission's warning stated as a pattern."}
  {:id "i6-retire"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 13846 :end 13901
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "the switch is a transitional state, not the destination"}
@@ -185,7 +185,7 @@
   :refs ["futon3/library/iching/hexagram-49-ge.flexiarg#6e9f317c" "futon3/library/war-room/wr-24-a-removed-constraint-does-not-remove-the-discipline-it-supplied.flexiarg#8504fa06"]
   :body "Retirement needs two things and the cascade makes both explicit: iching/hexagram-49-ge (\u9769, replace the old with the new, where timing and legitimacy are the conditions) needs :one-authority \u2014 legitimacy \u2014 and :replacement-discipline from war-room/wr-24, which says a removed constraint does not remove the discipline it supplied. Deleting the flag without installing that discipline elsewhere removes the pressure silently."}
  {:id "top-context"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 1504 :end 1572
            :heading "## HEAD (Rob, 2026-09-24, verbatim sense)"
            :quote "the boundary declared *before* there is an implementation to salvage"}
@@ -195,7 +195,7 @@
   :refs ["futon3/library/futon-theory/mission-interface-signature.flexiarg#529ac0b8"]
   :body "ANSWER to claude-10's meets question. Yes, the instances share a context above both roots, and it is this sentence: Rob's interface-versus-seam distinction. The library pattern carrying it is futon-theory/mission-interface-signature \u2014 declare typed inputs, typed outputs and their wiring so internally correct work can compose; the signature may be revised but must never be empty. Both roots descend from it: you count the sites to say what the signature must cover, and you choose the grain because a signature needs types at some grain. It is in instance-6.edn as the top; 4, 5 and 7 do not have it yet because adding it changes cascades claude-10 has already reviewed. Say the word and I will add the two edges to each."}
  {:id "p2a-i6-conflict"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 12123 :end 12181
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "### 6. Prompts as an interface — the most painful retrofit"}
@@ -206,7 +206,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-6.edn#065a9a92" "futon3c/holes/labs/M-futon-seams/proto/kernels.clj#a56d6969"]
   :body "Clause 0 kernel, the conflict case. At {call-sites-enumerated, grain-chosen, signature-declared} two incomparable patterns are enabled together: realtime/mode-gate produces :original-prose-authoritative and forbids :prose-generated; wr-8-typed-files-are-sources-of-truth produces :prose-generated and forbids :original-prose-authoritative. List and interleaving reach all wants with p 0 at every horizon: whichever fires first disables the other for good. Co-application reaches 0.389 (h6), 0.667 (h14) at theta 0.8, and 1.0 by h14 at theta 1, by passing through a state holding both tokens. That state is what the mission says the system is in now: both prompt versions live behind FUTON3C_MFUTON_MODE. So on this example co-application represents an observed state that no one-at-a-time kernel can reach, and the conflict is a fact to record, not a reason to exclude the step. This supports AR-34 as proposed: co-application with a conflicting-frontier flag on the certificate. Two cautions: (1) the :forbids on both patterns is the interpretation's claim (claude-1, stated in the receipts), not the patterns' text, so W0's record of interpretation author is what makes the conflict attributable; (2) guards are checked before the step, so co-application can land in a state that violates both guards afterwards; the flag must say that happened."}
  {:id "p2a-carrier-meets"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 1504 :end 1572
            :heading "## HEAD (Rob, 2026-09-24, verbatim sense)"
            :quote "the boundary declared *before* there is an implementation to salvage"}
@@ -217,7 +217,7 @@
   :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "mathlib4/DarkTower/WarMachine/CascadeOrder.lean" "futon3c/holes/labs/M-futon-seams/proto/instance-6.edn#065a9a92"]
   :body "Clause 0 carrier (AR-34), restated after Joe (2026-09-24): in Alexander, overlapping sets and 'what sits above which' are the same order: a unit sits above another exactly when it contains it, so two units overlap iff they share a descendant, and the semilattice condition is that for every OVERLAPPING pair their common part is itself a unit, i.e. they have a greatest common descendant. (An earlier version of this note reversed the orientation; the first counts were the Alexander direction.) PROOF-2a's hasMeets demands a meet for EVERY pair, including disjoint ones, which Alexander does not. Classified that way: instance 4, 21 pairs with a meet; 5, 19 with a meet and 9 disjoint; 7, 17 with a meet and 4 disjoint; all three satisfy Alexander's condition. Instance 6 has one violation: count-every-card-back and choose-the-grain-where-state-lives overlap, but their common part has two maximal units, realtime/mode-gate and wr-8-typed-files-are-sources-of-truth, which are exactly the two patterns in conflict. So on this instance the missing meet and the unresolved conflict are the same fact: there is no single unit for the overlap because the system holds two sources of truth for it. Verdict for the carrier: restate W0 as an acyclic containment order in which every overlapping pair has a meet (Alexander's condition), not hasMeets over all pairs; and record a missing meet as a finding, since here it located the conflict."}
  {:id "i5-adapter"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 10350 :end 10398
            :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "finally ran a `matrix-ircd` adapter to mimic IRC"}
@@ -227,7 +227,7 @@
   :refs ["futon3/library/software-design/adapter-pattern.flexiarg#9cd1c225"]
   :body "software-design/adapter-pattern now produces :impersonation-retired, and its THEN is the discriminator: create a dedicated adapter translating between the EXPECTED interface and the dependency's, and keep that adapter as THE ONLY integration boundary. matrix-ircd fails the second clause \u2014 it is a boundary stacked under IRC's own shape \u2014 so satisfying the pattern retires the impersonation rather than sanctioning it. The guard needs :protocol-declared, and that dependency is the finding: with no declared interface, 'translate to the expected interface' has no referent except whatever the first implementation does. The same pattern, before and after the declaration, produces the impersonation or the seam."}
  {:id "i5-spread"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 10801 :end 10881
            :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "**16 hardcoded `\"#futon\"`-style channel literals** across `src/` and `scripts/`."}
@@ -237,7 +237,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
   :body "With the hole closed, instance 5 became the widest :list spread in the set \u2014 p(all wants) ranges 0.168 to 0.797 across its 48 linear extensions at horizon 8, a factor of 4.7 depending on which arbitrary order the flattening picks. Instance 6 shows a linear extension reaching the wants with probability zero; this shows it reaching them with a probability that depends on a choice nobody made deliberately. For clause 0's X0(e) the second may be the more common failure."}
  {:id "exemplar-click"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 17734 :end 17794
            :heading "## IDENTIFY exit (when picked up)"
            :quote "Pick one instance and declare its interface \u2014 not all eight."}
@@ -247,7 +247,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001.edn"]
   :body "EXEMPLAR, click-001.edn. This sentence is the click: eight targets considered, four feasible (4, 5, 6, 7 have cascades; 1, 2, 3, 8 are excluded :no-candidate-field with what-would-make-feasible), and inst/4 chosen. Two semantically different candidates were built for it \u2014 4a registry-first and 4b observe-first, the route Rob actually took in instance 6. Clause T comes out :partially-met, clause 0 :not-met, and the reason 0 fails is stated rather than dressed: both candidates are :hand-built, so W0's construction condition cannot hold. Numbers are from kernels.clj and meets.clj with the commands recorded in the file."}
  {:id "exemplar-two-orderings"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 4126 :end 4167
            :heading "## Cost ordering (use this to prioritise)"
            :quote "## Cost ordering (use this to prioritise)"}
@@ -257,7 +257,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001.edn"]
   :body "FINDING for Clause T. The mission declares two orderings and this is not the one that chose the target. This ranks KINDS of retrofit by expense; the target was chosen by the IDENTIFY exit's separate ranking, on 'smallest surface' and 'unblocks provider substitution for Rob immediately'. Applied to instances, this ordering does not discriminate \u2014 4, 5 and 7 are all rank-2 code retrofits. It is also ambiguous in the direction that matters: 'worst' can mean most expensive to fix, which argues for doing it last, or most damaging, which argues for first. The record says :entered-as :not-used; the ambiguity should be resolved here in the mission before a later click tries to use it as a prior."}
  {:id "exemplar-lowest-score"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 17862 :end 17878
            :heading "## IDENTIFY exit (when picked up)"
            :quote "smallest surface"}
@@ -267,7 +267,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001.edn"]
   :body "FINDING for Clause T. inst/4 has the LOWEST best-candidate p(all wants) of the four feasible targets \u2014 0.26 against 0.924 for inst/5, 0.853 for inst/7, 0.619 for inst/6 \u2014 and was chosen on declared rank alone. If a G per target is later defined from a cascade's p(all wants), this click's choice contradicts it. The honest reading is that p(all wants) measures how readily a cascade reaches its own wants, not how much the target is worth doing, so a G built only from the first would be measuring the wrong thing."}
  {:id "outcome-grain"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 8630 :end 8689
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "### 4. Provider vs role \u2014 an identifier carrying a decision"}
@@ -277,7 +277,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001-outcome.edn" "futon3c 8e5c431e"]
   :body "OUTCOME of click-001 (exemplar/click-001-outcome.edn, d9825670; enacted at futon3c 8e5c431e). The plan and the enactment used different grains. The cascade chose the ROLE grain \u2014 cascade-construction/choose-the-grain-where-state-lives answered 'at the role', token :roles-named. What was built reads the PROVIDER: futon3c.agency.roles takes the registered :agent/type, and the live check returns wm-author\u2192:codex, claude-10\u2192:claude. So the two str/starts-with? branches are gone and the string parsing is gone, which is real, but the thing the cascade said to build \u2014 a role that persists while seats change \u2014 is not what exists. All three wants are recorded :partial; none is met."}
  {:id "outcome-unbound"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 18349 :end 18396
            :heading "## IDENTIFY exit (when picked up)"
            :quote "at least one existing caller is converted to it"}
@@ -287,7 +287,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001-outcome.edn"]
   :body "WHY the grains diverged, and it is not carelessness. The implementer worked from the mission's defect description \u2014 the provider parsed out of the id, the http.clj sites \u2014 rather than from the chosen cascade, and nothing in the loop checked the enactment against the candidate before it was committed. The outcome record states the gap: PROOF-2a has no clause binding the enacted change to the chosen candidate. Clause 4's Q-link joins action to outcome to next belief, but 'action' means the selected candidate, and nothing checks that what was done IS that candidate. A click can pass every clause and build something else."}
  {:id "i4-wiring"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9687 :end 9736
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "**What the interface would be:** a role registry."}
@@ -298,7 +298,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-4-wiring.edn"]
   :body "WIRING for instance 4 \u2014 the construction, where the cascade beside it is the argument. Every node names the pattern that licenses it (\u22a2), and satiety is read from the outcome record, not from the plan: solid green carries a witness, amber dashed carries what it owes. Every planned node is hungry. The red node below the path is the work that was actually done \u2014 futon3c.agency.roles, one function answering which PROVIDER an agent is \u2014 licensed by nothing in this cascade, and drawn off the path because folding it into the role-grain node would make a different construction look like a half-finished one. It reaches the planned path only by two :partly-discharges edges."}
  {:id "i4b-cascade"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 9858 :end 10047
            :heading "### 4. Provider vs role \u2014 an identifier carrying a decision"
            :quote "Evidence it is needed: the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself."}
@@ -309,7 +309,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-4b.edn"]
   :body "The SECOND candidate for this target, 4b observe-first: build a read-only role view from the seats that exist, route through it behind a switch, make that the single routing authority, then convert, test and replace. Four of its seven patterns differ from 4a's, and it uses agency/single-routing-authority \u2014 which states this instance's requirement verbatim in the agency family \u2014 where 4a uses the general cycle-machine/single-producer. It is nearly a chain: 2 linear extensions against 4a's 4."}
  {:id "i5-cascade"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 10138 :end 10198
            :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "### 5. Transport and Room \u2014 the seam that was never declared"}
@@ -320,7 +320,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
   :body "The cascade for instance 5. It has NO missing meet, and the correction is worth recording: an earlier run of meets.clj reported three, all of them comparable pairs \u2014 one pattern below the other \u2014 which the strict reading of descendants dropped from their own common part. In containment terms if A contains B then A meet B = B, which is in the cascade. Recomputed with reflexive descendants, matching CascadeOrder.Below in the PROOF-2a Lean module (a = b OR Reach r a b): 19 overlapping pairs, 19 with a greatest common descendant. Across all five cascades the strict reading showed five missing meets and the reflexive one shows one. Which is the kind of definition a formalisation exists to fix, and the reason a finding computed before it is fixed is worth very little. Found by claude-10."}
  {:id "i5-wiring"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 11501 :end 11560
            :heading "### 5. Transport and Room \u2014 the seam that was never declared"
            :quote "**What the interface would be, none of it provider-named:**"}
@@ -331,7 +331,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-5-wiring.edn"]
   :body "WIRING for instance 5, derived from its cascade and marked :derived \u2014 for an instance nobody has enacted, the construction is determined by the argument, so it is generated rather than restated by hand. Every interior node is hungry: nothing here is built. The node forms are the cascade's own statements of what each pattern produces."}
  {:id "i6-wiring"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 13066 :end 13243
            :heading "### 6. Prompts as an interface \u2014 the most painful retrofit"
            :quote "The retrofit needed: a mode flag the whole system consults; a shadow module mirroring the call sites; both versions live at once; and pattern-matching of prompt text at runtime."}
@@ -342,7 +342,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-6-wiring.edn"]
   :body "WIRING for instance 6, derived and plan-only. Read it against the cascade above: the two nodes that conflict there \u2014 keep the original prose authoritative, generate the prose from typed files \u2014 appear here as two constructions that cannot both be built, which is what the mission means when it says both versions are live at once."}
  {:id "i7-cascade"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 14199 :end 14249
            :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "### 7. Editor coupling \u2014 the one still compounding"}
@@ -353,7 +353,7 @@
   :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-7.edn"]
   :body "The cascade for instance 7. Like instance 5 it has no missing meet: the two pairs an earlier run reported were comparable, and a comparable pair meets at its lower unit. 17 overlapping pairs, 17 with a greatest common descendant, computed reflexively. The one real missing meet in this mission is instance 6's, where two incomparable roots have a common part whose maximal units are exactly the two patterns that conflict \u2014 the missing meet and the conflict turn out to be the same fact."}
  {:id "i7-wiring"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
            :start 15647 :end 15792
            :heading "### 7. Editor coupling \u2014 the one still compounding"
            :quote "**Where the seam goes:** `turn \u2192 record` (parse, split, offsets, quotes) and `record \u2192 dispatch` (choose delegate, build brief, deliver, report)."}
@@ -364,8 +364,8 @@
   :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-7-wiring.edn"]
   :body "WIRING for instance 7, derived and plan-only. This is the instance the mission calls still compounding, and the diagram shows why the cost grows: every node is hungry, and the two independent leaves mean there is no single act that finishes it."}
  {:id "enactment-as-chosen"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
-           :start 37400 :end 37459
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+           :start 40690 :end 40749
            :heading "## INSTANTIATE \u2014 demonstrations"
            :quote "All three are\nnow observed met, each by a check recorded in"}
   :column :pattern
@@ -374,8 +374,8 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001-enactment.edn" "futon3c eafd07b7" "futon3c d6927670"]
   :body "The second run enacted the cascade as chosen, at the ROLE grain. resources/roles.edn plus roles/seat-for (eafd07b7); request-review! asks for :reviewer; tickle's implementer default and mentor resolve the same way (d6927670). The redirect test is the real one now: rebinding :reviewer from claude-1 to oxf-codex-7 changes which seat is asked, and the test fails against the old code. 8 attempts, 7 succeeded; the grain step is the one that failed, at attempt 1, and succeeded at attempt 3."}
  {:id "enactment-residual"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
-           :start 39470 :end 39538
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+           :start 42760 :end 42828
            :heading "## INSTANTIATE \u2014 demonstrations"
            :quote "counts **43 seat literals across 12 files** and **one routing site**"}
   :column :pattern
@@ -384,8 +384,8 @@
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/sites.edn" "futon3c 139caa97"]
   :body "What the instance still carries, measured rather than asserted: enumerate_sites.py makes the :sites-enumerated token checkable, and it finds 43 seat literals in 12 files and one routing site \u2014 the library-loop adapter's check on the codex binary name. That site and tickle's rotation roster are recorded as deviations rather than closed, and neither is a str/starts-with? on an agent id, which is the coupling the instance was about."}
  {:id "document-proposal"
-  :anchor {:mission-sha "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
-           :start 41514 :end 41586
+  :anchor {:mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+           :start 44804 :end 44876
            :heading "### Proposed additional exit criterion (Rob, via Joe, 2026-09-24)"
            :quote "the `>>>` block-quote convention is\nimplemented in the Emacs path alone."}
   :column :pattern

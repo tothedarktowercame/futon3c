@@ -459,24 +459,88 @@ to compare the cascade's own answer with the grain the enactment operates on.
 That is the one remaining place in this method where a human judgement is made
 and nothing downstream would notice it being made differently.
 
-## ARGUE — why this design
+## ARGUE — which patterns, and why those
 
-**Exit criterion:** the design feels inevitable given the constraints, and an
-outsider can understand it from the plain-language argument alone. **Not met.**
+**Exit criterion:** the design feels *inevitable* given the constraints, not
+merely *possible*, and someone outside the project can understand what it does
+and why from the plain-language argument alone. **Partly met, and the part that
+is not met was measured rather than guessed.**
 
-What is argued: every pattern's receipt argues its own fit and states its scope
-limit, and every containment edge says why it is there. Three candidate
-transition kernels were run over every linear extension of each cascade, which
-argues about the *carrier* — and found that co-application differs from any
-flattening only when the click budget is shorter than the cascade is deep, and
-that on instance 6 no flattening reaches the wants at any horizon because the
-two conflicting patterns disable each other.
+ARGUE for this mission is pattern selection: a cascade *is* a claim that these
+patterns, in this containment order, are what the move requires. The material
+for the argument already exists — every one of the **37 pattern entries** across
+the five cascades carries three fields written when it was chosen:
 
-What is not argued: why instance 4's registry-first route should be preferred
-to observe-first. The only comparison is p(all wants) 0.26 against 0.21 at
-θ 0.8, horizon 6 — a number about how readily each cascade reaches its own
-wants, which is not an argument about which is the better design. And there is
-no plain-language account for a reader outside the project.
+- **`:forces`** — the general condition the pattern addresses, stated without
+  reference to this mission.
+- **`:reading`** — why it fits *here*, in this instance's terms.
+- **`:scope`** — what of the pattern does **not** transfer. This is the field
+  that makes the others answerable: `choose-the-grain-where-state-lives` is
+  taken "verbatim on grain selection" and its "many-item invariants in adapters
+  and gates" half is explicitly not used.
+
+Every containment edge carries a **`:via`** saying why it is there — not that
+one pattern follows another, but what distinction the first opens that the
+second needs. "Choosing the role as the grain is what makes a binding record
+about roles rather than about processes."
+
+That is a strong argument for **fit**. It is not an argument for
+**inevitability**, and the difference is measurable.
+
+### Could the library have been searched into these patterns?
+
+`proto/selection-margins.edn` (regenerate with `proto/selection_margins.py`)
+runs `scripts/xlate.py find` twice for each of instance 4's seven slots: once
+with the move stated in **the mission's** vocabulary, once in **the pattern's**
+own. Rank is where the chosen pattern appears; *nil* means it did not appear at
+all.
+
+| slot | from the problem | from the name |
+|---|---|---|
+| `choose-the-grain-where-state-lives` | — | **1** |
+| `coordination/assignment-binding` | **1** | 1 |
+| `cycle-machine/single-producer` | — | 2 |
+| `or3/count-every-card-back` | — | 1 |
+| `gauntlet/placenta-transfer` | — | 3 |
+| `translation/test-by-reproducing-behaviour` | **1** | 2 |
+| `realtime/mode-gate` | — | 1 |
+
+**Two of seven** are reachable from the move as the mission states it. **All
+seven** are reachable once the query uses the pattern's own words. The
+selection was made by someone who already knew the library, not by searching
+it — and the mission should say so, because the capability it is trying to
+develop cannot depend on that.
+
+This is the same defect the mission is about, turned on its own tools. A
+coupling in prose is invisible to a tool that greps for literals; a pattern
+whose vocabulary differs from the problem's is invisible to retrieval that
+matches words. `or3/count-every-card-back` is about enumerating before acting,
+and nothing in "enumerate every site that hardcodes the thing" reaches it.
+
+**The reconstruction's limit, stated:** the original selection recorded no
+rejected candidates, so this cannot show how the patterns were actually found.
+It shows what retrieval offers today for each phrasing. A cascade that recorded
+its rejects at the time would not need reconstructing — that is a change to
+DERIVE step 4, not a finding about these seven.
+
+### What is still not argued
+
+- **Registry-first versus observe-first.** The only comparison between instance
+  4's two candidates is p(all wants) 0.26 against 0.21 at θ 0.8, horizon 6 —
+  a number about how readily each cascade reaches its own wants, which is not
+  an argument about which is the better design. They differ in four of seven
+  patterns; no receipt compares a pair.
+- **The plain-language account for an outsider.** It does not exist yet. That
+  is DOCUMENT's job and Rob's requested example is the vehicle for it.
+
+### What the kernel runs argue, which is something else
+
+Three candidate transition kernels over every linear extension of each cascade.
+The finding is about the **carrier**, not this design: co-application differs
+from any flattening only when the click budget is shorter than the cascade is
+deep, and on instance 6 no flattening reaches the wants at any horizon, because
+the two conflicting patterns disable each other. Worth keeping and not to be
+mistaken for an argument that these patterns are the right ones.
 
 ## VERIFY — checked against structural constraints
 
