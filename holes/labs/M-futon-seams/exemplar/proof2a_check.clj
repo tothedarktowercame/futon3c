@@ -11,6 +11,9 @@
 (require '[clojure.edn :as edn] '[clojure.set :as set] '[clojure.string :as str])
 (load-file (str (.getParent (.getParentFile (java.io.File. (System/getProperty "babashka.file"))))
                 "/proto/kernels_lib.clj"))
+;; Defined by the load-file above; declared so a linter can see them (a def
+;; without a value leaves an existing root binding alone).
+(declare ancestors-map rollout frontier conflicts summary linear-extensions)
 
 (def LIB "/home/joe/code/futon3/library")
 ;; PROOF-2a W_0 requires :machine-constructed. A hand-built candidate fails W_0.
@@ -144,6 +147,34 @@
                                                :note "PROOF-2 W_0 needs at least two semantically different candidates"}])
                             (when (absent? (:score-inputs tf)) [{:kind :score-inputs-absent :status (:status (:score-inputs tf))}])))}))
 
+;; ---------------------------------------------------------------- W_c
+;; Clause C (enactment conformance): the change that was made IS the chosen
+;; candidate. Every pattern of the chosen candidate has a successful attempt
+;; whose check names what observes its produced token; every attempt names a
+;; pattern of that candidate; deviations are typed. Checked against an
+;; enactment record (click-001-enactment.edn form).
+(defn check-c [rec enact]
+  (let [cid (:candidate enact)
+        cand (get-in rec [:decision :selection-certificate :candidate-derivations cid])
+        pats (set (keys (:interpretations cand)))
+        atts (:attempts enact)
+        ok (filter :success atts)]
+    (cond-> []
+      (nil? cand) (conj (str "W_c: enactment names candidate " cid ", which the click did not record"))
+      (not= cid (:candidate (get-in rec [:decision :selection-law]) cid))
+      (conj "W_c: enactment candidate differs from the click's selected candidate")
+      (some #(not (contains? pats (:pattern %))) atts)
+      (conj (str "W_c: attempts at patterns outside the chosen candidate: "
+                 (vec (remove pats (map :pattern atts)))))
+      (seq (remove (set (map :pattern ok)) pats))
+      (conj (str "W_c: chosen patterns with no successful attempt: " (vec (sort-by str (remove (set (map :pattern ok)) pats)))))
+      (some #(nil? (:check %)) ok)
+      (conj (str "W_c: successful attempts with no check: " (vec (map :pattern (filter #(nil? (:check %)) ok)))))
+      (some #(not (contains? (set (get-in cand [:interpretations (:pattern %) :produces])) (:produced %))) ok)
+      (conj "W_c: an attempt claims a token its pattern does not produce")
+      (some #(not (keyword? (:kind %))) (get-in enact [:conformance :deviations]))
+      (conj "W_c: a deviation is not typed"))))
+
 ;; ---------------------------------------------------------------- X falsifiers
 (defn first-cand [rec] (first (keys (get-in rec [:decision :selection-certificate :candidate-derivations]))))
 (defn falsifiers [rec]
@@ -183,6 +214,7 @@
                         (fn [es] (let [{:keys [above below]} (first es)] (conj (vec es) {:above below :below above}))))]))))
 
 (let [f (first *command-line-args*)
+      ef (second *command-line-args*)
       rec (edn/read-string (slurp f))
       {:keys [problems findings]} (check rec)]
   (println "PROOF-2a check:" f)
@@ -192,6 +224,19 @@
   (doseq [p problems] (println "   -" p))
   (println "  findings (typed, not failures):" (count findings))
   (doseq [x findings] (println "   -" (pr-str x)))
+  (when ef
+    (let [enact (edn/read-string (slurp ef))
+          pc (check-c rec enact)
+          first-only (update enact :attempts (fn [as] (filterv #(= 1 (:n %)) as)))
+          untyped (update-in enact [:conformance :deviations] (fn [ds] (conj (vec ds) {:statement "untyped"})))
+          nocheck (update enact :attempts (fn [as] (mapv #(dissoc % :check) as)))]
+      (println "  W_c (enactment is the chosen candidate):" ef)
+      (println (if (empty? pc) "    PASS" (str "    FAIL (" (count pc) ")")))
+      (doseq [p pc] (println "     -" p))
+      (doseq [[label bad] [["X_c(first) only the first attempt (8e5c431e, provider grain)" first-only]
+                           ["X_c(check) successful attempts with their checks removed" nocheck]
+                           ["X_c(untyped) an untyped deviation" untyped]]]
+        (println "   " (if (seq (check-c rec bad)) "caught " "VACUOUS") label))))
   (println "  falsifiers (each bad extract must fail):")
   (let [vac (atom 0)]
     (doseq [[label bad] (falsifiers rec)]
