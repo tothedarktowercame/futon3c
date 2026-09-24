@@ -7,6 +7,34 @@
 (require '[clojure.edn :as edn] '[clojure.set :as set] '[cheshire.core :as j])
 (load-file (str (System/getProperty "user.dir") "/holes/labs/M-futon-seams/proto/kernels_lib.clj"))
 
+(defn- strict-below [children id]
+  (loop [seen #{} frontier (get children id #{})]
+    (if (empty? frontier) seen
+        (recur (into seen frontier)
+               (set/difference (reduce set/union #{} (map #(get children % #{}) frontier)) seen)))))
+
+(defn meet-report
+  "The restricted semilattice condition of PROOF-2a clause 0: an overlapping
+   pair (one sharing a descendant) must have a greatest common descendant that
+   is itself a pattern of the cascade. Pairs without one are findings."
+  [pats above]
+  (let [ids (vec (sort (keys pats)))
+        children (reduce (fn [m {:keys [context pattern]}]
+                           (update m context (fnil conj #{}) pattern)) {} above)
+        desc (into {} (for [i ids] [i (strict-below children i)]))
+        rows (for [a ids b ids :when (neg? (compare (str a) (str b)))
+                   :let [common (set/intersection (desc a) (desc b))]
+                   :when (seq common)]
+               (let [maximal (set (remove (fn [d] (some #(contains? (desc %) d) (disj common d)))
+                                          common))
+                     gcd (when (= 1 (count maximal))
+                           (let [m (first maximal)]
+                             (when (every? #(or (= % m) (contains? (desc m) %)) common) m)))]
+                 {:pair [a b] :maximal-common (vec (sort maximal)) :meet gcd}))]
+    {:overlapping (count rows)
+     :with-meet (count (filter :meet rows))
+     :missing (vec (remove :meet rows))}))
+
 (defn depth [anc id] (if (empty? (anc id)) 0 (inc (apply max (map #(depth anc %) (anc id))))))
 
 (defn bundle [file horizons theta]
@@ -28,6 +56,8 @@
                                :receipt (:receipt p) :forces (:forces p)
                                :depth (depth anc id)}]))
      :above (:above c)
+     :candidate (:candidate c)
+     :meets (meet-report pats (:above c))
      :linear-extensions (count exts)
      :wide-states (vec (take 40 wide))
      :wide-count (count wide) :reachable (count reach)

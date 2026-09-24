@@ -259,4 +259,74 @@
   :status :draft
   :refs ["futon3c/holes/labs/M-futon-seams/exemplar/click-001-outcome.edn"]
   :body "WHY the grains diverged, and it is not carelessness. The implementer worked from the mission's defect description \u2014 the provider parsed out of the id, the http.clj sites \u2014 rather than from the chosen cascade, and nothing in the loop checked the enactment against the candidate before it was committed. The outcome record states the gap: PROOF-2a has no clause binding the enacted change to the chosen candidate. Clause 4's Q-link joins action to outcome to next belief, but 'action' means the selected candidate, and nothing checks that what was done IS that candidate. A click can pass every clause and build something else."}
+ {:id "i4-wiring"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 9261 :end 9310
+           :quote "**What the interface would be:** a role registry."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "wiring-4"
+  :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-4-wiring.edn"]
+  :body "WIRING for instance 4 \u2014 the construction, where the cascade beside it is the argument. Every node names the pattern that licenses it (\u22a2), and satiety is read from the outcome record, not from the plan: solid green carries a witness, amber dashed carries what it owes. Every planned node is hungry. The red node below the path is the work that was actually done \u2014 futon3c.agency.roles, one function answering which PROVIDER an agent is \u2014 licensed by nothing in this cascade, and drawn off the path because folding it into the role-grain node would make a different construction look like a half-finished one. It reaches the planned path only by two :partly-discharges edges."}
+ {:id "i4b-cascade"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 9432 :end 9621
+           :quote "Evidence it is needed: the self-dispatch guard in `session-turn-analysis.el` compares the delegate id against the receiving agent's id to stop a seat interpreting turns addressed to itself."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "instance-4b"
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-4b.edn"]
+  :body "The SECOND candidate for this target, 4b observe-first: build a read-only role view from the seats that exist, route through it behind a switch, make that the single routing authority, then convert, test and replace. Four of its seven patterns differ from 4a's, and it uses agency/single-routing-authority \u2014 which states this instance's requirement verbatim in the agency family \u2014 where 4a uses the general cycle-machine/single-producer. It is nearly a chain: 2 linear extensions against 4a's 4."}
+ {:id "i5-cascade"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 9712 :end 9772
+           :quote "### 5. Transport and Room \u2014 the seam that was never declared"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "instance-5"
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-5.edn"]
+  :body "The cascade for instance 5, with the amber connector marking a MISSING MEET: three overlapping pairs share the same two maximal common units, realtime/transport-pivot and translation/test-by-reproducing-behaviour, and neither is below the other. Clause 0 asks that an overlapping pair's common part be a single pattern of the cascade. Here the construction forks into a migration discipline and a conformance test with nothing joining them \u2014 which is honest, since the two genuinely do not depend on each other, and is exactly the typed finding clause 0 says to record rather than repair."}
+ {:id "i5-wiring"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 11075 :end 11134
+           :quote "**What the interface would be, none of it provider-named:**"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "wiring-5"
+  :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-5-wiring.edn"]
+  :body "WIRING for instance 5, derived from its cascade and marked :derived \u2014 for an instance nobody has enacted, the construction is determined by the argument, so it is generated rather than restated by hand. Every interior node is hungry: nothing here is built. The node forms are the cascade's own statements of what each pattern produces."}
+ {:id "i6-wiring"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 12640 :end 12817
+           :quote "The retrofit needed: a mode flag the whole system consults; a shadow module mirroring the call sites; both versions live at once; and pattern-matching of prompt text at runtime."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "wiring-6"
+  :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-6-wiring.edn"]
+  :body "WIRING for instance 6, derived and plan-only. Read it against the cascade above: the two nodes that conflict there \u2014 keep the original prose authoritative, generate the prose from typed files \u2014 appear here as two constructions that cannot both be built, which is what the mission means when it says both versions are live at once."}
+ {:id "i7-cascade"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 13773 :end 13823
+           :quote "### 7. Editor coupling \u2014 the one still compounding"}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "instance-7"
+  :refs ["futon3c/holes/labs/M-futon-seams/proto/instance-7.edn"]
+  :body "The cascade for instance 7, with its own missing meet marked: two overlapping pairs share the maximal units contracts/every-entry-has-a-falsifier and memory/no-tightening-while-held. The construction forks into naming a falsifier and converting the writers, and the two never rejoin. Same shape as instance 5's, and the same clause-0 finding."}
+ {:id "i7-wiring"
+  :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+           :start 15221 :end 15366
+           :quote "**Where the seam goes:** `turn \u2192 record` (parse, split, offsets, quotes) and `record \u2192 dispatch` (choose delegate, build brief, deliver, report)."}
+  :column :pattern
+  :author "claude-1"
+  :status :draft
+  :figure "wiring-7"
+  :refs ["futon3c/holes/labs/M-futon-seams/wiring/instance-7-wiring.edn"]
+  :body "WIRING for instance 7, derived and plan-only. This is the instance the mission calls still compounding, and the diagram shows why the cost grows: every node is hungry, and the two independent leaves mean there is no single act that finishes it."}
 ]

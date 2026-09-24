@@ -57,13 +57,13 @@ def svg(b):
     # by anything, so placing it among the produced nodes would imply an edge.
     open_holes = [h for h in (b.get("holes") or []) if h.get("status") != "closed"]
     cols = max(layers) + 1 + (1 if open_holes else 0)
-    width = COLW * cols + 40
+    width = COLW * cols + 130
     height = ROWH * max(len(v) for v in layers.values()) + 60
     pos = {}
     for d, ids in layers.items():
         top = (height - ROWH * len(ids)) / 2
         for i, pid in enumerate(ids):
-            pos[pid] = (30 + d * COLW, top + i * ROWH + 20)
+            pos[pid] = (54 + d * COLW, top + i * ROWH + 20)
 
     out = [f'<svg viewBox="0 0 {width} {height}" class="lattice" '
            f'role="img" aria-label="pattern semilattice for instance {b["instance"]}">']
@@ -93,7 +93,7 @@ def svg(b):
             f'<text x="{x+10}" y="{y+56}" class="nprod">⊢ {html.escape(prod)}</text></g>')
     for k, h in enumerate(h for h in (b.get("holes") or [])
                           if h.get("status") != "closed"):
-        x = 30 + (max(layers) + 1) * COLW
+        x = 54 + (max(layers) + 1) * COLW
         y = (height - BH) / 2 + k * ROWH
         out.append(
             f'<g class="node"><title>{html.escape(h["why-not-citable"])}</title>'
@@ -102,6 +102,44 @@ def svg(b):
             f'<text x="{x+10}" y="{y+19}" class="nhole">HOLE</text>'
             f'<text x="{x+10}" y="{y+35}" class="nid">{html.escape(short(h["token"]))}</text>'
             f'<text x="{x+10}" y="{y+56}" class="nprod">no pattern produces this</text></g>')
+    # Markings clause 0 asks for, drawn on the cascade they belong to.
+    # Distinct maximal pairs only: in instance 5 all three missing meets share
+    # one pair, and drawing it three times would say three things.
+    seen = set()
+    for m in (b.get("meets", {}) or {}).get("missing", []):
+        mc = m["maximal-common"]
+        if len(mc) != 2 or tuple(mc) in seen:
+            continue
+        seen.add(tuple(mc))
+        if mc[0] not in pos or mc[1] not in pos:
+            continue
+        (x1, y1), (x2, y2) = pos[mc[0]], pos[mc[1]]
+        cx = max(x1, x2) + BW + 26
+        out.append(
+            f'<path d="M{x1+BW} {y1+BH/2} C{cx} {y1+BH/2} {cx} {y2+BH/2} {x2+BW} {y2+BH/2}" '
+            f'fill="none" stroke="{C["hole"]}" stroke-width="1.6" stroke-dasharray="3 3">'
+            f'<title>no meet: these are the maximal units of the common part of '
+            f'{html.escape(short(m["pair"][0]))} and {html.escape(short(m["pair"][1]))}, '
+            f'and neither is below the other</title></path>'
+            f'<text x="{cx+6}" y="{(y1+y2)/2+BH/2}" class="nmeet">no meet</text>')
+
+    conf_seen = set()
+    for w in b.get("wide-states", []):
+        for a_id, b_id, toks in w.get("conflicts", []):
+            key = tuple(sorted((a_id, b_id)))
+            if key in conf_seen or a_id not in pos or b_id not in pos:
+                continue
+            conf_seen.add(key)
+            (x1, y1), (x2, y2) = pos[a_id], pos[b_id]
+            cx = min(x1, x2) - 24
+            out.append(
+                f'<path d="M{x1} {y1+BH/2} C{cx} {y1+BH/2} {cx} {y2+BH/2} {x2} {y2+BH/2}" '
+                f'fill="none" stroke="{C["accent"]}" stroke-width="2" stroke-dasharray="6 3">'
+                f'<title>conflicting frontier: each produces a token the other forbids '
+                f'({html.escape(", ".join(short(t) for t in toks))})</title></path>'
+                f'<text x="{cx-4}" y="{(y1+y2)/2+BH/2}" class="nconf" '
+                f'text-anchor="end">conflict</text>')
+
     out.append("</svg>")
     return "".join(out)
 
@@ -253,6 +291,9 @@ code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.85em; }
         font-family:ui-monospace,Menlo,monospace; }
 .nprod{ font-size:10.5px; fill:#555; font-family:ui-monospace,Menlo,monospace; }
 .nhole{ font-size:11px; fill:#a8791d; font-weight:700;
+        font-family:ui-monospace,Menlo,monospace; }
+.nmeet{ font-size:9.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
+.nconf{ font-size:9.5px; fill:#b8431f; font-weight:700;
         font-family:ui-monospace,Menlo,monospace; }
 .node { cursor:pointer; }
 .node.lit rect { fill:#fbe6dd; stroke-width:2; }

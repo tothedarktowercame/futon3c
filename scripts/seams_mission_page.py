@@ -24,9 +24,15 @@ REPO = "/home/joe/code/futon3c"
 MISSION = "holes/missions/M-futon-seams.md"
 ANNOTATIONS = "holes/labs/M-futon-seams/annotations.edn"
 CASCADES = ["holes/labs/M-futon-seams/proto/instance-4.edn",
+            "holes/labs/M-futon-seams/proto/instance-4b.edn",
             "holes/labs/M-futon-seams/proto/instance-5.edn",
             "holes/labs/M-futon-seams/proto/instance-6.edn",
             "holes/labs/M-futon-seams/proto/instance-7.edn"]
+WIRINGS = ["holes/labs/M-futon-seams/wiring/instance-4-wiring.edn",
+           "holes/labs/M-futon-seams/wiring/instance-4b-wiring.edn",
+           "holes/labs/M-futon-seams/wiring/instance-5-wiring.edn",
+           "holes/labs/M-futon-seams/wiring/instance-6-wiring.edn",
+           "holes/labs/M-futon-seams/wiring/instance-7-wiring.edn"]
 
 OPEN, CLOSE = "\x00", "\x01"          # anchor sentinels, absent from markdown
 
@@ -208,7 +214,20 @@ def main():
         sys.path.insert(0, os.path.join(REPO, "scripts"))
         import seams_page
         for b in json.load(open(bundle)):
-            figures[f"instance-{b['instance']}"] = seams_page.svg(b)
+            cand = str(b.get("candidate") or "")
+            key = f"instance-{b['instance']}{'b' if 'b-observe' in cand else ''}"
+            figures[key] = seams_page.svg(b)
+
+    # the wiring diagrams: the construction beside the argument
+    import seams_wiring
+    for path in WIRINGS:
+        w = edn_to_json(path)
+        # instance 4 has two candidates; the key distinguishes them by the
+        # candidate id, not by "has one at all" -- candidate a has one too.
+        cand = str(w.get("candidate") or "")
+        suffix = "b" if "b-observe" in cand else ""
+        key = f"wiring-{w['instance']}{suffix}"
+        figures[key] = seams_wiring.svg(w)
 
     marked, live, stale = place_anchors(text, notes)
     blocks = [resolve_sentinels(b) for b in render_markdown(marked)]
@@ -308,6 +327,19 @@ li { margin:0 0 .3rem; }
 .nfig { margin:.4rem 0; overflow:hidden; cursor:zoom-in; position:relative;
         border:1px solid #eae6d8; background:#fff; padding:.2rem; }
 .nfig svg { width:100%; height:auto; min-width:0; }
+.wiring { max-width:100%; height:auto; }
+.wid { font-size:11px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
+.wform { font-size:9px; fill:#666; }
+.wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
+.wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
+.wnode { cursor:help; }
+.nmeet{ font-size:9.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
+.nconf{ font-size:9.5px; fill:#b8431f; font-weight:700; font-family:ui-monospace,Menlo,monospace; }
+.nhole{ font-size:11px; fill:#a8791d; font-weight:700; font-family:ui-monospace,Menlo,monospace; }
+.nfam { font-size:10px; fill:#999; font-family:ui-monospace,Menlo,monospace; }
+.nid  { font-size:12.5px; fill:#1b6b3a; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
+.nprod{ font-size:10.5px; fill:#555; font-family:ui-monospace,Menlo,monospace; }
+.node { cursor:pointer; }
 .figopen { position:absolute; right:.25rem; bottom:.2rem; font-size:.58rem; color:#999;
            font-family:ui-monospace,Menlo,monospace; background:#fffff8; padding:0 .2rem; }
 .figmodal { position:fixed; inset:0; background:rgba(255,255,248,.97); z-index:50;
