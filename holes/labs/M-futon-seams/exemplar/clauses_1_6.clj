@@ -76,6 +76,50 @@
                        [p {:alpha a :beta b :mean (/ a (+ a b)) :attempts attempts :successes successes}])))
 (def click2 (want-marginal (rollout #(get-in theta1 [% :mean]))))
 
+;; --- clause 4 in the enactment's own unit: ATTEMPTS until all wants hold.
+;; A kernel step under co-application attempts every frontier pattern once, so
+;; it costs |frontier| attempts; under interleaving it costs one. The result is
+;; the exact distribution of the number of attempts to completion (capped),
+;; with :never for mass that stalls (empty frontier, wants unmet). No horizon
+;; is chosen: the enactment's observed count is scored against it.
+(def attempt-cap 40)
+(defn attempts-dist [kind theta]
+  (loop [live {[s0 0] 1.0} done {}]
+    (if (empty? live) done
+        (let [step1 (for [[[s a] w] live
+                          :let [f (frontier s)]]
+                      (cond
+                        (set/subset? want s) [:done a w]
+                        (empty? f) [:done :never w]
+                        (>= a attempt-cap) [:done :over-cap w]
+                        (= kind :coapp)
+                        [:live (for [[s2 p] (step theta s)] [[s2 (+ a (count f))] (* w p)])]
+                        :else ; interleaving: one frontier pattern, uniformly
+                        [:live (for [q f [s2 p] {(set/union s (:produces (pats q))) (theta q) s (- 1.0 (theta q))}]
+                                 [[s2 (inc a)] (/ (* w p) (count f))])]))]
+          (recur (reduce (fn [m [tag x]] (if (= tag :live) (reduce (fn [m [k w]] (update m k (fnil + 0.0) w)) m x) m)) {} step1)
+                 (reduce (fn [m [tag a w]] (if (= tag :done) (update m a (fnil + 0.0) w) m)) done step1))))))
+(defn dist-summary [d observed]
+  (let [ks (filter number? (keys d))
+        mean (/ (reduce + (map #(* % (d %)) ks)) (max 1e-12 (reduce + (map d ks))))
+        p-obs (get d observed 0.0)]
+    {:p-exactly-observed p-obs
+     :p-at-most-observed (reduce + (for [k ks :when (<= k observed)] (d k)))
+     :mean-attempts-if-completes mean
+     :p-never (get d :never 0.0) :p-over-cap (get d :over-cap 0.0)
+     :log-score-bits (when (pos? p-obs) (/ (Math/log p-obs) (Math/log 2)))}))
+(def observed-attempts (count (:attempts enact)))
+(def sensitivity
+  (for [n [2 5 20]]
+    (let [th (into {} (for [p (keys pats)
+                            :let [{:keys [attempts successes] :or {attempts 0 successes 0}} (trials p)
+                                  a (+ (* m0 n) successes) b (+ (* (- 1 m0) n) (- attempts successes))]]
+                        [p (/ a (+ a b))]))]
+      {:pseudo-count n :theta-grain-step (th :cascade-construction/choose-the-grain-where-state-lives)
+       :theta-others (th :or3/count-every-card-back)
+       :click-002-p-all-wants-at-horizon (p-all (want-marginal (rollout th)))
+       :attempts-under-learned (dist-summary (attempts-dist :coapp th) observed-attempts)})))
+
 (defn r [x] (/ (Math/round (* 1e6 (double x))) 1e6))
 (defn fmt [m] (into (sorted-map-by #(compare (str %1) (str %2))) (for [[k v] m] [(vec (sort k)) (r v)])))
 
@@ -100,15 +144,27 @@
                 :realised {:observations obs}
                 :surprise-bits (r (/ F (Math/log 2)))
                 :link {:action (:candidate enact) :outcome "click-001-enactment.edn :observations" :next-belief ":clause-2-D :posterior"}}
+   :clause-4-attempts
+   {:unit :attempts
+    :observed observed-attempts
+    :statement "prediction and outcome in one unit: attempts to completion, not probability at a chosen horizon"
+    :coapp-theta-0.8 (update-vals (dist-summary (attempts-dist :coapp theta0) observed-attempts) #(if (number? %) (r %) %))
+    :interleaving-theta-0.8 (update-vals (dist-summary (attempts-dist :inter theta0) observed-attempts) #(if (number? %) (r %) %))}
    :clause-5-B {:prior {:mean m0 :pseudo-count n0 :status :declared}
                 :per-pattern (into (sorted-map-by #(compare (str %1) (str %2)))
                                    (for [[p v] theta1] [p (-> v (update :mean r) (update :alpha r) (update :beta r))]))
                 :click-002-prediction {:p-all-wants (r (p-all click2)) :horizon T :kernel :coapp
                                        :statement "the next click reads the updated thetas before predicting"}
-                :changed-the-prediction? (> (Math/abs (- (p-all click2) (p-all prior))) 1e-6)}
+                :changed-the-prediction? (> (Math/abs (- (p-all click2) (p-all prior))) 1e-6)
+                :sensitivity-to-declared-prior
+                (vec (for [x sensitivity]
+                       (-> x (update :theta-grain-step r) (update :theta-others r)
+                           (update :click-002-p-all-wants-at-horizon r)
+                           (update :attempts-under-learned (fn [m] (update-vals m #(if (number? %) (r %) %)))))))}
    :clause-6 {:E {:status :not-measured} :C {:status :declared :value (vec (sort want))}
               :A {:status :declared-rates} :D {:status :computed} :F {:status :computed}
               :Q {:status :linked} :B {:status :computed-from-declared-prior}}})
 
 (spit (str here "/click-001-clauses.edn") (with-out-str (pp/pprint out)))
-(pp/pprint (select-keys out [:clause-2-D :clause-3-F :clause-4-Q :clause-5-B]))
+(pp/pprint (select-keys out [:clause-4-attempts]))
+(pp/pprint (get-in out [:clause-5-B :sensitivity-to-declared-prior]))

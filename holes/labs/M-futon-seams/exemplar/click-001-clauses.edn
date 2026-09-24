@@ -44,6 +44,25 @@
   :F {:status :computed},
   :Q {:status :linked},
   :B {:status :computed-from-declared-prior}},
+ :clause-4-attempts
+ {:unit :attempts,
+  :observed 8,
+  :statement
+  "prediction and outcome in one unit: attempts to completion, not probability at a chosen horizon",
+  :coapp-theta-0.8
+  {:p-exactly-observed 0.293601,
+   :p-at-most-observed 0.503316,
+   :mean-attempts-if-completes 8.75,
+   :p-never 0.0,
+   :p-over-cap 0.0,
+   :log-score-bits -1.76807},
+  :interleaving-theta-0.8
+  {:p-exactly-observed 0.293601,
+   :p-at-most-observed 0.503316,
+   :mean-attempts-if-completes 8.75,
+   :p-never 0.0,
+   :p-over-cap 0.0,
+   :log-score-bits -1.76807}},
  :clause-1-A
  {:status :declared,
   :rates
@@ -91,4 +110,38 @@
    :kernel :coapp,
    :statement
    "the next click reads the updated thetas before predicting"},
-  :changed-the-prediction? true}}
+  :changed-the-prediction? true,
+  :sensitivity-to-declared-prior
+  [{:pseudo-count 2,
+    :theta-grain-step 0.65,
+    :theta-others 0.866667,
+    :click-002-p-all-wants-at-horizon 0.317061,
+    :attempts-under-learned
+    {:p-exactly-observed 0.316755,
+     :p-at-most-observed 0.592195,
+     :mean-attempts-if-completes 8.461538,
+     :p-never 0.0,
+     :p-over-cap 0.0,
+     :log-score-bits -1.65856}}
+   {:pseudo-count 5,
+    :theta-grain-step 0.714286,
+    :theta-others 0.833333,
+    :click-002-p-all-wants-at-horizon 0.285726,
+    :attempts-under-learned
+    {:p-exactly-observed 0.307559,
+     :p-at-most-observed 0.546772,
+     :mean-attempts-if-completes 8.6,
+     :p-never 0.0,
+     :p-over-cap 0.0,
+     :log-score-bits -1.701063}}
+   {:pseudo-count 20,
+    :theta-grain-step 0.772727,
+    :theta-others 0.809524,
+    :click-002-p-all-wants-at-horizon 0.266786,
+    :attempts-under-learned
+    {:p-exactly-observed 0.297965,
+     :p-at-most-observed 0.515438,
+     :mean-attempts-if-completes 8.705882,
+     :p-never 0.0,
+     :p-over-cap 0.0,
+     :log-score-bits -1.746784}}]}}
