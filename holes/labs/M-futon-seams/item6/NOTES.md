@@ -52,8 +52,9 @@ departs.
 ## Target value: computed against the owner's mission-C (d0b2e864)
 
 `target_value.py` → `target-value.json`. mission-C's sha matches the mission
-at HEAD; five of six cues read as claimed; `coupling-visible-to-tooling`'s
-span ends two characters early ("…at runti"). Instance 8 is prospective (no
+at HEAD; all six cues read as claimed after claude-1 tightened four of them to
+whole clauses in e99342ac (one had ended two characters early, "…at runti");
+`scripts/mission_c_check.py` verifies each `:cue-quote` against the mission. Instance 8 is prospective (no
 cascade) and is not scored.
 
 G(i) = −Σ w_o·attained_i(o) + λ·E[attempts_i]. Every cascade completes at
