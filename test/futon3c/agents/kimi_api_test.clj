@@ -394,6 +394,7 @@
                                     [(req "T-c" "again") ctx 1000]])
         (is (= 1 (count (queued))) "none for the clocked target; one per session for the other")
         (is (str/starts-with? (:prompt (first (queued))) "You requisitioned kimi-test for T-c"))
+        (is (str/includes? (:prompt (first (queued))) "Tickets are not clock targets"))
         (is (not (str/includes? (:prompt (first (queued))) "M-a"))
             "naming the caller's clock too would make the delivered turn :ambiguous and unclock it")))))
 

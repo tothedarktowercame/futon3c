@@ -2090,9 +2090,14 @@ CALLS contains maps of tool name, arguments, and result digest."
                   (if caller-target
                     ", which is not what your clock said."
                     " while not clocked in.")
-                  " If your work has moved to " job-target
-                  ", this reminder clocks you onto it; if it hasn't, "
-                  "clock back onto what you are doing.")
+                  (if (str/starts-with? job-target "T-")
+                    ;; Clock decisions recognise only C-/M-/E- names.
+                    (str " Tickets are not clock targets: if your work has "
+                         "moved, clock onto the mission or excursion "
+                         job-target " belongs to.")
+                    (str " If your work has moved to " job-target
+                         ", this reminder clocks you onto it; if it hasn't, "
+                         "clock back onto what you are doing.")))
              {:requisitioned job-target :caller-clock caller-target}))
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
