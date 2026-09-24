@@ -675,6 +675,14 @@ Seven checks run, and each exists because it caught something:
   passed when the truth was false, which is the cell an error-rate table exists
   to expose.
 
+**What scoring the checks found.** With independence established, the rates
+stand: test fp .167 / fn .125; grep fp .300 / fn .167; validator fp .179 /
+**fn .750**; layout `insufficient` at n=4, recorded as a typed absence rather
+than a number. The validator figure is the best-powered of the four — 7 rows
+carrying 18 runs — and it says a validator in this mission let through three
+of four bad cases. A check that is trusted and wrong three times in four is
+worse than no check, and this is the first measurement any of them has had.
+
 ### Risks that cannot be checked statically, and what was done about each
 
 | risk | spiked? | how |
@@ -684,8 +692,8 @@ Seven checks run, and each exists because it caught something:
 | Does a grain declaration correspond to real code? | **yes** | `grain_check.py` resolves the named resolver and compares its argument list; tested against a renamed function and a drifted arglist |
 | Do the recorded predictions reproduce? | **yes** | clause 4 recomputes from the recorded inputs: 0.260 against the recorded 0.26 |
 | **Is a coupling carried in prompt text really invisible to tooling?** | **yes** | `exemplar/spike-prompt-coupling.edn` — see below |
-| Does the check ledger's truth stand up? | **partly** | the population exists and the rates are computed from it; the independence of each source is the part still being assessed, elsewhere |
-| Are the check error rates real? | **yes** | `exemplar/check-ledger.edn`: 22 rows, each carrying `:truth` and a `:truth-source`, 19 sources distinct. Clause 1 (A) reads `:measured-from-check-ledger`, not `:declared` — per-kind rates come from counts. Open question, not an absent one: whether each `:truth-source` is independent of the check it judges. kimi-3 is filtering on exactly that under claude-8's H-witness packet |
+| Are the check error rates real? | **yes** | `exemplar/check-ledger.edn`: 22 rows, 33 runs, each row carrying `:truth` and a `:truth-source`. Clause 1 (A) reads `:measured-from-check-ledger` — per-kind rates from counts |
+| Is each recorded truth independent of the check it judges? | **yes**, and judged from outside | futon2 `f758d702` / `fc90808d`, fixture `test/fixtures/check-ledger-classification/m-futon-seams-v1.edn`: every row classified by kimi-4 — 7 constructed-bad-case, 9 later-review, 6 independent-recomputation, **none self-truthed**. The estimator now refuses a row naming no independent act, and an unclassified ledger reads all-insufficient |
 
 **The prompt-coupling spike.** Instance 6 *claims* a coupling in prompt text is
 invisible to tooling. That is a claim, so it was tried: change

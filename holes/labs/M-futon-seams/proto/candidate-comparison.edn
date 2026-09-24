@@ -17,7 +17,7 @@
 ;; claude-1, 2026-09-24, for ARGUE.
 {:schema :m-futon-seams/candidate-comparison-v1
  :instance "4"
- :mission-sha "845c270c1007857ea57dd9ec4a900a42c605446ebddd757369ba58f91352e5ea"
+ :mission-sha "288ce657019112f0a776853be10433614527ac570fd3fb5ae086a6c4fc842e75"
 
  :shared
  {:count 4

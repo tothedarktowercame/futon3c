@@ -20,7 +20,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "845c270c1007857ea57dd9ec4a900a42c605446ebddd757369ba58f91352e5ea"
+           :sha256 "288ce657019112f0a776853be10433614527ac570fd3fb5ae086a6c4fc842e75"
            :status-line "HEAD complete; IDENTIFY complete; INSTANTIATE-1 complete for instance 4 (enacted as chosen after a first wrong-grain attempt); MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
@@ -103,7 +103,7 @@
    :exit-line 231
    :status :exit-met
    :mission-anchor {:start 43700 :end 43750 :quote "## VERIFY \u2014 checked against structural constraints"}
-   :because "Met 2026-09-24. The section previously said 'met in substance' without saying which of the three clauses the hedge was on; it was the second. Clause 1: seven checks, each of which caught something real. Clause 3: four DERIVE revisions recorded. Clause 2, unverifiable risks spiked: all named risks spiked, each with how. CORRECTED 2026-09-24: this row first read that check-ledger.edn has no ground truth and that clause 1 (A) is :declared. Both are false. The ledger carries :truth and a :truth-source on all 22 rows, 19 sources distinct, and clause 1 reads :measured-from-check-ledger with per-kind rates from counts. I queried a field named :ground-truth after reading a field list that says :truth, and asserted the conclusion twice before claude-8's check contradicted it. What is genuinely open is whether each :truth-source is independent of the check it judges, which kimi-3 is filtering on. The fifth spike is the one worth reading: instance 6 CLAIMS a prompt-carried coupling is invisible to tooling, so it was tried, and nothing noticed -- 22 tests, 75 assertions, 1 pre-existing failure, identical with and without a deliberately broken path."
+   :because "Met 2026-09-24. The section previously said 'met in substance' without saying which of the three clauses the hedge was on; it was the second. Clause 1: seven checks, each of which caught something real. Clause 3: four DERIVE revisions recorded. Clause 2, unverifiable risks spiked: all named risks spiked, each with how. CORRECTED 2026-09-24: this row first read that check-ledger.edn has no ground truth and that clause 1 (A) is :declared. Both are false. The ledger carries :truth and a :truth-source on all 22 rows, 19 sources distinct, and clause 1 reads :measured-from-check-ledger with per-kind rates from counts. I queried a field named :ground-truth after reading a field list that says :truth, and asserted the conclusion twice before claude-8's check contradicted it. That last question is now CLOSED from outside: futon2 f758d702/fc90808d classify every ledger row -- 7 constructed-bad-case, 9 later-review, 6 independent-recomputation, none self-truthed -- so all 33 runs are eligible and the per-kind rates stand. The striking one is validator fn .750: the best-powered kind at 18 runs, and it says a validator in this mission let three of four bad cases through. The fifth spike is the one worth reading: instance 6 CLAIMS a prompt-carried coupling is invisible to tooling, so it was tried, and nothing noticed -- 22 tests, 75 assertions, 1 pre-existing failure, identical with and without a deliberately broken path."
    :evidence [{:kind :artefact :ref "scripts/cascade_check.py" :what "5/5 cascades pass"}
               {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
               {:kind :artefact :ref "exemplar/proof2a_check.clj" :what "W_t and W_0 both pass (W_0 by constructor replay since a3f65fcc); clause C checks the enactment against the chosen candidate since 401469fd; every falsifier caught"}
@@ -121,7 +121,7 @@
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :exit-met
-   :mission-anchor {:start 48897 :end 48928 :quote "## INSTANTIATE \u2014 demonstrations"}
+   :mission-anchor {:start 49477 :end 49508 :quote "## INSTANTIATE \u2014 demonstrations"}
    :because "Met for instance 4, which is the scope the IDENTIFY exit set. All three want tokens are observed met with a recorded check each -- two tests and a grep -- and the mission now carries the four commands that reproduce them. NOT met for the mission: seven instances remain unenacted. Two residual couplings are recorded as deviations rather than closed: the library-loop adapter's check on the codex binary name, and tickle_orchestrate's rotation roster, which lists seats to cycle rather than looking a role up."
    :evidence [{:kind :commit :ref "eafd07b7" :what "resources/roles.edn, roles/seat-for, request-review! asks for :reviewer, redirect test"}
               {:kind :commit :ref "d6927670" :what "tickle's implementer default and mentor resolve through seat-for"}
@@ -137,7 +137,7 @@
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
-   :mission-anchor {:start 51603 :end 51614 :quote "## DOCUMENT"}
+   :mission-anchor {:start 52183 :end 52194 :quote "## DOCUMENT"}
    :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/. A second exit criterion is PROPOSED but not adopted (Rob via Joe, 2026-09-24): discharge DOCUMENT by building a seam for the annotation-of-user-inputs feature, so the documentation is a worked example rather than prose about seams."
    :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}
               {:kind :proposal :what "Rob via Joe: discharge DOCUMENT by extracting the turn->record and record->dispatch seam from the annotation feature. Evidence it is a seam and not a tidy-up: the >>> convention exists in the Emacs path only, so the same turn recorded live and recorded through turn_batch.py mean different things."}]
