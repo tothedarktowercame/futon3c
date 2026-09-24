@@ -2082,12 +2082,17 @@ CALLS contains maps of tool name, arguments, and result digest."
                      (not continuation?))
             (enqueue-caller-followup!
              (:caller invoke-context) (str "clock:" job-target)
+             ;; Name only the requisitioned target: this reminder arrives as
+             ;; an operator turn, where naming two targets makes the clock
+             ;; decision :ambiguous and unclocks the caller (seen live
+             ;; 2026-09-24). Naming one clocks the caller onto it.
              (str "You requisitioned " agent-id " for " job-target
                   (if caller-target
-                    (str " while clocked on " caller-target ".")
+                    ", which is not what your clock said."
                     " while not clocked in.")
                   " If your work has moved to " job-target
-                  ", clock in on it so your clock says what you are doing.")
+                  ", this reminder clocks you onto it; if it hasn't, "
+                  "clock back onto what you are doing.")
              {:requisitioned job-target :caller-clock caller-target}))
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id

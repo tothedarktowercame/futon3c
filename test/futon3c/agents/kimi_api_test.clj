@@ -392,11 +392,10 @@
         (run-jobs (make-invoke {}) [[(req "M-a" "on the clock") ctx 1000]
                                     [(req "T-c" "off the clock") ctx 1000]
                                     [(req "T-c" "again") ctx 1000]])
-        (is (= [(str "You requisitioned kimi-test for T-c while clocked on M-a. "
-                     "If your work has moved to T-c, clock in on it so your "
-                     "clock says what you are doing.")]
-               (mapv :prompt (queued)))
-            "none for the clocked target; one per session for the other")))))
+        (is (= 1 (count (queued))) "none for the clocked target; one per session for the other")
+        (is (str/starts-with? (:prompt (first (queued))) "You requisitioned kimi-test for T-c"))
+        (is (not (str/includes? (:prompt (first (queued))) "M-a"))
+            "naming the caller's clock too would make the delivered turn :ambiguous and unclock it")))))
 
 (deftest zai-seats-need-no-requisition-and-keep-their-history
   (let [store (atom {:entries {} :order []})
