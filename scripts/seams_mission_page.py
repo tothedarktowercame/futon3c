@@ -82,6 +82,13 @@ def inline(s):
     return s
 
 
+def slugify(s):
+    """A heading's slug, with any anchor sentinel inside it removed: a phase
+    heading now carries one, and letting it through renamed every phase id."""
+    s = re.sub(OPEN + r"[a-zA-Z0-9_-]+" + OPEN, "", s).replace(CLOSE, "")
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:48]
+
+
 def render_markdown(text):
     """A small renderer for the subset the mission uses. Deterministic."""
     out, lines, i = [], text.split("\n"), 0
@@ -99,7 +106,7 @@ def render_markdown(text):
         m = re.match(r"^(#{1,6})\s+(.*)$", ln)
         if m:
             lvl = len(m.group(1))
-            slug = re.sub(r"[^a-z0-9]+", "-", m.group(2).lower()).strip("-")[:48]
+            slug = slugify(m.group(2))
             out.append(f'<h{lvl} id="s-{slug}">{inline(m.group(2))}</h{lvl}>')
             i += 1
             continue
@@ -160,7 +167,15 @@ def place_anchors(text, notes):
             stale.append(n)
     marks = []
     for n in live:
-        marks.append((n["anchor"]["start"], "open", n["id"]))
+        s = n["anchor"]["start"]
+        if n.get("_heading"):
+            # A phase anchor quotes the whole heading line, hashes included.
+            # Opening at the hash would stop the line matching as a heading,
+            # so open just inside it; the span still covers the phase name.
+            m = re.match(r"#{1,6}\s+", text[s:n["anchor"]["end"]])
+            if m:
+                s += m.end()
+        marks.append((s, "open", n["id"]))
         marks.append((n["anchor"]["end"], "close", n["id"]))
     # apply right to left; at one position, closes before opens
     marks.sort(key=lambda m: (-m[0], 0 if m[1] == "close" else 1))
@@ -217,8 +232,8 @@ def toc_html(life):
             f'<span class="exitsrc">mission-lifecycle.md:{ph["exit-line"]}</span></td>'
             f'<td class="phwhy">{html.escape(ph["because"])}'
             + (f'<ul class="phev">{ev}</ul>' if ev else "")
-            + (f'<p class="phart">{arte} artefact{"s" if arte != 1 else ""} '
-               f'in the margin below</p>' if arte else "")
+            + (f'<p class="phart">{arte} artefact{"s" if arte != 1 else ""}, '
+               f'each beside the passage it annotates</p>' if arte else "")
             + '</td></tr>')
     o = life["overall"]
     return (f'<section class="toc" id="toc">'
@@ -235,28 +250,32 @@ def toc_html(life):
             f'</section>')
 
 
-def phase_section(ph, in_mission):
-    """A heading in the main column for each phase, so its artefacts have a
-    place to sit. Where the mission has written the phase, this points at it;
-    where it has not, the placeholder says so and is drawn as a placeholder --
-    it is not mission text and must not read as any."""
+def phase_bar(ph):
+    """The phase's standing, set directly under the mission's own heading for
+    it. There used to be a second heading per phase at the foot of the page,
+    restating what the mission already said, and every artefact was levelled
+    with that restatement rather than with the passage it annotates. One
+    heading per phase now: the mission's."""
     st = ph["status"]
-    if in_mission:
-        body = (f'<p class="phbody">Written in the mission above, at '
-                f'<code>{html.escape(ph["mission-anchor"]["quote"])}</code>. '
-                f'{html.escape(ph["because"])}</p>')
-        cls = "phase inmission"
-    else:
-        body = (f'<p class="phbody"><b>Not yet written in the mission.</b> '
-                f'{html.escape(ph["because"])}</p>')
-        cls = "phase placeholder"
-    return (f'<section class="{cls}">'
+    return (f'<p class="phasebar b-{st}">'
+            f'<span class="dot d-{st}"></span>'
+            f'<span class="phstatword">{status_label(ph)}</span>'
+            f'<span class="phexit3">exit: “{html.escape(ph["exit"])}”</span>'
+            f'<a class="phwhere" href="#toc">how this was read</a></p>')
+
+
+def unwritten_phase(ph):
+    """A phase the mission has not written has no heading of its own to sit
+    under, so it gets a placeholder -- drawn as one, because it is not
+    mission text and must not read as any."""
+    st = ph["status"]
+    return (f'<section class="phase placeholder">'
             f'<h2 id="anc-phase-{ph["id"]}" class="phhead" data-note="phase-{ph["id"]}">'
             f'<span class="phn">{ph["n"]}</span> {html.escape(ph["title"])}'
             f'<span class="dot d-{st}"></span>'
             f'<span class="phstatword">{status_label(ph)}</span></h2>'
-            f'<p class="phexit2">Exit criterion: “{html.escape(ph["exit"])}”</p>'
-            + body + '</section>')
+            f'<p class="phbody"><b>Not yet written in the mission.</b> '
+            f'{html.escape(ph["because"])}</p></section>')
 
 
 def figure_width(svg):
@@ -265,7 +284,7 @@ def figure_width(svg):
     return round(float(m.group(1)) * BODY_PX / LABEL_PX) if m else None
 
 
-def figure_html(key, svg, cap, num, anchor_id, full_width=False):
+def figure_html(key, svg, cap, num, anchor_id, at_id=None, full_width=False):
     """A numbered figure sized so its labels match the body text."""
     marks = "".join(f'<li>{html.escape(m)}</li>' for m in cap.get("marks", []))
     w = figure_width(svg)
@@ -285,6 +304,9 @@ def figure_html(key, svg, cap, num, anchor_id, full_width=False):
             f'{html.escape(cap.get("sub", ""))}'
             + (f' <span class="figwhy">— {html.escape(cap["why"])}.</span>'
                if cap.get("why") else "")
+            + (f'<p class="figback">annotates '
+               f'<a href="#anc-{html.escape(at_id or anchor_id)}">'
+               f'\u201c{html.escape(cap["at"])}\u201d</a></p>' if cap.get("at") else "")
             + (f'<ul class="figmarks">{marks}</ul>' if marks else "")
             + '</figcaption></figure>')
 
@@ -312,17 +334,25 @@ def note_html(n, figures=None, anchor_override=None):
     bits.append(f'<p class="nbody">{html.escape(n.get("body",""))}</p>')
     ref = n.get("_figref")
     if ref:
-        bits.append(f'<p class="nseefig">See <a href="#fig-{ref}">Figure {ref}</a> '
-                    f'{n.get("_figdir", "below")}.</p>')
+        # The direction word is set by the script from the laid-out positions,
+        # because the figures stack in a lane of their own and a direction
+        # asserted from the source order is a claim the layout can falsify --
+        # which it did, the last time this page said "above" of a figure below.
+        bits.append(f'<p class="nseefig" data-fig="{ref}">See '
+                    f'<a href="#fig-{ref}">Figure {ref}</a> '
+                    f'<span class="figdir">{n.get("_figdir", "below")}</span>.</p>')
     if n.get("refs"):
         bits.append('<p class="nrefs">' +
                     " · ".join(f"<code>{html.escape(r)}</code>" for r in n["refs"]) + "</p>")
     if n.get("_why"):
         bits.insert(1, f'<p class="nwhy">{html.escape(n["_why"])}</p>')
     if n.get("_at-phase"):
-        bits.append(f'<p class="natphase">placed at {html.escape(n["_at-phase"])}; '
-                    f'anchored in the mission at '
-                    f'<a href="#anc-{html.escape(n["id"])}">its span</a></p>')
+        # The note is set beside the passage it annotates, so the phase is no
+        # longer its position -- it is where the artefact was made, which the
+        # lifecycle records and the reader still needs.
+        bits.append(f'<p class="natphase">made in '
+                    f'<a href="#anc-phase-{html.escape(n["_at-phase"])}">'
+                    f'{html.escape(n["_at-phase"])}</a></p>')
     return (f'<aside class="{cls}" id="note-{html.escape(n["id"])}" '
             f'data-anchor="{html.escape(anchor_override or n["id"])}">'
             + "".join(bits) + "</aside>")
@@ -420,72 +450,118 @@ def main():
                     "carries what it owes, ⊢ names the licensing pattern."),
             "marks": marks}
 
-    marked, live, stale = place_anchors(text, notes)
+    # Each phase heading in the mission becomes an anchor of its own, so the
+    # table of contents lands on the phase as the mission writes it. A phase
+    # the mission has not written has no heading to anchor to and is drawn as
+    # a placeholder at the end.
+    phase_anchor, unwritten = [], []
+    for ph in life["phases"]:
+        anc = ph.get("mission-anchor")
+        (phase_anchor if anc else unwritten).append(ph)
+    pseudo = [{"id": f'phase-{ph["id"]}', "anchor": ph["mission-anchor"],
+               "_heading": True} for ph in phase_anchor]
+
+    marked, live, stale = place_anchors(text, notes + pseudo)
     blocks = [resolve_sentinels(b) for b in render_markdown(marked)]
 
-    # Each note is emitted in the flow, directly after the block its anchor
-    # sits in. On a wide screen the script lifts it into the margin and levels
-    # it with the anchor; on a narrow one it stays where it is and folds under
-    # the passage it belongs to, which is the behaviour a phone needs.
-    # Figures are numbered by walking the phases in order, BEFORE the body is
-    # assembled, so a note at a mission span knows whether its figure is above
-    # it or below it. They all sit in phase sections after the mission text,
-    # so a span-anchored note points down and a note beside its own figure
-    # points up.
-    fignums = {}
-    for ph in sorted(life["phases"], key=lambda q: q["n"]):
+    # Which block each anchor landed in. An annotation is levelled with the
+    # passage it is anchored to -- that is what an anchored note is for. It
+    # used to be levelled with its phase instead, and because every phase was
+    # restated below the mission text, every annotation ended up at the foot
+    # of the page with nothing beside it.
+    block_of = {}
+    for i, b in enumerate(blocks):
+        for aid in re.findall(r'id="anc-([a-zA-Z0-9_-]+)"', b):
+            block_of.setdefault(aid, i)
+
+    # A figure sits with the note that declares it; one no note declares
+    # falls back to its phase's heading.
+    fig_note = {n["figure"]: n["id"] for n in notes if n.get("figure") in figures}
+    fig_why, note_why = {}, {}
+    for ph in life["phases"]:
         for art in ph.get("artefacts", []):
-            fig = art.get("figure")
-            if fig and fig in figures:
-                fignums[fig] = len(fignums) + 1
+            if art.get("figure"):
+                fig_why[art["figure"]] = art.get("why", "")
+            if art.get("note"):
+                note_why[art["note"]] = art.get("why", "")
+
+    # A figure is levelled with the mission's heading for the phase that made
+    # it, and carries a link back to the passage it annotates. Levelling it
+    # with that passage instead was tried and does not fit: ten figures need
+    # about 13900px and the seven instances they annotate are 8500px of text,
+    # so the last of them ended up 6700px past its anchor while the margin
+    # beside every phase section stood empty.
+    LAST = len(blocks)          # anything whose anchor no longer holds
+    plan, seq = [], 0
+    for key in figures:
+        aid = f'phase-{fig_phase.get(key, "")}'
+        if aid not in block_of:
+            aid = fig_note.get(key, aid)
+        plan.append((block_of.get(aid, LAST), 0, seq, "fig", key, aid)); seq += 1
+    for n in notes:
+        aid = (n["id"] if n["id"] in block_of
+               else f'phase-{note_phase.get(n["id"], "")}')
+        plan.append((block_of.get(aid, LAST), 1, seq, "note", n["id"], aid)); seq += 1
+    plan.sort()
+
+    # Figures are numbered in the order they are now read in, and a note
+    # knows whether its figure is above it or below it from the same order.
+    fignums = {key: i + 1 for i, (_, _, _, kind, key, _)
+               in enumerate([q for q in plan if q[3] == "fig"])}
+    where = {(kind, key): i for i, (_, _, _, kind, key, _) in enumerate(plan)}
     for n in notes:
         fig = n.get("figure")
         if fig in fignums:
             n["_figref"] = fignums[fig]
-            n["_figdir"] = "above" if n["id"] in note_phase else "below"
+            n["_figdir"] = ("above" if where[("fig", fig)] < where[("note", n["id"])]
+                            else "below")
 
-    placed = set()
+    by_block, by_id = {}, {n["id"]: n for n in notes}
+    for bi, _, _, kind, key, aid in plan:
+        by_block.setdefault(bi, []).append((kind, key, aid))
+    bar_at = {block_of[f'phase-{ph["id"]}']: ph for ph in phase_anchor
+              if f'phase-{ph["id"]}' in block_of}
+
+    # Ten figures totalling some 13900px are anchored into about 8500px of
+    # mission text, so a figure cannot be levelled with its passage however
+    # the lanes are cut. It carries the passage instead, as a back-link.
+    quote_of = {n["id"]: n["anchor"]["quote"] for n in notes}
+    quote_of.update({f'phase-{ph["id"]}': ph["mission-anchor"]["quote"]
+                     for ph in phase_anchor})
+
+    def artefacts(bi):
+        out = []
+        for kind, key, aid in by_block.get(bi, []):
+            if kind == "fig":
+                cap = dict(captions.get(key, {}))
+                cap["phase"] = fig_phase.get(key)
+                cap["why"] = fig_why.get(key, "")
+                at = fig_note.get(key, aid)
+                q = quote_of.get(at, "").lstrip("#").strip()
+                cap["at"] = q if len(q) <= 64 else q[:63].rsplit(" ", 1)[0] + "\u2026"
+                out.append(figure_html(key, figures[key], cap, fignums[key], aid,
+                                       at_id=fig_note.get(key)))
+            else:
+                n = dict(by_id[key])
+                n["_at-phase"] = note_phase.get(key)
+                n["_why"] = note_why.get(key, "")
+                out.append(note_html(n, anchor_override=aid))
+        return out
+
     body_parts = []
-    for b in blocks:
+    for i, b in enumerate(blocks):
         body_parts.append(b)
-        for n in notes:
-            if n["id"] in placed or n["id"] in note_phase:
-                continue          # a claimed note waits for its phase
-            if f'id="anc-{n["id"]}"' in b:
-                body_parts.append(note_html(n))
-                placed.add(n["id"])
-
-    # Phase order after the mission text: the War Machine works a mission
-    # phase by phase, so the artefacts appear where they would have been made.
-    by_id = {n["id"]: n for n in notes}
-    for ph in sorted(life["phases"], key=lambda p: p["n"]):
-        anc = ph.get("mission-anchor")
-        live_anchor = bool(anc) and text[anc["start"]:anc["end"]] == anc["quote"]
-        if anc and not live_anchor:
-            stale.append({"id": f"phase-{ph['id']}",
-                          "_stale": "phase anchor no longer holds",
-                          "anchor": anc})
-        body_parts.append(phase_section(ph, live_anchor))
-        for art in ph.get("artefacts", []):
-            fig = art.get("figure")
-            if fig and fig in figures:
-                cap = dict(captions.get(fig, {}))
-                cap["phase"] = ph["id"]
-                cap["why"] = art.get("why", "")
-                body_parts.append(figure_html(fig, figures[fig], cap,
-                                              fignums[fig], f"phase-{ph['id']}",
-                                              full_width=art.get("full-width")))
-            nid = art.get("note")
-            if nid and nid in by_id and nid not in placed:
-                n = dict(by_id[nid])
-                n["_at-phase"] = ph["id"]
-                n["_why"] = art.get("why", "")
-                body_parts.append(note_html(n, anchor_override=f"phase-{ph['id']}"))
-                placed.add(nid)
-
-    for n in notes:
-        if n["id"] not in placed:
-            body_parts.append(note_html(n))
+        if i in bar_at:
+            body_parts.append(phase_bar(bar_at[i]))
+        body_parts.extend(artefacts(i))
+    for ph in unwritten:
+        body_parts.append(unwritten_phase(ph))
+    if by_block.get(LAST):
+        body_parts.append('<h2 class="orphanhead">Annotations with no live anchor</h2>'
+                          '<p class="orphannote">The span each of these was written '
+                          'against is no longer where it was recorded, so there is '
+                          'nothing in the mission to set them beside.</p>')
+        body_parts.extend(artefacts(LAST))
     body = "\n".join(body_parts)
 
     cols = {"a": [n for n in notes if n.get("column") == "pattern"],
@@ -522,7 +598,11 @@ CSS = """
 /* Mission left, a WIDE margin right: the margin is a working second column,
    not a gutter. The text keeps a reading measure and the margin takes all the
    rest, which is the arrangement the mark7 typeset previews use. */
-:root { --measure: 33rem; --gutter: 2.4rem; --pad: 3vw;
+/* The measure flexes between 26rem and 33rem. It was fixed at 33rem, which
+   is a good measure at 1920 and leaves a 1600 screen only 224px of margin to
+   annotate in -- the notes went narrow and therefore tall, and stopped
+   levelling with what they annotate. 26rem is still about 55 characters. */
+:root { --measure: clamp(26rem, 27vw, 33rem); --gutter: 2.4rem; --pad: 3vw;
         --margin-w: max(44rem, calc(100vw - 2*var(--pad) - var(--measure) - var(--gutter))); }
 *,*::before,*::after { box-sizing:border-box; }
 body { margin:0; padding:2.5rem var(--pad) 8rem; background:#fffff8; color:#111;
@@ -538,7 +618,9 @@ body { margin:0; padding:2.5rem var(--pad) 8rem; background:#fffff8; color:#111;
          padding:.15rem 0 .35rem; border-bottom:1px solid #eae6d8;
          font-size:.66rem; font-variant:small-caps; letter-spacing:.08em; color:#999;
          display:grid; grid-template-columns:1fr 1fr; column-gap:1.6rem; }
+
 .mh-a { color:#1b6b3a; } .mh-b { color:#2a4d8f; }
+.k-a { color:#1b6b3a; } .k-b { color:#2a4d8f; }
 h1 { font-size:1.6rem; font-weight:400; margin:0 0 .2rem; }
 h2 { font-size:1.18rem; font-weight:400; margin:2.4rem 0 .5rem;
      border-bottom:1px solid #e6e2d4; padding-bottom:.25rem; }
@@ -565,8 +647,7 @@ li { margin:0 0 .3rem; }
               rgba(0,0,0,.02) 8px, rgba(0,0,0,.02) 16px); }
 .note.stale { border-left-color:#b8431f; background:#fdf1ec; }
 .note.lit { background:#fbe6dd; }
-.note.inmargin { position:absolute; margin:0; width:calc(50% - .8rem); }
-.note.inmargin.col-b { left:calc(50% + .8rem); }
+.note.inmargin { position:absolute; margin:0; }
 
 /* A figure gets the WHOLE margin, not half of it, and is legible there
    without enlarging: the cascades are laid out depth-downward for exactly
@@ -577,7 +658,7 @@ li { margin:0 0 .3rem; }
 .pagefig .figbody { width:auto; max-width:100%; }
 .pagefig figcaption { font-size:.72rem; line-height:1.5; color:#666;
                       padding:.4rem .1rem 0; max-width:60rem; }
-.marginfig.inmargin { position:absolute; width:100%; margin:0; }
+.marginfig.inmargin { position:absolute; margin:0; }
 /* Width is set per figure so its labels render at body size; max-width keeps
    it inside the margin on a screen too narrow for that, which is a text-size
    miss and is reported by scripts/check_seams_layout.js. */
@@ -597,6 +678,8 @@ li { margin:0 0 .3rem; }
 .figmarks li { margin:0 0 .15rem; color:#8a5a12; }
 .nseefig { margin:.35rem 0 0; font-size:.7rem; }
 .nseefig a { color:#b8431f; }
+.figback { margin:.25rem 0 0; font-size:.66rem; color:#888; }
+.figback a { color:#b8431f; }
 .nhead { margin:0 0 .25rem; font-size:.63rem; font-family:ui-monospace,Menlo,monospace; }
 .nid { color:#555; } .nauth { color:#aaa; margin-left:.4rem; }
 .ndraft { color:#a8791d; margin-left:.4rem; font-variant:small-caps; letter-spacing:.05em; }
@@ -671,22 +754,33 @@ li { margin:0 0 .3rem; }
 .d-blocked { background:#7a6ca8; }
 .d-not-started { background:#ccc; }
 
-/* A phase section. One that the mission has written points at it; one it has
-   not is a PLACEHOLDER -- dashed and tinted, so it cannot be read as mission
-   text that happens to be short. */
+/* The phase's standing, under the mission's own heading for that phase.
+   It is a rule across the measure rather than a box: the mission text is
+   what the reader is reading, and this is a caption on it. */
+.phasebar { margin:-.2rem 0 1rem; padding:.3rem 0 .35rem .8rem; font-size:.7rem;
+            line-height:1.45; color:#777; border-left:3px solid #e6e2d4;
+            background:#fbfaf3; }
+.phasebar.b-exit-met { border-left-color:#1b6b3a; }
+.phasebar.b-in-progress { border-left-color:#a8791d; }
+.phasebar.b-blocked { border-left-color:#7a6ca8; }
+.phexit3 { display:block; font-style:italic; color:#666; margin-top:.15rem; }
+.phwhere { color:#aaa; font-size:.64rem; }
+/* A phase the mission has not written: dashed and tinted, so it cannot be
+   read as mission text that happens to be short. */
 .phase { margin:2.2rem 0 1rem; }
 .phase.placeholder { border-left:3px dashed #c9c4b0; padding:.5rem 0 .4rem .9rem;
                      background:#fbfaf3; }
-.phase.inmission { border-left:3px solid #e6e2d4; padding:.5rem 0 .4rem .9rem; }
 .phhead { font-size:1.05rem; margin:0 0 .3rem; border:0; padding:0; }
 .phn { display:inline-block; min-width:1.4rem; color:#aaa;
        font-family:ui-monospace,Menlo,monospace; font-size:.8rem; }
 .phstatword { font-size:.68rem; color:#888; font-variant:small-caps;
               letter-spacing:.05em; }
-.phexit2 { font-size:.74rem; color:#666; font-style:italic; margin:0 0 .4rem; }
 .phbody { font-size:.82rem; color:#444; margin:0; }
+.orphanhead { color:#b8431f; }
+.orphannote { font-size:.78rem; color:#777; }
 .nwhy { margin:0 0 .3rem; font-size:.7rem; color:#1b6b3a; }
-.natphase { margin:.3rem 0 0; font-size:.63rem; color:#999; }
+.natphase { margin:.3rem 0 0; font-size:.63rem; color:#999;
+            font-variant:small-caps; letter-spacing:.05em; }
 .natphase a { color:#999; }
 .figwhy { color:#1b6b3a; }
 
@@ -709,51 +803,125 @@ footer a { color:#999; }
 """
 
 JS = """
-// Lift each note into the wide margin and level it with its anchor. Two
-// sub-columns inside the one margin: the pattern working on the left, the
-// PROOF-2a reading on the right. Notes that would collide stack downward.
-// With the script off, or on a narrow screen, notes stay in the flow under
-// the passage they annotate -- which is why they are emitted there.
+// Three lanes in the margin, not two. The pattern working and the PROOF-2a
+// reading each get a note lane and are levelled with the passage they are
+// anchored to; the figures get a lane of their own at the outer edge.
+//
+// They used to share: a figure took the whole margin, so every figure pushed
+// both note columns down by its full height. Ten figures totalling 13805px
+// are anchored into about 4300px of mission text -- the seven instances --
+// so the notes ended up as much as 12000px below the passages they annotate,
+// which is the pile-up at the foot of the page. Separate lanes decouple
+// them: the notes align, and the figures, which are numbered and referred to
+// by number, stack.
+//
+// With the script off, or on a narrow screen, every one of them stays in the
+// flow under the passage it annotates -- which is why they are emitted there.
+const GAP = 24;          // between lanes
+const MIN_NOTE = 220;    // a note lane narrower than this is not worth having
+const MAX_NOTE = 640;    // and one wider than this stops reading as a note
+const MIN_TWO  = 420;    // two note columns are worth having only above this
+
 function layout() {
   const margin = document.querySelector('.margin');
   const main = document.querySelector('.main');
-  const wide = window.matchMedia('(min-width: 90rem)').matches;
-  const notes = [...document.querySelectorAll('.note, .marginfig')];  // .pagefig stays put
-  if (!wide) {
-    notes.forEach(n => {
+  const head = document.querySelector('.mhead');
+  const all = [...document.querySelectorAll('.note, .marginfig')];  // document order
+  if (!window.matchMedia('(min-width: 90rem)').matches) {
+    all.forEach(n => {
       n.classList.remove('inmargin');
       const anc = document.getElementById('anc-' + n.dataset.anchor);
       const host = anc ? anc.closest('.main > *') : null;
       if (host && host.nextSibling !== n) host.after(n);
-      n.style.top = '';
+      n.style.top = n.style.left = n.style.width = '';
     });
+    figDirections();
     return;
   }
-  const mtop = margin.getBoundingClientRect().top + window.scrollY;
-  const bottom = {a: 34, b: 34};   // clear the sticky column heads
-  notes.forEach(n => {
+  all.forEach(n => {
     if (n.parentElement !== margin) margin.appendChild(n);
     n.classList.add('inmargin');
   });
-  notes.forEach(n => {
-    const fig = n.classList.contains('marginfig');
-    const col = n.classList.contains('col-b') ? 'b' : 'a';
-    const anc = document.getElementById('anc-' + n.dataset.anchor);
-    const floor = fig ? Math.max(bottom.a, bottom.b) : bottom[col];
-    const want = anc ? anc.getBoundingClientRect().top + window.scrollY - mtop : floor;
-    const y = Math.max(want, floor + 12);
-    n.style.top = y + 'px';
-    if (fig) { bottom.a = bottom.b = y + n.offsetHeight; }
-    else { bottom[col] = y + n.offsetHeight; }
+  const MW = margin.clientWidth;
+  const mtop = margin.getBoundingClientRect().top + window.scrollY;
+  const top = n => {
+    const a = document.getElementById('anc-' + n.dataset.anchor);
+    return a ? a.getBoundingClientRect().top + window.scrollY - mtop : null;
+  };
+
+  // Figures first, in a lane of their own at the outer edge, each at the
+  // width its labels come out at body size. They are levelled with the
+  // mission's heading for the phase that made them, so they occupy one band
+  // of the page -- DERIVE and ARGUE -- and not the whole of it.
+  const figs = all.filter(n => n.classList.contains('marginfig'));
+  const natural = figs.reduce((m, f) => Math.max(m, +f.dataset.naturalWidth || 0), 0);
+  const figLane = figs.length ? Math.min(natural, Math.max(MW - MIN_NOTE - GAP, 0)) : 0;
+  let floor = 34, band = [Infinity, -Infinity];
+  figs.forEach(f => {
+    f.style.left = (MW - figLane) + 'px';
+    f.style.width = figLane + 'px';
+    const y = Math.max(top(f) ?? floor, floor + 12);
+    f.style.top = y + 'px';
+    floor = y + f.offsetHeight;
+    band = [Math.min(band[0], y), Math.max(band[1], floor)];
   });
-  margin.style.minHeight = Math.max(bottom.a, bottom.b, main.offsetHeight) + 'px';
+  const figBottom = floor;
+
+  // Then the notes, levelled with the passage each is anchored to. Two
+  // columns where there is room -- the pattern working and the PROOF-2a
+  // reading -- and one where a figure is already using the outer edge.
+  // Reserving the figure lane down the whole page was the wrong trade: the
+  // figures occupy two sections of eight, and narrowing every note for them
+  // made every note taller, which puts it further from what it annotates.
+  const two = MW >= 2 * MIN_TWO + GAP;
+  const colW = Math.min(MAX_NOTE, two ? (MW - GAP) / 2 : MW);
+  const bandW = Math.min(MAX_NOTE, Math.max(MIN_NOTE, MW - figLane - GAP));
+  head.style.width = (two ? colW * 2 + GAP : colW) + 'px';
+  head.classList.toggle('onelane', !two);
+  let fa = 34, fb = 34;
+  all.filter(n => !n.classList.contains('marginfig')).forEach(n => {
+    const b = two && n.classList.contains('col-b');
+    const x = b ? colW + GAP : 0;
+    let floor = b ? fb : fa;
+    let y = Math.max(top(n) ?? floor, floor + 12);
+    n.style.left = x + 'px';
+    n.style.width = colW + 'px';
+    let h = n.offsetHeight;
+    if (x + colW > MW - figLane && y < band[1] && y + h > band[0]) {
+      // This one would run into the figure lane. One narrow column instead,
+      // sharing a floor, so the two columns cannot print over each other.
+      floor = Math.max(fa, fb);
+      y = Math.max(top(n) ?? floor, floor + 12);
+      n.style.left = '0px';
+      n.style.width = bandW + 'px';
+      n.style.top = y + 'px';
+      fa = fb = y + n.offsetHeight;
+      return;
+    }
+    n.style.top = y + 'px';
+    if (b) fb = y + h; else fa = y + h;
+  });
+  margin.style.minHeight = Math.max(fa, fb, figBottom, main.offsetHeight) + 'px';
+  figDirections();
+}
+
+// "See Figure 7 above" is true or false depending on where the figure ended
+// up, so it is read off the page rather than guessed from the source order.
+function figDirections() {
+  document.querySelectorAll('.nseefig').forEach(p => {
+    const note = p.closest('.note'), fig = document.getElementById('fig-' + p.dataset.fig);
+    const word = p.querySelector('.figdir');
+    if (!note || !fig || !word) return;
+    word.textContent = fig.getBoundingClientRect().top < note.getBoundingClientRect().top
+                     ? 'above' : 'below';
+  });
 }
 document.addEventListener('click', e => {
   const open = e.target.closest('.figbody');
   if (open) {
     const m = document.createElement('div');
     m.className = 'figmodal';
-    const host = open.closest('.marginfig');
+    const host = open.closest('figure');
     m.innerHTML = '<span class="figcap">' + (host ? host.id.replace('fig-', 'Figure ') : '')
                 + ' — ' + (host ? host.dataset.fig : '') + '</span>'
                 + open.querySelector('svg').outerHTML;
@@ -771,18 +939,20 @@ document.addEventListener('click', e => {
 window.addEventListener('load', layout);
 window.addEventListener('resize', layout);
 """
-
 PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>M-futon-seams — worked against PROOF-2a</title>
 <style>{css}</style></head><body>
 <div class="masthead">
 <h1>M-futon-seams, worked</h1>
-<p class="sub">The mission is the main text and grows as it is worked. The margin carries
-two columns: <b>the pattern working</b> — cascade nodes, work-state tokens, context→pattern
-edges — and <b>the PROOF-2a reading</b> of the same span: which clause or data shape it
-exercises, and whether this example fits the shape, breaks it, or needs a field that does
-not exist. Breaks are the evidence worth most. Click a marked span or a note to pair them.</p>
+<p class="sub">The mission is the main text and grows as it is worked. Each note is set beside
+the passage it is anchored to, and is one of two readings of that passage: <b class="k-a">the
+pattern working</b> — cascade nodes, work-state tokens, context→pattern edges — or <b
+class="k-b">the PROOF-2a reading</b>, which clause or data shape the passage exercises and
+whether this example fits the shape, breaks it, or needs a field that does not exist. Breaks
+are the evidence worth most. The figures sit in a lane of their own, beside the phase that
+made them, each linking back to the passage it draws. Click a marked span or a note to pair
+them.</p>
 <p class="prov">{mission} at {rev} · sha256 {sha}… · {counts}<br>
 kernel tables, conflict states and the full-size lattices:
 <a href="seams-kernels.html">seams-kernels.html</a></p>
@@ -791,7 +961,7 @@ kernel tables, conflict states and the full-size lattices:
 <div class="page">
   <article class="main">{body}</article>
   <div class="margin" aria-hidden="false">
-    <p class="mhead"><span class="mh-a">the pattern working</span><span class="mh-b">the PROOF-2a reading</span></p>
+    <p class="mhead"><span class="mh-a">green: the pattern working</span><span class="mh-b">blue: the PROOF-2a reading</span></p>
   </div>
 </div>
 <footer>Generated by <code>scripts/seams_mission_page.py</code> from
