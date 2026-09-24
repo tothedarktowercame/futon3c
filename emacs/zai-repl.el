@@ -208,9 +208,7 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (defun zai-repl--dispatch-clock-id ()
   "Return the most specific buffer clock id for Agency invoke payloads."
-  (or (agent-chat-normalize-excursion-id agent-chat--excursion-id)
-      (agent-chat-normalize-mission-id agent-chat--mission-id)
-      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+  (agent-chat-dispatch-clock-id))
 
 (defun zai-repl--message-vector ()
   "Return the full outbound message vector for the current request."

@@ -6771,6 +6771,7 @@
                             :campaign-id (:campaign-id clock)
                             :mission-id (:mission-id clock)
                             :excursion-id (:excursion-id clock)
+                            :ticket-id (:ticket-id clock)
                             :witness (:last-auto-clock-witness state)})))))
 
 (declare handle-agent-get*)

@@ -973,9 +973,7 @@ on every redisplay tick."
 
 (defun claude-repl--dispatch-clock-id ()
   "Return the most specific buffer clock id for Agency invoke payloads."
-  (or (agent-chat-normalize-excursion-id agent-chat--excursion-id)
-      (agent-chat-normalize-mission-id agent-chat--mission-id)
-      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+  (agent-chat-dispatch-clock-id))
 
 ;;; Streaming invoke
 

@@ -475,6 +475,50 @@ already recorded the park-id, so refusing here would destroy the resume."
     (should-not (agent-chat--auto-clock-target-from-text
                  "compare M-autoclock-in and M-vsatarcs-invariants-integration"))))
 
+;; Tickets are clock targets (Joe, 2026-09-24).
+(defmacro agent-chat-test--with-ticket-candidates (&rest body)
+  `(cl-letf (((symbol-function 'agent-chat--clock-target-candidates)
+              (lambda (kind)
+                (pcase kind
+                  ('mission '("M-autoclock-in"))
+                  ('ticket '("T-agency-desktop-save" "T-other"))))))
+     ,@body))
+
+(ert-deftest agent-chat-tickets-parse-label-and-inherit-the-path ()
+  (with-temp-buffer
+    (should (equal (agent-chat-parse-clock-target "M-autoclock-in > T-agency-desktop-save")
+                   '(:campaign-id nil :mission-id "M-autoclock-in" :excursion-id nil
+                     :ticket-id "T-agency-desktop-save")))
+    (agent-chat-set-clock! "M-autoclock-in" nil t)
+    (agent-chat-set-clock! "T-agency-desktop-save" t t)
+    (should (equal (agent-chat-mission-label) "M-autoclock-in › T-agency-desktop-save"))
+    (should (equal (agent-chat-dispatch-clock-id) "T-agency-desktop-save"))
+    (let ((fields (agent-chat--mission-body-fields)))
+      (should (equal (alist-get 'ticket-id fields) "T-agency-desktop-save"))
+      (should (equal (alist-get 'clocked-ticket fields) "T-agency-desktop-save")))
+    (agent-chat-set-clock! "M-autoclock-in" nil t)
+    (should-not agent-chat--ticket-id)
+    (should (equal (agent-chat-dispatch-clock-id) "M-autoclock-in"))))
+
+(ert-deftest agent-chat-auto-clock-resolves-tickets ()
+  (agent-chat-test--with-ticket-candidates
+   (should (equal (agent-chat--auto-clock-target-from-text
+                   "You requisitioned kimi-1 for T-agency-desktop-save.")
+                  '(:campaign-id nil :mission-id nil :excursion-id nil
+                    :ticket-id "T-agency-desktop-save"
+                    :tokens ("T-agency-desktop-save")
+                    :rule "explicit-resolved-target")))
+   (should-not (agent-chat--auto-clock-target-from-text "T-agency-desktop-save and T-other"))
+   (should-not (agent-chat--auto-clock-target-from-text "T-missing"))
+   (with-temp-buffer
+     (setq-local agent-chat-auto-clock-enabled t)
+     (cl-letf (((symbol-function 'agent-chat-insert-message) #'ignore))
+       (agent-chat-set-clock! "M-autoclock-in" nil t)
+       (agent-chat--maybe-auto-clock-from-turn "switch → T-agency-desktop-save")
+       (should (equal agent-chat--ticket-id "T-agency-desktop-save"))
+       ;; An arrow switch to a ticket keeps the parent path.
+       (should (equal agent-chat--mission-id "M-autoclock-in"))))))
+
 (ert-deftest agent-chat-auto-clock-promotes-before-evidence-fields-and-clears-witness ()
   (with-temp-buffer
     (agent-chat-test--init-buffer)

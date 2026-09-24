@@ -167,6 +167,11 @@ to this many attempts, then retain the record as a terminal failure."
 (defvar-local agent-chat--excursion-id nil
   "Excursion ID clocked into the current chat session, or nil for no excursion.")
 
+(defvar-local agent-chat--ticket-id nil
+  "Ticket ID (T-*) clocked into the current chat session, or nil for none.
+Tickets are clock targets (Joe, 2026-09-24): the most specific level, below
+the campaign › mission › excursion path.")
+
 (defvar-local agent-chat--clock-change-fn nil
   "Optional function called after the chat clock target changes.")
 
@@ -373,27 +378,42 @@ When nil, immediate futon* repos under ~/code plus the current
   "Return normalized EXCURSION string, or nil for no excursion."
   (agent-chat-normalize-clock-id excursion))
 
+(defun agent-chat-normalize-ticket-id (ticket)
+  "Return normalized TICKET string, or nil for no ticket."
+  (agent-chat-normalize-clock-id ticket))
+
+(defun agent-chat-dispatch-clock-id ()
+  "Return the most specific buffer clock id for Agency invoke payloads."
+  (or (agent-chat-normalize-ticket-id agent-chat--ticket-id)
+      (agent-chat-normalize-excursion-id agent-chat--excursion-id)
+      (agent-chat-normalize-mission-id agent-chat--mission-id)
+      (agent-chat-normalize-campaign-id agent-chat--campaign-id)))
+
 (defun agent-chat--parse-clock-target-string (target &optional inherit-current)
-  "Parse TARGET into (:campaign-id C :mission-id M :excursion-id E).
-When INHERIT-CURRENT is non-nil, mission-only and excursion-only targets
+  "Parse TARGET into (:campaign-id C :mission-id M :excursion-id E :ticket-id T).
+When INHERIT-CURRENT is non-nil, mission-, excursion- and ticket-only targets
 inherit the current parent path."
   (let ((raw (agent-chat-normalize-clock-id target)))
     (cond
-     ((null raw) (list :campaign-id nil :mission-id nil :excursion-id nil))
+     ((null raw) (list :campaign-id nil :mission-id nil :excursion-id nil
+                       :ticket-id nil))
      ((string-match-p "\\(?:›\\|>\\|/\\)" raw)
       (let ((campaign nil)
             (mission nil)
-            (excursion nil))
+            (excursion nil)
+            (ticket nil))
         (dolist (part (split-string raw "\\s-*\\(?:›\\|>\\|/\\)\\s-*" t))
           (let ((id (agent-chat-normalize-clock-id part)))
             (cond
              ((and id (string-prefix-p "C-" id)) (setq campaign id))
              ((and id (string-prefix-p "M-" id)) (setq mission id))
              ((and id (string-prefix-p "E-" id)) (setq excursion id))
+             ((and id (string-prefix-p "T-" id)) (setq ticket id))
              ((null campaign) (setq campaign id))
              ((null mission) (setq mission id))
              (t (setq excursion id)))))
-        (list :campaign-id campaign :mission-id mission :excursion-id excursion)))
+        (list :campaign-id campaign :mission-id mission :excursion-id excursion
+              :ticket-id ticket)))
      ((string-prefix-p "C-" raw)
       (list :campaign-id raw :mission-id nil :excursion-id nil))
      ((string-prefix-p "M-" raw)
@@ -404,31 +424,40 @@ inherit the current parent path."
       (list :campaign-id (and inherit-current agent-chat--campaign-id)
             :mission-id (and inherit-current agent-chat--mission-id)
             :excursion-id raw))
+     ((string-prefix-p "T-" raw)
+      (list :campaign-id (and inherit-current agent-chat--campaign-id)
+            :mission-id (and inherit-current agent-chat--mission-id)
+            :excursion-id (and inherit-current agent-chat--excursion-id)
+            :ticket-id raw))
      (t
       (list :campaign-id nil :mission-id raw :excursion-id nil)))))
 
 (defun agent-chat-parse-clock-target (target &optional inherit-current)
-  "Parse TARGET into a campaign/mission/excursion plist.
+  "Parse TARGET into a campaign/mission/excursion/ticket plist.
 TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
-:excursion-id."
+:excursion-id/:ticket-id."
   (cond
    ((and (listp target) (or (plist-member target :campaign-id)
                             (plist-member target :mission-id)
-                            (plist-member target :excursion-id)))
+                            (plist-member target :excursion-id)
+                            (plist-member target :ticket-id)))
     (list :campaign-id (agent-chat-normalize-campaign-id
                         (plist-get target :campaign-id))
           :mission-id (agent-chat-normalize-mission-id
                        (plist-get target :mission-id))
           :excursion-id (agent-chat-normalize-excursion-id
-                         (plist-get target :excursion-id))))
+                         (plist-get target :excursion-id))
+          :ticket-id (agent-chat-normalize-ticket-id
+                      (plist-get target :ticket-id))))
    (t
     (agent-chat--parse-clock-target-string target inherit-current))))
 
 (defun agent-chat-mission-label ()
-  "Return display label for the current campaign/mission/excursion clock-in."
+  "Return display label for the current campaign/mission/excursion/ticket clock-in."
   (let ((parts (delq nil (list agent-chat--campaign-id
                                agent-chat--mission-id
-                               agent-chat--excursion-id))))
+                               agent-chat--excursion-id
+                               agent-chat--ticket-id))))
     (if parts
         (string-join parts " › ")
       "no mission")))
@@ -920,18 +949,21 @@ real freeze was the poller, now async."
                  (camp (alist-get 'campaign-id data))
                  (mis  (alist-get 'mission-id data))
                  (exc  (alist-get 'excursion-id data))
+                 (tkt  (alist-get 'ticket-id data))
                  (camp (and (stringp camp) camp))
                  (mis  (and (stringp mis) mis))
-                 (exc  (and (stringp exc) exc)))
+                 (exc  (and (stringp exc) exc))
+                 (tkt  (and (stringp tkt) tkt)))
             ;; Only apply a non-empty server clock that differs from the buffer's,
             ;; so an unclocked session (or a server with no record) never clobbers.
             (when (and (eq t (alist-get 'ok data))
-                       (or camp mis exc)
+                       (or camp mis exc tkt)
                        (not (and (equal camp agent-chat--campaign-id)
                                  (equal mis agent-chat--mission-id)
-                                 (equal exc agent-chat--excursion-id))))
+                                 (equal exc agent-chat--excursion-id)
+                                 (equal tkt agent-chat--ticket-id))))
               (agent-chat-set-clock!
-               (string-join (delq nil (list camp mis exc)) " > ")
+               (string-join (delq nil (list camp mis exc tkt)) " > ")
                nil t))))))))
 
 (defun agent-chat-finish-turn! (&optional elapsed continued)
@@ -975,14 +1007,15 @@ the elapsed, so the whole unified turn finalizes ONCE (E-repl-continuations)."
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
   "Clock the current chat buffer into TARGET, or clear with nil/blank.
-TARGET may be C-*, M-*, E-*, or a C-* > M-* > E-* path.  With
-INHERIT-CURRENT, mission-only and excursion-only targets keep the current
-parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
+TARGET may be C-*, M-*, E-*, T-*, or a C-* > M-* > E-* > T-* path.  With
+INHERIT-CURRENT, mission-, excursion- and ticket-only targets keep the
+current parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
 `agent-chat--clock-change-fn'."
   (let ((parsed (agent-chat-parse-clock-target target inherit-current)))
     (setq agent-chat--campaign-id (plist-get parsed :campaign-id))
     (setq agent-chat--mission-id (plist-get parsed :mission-id))
-    (setq agent-chat--excursion-id (plist-get parsed :excursion-id)))
+    (setq agent-chat--excursion-id (plist-get parsed :excursion-id))
+    (setq agent-chat--ticket-id (plist-get parsed :ticket-id)))
   (agent-chat--update-session-header-line)
   (when (and (not suppress-callback)
              (functionp agent-chat--clock-change-fn))
@@ -993,16 +1026,17 @@ parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
                 (error-message-string clock-err)))))
   (list :campaign-id agent-chat--campaign-id
         :mission-id agent-chat--mission-id
-        :excursion-id agent-chat--excursion-id))
+        :excursion-id agent-chat--excursion-id
+        :ticket-id agent-chat--ticket-id))
 
 (defun agent-chat-set-mission! (mission)
   "Clock the current chat buffer into MISSION, or clear with nil/blank."
   (agent-chat-set-clock! mission))
 
 (defun agent-chat-read-clock-target (&optional prompt)
-  "Read a campaign/mission/excursion target from the minibuffer; blank clears it."
+  "Read a campaign/mission/excursion/ticket target from the minibuffer; blank clears it."
   (let ((input (read-string
-                (or prompt "Clock target (C-*, M-*, E-*, C-* > M-* > E-*, blank for no mission): "))))
+                (or prompt "Clock target (C-*, M-*, E-*, T-*, C-* > M-* > E-*, blank for no mission): "))))
     (agent-chat-parse-clock-target input t)))
 
 (defun agent-chat-read-mission (&optional prompt)
@@ -1011,7 +1045,7 @@ parent path.  When SUPPRESS-CALLBACK is non-nil, do not call
 
 (defun agent-chat-clock-in (target)
   "Clock the current running chat buffer into TARGET.
-TARGET may be a campaign, mission, excursion, path, or blank."
+TARGET may be a campaign, mission, excursion, ticket, path, or blank."
   (interactive (list (agent-chat-read-clock-target)))
   (agent-chat-set-clock! target t)
   (message "clocked in: %s" (agent-chat-mission-label)))
@@ -1069,15 +1103,17 @@ When nil, use the current git root plus futon* directories under ~/code."
     (delete-dups (delq nil roots))))
 
 (defun agent-chat--clock-target-candidates (kind)
-  "Return completion candidates for KIND, one of `campaign', `mission', `excursion'."
+  "Return completion candidates for KIND: `campaign', `mission', `excursion', `ticket'."
   (let* ((dir-name (pcase kind
                      ('campaign "campaigns")
                      ('mission "missions")
-                     ('excursion "excursions")))
+                     ('excursion "excursions")
+                     ('ticket "tickets")))
          (prefix (pcase kind
                    ('campaign "C-")
                    ('mission "M-")
-                   ('excursion "E-")))
+                   ('excursion "E-")
+                   ('ticket "T-")))
          candidates)
     (dolist (root (agent-chat--clock-target-roots))
       ;; scan both holes/<kind>/ (standard) AND holes/ directly (futon7 etc. put
@@ -1097,11 +1133,11 @@ When nil, use the current git root plus futon* directories under ~/code."
      (completing-read prompt candidates nil nil))))
 
 (defun agent-chat--explicit-clock-target-tokens (text)
-  "Return explicit C-/M-/E- target tokens named in TEXT."
+  "Return explicit C-/M-/E-/T- target tokens named in TEXT."
   (let ((start 0)
         tokens)
     (while (string-match
-            "\\(?:\\`\\|[^[:alnum:]_-]\\)\\([CME]-[[:alnum:]_-]+\\)\\(?:\\'\\|[^[:alnum:]_-]\\)"
+            "\\(?:\\`\\|[^[:alnum:]_-]\\)\\([CMET]-[[:alnum:]_-]+\\)\\(?:\\'\\|[^[:alnum:]_-]\\)"
             text start)
       (push (match-string 1 text) tokens)
       (setq start (match-end 1)))
@@ -1118,11 +1154,14 @@ When nil, use the current git root plus futon* directories under ~/code."
       (cons 'mission token)))
    ((string-prefix-p "E-" token)
     (when (member token (agent-chat--clock-target-candidates 'excursion))
-      (cons 'excursion token)))))
+      (cons 'excursion token)))
+   ((string-prefix-p "T-" token)
+    (when (member token (agent-chat--clock-target-candidates 'ticket))
+      (cons 'ticket token)))))
 
 (defun agent-chat--auto-clock-target-from-text (text)
   "Return a witnessed auto-clock target plist for TEXT, or nil.
-The rule is explicit-not-fuzzy: all C-/M-/E- tokens in TEXT must resolve by
+The rule is explicit-not-fuzzy: all C-/M-/E-/T- tokens in TEXT must resolve by
 exact ID, and at most one target may be named per level."
   (let* ((tokens (agent-chat--explicit-clock-target-tokens text))
          (resolved (delq nil (mapcar #'agent-chat--resolve-auto-clock-token tokens)))
@@ -1132,7 +1171,7 @@ exact ID, and at most one target may be named per level."
                                                (cons (cdr entry) t))
                                              resolved)))
                       tokens))
-         campaign mission excursion ambiguous)
+         campaign mission excursion ticket ambiguous)
     (dolist (entry resolved)
       (pcase (car entry)
         ('campaign
@@ -1140,19 +1179,24 @@ exact ID, and at most one target may be named per level."
         ('mission
          (if mission (setq ambiguous t) (setq mission (cdr entry))))
         ('excursion
-         (if excursion (setq ambiguous t) (setq excursion (cdr entry))))))
+         (if excursion (setq ambiguous t) (setq excursion (cdr entry))))
+        ('ticket
+         (if ticket (setq ambiguous t) (setq ticket (cdr entry))))))
     (when (and resolved (null unresolved) (not ambiguous))
-      (list :campaign-id campaign
-            :mission-id mission
-            :excursion-id excursion
-            :tokens tokens
-            :rule "explicit-resolved-target"))))
+      (append (list :campaign-id campaign
+                    :mission-id mission
+                    :excursion-id excursion)
+              ;; Only a named ticket adds the key; other results keep shape.
+              (when ticket (list :ticket-id ticket))
+              (list :tokens tokens
+                    :rule "explicit-resolved-target")))))
 
 (defun agent-chat--clock-target-equal-p (target)
   "Return non-nil when TARGET equals the current buffer clock target."
   (and (equal (plist-get target :campaign-id) agent-chat--campaign-id)
        (equal (plist-get target :mission-id) agent-chat--mission-id)
-       (equal (plist-get target :excursion-id) agent-chat--excursion-id)))
+       (equal (plist-get target :excursion-id) agent-chat--excursion-id)
+       (equal (plist-get target :ticket-id) agent-chat--ticket-id)))
 
 (defun agent-chat--normalize-creation-mission-id (mission)
   "Return normalized mission id for creation-clock MISSION."
@@ -1229,14 +1273,14 @@ no-target floor; the creation-clock rule is explicit creation intent."
       mission-id)))
 
 (defun agent-chat--explicit-switch-token (text)
-  "Return the single →-decorated, resolved C-/M-/E- token in TEXT, or nil.
+  "Return the single →-decorated, resolved C-/M-/E-/T- token in TEXT, or nil.
 The → arrow is M-points-de-fuite §1's explicit-override primitive (`→ M-typed-holes`
 = switch mission): unlike a bare mention (recognized first-mention, floor-fill
 only), → SWITCHES the clock even when one is already active — the thin escape
 hatch over the recognition layer.  Requires exactly one →-decorated token, and
 it must resolve to an existing target (explicit-not-fuzzy)."
   (let ((start 0) tokens)
-    (while (string-match "→[[:space:]]*\\([CME]-[[:alnum:]_-]+\\)" text start)
+    (while (string-match "→[[:space:]]*\\([CMET]-[[:alnum:]_-]+\\)" text start)
       (push (match-string 1 text) tokens)
       (setq start (match-end 1)))
     (setq tokens (delete-dups (nreverse tokens)))
@@ -1262,7 +1306,8 @@ Returns the promotion witness plist, or nil when no promotion happened."
        ((and switch-tok
              (not (member switch-tok (list agent-chat--campaign-id
                                            agent-chat--mission-id
-                                           agent-chat--excursion-id))))
+                                           agent-chat--excursion-id
+                                           agent-chat--ticket-id))))
         (let ((old-target (agent-chat-mission-label)))
           (agent-chat-set-clock! switch-tok t t)  ; inherit-current, suppress-callback
           (setq agent-chat--last-auto-clock-witness
@@ -1279,13 +1324,15 @@ Returns the promotion witness plist, or nil when no promotion happened."
        ;; Bare mention: fill the floor only (never switch an active clock).
        ((and (null agent-chat--campaign-id)
              (null agent-chat--mission-id)
-             (null agent-chat--excursion-id))
+             (null agent-chat--excursion-id)
+             (null agent-chat--ticket-id))
         (when-let ((target (agent-chat--auto-clock-target-from-text text)))
           (unless (agent-chat--clock-target-equal-p target)
             (let ((old-target (agent-chat-mission-label)))
               (agent-chat-set-clock! (list :campaign-id (plist-get target :campaign-id)
                                            :mission-id (plist-get target :mission-id)
-                                           :excursion-id (plist-get target :excursion-id))
+                                           :excursion-id (plist-get target :excursion-id)
+                                           :ticket-id (plist-get target :ticket-id))
                                      nil t)
               (setq agent-chat--last-auto-clock-witness
                     `((rule . ,(plist-get target :rule))
@@ -1303,23 +1350,25 @@ Returns the promotion witness plist, or nil when no promotion happened."
 
 (defun agent-chat--edit-activity-file-target (file)
   "Return an exact clock target plist witnessed by saved mission doc FILE.
-Only C-/M-/E- markdown files under a holes/ tree are accepted, and the basename
+Only C-/M-/E-/T- markdown files under a holes/ tree are accepted, and the basename
 must resolve exactly through `agent-chat--clock-target-candidates'."
   (let* ((path (and file (expand-file-name file)))
          (base (and path (file-name-nondirectory path))))
     (when (and path
                base
                (string-match-p "\\(?:\\`\\|/\\)holes/" path)
-               (string-match "\\`\\([CME]-[^/]+\\)\\.md\\'" base))
+               (string-match "\\`\\([CMET]-[^/]+\\)\\.md\\'" base))
       (let* ((id (match-string 1 base))
              (kind (cond
                     ((string-prefix-p "C-" id) 'campaign)
                     ((string-prefix-p "M-" id) 'mission)
-                    ((string-prefix-p "E-" id) 'excursion))))
+                    ((string-prefix-p "E-" id) 'excursion)
+                    ((string-prefix-p "T-" id) 'ticket))))
         (when (and kind (member id (agent-chat--clock-target-candidates kind)))
           (list :campaign-id (and (eq kind 'campaign) id)
                 :mission-id (and (eq kind 'mission) id)
                 :excursion-id (and (eq kind 'excursion) id)
+                :ticket-id (and (eq kind 'ticket) id)
                 :id id
                 :file path))))))
 
@@ -1363,7 +1412,8 @@ foo/bar/foo/bar/foo do not switch at a transient 3-to-2 edge."
   "Return clock target plist for exact edit-activity TARGET."
   (list :campaign-id (plist-get target :campaign-id)
         :mission-id (plist-get target :mission-id)
-        :excursion-id (plist-get target :excursion-id)))
+        :excursion-id (plist-get target :excursion-id)
+        :ticket-id (plist-get target :ticket-id)))
 
 (defun agent-chat--maybe-edit-activity-reclock (target count)
   "Maybe switch the current chat buffer to edit-activity TARGET with COUNT.
@@ -1491,6 +1541,15 @@ NOW is an epoch timestamp used by batch smoke checks."
                                :excursion-id excursion)
                          nil t))
 
+(defun agent-chat-clock-ticket (ticket)
+  "Clock into TICKET under the current campaign/mission/excursion path."
+  (interactive (list (agent-chat--read-clock-id 'ticket "Ticket T-*: ")))
+  (agent-chat-set-clock! (list :campaign-id agent-chat--campaign-id
+                               :mission-id agent-chat--mission-id
+                               :excursion-id agent-chat--excursion-id
+                               :ticket-id ticket)
+                         nil t))
+
 (defun agent-chat-clock-clear-excursion ()
   "Clear the active excursion for the hydra, preserving campaign/mission."
   (interactive)
@@ -1519,7 +1578,8 @@ NOW is an epoch timestamp used by batch smoke checks."
 
 _c_: Campaign              _m_: Mission              _b_: bare Excursion
 _p_: Campaign → Mission    _x_: Campaign → Excursion _v_: Mission → Excursion
-_e_: clear Excursion       _n_: no mission           _q_: quit
+_t_: Ticket (under path)   _e_: clear Excursion      _n_: no mission
+_q_: quit
 "
             ("c" agent-chat-clock-campaign)
             ("m" agent-chat-clock-mission)
@@ -1527,6 +1587,7 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
             ("x" agent-chat-clock-campaign-excursion)
             ("v" agent-chat-clock-mission-excursion)
             ("b" agent-chat-clock-excursion)
+            ("t" agent-chat-clock-ticket)
             ("e" agent-chat-clock-clear-excursion)
             ("n" agent-chat-clock-no-mission)
             ("q" nil)))
@@ -2597,6 +2658,7 @@ CONFIG keys:
   :campaign-id - optional campaign id clocked into this session
   :mission-id  - optional mission id clocked into this session
   :excursion-id - optional excursion id clocked into this session
+  :ticket-id   - optional ticket id clocked into this session
   :clock-change-fn - optional 0-arg function called after clock-in changes
   :thinking-text   - e.g. \"claude is thinking...\"
   :thinking-prop   - symbol for text property"
@@ -2611,6 +2673,7 @@ CONFIG keys:
         (campaign-id (plist-get config :campaign-id))
         (mission-id (plist-get config :mission-id))
         (excursion-id (plist-get config :excursion-id))
+        (ticket-id (plist-get config :ticket-id))
         (clock-change-fn (plist-get config :clock-change-fn))
         (thinking-text (plist-get config :thinking-text))
         (thinking-prop (plist-get config :thinking-prop))
@@ -2625,6 +2688,7 @@ CONFIG keys:
     (setq agent-chat--campaign-id (agent-chat-normalize-campaign-id campaign-id))
     (setq agent-chat--mission-id (agent-chat-normalize-mission-id mission-id))
     (setq agent-chat--excursion-id (agent-chat-normalize-excursion-id excursion-id))
+    (setq agent-chat--ticket-id (agent-chat-normalize-ticket-id ticket-id))
     (setq agent-chat--clock-change-fn clock-change-fn)
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
@@ -3088,10 +3152,11 @@ under outbox/failed and return nil."
          nil)))))
 
 (defun agent-chat--mission-body-fields ()
-  "Return campaign/mission/excursion evidence fields for the current buffer."
+  "Return campaign/mission/excursion/ticket evidence fields for the current buffer."
   (let ((campaign (agent-chat-normalize-campaign-id agent-chat--campaign-id))
         (mission (agent-chat-normalize-mission-id agent-chat--mission-id))
-        (excursion (agent-chat-normalize-excursion-id agent-chat--excursion-id)))
+        (excursion (agent-chat-normalize-excursion-id agent-chat--excursion-id))
+        (ticket (agent-chat-normalize-ticket-id agent-chat--ticket-id)))
     (append
      (when campaign
        `((campaign-id . ,campaign)
@@ -3102,7 +3167,10 @@ under outbox/failed and return nil."
      (when excursion
        `((excursion-id . ,excursion)
          (clocked-excursion . ,excursion)))
-     (when (or campaign mission excursion)
+     (when ticket
+       `((ticket-id . ,ticket)
+         (clocked-ticket . ,ticket)))
+     (when (or campaign mission excursion ticket)
        `((clocked-target . ,(agent-chat-mission-label))))
      (when agent-chat--last-auto-clock-witness
        `((auto-clock-witness . ,agent-chat--last-auto-clock-witness))))))
