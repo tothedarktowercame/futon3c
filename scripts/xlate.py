@@ -243,10 +243,42 @@ def cmd_census(args):
                         cited[r["id"]] += 1
                 else:
                     holes += 1
-        side = path[:-len(".analysis.json")] + ".candidates.json"
-        if os.path.exists(side):
-            for c in json.load(open(side, encoding="utf-8")).get("candidates", []):
-                proposed[c["id"]] += 1
+        # Two spellings exist in the wild: turn-X.json.candidates.json, which
+        # this derived, and turn-X.candidates.json, which is what 16 of the 17
+        # files are actually called. Only one was ever found, so the census
+        # reported one unminted proposal where there were several -- and a
+        # proposal that cannot be counted cannot ripen. Accept both.
+        stem = path[:-len(".analysis.json")]
+        for side in (stem + ".candidates.json",
+                     stem[:-len(".json")] + ".candidates.json"
+                     if stem.endswith(".json") else None):
+            if side and os.path.exists(side):
+                for c in json.load(open(side, encoding="utf-8")).get("candidates", []):
+                    proposed[c["id"]] += 1
+                break
+    # An analyst that meets an already-proposed move again does the right
+    # thing by CITING the proposal rather than minting a second name for it --
+    # and until 2026-09-24 that made the occurrence invisible here, because
+    # only candidates files were counted. The correct behaviour suppressed the
+    # very signal that ripens a proposal: kimi-1 reported three alignments for
+    # orchestration/lightweight-ack-advance while this census saw one.
+    #
+    # A mention in a rationale can only INCREMENT an id some candidates file
+    # already proposed. It can never introduce one: a first pass at this
+    # scanned rationales with a bare id-shaped regex and duly proposed
+    # "usr/local", "texlive/2026" and "19/20", because prose contains paths.
+    known = set(proposed)
+    for path in _glob.glob(f"{records}/*.analysis.json"):
+        data = json.load(open(path, encoding="utf-8"))
+        seen_here = set()
+        for sentence in data.get("sentences", []):
+            for frag in sentence.get("fragments", []):
+                blob = str(frag.get("rationale", ""))
+                for pid in known:
+                    if pid in blob and pid not in seen_here:
+                        seen_here.add(pid)
+                        proposed[pid] += 1
+    del known
 
     # descendants: patterns whose @why rests on this one
     children = collections.Counter()
