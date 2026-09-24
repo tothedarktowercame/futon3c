@@ -1,5 +1,19 @@
 (ns futon3c.wm.run4-historical-action
-  "Server-configured runner ports for a pinned historical verification."
+  "Server-configured runner ports for a pinned historical verification.
+
+  The three refusals below are the guard declining to act on the WRONG
+  obligation, or on none. They are typed :guardrail-refusal /
+  :trigger-ineligible so futon2's repair-class-for
+  (full_loop_runner.clj:3470) files them as :environmental-hold. An
+  untyped throw lands on that function's :else branch and mints a
+  :machine-failure finding -- a stop-line for the machine correctly
+  refusing to do something wrong. That is what happened to
+  repair-run4-u88-production-successor-20260911-v2--attempt-001 on
+  2026-09-11: \"Historical candidate targets another stop-line\" stopped the
+  line and has been open ever since (kimi-2's diagnosis, 2026-09-24).
+  The two configuration/authority refusals keep the machine-repair
+  contract on purpose: a caller supplying an invalid root or sha is a
+  defect, not the guard working."
   (:require [clojure.java.io :as io]
             [futon2.aif.repair-obligation :as repair]))
 
@@ -23,14 +37,23 @@
      (fn [obligation]
        (let [candidate (read-candidate)]
          (when-not (= (:repair/id obligation) (:repair/id candidate))
-           (throw (ex-info "Historical candidate targets another stop-line" {})))
+           (throw (ex-info "Historical candidate targets another stop-line"
+                           {:outcome :guardrail-refusal
+                            :failure-kind :guardrail-refusal
+                            :failure-detail :historical-candidate-targets-another-stop-line
+                            :obligation (:repair/id obligation)
+                            :candidate (:repair/id candidate)})))
          candidate))
      :historical-verification-execute-fn
      (fn [{:keys [execution-identity obligation candidate]}]
        (let [fresh (read-candidate)]
          (when-not (and (= candidate fresh)
                         (= (:repair/id obligation) (:repair/id fresh)))
-           (throw (ex-info "Historical candidate changed before execution" {})))
+           (throw (ex-info "Historical candidate changed before execution"
+                           {:outcome :guardrail-refusal
+                            :failure-kind :guardrail-refusal
+                            :failure-detail :historical-candidate-changed-before-execution
+                            :obligation (:repair/id obligation)})))
          (repair/commit-historical-verification!
           repair-root execution-identity evidence)))}))
 
@@ -45,6 +68,9 @@
                                   (repair/open-obligations
                                    (:repair-root config))))]
     (when-not obligation
-      (throw (ex-info "Historical action has no open stop-line" {})))
+      (throw (ex-info "Historical action has no open stop-line"
+                      {:outcome :trigger-ineligible
+                       :failure-kind :trigger-ineligible
+                       :failure-detail :no-open-stop-line})))
     ((:historical-verification-candidate-fn ports) obligation)
     {:repair-id (:repair/id obligation)}))
