@@ -31,6 +31,7 @@ def main():
         capture_output=True, text=True).stdout)
 
     moved = skipped = 0
+    moves = []
     for n in notes:
         anc = n["anchor"]
         if text[anc["start"]:anc["end"]] == anc["quote"]:
@@ -47,13 +48,35 @@ def main():
         s = hits[0]
         e = s + len(anc["quote"])
         print(f"  MOVE  {n['id']} {anc['start']}..{anc['end']} -> {s}..{e}")
-        src = src.replace(f":start {anc['start']} :end {anc['end']}", f":start {s} :end {e}", 1)
+        moves.append((anc["start"], anc["end"], s, e))
         moved += 1
 
+    # Two passes. A uniform shift makes one note's NEW offsets equal another's
+    # OLD ones, so a sequence of direct replacements rewrites the wrong entry --
+    # it did, silently, and left seven notes stale that the run had just
+    # reported as moved. Sentinels first, then the values.
+    for i, (a0, b0, _, _) in enumerate(moves):
+        src = src.replace(f":start {a0} :end {b0}", f":start \x00{i}\x00 :end \x01{i}\x01", 1)
+    for i, (_, _, a1, b1) in enumerate(moves):
+        src = src.replace(f":start \x00{i}\x00 :end \x01{i}\x01", f":start {a1} :end {b1}", 1)
     src = re.sub(r':mission-sha "[0-9a-f]{64}"', f':mission-sha "{sha}"', src)
     if a.apply:
         open(ANN, "w", encoding="utf-8").write(src)
         print(f"applied: {moved} moved, {skipped} left")
+        # Verify rather than assume. An earlier version reported 27 moved and
+        # left four of them stale anyway; a re-read is the only thing that
+        # would have caught that, and it costs nothing.
+        again = json.loads(subprocess.run(
+            ["bb", "-e",
+             '(require (quote [clojure.edn :as edn]) (quote [cheshire.core :as j]))'
+             f'(print (j/generate-string (edn/read-string (slurp "{ANN}"))))'],
+            capture_output=True, text=True).stdout)
+        still = [n["id"] for n in again
+                 if text[n["anchor"]["start"]:n["anchor"]["end"]] != n["anchor"]["quote"]
+                 and n.get("author") == a.author]
+        if still:
+            print(f"  NOT FIXED, run again: {', '.join(still)}")
+            sys.exit(1)
     else:
         print(f"dry run: {moved} would move, {skipped} left (pass --apply)")
 

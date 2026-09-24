@@ -18,36 +18,36 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 6
- :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+ :mission-sha "a011e029047b5681571e0c6d68e559e6cc697ce33670a703c88e15b2d04fffa7"
 
  :tokens
  {:signature-declared
   {:statement "The interface has a declared signature — what a prompt carries as typed inputs and outputs — rather than being whatever the first call site happened to write."
-   :cue [1078 1146]}
+   :cue [1411 1479]}
   :call-sites-enumerated
   {:statement "Every call site that embeds a coupling in prompt text is listed, including the ones a grep for a literal will not find."
-   :cue [12851 12920]}
+   :cue [13184 13253]}
   :grain-chosen
   {:statement "The unit is the prompt fragment that carries one coupling — a path, a role, a provider — not the whole packet and not the call site."
-   :cue [12851 12920]}
+   :cue [13184 13253]}
   :original-prose-authoritative
   {:statement "The prose in the source call sites remains the authority; rewrites happen elsewhere, bounded, and only in the other mode."
-   :cue [12282 12364]}
+   :cue [12615 12697]}
   :mode-gated
   {:statement "The change is reachable only behind an explicit mode switch, so the untouched path stays available while the new one is unproven."
-   :cue [12019 12104]}
+   :cue [12352 12437]}
   :prose-generated
   {:statement "The typed source is canonical and the prompt prose is generated from it, so a coupling cannot be introduced by editing prose."
-   :cue [13519 13599]}
+   :cue [13852 13932]}
   :one-authority
   {:statement "Exactly one authoritative reader for each coupling a prompt carries; any second copy is a pin read by a comparator, or a defect."
-   :cue [13519 13599]}
+   :cue [13852 13932]}
   :replacement-discipline
   {:statement "Whatever discipline the mode flag was supplying — bounded rewrites, reviewed in one place — is installed in the same act that retires it."
-   :cue [13420 13475]}
+   :cue [13753 13808]}
   :flag-retired
   {:statement "FUTON3C_MFUTON_MODE and the shadow module are gone; the abstract path has absorbed the hardcoded one."
-   :cue [13420 13475]}}
+   :cue [13753 13808]}}
 
  :initial #{}
  :want #{:one-authority :flag-retired}

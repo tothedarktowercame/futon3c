@@ -433,7 +433,13 @@ def main():
     # phase by phase, so the artefacts appear where they would have been made.
     by_id = {n["id"]: n for n in notes}
     for ph in sorted(life["phases"], key=lambda p: p["n"]):
-        body_parts.append(phase_section(ph, bool(ph.get("mission-anchor"))))
+        anc = ph.get("mission-anchor")
+        live_anchor = bool(anc) and text[anc["start"]:anc["end"]] == anc["quote"]
+        if anc and not live_anchor:
+            stale.append({"id": f"phase-{ph['id']}",
+                          "_stale": "phase anchor no longer holds",
+                          "anchor": anc})
+        body_parts.append(phase_section(ph, live_anchor))
         for art in ph.get("artefacts", []):
             fig = art.get("figure")
             if fig and fig in figures:
@@ -460,7 +466,9 @@ def main():
 
     counts = (f'{len(notes)} notes — {len(cols["a"])} pattern, {len(cols["b"])} PROOF-2a; '
               f'{sum(1 for n in notes if n.get("status") == "reviewed")} reviewed, '
-              f'{len(stale)} with a stale anchor')
+              f'{len(stale)} with a stale anchor; '
+              f'{sum(1 for p in life["phases"] if p["status"] == "exit-met")} of '
+              f'{len(life["phases"])} phase exits met')
 
     open(a.out, "w", encoding="utf-8").write(PAGE.format(
         css=CSS, js=JS, body=body, toc=toc_html(life), rev=html.escape(revlabel),

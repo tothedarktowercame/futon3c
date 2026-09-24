@@ -1,7 +1,7 @@
 # Mission: M-futon-seams
 
-**Status:** IDENTIFY (2026-09-24) — recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request, as a source of information for Joe. Nothing has been implemented against it. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
-**Owner:** unassigned — Joe to place it.
+**Status:** HEAD complete; IDENTIFY complete; MAP/DERIVE/ARGUE/VERIFY in progress on **instance 4 only**; INSTANTIATE-1 taken out of order (2026-09-24). Phases 2–7 below were written *after* the work they describe, which is the mission's own most useful finding — see §Working out of order. Recorded from a Matrix conversation between Rob (`@facadebootstrap:into-the-matrix.my-familiar.com`) and claude-1, at Rob's request. Rob is having one of his evolvers record the same conversation on the mfuton side and intends to abstract the mfuton memory MCP's database calls.
+**Owner:** **claude-1** (Joe, 2026-09-24: "claude-1 owns it, we're collaborating on the AIF + PROOF-2 interpretation"). claude-10 holds the PROOF-2a reading, the checker and the enactment record.
 **Repo:** futon3c (the mission lives here; the instances span futon3c, futon6, mfuton).
 
 ## HEAD (Rob, 2026-09-24, verbatim sense)
@@ -167,3 +167,149 @@ Pick one instance and declare its interface — not all eight. The candidates in
 For whichever is chosen, the exit is: the interface is declared, **at least one existing caller is converted to it**, and there is a test of the form "redirect the binding and confirm behaviour follows" (instance 1's method). An interface with no second implementation and no redirect test is a guess.
 
 **Do not** mint the abstraction and leave the hardcoded path alive indefinitely. Instance 6 is the warning: a switch is a transitional state, and two sources of truth kept in sync by hand is the failure it was meant to prevent.
+
+
+## Working out of order
+
+This section exists because the mission cannot honestly present phases 2–7 as
+though they were worked in sequence. They were not. On 2026-09-24 the mission
+was recorded at 16:0x, and within the next two hours it acquired an inventory
+(MAP), five cascades with receipts (DERIVE), argued pattern fits and kernel
+runs (ARGUE), four static checkers (VERIFY) and live code in the serving JVM
+(INSTANTIATE) — while its Status line still said IDENTIFY and it had no
+section for any of them.
+
+The cost is recorded rather than inferred. `exemplar/click-001-outcome.edn`
+shows the enactment at futon3c `8e5c431e` built the **provider** grain where
+the chosen cascade had specified the **role** grain, because the implementer
+worked from this mission's defect description rather than from a DERIVE that
+had met its exit. All three of instance 4's wants came back `:partial`. A
+phase order is not ceremony: skipping DERIVE's exit is what let a reasonable
+agent build a reasonable thing that was not the thing chosen.
+
+The phases below are written now, after the fact, and say which of their exit
+criteria are met on the evidence that exists. Where a criterion is not met
+they say so. `holes/labs/M-futon-seams/lifecycle.edn` carries the same
+statuses as data, and the working page renders them as a table.
+
+## MAP — what exists, what is missing
+
+**Exit criterion:** every MAP question has a concrete answer; the ready-vs-missing
+table is complete. **Not met** — the answers exist, the table does not.
+
+The inventory is §The eight instances above: every count in it was measured
+against the working tree on 2026-09-24, not remembered. Ready versus missing,
+for the purpose the mission actually has (which instances can be worked):
+
+| instance | cascade | wiring | enacted | ready? |
+|---|---|---|---|---|
+| 1 filesystem root | no | no | already done (futon6 `6007937`) | retrospective only |
+| 2 OS invocation | no | no | already done (`scripts/windows/`) | retrospective only |
+| 3 agent dispatch | no | no | worked | retrospective only |
+| 4 provider vs role | yes, two candidates | yes | `8e5c431e`, partial | **worked** |
+| 5 transport and Room | yes | yes | no | ready |
+| 6 prompts as an interface | yes | yes | no | ready |
+| 7 editor coupling | yes | yes | no | ready |
+| 8 store kind | no | no | no | **missing a cascade** |
+
+What is missing to close this phase: a cascade for instance 8, which is the
+only live unresolved instance without one; and this table moved from a click's
+`:exclusions` into the mission, which is what has now been done.
+
+## DERIVE — the design
+
+**Exit criterion:** someone could implement the mission from the DERIVE section
+alone. **Not met for the mission; met for instance 4.**
+
+The design is not prose here; it is five cascades in
+`holes/labs/M-futon-seams/proto/`, each pattern carrying a guard over work-state
+tokens, the tokens it produces, and a receipt naming the library file, the
+sha256 of the bytes read, the reading, and a scope limit saying what of the
+pattern does *not* transfer. Instance 4 has two candidate routes —
+registry-first (`instance-4.edn`) and observe-first (`instance-4b.edn`) — which
+differ in four of seven patterns rather than in ordering.
+
+`wiring/instance-N-wiring.edn` gives each cascade's construction as token flow:
+a box's input ports are the tokens it needs, its outputs the tokens it
+produces, an edge carries one named token, and a token a box forbids is an
+inhibitor port. Dangling outputs and unfed wants are recorded, not hidden.
+
+Why the exit is not met for the mission: only instance 4 has been worked to a
+decision, and the cascades live in `holes/labs` rather than here. An
+implementer would have to be told where to look.
+
+## ARGUE — why this design
+
+**Exit criterion:** the design feels inevitable given the constraints, and an
+outsider can understand it from the plain-language argument alone. **Not met.**
+
+What is argued: every pattern's receipt argues its own fit and states its scope
+limit, and every containment edge says why it is there. Three candidate
+transition kernels were run over every linear extension of each cascade, which
+argues about the *carrier* — and found that co-application differs from any
+flattening only when the click budget is shorter than the cascade is deep, and
+that on instance 6 no flattening reaches the wants at any horizon because the
+two conflicting patterns disable each other.
+
+What is not argued: why instance 4's registry-first route should be preferred
+to observe-first. The only comparison is p(all wants) 0.26 against 0.21 at
+θ 0.8, horizon 6 — a number about how readily each cascade reaches its own
+wants, which is not an argument about which is the better design. And there is
+no plain-language account for a reader outside the project.
+
+## VERIFY — checked against structural constraints
+
+**Exit criterion:** the design has been checked against available structural
+constraints; unverifiable risks spiked; DERIVE revisions recorded. **Met in
+substance.**
+
+Four checks run and have each caught real defects:
+
+- `scripts/cascade_check.py` — every pattern id resolves, its declaration
+  matches its path, every receipt's sha256 still matches the file's bytes,
+  every token used is declared. 5/5 pass.
+- `scripts/wiring_check.py` — an edge carries a token its source produces and
+  its target needs; `:licensed-by` resolves to a pattern of the named cascade;
+  recorded dangling outputs equal what the ports imply. 5/5 pass.
+- `exemplar/proof2a_check.clj` (claude-10) — PROOF-2a's W_t and W_0 with nine
+  falsifiers. W_t passes; W_0 fails on the construction condition, by
+  construction, because the candidates are hand-built.
+- `scripts/check_seams_layout.js` — the rendering, measured rather than
+  eyeballed. 40 measurements, 0 failing.
+
+DERIVE revisions recorded: the reflexive-descendants correction, which
+reduced five missing meets to one (`4d748660`); `software-design/adapter-pattern`
+becoming citable and closing instance 5's unproduced want; and
+`gauntlet/placenta-transfer` replacing a stretched reading in instance 4.
+
+## INSTANTIATE — demonstrations
+
+**Exit criterion:** every completion criterion has a concrete demonstration, and
+a new person could reproduce it from the mission doc. **Not met.**
+
+One instance has been enacted. `futon3c.agency.roles` (futon3c `8e5c431e`,
+claude-10) gives one function answering which provider an agent is; both
+`str/starts-with?` provider branches in `transport/http.clj` now call it; a
+redirect test passes in `roles_test` and 8 of its 14 assertions fail against
+the old definitions, so it is a real falsifier.
+
+Against instance 4's three completion criteria, all three are `:partial`:
+
+- `caller-converted` — two call sites converted, but they ask for a *provider*,
+  not a role.
+- `redirect-test` — re-declaring a provider for a fixed id changes both routing
+  decisions; rebinding a *role* cannot be tested, because roles do not exist.
+- `prefix-routing-retired` — no `str/starts-with?` provider branch remains, but
+  the library-loop adapter still requires the literal codex binary.
+
+A new person could not reproduce this from the mission doc, which until now did
+not mention it.
+
+## DOCUMENT
+
+**Exit criterion:** someone browsing the docbook can discover what this mission
+built without knowing it exists. **Not started.**
+
+The only rendered account is the working page at
+`zone.hyperreal.enterprises/wip/seams.html`, reachable by URL alone. Nothing
+navigates to it and there is no docbook entry.

@@ -7,30 +7,30 @@
 ;; declaration matches its path; sha256 is of the file at authoring time.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
- :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+ :mission-sha "a011e029047b5681571e0c6d68e559e6cc697ce33670a703c88e15b2d04fffa7"
 
  :tokens
  {:sites-enumerated
   {:statement "Every site that names a provider is listed: the 51 provider-literal agent ids in src/ and the three that route on a prefix."
-   :cue [8797 8826]}
+   :cue [9130 9159]}
   :roles-named
   {:statement "The role vocabulary exists as a thing in its own right — implementer, reviewer, interpreter — separate from any seat that fills one."
-   :cue [9294 9309]}
+   :cue [9627 9642]}
   :binding-recorded
   {:statement "A role-to-seat binding is an explicit record, not a string a caller parses; a conflicting binding is rejected rather than silently preferred."
-   :cue [9294 9309]}
+   :cue [9627 9642]}
   :one-producer
   {:statement "Exactly one place resolves a role to a seat. Nothing else infers it."
-   :cue [8575 8591]}
+   :cue [8908 8924]}
   :caller-converted
   {:statement "At least one existing call site asks for a role instead of naming a seat, and the seats holding bindings under the old reading still work."
-   :cue [17923 17970]}
+   :cue [18256 18303]}
   :redirect-test
   {:statement "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
-   :cue [18007 18057]}
+   :cue [18340 18390]}
   :prefix-routing-retired
   {:statement "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
-   :cue [8575 8591]}}
+   :cue [8908 8924]}}
 
  :initial #{}
  :want #{:caller-converted :redirect-test :prefix-routing-retired}

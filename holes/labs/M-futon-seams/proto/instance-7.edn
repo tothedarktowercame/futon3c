@@ -9,33 +9,33 @@
 ;; chosen by flattening decides which of them happens inside a finite horizon.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 7
- :mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
+ :mission-sha "a011e029047b5681571e0c6d68e559e6cc697ce33670a703c88e15b2d04fffa7"
 
  :tokens
  {:writers-enumerated
   {:statement "Every writer and reader of the turn record format is listed: the elisp recorder, scripts/turn_batch.py, the ClojureScript feed reader."
-   :cue [15062 15089]}
+   :cue [15395 15422]}
   :grain-chosen
   {:statement "The unit is the turn — one operator utterance with its offsets and quoted regions — not the buffer it was typed in and not the session."
-   :cue [14535 14571]}
+   :cue [14868 14904]}
   :dependency-checked
   {:statement "What would break if the shared core were wrong is stated rather than assumed. The >>> fence divergence is the answer: it already broke, in the Python path, silently."
-   :cue [15062 15089]}
+   :cue [15395 15422]}
   :record-schema-declared
   {:statement "The turn record is a declared contract — parse, split, offsets, quoted regions — rather than a shape three implementations each reproduce."
-   :cue [15062 15089]}
+   :cue [15395 15422]}
   :one-producer
   {:statement "One implementation produces a record; the others call it."
-   :cue [15062 15089]}
+   :cue [15395 15422]}
   :falsifier-named
   {:statement "A concrete input a wrong implementation fails is named: a >>> fence with content on the same line, which the elisp handles and an independent reimplementation did not."
-   :cue [18007 18057]}
+   :cue [18340 18390]}
   :divergence-test
   {:statement "The extracted core is run where behaviour is known, and any disagreement between a caller and the core is attributed to one side."
-   :cue [18007 18057]}
+   :cue [18340 18390]}
   :writers-converted
   {:statement "The existing writers call the core instead of reimplementing it, without invalidating records already written under the old reading."
-   :cue [17923 17970]}}
+   :cue [18256 18303]}}
 
  :initial #{}
  :want #{:record-schema-declared :divergence-test :writers-converted}

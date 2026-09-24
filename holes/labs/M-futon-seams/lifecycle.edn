@@ -6,9 +6,12 @@
 ;; artefacts belonging to MAP, DERIVE, ARGUE and INSTANTIATE while the mission
 ;; file still says IDENTIFY and has no section for any of them.
 ;;
-;; Nothing here advances the mission's Status line. The mission's owner is
-;; "unassigned -- Joe to place it", and moving a mission through its lifecycle
-;; is the owner's act, not a renderer's.
+;; Joe assigned the mission to claude-1 on 2026-09-24 ("claude-1 owns it,
+;; we're collaborating on the AIF + PROOF-2 interpretation"), so the Status
+;; line and the phase sections have been advanced to what the evidence
+;; supports -- and the out-of-order work is stated in the mission rather than
+;; smoothed away. Phases 2-7 are now written in the mission itself, so every
+;; row below anchors to a real span and none is a placeholder.
 ;;
 ;; :mission-anchor is an exact span of the mission at the recorded sha, as the
 ;; annotations are. A phase with none gets a PLACEHOLDER in the page -- a
@@ -17,8 +20,8 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
-           :status-line "IDENTIFY (2026-09-24)"}
+           :sha256 "a011e029047b5681571e0c6d68e559e6cc697ce33670a703c88e15b2d04fffa7"
+           :status-line "HEAD complete; IDENTIFY complete; MAP/DERIVE/ARGUE/VERIFY in progress on instance 4 only; INSTANTIATE-1 taken out of order (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
  :phases
@@ -26,7 +29,7 @@
    :exit "The operator recognises the HEAD as faithful to the mission's live shape, and the carried-forward tensions are named well enough that IDENTIFY can proceed without pretending the unknowns have already been settled."
    :exit-line 45
    :status :exit-met
-   :mission-anchor {:start 548 :end 589 :quote "## HEAD (Rob, 2026-09-24, verbatim sense)"}
+   :mission-anchor {:start 881 :end 922 :quote "## HEAD (Rob, 2026-09-24, verbatim sense)"}
    :because "The HEAD is Rob's own wording from the Matrix interview, with his interface/seam distinction preserved rather than paraphrased. The carried-forward tension is named in its own section and not resolved. Rob is the operator for this HEAD and asked for the record; Joe has read it and commissioned work from it."
    :evidence [{:kind :commit :ref "73c77352" :what "the mission recorded from the interview"}
               {:kind :span :what "## HEAD, and the following tension section"}]
@@ -35,11 +38,12 @@
   {:id :IDENTIFY :n 1 :title "IDENTIFY — the gap, scoped"
    :exit "A human has read the proposal and agrees the gap is real and the scope is right."
    :exit-line 68
-   :status :in-progress
-   :mission-anchor {:start 17273 :end 17306 :quote "## IDENTIFY exit (when picked up)"}
-   :because "Joe has read it and acted on it, which is most of the criterion. What is missing is the agreement on SCOPE: the mission's own IDENTIFY exit says to pick one instance, click-001 picked instance 4, and no human has said that is the right one. The owner line still reads 'unassigned'."
+   :status :exit-met
+   :mission-anchor {:start 17606 :end 17639 :quote "## IDENTIFY exit (when picked up)"}
+   :because "Met. Joe has read the proposal, agrees the gap is real -- he commissioned the record and then the work -- and has agreed the scope in act: click-001 picked instance 4, Joe directed its implementation at 8e5c431e and the PROOF-2a exemplar over it, and on 2026-09-24 assigned the mission to claude-1. The agreement on scope is by direction rather than by a written ruling, which is worth noting but is what the criterion asks for: a human read it and agrees."
    :evidence [{:kind :artefact :ref "exemplar/click-001.edn" :what "the target choice, with the exclusions and the cost ordering"}
-              {:kind :discrepancy :what "the exit asks a human to agree the scope; the choice was made by a click and is unreviewed"}]
+              {:kind :commit :ref "8e5c431e" :what "Joe directed work on the chosen instance, which is agreement in act"}
+              {:kind :note :what "ownership assigned to claude-1, 2026-09-24"}]
    :artefacts [{:note "exemplar-click" :why "the click that performs this phase's own exit act"}
                {:note "exemplar-two-orderings" :why "the cost ordering that did not choose the target"}
                {:note "exemplar-lowest-score" :why "the chosen target scores lowest of the four feasible"}]}
@@ -48,7 +52,7 @@
    :exit "Every MAP question has a concrete answer. The \"ready vs missing\" table is complete."
    :exit-line 113
    :status :in-progress
-   :mission-anchor nil
+   :mission-anchor {:start 20042 :end 20079 :quote "## MAP \u2014 what exists, what is missing"}
    :because "The inventory exists and is measured -- eight instances with counts and paths, each checked against the working tree -- but it lives in the instance sections rather than as a MAP section, and there is no ready-vs-missing table. Four of the eight have cascades and four do not, which IS the ready-vs-missing split, recorded in click-001's exclusions rather than in the mission."
    :evidence [{:kind :span :what "the eight instances, each with measured counts and paths"}
               {:kind :artefact :ref "exemplar/click-001.edn" :what ":feasible and :exclusions — the ready-vs-missing split, in the click rather than the mission"}
@@ -59,7 +63,7 @@
    :exit "Someone could implement the mission from the DERIVE section alone, without needing to ask clarifying questions."
    :exit-line 153
    :status :in-progress
-   :mission-anchor nil
+   :mission-anchor {:start 21290 :end 21312 :quote "## DERIVE \u2014 the design"}
    :because "Five cascades and five wiring diagrams exist, each pattern carrying a guard, produces and a receipt with source path and sha. Instance 4 has two candidate routes. That is a design someone could build from -- but it is in holes/labs, not in a DERIVE section of the mission, and only instance 4 has been worked to a click."
    :evidence [{:kind :artefact :ref "proto/instance-{4,4b,5,6,7}.edn" :what "cascades with receipts"}
               {:kind :artefact :ref "wiring/instance-{4,4b,5,6,7}-wiring.edn" :what "token-flow constructions"}
@@ -77,7 +81,7 @@
    :exit "The design feels inevitable given the constraints, not merely possible. And someone outside the project can understand what it does and why from the plain-language argument alone."
    :exit-line 191
    :status :in-progress
-   :mission-anchor nil
+   :mission-anchor {:start 22441 :end 22467 :quote "## ARGUE \u2014 why this design"}
    :because "Each pattern's receipt argues its own fit and states a scope limit -- what of the pattern does NOT transfer -- and each containment edge says why it is there. The kernel runs are an argument about the CARRIER rather than about this design. What is not done: nothing argues why instance 4's route a should be preferred to route b beyond a 0.26-against-0.21 number, and no plain-language argument exists for a reader outside the project."
    :evidence [{:kind :artefact :ref "proto/meets.clj" :what "the restricted semilattice condition, computed"}
               {:kind :artefact :ref "proto/kernels.clj" :what "three kernels over every linear extension"}
@@ -95,7 +99,7 @@
    :exit "The design has been checked against available structural constraints. Any risks that can't be verified statically have been spiked. DERIVE revisions (if any) are recorded."
    :exit-line 231
    :status :in-progress
-   :mission-anchor nil
+   :mission-anchor {:start 23506 :end 23556 :quote "## VERIFY \u2014 checked against structural constraints"}
    :because "Real static checking exists and has found real defects: cascade_check.py (ids resolve, receipts' shas still match, tokens declared), wiring_check.py (an edge carries a token its ends have), proof2a_check.clj (W_t, W_0 and nine falsifiers), and a measured layout check. DERIVE revisions ARE recorded -- the reflexive-descendants correction, the adapter-pattern hole closing, i4-convert's pattern replaced. What is missing is the mission-side record: these live in commits and lab files, not in a VERIFY section."
    :evidence [{:kind :artefact :ref "scripts/cascade_check.py" :what "5/5 cascades pass"}
               {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
@@ -108,7 +112,7 @@
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :in-progress
-   :mission-anchor nil
+   :mission-anchor {:start 24799 :end 24830 :quote "## INSTANTIATE \u2014 demonstrations"}
    :because "Code was written and is live: futon3c.agency.roles at 8e5c431e, both prefix branches converted, a redirect test passing. But the mission's own completion criteria are its three wants, and all three came back :partial -- and what was built reads the PROVIDER where the chosen cascade specified the ROLE. A new person could not reproduce it from the mission doc, which does not mention it. This phase ran BEFORE MAP, DERIVE and ARGUE met their exits, which is part of why it built the wrong grain."
    :evidence [{:kind :commit :ref "8e5c431e" :what "futon3c.agency.roles, http.clj sites converted, roles_test"}
               {:kind :artefact :ref "exemplar/click-001-outcome.edn" :what "all three wants :partial; the grain deviation"}
@@ -120,7 +124,7 @@
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
-   :mission-anchor nil
+   :mission-anchor {:start 25904 :end 25915 :quote "## DOCUMENT"}
    :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/."
    :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}]
    :artefacts []}]
@@ -130,4 +134,4 @@
   :exits-met [:HEAD]
   :finding
   "The mission's Status line is not wrong, but it is not the whole picture either. HEAD's exit is met. IDENTIFY's is not: its criterion asks a human to agree the gap and the scope, and the scope was chosen by a click that nobody has reviewed. Meanwhile MAP, DERIVE, ARGUE, VERIFY and INSTANTIATE all have real artefacts, and INSTANTIATE has live code -- work ran several phases ahead of the order the lifecycle sets out. The clearest cost of that is recorded in click-001-outcome: the enactment was built from the mission's defect description rather than from a DERIVE that had met its exit, and it built the provider grain where the cascade had chosen the role grain."
-  :not-done-here "The Status line is unchanged. Advancing it is the owner's act and the owner is unassigned."}}
+  :advanced "2026-09-24: Joe assigned the mission to claude-1, so the Status line now reads HEAD complete; IDENTIFY complete; MAP/DERIVE/ARGUE/VERIFY in progress on instance 4 only; INSTANTIATE-1 taken out of order. Phases 2-7 are written into the mission, each stating which of its exit criteria is met and which is not. VERIFY is the only one of the five in-progress phases whose criterion is met in substance; MAP, DERIVE, ARGUE and INSTANTIATE each say plainly what is missing."}}
