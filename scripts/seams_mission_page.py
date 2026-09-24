@@ -364,7 +364,10 @@ body { margin:0; padding:2.5rem var(--pad) 8rem; background:#fffff8; color:#111;
         column-gap:var(--gutter); align-items:start; }
 .main { grid-column:1; min-width:0; }
 .margin { grid-column:2; position:relative; min-width:0; }
-.mhead { position:sticky; top:0; z-index:3; background:#fffff8; margin:0;
+/* Not sticky: it is a one-line label and the columns are colour-coded, so
+   keeping it pinned bought nothing and painted over the top of any figure
+   that scrolled under it. */
+.mhead { margin:0;
          padding:.15rem 0 .35rem; border-bottom:1px solid #eae6d8;
          font-size:.66rem; font-variant:small-caps; letter-spacing:.08em; color:#999;
          display:grid; grid-template-columns:1fr 1fr; column-gap:1.6rem; }

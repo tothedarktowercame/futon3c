@@ -35,6 +35,14 @@ const TOLERANCE = 0.10;
     await page.waitForTimeout(350);          // let layout() run and settle
     await page.screenshot({
       path: path.join(SHOTS, `seams-${width}.png`), fullPage: false });
+    // Element shots too: a viewport shot at 1600 shows the mission text and no
+    // figure, so it cannot support a visual check of the figures themselves.
+    if (width === 1600) {
+      for (const f of await page.$$('.marginfig')) {
+        const id = await f.getAttribute('id');
+        await f.screenshot({ path: path.join(SHOTS, `${id}.png`) });
+      }
+    }
 
     const measured = await page.evaluate(() => {
       const bodyPx = parseFloat(getComputedStyle(
@@ -51,6 +59,21 @@ const TOLERANCE = 0.10;
         bodyPx, wide,
         docOverflow: document.documentElement.scrollWidth
                      - document.documentElement.clientWidth,
+        // Text that runs past the box it labels: the labels render at body
+        // size now, so a long pattern name overflows unless it wraps.
+        clipped: [...document.querySelectorAll('.marginfig svg g')].flatMap(g => {
+          const rect = g.querySelector('rect');
+          if (!rect) return [];
+          const rb = rect.getBBox();
+          return [...g.querySelectorAll('text')].filter(t => {
+            const tb = t.getBBox();
+            return tb.x + tb.width > rb.x + rb.width + 0.5 || tb.x < rb.x - 0.5;
+          }).map(t => ({
+            fig: g.closest('.marginfig').id,
+            text: t.textContent.slice(0, 28),
+            over: +(t.getBBox().x + t.getBBox().width - rb.x - rb.width).toFixed(1)
+          }));
+        }),
         figures: [...document.querySelectorAll('.marginfig')].map(f => {
           const svg = f.querySelector('svg');
           const vb = svg.getAttribute('viewBox').split(' ').map(Number);
@@ -87,6 +110,12 @@ const TOLERANCE = 0.10;
                  [miss ? 'TEXT-SIZE' : null, over ? 'OVERFLOW' : null,
                   lap ? 'OVERLAP' : null].filter(Boolean).join('+') || 'ok'
       });
+    }
+    for (const c of measured.clipped) {
+      fails++;
+      rows.push({ width, figure: c.fig, rendered: '', natural: '', labelPx: '',
+                  bodyPx: '', ratio: '',
+                  verdict: `TEXT-CLIPPED "${c.text}" by ${c.over}px` });
     }
     if (measured.docOverflow > 1) {
       fails++;

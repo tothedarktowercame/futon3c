@@ -46,6 +46,28 @@ STANDS = {
 def short(pid):
     return pid.split("/", 1)[1] if "/" in pid else pid
 
+
+def wrap_id(text, maxchars=21):
+    """Break a pattern name at '-' boundaries so it fits its box.
+
+    Labels render at body size now, so a 33-character name like
+    choose-the-grain-where-state-lives is wider than any box a margin can
+    hold. Breaking at a hyphen keeps the name readable as a name; truncating
+    it did not, and clipping it said nothing at all."""
+    if len(text) <= maxchars:
+        return [text]
+    parts, lines, cur = text.split("-"), [], ""
+    for i, part in enumerate(parts):
+        piece = part + ("-" if i < len(parts) - 1 else "")
+        if cur and len(cur) + len(piece) > maxchars:
+            lines.append(cur)
+            cur = piece
+        else:
+            cur += piece
+    if cur:
+        lines.append(cur)
+    return lines[:3]
+
 def svg(b, vertical=False):
     """Layer the patterns by longest-path depth and draw the above-relation.
 
@@ -64,7 +86,7 @@ def svg(b, vertical=False):
     widest = max(len(v) for v in layers.values())
     pos = {}
     if vertical:
-        COLW, ROWH, BW, BH = 210, 104, 190, 72
+        COLW, ROWH, BW, BH = 210, 122, 190, 92
         lanes = widest + (1 if open_holes else 0)
         width = COLW * lanes + 56
         height = ROWH * depths + 44
@@ -107,14 +129,19 @@ def svg(b, vertical=False):
     for pid, (x, y) in pos.items():
         p = pats[pid]
         prod = ", ".join(short(t) for t in p["produces"])
+        lines = wrap_id(short(pid))
+        ids = "".join(
+            f'<text x="{x+10}" y="{y+35+i*15}" class="nid">{html.escape(l)}</text>'
+            for i, l in enumerate(lines))
         out.append(
             f'<g class="node" data-pat="{html.escape(pid)}">'
             f'<title>{html.escape(p["receipt"]["reading"])}</title>'
             f'<rect x="{x}" y="{y}" width="{BW}" height="{BH}" rx="3" fill="#fff" '
             f'stroke="{C["pattern"]}" stroke-width="1.2"/>'
             f'<text x="{x+10}" y="{y+19}" class="nfam">{html.escape(pid.split("/")[0])}/</text>'
-            f'<text x="{x+10}" y="{y+35}" class="nid">{html.escape(short(pid))}</text>'
-            f'<text x="{x+10}" y="{y+56}" class="nprod">⊢ {html.escape(prod)}</text></g>')
+            + ids +
+            f'<text x="{x+10}" y="{y+BH-9}" class="nprod">⊢ '
+            f'{html.escape(prod[:22] + ("…" if len(prod) > 22 else ""))}</text></g>')
     for k, h in enumerate(h for h in (b.get("holes") or [])
                           if h.get("status") != "closed"):
         if vertical:

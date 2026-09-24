@@ -15,7 +15,7 @@
            :sha256 "64c7b698c547b67aa1c377dfc2aa5c7e152d6aa016f837bc6e7b32e709c645de"}
  :nodes
  [{:id :have-port :role :scope
-   :form "the instance as the mission measures it"
+   :form "the instance as the mission measures it \u2014 nothing enters here: this cascade's initial state is empty, so every token is built"
    :in #{} :out #{}
    :satiety :full
    :via "boundary port: what is true before anything is built"}

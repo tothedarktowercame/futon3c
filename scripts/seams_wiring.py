@@ -27,7 +27,23 @@ def short(x):
     return x.split("/", 1)[1] if "/" in x else x
 
 
-def _abbrev(t, n=13):
+def wrap_id(text, maxchars=21):
+    """Break a name at '-' boundaries; see seams_page.wrap_id."""
+    if len(text) <= maxchars:
+        return [text]
+    parts, lines, cur = text.split("-"), [], ""
+    for i, part in enumerate(parts):
+        piece = part + ("-" if i < len(parts) - 1 else "")
+        if cur and len(cur) + len(piece) > maxchars:
+            lines.append(cur); cur = piece
+        else:
+            cur += piece
+    if cur:
+        lines.append(cur)
+    return lines[:3]
+
+
+def _abbrev(t, n=11):
     t = short(t)
     return t if len(t) <= n else t[:n - 1] + "…"
 
@@ -63,7 +79,7 @@ def svg(w):
     for n in spine:
         layers.setdefault(depth.get(n["id"], 0), []).append(n["id"])
 
-    COLW, ROWH, BW, BH = 205, 118, 186, 80
+    COLW, ROWH, BW, BH = 205, 146, 186, 96
     lanes = max(len(v) for v in layers.values())
     width = COLW * lanes + 46
     height = ROWH * (maxd + 1) + 40 + (ROWH if dev else 0)
@@ -133,11 +149,14 @@ def svg(w):
             f'<g class="wnode"><title>{html.escape(str(tip))}</title>'
             f'<rect x="{x}" y="{y}" width="{BW}" height="{BH}" rx="3" fill="{fill}" '
             f'stroke="{stroke}" stroke-width="1.3"{dash}/>'
-            f'<text x="{x+9}" y="{y+22}" class="wid">{html.escape(short(nid))}</text>')
+            + "".join(
+                f'<text x="{x+9}" y="{y+22+i*15}" class="wid">{html.escape(l)}</text>'
+                for i, l in enumerate(wrap_id(short(nid)))))
+        base = 22 + 15 * len(wrap_id(short(nid)))
         words, line, ln = str(n.get("form", "")).split(), "", 0
         for word in words:
-            if len(line) + len(word) > 28:
-                out.append(f'<text x="{x+9}" y="{y+35+ln*10}" class="wform">'
+            if len(line) + len(word) > 30:
+                out.append(f'<text x="{x+9}" y="{y+base+ln*10}" class="wform">'
                            f'{html.escape(line)}</text>')
                 line, ln = word, ln + 1
                 if ln >= 2:
@@ -145,12 +164,14 @@ def svg(w):
             else:
                 line = (line + " " + word).strip()
         if ln < 2 and line:
-            out.append(f'<text x="{x+9}" y="{y+35+ln*10}" class="wform">'
+            out.append(f'<text x="{x+9}" y="{y+base+ln*10}" class="wform">'
                        f'{html.escape(line)}</text>')
         lic = n.get("licensed-by")
         if lic and "deviation/none" not in str(lic):
+            lictxt = str(lic).lstrip(":").split("/", 1)[0] + "/"
             out.append(f'<text x="{x+9}" y="{y+BH-9}" class="wlic">⊢ '
-                       f'{html.escape(short(lic))}</text>')
+                       f'{html.escape(lictxt[:24] + ("…" if len(lictxt) > 24 else ""))}'
+                       f'</text>')
         elif role == "deviation":
             out.append(f'<text x="{x+9}" y="{y+BH-9}" class="wdev">'
                        f'licensed by nothing in the cascade</text>')
@@ -171,7 +192,10 @@ def svg(w):
                 + f'<title>{"forbids" if bad else "needs"} {html.escape(short(t))}'
                   f'{" — UNFED: nothing produces it" if openport else ""}</title>'
                 + (f'</circle>' if bad else ''))
-            out.append(f'<text x="{px}" y="{y-7}" class="wtok" text-anchor="middle">'
+            # stagger: two ports 60px apart hold ~8 characters each before
+            # their labels touch, and these names are longer than that
+            out.append(f'<text x="{px}" y="{y - (7 if k % 2 == 0 else 17)}" '
+                       f'class="wtok" text-anchor="middle">'
                        f'{html.escape(_abbrev(t))}</text>')
         outs = sorted(n.get("out") or [])
         for k, t in enumerate(outs):
@@ -184,12 +208,15 @@ def svg(w):
                 f'<title>produces {html.escape(short(t))}'
                 f'{" — UNUSED: no node needs it and it is not a want" if loose else ""}'
                 f'</title></rect>')
-            out.append(f'<text x="{px}" y="{y+BH+12}" class="wtok" text-anchor="middle">'
+            out.append(f'<text x="{px}" y="{y+BH + (12 if k % 2 == 0 else 22)}" '
+                       f'class="wtok" text-anchor="middle">'
                        f'{html.escape(_abbrev(t))}</text>')
             if loose:
-                out.append(f'<path d="M{px} {y+BH+3} l0 9" stroke="{C["hungry"]}" '
-                           f'stroke-width="1.2" stroke-dasharray="2 2"/>'
-                           f'<text x="{px}" y="{y+BH+23}" class="wloose" '
+                ly = y + BH + (24 if k % 2 == 0 else 34)
+                out.append(f'<path d="M{px} {y+BH+3} l0 {ly-y-BH-11}" '
+                           f'stroke="{C["hungry"]}" stroke-width="1.2" '
+                           f'stroke-dasharray="2 2"/>'
+                           f'<text x="{px}" y="{ly}" class="wloose" '
                            f'text-anchor="middle">unused</text>')
     out.append("</svg>")
     return "".join(out)

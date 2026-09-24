@@ -99,7 +99,11 @@ def main():
           '           :sha256 "%s"}' % sha,
           " :nodes",
           " [{:id :have-port :role :scope",
-          '   :form "the instance as the mission measures it"',
+          '   :form %s' % json.dumps(
+              "the instance as the mission measures it"
+              if initial else
+              "the instance as the mission measures it — nothing enters here: "
+              "this cascade's initial state is empty, so every token is built"),
           "   :in #{} :out %s" % ("#{" + " ".join(":" + t for t in sorted(initial)) + "}"),
           "   :satiety :full",
           '   :via "boundary port: what is true before anything is built"}',
