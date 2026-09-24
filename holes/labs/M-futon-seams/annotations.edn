@@ -71,4 +71,54 @@
   :status :draft
   :refs ["futon3/library/translation/test-by-reproducing-behaviour.flexiarg#60442e77"]
   :body "Token :redirect-test \u2014 produced by translation/test-by-reproducing-behaviour. The mission already names this method in its IDENTIFY exit; the pattern is that method, and its falsifier requirement is the part the mission states loosely. A test a wrong indirection would also pass shows nothing."}
+ {:id "p2a-i4-kernel"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 8204 :end 8263
+           :quote "### 4. Provider vs role — an identifier carrying a decision"}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :breaks
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/kernels.clj#a56d6969" "futon3c/holes/labs/M-futon-seams/proto/instance-4.edn#10501d40"]
+  :body "Clause 0, X0(e) and the kernel choice. Three of eleven reachable states have two incomparable patterns enabled at once. At theta 0.8, horizon 6: co-application reaches all wants with p 0.26; the list kernel (every linear extension) and interleaving reach them with p 0. At horizon 14 all three give 0.998-1.0. So the semilattice changes the RATE at which wants are reached, not whether they can be. X0(e) as written (flatten; if nothing changes, the semilattice did no work) BREAKS: on a click whose horizon exceeds the cascade's depth, flattening changes nothing whatever the structure. The finding has to be stated relative to the horizon. Interleaving tracks the list kernel, not co-application: the choice that matters is one pattern per step versus several."}
+ {:id "p2a-roots"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 17308 :end 17368
+           :quote "Pick one instance and declare its interface — not all eight."}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :missing-field
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-4.edn#10501d40" "futon3c/holes/labs/M-futon-seams/proto/instance-5.edn#10501d40" "futon3c/holes/labs/M-futon-seams/proto/instance-7.edn#10501d40"]
+  :body "Clause T. This sentence is a target choice: eight candidates considered, one to be chosen, with the cost ordering below as the reason. Clause T's shape fits (considered, feasible, chosen). What it lacks is the score: PROOF-2a leaves 'G per target' as a missing definition, and the mission ranks by cost to retrofit (free / mechanical / worst), which is neither a feasibility exclusion nor a G. The target field needs a place for a declared cost ordering and a statement of how it enters the choice."}
+ {:id "p2a-i5-unproduced"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 9712 :end 9772
+           :quote "### 5. Transport and Room — the seam that was never declared"}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :breaks
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-5.edn#10501d40" "futon3/library/software-design/adapter-pattern.flexiarg"]
+  :body "Clause 0, construction (W0, X0(d)) and the carrier. (1) No pattern produces the want :impersonation-retired, so p(all wants) is 0 under every kernel at every horizon. The pattern that would produce it, software-design/adapter-pattern, exists but declares @arg rather than @flexiarg, so it cannot be cited (28 library files do this). The refusal is caused by a header defect in the library, not by missing knowledge; a typed :unproduced-need finding should say which. (2) The carrier: 7 of 21 pattern pairs have no meet, so this structure fails CascadeOrder.hasMeets, which PROOF-2a's W0 requires. With two roots (count-every-card-back, choose-the-grain-where-state-lives) and no common context above them, the cascade is a forest of two trees joined lower down, not a semilattice with meets."}
+ {:id "p2a-i7-carrier"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 13773 :end 13823
+           :quote "### 7. Editor coupling — the one still compounding"}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :breaks
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon3c/holes/labs/M-futon-seams/proto/instance-7.edn#10501d40"]
+  :body "Clause 0 carrier and kernel. 4 of 21 pairs have no meet, so this also fails hasMeets. The kernels separate most here: at horizon 6, co-application p 0.853, list and interleaving p 0 (list's E[#wants] 1.16-1.64 across 21 linear extensions: the precedence list silently picks a number in that range). No wide state has a conflict (no enabled pattern produces what another forbids), in this instance or in 4 and 5; so the case where co-application is unsound is not yet exercised. One more instance with a real conflict is needed before the kernel is settled."}
+ {:id "p2a-redirect-observation"
+  :anchor {:mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+           :start 18023 :end 18098
+           :quote "An interface with no second implementation and no redirect test is a guess."}
+  :column :proof2a
+  :author "claude-10"
+  :status :reviewed
+  :verdict :fits
+  :refs ["futon2/holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md" "futon2/holes/E-flight-aif.md"]
+  :body "Clause 1 (A, observation) and E-flight-aif W1-c. The mission names how each want is observed: a redirect test that runs (instance 1's method, '91 distinct literals resolve to exactly the same location'). That is an artifact check a C4-style locator can re-observe, not a verdict. The wants :redirect-test / :divergence-test / :adapter-conformance-test therefore have observations of the kind A needs, stated in the mission itself."}
 ]
