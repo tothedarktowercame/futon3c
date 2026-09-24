@@ -36,6 +36,14 @@ WIRINGS = ["holes/labs/M-futon-seams/wiring/instance-4-wiring.edn",
 
 OPEN, CLOSE = "\x00", "\x01"          # anchor sentinels, absent from markdown
 
+# The acceptance test Joe set: a figure's label text must render at the same
+# size as the body text beside it. That fixes the figure's rendered width --
+# rendered_label = css_font_px * (rendered_width / viewBox_width) -- so the
+# width follows from the label size and the diagram's content, not from
+# however wide the margin happens to be.
+BODY_PX = 16.64          # 1.04rem at a 16px root; must track the body rule below
+LABEL_PX = 12.5          # .nid and .wid, the primary label in both drawings
+
 
 def sh(*args, **kw):
     return subprocess.run(args, capture_output=True, text=True, cwd=REPO, **kw)
@@ -158,12 +166,20 @@ def resolve_sentinels(rendered):
 
 # ---------------------------------------------------------------- page
 
+def figure_width(svg):
+    """The width at which this drawing's labels come out at body size."""
+    m = re.search(r'viewBox="0 0 ([0-9.]+) ([0-9.]+)"', svg)
+    return round(float(m.group(1)) * BODY_PX / LABEL_PX) if m else None
+
+
 def figure_html(key, svg, cap, num, anchor_id):
-    """A numbered figure at full margin width, level with what it illustrates."""
+    """A numbered figure sized so its labels match the body text."""
     marks = "".join(f'<li>{html.escape(m)}</li>' for m in cap.get("marks", []))
+    w = figure_width(svg)
+    style = f' style="width:{w}px"' if w else ""
     return (f'<figure class="marginfig" id="fig-{num}" data-anchor="{html.escape(anchor_id)}" '
-            f'data-fig="{html.escape(key)}">'
-            f'<div class="figbody" title="click to enlarge">{svg}'
+            f'data-fig="{html.escape(key)}" data-natural-width="{w}">'
+            f'<div class="figbody"{style} title="click to enlarge">{svg}'
             f'<span class="figopen">enlarge ⤢</span></div>'
             f'<figcaption><span class="fignum">Figure {num}</span> '
             f'{html.escape(cap.get("what", key))} — instance {cap.get("instance", "?")}. '
@@ -378,8 +394,17 @@ li { margin:0 0 .3rem; }
    this reason. Clicking still opens it larger for detail. */
 .marginfig { margin:1.2rem 0 1.4rem; padding:0; }
 .marginfig.inmargin { position:absolute; width:100%; margin:0; }
+/* Width is set per figure so its labels render at body size; max-width keeps
+   it inside the margin on a screen too narrow for that, which is a text-size
+   miss and is reported by scripts/check_seams_layout.js. */
 .figbody { position:relative; border:1px solid #eae6d8; background:#fff;
-           padding:.4rem; cursor:zoom-in; overflow:hidden; }
+           padding:.4rem; cursor:zoom-in; overflow:hidden;
+           box-sizing:content-box;
+           /* content-box, so the stated width is the drawing's width and the
+              label lands at body size. max-width has to subtract the padding
+              and border it does NOT include, or a narrow screen gets 2px of
+              horizontal scroll. */
+           max-width:calc(100% - .8rem - 2px); }
 .figbody svg { display:block; width:100%; height:auto; }
 .marginfig figcaption { font-size:.68rem; line-height:1.45; color:#666;
                         padding:.35rem .1rem 0; }
@@ -401,7 +426,7 @@ li { margin:0 0 .3rem; }
         border:1px solid #eae6d8; background:#fff; padding:.2rem; }
 .nfig svg { width:100%; height:auto; min-width:0; }
 .wiring { max-width:100%; height:auto; }
-.wid { font-size:11px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
+.wid { font-size:12.5px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
 .wform { font-size:9px; fill:#666; }
 .wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
 .wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
@@ -432,7 +457,7 @@ footer a { color:#999; }
 
 /* Narrow: one column, and every note stays exactly where the flow put it --
    under the passage it annotates, never hidden. */
-@media (max-width:80rem) {
+@media (max-width:81.99rem) {
   .page { grid-template-columns:1fr; }
   .margin { display:none; }
   .note { margin-left:.8rem; }
@@ -448,7 +473,7 @@ JS = """
 function layout() {
   const margin = document.querySelector('.margin');
   const main = document.querySelector('.main');
-  const wide = window.matchMedia('(min-width: 80rem)').matches;
+  const wide = window.matchMedia('(min-width: 82rem)').matches;
   const notes = [...document.querySelectorAll('.note, .marginfig')];
   if (!wide) {
     notes.forEach(n => {

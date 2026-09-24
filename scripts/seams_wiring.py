@@ -28,7 +28,7 @@ def svg(w):
         outs.setdefault(a, []).append((b, e))
 
     # longest path from have-port, ignoring deviation edges for the spine
-    depth = {":have-port": 0}
+    depth = {"have-port": 0}
     for _ in range(len(nodes) + 1):
         for a, lst in outs.items():
             for b, e in lst:
@@ -40,22 +40,28 @@ def svg(w):
 
     spine = [n for n in w["nodes"] if n.get("role") != "deviation"]
     maxd = max(depth.get(n["id"], 0) for n in spine)
-    depth[":want-port"] = maxd
+    if maxd == 0:
+        raise SystemExit("seams_wiring: no depth propagated — check the node id form")
+    depth["want-port"] = maxd
     layers = {}
     for n in spine:
         layers.setdefault(depth.get(n["id"], 0), []).append(n["id"])
 
-    COLW, ROWH, BW, BH = 236, 104, 190, 78
-    width = COLW * (maxd + 1) + 60
-    rows = max(len(v) for v in layers.values())
-    height = ROWH * rows + 60 + (ROWH + 30 if dev else 0)
+    # Laid out depth DOWNWARD, like the cascades: a margin column can hold a
+    # tall narrow diagram at full size, and cannot hold a wide one at any size
+    # that keeps its labels readable.
+    COLW, ROWH, BW, BH = 205, 100, 186, 76
+    lanes = max(len(v) for v in layers.values())
+    width = COLW * lanes + 46
+    height = ROWH * (maxd + 1) + 34 + (ROWH if dev else 0)
     pos = {}
     for d, ids in sorted(layers.items()):
-        top = (ROWH * rows + 60 - ROWH * len(ids)) / 2
+        left = (COLW * lanes - COLW * len(ids)) / 2
         for i, nid in enumerate(sorted(ids)):
-            pos[nid] = (30 + d * COLW, top + i * ROWH)
+            pos[nid] = (23 + left + i * COLW, 18 + d * ROWH)
     for i, n in enumerate(dev):
-        pos[n["id"]] = (30 + COLW, ROWH * rows + 60 + 12 + i * ROWH)
+        pos[n["id"]] = (23 + (COLW * lanes - COLW) / 2 + i * COLW,
+                        18 + (maxd + 1) * ROWH)
 
     out = [f'<svg viewBox="0 0 {width} {height}" class="wiring" role="img" '
            f'aria-label="wiring diagram for instance {w.get("instance")}">']
@@ -69,9 +75,9 @@ def svg(w):
         for b, e in lst:
             if a not in pos or b not in pos:
                 continue
-            x1, y1 = pos[a][0] + BW, pos[a][1] + BH / 2
-            x2, y2 = pos[b][0], pos[b][1] + BH / 2
-            mid = (x1 + x2) / 2
+            x1, y1 = pos[a][0] + BW / 2, pos[a][1] + BH
+            x2, y2 = pos[b][0] + BW / 2, pos[b][1]
+            mid = (y1 + y2) / 2
             kind = e.get("kind", "composes")
             colour = C["dev"] if kind in ("deviates", "partly-discharges") else C["rule"]
             dash = ' stroke-dasharray="5 4"' if kind != "composes" else ""
@@ -79,7 +85,7 @@ def svg(w):
                 dash = ' stroke-dasharray="5 4"'
             marker = "wd" if colour == C["dev"] else "wa"
             out.append(
-                f'<path d="M{x1} {y1} C{mid} {y1} {mid} {y2} {x2} {y2}" fill="none" '
+                f'<path d="M{x1} {y1} C{x1} {mid} {x2} {mid} {x2} {y2}" fill="none" '
                 f'stroke="{colour}" stroke-width="1.4"{dash} marker-end="url(#{marker})">'
                 f'<title>{html.escape(kind)} — {html.escape(e.get("via", ""))}</title></path>')
 
@@ -104,7 +110,7 @@ def svg(w):
             f'<text x="{x+9}" y="{y+17}" class="wid">{html.escape(short(nid))}</text>')
         words, line, ln = form.split(), "", 0
         for word in words:
-            if len(line) + len(word) > 30:
+            if len(line) + len(word) > 26:
                 out.append(f'<text x="{x+9}" y="{y+31+ln*11}" class="wform">'
                            f'{html.escape(line)}</text>')
                 line, ln = word, ln + 1
@@ -128,7 +134,7 @@ def svg(w):
 
 CSS = """
 .wiring { max-width:100%; height:auto; }
-.wid { font-size:11px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
+.wid { font-size:12.5px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
 .wform { font-size:9px; fill:#666; }
 .wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
 .wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
