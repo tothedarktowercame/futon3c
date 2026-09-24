@@ -1,0 +1,76 @@
+;; Registry-first against observe-first: the comparison ARGUE owed and the
+;; click did not make.
+;;
+;; click-001 preferred :cand/a-registry-first on p(all wants) 0.26 against
+;; 0.21, and recorded its own caveat: both candidates were authored by the
+;; same agent from the same mission within an hour, so a field of two from one
+;; author is not a field of two from two.
+;;
+;; That number measures how readily a cascade reaches ITS OWN wants under a
+;; kernel. It is not a comparison of designs. This file compares them on
+;; something a design argument can use: what each route would have done about
+;; the two things that actually went wrong when 4a was enacted.
+;;
+;; The comparison is RETROSPECTIVE and says so. It was available before the
+;; enactment -- both cascades and both receipts existed -- and nobody made it.
+;;
+;; claude-1, 2026-09-24, for ARGUE.
+{:schema :m-futon-seams/candidate-comparison-v1
+ :instance "4"
+ :mission-sha "71de00cc3d36cdbce642f4105368750fc56b538dfdce21b6abb68ad60fd8dc90"
+
+ :shared
+ {:count 4
+  :patterns [:or3/count-every-card-back
+             :gauntlet/placenta-transfer
+             :translation/test-by-reproducing-behaviour
+             :realtime/mode-gate]
+  :note "realtime/mode-gate is listed as shared because both cascades contain it; 4b also contains iching/hexagram-49-ge, which is its reading of the same retirement act."}
+
+ :differ
+ [{:requirement "what the routing state belongs to"
+   :a {:patterns [:cascade-construction/choose-the-grain-where-state-lives
+                  :coordination/assignment-binding]
+       :how "NAMES the grain (:role) and makes the binding an explicit record."}
+   :b {:patterns [:peripherals/read-only-first-then-extend]
+       :how "Does not name a grain. Builds a read-only role view first, from the seats that exist, so what a binding needs is learned from watching before anything routes through it."}}
+
+  {:requirement "exactly one place decides routing"
+   :a {:patterns [:cycle-machine/single-producer]
+       :how "The general form: one writer, everything else reads."}
+   :b {:patterns [:agency/single-routing-authority]
+       :how "The domain-specific form, and 4b's own receipt argues it is the better reading here: it states the requirement in the agency family and names the failure modes."}}
+
+  {:requirement "retire the old path"
+   :a {:patterns [:realtime/mode-gate]
+       :how "A gate closes once the new path holds."}
+   :b {:patterns [:iching/hexagram-49-ge]
+       :how "革: replacement, with LEGITIMACY (the single authority) and TIMING (the test having passed) as conditions. 4b's receipt calls mode-gate 'the weaker reading -- a gate closing is not the same act as a replacement'."}}]
+
+ :against-what-happened
+ [{:failure "the grain error"
+   :what "The first enactment (8e5c431e) built a lookup keyed by an agent id returning a provider, where the cascade had chosen the role. All three wants came back :partial."
+   :a {:verdict :named-it-and-did-not-check-it
+       :statement "4a names the grain, and named it correctly. Nothing compared the name to the code until the wants failed. But BECAUSE it names it, the error is checkable after the fact: grain_check.py compares 4a's :grain {:keyed-by :role} against the enacted resolver's argument list, and fails on the first attempt."}
+   :b {:verdict :would-likely-have-shown-it-and-cannot-check-it
+       :statement "4b's first move produces :roles-observable -- a read-only view of roles, displayed, before anything routes through it. A view of ROLES built from existing seats would have made a provider lookup visible as the wrong thing early, because it would have displayed providers where roles were expected. But 4b declares no grain at all, so grain_check.py has nothing to compare and CANNOT check it. Its protection is that someone would notice, which is not a check."}}
+
+  {:failure "the step-order deviation"
+   :what "realtime/mode-gate (retire the prefix routing) was enacted in attempt 1, before its guard :redirect-test held. The cascade orders it last. Recorded in click-001-enactment.edn :conformance."
+   :a {:verdict :violated-a-guard
+       :statement "mode-gate's guard was the only thing saying 'not yet', and a guard in a cascade is not enforced during enactment -- clause C catches it afterwards, on the record."}
+   :b {:verdict :names-the-condition-that-was-broken
+       :statement "hexagram-49-ge makes TIMING a condition of legitimacy rather than a guard on a step: a replacement done before its test has passed is not an early replacement, it is not a replacement. The deviation that happened is precisely what this reading forbids, and 4b's receipt had already called 4a's reading the weaker one."}}]
+
+ :finding
+ {:preferred-by-the-click :cand/a-registry-first
+  :on "p(all wants) 0.26 against 0.21"
+  :verdict :not-inevitable
+  :statement "Neither route dominates, and the number that chose between them measures neither axis. 4a is better on CHECKABILITY: it names the grain, which is what makes the error it suffered catchable at all, and grain_check.py exists because 4a declares something to check. 4b is better on PREVENTION: its first move makes roles observable before anything routes, and its retirement pattern states the timing condition the enactment actually broke. The honest verdict on ARGUE's criterion is that this design is defensible, not inevitable -- it is one of two readings, each stronger on a different axis, selected on a measurement of neither."
+  :available-before-the-enactment true
+  :why-it-was-not-made "The click compared candidates on the one number a kernel run produces, because that is what the tooling offered. Nothing asked what each candidate made checkable."}
+
+ :for-the-method
+ {:step "DERIVE step 6, choose the target and record the click"
+  :change "A click over two candidates should record, per candidate, WHICH OF ITS JUDGEMENTS IT MAKES CHECKABLE -- the declarations a later check can compare against code. 4a declares a grain and can be grain-checked; 4b declares none and cannot. That is a property of a candidate a selector can read, and it is not p(all wants)."
+  :status :proposed}}

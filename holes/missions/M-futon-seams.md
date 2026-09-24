@@ -497,8 +497,11 @@ constructed example.
 
 **Exit criterion:** the design feels *inevitable* given the constraints, not
 merely *possible*, and someone outside the project can understand what it does
-and why from the plain-language argument alone. **Partly met, and the part that
-is not met was measured rather than guessed.**
+and why from the plain-language argument alone. **Not met, and both halves now say
+why rather than promising more work.** The inevitability half is answered
+with a measurement and the answer is negative: the design is defensible, not
+inevitable. The plain-language half is DOCUMENT's, and this phase closes when
+DOCUMENT is written.
 
 ARGUE for this mission is pattern selection: a cascade *is* a claim that these
 patterns, in this containment order, are what the move requires. The material
@@ -557,15 +560,74 @@ It shows what retrieval offers today for each phrasing. A cascade that recorded
 its rejects at the time would not need reconstructing — that is a change to
 DERIVE step 4, not a finding about these seven.
 
+### Registry-first against observe-first
+
+The click preferred `:cand/a-registry-first` on p(all wants) **0.26 against
+0.21**, and recorded its own caveat: both candidates were authored by the same
+agent from the same mission within an hour, so a field of two from one author
+is not a field of two from two. That number measures how readily a cascade
+reaches *its own* wants under a kernel. It does not compare designs.
+
+`proto/candidate-comparison.edn` compares them on something a design argument
+can use. They share four of seven patterns; the three that differ are each a
+different **reading of the same requirement**:
+
+| requirement | 4a registry-first | 4b observe-first |
+|---|---|---|
+| what the routing state belongs to | **names** the grain (`:role`), makes the binding a record | does not name a grain; builds a **read-only role view** first, so what a binding needs is learned from watching |
+| one place decides routing | `cycle-machine/single-producer` — the general form | `agency/single-routing-authority` — the domain form, which names the failure modes |
+| retire the old path | `realtime/mode-gate` — a gate closes | `iching/hexagram-49-ge` — 革, replacement with **legitimacy and timing** as conditions |
+
+**The test that means something: what would each have done about the two
+things that actually went wrong?**
+
+*The grain error.* 4a named the grain and named it correctly, and nothing
+compared the name to the code until the wants failed. But **because** it names
+it, the error is checkable afterwards — `grain_check.py` exists only because
+4a declares something to check, and it fails on the first attempt. 4b's first
+move produces `:roles-observable`: a read-only view of *roles*, displayed,
+before anything routes through it. That would likely have **shown** a provider
+lookup as the wrong thing early — it would have displayed providers where
+roles were expected. But 4b declares no grain at all, so `grain_check.py` has
+nothing to compare and cannot check it. Its protection is that someone would
+notice, which is not a check.
+
+*The step-order deviation.* `realtime/mode-gate` was enacted in attempt 1,
+before its guard `:redirect-test` held. A guard in a cascade is not enforced
+during enactment; clause C catches it afterwards, on the record. 4b's
+`hexagram-49-ge` makes timing a **condition of legitimacy** rather than a
+guard on a step: a replacement done before its test has passed is not an early
+replacement, it is not a replacement. The deviation that happened is precisely
+what that reading forbids — and 4b's own receipt had already called 4a's
+reading the weaker one, before either was enacted.
+
+**The verdict, which is not a clean win.** 4a is better on **checkability**;
+4b is better on **prevention**; and the number that chose between them
+measures neither. So the honest answer to this phase's criterion is that the
+design is **defensible, not inevitable** — one of two readings, each stronger
+on a different axis, selected on a measurement of neither.
+
+This comparison was available before the enactment. Both cascades and both
+receipts existed. Nobody made it, because the click compared candidates on the
+one number the tooling produced, and nothing asked what each candidate made
+*checkable*.
+
+**Proposed change to DERIVE step 6:** a click over two candidates should
+record, per candidate, which of its judgements it makes checkable — the
+declarations a later check can compare against code. 4a declares a grain and
+can be grain-checked; 4b declares none and cannot. That is a property of a
+candidate a selector can read, and it is not p(all wants).
+
 ### What is still not argued
 
-- **Registry-first versus observe-first.** The only comparison between instance
-  4's two candidates is p(all wants) 0.26 against 0.21 at θ 0.8, horizon 6 —
-  a number about how readily each cascade reaches its own wants, which is not
-  an argument about which is the better design. They differ in four of seven
-  patterns; no receipt compares a pair.
-- **The plain-language account for an outsider.** It does not exist yet. That
-  is DOCUMENT's job and Rob's requested example is the vehicle for it.
+**The plain-language account for an outsider.** It does not exist. This is the
+second half of this phase's exit criterion, and it is the half DOCUMENT
+produces — Rob's requested example is the vehicle. Worth naming as a fact
+about the lifecycle rather than about this mission: ARGUE is specified to come
+before DOCUMENT, and one clause of ARGUE's exit can only be satisfied by work
+DOCUMENT does. This phase stays open until then.
+
+
 
 ### What the kernel runs argue, which is something else
 
