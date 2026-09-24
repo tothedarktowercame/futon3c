@@ -334,6 +334,42 @@ nothing depends on that history."
   :type 'string
   :group 'session-mode)
 
+(defcustom session-mode-analysis-reap-after 180
+  "Seconds after a dispatch before asking what became of its job.
+Long enough that an ordinary interpretation has finished, so the usual
+answer is \"still running\" and nothing is written."
+  :type 'integer
+  :group 'session-mode)
+
+(defconst session-mode--dispatch-reaper
+  (expand-file-name "../scripts/turn_dispatch_reap.py"
+                    (file-name-directory (or load-file-name buffer-file-name)))
+  "Asks what became of a dispatched analysis, beside the analysis tool.")
+
+(defun session-mode--record-dispatch-job (path job-id)
+  "Note on the record at PATH that its dispatch created JOB-ID."
+  (call-process "python3" nil nil nil
+                session-mode--dispatch-reaper "--set-job" path job-id))
+
+(defun session-mode--reap-dispatch (path)
+  "Ask what became of PATH's dispatch and write the answer onto the record.
+A refusal and a busy seat both left `requested' before this existed."
+  (let ((buf (generate-new-buffer " *session-analysis-reap*")))
+    (make-process
+     :name "session-analysis-reap" :buffer buf :noquery t
+     :sentinel (lambda (proc _e)
+                 (when (memq (process-status proc) '(exit signal))
+                   (with-current-buffer (process-buffer proc)
+                     (when (string-match-p "REFUSED\\|FAILED" (buffer-string))
+                       (display-warning
+                        'session-mode
+                        (format "Turn analysis was not done: %s"
+                                (string-trim (buffer-string)))
+                        :warning)))
+                   (when (buffer-live-p (process-buffer proc))
+                     (kill-buffer (process-buffer proc)))))
+     :command (list "python3" session-mode--dispatch-reaper "--apply" path))))
+
 (defun session-mode--dispatch-analysis (path)
   "Ask `session-mode-analysis-agent' to interpret the turn recorded at PATH.
 Fire and forget: the dispatch must not delay the conversation, and a seat
@@ -446,7 +482,7 @@ state -- never silently complete."
     (condition-case err
         (make-process
          :name "session-analysis-dispatch"
-         :buffer (get-buffer-create " *session-analysis-dispatch*")
+         :buffer (generate-new-buffer " *session-analysis-dispatch*")
          :noquery t
          :sentinel
          (lambda (proc event)
@@ -455,13 +491,26 @@ state -- never silently complete."
            ;; traceback landed in a hidden buffer where nobody would look. That
            ;; is 象/两种规格 on the sending side: delivery is not accomplishment,
            ;; and a silent failure is the one that costs a day.
-           (when (and (memq (process-status proc) '(exit signal))
-                      (/= (process-exit-status proc) 0))
-             (display-warning
-              'session-mode
-              (format "Analysis dispatch to %s failed (%s). The record stays `requested'."
-                      session-mode-analysis-agent (string-trim event))
-              :warning)))
+           (when (memq (process-status proc) '(exit signal))
+             (if (/= (process-exit-status proc) 0)
+                 (display-warning
+                  'session-mode
+                  (format "Analysis dispatch to %s failed (%s). The record stays `requested'."
+                          session-mode-analysis-agent (string-trim event))
+                  :warning)
+               ;; Exit 0 means DELIVERED, not done. The seat can still refuse --
+               ;; kimi-1 did, on 2026-09-24, for want of a requisition line --
+               ;; and that left the record at `requested', indistinguishable
+               ;; from a seat that was merely busy. Record the job the bell
+               ;; created, then look at what became of it.
+               (let ((out (with-current-buffer (process-buffer proc) (buffer-string))))
+                 (when (string-match "\"job-id\"[ \t]*:[ \t]*\"\\([^\"]+\\)\"" out)
+                   (let ((jid (match-string 1 out)))
+                     (session-mode--record-dispatch-job path jid)
+                     (run-at-time session-mode-analysis-reap-after nil
+                                  #'session-mode--reap-dispatch path)))))
+             (when (buffer-live-p (process-buffer proc))
+               (kill-buffer (process-buffer proc)))))
          :command (list "sh" "-c"
                         (format "printf %%s %s | python3 %s --to %s --from %s --kind bell --type request --mode work"
                                 (shell-quote-argument brief)
