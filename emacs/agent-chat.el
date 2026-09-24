@@ -669,6 +669,16 @@ the current \"Cooked for\" line."
     (let ((inhibit-read-only t)
           (start (marker-position agent-chat--modeline-start))
           (end (marker-position agent-chat--modeline-end)))
+      ;; The modeline is one line.  A region spanning more than that means a
+      ;; marker has drifted; re-anchor END to START's line instead of deleting
+      ;; whatever lies between them, which once was the whole transcript.
+      (save-excursion
+        (goto-char start)
+        (let ((line-end (line-beginning-position 2)))
+          (unless (and (<= start end) (<= end line-end))
+            (message "agent-chat: modeline end marker drifted (%d, expected <= %d); re-anchored"
+                     end line-end)
+            (setq end line-end))))
       (save-excursion
         (delete-region start end)
         (goto-char start)
@@ -2634,8 +2644,11 @@ CONFIG keys:
       (setq agent-chat--modeline-start (point-marker))
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
                           'face 'font-lock-comment-face))
-      (setq agent-chat--modeline-end (point-marker))
-      (set-marker-insertion-type agent-chat--modeline-end t))
+      ;; Insertion type stays nil: the help line, separator and prompt are
+      ;; inserted at this very position next, and a type-t marker rode along
+      ;; to point-max, so the first modeline redraw deleted the whole
+      ;; transcript (claude-5, 2026-09-24).
+      (setq agent-chat--modeline-end (point-marker)))
     (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock | C-c . ✘✓💡 marks | C-c , 2nd-string\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers
