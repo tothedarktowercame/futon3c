@@ -43,7 +43,7 @@ def wrap_id(text, maxchars=21):
     return lines[:3]
 
 
-def _abbrev(t, n=11):
+def _abbrev(t, n=40):
     t = short(t)
     return t if len(t) <= n else t[:n - 1] + "…"
 
@@ -79,7 +79,15 @@ def svg(w):
     for n in spine:
         layers.setdefault(depth.get(n["id"], 0), []).append(n["id"])
 
-    COLW, ROWH, BW, BH = 205, 146, 186, 96
+    # Every token is written INSIDE the box beside its own port. That is the
+    # one place a name cannot collide with another name, and it is what lets a
+    # diagram this dense sit in a margin: the alternative, labelling each edge,
+    # was tried and could not be placed without overprinting at this width.
+    COLW, BW = 236, 214
+    def rows(n):
+        return len(n.get("in") or []) + len(n.get("forbids") or []) + len(n.get("out") or [])
+    BH = 78 + 13 * max(rows(n) for n in w["nodes"])
+    ROWH = BH + 46
     lanes = max(len(v) for v in layers.values())
     width = COLW * lanes + 46
     height = ROWH * (maxd + 1) + 40 + (ROWH if dev else 0)
@@ -155,7 +163,7 @@ def svg(w):
         base = 22 + 15 * len(wrap_id(short(nid)))
         words, line, ln = str(n.get("form", "")).split(), "", 0
         for word in words:
-            if len(line) + len(word) > 30:
+            if len(line) + len(word) > 34:
                 out.append(f'<text x="{x+9}" y="{y+base+ln*10}" class="wform">'
                            f'{html.escape(line)}</text>')
                 line, ln = word, ln + 1
@@ -169,15 +177,16 @@ def svg(w):
         lic = n.get("licensed-by")
         if lic and "deviation/none" not in str(lic):
             lictxt = str(lic).lstrip(":").split("/", 1)[0] + "/"
-            out.append(f'<text x="{x+9}" y="{y+BH-9}" class="wlic">⊢ '
+            out.append(f'<text x="{x+9}" y="{y+BH-15-13*rows(n)}" class="wlic">⊢ '
                        f'{html.escape(lictxt[:24] + ("…" if len(lictxt) > 24 else ""))}'
                        f'</text>')
         elif role == "deviation":
-            out.append(f'<text x="{x+9}" y="{y+BH-9}" class="wdev">'
+            out.append(f'<text x="{x+9}" y="{y+BH-15-13*rows(n)}" class="wdev">'
                        f'licensed by nothing in the cascade</text>')
         out.append("</g>")
 
         ins = sorted(n.get("in") or []) + sorted(n.get("forbids") or [])
+        outs = sorted(n.get("out") or [])
         forb = set(n.get("forbids") or [])
         for k, t in enumerate(ins):
             px = x + BW / (len(ins) + 1) * (k + 1)
@@ -194,10 +203,9 @@ def svg(w):
                 + (f'</circle>' if bad else ''))
             # stagger: two ports 60px apart hold ~8 characters each before
             # their labels touch, and these names are longer than that
-            out.append(f'<text x="{px}" y="{y - (7 if k % 2 == 0 else 17)}" '
-                       f'class="wtok" text-anchor="middle">'
-                       f'{html.escape(_abbrev(t))}</text>')
-        outs = sorted(n.get("out") or [])
+            out.append(f'<text x="{x+9}" y="{y+BH-11-13*(len(ins)+len(outs)-1-k)}" '
+                       f'class="wtok{" winh" if bad else ""}">'
+                       f'{"⊘" if bad else "◂"} {html.escape(short(t))}</text>')
         for k, t in enumerate(outs):
             px = x + BW / (len(outs) + 1) * (k + 1)
             loose = (nid, t) in dangling
@@ -208,16 +216,13 @@ def svg(w):
                 f'<title>produces {html.escape(short(t))}'
                 f'{" — UNUSED: no node needs it and it is not a want" if loose else ""}'
                 f'</title></rect>')
-            out.append(f'<text x="{px}" y="{y+BH + (12 if k % 2 == 0 else 22)}" '
-                       f'class="wtok" text-anchor="middle">'
-                       f'{html.escape(_abbrev(t))}</text>')
+            out.append(f'<text x="{x+9}" y="{y+BH-11-13*(len(outs)-1-k)}" '
+                       f'class="wtok{" wtokloose" if loose else ""}">'
+                       f'▸ {html.escape(short(t))}'
+                       f'{" (unused)" if loose else ""}</text>')
             if loose:
-                ly = y + BH + (24 if k % 2 == 0 else 34)
-                out.append(f'<path d="M{px} {y+BH+3} l0 {ly-y-BH-11}" '
-                           f'stroke="{C["hungry"]}" stroke-width="1.2" '
-                           f'stroke-dasharray="2 2"/>'
-                           f'<text x="{px}" y="{ly}" class="wloose" '
-                           f'text-anchor="middle">unused</text>')
+                out.append(f'<path d="M{px} {y+BH+3} l0 9" stroke="{C["hungry"]}" '
+                           f'stroke-width="1.2" stroke-dasharray="2 2"/>')
     out.append("</svg>")
     return "".join(out)
 
@@ -228,7 +233,9 @@ CSS = """
 .wform { font-size:8.5px; fill:#666; }
 .wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
 .wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
-.wtok { font-size:7.5px; fill:#667; font-family:ui-monospace,Menlo,monospace; }
+.wtok { font-size:10px; fill:#556; font-family:ui-monospace,Menlo,monospace; }
+.winh { fill:#b8431f; }
+.wtokloose { fill:#a8791d; }
 .wloose { font-size:7.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
 .wnode { cursor:help; }
 """

@@ -58,6 +58,42 @@ def check(path):
 
     if casc:
         pats = set(casc["patterns"])
+        # Against the CASCADE, not the wiring's own :in/:out. A wiring can be
+        # internally consistent and still not be the flow its cascade implies
+        # -- which is exactly the defect that produced the leaf-to-want-port
+        # edges, since those were consistent with the file that declared them.
+        short = lambda pid: pid.split("/", 1)[-1]
+        prod = {short(pid): set(p["produces"]) for pid, p in casc["patterns"].items()}
+        need = {short(pid): set(p["guard"]["needs"]) for pid, p in casc["patterns"].items()}
+        forb = {short(pid): set(p["guard"].get("forbids") or []) for pid, p in casc["patterns"].items()}
+        initial, want = set(casc.get("initial") or []), set(casc["want"])
+        implied = set()
+        for pid in prod:
+            for t in need[pid]:
+                if t in initial:
+                    implied.add((t, "have-port", pid, "carries"))
+                for src in prod:
+                    if t in prod[src]:
+                        implied.add((t, src, pid, "carries"))
+            for t in forb[pid]:
+                for src in prod:
+                    if t in prod[src]:
+                        implied.add((t, src, pid, "inhibits"))
+        for t in want:
+            for src in prod:
+                if t in prod[src]:
+                    implied.add((t, src, "want-port", "carries"))
+        actual = {(e["token"], e["from"]["node"], e["to"]["node"], e.get("kind", "carries"))
+                  for e in (w.get("edges") or [])
+                  if e.get("kind") != "partly-feeds"}
+        for x in sorted(implied - actual):
+            bad.append(f"the cascade implies an edge the wiring lacks: {x}")
+        for x in sorted(actual - implied):
+            bad.append(f"the wiring has an edge the cascade does not imply: {x}")
+        for n in w["nodes"]:
+            if n["id"] == "want-port" and set(n.get("in") or []) != want:
+                bad.append(f"want-port ports {sorted(n.get('in') or [])} != cascade wants "
+                           f"{sorted(want)}")
         for n in w["nodes"]:
             lic = n.get("licensed-by")
             if lic and "deviation/none" not in str(lic) and lic not in pats:

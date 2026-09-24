@@ -245,12 +245,18 @@ def figure_width(svg):
     return round(float(m.group(1)) * BODY_PX / LABEL_PX) if m else None
 
 
-def figure_html(key, svg, cap, num, anchor_id):
+def figure_html(key, svg, cap, num, anchor_id, full_width=False):
     """A numbered figure sized so its labels match the body text."""
     marks = "".join(f'<li>{html.escape(m)}</li>' for m in cap.get("marks", []))
     w = figure_width(svg)
+    # A full-width figure is not lifted into the margin: it sits below its
+    # section across the whole page, because at margin width its edge labels
+    # cannot be placed without overprinting something.
+    # Both kinds are sized from the label target; a full-width figure simply
+    # has more room to be that size in.
     style = f' style="width:{w}px"' if w else ""
-    return (f'<figure class="marginfig" id="fig-{num}" data-anchor="{html.escape(anchor_id)}" '
+    cls = "pagefig" if full_width else "marginfig"
+    return (f'<figure class="{cls}" id="fig-{num}" data-anchor="{html.escape(anchor_id)}" '
             f'data-fig="{html.escape(key)}" data-natural-width="{w}">'
             f'<div class="figbody"{style} title="click to enlarge">{svg}'
             f'<span class="figopen">enlarge ⤢</span></div>'
@@ -447,7 +453,8 @@ def main():
                 cap["phase"] = ph["id"]
                 cap["why"] = art.get("why", "")
                 body_parts.append(figure_html(fig, figures[fig], cap,
-                                              fignums[fig], f"phase-{ph['id']}"))
+                                              fignums[fig], f"phase-{ph['id']}",
+                                              full_width=art.get("full-width")))
             nid = art.get("note")
             if nid and nid in by_id and nid not in placed:
                 n = dict(by_id[nid])
@@ -485,7 +492,7 @@ CSS = """
    not a gutter. The text keeps a reading measure and the margin takes all the
    rest, which is the arrangement the mark7 typeset previews use. */
 :root { --measure: 33rem; --gutter: 2.4rem; --pad: 3vw;
-        --margin-w: max(26rem, calc(100vw - 2*var(--pad) - var(--measure) - var(--gutter))); }
+        --margin-w: max(44rem, calc(100vw - 2*var(--pad) - var(--measure) - var(--gutter))); }
 *,*::before,*::after { box-sizing:border-box; }
 body { margin:0; padding:2.5rem var(--pad) 8rem; background:#fffff8; color:#111;
        font:1.04rem/1.65 et-book, Palatino, "Palatino Linotype", Georgia, serif; }
@@ -534,6 +541,11 @@ li { margin:0 0 .3rem; }
    without enlarging: the cascades are laid out depth-downward for exactly
    this reason. Clicking still opens it larger for detail. */
 .marginfig { margin:1.2rem 0 1.4rem; padding:0; }
+/* Full-width figures: below the section, across the page. */
+.pagefig { margin:1.4rem 0 2rem; padding:0; max-width:none; }
+.pagefig .figbody { width:auto; max-width:100%; }
+.pagefig figcaption { font-size:.72rem; line-height:1.5; color:#666;
+                      padding:.4rem .1rem 0; max-width:60rem; }
 .marginfig.inmargin { position:absolute; width:100%; margin:0; }
 /* Width is set per figure so its labels render at body size; max-width keeps
    it inside the margin on a screen too narrow for that, which is a text-size
@@ -571,8 +583,13 @@ li { margin:0 0 .3rem; }
 .wform { font-size:8.5px; fill:#666; }
 .wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
 .wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
-.wtok { font-size:7.5px; fill:#667; font-family:ui-monospace,Menlo,monospace; }
-.wloose { font-size:7.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
+/* Secondary text in a figure. The node title (.nid/.wid) is held at body
+   size; these carry annotations and are set smaller deliberately, with the
+   measured ratio reported per class by check_seams_layout.js rather than
+   left unstated. */
+.wtok { font-size:10px; fill:#556; font-family:ui-monospace,Menlo,monospace; }
+.winh { fill:#b8431f; }
+.wtokloose { fill:#a8791d; }
 .wnode { cursor:help; }
 .nmeet{ font-size:9.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
 .nconf{ font-size:9.5px; fill:#b8431f; font-weight:700; font-family:ui-monospace,Menlo,monospace; }
@@ -652,7 +669,7 @@ footer a { color:#999; }
 
 /* Narrow: one column, and every note stays exactly where the flow put it --
    under the passage it annotates, never hidden. */
-@media (max-width:81.99rem) {
+@media (max-width:89.99rem) {
   .page { grid-template-columns:1fr; }
   .margin { display:none; }
   .note { margin-left:.8rem; }
@@ -668,8 +685,8 @@ JS = """
 function layout() {
   const margin = document.querySelector('.margin');
   const main = document.querySelector('.main');
-  const wide = window.matchMedia('(min-width: 82rem)').matches;
-  const notes = [...document.querySelectorAll('.note, .marginfig')];
+  const wide = window.matchMedia('(min-width: 90rem)').matches;
+  const notes = [...document.querySelectorAll('.note, .marginfig')];  // .pagefig stays put
   if (!wide) {
     notes.forEach(n => {
       n.classList.remove('inmargin');

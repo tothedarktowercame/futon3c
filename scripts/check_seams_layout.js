@@ -38,7 +38,7 @@ const TOLERANCE = 0.10;
     // Element shots too: a viewport shot at 1600 shows the mission text and no
     // figure, so it cannot support a visual check of the figures themselves.
     if (width === 1600) {
-      for (const f of await page.$$('.marginfig')) {
+      for (const f of await page.$$('.marginfig, .pagefig')) {
         const id = await f.getAttribute('id');
         await f.screenshot({ path: path.join(SHOTS, `${id}.png`) });
       }
@@ -62,9 +62,25 @@ const TOLERANCE = 0.10;
         bodyPx, wide,
         docOverflow: document.documentElement.scrollWidth
                      - document.documentElement.clientWidth,
-        // Text that runs past the box it labels: the labels render at body
-        // size now, so a long pattern name overflows unless it wraps.
-        clipped: [...document.querySelectorAll('.marginfig svg g')].flatMap(g => {
+        // Every <text> in every figure, by class: Joe's measure is about the
+        // text in the image, and measuring only the node titles let ports at
+        // 10px pass a check the titles passed at 16.6px.
+        textClasses: (() => {
+          const byClass = {};
+          for (const svg of document.querySelectorAll('.marginfig svg, .pagefig svg')) {
+            const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+            const scale = svg.getBoundingClientRect().width / vb[2];
+            for (const t of svg.querySelectorAll('text')) {
+              const cls = t.getAttribute('class') || '(none)';
+              const px = +(parseFloat(getComputedStyle(t).fontSize) * scale).toFixed(2);
+              (byClass[cls] ||= { px, n: 0 }).n++;
+            }
+          }
+          return byClass;
+        })(),
+        // Text that runs past the box it labels, and text that overprints
+        // other text inside one figure.
+        clipped: [...document.querySelectorAll('.marginfig svg g, .pagefig svg g')].flatMap(g => {
           const rect = g.querySelector('rect');
           if (!rect) return [];
           const rb = rect.getBBox();
@@ -72,12 +88,29 @@ const TOLERANCE = 0.10;
             const tb = t.getBBox();
             return tb.x + tb.width > rb.x + rb.width + 0.5 || tb.x < rb.x - 0.5;
           }).map(t => ({
-            fig: g.closest('.marginfig').id,
+            fig: g.closest('figure').id,
             text: t.textContent.slice(0, 28),
             over: +(t.getBBox().x + t.getBBox().width - rb.x - rb.width).toFixed(1)
           }));
         }),
-        figures: [...document.querySelectorAll('.marginfig')].map(f => {
+        overlaps: (() => {
+          const bad = [];
+          for (const svg of document.querySelectorAll('.marginfig svg, .pagefig svg')) {
+            const ts = [...svg.querySelectorAll('text')].map(t => ({
+              el: t, b: t.getBBox(), s: t.textContent }));
+            for (let i = 0; i < ts.length; i++)
+              for (let j = i + 1; j < ts.length; j++) {
+                const a = ts[i].b, b = ts[j].b;
+                const ox = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+                const oy = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+                if (ox > 1 && oy > 1)
+                  bad.push({ fig: svg.closest('figure').id,
+                             a: ts[i].s.slice(0, 20), b: ts[j].s.slice(0, 20) });
+              }
+          }
+          return bad;
+        })(),
+        figures: [...document.querySelectorAll('.marginfig, .pagefig')].map(f => {
           const svg = f.querySelector('svg');
           const vb = svg.getAttribute('viewBox').split(' ').map(Number);
           const r = svg.getBoundingClientRect();
@@ -85,6 +118,7 @@ const TOLERANCE = 0.10;
           const labelCss = label ? parseFloat(getComputedStyle(label).fontSize) : null;
           const scale = r.width / vb[2];
           const fr = f.getBoundingClientRect();
+          const inMargin = f.classList.contains('marginfig');
           const overlaps = notes.filter(n =>
             !(fr.bottom + scrollY <= n.top || fr.top + scrollY >= n.bottom
               || fr.right <= n.left || fr.left >= n.right)).map(n => n.id);
@@ -92,7 +126,9 @@ const TOLERANCE = 0.10;
             id: f.id, natural: Number(f.dataset.naturalWidth),
             rendered: Math.round(r.width), labelCss,
             labelPx: labelCss ? +(labelCss * scale).toFixed(2) : null,
-            pastMargin: Math.round(fr.right - mBox.right),
+            inMargin,
+            pastMargin: inMargin ? Math.round(fr.right - mBox.right)
+                                 : Math.round(fr.right - document.documentElement.clientWidth),
             overlaps
           };
         })
@@ -113,6 +149,21 @@ const TOLERANCE = 0.10;
                  [miss ? 'TEXT-SIZE' : null, over ? 'OVERFLOW' : null,
                   lap ? 'OVERLAP' : null].filter(Boolean).join('+') || 'ok'
       });
+    }
+    if (width === 1600) {
+      console.log('\ntext classes at 1600px (body is ' + measured.bodyPx + 'px):');
+      for (const [cls, v] of Object.entries(measured.textClasses).sort())
+        console.log('  ' + cls.padEnd(10) + String(v.px).padEnd(8)
+                    + 'x' + String(v.n).padEnd(5)
+                    + (Math.abs(v.px / measured.bodyPx - 1) <= TOLERANCE
+                       ? 'body size' : 'secondary'));
+      console.log('');
+    }
+    for (const o of measured.overlaps) {
+      fails++;
+      rows.push({ width, figure: o.fig, rendered: '', natural: '', labelPx: '',
+                  bodyPx: '', ratio: '',
+                  verdict: `TEXT-OVERLAP "${o.a}" / "${o.b}"` });
     }
     for (const c of measured.clipped) {
       fails++;
