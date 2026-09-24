@@ -2495,6 +2495,46 @@
     (json-response 400 {:record/type :test-registry/refusal
                         :reason :invalid-json})))
 
+(defn handle-test-registry-run
+  "POST /api/alpha/test-registry/run — register a mechanical test run.
+  The registry executes the command itself (register-run! sets :warrant?
+  from the run it actually performed), so the body names what to run,
+  never what happened: any caller-supplied outcome key is refused."
+  [request config]
+  (if-let [payload (parse-json-map (read-body request))]
+    (if (some #(contains? payload %) [:warrant? :results :outcome :exit :status])
+      (json-response 400 {:record/type :test-registry/refusal
+                          :reason :caller-supplied-outcome-refused})
+      (let [spec (select-keys payload [:repo-root :command :author :artifact-dir
+                                       :code-paths :test-paths])]
+        (if (and (string? (:repo-root spec)) (not (str/blank? (:repo-root spec)))
+                 (vector? (:command spec)) (seq (:command spec))
+                 (string? (:author spec)) (not (str/blank? (:author spec)))
+                 (string? (:artifact-dir spec)) (not (str/blank? (:artifact-dir spec))))
+          (try
+            (let [register! (requiring-resolve 'futon3c.test-registry/register-run!)
+                  record (register! (evidence-store-for-config config) spec)]
+              (json-response 200 {:evidence/id (:evidence/id record)
+                                  :warrant? (boolean (get-in record [:payload :warrant?]))
+                                  :postcheck (get-in record [:payload :postcheck])
+                                  :record record}))
+            (catch clojure.lang.ExceptionInfo throwable
+              (let [data (ex-data throwable)]
+                (if (= :test-registry/refusal (:record/type data))
+                  (json-response 200 data)
+                  (json-response 500 {:record/type :test-registry/refusal
+                                      :reason :run-endpoint-failed
+                                      :details {:message (.getMessage throwable)}}))))
+            (catch Throwable throwable
+              (json-response 500 {:record/type :test-registry/refusal
+                                  :reason :run-endpoint-failed
+                                  :details {:message (.getMessage throwable)}})))
+          (json-response 400 {:record/type :test-registry/refusal
+                              :reason :run-spec-invalid
+                              :details {:required [:repo-root :command :author :artifact-dir]}}))))
+    (json-response 400 {:record/type :test-registry/refusal
+                        :reason :invalid-json})))
+
 (defn handle-test-registry-report
   "GET /api/alpha/test-registry/report — conformance over default bindings."
   [_request config]
@@ -8908,6 +8948,9 @@
     (cond
       (and (= :post method) (= "/api/alpha/test-registry/check" uri))
       (handle-test-registry-check request config)
+
+      (and (= :post method) (= "/api/alpha/test-registry/run" uri))
+      (handle-test-registry-run request config)
 
       (and (= :get method) (= "/api/alpha/test-registry/report" uri))
       (handle-test-registry-report request config)

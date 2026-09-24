@@ -151,3 +151,62 @@
         (reset! @#'futon3c.transport.http/test-registry-report-cache nil)
         (doseq [file (reverse (file-seq root))]
           (io/delete-file file true))))))
+
+(deftest run-endpoint-registers-mechanically-never-a-callers-outcome
+  (let [backend (atom {:entries {} :order []})
+        calls (atom [])
+        register! (fn [received-backend spec]
+                    (swap! calls conj spec)
+                    (is (identical? backend received-backend))
+                    (is (not (some #(contains? spec %) [:warrant? :results :outcome])))
+                    {:evidence/id "test-registry-registered"
+                     :payload {:warrant? true :postcheck {:status :matched}}})
+        spec {:repo-root "/repo" :command ["clojure" "-X:test" ":nses" "[a-test]"]
+              :author "wm-author" :artifact-dir "/tmp/artifacts"
+              :code-paths ["src"] :test-paths ["test"]}]
+    (with-redefs [registry/register-run! register!]
+      (let [response (http/handle-test-registry-run
+                      {:body (json/generate-string spec)}
+                      {:evidence-store backend})
+            body (json-body response)]
+        (is (= 200 (:status response)))
+        (is (= 1 (count @calls)))
+        (is (= "test-registry-registered" (get body :evidence/id)))
+        (is (true? (:warrant? body)))
+        (is (= {:status "matched"} (:postcheck body))))
+      ;; A caller-supplied outcome is refused before the registry is touched:
+      ;; the registry runs the command; the body names what to run, never
+      ;; what happened.
+      (reset! calls [])
+      (let [response (http/handle-test-registry-run
+                      {:body (json/generate-string (assoc spec :warrant? true))}
+                      {:evidence-store backend})
+            body (json-body response)]
+        (is (= 400 (:status response)))
+        (is (= "caller-supplied-outcome-refused" (:reason body)))
+        (is (empty? @calls)))
+      (let [response (http/handle-test-registry-run
+                      {:body (json/generate-string (dissoc spec :artifact-dir))}
+                      {:evidence-store backend})
+            body (json-body response)]
+        (is (= 400 (:status response)))
+        (is (= "run-spec-invalid" (:reason body)))))))
+
+(deftest run-endpoint-surfaces-the-registrys-typed-refusal
+  (let [backend (atom {:entries {} :order []})]
+    (with-redefs [registry/register-run!
+                  (fn [_ _]
+                    (throw (ex-info "scope-not-committed"
+                                    {:record/type :test-registry/refusal
+                                     :warrant? false :reason :scope-not-committed
+                                     :details {:paths ["src/a.clj"]}})))]
+      (let [response (http/handle-test-registry-run
+                      {:body (json/generate-string
+                              {:repo-root "/repo" :command ["make" "test"]
+                               :author "a" :artifact-dir "/tmp/x"})}
+                      {:evidence-store backend})
+            body (json-body response)]
+        (is (= 200 (:status response)))
+        (is (= "test-registry/refusal" (:record/type body)))
+        (is (false? (:warrant? body)))
+        (is (= "scope-not-committed" (:reason body)))))))
