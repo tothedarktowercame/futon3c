@@ -1,0 +1,65 @@
+;; click-001 ENACTMENT: what was done, pattern by pattern, for the chosen
+;; candidate :cand/a-registry-first. Author claude-10, 2026-09-24.
+;; One entry per ATTEMPT at a pattern step. An attempt succeeds when the token
+;; the pattern produces is observed afterwards by the named check. These are
+;; the trials clause 5 learns from. The first attempt (8e5c431e) is recorded
+;; too: it chose the wrong grain, which is a failure of the grain step.
+{:schema :m-futon-seams/proof2a-enactment-v1
+ :click "holes/labs/M-futon-seams/exemplar/click-001.edn"
+ :candidate :cand/a-registry-first
+ :conformance
+ {:statement "Attempt 1 did not enact the chosen candidate (provider grain, see click-001-outcome.edn). Attempts 2-7 enact its seven patterns at the role grain, in the order below."
+  :deviations [{:kind :step-order
+                :statement "realtime/mode-gate (retire the prefix routing) was done in attempt 1, before its guard :redirect-test held; the cascade orders it last."}
+               {:kind :scope
+                :statement "tickle_orchestrate's rotation roster (default-fm-rotation, agent-roles) still names seats; it lists seats to cycle, not a role lookup, and was left."}]}
+ :attempts
+ [{:n 1 :pattern :cascade-construction/choose-the-grain-where-state-lives :commit "8e5c431e"
+   :produced :roles-named :success false
+   :evidence "chose the provider grain (futon3c.agency.roles/provider) instead of the role grain the cascade specifies"}
+  {:n 1 :pattern :realtime/mode-gate :commit "8e5c431e"
+   :produced :prefix-routing-retired :success true
+   :check {:kind :grep :cmd "grep -rnE 'starts-with\\?[^)]*\"(claude|codex|kimi|zai)\"' src" :expect :no-match}
+   :evidence "both id-prefix provider branches in transport/http.clj converted; the library-loop adapter's binary-name check remains (a command-shape coupling, not an identifier)"}
+  {:n 2 :pattern :or3/count-every-card-back :commit "139caa97"
+   :produced :sites-enumerated :success true
+   :check {:kind :artifact :cmd "python3 holes/labs/M-futon-seams/exemplar/enumerate_sites.py" :expect "sites.edn regenerates byte-identical"}
+   :evidence "43 seat literals in 12 files and 1 provider-routing site listed in exemplar/sites.edn"}
+  {:n 3 :pattern :cascade-construction/choose-the-grain-where-state-lives :commit "eafd07b7"
+   :produced :roles-named :success true
+   :check {:kind :artifact :cmd "resources/roles.edn :roles" :expect "role vocabulary with no provider field"}
+   :evidence "roles :reviewer :implementer :mentor, each a description of the work, no provider"}
+  {:n 4 :pattern :coordination/assignment-binding :commit "eafd07b7"
+   :produced :binding-recorded :success true
+   :check {:kind :test :cmd "clojure -M:test -n futon3c.agency.roles-test" :test "seat-for-refuses-typed"}
+   :evidence "bindings are data with a :source; two bindings for one role refuse :conflicting-bindings"}
+  {:n 5 :pattern :cycle-machine/single-producer :commit "d6927670"
+   :produced :one-producer :success true
+   :check {:kind :grep :cmd "grep -n 'seat-for' src/futon3c/agents/tickle_orchestrate.clj" :expect "reviewer, implementer and mentor all resolved through roles/seat-for"}
+   :evidence "roles/seat-for is the only role->seat resolver; tickle's reviewer, implementer default and mentor call it"}
+  {:n 6 :pattern :gauntlet/placenta-transfer :commit "eafd07b7"
+   :produced :caller-converted :success true
+   :check {:kind :test :cmd "clojure -M:test -n futon3c.agency.roles-test" :test "redirect-a-role-to-another-provider"}
+   :evidence "request-review! asks for :reviewer instead of naming claude-1"}
+  {:n 7 :pattern :translation/test-by-reproducing-behaviour :commit "eafd07b7"
+   :produced :redirect-test :success true
+   :check {:kind :test :cmd "clojure -M:test -n futon3c.agency.roles-test" :test "redirect-a-role-to-another-provider"
+           :falsifier "same test against the HEAD~ request-review! (hardcoded claude-1) fails: both reviews go to claude-1"}
+   :evidence "rebinding :reviewer claude-1 -> oxf-codex-7 changes the invoked seat and its provider"}]
+
+ ;; Clause 1 (A). Each want is observed by a check. The rates are DECLARED per
+ ;; check kind, not measured: PROOF-2a W1 asks for measured rates, so W1's
+ ;; measured-rate side is not met and the record says so.
+ :observation-model
+ {:status :declared
+  :reason "no population of check outcomes against known ground truth exists yet"
+  :rates {:test {:p-pass-if-true 0.98 :p-pass-if-false 0.02}
+          :grep {:p-pass-if-true 0.99 :p-pass-if-false 0.01}}}
+ :observations
+ {:caller-converted {:check-kind :test :passed true}
+  :redirect-test {:check-kind :test :passed true}
+  :prefix-routing-retired {:check-kind :grep :passed true}}
+
+ ;; Clause 5 (B). Prior pseudo-count for every pattern's theta, declared.
+ :theta-prior {:mean 0.8 :pseudo-count 5 :status :declared
+               :reason "click-001 predicted with theta 0.8 for every pattern; 5 pseudo-trials is a declared strength, not measured"}}

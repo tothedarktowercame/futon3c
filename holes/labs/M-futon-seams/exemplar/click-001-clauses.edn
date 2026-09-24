@@ -1,0 +1,94 @@
+{:schema :m-futon-seams/proof2a-clauses-v1,
+ :computed-by "bb holes/labs/M-futon-seams/exemplar/clauses_1_6.clj",
+ :clause-2-D
+ {:prior-over-want-states
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.260047,
+   [:caller-converted :redirect-test] 0.393426,
+   [:caller-converted] 0.247065,
+   [] 0.099462},
+  :likelihood-of-observations
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.950796,
+   [:caller-converted :redirect-test] 0.009604,
+   [:caller-converted] 1.96E-4,
+   [] 4.0E-6},
+  :posterior
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.984757,
+   [:caller-converted :redirect-test] 0.015049,
+   [:caller-converted] 1.93E-4,
+   [] 2.0E-6},
+  :posterior-all-wants-met 0.984757,
+  :not-a-copy-of-facts true},
+ :clause-4-Q
+ {:predicted
+  {:p-all-wants 0.260047,
+   :source "rollout at theta 0.8, as click-001 recorded"},
+  :recorded-in-click 0.26,
+  :prediction-reproduced? true,
+  :realised
+  {:observations
+   {:caller-converted {:check-kind :test, :passed true},
+    :redirect-test {:check-kind :test, :passed true},
+    :prefix-routing-retired {:check-kind :grep, :passed true}}},
+  :surprise-bits 1.993788,
+  :link
+  {:action :cand/a-registry-first,
+   :outcome "click-001-enactment.edn :observations",
+   :next-belief ":clause-2-D :posterior"}},
+ :clause-6
+ {:E {:status :not-measured},
+  :C
+  {:status :declared,
+   :value [:caller-converted :prefix-routing-retired :redirect-test]},
+  :A {:status :declared-rates},
+  :D {:status :computed},
+  :F {:status :computed},
+  :Q {:status :linked},
+  :B {:status :computed-from-declared-prior}},
+ :clause-1-A
+ {:status :declared,
+  :rates
+  {:test {:p-pass-if-true 0.98, :p-pass-if-false 0.02},
+   :grep {:p-pass-if-true 0.99, :p-pass-if-false 0.01}},
+  :observations
+  {:caller-converted {:check-kind :test, :passed true},
+   :redirect-test {:check-kind :test, :passed true},
+   :prefix-routing-retired {:check-kind :grep, :passed true}},
+  :W1-measured-rates
+  {:met false,
+   :reason
+   "no population of check outcomes against known ground truth exists yet"}},
+ :inputs
+ {:click "click-001.edn",
+  :enactment "click-001-enactment.edn",
+  :candidate :cand/a-registry-first,
+  :kernel :coapp,
+  :horizon 6},
+ :clause-3-F
+ {:P-o 0.251079,
+  :F 1.381989,
+  :statement
+  "q is the exact update, so F = -log P(o) (ExactBeliefTrajectory.exactUpdate_minimises_vfe)"},
+ :clause-5-B
+ {:prior {:mean 0.8, :pseudo-count 5, :status :declared},
+  :per-pattern
+  {:cascade-construction/choose-the-grain-where-state-lives
+   {:alpha 5.0, :beta 2.0, :mean 0.714286, :attempts 2, :successes 1},
+   :coordination/assignment-binding
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1},
+   :cycle-machine/single-producer
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1},
+   :gauntlet/placenta-transfer
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1},
+   :or3/count-every-card-back
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1},
+   :realtime/mode-gate
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1},
+   :translation/test-by-reproducing-behaviour
+   {:alpha 5.0, :beta 1.0, :mean 0.833333, :attempts 1, :successes 1}},
+  :click-002-prediction
+  {:p-all-wants 0.285726,
+   :horizon 6,
+   :kernel :coapp,
+   :statement
+   "the next click reads the updated thetas before predicting"},
+  :changed-the-prediction? true}}
