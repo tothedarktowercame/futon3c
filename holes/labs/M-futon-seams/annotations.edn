@@ -113,7 +113,7 @@
   :body "Clause 0 kernel. The kernels separate most here: at horizon 6, co-application p 0.853, list and interleaving p 0 (list's E[#wants] 1.16-1.64 across 21 linear extensions: the precedence list silently picks a number in that range). No wide state in 4, 5 or 7 has a conflict; instance 6 supplies one. Carrier: see the note on the top context."}
  {:id "p2a-redirect-observation"
   :anchor {:mission-sha "8dda749f852fcd9cd1493e711b2a4cd35309e3d36f22c06a0b947f5a51cc6939"
-           :start 18023 :end 18098
+           :start 18082 :end 18157
            :quote "An interface with no second implementation and no redirect test is a guess."}
   :column :proof2a
   :author "claude-10"
