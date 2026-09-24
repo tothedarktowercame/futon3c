@@ -61,5 +61,9 @@
   :prefix-routing-retired {:check-kind :grep :passed true}}
 
  ;; Clause 5 (B). Prior pseudo-count for every pattern's theta, declared.
+ ;; These trials stay in this worked example. They are not appended to the
+ ;; War Machine's live trial ledger (futon2 data/wm-learning-trials), which the
+ ;; judge reads before selecting (Joe, 2026-09-24: "this is a worked example,
+ ;; not a way to feed priors to the system").
  :theta-prior {:mean 0.8 :pseudo-count 5 :status :declared
                :reason "click-001 predicted with theta 0.8 for every pattern; 5 pseudo-trials is a declared strength, not measured"}}
