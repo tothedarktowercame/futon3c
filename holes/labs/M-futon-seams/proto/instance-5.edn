@@ -1,0 +1,148 @@
+;; M-futon-seams instance 5 — transport and Room.
+;; No defprotocol exists anywhere under src/futon3c/transport/, 16 #futon
+;; literals are hardcoded, irc.clj sits as a peer of http.clj rather than as
+;; an implementation, and Matrix reaches the system by impersonating IRC.
+;; Authored by claude-1, 2026-09-24, for PROOF-2a clause 0 X0(e).
+;; NOTE the :holes key: one want has no producer, because the pattern that
+;; would produce it is in the library and is not citable. kernels.clj ignores
+;; :holes; it is recorded so the unproduced want is visible rather than absent.
+{:schema :m-futon-seams/proto-cascade-v1
+ :instance 5
+ :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+
+ :tokens
+ {:literals-enumerated
+  {:statement "The 16 hardcoded #futon channel literals across src/ and scripts/ are listed."
+   :cue [10377 10389]}
+  :grain-chosen
+  {:statement "The grain is the Room, not the connection and not the server process: a Room is what a message is addressed to and what membership is a property of."
+   :cue [11135 11168]}
+  :message-typed
+  {:statement "A Message is a typed value — author, body, time, thread ref — rather than a line of text whose shape each transport guesses."
+   :cue [11135 11168]}
+  :line-contract
+  {:statement "What a transport must carry in one indivisible unit is stated, so an adapter knows what it may not fragment."
+   :cue [11135 11168]}
+  :protocol-declared
+  {:statement "Room, Message and Command exist as a declared interface that an adapter can implement."
+   :cue [11135 11168]}
+  :one-producer
+  {:statement "Room state has exactly one producer; no transport module maintains its own parallel notion of who is present."
+   :cue [11135 11168]}
+  :migration-declared
+  {:statement "Moving a running session from one transport to another is a recorded migration with an authoritative channel at every moment."
+   :cue [2166 2177]}
+  :adapter-conformance-test
+  {:statement "An adapter is tested by reproducing behaviour known from another adapter, with a falsifier a wrong adapter would fail."
+   :cue [17948 17998]}
+  :impersonation-retired
+  {:statement "matrix-ircd is no longer needed: Matrix reaches the system as an adapter rather than by pretending to be IRC."
+   :cue [2166 2177]}}
+
+ :initial #{}
+ :want #{:protocol-declared :adapter-conformance-test :impersonation-retired}
+
+ :holes
+ [{:token :impersonation-retired
+   :wanted "Integrate a second transport without changing the existing callers — the adapter move."
+   :nearest "software-design/adapter-pattern"
+   :nearest-sha256 "9cd1c225c5ad3f5eb25f7cc238b6880c05fb48d84da18cc7e2dc97b6f67c4200"
+   :why-not-citable "The file exists at futon3/library/software-design/adapter-pattern.flexiarg and declares @arg, not @flexiarg. 28 library files declare @arg; a citation of this id fails the same check session_turn_analysis.py applies, so the interpretation cannot carry a receipt that resolves."
+   :consequence "No pattern in this cascade produces :impersonation-retired. The want is unreachable by construction, which is a typed finding about the library rather than about the instance."}]
+
+ :patterns
+ {:or3/count-every-card-back
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:literals-enumerated}
+   :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                      :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+             :reading "The 16 channel literals are counted back before any is replaced by configuration, so none is left behind to re-hardcode the room."
+             :scope "Counting discipline only; the workshop setting does not transfer."
+             :author "claude-1"}
+   :forces "Synthesis is where attribution dies — by the time a clean list exists nobody can say which item came from where."}
+
+  :cascade-construction/choose-the-grain-where-state-lives
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:grain-chosen}
+   :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
+                      :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
+             :reading "Asked of this seam: is the unit the connection, the server, or the room? The room — a message is addressed to a room and membership is a property of one, while connections come and go underneath."
+             :scope "Verbatim on grain selection."
+             :author "claude-1"}
+   :forces "The same problem can be modelled per item, per batch or per system."}
+
+  :realtime/structured-events-only
+  {:guard {:needs #{:grain-chosen} :forbids #{}}
+   :produces #{:message-typed}
+   :receipt {:source {:path "futon3/library/realtime/structured-events-only.flexiarg"
+                      :sha256 "19708084425ea5d2f70f36e5603640b28062a74c1fc8ebdf5a8380db95fa5b28"}
+             :reading "A Message must be a typed value, not free text a transport parses its own way. This is the pattern that says so, and it already lives in the realtime family beside the IRC code that ignores it."
+             :scope "The pattern is stated for PSR/PUR events; the reading extends it to the Message type an adapter would implement."
+             :author "claude-1"}
+   :forces "Humans may annotate context outside the structured event payload, so the payload cannot simply be the whole line."}
+
+  :realtime/single-line-transport
+  {:guard {:needs #{:grain-chosen} :forbids #{}}
+   :produces #{:line-contract}
+   :receipt {:source {:path "futon3/library/realtime/single-line-transport.flexiarg"
+                      :sha256 "0768aa1a6b5a3f7725b1b253b11855f41fcacc9125b96306a9532abc8e893cfd"}
+             :reading "States what a transport must carry indivisibly. An adapter needs that bound explicitly, because IRC imposes it and Matrix does not — the constraint belongs to the interface, not to whichever transport happened to be first."
+             :scope "Verbatim."
+             :author "claude-1"}
+   :forces "Some content needs detail beyond a short line."}
+
+  :cycle-machine/single-producer
+  {:guard {:needs #{:message-typed :line-contract} :forbids #{}}
+   :produces #{:protocol-declared :one-producer}
+   :receipt {:source {:path "futon3/library/cycle-machine/single-producer.flexiarg"
+                      :sha256 "973389525453e7e94222fe87d870dd6246dc155975a7469f6441ba7bad187e65"}
+             :reading "irc.clj, ws.clj and http.clj each hold their own notion of a destination. Declaring Room/Message/Command is what gives that structure one producer; the pattern's contract test against the real counterpart is the adapter conformance suite."
+             :scope "Applied to room state and the message type."
+             :author "claude-1"}
+   :forces "When several files each fill the structure from their own reading, each fills it differently and no single reading is checkable."}
+
+  :realtime/transport-pivot
+  {:guard {:needs #{:protocol-declared} :forbids #{}}
+   :produces #{:migration-declared}
+   :receipt {:source {:path "futon3/library/realtime/transport-pivot.flexiarg"
+                      :sha256 "88f3f7253d5767009f0af4084e3b3b0055e45cb55a4dbfbe46b2edc8efe9364f"}
+             :reading "The library's existing answer to this instance, and a partial one: it disciplines the ACT of changing transport without making transports interchangeable. Once the protocol is declared, its migration procedure applies to adapter swaps and is no longer the only thing standing in for a seam."
+             :scope "The pattern governs a migration in progress, not the interface. That limit is the reason it did not prevent this instance."
+             :author "claude-1"}
+   :forces "Switching midstream creates split-brain conversation, duplicated messages, and uncertainty about the authoritative channel."}
+
+  :translation/test-by-reproducing-behaviour
+  {:guard {:needs #{:protocol-declared} :forbids #{}}
+   :produces #{:adapter-conformance-test}
+   :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                      :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+             :reading "An adapter is a translation of the interface onto a wire. It is tested where behaviour is already known — the IRC adapter's recorded sessions — with falsifiers a wrong adapter would pass."
+             :scope "Verbatim; the translation is interface-to-wire."
+             :author "claude-1"}
+   :forces "Easy fixtures confirm rather than test, and a disagreement does not say which side erred."}}
+
+ :above
+ [{:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :realtime/structured-events-only
+   :kind :differentiates
+   :via "Once the room is the unit, what travels between rooms is the next distinction; typing the message differentiates the space the grain choice opens."}
+  {:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :realtime/single-line-transport
+   :kind :differentiates
+   :via "The same grain choice raises a second, independent question: what a transport must carry without splitting. Neither this nor the message type needs the other."}
+  {:context :realtime/structured-events-only
+   :pattern :cycle-machine/single-producer
+   :kind :jointly-with
+   :via "A declared protocol needs both halves: what a message IS and what a transport must carry indivisibly. This is one of the two joint contexts."}
+  {:context :realtime/single-line-transport
+   :pattern :cycle-machine/single-producer
+   :kind :jointly-with
+   :via "The second joint context. Declaring Room/Message/Command from only one of the two would fix the interface to whichever transport supplied the missing half."}
+  {:context :cycle-machine/single-producer
+   :pattern :realtime/transport-pivot
+   :kind :differentiates
+   :via "With an interface in place the existing migration discipline becomes a procedure over adapters rather than a substitute for having them."}
+  {:context :cycle-machine/single-producer
+   :pattern :translation/test-by-reproducing-behaviour
+   :kind :differentiates
+   :via "Conformance can only be tested against something declared; this and the migration discipline are independent of each other."}]}

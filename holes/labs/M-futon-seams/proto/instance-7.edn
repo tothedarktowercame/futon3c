@@ -1,0 +1,142 @@
+;; M-futon-seams instance 7 — editor coupling.
+;; 30 .el files, 23,325 lines. session-turn-analysis.el is 497 lines of which
+;; 48 touch buffers, overlays, points, markers, faces or windows. The turn
+;; record format already has three writers -- elisp, a Python batch path, a
+;; ClojureScript reader -- agreeing by convention rather than by construction.
+;; Authored by claude-1, 2026-09-24, for PROOF-2a clause 0 X0(e).
+;; This instance is the one the mission says is still compounding, and the
+;; cascade shows why: two of its late moves are incomparable, so an order
+;; chosen by flattening decides which of them happens inside a finite horizon.
+{:schema :m-futon-seams/proto-cascade-v1
+ :instance 7
+ :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+
+ :tokens
+ {:writers-enumerated
+  {:statement "Every writer and reader of the turn record format is listed: the elisp recorder, scripts/turn_batch.py, the ClojureScript feed reader."
+   :cue [15062 15089]}
+  :grain-chosen
+  {:statement "The unit is the turn — one operator utterance with its offsets and quoted regions — not the buffer it was typed in and not the session."
+   :cue [14535 14571]}
+  :dependency-checked
+  {:statement "What would break if the shared core were wrong is stated rather than assumed. The >>> fence divergence is the answer: it already broke, in the Python path, silently."
+   :cue [15062 15089]}
+  :record-schema-declared
+  {:statement "The turn record is a declared contract — parse, split, offsets, quoted regions — rather than a shape three implementations each reproduce."
+   :cue [15062 15089]}
+  :one-producer
+  {:statement "One implementation produces a record; the others call it."
+   :cue [15062 15089]}
+  :falsifier-named
+  {:statement "A concrete input a wrong implementation fails is named: a >>> fence with content on the same line, which the elisp handles and an independent reimplementation did not."
+   :cue [17948 17998]}
+  :divergence-test
+  {:statement "The extracted core is run where behaviour is known, and any disagreement between a caller and the core is attributed to one side."
+   :cue [17948 17998]}
+  :writers-converted
+  {:statement "The existing writers call the core instead of reimplementing it, without invalidating records already written under the old reading."
+   :cue [17864 17911]}}
+
+ :initial #{}
+ :want #{:record-schema-declared :divergence-test :writers-converted}
+
+ :patterns
+ {:or3/count-every-card-back
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:writers-enumerated}
+   :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                      :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+             :reading "Three writers are known; the count has to be closed before extraction, because a fourth found afterwards is a fourth reimplementation."
+             :scope "Counting discipline only."
+             :author "claude-1"}
+   :forces "Synthesis is where attribution dies — by the time a clean list exists nobody can say which item came from where."}
+
+  :cascade-construction/choose-the-grain-where-state-lives
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:grain-chosen}
+   :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
+                      :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
+             :reading "The grain is the turn: one turn is what a single run changes, and its facts — offsets, quoted regions, sentence spans — are observable in the record. The buffer is where it happens to be typed."
+             :scope "Verbatim on grain selection."
+             :author "claude-1"}
+   :forces "The same problem can be modelled per item, per batch or per system."}
+
+  :mmca/verified-but-idle-link
+  {:guard {:needs #{:grain-chosen} :forbids #{}}
+   :produces #{:dependency-checked}
+   :receipt {:source {:path "futon3/library/mmca/verified-but-idle-link.flexiarg"
+                      :sha256 "81a02a12d9cfca72cc4cc70bf82047b1809239a105f5e870a473f9cae6af0bd6"}
+             :reading "Its test — ask what breaks if this is false — applied before extracting: does anything actually depend on the three writers agreeing? It does, and the evidence is already recorded. The >>> fence opened on a bare line in the elisp and not on a fence with trailing content, and the divergence was invisible until a turn used the second form."
+             :scope "The pattern is about promoting a verified fact to a structural claim; used here as the question asked before extracting a shared core."
+             :author "claude-1"}
+   :forces "Predicting a property is not the same as that property doing work; a connection can be exactly true and still do nothing for the argument."}
+
+  :cycle-machine/single-producer
+  {:guard {:needs #{:writers-enumerated :grain-chosen} :forbids #{}}
+   :produces #{:record-schema-declared :one-producer}
+   :receipt {:source {:path "futon3/library/cycle-machine/single-producer.flexiarg"
+                      :sha256 "973389525453e7e94222fe87d870dd6246dc155975a7469f6441ba7bad187e65"}
+             :reading "Verbatim on this instance: the turn record is a structure the model consumes, and it currently has three producers. Its requirement — exactly one producer with a contract test against the real counterpart — is the seam."
+             :scope "Applied to the turn record format."
+             :author "claude-1"}
+   :forces "When several files each fill the structure from their own reading of the counterpart's semantics, each fills it differently and no single reading is checkable."}
+
+  :contracts/every-entry-has-a-falsifier
+  {:guard {:needs #{:record-schema-declared} :forbids #{}}
+   :produces #{:falsifier-named}
+   :receipt {:source {:path "futon3/library/contracts/every-entry-has-a-falsifier.flexiarg"
+                      :sha256 "ae7e7a5730bdcc9a358353052b7667e2d24c8eae85597c19f9175b72abf1bf89"}
+             :reading "The declared record needs a refuting input named, not just a shape. One already exists from this instance's own history and would have caught the divergence on the day it was introduced."
+             :scope "The pattern speaks of Lean/runtime correspondences; the reading transfers the falsifier requirement to an extracted core and its callers."
+             :author "claude-1"}
+   :forces "Value-replay fixtures are easy to write and weak."}
+
+  :translation/test-by-reproducing-behaviour
+  {:guard {:needs #{:falsifier-named} :forbids #{}}
+   :produces #{:divergence-test}
+   :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                      :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+             :reading "Each caller of the core is a translation of it; the test runs them where behaviour is known and attributes each disagreement to the caller or to the core."
+             :scope "Verbatim."
+             :author "claude-1"}
+   :forces "Easy fixtures confirm rather than test, and a disagreement does not say which side erred."}
+
+  :memory/no-tightening-while-held
+  {:guard {:needs #{:one-producer :dependency-checked} :forbids #{}}
+   :produces #{:writers-converted}
+   :receipt {:source {:path "futon3/library/memory/no-tightening-while-held.flexiarg"
+                      :sha256 "c331922e1542c5eb2bf83f5ddeaf3eb9c2bdbd823d3f2f4b17d827593e70d52d"}
+             :reading "Records already written under the three-writer reading are read back by the feed and by the census. Converting the writers narrows what a valid record is, so it is done without retroactively invalidating those."
+             :scope "Verbatim on schema tightening; the callers here hold records rather than in-flight state."
+             :author "claude-1"}
+   :forces "A write-time tightening looks like a boundary crossed once. It is not: records are persisted and re-validated later."}}
+
+ :above
+ [{:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :mmca/verified-but-idle-link
+   :kind :differentiates
+   :via "Once the turn is the unit, the question of whether anything depends on the writers agreeing about a turn becomes askable; at the wrong grain it has no content."}
+  {:context :or3/count-every-card-back
+   :pattern :cycle-machine/single-producer
+   :kind :jointly-with
+   :via "Naming one producer requires knowing the full set of current producers; this is one of the two joint contexts."}
+  {:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :cycle-machine/single-producer
+   :kind :jointly-with
+   :via "And it requires knowing what the produced structure is a structure OF. The second joint context."}
+  {:context :cycle-machine/single-producer
+   :pattern :contracts/every-entry-has-a-falsifier
+   :kind :differentiates
+   :via "A falsifier can only be named against a declared contract; before that there is nothing for an input to refute."}
+  {:context :contracts/every-entry-has-a-falsifier
+   :pattern :translation/test-by-reproducing-behaviour
+   :kind :differentiates
+   :via "The test is the falsifier being run; without a named refuting input it is a fixture that confirms."}
+  {:context :cycle-machine/single-producer
+   :pattern :memory/no-tightening-while-held
+   :kind :jointly-with
+   :via "Conversion needs something to convert to. One of two joint contexts, and independent of the falsifier line: a caller can be converted before or after the divergence test exists."}
+  {:context :mmca/verified-but-idle-link
+   :pattern :memory/no-tightening-while-held
+   :kind :jointly-with
+   :via "And it needs a reason: if nothing broke when the writers disagreed, converting them is churn. The second joint context."}]}

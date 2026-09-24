@@ -1,0 +1,133 @@
+;; M-futon-seams instance 4 — provider vs role.
+;; The retrofit of the seam the mission's IDENTIFY exit names first: 51
+;; provider-literal agent ids in src/, and three sites that route by reading
+;; the provider out of the identifier string.
+;; Authored by claude-1, 2026-09-24, for PROOF-2a clause 0 X0(e).
+;; Every pattern id below resolves in futon3/library AND its @flexiarg
+;; declaration matches its path; sha256 is of the file at authoring time.
+{:schema :m-futon-seams/proto-cascade-v1
+ :instance 4
+ :mission-sha "0df3226e228374ddd49897be6af3f0943dd499036c84cbc5e51105d58b2c9694"
+
+ :tokens
+ {:sites-enumerated
+  {:statement "Every site that names a provider is listed: the 51 provider-literal agent ids in src/ and the three that route on a prefix."
+   :cue [8797 8826]}
+  :roles-named
+  {:statement "The role vocabulary exists as a thing in its own right — implementer, reviewer, interpreter — separate from any seat that fills one."
+   :cue [9294 9309]}
+  :binding-recorded
+  {:statement "A role-to-seat binding is an explicit record, not a string a caller parses; a conflicting binding is rejected rather than silently preferred."
+   :cue [9294 9309]}
+  :one-producer
+  {:statement "Exactly one place resolves a role to a seat. Nothing else infers it."
+   :cue [8575 8591]}
+  :caller-converted
+  {:statement "At least one existing call site asks for a role instead of naming a seat, and the seats holding bindings under the old reading still work."
+   :cue [17864 17911]}
+  :redirect-test
+  {:statement "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
+   :cue [17948 17998]}
+  :prefix-routing-retired
+  {:statement "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
+   :cue [8575 8591]}}
+
+ :initial #{}
+ :want #{:caller-converted :redirect-test :prefix-routing-retired}
+
+ :patterns
+ {:or3/count-every-card-back
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:sites-enumerated}
+   :receipt {:source {:path "futon3/library/or3/count-every-card-back.flexiarg"
+                      :sha256 "9de888f56525ff68af9bf7e8814f3d4eb25bc448c2339a804f2c1753db386a62"}
+             :reading "Read as the enumeration move: every occurrence is counted back before any is changed, so nothing is silently left behind. The mission's 51 literals and three prefix branches are the cards."
+             :scope "The pattern is about attributing workshop contributions; the transfer is the counting discipline, not the workshop setting."
+             :author "claude-1"}
+   :forces "Synthesis is where attribution dies — ideas get clustered and reworded, and by the time a clean list exists nobody can say which came from where."}
+
+  :cascade-construction/choose-the-grain-where-state-lives
+  {:guard {:needs #{} :forbids #{}}
+   :produces #{:roles-named}
+   :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
+                      :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
+             :reading "The grain question asked of this seam: does the state one dispatch changes live at the provider, the seat, or the role? It lives at the role — the role persists while seats come and go, as it did across four seat swaps in one evening."
+             :scope "Verbatim on grain selection. Its 'many-item invariants in adapters and gates' half is not used here."
+             :author "claude-1"}
+   :forces "The same problem can be modelled per item, per batch or per system, and requirements are usually stated at whichever grain the speaker happened to use."}
+
+  :coordination/assignment-binding
+  {:guard {:needs #{:roles-named} :forbids #{}}
+   :produces #{:binding-recorded}
+   :receipt {:source {:path "futon3/library/coordination/assignment-binding.flexiarg"
+                      :sha256 "d20124da82dd1ff934ea1067f5626c154cbcf62f2487194e65c712db195253ee"}
+             :reading "Its move is exactly the binding this seam needs: an explicit record binding an agent to a task, with conflicting assignments treated as a gate rejection rather than a last-writer-wins."
+             :scope "The pattern speaks of agent-id to task-id; here it is role to seat. The same record, one level up."
+             :author "claude-1"}
+   :forces "Without a recorded assignment, later evidence cannot be traced to accountable actors."}
+
+  :cycle-machine/single-producer
+  {:guard {:needs #{:binding-recorded} :forbids #{}}
+   :produces #{:one-producer}
+   :receipt {:source {:path "futon3/library/cycle-machine/single-producer.flexiarg"
+                      :sha256 "973389525453e7e94222fe87d870dd6246dc155975a7469f6441ba7bad187e65"}
+             :reading "Three sites currently derive the provider independently by reading the id. That is three producers of one fact. The pattern's requirement — exactly one producer, with a contract test against the real counterpart — is what retires them."
+             :scope "Applied to the role-to-seat fact, not to a verified process model's consumed structures generally."
+             :author "claude-1"}
+   :forces "When several files each fill the structure from their own reading of the counterpart's semantics, each fills it differently and no single reading is checkable."}
+
+  :memory/no-tightening-while-held
+  {:guard {:needs #{:sites-enumerated :one-producer} :forbids #{}}
+   :produces #{:caller-converted}
+   :receipt {:source {:path "futon3/library/memory/no-tightening-while-held.flexiarg"
+                      :sha256 "c331922e1542c5eb2bf83f5ddeaf3eb9c2bdbd823d3f2f4b17d827593e70d52d"}
+             :reading "Seats hold live bindings under the string reading. Converting a caller narrows what a valid binding is, which is a tightening — so it is done without invalidating what running seats already hold."
+             :scope "The pattern is about schema narrowing at write time; a call-site conversion is the same narrowing applied to an implicit schema."
+             :author "claude-1"}
+   :forces "A write-time tightening looks like a boundary crossed once. It is not: records are persisted and re-validated later, so state agents already hold is retroactively invalidated."}
+
+  :translation/test-by-reproducing-behaviour
+  {:guard {:needs #{:caller-converted} :forbids #{}}
+   :produces #{:redirect-test}
+   :receipt {:source {:path "futon3/library/translation/test-by-reproducing-behaviour.flexiarg"
+                      :sha256 "60442e7757a1aaaddc920969e5e4d965fe199ad47c7f149a70710e97f74282c4"}
+             :reading "The mission's own acceptance method, already named there: redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail. This pattern is that method."
+             :scope "Verbatim; the translation here is seat-name to role."
+             :author "claude-1"}
+   :forces "Easy fixtures confirm rather than test, and a disagreement does not say which side erred."}
+
+  :realtime/mode-gate
+  {:guard {:needs #{:redirect-test} :forbids #{}}
+   :produces #{:prefix-routing-retired}
+   :receipt {:source {:path "futon3/library/realtime/mode-gate.flexiarg"
+                      :sha256 "5e505b53101854792852c33f2c27c73c37597a8f3de02af096bdfc714e8020d9"}
+             :reading "Retirement is the mode gate closing: the prefix branches stay reachable behind an explicit switch only until the redirect test passes, then the switch and the branches go together. The mission's instance 6 is the warning about leaving that switch open."
+             :scope "The pattern gates code-changing actions behind an explicit mode; used here for the transitional switch over the old routing."
+             :author "claude-1"}
+   :forces "In mixed-mode conversation agents may act as if they have execution authority while the human is still orienting."}}
+
+ :above
+ [{:context :cascade-construction/choose-the-grain-where-state-lives
+   :pattern :coordination/assignment-binding
+   :kind :differentiates
+   :via "Choosing the role as the grain is what makes a binding record about roles rather than about processes; the binding differentiates the space the grain choice opens."}
+  {:context :coordination/assignment-binding
+   :pattern :cycle-machine/single-producer
+   :kind :differentiates
+   :via "Once a binding is a record, asking who may write it is the next distinction; with no record there is no producer question to ask."}
+  {:context :or3/count-every-card-back
+   :pattern :memory/no-tightening-while-held
+   :kind :jointly-with
+   :via "You cannot convert callers safely without knowing which callers exist; the enumeration and the single resolver jointly enable the conversion, and neither alone does."}
+  {:context :cycle-machine/single-producer
+   :pattern :memory/no-tightening-while-held
+   :kind :jointly-with
+   :via "There must be something to convert callers TO before converting them; this is the second of the two joint contexts."}
+  {:context :memory/no-tightening-while-held
+   :pattern :translation/test-by-reproducing-behaviour
+   :kind :differentiates
+   :via "A converted caller is what the redirect test has to act on; before that there is nothing whose behaviour could follow a rebinding."}
+  {:context :translation/test-by-reproducing-behaviour
+   :pattern :realtime/mode-gate
+   :kind :differentiates
+   :via "Retiring the old routing is safe only once the test shows the new path carries the behaviour; the test differentiates retirement from hope."}]}
