@@ -1,0 +1,95 @@
+;; The mission's C: what M-futon-seams wants, at mission level rather than
+;; instance level, so a target's VALUE can be computed against something.
+;;
+;; Discipline, stated because it is the whole worth of the file: an outcome is
+;; here only if the mission states it, and each carries the span where it does.
+;; Nothing is inferred from what an instance would be nice for. Where the
+;; mission states no relative weight between outcomes, :preference says
+;; :unstated rather than carrying a number I made up -- the ranking is then a
+;; function of whichever ordering claude-10 tries, not of my guess.
+;;
+;; Authored by claude-1 (owner), 2026-09-24, for PROOF-2a item 6. DRAFT.
+{:schema :m-futon-seams/mission-C-v1
+ :mission-sha "cb8001b948dd87ae1711ffaff5d411ac652302a3256726559e19d65bba5ce030"
+
+ :outcomes
+ {:second-implementation-is-cheap
+  {:statement "A second implementation of any component can be built without the first having to be rewritten and without the second having to impersonate it."
+   :cue [2536 2589]
+   :who "whoever brings the second implementation — Rob concretely, anyone later in principle"
+   :checkable-by "an implementation of the declared interface that touches no existing caller"}
+
+  :rob-can-run-the-stack
+  {:statement "Rob can run futon3c on his own setup — his provider, his shell, his transport, his editor — without transcribing or impersonating anything."
+   :cue [2696 2735]
+   :who "Rob"
+   :checkable-by "Rob runs the affected surface on his machine with no futon3c change and no shim process"}
+
+  :joe-can-use-robs-work
+  {:statement "Joe can use a component Rob built, against the store and stack he already runs, without it being rewritten for him."
+   :cue [2793 2856]
+   :who "Joe"
+   :checkable-by "the mfuton memory MCP answering against XTDB with no change to its call sites"}
+
+  :no-drifting-forks
+  {:statement "Two implementations of one thing do not drift apart, because there is one authority for what the thing is rather than a convention two places keep by hand."
+   :cue [2948 2990]
+   :who "the system, and whoever later has to unify them"
+   :checkable-by "a conformance test that a drifted implementation fails"}
+
+  :coupling-visible-to-tooling
+  {:statement "A coupling — a path, a role, a provider — can be found by a tool rather than only by reading, so it cannot be reintroduced unnoticed."
+   :cue [13465 13579]
+   :who "the system, and whoever maintains it"
+   :checkable-by "grep or a linter finding every occurrence; the prompt case is the one where it currently cannot"}
+
+  :vs-code-implementation-possible
+  {:statement "A non-Emacs client can reuse the core functionality rather than copy-pasting interactions, so the two do not evolve separately."
+   :cue [14595 14645]
+   :who "Rob"
+   :source "Rob's interview, 2026-09-24, recorded in this mission's instance 7: he did not build the TypeScript version because there was nothing to build against, and copy-pasted into webhooks instead"
+   :checkable-by "a second client producing a byte-identical turn record from the same input"}}
+
+ :served-by
+ [{:instance "4" :want :prefix-routing-retired :outcome :rob-can-run-the-stack
+   :how "Rob started with only Codex available and the code decided routing by reading 'claude' or 'codex' out of the agent id; with no provider read from an identifier, a seat he has can serve a role the code asks for."}
+  {:instance "4" :want :caller-converted :outcome :second-implementation-is-cheap
+   :how "A caller that asks for a role rather than naming a seat is a caller a second provider can serve without being edited."}
+  {:instance "4" :want :redirect-test :outcome :second-implementation-is-cheap
+   :how "The test is what makes the substitution demonstrable rather than asserted: rebind the role, the behaviour follows."}
+
+  {:instance "5" :want :protocol-declared :outcome :second-implementation-is-cheap
+   :how "Room/Message/Command is the thing a second transport implements; today there is no defprotocol anywhere under transport/ for an adapter to satisfy."}
+  {:instance "5" :want :impersonation-retired :outcome :rob-can-run-the-stack
+   :how "Rob reaches the system over Matrix through matrix-ircd, a process whose whole job is to look like the transport the code insists on. With the interface declared, Matrix is an adapter and the shim goes."}
+  {:instance "5" :want :adapter-conformance-test :outcome :no-drifting-forks
+   :how "An adapter tested by reproducing behaviour known from another adapter is the thing that catches two transports drifting apart."}
+
+  {:instance "6" :want :one-authority :outcome :no-drifting-forks
+   :how "The mission's own case: mfuton_prompt_override.clj is a second copy kept in sync with a dependency map by hand, which is a defect even while it agrees."}
+  {:instance "6" :want :one-authority :outcome :coupling-visible-to-tooling
+   :how "With prose generated from typed files, a coupling cannot be introduced by editing prose, so a tool can find every one; today they are matched by regex over natural language at runtime."}
+  {:instance "6" :want :flag-retired :outcome :no-drifting-forks
+   :how "The transitional switch is what keeps both versions live; retiring it is what ends the drift it was meant to prevent."}
+
+  {:instance "7" :want :record-schema-declared :outcome :vs-code-implementation-possible
+   :how "A declared turn-record contract is what a TypeScript client would implement instead of reimplementing the parser; Rob's stated reason for not building one was that there was nothing to build against."}
+  {:instance "7" :want :record-schema-declared :outcome :second-implementation-is-cheap
+   :how "Same contract, general case: the five current readers and writers agree by convention, and a sixth would have to join the convention rather than an interface."}
+  {:instance "7" :want :writers-converted :outcome :no-drifting-forks
+   :how "The drift is already measured: the >>> convention exists in the Emacs path only, so the same turn recorded live and through turn_batch.py mean different things."}
+  {:instance "7" :want :divergence-test :outcome :no-drifting-forks
+   :how "A test that attributes a disagreement to one side is what stops the next divergence being found by accident, as this one was."}
+
+  {:instance "8" :want nil :outcome :joe-can-use-robs-work
+   :how "PROSPECTIVE: instance 8 has no cascade, so it has no want tokens and cannot be scored. What it would serve is stated in the mission's own words -- Joe could not use Rob's memory MCP because it is neo4j-specific -- and futon3c has the mirror defect, xtdb 40 times in src/ including social/shapes.clj. Recorded so the target is not scored as worthless for lack of a cascade."
+   :status :prospective}]
+
+ :preference
+ {:status :unstated
+  :weights {}
+  :cue [17734 17794]
+  :note "The mission states no relative weight between these outcomes, and inventing one would decide the ranking rather than report it. What it does state is two ORDERINGS, neither of which is a weighting over outcomes:
+(1) the IDENTIFY exit ranks three instances -- 4, then 5, then 7 -- and its stated reasons mix value with cost: 'smallest surface' is a cost claim, 'unblocks provider substitution for Rob immediately' and 'retires matrix-ircd and the don't-start-an-IRC-server flag together' are value claims, and 'do before a VS Code implementation exists, not after' is a claim about the cost RISING with time rather than about value at all.
+(2) the cost ordering ranks kinds of retrofit -- declare first free, retrofit in code expensive, retrofit in prompt text worst -- which is about cost only, does not discriminate between 4, 5 and 7 (all code retrofits), and is ambiguous between most-expensive-to-fix and most-damaging.
+The orderings that matter for a sensitivity report: Rob-first (rob-can-run-the-stack heaviest), drift-first (no-drifting-forks heaviest), and general-second-implementation-first. Instance 4 wins Rob-first; 6 and 7 gain most under drift-first; 5 and 7 gain most under general-first. Instance 8 is unscorable under all of them until it has a cascade, which is a fact about the field rather than about its value."}}
