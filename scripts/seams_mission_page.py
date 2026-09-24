@@ -174,7 +174,12 @@ def note_html(n, figures):
     bits.append(f'<p class="nbody">{html.escape(n.get("body",""))}</p>')
     fig = n.get("figure")
     if fig and fig in figures:
-        bits.append(f'<div class="nfig">{figures[fig]}</div>')
+        # The rail is ~20rem and the lattice is up to 1540px: in the rail it is
+        # a thumbnail that says "there is a shape here", and the shape itself is
+        # readable in an overlay. Both are the same SVG, emitted once.
+        bits.append(f'<div class="nfig" data-fig="{html.escape(fig)}" '
+                    f'title="click to open full width">{figures[fig]}'
+                    f'<span class="figopen">open ⤢</span></div>')
     if n.get("refs"):
         bits.append('<p class="nrefs">' +
                     " · ".join(f"<code>{html.escape(r)}</code>" for r in n["refs"]) + "</p>")
@@ -278,7 +283,17 @@ li { margin:0 0 .3rem; }
 .nbody { margin:0; }
 .nstale { margin:0 0 .3rem; color:#b8431f; font-size:.68rem; }
 .nrefs { margin:.3rem 0 0; color:#999; font-size:.62rem; word-break:break-all; }
-.nfig { margin:.4rem 0; overflow-x:auto; }
+.nfig { margin:.4rem 0; overflow:hidden; cursor:zoom-in; position:relative;
+        border:1px solid #eae6d8; background:#fff; padding:.2rem; }
+.figopen { position:absolute; right:.25rem; bottom:.2rem; font-size:.58rem;
+           color:#999; font-family:ui-monospace,Menlo,monospace;
+           background:#fffff8; padding:0 .2rem; }
+.figmodal { position:fixed; inset:0; background:rgba(255,255,248,.97); z-index:50;
+            display:flex; align-items:center; justify-content:center; padding:3vw;
+            cursor:zoom-out; }
+.figmodal svg { width:100%; max-width:1600px; height:auto; }
+.figmodal .figcap { position:absolute; top:1.2rem; left:3vw; font-size:.72rem;
+                    color:#888; font-family:ui-monospace,Menlo,monospace; }
 .nfig svg { width:100%; height:auto; min-width:0; }
 .nfig .nid, .nfig .nfam, .nfig .nprod, .nfig .nhole { font-size:9px; }
 .masthead { max-width:var(--measure); }
@@ -317,6 +332,16 @@ function layout() {
   rails.b.style.minHeight = bottom.b + 'px';
 }
 document.addEventListener('click', e => {
+  const open = e.target.closest('.nfig');
+  if (open) {
+    const m = document.createElement('div');
+    m.className = 'figmodal';
+    m.innerHTML = '<span class="figcap">' + open.dataset.fig + '</span>'
+                + open.querySelector('svg').outerHTML;
+    m.addEventListener('click', () => m.remove());
+    document.body.appendChild(m);
+    return;
+  }
   const t = e.target.closest('.anchor, .note');
   document.querySelectorAll('.lit').forEach(x => x.classList.remove('lit'));
   if (!t) return;
