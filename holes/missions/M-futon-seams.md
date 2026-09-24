@@ -500,12 +500,16 @@ merely *possible*, and someone outside the project can understand what it does
 and why from the plain-language argument alone. **Not met.** Both halves now say why
 rather than promising more work.
 
-**This phase closes only through DOCUMENT's plain-language account for an
-outsider, and the negative finding is retained by closing it** — the design is
-*defensible, not inevitable*: 2 of instance 4's 7 patterns are reachable from
-the move as the mission states it, and neither candidate dominates the other.
-An account that reaches ARGUE's exit by softening that has not satisfied this
-criterion, it has changed it. The inevitability half is answered
+*Correction, 2026-09-24.* This section previously said the phase could close
+only through DOCUMENT, on the reading that its exit's second clause — "someone
+outside the project can understand what it does and why from the plain-language
+argument alone" — asked for DOCUMENT's output. **That was wrong.** ARGUE's own
+checklist asks for a *plain-language argument*: three to five sentences, no
+jargon, written here. DOCUMENT asks for something unrelated — that what was
+built be discoverable by navigating a docbook. The dependency was invented,
+and inventing it is the same error this mission is about: working from a
+reading rather than from the specification. The argument is below; the
+constraint it carried is discarded. The inevitability half is answered
 with a measurement and the answer is negative: the design is defensible, not
 inevitable. The plain-language half is DOCUMENT's, and this phase closes when
 DOCUMENT is written.
@@ -625,14 +629,79 @@ declarations a later check can compare against code. 4a declares a grain and
 can be grain-checked; 4b declares none and cannot. That is a property of a
 candidate a selector can read, and it is not p(all wants).
 
+### Rationale citation
+
+`@why war-room/wr-8-typed-files-are-sources-of-truth` — *"Make the typed
+argument files the canonical self-model and generate prose from them, so drift
+becomes detectable instead of perennial."* (WR-8, 2026-04-24.)
+
+This design rests on that ruling twice over. Instance 6 **is** WR-8 unapplied:
+a coupling carried in prose that no tool can read, with a second copy kept in
+sync by hand. And the mission's own method applies it — `lifecycle.edn` holds
+each phase's status as data, the page is generated from it, and
+`verdict_check.py` fails when the prose and the data disagree. That check
+exists because they did disagree, and a reader outside the mission found it
+before anything here did.
+
+`war-room/wr-13-futonic-debt-is-paid-in-order` also bears on the IDENTIFY exit's
+choice of one instance over eight, but the mission did not cite it when
+choosing and citing it now would be decoration.
+
+### Theoretical coherence
+
+IDENTIFY's anchor is the cost ordering: *declared before an implementation
+exists is free; retrofitted in code is expensive; retrofitted in prompt text is
+worst.* The design serves it and the VERIFY spike sharpened it. Instance 4 was
+a code retrofit and cost two enactments, the first at the wrong grain. Instance
+6, the prompt case, turns out not to be merely expensive to check but
+**unchecked** — a deliberately broken path changed no test outcome, and two
+such paths are broken in the tree right now with nothing reporting it. The
+theory has not shifted; its third tier is worse than stated.
+
+### Trade-offs
+
+- **One instance, not eight.** The IDENTIFY exit chose depth. The cost is that
+  seven instances remain undeclared and the capability is demonstrated once.
+- **Declared grain over observed grain.** Registry-first names what the state
+  belongs to before building; observe-first would have shown it. Naming it is
+  what made `grain_check.py` possible, and the price is that the mistake had to
+  be made before anything could catch it.
+- **Checks on records, not guards during work.** Clause C and the grain check
+  both read a record written afterwards. A guard would prevent; a check only
+  notices, and only what the record says.
+- **Four steps of the method are done by hand.** Not automated away, because
+  they are judgements. The claim is narrower: a judgement must be recorded in a
+  form something else can contradict.
+
+### Generalisation
+
+The method transfers to any undeclared seam: measure the sites, name the grain,
+build the cascade, check it, enact it, compare what was enacted against what
+was chosen. What does **not** transfer is the library. Only 2 of instance 4's 7
+patterns are reachable from the problem as stated, so a team without someone
+who already knows the corpus would get a different cascade — that is the
+capability's real precondition, and it is measured rather than assumed.
+
+### The plain-language argument
+
+When two programs need to talk, the first one written usually wins: everything
+after it has to pretend to be the first, and the pretending is where the work
+goes. The cheapest moment to say what the boundary actually is, is before there
+is a second program to salvage — but nobody does it then, because the first
+program is concrete and a boundary is not. So this mission finds the places
+where that has already happened, picks one, writes down what the boundary
+should be, builds it, and then checks that what got built is what was written
+down. The checking is the point: on the first attempt it was not, and only a
+written-down decision could have shown that.
+
 ### What is still not argued
 
-**The plain-language account for an outsider.** It does not exist. This is the
-second half of this phase's exit criterion, and it is the half DOCUMENT
-produces — Rob's requested example is the vehicle. Worth naming as a fact
-about the lifecycle rather than about this mission: ARGUE is specified to come
-before DOCUMENT, and one clause of ARGUE's exit can only be satisfied by work
-DOCUMENT does. This phase stays open until then.
+The design is **defensible, not inevitable**, and this phase's first exit
+clause asks for inevitable. Two candidates reach the same three wants by
+different readings; neither dominates; and the number that chose between them
+measures neither axis. That is a finding, not a gap to be filled by better
+writing — a section that closed this clause by softening it would have changed
+the criterion rather than met it.
 
 
 

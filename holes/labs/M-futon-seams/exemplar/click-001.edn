@@ -15,7 +15,7 @@
  :authored-by "claude-1"
  :authored-at "2026-09-24"
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "119e4edecf9700bc438c179554e177deff0efeb6b4cfe0c0b25432dc1dbd3ec9"}
+           :sha256 "da2ac70e929581a024308107505bc7a62568867900e549a40daa3c96e2773290"}
  :computed-by
  [{:what [:decision :selection-certificate :candidate-derivations :* :prediction]
    :command "bb holes/labs/M-futon-seams/proto/kernels.clj 0.8 6 holes/labs/M-futon-seams/proto/instance-4.edn holes/labs/M-futon-seams/proto/instance-4b.edn"}
