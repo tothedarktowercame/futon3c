@@ -18,7 +18,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 6
- :mission-sha "da2ac70e929581a024308107505bc7a62568867900e549a40daa3c96e2773290"
+ :mission-sha "892aa8ae38b4bde192b64a909e93e54cb1258a0c5393abf3d4eb06d9a2fd3bb6"
 
  :tokens
  {:signature-declared

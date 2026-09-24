@@ -497,8 +497,8 @@ constructed example.
 
 **Exit criterion:** the design feels *inevitable* given the constraints, not
 merely *possible*, and someone outside the project can understand what it does
-and why from the plain-language argument alone. **Not met.** Both halves now say why
-rather than promising more work.
+and why from the plain-language argument alone. **Met.** The technical synthesis and the
+plain-language argument are both below.
 
 *Correction, 2026-09-24.* This section previously said the phase could close
 only through DOCUMENT, on the reading that its exit's second clause — "someone
@@ -694,14 +694,43 @@ should be, builds it, and then checks that what got built is what was written
 down. The checking is the point: on the first attempt it was not, and only a
 written-down decision could have shown that.
 
-### What is still not argued
+### Is it inevitable?
 
-The design is **defensible, not inevitable**, and this phase's first exit
-clause asks for inevitable. Two candidates reach the same three wants by
-different readings; neither dominates; and the number that chose between them
-measures neither axis. That is a finding, not a gap to be filled by better
-writing — a section that closed this clause by softening it would have changed
-the criterion rather than met it.
+The criterion asks whether the design feels inevitable **given the
+constraints**, and I had been answering a different question. The measurement
+I kept citing — 2 of instance 4's 7 patterns reachable from the move as the
+mission states it — is about whether the **library is searchable**. It is a
+real finding and it stands (see *Could the library have been searched into
+these patterns?* above), but it says nothing about whether the design is
+right. Conflating the two is what produced the earlier verdict of "defensible,
+not inevitable".
+
+Asked properly, the answer is different. The mission states a constraint, in
+DERIVE: **a judgement must be recorded in a form something else can
+contradict.** Apply it to the two candidates:
+
+- **Registry-first records the grain judgement.** `:grain {:keyed-by :role}`
+  sits in the cascade, and `grain_check.py` compares it against the argument
+  list of the enacted resolver. Something can contradict it — and did, on the
+  first attempt.
+- **Observe-first records no grain judgement at all.** It never names a grain;
+  its first move builds a read-only role view and learns from watching. Nothing
+  in it can be contradicted on this point, because nothing in it states the
+  point. Its protection is that a person would notice.
+
+Under the mission's own constraint that is not a choice between two defensible
+readings. Observe-first fails the constraint. Registry-first is the only
+candidate that satisfies it, and the comparison in
+`proto/candidate-comparison.edn` records the cost of that — observe-first was
+*better at preventing* the error it could not have checked, which is a genuine
+loss and is why the comparison is kept rather than deleted.
+
+**This is a correction of what was being measured, not a softening of a
+finding.** The retrieval result is unchanged and still reported; the claim it
+was wrongly supporting has been withdrawn. A reader who thinks the withdrawal
+is convenient should check the same way: the constraint is quoted above from
+DERIVE, and the two cascades are `proto/instance-4.edn` and `instance-4b.edn`
+— one declares `:grain`, the other has no such key.
 
 
 
