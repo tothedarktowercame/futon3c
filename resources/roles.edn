@@ -1,0 +1,17 @@
+;; Roles and their seat bindings (M-futon-seams instance 4).
+;;
+;; A ROLE is what a piece of work needs done (review, implement, mentor); a
+;; SEAT is a registered agent that can do it. Code asks for a role; this file
+;; says which seat currently plays it. A seat's provider is not a role
+;; property: it is whatever the seat declared at registration
+;; (futon3c.agency.roles/provider). Rebinding a role to a seat of another
+;; provider is a one-line change here.
+;;
+;; Each binding names its source. Two bindings for one role are a conflict and
+;; the resolver refuses, rather than preferring whichever it read last.
+{:roles {:reviewer    {:does "reviews a worker's result and returns a verdict (APPROVE / REQUEST_CHANGES)"}
+         :implementer {:does "carries out a coding task and reports what it changed"}
+         :mentor      {:does "monitors epistemic risk and reviews pattern use during orchestration"}}
+ :bindings [{:role :reviewer    :seat "claude-1" :source "tickle_orchestrate.clj request-review!, hardcoded before 2026-09-24"}
+            {:role :implementer :seat "codex-1"  :source "tickle_orchestrate.clj default worker, hardcoded before 2026-09-24"}
+            {:role :mentor      :seat "claude-2" :source "tickle_orchestrate.clj mentor, hardcoded before 2026-09-24"}]}

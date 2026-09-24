@@ -16,6 +16,7 @@
             [cheshire.core :as json]
             [futon3c.agents.mfuton-prompt-override :as mfuton-prompt-override]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roles :as roles]
             [futon3c.apm.checked-handoff :as checked-handoff]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
@@ -383,23 +384,26 @@
   (let [{:keys [evidence-store repo-dir timeout-ms session-id]} config
         timeout-ms (or timeout-ms 300000)
         prompt (make-review-prompt issue codex-result repo-dir)
-        issue-number (:number issue)]
+        issue-number (:number issue)
+        ;; The reviewer is a role, bound in resources/roles.edn, not a seat
+        ;; named here (M-futon-seams instance 4).
+        reviewer (roles/seat-for :reviewer)]
     (emit! evidence-store
            {:session-id session-id
             :issue-number issue-number
             :repo repo-dir
             :claim-type :step
             :event-tag :review-assigned
-            :body {:reviewer "claude-1"}})
+            :body {:reviewer reviewer}})
     (project! {:issue issue :status :running :phase "Claude reviewing..."})
     (let [start (System/currentTimeMillis)
-          result (reg/invoke-agent! "claude-1" prompt timeout-ms)
+          result (reg/invoke-agent! reviewer prompt timeout-ms)
           elapsed (- (System/currentTimeMillis) start)
           ok? (:ok result)
           verdict (when ok? (parse-verdict (:result result)))
           handoff-event (checked-handoff/verdict-event
                          {:worker-seat (:agent-id codex-result)
-                          :author-seat "claude-1"
+                          :author-seat reviewer
                           :proposal {:issue issue
                                      :worker-result (:result codex-result)}
                           :verdict verdict

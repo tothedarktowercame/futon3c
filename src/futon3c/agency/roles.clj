@@ -12,8 +12,16 @@
    and the enforcement skipped all of them.
 
    An agent that is not registered has no declared provider; that is
-   reported as nil, never guessed from the id."
-  (:require [futon3c.agency.registry :as reg]))
+   reported as nil, never guessed from the id.
+
+   ROLES. Code that needs work done asks for a role (seat-for :reviewer), and
+   resources/roles.edn says which seat plays it. The binding is data with a
+   source; two bindings for one role are refused. A role says nothing about
+   provider: rebinding :reviewer from a Claude seat to a Codex seat changes
+   which agent is invoked and nothing else."
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [futon3c.agency.registry :as reg]))
 
 (defn provider
   "The provider AGENT-ID declared at registration (:agent/type), or nil when
@@ -38,3 +46,37 @@
     (if (some? explicit)
       (boolean explicit)
       (provider? agent-id :codex))))
+
+;; ------------------------------------------------------------------ roles
+
+(defn load-role-table
+  "Read the role vocabulary and bindings from resources/roles.edn."
+  []
+  (if-let [r (io/resource "roles.edn")]
+    (edn/read-string (slurp r))
+    {:roles {} :bindings []}))
+
+(def ^:dynamic *role-table*
+  "The role table in force. Bound in tests to exercise a rebinding; in
+   production it is the resource file, re-read on each resolution so an edit
+   to roles.edn takes effect without a restart."
+  nil)
+
+(defn- table [] (or *role-table* (load-role-table)))
+
+(defn seat-for
+  "The seat bound to ROLE. Throws ex-info with :refusal
+   :unknown-role (ROLE not in the vocabulary), :role-unbound (no binding), or
+   :conflicting-bindings (more than one binding for ROLE)."
+  [role]
+  (let [{:keys [roles bindings]} (table)
+        bs (filter #(= role (:role %)) bindings)]
+    (cond
+      (not (contains? roles role))
+      (throw (ex-info (str "unknown role " role) {:refusal :unknown-role :role role}))
+      (empty? bs)
+      (throw (ex-info (str "no seat bound to role " role) {:refusal :role-unbound :role role}))
+      (> (count (distinct (map :seat bs))) 1)
+      (throw (ex-info (str "conflicting bindings for role " role)
+                      {:refusal :conflicting-bindings :role role :bindings (vec bs)}))
+      :else (:seat (first bs)))))
