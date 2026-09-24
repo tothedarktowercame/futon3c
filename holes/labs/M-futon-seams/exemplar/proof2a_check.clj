@@ -165,9 +165,9 @@
       (conj ["X_0(receipt) one receipt sha256 altered"
              (update-in rec (conj cp :interpretations)
                         (fn [m] (let [k (first (keys m))] (assoc-in m [k :receipt :source :sha256] "0000000000000000"))))])
-      (seq (:frontier-conflicts cand))
+      (seq (findings-seq (:frontier-conflicts cand) :states))
       (conj ["X_0(f) conflicting frontier recorded without its flag" (assoc-in rec (conj cp :frontier-conflicts) [])])
-      (seq (:meet-findings cand))
+      (seq (findings-seq (:meet-findings cand) :missing))
       (conj ["X_0(meet) a missing meet left out of the record" (assoc-in rec (conj cp :meet-findings) [])])
       (number? (get-in cand [:prediction :p-all-wants]))
       (conj ["X_0(prediction) predicted p(all wants) altered"
