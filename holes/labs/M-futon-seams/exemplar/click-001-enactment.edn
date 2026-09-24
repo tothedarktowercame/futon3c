@@ -7,6 +7,15 @@
 {:schema :m-futon-seams/proof2a-enactment-v1
  :click "holes/labs/M-futon-seams/exemplar/click-001.edn"
  :candidate :cand/a-registry-first
+ :grain
+ {:keyed-by :role
+  :statement "The resolver takes a ROLE and answers which seat plays it. That is the grain instance-4.edn chose; the first attempt built a lookup keyed by an agent id, which is the provider grain."
+  :evidence {:fn "futon3c.agency.roles/seat-for"
+             :path "src/futon3c/agency/roles.clj"
+             :arglist "[role]"
+             :sha256 "617f7fe810e3408f4ccee7dec29f47a35ae88ee418be246d717e5dc862b0ffe3"}
+  :checked-by "scripts/grain_check.py"}
+
  :conformance
  {:statement "Attempt 1 did not enact the chosen candidate (provider grain, see click-001-outcome.edn). Attempts 2-7 enact its seven patterns at the role grain, in the order below."
   :deviations [{:kind :step-order

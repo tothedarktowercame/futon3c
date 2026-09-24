@@ -7,7 +7,7 @@
 ;; declaration matches its path; sha256 is of the file at authoring time.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 4
- :mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+ :mission-sha "a67b4520741371c496ee0d58aedd76895030219278965dbec611eafbe68da465"
 
  :tokens
  {:sites-enumerated
@@ -48,6 +48,8 @@
 
   :cascade-construction/choose-the-grain-where-state-lives
   {:guard {:needs #{} :forbids #{}}
+   :grain {:keyed-by :role
+           :statement "A resolver is keyed by the ROLE: it takes what the work needs done and answers which seat plays it. Keyed by an agent id it would be a provider lookup, which is the grain the mission's defect description describes and not the one chosen."}
    :produces #{:roles-named}
    :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
                       :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}

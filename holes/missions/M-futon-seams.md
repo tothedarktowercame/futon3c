@@ -317,19 +317,49 @@ The count is a token later, so it has to be re-derivable, not remembered.
 branches"; the enumeration found a third routing site of a different shape, and
 the mission was corrected rather than the count rounded.
 
-### 3. Choose the grain — **by hand, and unchecked**
+### 3. Choose the grain — by hand, and now checked
 
-**In:** the measured sites. **Out:** a statement of what the state one change
-alters actually belongs to. For instance 4: the **role**, not the seat and not
-the provider. **Tool:** none. **Check:** **none exists.**
+**In:** the measured sites. **Out:** a `:grain {:keyed-by … :statement …}` on
+the cascade's grain pattern. For instance 4: **`:role`**, not the seat and not
+the provider. **Tool:** none — the judgement is a person's. **Check:**
+`scripts/grain_check.py`.
 
-This is the step instance 4 got wrong, and it is worth being exact about how.
-The grain was chosen correctly in the cascade — `cascade-construction/choose-the-grain-where-state-lives`
-answered "at the role" — and then the first enactment read the *defect
-description* in §4 instead, which describes providers being parsed out of ids,
-and built a provider lookup. Nothing compared the two. A check for this step
-would compare the grain named in the cascade against the grain the enactment
-operates on; there is no such check today.
+This is the step instance 4 got wrong. The grain was chosen correctly in the
+cascade — `cascade-construction/choose-the-grain-where-state-lives` answered
+"at the role" — and then the first enactment read the *defect description* in
+§4 instead, which describes providers being parsed out of ids, and built a
+provider lookup. Nothing compared the two until all three wants came back
+`:partial`.
+
+**What made it checkable** was noticing that a resolver's grain is *what its
+lookup is keyed by*, and that this is visible in its argument list:
+
+```clojure
+(defn seat-for [role])       ; keyed by :role      — the chosen grain
+(defn provider [agent-id])   ; keyed by :agent-id  — the grain it was built at
+```
+
+So the check is three comparisons rather than one. The cascade declares its
+grain; the enactment declares the grain it was built at, naming a resolver as
+evidence; and that resolver must **exist, with the recorded argument list, in
+the file at the recorded sha256**. The third is what stops the check being two
+agents agreeing with each other — a declaration no code answers to is not
+evidence.
+
+All four cascades that choose a grain now declare it: instance 4 `:role`,
+5 `:room`, 6 `:fragment`, 7 `:turn`.
+
+*It catches the original error.* Run against `click-001-outcome.edn`, the
+first attempt, it fails:
+
+```
+cascade grain role, enacted grain agent-id
+FAIL GRAIN MISMATCH: the cascade chose role, the enactment is keyed by agent-id
+```
+
+and against a record naming a function that does not exist, or one whose
+argument list has drifted, it fails on the evidence instead. That record is
+kept unchanged for exactly this purpose.
 
 ### 4. Write the cascade
 
@@ -442,7 +472,7 @@ it.
 |---|---|---|
 | 1 hit the coupling | yes | n/a |
 | 2 measure | no (`enumerate_sites.py`) | yes, re-run it |
-| **3 choose the grain** | **yes** | **no** |
+| 3 choose the grain | yes | yes, `grain_check.py` |
 | 4 write the cascade | yes (retrieval tooled) | yes, `cascade_check.py` |
 | 5 write the wiring | no (derived) | yes, `wiring_check.py` |
 | 6 choose the target | yes | yes, `proof2a_check.clj` (W₀ by replay) |
@@ -450,14 +480,18 @@ it.
 | **8 enact** | **yes** | wants checked; conformance checked **on the record** (clause C) |
 | 9 observe | no (`clauses_1_6.clj`) | yes, clause statuses |
 
-**One step has no check at all: choosing the grain.** Step 8 had none when
-instance 4 was enacted, which is why it built the provider grain; clause C
-closed that gap afterwards and would now catch the same mistake — on the
-record. Step 3 is still open, and it is the earlier of the two: the grain is
-chosen before any artefact exists to compare it against, so a check for it has
-to compare the cascade's own answer with the grain the enactment operates on.
-That is the one remaining place in this method where a human judgement is made
-and nothing downstream would notice it being made differently.
+**Every step now has a check.** Four are still done by hand — hitting the
+coupling, choosing the grain, writing the cascade, enacting — and that is not a
+defect to be fixed: they are judgements, and the method's claim is that a
+judgement must be *recorded in a form something else can disagree with*, not
+that it be automated away.
+
+Instance 4's failure took two steps with it, and both are closed. Step 8 by
+clause C, which checks the enactment record against the chosen candidate; step
+3 by `grain_check.py`, which compares the grain the cascade chose against the
+grain the code is keyed by. Both are checks on records rather than guards
+during the work, and both fail on the real first attempt rather than on a
+constructed example.
 
 ## ARGUE — which patterns, and why those
 

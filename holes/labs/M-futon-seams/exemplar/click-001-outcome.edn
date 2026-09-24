@@ -26,6 +26,14 @@
                   :result [["wm-author" :codex true] ["wm-reviewer" :codex true] ["oxf-codex-3" :codex true]
                            ["codex-1" :codex true] ["claude-10" :claude false]]}}
 
+ :grain
+ {:keyed-by :agent-id
+  :statement "THE FIRST ATTEMPT, kept as the falsifier for grain_check.py. futon3c.agency.roles/provider takes an AGENT ID and answers which provider it is -- a provider lookup, not a role resolver. The cascade chose :role. This record is what the check must refuse."
+  :evidence {:fn "futon3c.agency.roles/provider"
+             :path "src/futon3c/agency/roles.clj"
+             :arglist "[agent-id]"}
+  :checked-by "scripts/grain_check.py"}
+
  :deviation {:kind :different-grain
              :planned "role grain: cascade-construction/choose-the-grain-where-state-lives answered 'at the role' (instance-4.edn, token :roles-named)"
              :realised "provider grain: futon3c.agency.roles reads the registered :agent/type"

@@ -9,7 +9,7 @@
 ;; chosen by flattening decides which of them happens inside a finite horizon.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 7
- :mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+ :mission-sha "a67b4520741371c496ee0d58aedd76895030219278965dbec611eafbe68da465"
 
  :tokens
  {:writers-enumerated
@@ -53,6 +53,8 @@
 
   :cascade-construction/choose-the-grain-where-state-lives
   {:guard {:needs #{} :forbids #{}}
+   :grain {:keyed-by :turn
+           :statement "Keyed by the TURN: one turn is what a single run changes, and its facts are observable in the record. The buffer is where it happens to be typed."}
    :produces #{:grain-chosen}
    :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
                       :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}

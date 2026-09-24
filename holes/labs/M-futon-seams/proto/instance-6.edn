@@ -18,7 +18,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/proto-cascade-v1
  :instance 6
- :mission-sha "462f61f6a6688476f4456a56a589b3bac7484fbbd84d60dd419ebb01735c0592"
+ :mission-sha "a67b4520741371c496ee0d58aedd76895030219278965dbec611eafbe68da465"
 
  :tokens
  {:signature-declared
@@ -75,6 +75,8 @@
 
   :cascade-construction/choose-the-grain-where-state-lives
   {:guard {:needs #{:signature-declared} :forbids #{}}
+   :grain {:keyed-by :fragment
+           :statement "Keyed by the FRAGMENT carrying one coupling. Per-packet cannot fix a path without rewriting an instruction; per-call-site cannot say which of three couplings moved."}
    :produces #{:grain-chosen}
    :receipt {:source {:path "futon3/library/cascade-construction/choose-the-grain-where-state-lives.flexiarg"
                       :sha256 "4736e7268adfa373660acb949652cc7f2af8c065e661c4f4eb0d760fb683cc45"}
