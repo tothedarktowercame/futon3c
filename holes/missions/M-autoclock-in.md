@@ -847,10 +847,10 @@ target…".
 
 **Open: clock drift.** This makes the gate only as good as the caller's
 clock. Seen live at 16:20Z: claude-10 was clocked to M-futon-seams by a
-mention in its operator turn, and claude-1 was clocked to M-futon-seams
-*by inheritance* from a claude-10 dispatch. Every kimi call claude-1 makes
-(per-turn analysis included) would therefore carry M-futon-seams until
-something reclocks it. A clock that doesn't follow the work means the same
-target is sent while the topic moves on, so the conversation is never
-cleared. The 128k cap is the only backstop for that until reclocking tracks
-the work.
+mention in its operator turn, and claude-1 by inheritance from a claude-10
+dispatch. Joe (2026-09-24): inheritance reclocking the recipient is wanted,
+not a defect: a bell carries its sender's clock to whoever does the work.
+What remains open is a clock that stays put while the work moves to another
+topic without naming a target: the same target keeps being sent, so the
+conversation is never cleared. The 128k cap is the backstop for that until
+reclocking tracks the work.
