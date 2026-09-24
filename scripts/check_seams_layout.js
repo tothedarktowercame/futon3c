@@ -10,7 +10,13 @@
 //
 // Prints a table and exits nonzero on any overflow, overlap, or text-size
 // miss outside the tolerance.
-const { chromium } = require('/home/joe/code/excitement-to-evidence/node_modules/playwright');
+// Playwright is borrowed, not installed: nothing is added to futon3c. The
+// default is where it lives on Zone; PLAYWRIGHT_PATH overrides it, because a
+// host path baked into a script is instance 1 of the mission this very page
+// is about, and writing one without an override would be poor form.
+const PW = process.env.PLAYWRIGHT_PATH
+  || '/home/joe/code/excitement-to-evidence/node_modules/playwright';
+const { chromium } = require(PW);
 const path = require('path');
 
 const URL = process.argv[2] || 'file:///var/www/zone.hyperreal.enterprises/wip/seams.html';
