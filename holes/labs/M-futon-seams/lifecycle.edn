@@ -13,6 +13,13 @@
 ;; smoothed away. Phases 2-7 are now written in the mission itself, so every
 ;; row below anchors to a real span and none is a placeholder.
 ;;
+;; :status is :not-started, :in-progress, :blocked or :exit-met. :blocked
+;; carries :blocked-on and means the phase's OWN work is done and its exit
+;; waits on another phase -- the lifecycle's own word for it, from its
+;; "Mission Lifecycle States" section, applied to a phase rather than a
+;; mission. ARGUE was rendering as "in progress" while nothing was in
+;; progress on it, which reads as a stall rather than as a dependency.
+;;
 ;; :verdict-source says WHERE a phase's verdict is written. :prose means the
 ;; section carries an exact **Met.** / **Not met.** / **Not started.** line and
 ;; scripts/verdict_check.py holds it to agree with :status here. :data-only
@@ -99,7 +106,8 @@
    :verdict-source :prose
    :exit "The design feels inevitable given the constraints, not merely possible. And someone outside the project can understand what it does and why from the plain-language argument alone."
    :exit-line 191
-   :status :in-progress
+   :status :blocked
+   :blocked-on :DOCUMENT
    :mission-anchor {:start 35609 :end 35649 :quote "## ARGUE \u2014 which patterns, and why those"}
    :because "NOT MET, and both halves of the criterion now say why rather than promising more work. FIT is strongly argued -- 37 pattern entries each carrying :forces, :reading and a :scope limit naming what does NOT transfer, and every containment edge a :via. INEVITABILITY is answered with a measurement and the answer is NEGATIVE: candidate-comparison.edn compares registry-first against observe-first on what each would have done about the two failures that actually happened, and neither dominates -- 4a is better on checkability (it names the grain, which is why grain_check.py can exist), 4b on prevention (a read-only role view before anything routes, and a retirement pattern that makes timing a condition of legitimacy, which is exactly the deviation that occurred). The number that chose between them, p(all wants) 0.26 vs 0.21, measures neither axis. The design is defensible, not inevitable. The second half of the exit -- a plain-language account for an outsider -- is work DOCUMENT does, so this phase stays open until DOCUMENT is written: a lifecycle ordering fact worth recording, since ARGUE is specified to precede DOCUMENT."
    :evidence [{:kind :artefact :ref "proto/meets.clj" :what "the restricted semilattice condition, computed"}

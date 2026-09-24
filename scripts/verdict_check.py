@@ -24,7 +24,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MISSION = os.path.join(REPO, "holes/missions/M-futon-seams.md")
 LIFECYCLE = os.path.join(REPO, "holes/labs/M-futon-seams/lifecycle.edn")
 
-VERDICT = {"Met.": "exit-met", "Not met.": "in-progress", "Not started.": "not-started"}
+VERDICT = {"Met.": {"exit-met"},
+           "Not met.": {"in-progress", "blocked"},
+           "Not started.": {"not-started"}}
+# "Not met." is the verdict; whether the phase is in progress or blocked on
+# another is WHY it is not met, and lives in :status rather than in the line.
 
 # Which phases carry a verdict line is declared per phase in lifecycle.edn as
 # :verdict-source, not listed here. It was a hardcoded set until 2026-09-24 --
@@ -65,10 +69,14 @@ def main():
                 bad.append(f"{ph['id']}: no verdict line at all")
             continue
         checked += 1
-        says = VERDICT[found.group(1)]
-        if says != ph["status"]:
+        allowed = VERDICT[found.group(1)]
+        if ph["status"] not in allowed:
             bad.append(f"{ph['id']}: the section says {found.group(1)!r} "
-                       f"({says}), lifecycle.edn says :{ph['status']}")
+                       f"({'/'.join(sorted(allowed))}), lifecycle.edn says "
+                       f":{ph['status']}")
+        if ph["status"] == "blocked" and not ph.get("blocked-on"):
+            bad.append(f"{ph['id']}: :blocked without :blocked-on — say which "
+                       f"phase it waits for")
 
     print(f"{checked} verdict lines checked against lifecycle.edn — "
           + ("OK" if not bad else f"{len(bad)} DISAGREEMENT(S)"))

@@ -180,7 +180,15 @@ def resolve_sentinels(rendered):
 # ---------------------------------------------------------------- page
 
 STATUS_LABEL = {"exit-met": "exit met", "in-progress": "in progress",
-                "not-started": "not started"}
+                "blocked": "blocked", "not-started": "not started"}
+
+
+def status_label(ph):
+    """A phase waiting on another says which, because 'in progress' on a phase
+    nobody is working reads as a stall rather than as a dependency."""
+    if ph["status"] == "blocked" and ph.get("blocked-on"):
+        return f'blocked on {ph["blocked-on"].lstrip(":")}'
+    return STATUS_LABEL[ph["status"]]
 
 
 def toc_html(life):
@@ -204,7 +212,7 @@ def toc_html(life):
                ' <span class="nosec">no section in the mission</span>') +
             f'</td>'
             f'<td class="phstat"><span class="dot d-{st}"></span>'
-            f'{STATUS_LABEL[st]}</td>'
+            f'{status_label(ph)}</td>'
             f'<td class="phexit">“{html.escape(ph["exit"])}”'
             f'<span class="exitsrc">mission-lifecycle.md:{ph["exit-line"]}</span></td>'
             f'<td class="phwhy">{html.escape(ph["because"])}'
@@ -246,7 +254,7 @@ def phase_section(ph, in_mission):
             f'<h2 id="anc-phase-{ph["id"]}" class="phhead" data-note="phase-{ph["id"]}">'
             f'<span class="phn">{ph["n"]}</span> {html.escape(ph["title"])}'
             f'<span class="dot d-{st}"></span>'
-            f'<span class="phstatword">{STATUS_LABEL[st]}</span></h2>'
+            f'<span class="phstatword">{status_label(ph)}</span></h2>'
             f'<p class="phexit2">Exit criterion: “{html.escape(ph["exit"])}”</p>'
             + body + '</section>')
 
@@ -660,6 +668,7 @@ li { margin:0 0 .3rem; }
        margin-right:.35rem; vertical-align:baseline; }
 .d-exit-met { background:#1b6b3a; }
 .d-in-progress { background:#a8791d; }
+.d-blocked { background:#7a6ca8; }
 .d-not-started { background:#ccc; }
 
 /* A phase section. One that the mission has written points at it; one it has
