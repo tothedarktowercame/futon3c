@@ -1,128 +1,129 @@
-;; WIRING DIAGRAM — M-futon-seams instance 4, candidate a (registry-first).
-;; The cascade is the ARGUMENT: which patterns, and how each narrows the space.
-;; This is the CONSTRUCTION: what gets built, in what order, and what witnesses
-;; it. Form follows holes/flights/first-flights-wiring.edn, with one change:
-;; every interior node names the pattern that licenses it as a typed
-;; :licensed-by id rather than in prose, which is E-flight-aif finding W1-b.
-;;
-;; Satiety is set from what actually happened, not from the plan:
+;; WIRING DIAGRAM — M-futon-seams instance 4, candidate a. TOKEN FLOW.
+;; Hand-authored over the derived flow: the edges and ports come from the
+;; cascade's produces/needs, and satiety comes from what actually happened --
 ;; exemplar/click-001-outcome.edn (d9825670), enacted at futon3c 8e5c431e.
-;; A node whose token came back :partial is hungry and carries the evidence as
-;; :owed. The provider-grain change that was actually built has no node on the
-;; planned path, so it is drawn as a node OFF that path -- the deviation, not
-;; folded into a planned node that would then look half-done.
-;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
+;; Every planned node is hungry and carries its token's observed evidence.
+;; The work that WAS done is a node off the planned path with its own ports:
+;; what futon3c.agency.roles actually produces, and which planned input ports
+;; it partly feeds. It is licensed by nothing in this cascade.
 {:mission "M-futon-seams"
  :artifact :wiring-diagram
+ :form :token-flow
+ :derived false
+ :hand-authored-overlay "satiety and the deviation node, from click-001-outcome.edn"
  :instance 4
- :candidate :cand/a-registry-first
  :cascade {:path "holes/labs/M-futon-seams/proto/instance-4.edn"
            :sha256 "8a8f7528ded74de1309a7b55c57aa0cdfccfef180081e3c272f4add1aacfce1b"}
- :outcome {:path "holes/labs/M-futon-seams/exemplar/click-001-outcome.edn"
-           :commit "d9825670" :enacted-at "futon3c 8e5c431e"}
-
  :nodes
  [{:id :have-port :role :scope
-   :form "51 provider-literal agent ids in src/; three sites route by reading the provider out of the identifier"
+   :form "the instance as the mission measures it"
+   :in #{} :out #{}
    :satiety :full
-   :via "boundary port: the state the mission measures at instance 4"}
+   :via "boundary port: what is true before anything is built"}
 
   {:id :want-port :role :scope
-   :form "code asks for a role; a role resolves to a seat; no identifier carries a routing decision"
+   :form "At least one existing call site asks for a role instead of naming a seat, and the seats holding bindings under the old reading still work.; The str/starts-with? provider branches are gone; no code reads a provider out of an identifier.; Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
+   :in #{:caller-converted :prefix-routing-retired :redirect-test} :out #{}
    :satiety {:hungry-for :payoff}
-   :owed "none of the three wants is met: caller-converted, redirect-test and prefix-routing-retired all came back :partial"
-   :via "boundary port: the mission's IDENTIFY exit for this instance"}
+   :owed "not enacted: no outcome record exists for this instance"
+   :via "boundary port: one input port per want"}
 
-  {:id :sites-listed :role :concept
-   :form "every provider-naming site enumerated"
-   :licensed-by :or3/count-every-card-back
-   :produces :sites-enumerated
-   :satiety {:hungry-for :evidence}
-   :owed "2 of 3 routing branches converted; the third (library_loop_adapter.clj, the codex binary name) was not in the count. The 51 provider-literal ids were never enumerated: 16 src files still carry seat literals."
-   :via "the count has to close before anything is changed, or what is left behind is invisible"}
-
-  {:id :role-grain :role :concept
-   :form "the grain is the ROLE: what one dispatch changes, persisting while seats come and go"
+  {:id :choose-the-grain-where-state-lives :role :concept
+   :form "The role vocabulary exists as a thing in its own right \u2014 implementer, reviewer, interpreter \u2014 separate from any seat that fills one."
    :licensed-by :cascade-construction/choose-the-grain-where-state-lives
-   :produces :roles-named
+   :in #{}
+   :forbids #{}
+   :out #{:roles-named}
    :satiety {:hungry-for :construction}
-   :owed "observed false. No role vocabulary exists. futon3c.agency.roles is about providers."
-   :via "the choice the whole construction rests on, and the one the enactment did not make"}
+   :owed "roles-named: observed False \u2014 no role vocabulary exists; roles.clj is about providers"
+   :via "The grain question asked of this seam: does the state one dispatch changes live at the provider, the seat, or the role? It lives at the role \u2014 the role persists while seats come and go, as it did acro"}
 
-  {:id :binding-record :role :concept
-   :form "role-to-seat binding as an explicit record; a conflicting binding is rejected"
+  {:id :assignment-binding :role :concept
+   :form "A role-to-seat binding is an explicit record, not a string a caller parses; a conflicting binding is rejected rather than silently preferred."
    :licensed-by :coordination/assignment-binding
-   :produces :binding-recorded
+   :in #{:roles-named}
+   :forbids #{}
+   :out #{:binding-recorded}
    :satiety {:hungry-for :construction}
-   :owed "observed false. The binding in use is the pre-existing :agent/type set at registration."
-   :via "makes the binding a thing that can be read, contested and replayed"}
+   :owed "binding-recorded: observed False \u2014 no role->seat binding record; the provider binding used is the pre-existing :agent/type at registration"
+   :via "Its move is exactly the binding this seam needs: an explicit record binding an agent to a task, with conflicting assignments treated as a gate rejection rather than a last-writer-wins."}
 
-  {:id :one-resolver :role :concept
-   :form "exactly one place resolves a role to a seat"
+  {:id :single-producer :role :concept
+   :form "Exactly one place resolves a role to a seat. Nothing else infers it."
    :licensed-by :cycle-machine/single-producer
-   :produces :one-producer
-   :satiety {:hungry-for :evidence}
-   :owed "one place now answers which PROVIDER an agent is (roles/provider); no place answers which seat plays a role"
-   :via "three sites derived it independently; one producer with a contract test is the pattern's requirement"}
+   :in #{:binding-recorded}
+   :forbids #{}
+   :out #{:one-producer}
+   :satiety {:hungry-for :construction}
+   :owed "one-producer: observed partial \u2014 one place now answers 'which provider is this agent' (futon3c.agency.roles/provider); no place answers 'which seat plays this role'"
+   :via "Three sites currently derive the provider independently by reading the id. That is three producers of one fact. The pattern's requirement \u2014 exactly one producer, with a contract test against the real "}
 
-  {:id :caller-moved :role :concept
-   :form "one call site asks for a role instead of naming a seat"
+  {:id :placenta-transfer :role :concept
+   :form "At least one existing call site asks for a role instead of naming a seat, and the seats holding bindings under the old reading still work."
    :licensed-by :gauntlet/placenta-transfer
-   :produces :caller-converted
+   :in #{:one-producer :sites-enumerated}
+   :forbids #{}
+   :out #{:caller-converted}
    :satiety {:hungry-for :construction}
-   :owed "two call sites in http.clj now call roles/ instead of parsing the id — but they ask for a provider, not a role"
-   :via "the function the operator performs by hand, transferred once"}
+   :owed "caller-converted: observed partial \u2014 http.clj agent-requires-execution? and claude-missing-conversation-result? call roles/ instead of parsing the id; they ask for a provider, not a role"
+   :via "Its conclusion IS the conversion move: identify which functions the human is performing as a surrogate for missing infrastructure and transfer them one at a time to the system. The function here is re"}
 
-  {:id :redirect-check :role :concept
-   :form "rebinding a role to another seat changes which seat runs, with a falsifier"
-   :licensed-by :translation/test-by-reproducing-behaviour
-   :produces :redirect-test
+  {:id :count-every-card-back :role :concept
+   :form "Every site that names a provider is listed: the 51 provider-literal agent ids in src/ and the three that route on a prefix."
+   :licensed-by :or3/count-every-card-back
+   :in #{}
+   :forbids #{}
+   :out #{:sites-enumerated}
    :satiety {:hungry-for :construction}
-   :owed "roles_test passes 4 tests / 14 assertions, and 8 of 14 fail against the old prefix definitions, so it is a real falsifier — but it redeclares a PROVIDER for a fixed id. Rebinding a role cannot be tested because roles do not exist."
-   :via "the mission's own acceptance method"}
+   :owed "sites-enumerated: observed partial \u2014 routing branches: 2 found and converted; the mission's corrected count is 3 (library_loop_adapter.clj codex-command checks the binary name). 51 provider-literal ids: not enumerated by this work; 16 src files still contain seat literals like \"codex-1\"."
+   :via "Read as the enumeration move: every occurrence is counted back before any is changed, so nothing is silently left behind. The mission's 51 literals and three prefix branches are the cards."}
 
-  {:id :prefix-retired :role :concept
-   :form "no code reads a provider out of an identifier"
+  {:id :mode-gate :role :concept
+   :form "The str/starts-with? provider branches are gone; no code reads a provider out of an identifier."
    :licensed-by :realtime/mode-gate
-   :produces :prefix-routing-retired
-   :satiety {:hungry-for :evidence}
-   :owed "grep for the starts-with? provider branches returns 0. The library-loop adapter still requires the literal codex binary and 'exec' — provider coupling in the command shape rather than in an id."
-   :via "retirement once the test carries the behaviour"}
+   :in #{:redirect-test}
+   :forbids #{}
+   :out #{:prefix-routing-retired}
+   :satiety {:hungry-for :construction}
+   :owed "prefix-routing-retired: observed partial \u2014 no str/starts-with? provider branch remains in src/; the library-loop adapter still requires the literal codex binary and 'exec', which is provider coupling of a different kind (command shape, not an id)"
+   :via "Retirement is the mode gate closing: the prefix branches stay reachable behind an explicit switch only until the redirect test passes, then the switch and the branches go together. The mission's insta"}
 
-  ;; OFF THE PLANNED PATH. Real work, licensed by nothing in this cascade.
+  {:id :test-by-reproducing-behaviour :role :concept
+   :form "Rebinding a role to a different seat changes which seat runs, demonstrated, with a falsifier that a wrong indirection would fail."
+   :licensed-by :translation/test-by-reproducing-behaviour
+   :in #{:caller-converted}
+   :forbids #{}
+   :out #{:redirect-test}
+   :satiety {:hungry-for :construction}
+   :owed "redirect-test: observed partial \u2014 re-declaring the provider for a fixed id changes both routing decisions; the token asks for rebinding a ROLE to a different seat, which cannot be tested because roles do not exist"
+   :via "The mission's own acceptance method, already named there: redirect the binding and confirm behaviour follows, with a falsifier a wrong indirection would fail. This pattern is that method."}
   {:id :provider-lookup :role :deviation
    :form "futon3c.agency.roles: one function answering which PROVIDER an agent is, from the registered :agent/type"
    :licensed-by :deviation/none
+   :in #{} :forbids #{}
+   :out #{:provider-known}
    :satiety :full
-   :witness "8e5c431e; live check on :6768 returns wm-author→:codex, wm-reviewer→:codex, oxf-codex-3→:codex, codex-1→:codex, claude-10→:claude; reloaded by claude-11 from master"
-   :via "what was actually built. It removes the string parsing, which the cascade also wanted, at the PROVIDER grain, which the cascade explicitly rejected. Drawn off the path because folding it into :role-grain would make a different construction look like a half-finished one."}]
-
- :hyperedges
- [{:kind :composes :ends [{:role :from :node :have-port} {:role :to :node :sites-listed}]
-   :via "the state as measured enters the count"}
-  {:kind :composes :ends [{:role :from :node :have-port} {:role :to :node :role-grain}]
-   :via "and the same state raises the grain question, independently of the count"}
-  {:kind :composes :ends [{:role :from :node :role-grain} {:role :to :node :binding-record}]
-   :via "the grain decides what a binding record is a record of"}
-  {:kind :composes :ends [{:role :from :node :binding-record} {:role :to :node :one-resolver}]
-   :via "a record can be asked who writes it"}
-  {:kind :composes :ends [{:role :from :node :sites-listed} {:role :to :node :caller-moved}]
-   :via "you cannot convert what you have not counted"}
-  {:kind :composes :ends [{:role :from :node :one-resolver} {:role :to :node :caller-moved}]
-   :via "and there must be something to convert to"}
-  {:kind :composes :ends [{:role :from :node :caller-moved} {:role :to :node :redirect-check}]
-   :via "a converted caller is what the check acts on"}
-  {:kind :composes :ends [{:role :from :node :redirect-check} {:role :to :node :prefix-retired}]
-   :via "retire once the behaviour is carried"}
-  {:kind :composes :ends [{:role :from :node :prefix-retired} {:role :to :node :want-port}]
-   :via "with no identifier carrying a decision the want port closes"}
-  {:kind :deviates :ends [{:role :from :node :have-port} {:role :to :node :provider-lookup}]
-   :via "the implementer worked from the mission's defect description rather than from the chosen cascade"}
-  {:kind :partly-discharges :ends [{:role :from :node :provider-lookup} {:role :to :node :prefix-retired}]
-   :via "it does remove the string parsing, which is one of the three wants, partly"}
-  {:kind :partly-discharges :ends [{:role :from :node :provider-lookup} {:role :to :node :caller-moved}]
-   :via "and it does move two call sites off id-parsing, at the wrong grain"}]
-
+   :witness "8e5c431e; live on :6768 — wm-author→:codex, wm-reviewer→:codex, oxf-codex-3→:codex, codex-1→:codex, claude-10→:claude; reloaded from master by claude-11"
+   :via "what was actually built. It removes the id parsing the cascade also wanted, at the PROVIDER grain the cascade explicitly rejected."}
+ ]
+ :edges
+ [
+  {:token :provider-known :from {:node :provider-lookup :port :provider-known} :to {:node :placenta-transfer :port :provider-known} :kind :partly-feeds}
+  {:token :provider-known :from {:node :provider-lookup :port :provider-known} :to {:node :mode-gate :port :provider-known} :kind :partly-feeds}
+  {:token :roles-named :from {:node :choose-the-grain-where-state-lives :port :roles-named} :to {:node :assignment-binding :port :roles-named} :kind :carries}
+  {:token :binding-recorded :from {:node :assignment-binding :port :binding-recorded} :to {:node :single-producer :port :binding-recorded} :kind :carries}
+  {:token :one-producer :from {:node :single-producer :port :one-producer} :to {:node :placenta-transfer :port :one-producer} :kind :carries}
+  {:token :sites-enumerated :from {:node :count-every-card-back :port :sites-enumerated} :to {:node :placenta-transfer :port :sites-enumerated} :kind :carries}
+  {:token :redirect-test :from {:node :test-by-reproducing-behaviour :port :redirect-test} :to {:node :mode-gate :port :redirect-test} :kind :carries}
+  {:token :caller-converted :from {:node :placenta-transfer :port :caller-converted} :to {:node :test-by-reproducing-behaviour :port :caller-converted} :kind :carries}
+  {:token :caller-converted :from {:node :placenta-transfer :port :caller-converted} :to {:node :want-port :port :caller-converted} :kind :carries}
+  {:token :prefix-routing-retired :from {:node :mode-gate :port :prefix-routing-retired} :to {:node :want-port :port :prefix-routing-retired} :kind :carries}
+  {:token :redirect-test :from {:node :test-by-reproducing-behaviour :port :redirect-test} :to {:node :want-port :port :redirect-test} :kind :carries}
+ ]
  :finding
  {:kind :enactment-not-bound-to-candidate
-  :statement "The planned path and the built thing meet only at two :partly-discharges edges. Nothing in PROOF-2a requires them to meet at all: clause 4's Q-link joins action to outcome to next belief, where 'action' is the selected candidate, and no clause checks that what was done IS that candidate. This diagram is that gap drawn."}}
+  :statement "The built node touches the planned flow only through two :partly-feeds edges, and the token it produces, :provider-known, is not a token of this cascade at all. Nothing in PROOF-2a requires the enactment to feed the plan: clause 4's Q-link joins action to outcome to next belief, where action means the SELECTED CANDIDATE, and no clause checks that what was done is that candidate."}
+ :dangling-outputs
+ []
+ :unfed-wants
+ []}

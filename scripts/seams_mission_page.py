@@ -278,6 +278,12 @@ def main():
         figures[key] = seams_wiring.svg(w)
         devs = [n for n in w["nodes"] if n.get("role") == "deviation"]
         marks = []
+        for d in (w.get("dangling-outputs") or []):
+            marks.append(f"dangling output, amber stub marked unused: "
+                         f"{d['node']} produces {d['token']}, which no box needs and "
+                         f"nothing wants")
+        for u in (w.get("unfed-wants") or []):
+            marks.append(f"unfed want, amber open port: nothing produces {u['want']}")
         if w.get("derived"):
             marks.append("derived from the cascade and plan-only: nothing here is built, "
                          "so every interior node is hungry")
@@ -287,8 +293,11 @@ def main():
         captions[key] = {
             "what": "Wiring diagram" + (" (derived)" if w.get("derived") else ""),
             "instance": w["instance"],
-            "sub": ("boundary ports left and right; solid green carries a witness, "
-                    "amber dashed carries what it owes; ⊢ names the licensing pattern"),
+            "sub": ("token flow: a box's input ports are the tokens it needs (top) and "
+                    "its output ports the tokens it produces (bottom); an edge carries one "
+                    "named token from a producer's port to a consumer's. A filled red port "
+                    "is a token the box FORBIDS. Solid green carries a witness, amber dashed "
+                    "carries what it owes, ⊢ names the licensing pattern."),
             "marks": marks}
 
     marked, live, stale = place_anchors(text, notes)
@@ -427,9 +436,11 @@ li { margin:0 0 .3rem; }
 .nfig svg { width:100%; height:auto; min-width:0; }
 .wiring { max-width:100%; height:auto; }
 .wid { font-size:12.5px; fill:#333; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
-.wform { font-size:9px; fill:#666; }
+.wform { font-size:8.5px; fill:#666; }
 .wlic { font-size:8.5px; fill:#1b6b3a; font-family:ui-monospace,Menlo,monospace; }
 .wdev { font-size:8.5px; fill:#b8431f; font-family:ui-monospace,Menlo,monospace; }
+.wtok { font-size:7.5px; fill:#667; font-family:ui-monospace,Menlo,monospace; }
+.wloose { font-size:7.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
 .wnode { cursor:help; }
 .nmeet{ font-size:9.5px; fill:#a8791d; font-family:ui-monospace,Menlo,monospace; }
 .nconf{ font-size:9.5px; fill:#b8431f; font-weight:700; font-family:ui-monospace,Menlo,monospace; }
