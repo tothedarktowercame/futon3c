@@ -20,7 +20,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "4b8800f7655efa1acbe606fde87abf359db5667f31be77c0b914785fb15cc1c7"
+           :sha256 "f8e8e08ccaac4aded25513681aeadfc96a26adc5512b7b41b2326a3f7192992e"
            :status-line "HEAD complete; IDENTIFY complete; INSTANTIATE-1 complete for instance 4 (enacted as chosen after a first wrong-grain attempt); MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
@@ -51,19 +51,19 @@
   {:id :MAP :n 2 :title "MAP — what exists, what is missing"
    :exit "Every MAP question has a concrete answer. The \"ready vs missing\" table is complete."
    :exit-line 113
-   :status :in-progress
+   :status :exit-met
    :mission-anchor {:start 20135 :end 20172 :quote "## MAP \u2014 what exists, what is missing"}
-   :because "The inventory exists and is measured -- eight instances with counts and paths, each checked against the working tree -- but it lives in the instance sections rather than as a MAP section, and there is no ready-vs-missing table. Four of the eight have cascades and four do not, which IS the ready-vs-missing split, recorded in click-001's exclusions rather than in the mission."
+   :because "Met 2026-09-24. The MAP section now defines this mission's Q1-Q5 and answers each by counting: what exists that the mission uses (1,411 patterns in 119 families, all citable; 21 distinct patterns from 17 families drawn so far; 16 programs of its own tooling, 2,987 lines), what data it holds, the ready-vs-missing table in two columns, how much coupling is left per instance, and what its own method cannot check. Five surprises are recorded, including two that changed a finding: the library was already citable and a validator was wrong to refuse it, and four of five missing meets were an artefact of strict descendants."
    :evidence [{:kind :span :what "the eight instances, each with measured counts and paths"}
               {:kind :artefact :ref "exemplar/click-001.edn" :what ":feasible and :exclusions — the ready-vs-missing split, in the click rather than the mission"}
-              {:kind :discrepancy :what "the mission has no MAP section; the work that satisfies most of the criterion sits elsewhere"}]
+              {:kind :span :what "Q1-Q5 with counted answers, the two-column ready-vs-missing table, and five recorded surprises"}]
    :artefacts [{:note "top-context" :why "the shared context above both roots, answered for the whole inventory"}]}
 
   {:id :DERIVE :n 3 :title "DERIVE — the method, from a hit coupling to a checked enactment"
    :exit "Someone could implement the mission from the DERIVE section alone, without needing to ask clarifying questions."
    :exit-line 153
    :status :in-progress
-   :mission-anchor {:start 21383 :end 21405 :quote "## DERIVE \u2014 the method"}
+   :mission-anchor {:start 24726 :end 24748 :quote "## DERIVE \u2014 the method"}
    :because "Rewritten 2026-09-24 as the METHOD rather than instance 4's design, at Joe's direction: the mission develops a capability -- find an undeclared seam, choose how to declare it, do it, check it -- not a list of instances. Nine numbered steps, each naming its input, its output artefact with the instance-4 path, the tool or 'by hand', and its check. Met for the tooled steps; NOT met for four done by hand, two of which have no check at all: choosing the grain, and binding the enactment to the chosen candidate. Those two are where instance 4 went wrong, and the section says so rather than presenting a clean procedure."
    :evidence [{:kind :artefact :ref "proto/instance-{4,4b,5,6,7}.edn" :what "cascades with receipts"}
               {:kind :artefact :ref "wiring/instance-{4,4b,5,6,7}-wiring.edn" :what "token-flow constructions"}
@@ -81,7 +81,7 @@
    :exit "The design feels inevitable given the constraints, not merely possible. And someone outside the project can understand what it does and why from the plain-language argument alone."
    :exit-line 191
    :status :in-progress
-   :mission-anchor {:start 30982 :end 31008 :quote "## ARGUE \u2014 why this design"}
+   :mission-anchor {:start 34325 :end 34351 :quote "## ARGUE \u2014 why this design"}
    :because "Each pattern's receipt argues its own fit and states a scope limit -- what of the pattern does NOT transfer -- and each containment edge says why it is there. The kernel runs are an argument about the CARRIER rather than about this design. What is not done: nothing argues why instance 4's route a should be preferred to route b beyond a 0.26-against-0.21 number, and no plain-language argument exists for a reader outside the project."
    :evidence [{:kind :artefact :ref "proto/meets.clj" :what "the restricted semilattice condition, computed"}
               {:kind :artefact :ref "proto/kernels.clj" :what "three kernels over every linear extension"}
@@ -99,7 +99,7 @@
    :exit "The design has been checked against available structural constraints. Any risks that can't be verified statically have been spiked. DERIVE revisions (if any) are recorded."
    :exit-line 231
    :status :in-progress
-   :mission-anchor {:start 32047 :end 32097 :quote "## VERIFY \u2014 checked against structural constraints"}
+   :mission-anchor {:start 35390 :end 35440 :quote "## VERIFY \u2014 checked against structural constraints"}
    :because "Real static checking exists and has found real defects: cascade_check.py (ids resolve, receipts' shas still match, tokens declared), wiring_check.py (an edge carries a token its ends have), proof2a_check.clj (W_t, W_0 and nine falsifiers), and a measured layout check. DERIVE revisions ARE recorded -- the reflexive-descendants correction, the adapter-pattern hole closing, i4-convert's pattern replaced. What is missing is the mission-side record: these live in commits and lab files, not in a VERIFY section."
    :evidence [{:kind :artefact :ref "scripts/cascade_check.py" :what "5/5 cascades pass"}
               {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
@@ -113,7 +113,7 @@
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :exit-met
-   :mission-anchor {:start 33676 :end 33707 :quote "## INSTANTIATE \u2014 demonstrations"}
+   :mission-anchor {:start 37019 :end 37050 :quote "## INSTANTIATE \u2014 demonstrations"}
    :because "Met for instance 4, which is the scope the IDENTIFY exit set. All three want tokens are observed met with a recorded check each -- two tests and a grep -- and the mission now carries the four commands that reproduce them. NOT met for the mission: seven instances remain unenacted. Two residual couplings are recorded as deviations rather than closed: the library-loop adapter's check on the codex binary name, and tickle_orchestrate's rotation roster, which lists seats to cycle rather than looking a role up."
    :evidence [{:kind :commit :ref "eafd07b7" :what "resources/roles.edn, roles/seat-for, request-review! asks for :reviewer, redirect test"}
               {:kind :commit :ref "d6927670" :what "tickle's implementer default and mentor resolve through seat-for"}
@@ -129,7 +129,7 @@
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
-   :mission-anchor {:start 36382 :end 36393 :quote "## DOCUMENT"}
+   :mission-anchor {:start 39725 :end 39736 :quote "## DOCUMENT"}
    :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/. A second exit criterion is PROPOSED but not adopted (Rob via Joe, 2026-09-24): discharge DOCUMENT by building a seam for the annotation-of-user-inputs feature, so the documentation is a worked example rather than prose about seams."
    :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}
               {:kind :proposal :what "Rob via Joe: discharge DOCUMENT by extracting the turn->record and record->dispatch seam from the annotation feature. Evidence it is a seam and not a tidy-up: the >>> convention exists in the Emacs path only, so the same turn recorded live and recorded through turn_batch.py mean different things."}]

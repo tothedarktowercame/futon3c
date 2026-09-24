@@ -195,26 +195,89 @@ statuses as data, and the working page renders them as a table.
 ## MAP — what exists, what is missing
 
 **Exit criterion:** every MAP question has a concrete answer; the ready-vs-missing
-table is complete. **Not met** — the answers exist, the table does not.
+table is complete. **Met.** The survey questions below are this mission's Q1–Q5,
+answered by counting rather than by estimate; every figure was measured on
+2026-09-24 and each says how.
 
-The inventory is §The eight instances above: every count in it was measured
-against the working tree on 2026-09-24, not remembered. Ready versus missing,
-for the purpose the mission actually has (which instances can be worked):
+MAP is research, not design: what follows is what exists, not what should.
 
-| instance | cascade | wiring | enacted | ready? |
-|---|---|---|---|---|
-| 1 filesystem root | no | no | already done (futon6 `6007937`) | retrospective only |
-| 2 OS invocation | no | no | already done (`scripts/windows/`) | retrospective only |
-| 3 agent dispatch | no | no | worked | retrospective only |
-| 4 provider vs role | yes, two candidates | yes | `8e5c431e`, partial | **worked** |
-| 5 transport and Room | yes | yes | no | ready |
-| 6 prompts as an interface | yes | yes | no | ready |
-| 7 editor coupling | yes | yes | no | ready |
-| 8 store kind | no | no | no | **missing a cascade** |
+### Q1. What already exists that this mission will use?
 
-What is missing to close this phase: a cascade for instance 8, which is the
-only live unresolved instance without one; and this table moved from a click's
-`:exclusions` into the mission, which is what has now been done.
+The **pattern library** at `futon3/library`: **1,411 patterns in 119
+families**, all of them citable — an id line (`@flexiarg`, `@arg` or
+`@multiarg`) matching the file's path, checked for every file. Retrieval is
+`scripts/xlate.py find`, BM25 over all of them plus proposals, ~0.3 s, with a
+measured recall@5 of about 0.29.
+
+The five cascades written so far draw **21 distinct patterns from 17
+families** — `agency`, `apparatus`, `cascade-construction`, `contracts`,
+`coordination`, `cycle-machine`, `futon-theory`, `gauntlet`, `iching`,
+`memory`, `mmca`, `or3`, `peripherals`, `realtime`, `software-design`,
+`translation`, `war-room`. That spread is a finding in itself: the moves this
+mission needs are not concentrated in a "software architecture" family, and
+half of them come from families written for other purposes.
+
+**Tooling this mission built and now uses** (16 programs, 2,987 lines):
+`cascade_check.py`, `wiring_check.py`, `wiring_from_cascade.py`,
+`mission_c_check.py`, `reanchor.py`, `mission_anchors.py`, the three renderers
+and the Playwright check; and under `holes/labs/M-futon-seams/`,
+`proto/kernels.clj`, `proto/meets.clj`, `exemplar/proof2a_check.clj`,
+`exemplar/construct_replay.clj`, `exemplar/clauses_1_6.clj`,
+`exemplar/enumerate_sites.py`.
+
+**From outside**: futon2's `interpretation-construction/construct` (replayed,
+not reimplemented), futon4's `mission-lifecycle.md`, and PROOF-2a itself.
+
+### Q2. What data does the mission already hold?
+
+Eight files under `proto/`, five under `wiring/`, eleven under `exemplar/`,
+eight under `item6/`, and **37 annotations** anchored to exact spans of this
+file. One click, one enactment with 8 attempts, one superseded outcome, one
+clause computation, one site enumeration, one mission-level C.
+
+### Q3. Which instances are ready to work, and which are missing what?
+
+| ready (no new artefact needed) | missing (the actual work) |
+|---|---|
+| **4** — two cascades, wiring, click, enacted, checked | — |
+| **5** — cascade, wiring | no click; not enacted |
+| **6** — cascade, wiring | no click; not enacted |
+| **7** — cascade, wiring | no click; not enacted |
+| **1, 2, 3** — done before this mission existed | no cascade, and none needed: retrospective only |
+| — | **8** — live and unresolved, and the only such instance with **no cascade at all** |
+
+### Q4. How much of the coupling this mission is about is left?
+
+Measured, not estimated. Instance 4: `exemplar/sites.edn` reports **43 seat
+literals across 12 files and one routing site**. Instance 5: **16 hardcoded
+channel literals**, and `grep defprotocol src/futon3c/transport/` still returns
+nothing. Instance 7: **30 `.el` files, 23,325 lines**, and the turn-record
+format has **five** readers or writers. Instance 8: `xtdb` appears **40 times**
+in `src/`, including in `social/shapes.clj`.
+
+### Q5. What can the mission's own method not yet check?
+
+One step of nine: **choosing the grain** (DERIVE step 3). Everything else has
+either a tool or a check, and the table at the end of DERIVE says which.
+
+### Surprises, recorded before DERIVE locked anything in
+
+- **The library was already citable.** The mission spent effort on a
+  distinction — `@arg` versus `@flexiarg` — that the loader never made. 28
+  files declared `@arg` and a validator refused them; the validator was wrong,
+  not the files. One want that had been recorded as unreachable became
+  reachable.
+- **Four of five "missing meets" were a definition artefact.** Strict
+  descendants made every comparable pair look like it lacked a meet. Under the
+  reflexive reading the library's own Lean module uses, one remains.
+- **A wiring can be internally consistent and wrong.** The first wirings drew
+  every cascade leaf to the want-port; the claim was false for three of
+  instance 5's four leaves and passed inspection.
+- **Instances 1, 2 and 3 are already done.** They are evidence, not work, and
+  a cascade for them would be a retrospective reading. That was not obvious
+  when the eight were first listed.
+- **The mission undercounted itself.** It said "two `starts-with?` branches"
+  where enumeration found a third routing site of a different shape.
 
 ## DERIVE — the method
 
