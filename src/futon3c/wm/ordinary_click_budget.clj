@@ -28,11 +28,21 @@
   ;; per-defect -- so no click issues while the board is dirty. 35 open
   ;; :machine-failure findings stand. The authorization document carries the
   ;; board and the repair route.
+  ;;
+  ;; 2026-09-24, later: Joe to claude-8, heard directly in claude-8's
+  ;; operator buffer: "I would award 10 clicks for you to use overnight as
+  ;; you see fit." Recorded in the same document's section "Joe's grant to
+  ;; claude-8, 2026-09-24" (futon2 326826ac) per that document's own rule
+  ;; that a draw raises `allocated` here rather than minting a new file.
+  ;; 5 (claude-5's lane, banked) + 10 (claude-8's lane) = 15. The ledger's
+  ;; :caller says which lane spent which. No click-path gate reads the
+  ;; board; the stop-line discipline is the lane's, taken from the store.
   {:path "futon2/holes/labs/wm-contract/AUTH-ordinary-click-budget-renewal-7-2026-09-24.md"
-   :sha "b31ecb66"})
+   :sha "326826ac"})
 (def allocated
-  "Five newly awarded; renewal-6 was fully consumed so nothing carries forward."
-  5)
+  "Five of the eighth grant (unspent, claude-5) plus ten granted to claude-8
+   on 2026-09-24 for overnight use at claude-8's discretion."
+  15)
 (def ^:dynamic *ledger-path*
   "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
 (defonce ^:private issue-lock (Object.))
