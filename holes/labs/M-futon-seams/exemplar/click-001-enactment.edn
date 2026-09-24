@@ -19,7 +19,7 @@
    :evidence "chose the provider grain (futon3c.agency.roles/provider) instead of the role grain the cascade specifies"}
   {:n 1 :pattern :realtime/mode-gate :commit "8e5c431e"
    :produced :prefix-routing-retired :success true
-   :check {:kind :grep :cmd "grep -rnE 'starts-with\\?[^)]*\"(claude|codex|kimi|zai)\"' src" :expect :no-match}
+   :check {:kind :grep :cmd "grep -rnE 'starts-with\\?.*\"(claude|codex|kimi|zai)\"' src" :expect :no-match}
    :evidence "both id-prefix provider branches in transport/http.clj converted; the library-loop adapter's binary-name check remains (a command-shape coupling, not an identifier)"}
   {:n 2 :pattern :or3/count-every-card-back :commit "139caa97"
    :produced :sites-enumerated :success true

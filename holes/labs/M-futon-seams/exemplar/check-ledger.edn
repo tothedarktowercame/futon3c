@@ -1,0 +1,69 @@
+;; Check ledger: runs of a check whose truth is known independently, so the
+;; observation model A can be MEASURED rather than declared (PROOF-2a clause 1).
+;; Author claude-10, 2026-09-24. One row per run (or :count identical runs).
+;;
+;; :truth   whether the property the check tests actually held on that input.
+;; :passed  whether the check said it held.
+;; A false pass is :passed true with :truth false; a false fail the reverse.
+;; :truth-source says how the truth was established without the check itself
+;; (a constructed bad case, a later review, an independent recomputation).
+;;
+;; Rows come from runs recorded on 2026-09-24 in M-futon-seams. The errors are
+;; the useful rows; each names the commit that found or fixed it.
+{:schema :m-futon-seams/check-ledger-v1
+ :rows
+ [;; ---- :test (clojure.test suites)
+  {:id :t1 :kind :test :check "roles_test provider-routing tests" :input "8e5c431e"
+   :truth true :passed true :truth-source "live proof-eval of the routing decisions agreed (claude-10)"}
+  {:id :t2 :kind :test :check "roles_test provider-routing tests" :input "old prefix definitions loaded over 8e5c431e"
+   :truth false :passed false :truth-source "constructed bad case: the prefix rule, known to skip 22 :codex agents"}
+  {:id :t3 :kind :test :check "roles_test redirect-a-role-to-another-provider" :input "eafd07b7"
+   :truth true :passed true :truth-source "request-review! read to call roles/seat-for (review)"}
+  {:id :t4 :kind :test :check "roles_test redirect-a-role-to-another-provider" :input "HEAD~ request-review! (hardcoded claude-1)"
+   :truth false :passed false :truth-source "constructed bad case: both reviews go to claude-1"}
+  {:id :t5 :kind :test :check "roles_test (8 tests)" :input "d6927670"
+   :truth true :passed true :truth-source "review of the three seat-for call sites"}
+
+  ;; ---- :grep (a regex over source)
+  {:id :g1 :kind :grep :check "starts-with\\?[^)]*\"(claude|codex|kimi|zai)\" (old regex)" :input "8e5c431e^ (2 prefix branches)"
+   :truth false :passed false :truth-source "reading http.clj: two prefix branches"
+   :note "found 1 of the 2 branches; the verdict was right by luck of the other"}
+  {:id :g2 :kind :grep :check "starts-with\\?[^)]*\"(claude|codex|kimi|zai)\" (old regex)" :input "constructed: 8e5c431e^ with only the first branch converted"
+   :truth false :passed true :truth-source "constructed bad case: the lower-case \"claude\" branch remains"
+   :error :false-pass :found-by "claude-10 while building this ledger"
+   :cause "[^)]* stops at the nested (str/lower-case agent-id) before the literal"}
+  {:id :g3 :kind :grep :check "old regex" :input "8e5c431e" :truth true :passed true :truth-source "review of the conversion"}
+  {:id :g4 :kind :grep :check "starts-with\\?.*\"(claude|codex|kimi|zai)\" (new regex)" :input "8e5c431e^" :truth false :passed false :truth-source "reading http.clj"}
+  {:id :g5 :kind :grep :check "new regex" :input "constructed one-branch case" :truth false :passed false :truth-source "constructed bad case"}
+  {:id :g6 :kind :grep :check "new regex" :input "HEAD src" :truth true :passed true :truth-source "review of the conversion"}
+
+  ;; ---- :validator (bb/python checkers over records)
+  {:id :v1 :kind :validator :check "proof2a_check W_t/W_0" :input "synthetic complete record (instances 4, 6)"
+   :truth true :passed true :truth-source "record built from recomputed values"}
+  {:id :v2 :kind :validator :check "proof2a_check falsifiers" :input "nine constructed bad extracts" :count 9
+   :truth false :passed false :truth-source "each extract constructed to violate its named condition"}
+  {:id :v3 :kind :validator :check "proof2a_check W_0 (first version)" :input "click-001.edn (hand-built candidates)"
+   :truth false :passed true :truth-source "PROOF-2a W_0 text requires :machine-constructed"
+   :error :false-pass :fixed-in "86d3f88e"}
+  {:id :v4 :kind :validator :check "meets.clj (strict descendants)" :input "instances 5 and 7, comparable pairs" :count 4
+   :truth true :passed false :truth-source "reflexive recomputation (proof2a_check, claude-10): the lower unit is the meet"
+   :error :false-fail :fixed-in "4d748660"}
+  {:id :v5 :kind :validator :check "cascade_check.py receipt sha" :input "instance-4 with corrupted receipt hashes"
+   :truth false :passed false :truth-source "constructed bad case"}
+  {:id :v6 :kind :validator :check "seams page stale-anchor flag" :input "annotation shifted by one character"
+   :truth false :passed false :truth-source "constructed bad case"}
+  {:id :v7 :kind :validator :check "reanchor.py (sequential replace)" :input "uniform +333 mission shift"
+   :truth false :passed true :truth-source "claude-1 re-read: four notes still stale after '27 moved'"
+   :error :false-pass :fixed-in "reanchor.py sentinels + verify-after-apply (claude-1, 83eb2b9e)"}
+
+  ;; ---- :layout (Playwright check of the page)
+  {:id :l1 :kind :layout :check "check_seams_layout.js (measured .nid/.wid only)" :input "wiring figures, 10px port labels"
+   :truth false :passed true :truth-source "element screenshot (claude-10) against Joe's measure"
+   :error :false-pass :fixed-in "4e5a1350"}
+  {:id :l2 :kind :layout :check "check_seams_layout.js (body measured as .main p)" :input "page with the lifecycle TOC"
+   :truth true :passed false :truth-source "claude-1: body sample was the TOC's small print; figures were right"
+   :error :false-fail :fixed-in "0addf90d"}
+  {:id :l3 :kind :layout :check "check_seams_layout.js text-in-box" :input "cascade figures, produces line 3.1px over"
+   :truth false :passed false :truth-source "element screenshot"}
+  {:id :l4 :kind :layout :check "check_seams_layout.js (40 measurements)" :input "c61cd94c" :truth true :passed true
+   :truth-source "element screenshots of Figures 1 and 5 (claude-10)"}]}

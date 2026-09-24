@@ -7,7 +7,7 @@ file. Run from /home/joe/code/futon3c. Deterministic for a fixed tree.
 """
 import os, re, subprocess
 SEAT = re.compile(r'"((?:oxf-|lon-|chi-)?(?:claude|codex|kimi|zai)-\d+)"')
-ROUTE = [(re.compile(r'starts-with\?[^)]*"(claude|codex|kimi|zai)"'), "id-prefix"),
+ROUTE = [(re.compile(r'starts-with\?.*"(claude|codex|kimi|zai)"'), "id-prefix"),
          (re.compile(r'\(=\s*"(codex|claude|kimi|zai)"\s*\(\.getName'), "command-binary-name")]
 rev = subprocess.check_output(["git", "rev-parse", "--short=8", "HEAD"], text=True).strip()
 seats, routes = [], []

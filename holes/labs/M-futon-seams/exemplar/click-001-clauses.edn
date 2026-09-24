@@ -1,35 +1,41 @@
 {:schema :m-futon-seams/proof2a-clauses-v1,
  :computed-by "bb holes/labs/M-futon-seams/exemplar/clauses_1_6.clj",
  :clause-2-D
- {:prior-over-want-states
+ {:prior-basis {:unit :attempts, :n 8, :kernel :interleaving},
+  :prior-at-6-kernel-steps-for-comparison
   {[:caller-converted :prefix-routing-retired :redirect-test] 0.260047,
    [:caller-converted :redirect-test] 0.393426,
    [:caller-converted] 0.247065,
    [] 0.099462},
+  :prior-over-want-states
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.503316,
+   [:caller-converted :redirect-test] 0.293601,
+   [:caller-converted] 0.146801,
+   [] 0.056282},
   :likelihood-of-observations
-  {[:caller-converted :prefix-routing-retired :redirect-test] 0.950796,
-   [:caller-converted :redirect-test] 0.009604,
-   [:caller-converted] 1.96E-4,
-   [] 4.0E-6},
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.48,
+   [:caller-converted :redirect-test] 0.213333,
+   [:caller-converted] 0.066667,
+   [] 0.020833},
   :posterior
-  {[:caller-converted :prefix-routing-retired :redirect-test] 0.984757,
-   [:caller-converted :redirect-test] 0.015049,
-   [:caller-converted] 1.93E-4,
-   [] 2.0E-6},
-  :posterior-all-wants-met 0.984757,
+  {[:caller-converted :prefix-routing-retired :redirect-test] 0.766506,
+   [:caller-converted :redirect-test] 0.198724,
+   [:caller-converted] 0.031051,
+   [] 0.00372},
+  :posterior-all-wants-met 0.766506,
   :not-a-copy-of-facts true},
  :clause-4-Q
  {:predicted
-  {:p-all-wants 0.260047,
-   :source "rollout at theta 0.8, as click-001 recorded"},
+  {:p-all-wants-after-observed-attempts 0.503316,
+   :p-all-wants-at-6-kernel-steps 0.260047},
   :recorded-in-click 0.26,
-  :prediction-reproduced? true,
+  :click-prediction-reproduced? true,
   :realised
   {:observations
    {:caller-converted {:check-kind :test, :passed true},
     :redirect-test {:check-kind :test, :passed true},
     :prefix-routing-retired {:check-kind :grep, :passed true}}},
-  :surprise-bits 1.993788,
+  :surprise-bits 1.665724,
   :link
   {:action :cand/a-registry-first,
    :outcome "click-001-enactment.edn :observations",
@@ -64,18 +70,36 @@
    :p-over-cap 0.0,
    :log-score-bits -1.76807}},
  :clause-1-A
- {:status :declared,
+ {:status :measured-from-check-ledger,
   :rates
+  {:test
+   {:p-pass-if-true 0.8,
+    :p-pass-if-false 0.25,
+    :counts
+    {:true-runs 3,
+     :passed-when-true 3,
+     :false-runs 2,
+     :passed-when-false 0}},
+   :grep
+   {:p-pass-if-true 0.75,
+    :p-pass-if-false 0.333333,
+    :counts
+    {:true-runs 2,
+     :passed-when-true 2,
+     :false-runs 4,
+     :passed-when-false 1}}},
+  :declared-rates
   {:test {:p-pass-if-true 0.98, :p-pass-if-false 0.02},
    :grep {:p-pass-if-true 0.99, :p-pass-if-false 0.01}},
+  :ledger "check-ledger.edn",
   :observations
   {:caller-converted {:check-kind :test, :passed true},
    :redirect-test {:check-kind :test, :passed true},
    :prefix-routing-retired {:check-kind :grep, :passed true}},
   :W1-measured-rates
-  {:met false,
+  {:met :partly,
    :reason
-   "no population of check outcomes against known ground truth exists yet"}},
+   "rates are counts from the ledger, Beta(1,1); few rows, so wide uncertainty"}},
  :inputs
  {:click "click-001.edn",
   :enactment "click-001-enactment.edn",
@@ -83,8 +107,8 @@
   :kernel :coapp,
   :horizon 6},
  :clause-3-F
- {:P-o 0.251079,
-  :F 1.381989,
+ {:P-o 0.315186,
+  :F 1.154592,
   :statement
   "q is the exact update, so F = -log P(o) (ExactBeliefTrajectory.exactUpdate_minimises_vfe)"},
  :clause-5-B

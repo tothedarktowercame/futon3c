@@ -47,17 +47,46 @@
 (defn want-marginal [d] (reduce (fn [m [s w]] (update m (set/intersection want s) (fnil + 0.0) w)) {} d))
 (defn p-all [m] (get m want 0.0))
 
-;; --- clause 1: A, observation likelihood for the recorded observations
-(def rates (get-in enact [:observation-model :rates]))
+;; --- clause 1: A, observation likelihood for the recorded observations.
+;; MEASURED from check-ledger.edn where it has rows for a check kind: the
+;; posterior mean of Beta(1,1) updated with (passed | truth) counts. The
+;; declared rates are kept beside them so the effect of measuring is visible.
+(def ledger (let [f (java.io.File. (str here "/check-ledger.edn"))] (when (.exists f) (edn/read-string (slurp f)))))
+(defn measured-rates [kind]
+  (let [rows (filter #(= kind (:kind %)) (:rows ledger))
+        n (fn [pred] (reduce + (map #(or (:count %) 1) (filter pred rows))))
+        tt (n :truth) tp (n #(and (:truth %) (:passed %)))
+        ft (n #(false? (:truth %))) fp (n #(and (false? (:truth %)) (:passed %)))]
+    (when (seq rows)
+      {:p-pass-if-true (/ (+ tp 1.0) (+ tt 2.0)) :p-pass-if-false (/ (+ fp 1.0) (+ ft 2.0))
+       :counts {:true-runs tt :passed-when-true tp :false-runs ft :passed-when-false fp}})))
+(def declared-rates (get-in enact [:observation-model :rates]))
+(def rates (into {} (for [[k v] declared-rates] [k (or (measured-rates k) v)])))
 (defn lik [obs wstate]   ; P(o | want-state), checks independent given the state
   (reduce * 1.0 (for [[tok {:keys [check-kind passed]}] obs
                       :let [{:keys [p-pass-if-true p-pass-if-false]} (rates check-kind)
                             p (if (contains? wstate tok) p-pass-if-true p-pass-if-false)]]
                   (if passed p (- 1.0 p)))))
 
-;; --- clause 2: D, the exact posterior over want-states; clause 3: F
+;; --- clause 2: D, the exact posterior over want-states; clause 3: F.
+;; The prior is the predicted state AFTER THE OBSERVED NUMBER OF ATTEMPTS
+;; (clause 4's unit), computed under interleaving, whose step is one attempt
+;; (co-application has the same attempt distribution; its steps bundle
+;; several attempts, so "state after 8 attempts" is only defined per attempt).
 (def theta0 (constantly (get-in enact [:theta-prior :mean])))
-(def prior (want-marginal (rollout theta0)))          ; predicted, before acting
+(defn state-after-attempts [theta n]
+  (loop [d {s0 1.0} k 0]
+    (if (= k n) d
+        (recur (reduce (fn [m [s w]]
+                         (let [f (vec (sort-by str (frontier s)))]
+                           (if (empty? f) (update m s (fnil + 0.0) w)
+                               (reduce (fn [m q] (-> m (update (set/union s (:produces (pats q))) (fnil + 0.0) (/ (* w (theta q)) (count f)))
+                                                     (update s (fnil + 0.0) (/ (* w (- 1.0 (theta q))) (count f)))))
+                                       m f))))
+                       {} d)
+               (inc k)))))
+(def horizon-prior (want-marginal (rollout theta0)))  ; kept for comparison: 6 kernel steps
+(def prior (want-marginal (state-after-attempts theta0 (count (:attempts enact)))))
 (def obs (:observations enact))
 (def p-o (reduce + (for [[ws w] prior] (* w (lik obs ws)))))
 (def posterior (into {} (for [[ws w] prior] [ws (/ (* w (lik obs ws)) p-o)])))
@@ -128,19 +157,25 @@
    :computed-by "bb holes/labs/M-futon-seams/exemplar/clauses_1_6.clj"
    :inputs {:click "click-001.edn" :enactment "click-001-enactment.edn" :candidate (:candidate enact)
             :kernel :coapp :horizon T}
-   :clause-1-A {:status (get-in enact [:observation-model :status]) :rates rates
+   :clause-1-A {:status (if ledger :measured-from-check-ledger (get-in enact [:observation-model :status]))
+                :rates (into {} (for [[k v] rates] [k (-> v (update :p-pass-if-true r) (update :p-pass-if-false r))]))
+                :declared-rates declared-rates
+                :ledger "check-ledger.edn"
                 :observations obs
-                :W1-measured-rates {:met false :reason (get-in enact [:observation-model :reason])}}
-   :clause-2-D {:prior-over-want-states (fmt prior)
+                :W1-measured-rates (if ledger {:met :partly :reason "rates are counts from the ledger, Beta(1,1); few rows, so wide uncertainty"} {:met false :reason (get-in enact [:observation-model :reason])})}
+   :clause-2-D {:prior-basis {:unit :attempts :n (count (:attempts enact)) :kernel :interleaving}
+                :prior-at-6-kernel-steps-for-comparison (fmt horizon-prior)
+                :prior-over-want-states (fmt prior)
                 :likelihood-of-observations (fmt (into {} (for [ws (keys prior)] [ws (lik obs ws)])))
                 :posterior (fmt posterior)
                 :posterior-all-wants-met (r (get posterior want 0.0))
                 :not-a-copy-of-facts (not= 1.0 (r (get posterior want 0.0)))}
    :clause-3-F {:P-o (r p-o) :F (r F)
                 :statement "q is the exact update, so F = -log P(o) (ExactBeliefTrajectory.exactUpdate_minimises_vfe)"}
-   :clause-4-Q {:predicted {:p-all-wants (r (p-all prior)) :source "rollout at theta 0.8, as click-001 recorded"}
+   :clause-4-Q {:predicted {:p-all-wants-after-observed-attempts (r (p-all prior))
+                            :p-all-wants-at-6-kernel-steps (r (p-all horizon-prior))}
                 :recorded-in-click (get-in cand [:prediction :p-all-wants])
-                :prediction-reproduced? (< (Math/abs (- (p-all prior) (get-in cand [:prediction :p-all-wants]))) 1e-3)
+                :click-prediction-reproduced? (< (Math/abs (- (p-all horizon-prior) (get-in cand [:prediction :p-all-wants]))) 1e-3)
                 :realised {:observations obs}
                 :surprise-bits (r (/ F (Math/log 2)))
                 :link {:action (:candidate enact) :outcome "click-001-enactment.edn :observations" :next-belief ":clause-2-D :posterior"}}
@@ -166,5 +201,8 @@
               :Q {:status :linked} :B {:status :computed-from-declared-prior}}})
 
 (spit (str here "/click-001-clauses.edn") (with-out-str (pp/pprint out)))
-(pp/pprint (select-keys out [:clause-4-attempts]))
+(pp/pprint (select-keys out [:clause-1-A]))
+(pp/pprint (select-keys (:clause-2-D out) [:prior-over-want-states :posterior-all-wants-met]))
+(pp/pprint (:predicted (:clause-4-Q out)))
+(pp/pprint (:clause-3-F out))
 (pp/pprint (get-in out [:clause-5-B :sensitivity-to-declared-prior]))
