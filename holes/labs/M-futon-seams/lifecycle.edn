@@ -110,6 +110,9 @@
               {:kind :commit :ref "4d748660" :what "a DERIVE revision: four of five missing meets were a definition artefact"}
               {:kind :artefact :ref "exemplar/spike-prompt-coupling.edn" :what "the spike for clause 2: a broken path in prompt text changes no test outcome, and two such paths are ALREADY broken in the tree with nothing reporting it"}
               {:kind :artefact :ref "scripts/grain_check.py" :what "the grain declaration against the enacted resolver's arglist at the recorded sha"}
+              {:kind :independent-check :ref "futon2 0cb6396d proof2/packets/H-WITNESS-check.md"
+               :what "kimi-4, read-only, under claude-8: 14 warrant-citing steps across both candidates, 10 distinct patterns, every flexiarg present with a sha matching its receipt pin, all 14 reading as rewrite readings with consumed and produced tokens named and none citing a HOWEVER as its reason. No met phase exit rests on an unwarranted step. This is the first check of this mission's warrants by an agent outside it."
+               :observation "Receipt dates are pinned at file level (a prose comment) rather than per receipt. Noted and NOT acted on: every receipt in all five cascades has one author and one date, and the sha pin already catches the case a date would -- a reading made against a pattern that has since changed. A per-receipt date backfilled from a single day would add a field without adding information. If a cascade ever carries receipts from two authors or two days, add it then."}
               {:kind :artefact :ref "exemplar/click-001-clauses.edn" :what "PROOF-2a clauses 1-6 computed over this click (results in the file, not restated on the page)"}]
    :artefacts [{:note "p2a-i4-kernel"} {:note "p2a-roots"} {:note "p2a-i5-unproduced"}
                {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}]}
