@@ -1,0 +1,53 @@
+{
+ "candidates": {
+  "a": [
+   "cascade-construction/choose-the-grain-where-state-lives",
+   "coordination/assignment-binding",
+   "cycle-machine/single-producer",
+   "gauntlet/placenta-transfer",
+   "or3/count-every-card-back",
+   "realtime/mode-gate",
+   "translation/test-by-reproducing-behaviour"
+  ],
+  "b": [
+   "agency/single-routing-authority",
+   "gauntlet/placenta-transfer",
+   "iching/hexagram-49-ge",
+   "or3/count-every-card-back",
+   "peripherals/read-only-first-then-extend",
+   "realtime/mode-gate",
+   "translation/test-by-reproducing-behaviour"
+  ]
+ },
+ "library_size": 1411,
+ "missions": {
+  "E_a": -51.9231,
+  "E_a_minus_E_b": -1.3863,
+  "E_b": -50.5368,
+  "corpus_uses": 254,
+  "distinct_patterns_used": 144,
+  "floor_ln_p": -7.4176,
+  "prior_ratio_a_over_b": 0.25,
+  "seen": {
+   "agency/single-routing-authority": 1,
+   "peripherals/read-only-first-then-extend": 1
+  },
+  "unseen_a": 7,
+  "unseen_b": 5
+ },
+ "turns": {
+  "E_a": -49.4797,
+  "E_a_minus_E_b": 1.7918,
+  "E_b": -51.2714,
+  "corpus_uses": 106,
+  "distinct_patterns_used": 60,
+  "floor_ln_p": -7.3245,
+  "prior_ratio_a_over_b": 6.0,
+  "seen": {
+   "coordination/assignment-binding": 1,
+   "cycle-machine/single-producer": 2
+  },
+  "unseen_a": 5,
+  "unseen_b": 7
+ }
+}
