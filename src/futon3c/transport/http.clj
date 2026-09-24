@@ -67,6 +67,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.roles :as roles]
             [futon3c.agency.warrant :as warrant]
             [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.invoke-ingress-controller :as invoke-ingress]
@@ -4751,15 +4752,11 @@
         result))))
 
 (defn- agent-requires-execution?
-  "Return true when the agent metadata requests execution evidence enforcement."
+  "Return true when AGENT-ID's declared role requires execution evidence.
+   Reads the registered provider and metadata (futon3c.agency.roles), not the
+   id's prefix: an id beginning \"codex\" is not evidence of anything."
   [agent-id]
-  (let [record (reg/get-agent agent-id)
-        metadata (:agent/metadata record)
-        aid (some-> agent-id str str/lower-case)]
-    (boolean (or (get metadata :require-execution?)
-                 (get metadata "require-execution?")
-                 (and (string? aid)
-                      (str/starts-with? aid "codex"))))))
+  (roles/requires-execution? agent-id))
 
 (defn- codex-task-no-execution?
   "True when an execution-enforced agent returns a task-mode reply with no evidence.
@@ -4802,7 +4799,7 @@
   [agent-id result]
   (and (not (:ok result))
        (string? agent-id)
-       (str/starts-with? (str/lower-case agent-id) "claude")
+       (roles/provider? agent-id :claude)
        (boolean
         (re-find #"No conversation found with session ID:"
                  (result-error-message result)))))
