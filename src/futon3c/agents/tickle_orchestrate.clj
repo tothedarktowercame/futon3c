@@ -327,14 +327,14 @@
    Returns {:ok bool :result str :elapsed-ms long}.
 
    config:
-     :agent-id — agent to invoke (default \"codex-1\")
+     :agent-id — agent to invoke (default: the seat bound to :implementer in roles.edn)
      :evidence-store — for workflow tracking
      :repo-dir — repository root
      :timeout-ms — invoke timeout (default 180000 = 3 min)
      :session-id — workflow session id"
   [issue config]
   (let [{:keys [evidence-store repo-dir timeout-ms session-id agent-id]} config
-        agent-id (or agent-id "codex-1")
+        agent-id (or agent-id (roles/seat-for :implementer))
         timeout-ms (or timeout-ms 180000)
         prompt (make-assign-prompt issue repo-dir agent-id)
         issue-number (:number issue)
@@ -571,14 +571,14 @@
    config:
      :evidence-store — evidence store
      :repo-dir — repository root
-     :agent-id — agent to invoke (default \"codex-1\")
+     :agent-id — agent to invoke (default: the seat bound to :implementer in roles.edn)
      :timeout-ms — invoke timeout (default 180000)
      :send-to-channel! — IRC send fn (optional)
      :room — IRC room (default \"#futon\")"
   [issue config]
   (let [{:keys [evidence-store repo-dir agent-id timeout-ms
                 send-to-channel! room]} config
-        agent-id (or agent-id "codex-1")
+        agent-id (or agent-id (roles/seat-for :implementer))
         session-id (workflow-id)
         issue-number (:number issue)
         start (System/currentTimeMillis)]
@@ -825,7 +825,7 @@
             (if pass?
               (do (println (str "[fm-conductor] " target-agent " → PASS"))
                   ;; Whistle: if PASS and no assignable work, escalate via Agency
-                  (let [mentor "claude-2"
+                  (let [mentor (roles/seat-for :mentor)
                         whistle? (and (empty? assignable)
                                       (not= target-agent mentor)
                                       (cooldown-elapsed? conductor-state
