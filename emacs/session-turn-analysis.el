@@ -318,12 +318,19 @@ The record is written either way; only who fills it changes."
   :type 'string
   :group 'session-mode)
 
-(defcustom session-mode-analysis-requisition
-  "M-futon-seams — interpret one operator turn into intents, cues and pattern citations"
-  "Requisition line sent with every turn-analysis brief.
-A seat may refuse work that does not name what it is for; this says so in
-one line. The default names the mission the turn-annotation work belongs
-to, which is where the record format and this dispatcher are specified."
+(defcustom session-mode-analysis-requisition "M-futon-seams"
+  "Requisition TARGET sent with every turn-analysis brief.
+A seat may refuse work that does not name what it is for. The dispatcher
+appends the turn's own id as the purpose, so the line reads
+  Requisition: M-futon-seams — interpret operator turn turn-oxKV5y
+
+The target is deliberately CONSTANT. A Kimi seat keeps one conversation
+per target and compacts it when the target changes, so a per-turn target
+would pay for a compaction on every single turn. The cost of holding it
+constant is that one turn's reading can colour the next; the brief says
+plainly that the record is everything the seat knows, and the learned cue
+vocabulary is persisted to a file rather than carried in conversation, so
+nothing depends on that history."
   :type 'string
   :group 'session-mode)
 
@@ -339,7 +346,9 @@ state -- never silently complete."
                  ;; to it failed: the brief had no way to say what the work was
                  ;; for. Stated here rather than assumed, and harmless to a seat
                  ;; that does not read it.
-                 "Requisition: " session-mode-analysis-requisition "\n\n"
+                 "Requisition: " session-mode-analysis-requisition
+                 " — interpret operator turn "
+                 (file-name-base path) "\n\n"
                  "Interpret one operator turn. This is the whole task; there is no "
                  "conversation attached to it.\n\n"
                  "The turn, its sentence offsets and its metadata (including which "
