@@ -1,0 +1,35 @@
+;; VERIFY spike: can a static check catch a coupling carried in prompt text?
+;;
+;; The exit criterion asks that risks which cannot be verified statically be
+;; SPIKED -- tried, not argued about. Instance 6 claims a coupling in prompt
+;; text is invisible to tooling. That is a claim, and this is the experiment.
+;;
+;; Run 2026-09-24 by claude-1, in the working tree, restored afterwards.
+{:schema :m-futon-seams/spike-v1
+ :question "If a path coupling in mfuton_prompt_override.clj is changed to name a file that does not exist, does anything in the repository notice?"
+ :subject "src/futon3c/agents/mfuton_prompt_override.clj"
+
+ :method
+ ["copy the file aside"
+  "change upstream-strategy-doc-ref from futon6/data/frontiermath-pilot/FM-001-strategy.md to ...-MOVED.md"
+  "run the test namespace that exercises this area, futon3c.dev.fm-test"
+  "restore the file and run the same namespace again for the baseline"]
+
+ :result
+ {:with-the-break  {:tests 22 :assertions 75 :failures 1}
+  :baseline        {:tests 22 :assertions 75 :failures 1}
+  :same? true
+  :the-one-failure "unrelated and pre-existing: a channel assertion, #math against #futon, in manual FM dispatch. Recorded so it is not read as the spike's result."
+  :verdict :nothing-noticed
+  :statement "Breaking the path changed no test outcome. The coupling is carried in a string the code passes on, and nothing resolves it, so nothing can fail on it."}
+
+ :found-while-looking
+ [{:kind :already-broken
+   :statement "Both upstream doc refs name files that DO NOT EXIST in the working tree today: futon6/data/frontiermath-pilot/FM-001-strategy.md and futon6/data/first-proof/frontiermath-pilot/FM-001-ramsey-book-graphs-state.md are both absent. The coupling is not at risk of breaking; it is already broken, and nothing reports it. The spike did not need to introduce a fault -- one was there."}
+  {:kind :second-copy-inside-one-file
+   :statement "Each path is written TWICE in this file: once as a private def (upstream-strategy-doc-ref, line 45) and once as a literal argument to frontiermath-doc-ref (line 128). Changing one does not change the other. Instance 6's 'two sources kept in sync by hand' is not only between the .md map and this file; it is inside this file."}]
+
+ :bearing
+ {:on "instance 6, and on VERIFY's second clause"
+  :statement "The claim that a prompt-carried coupling is invisible to tooling is now tested rather than asserted, and the test agrees with it -- more strongly than the mission claimed, since two such couplings are broken in the tree right now with nothing reporting it. What a static check CAN do is resolve a path at build or test time and fail when it does not exist; that is precisely what instance 6's :one-authority want would make possible, and it does not exist today."
+  :risk-status :spiked-and-confirmed}}

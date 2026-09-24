@@ -20,7 +20,7 @@
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/lifecycle-v1
  :mission {:path "holes/missions/M-futon-seams.md"
-           :sha256 "71de00cc3d36cdbce642f4105368750fc56b538dfdce21b6abb68ad60fd8dc90"
+           :sha256 "93c192896babc3cd01006f8416e04de05d782b43acc08318b397b4859c789de5"
            :status-line "HEAD complete; IDENTIFY complete; INSTANTIATE-1 complete for instance 4 (enacted as chosen after a first wrong-grain attempt); MAP/DERIVE/ARGUE in progress; VERIFY met in substance (2026-09-24)"}
  :lifecycle {:path "futon4/holes/mission-lifecycle.md"}
 
@@ -101,13 +101,15 @@
   {:id :VERIFY :n 5 :title "VERIFY — checked against structural constraints"
    :exit "The design has been checked against available structural constraints. Any risks that can't be verified statically have been spiked. DERIVE revisions (if any) are recorded."
    :exit-line 231
-   :status :in-progress
+   :status :exit-met
    :mission-anchor {:start 43700 :end 43750 :quote "## VERIFY \u2014 checked against structural constraints"}
-   :because "Real static checking exists and has found real defects: cascade_check.py (ids resolve, receipts' shas still match, tokens declared), wiring_check.py (an edge carries a token its ends have), proof2a_check.clj (W_t, W_0 and nine falsifiers), and a measured layout check. DERIVE revisions ARE recorded -- the reflexive-descendants correction, the adapter-pattern hole closing, i4-convert's pattern replaced. What is missing is the mission-side record: these live in commits and lab files, not in a VERIFY section."
+   :because "Met 2026-09-24. The section previously said 'met in substance' without saying which of the three clauses the hedge was on; it was the second. Clause 1: seven checks, each of which caught something real. Clause 3: four DERIVE revisions recorded. Clause 2, unverifiable risks spiked: five of six spiked, each named with how. The sixth -- are the check error rates real -- is NOT this mission's to close: check-ledger.edn has 22 rows with no ground truth on any of them, which is exactly why clause 1 (A) is :declared, and kimi-3 is measuring it under claude-8's H-witness packet. The fifth spike is the one worth reading: instance 6 CLAIMS a prompt-carried coupling is invisible to tooling, so it was tried, and nothing noticed -- 22 tests, 75 assertions, 1 pre-existing failure, identical with and without a deliberately broken path."
    :evidence [{:kind :artefact :ref "scripts/cascade_check.py" :what "5/5 cascades pass"}
               {:kind :artefact :ref "scripts/wiring_check.py" :what "5/5 wirings pass"}
               {:kind :artefact :ref "exemplar/proof2a_check.clj" :what "W_t and W_0 both pass (W_0 by constructor replay since a3f65fcc); clause C checks the enactment against the chosen candidate since 401469fd; every falsifier caught"}
               {:kind :commit :ref "4d748660" :what "a DERIVE revision: four of five missing meets were a definition artefact"}
+              {:kind :artefact :ref "exemplar/spike-prompt-coupling.edn" :what "the spike for clause 2: a broken path in prompt text changes no test outcome, and two such paths are ALREADY broken in the tree with nothing reporting it"}
+              {:kind :artefact :ref "scripts/grain_check.py" :what "the grain declaration against the enacted resolver's arglist at the recorded sha"}
               {:kind :artefact :ref "exemplar/click-001-clauses.edn" :what "PROOF-2a clauses 1-6 computed over this click (results in the file, not restated on the page)"}]
    :artefacts [{:note "p2a-i4-kernel"} {:note "p2a-roots"} {:note "p2a-i5-unproduced"}
                {:note "p2a-i7-carrier"} {:note "p2a-redirect-observation"}]}
@@ -116,7 +118,7 @@
    :exit "Every completion criterion has a concrete demonstration. A new person (human or agent) could reproduce the demo from the mission doc without help."
    :exit-line 266
    :status :exit-met
-   :mission-anchor {:start 45329 :end 45360 :quote "## INSTANTIATE \u2014 demonstrations"}
+   :mission-anchor {:start 48283 :end 48314 :quote "## INSTANTIATE \u2014 demonstrations"}
    :because "Met for instance 4, which is the scope the IDENTIFY exit set. All three want tokens are observed met with a recorded check each -- two tests and a grep -- and the mission now carries the four commands that reproduce them. NOT met for the mission: seven instances remain unenacted. Two residual couplings are recorded as deviations rather than closed: the library-loop adapter's check on the codex binary name, and tickle_orchestrate's rotation roster, which lists seats to cycle rather than looking a role up."
    :evidence [{:kind :commit :ref "eafd07b7" :what "resources/roles.edn, roles/seat-for, request-review! asks for :reviewer, redirect test"}
               {:kind :commit :ref "d6927670" :what "tickle's implementer default and mentor resolve through seat-for"}
@@ -132,7 +134,7 @@
    :exit "Someone browsing the docbook can discover what this mission built without knowing the mission exists. The documentation is findable via navigation, not just via grep."
    :exit-line 293
    :status :not-started
-   :mission-anchor {:start 48035 :end 48046 :quote "## DOCUMENT"}
+   :mission-anchor {:start 50989 :end 51000 :quote "## DOCUMENT"}
    :because "This page is the only rendered account, and it is reachable by URL alone -- nothing navigates to it, and it is not in a docbook. The mission is discoverable by grep over holes/missions/. A second exit criterion is PROPOSED but not adopted (Rob via Joe, 2026-09-24): discharge DOCUMENT by building a seam for the annotation-of-user-inputs feature, so the documentation is a worked example rather than prose about seams."
    :evidence [{:kind :discrepancy :what "no docbook entry; the page is unlinked from any index"}
               {:kind :proposal :what "Rob via Joe: discharge DOCUMENT by extracting the turn->record and record->dispatch seam from the annotation feature. Evidence it is a seam and not a tidy-up: the >>> convention exists in the Emacs path only, so the same turn recorded live and recorded through turn_batch.py mean different things."}]

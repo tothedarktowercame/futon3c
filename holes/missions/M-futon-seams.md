@@ -641,33 +641,76 @@ mistaken for an argument that these patterns are the right ones.
 ## VERIFY — checked against structural constraints
 
 **Exit criterion:** the design has been checked against available structural
-constraints; unverifiable risks spiked; DERIVE revisions recorded. **Met in
-substance.**
+constraints; unverifiable risks spiked; DERIVE revisions recorded. **Met.**
+Three clauses, taken separately below, because the section previously said
+"met in substance" without saying which clause the hedge was on. It was the
+second.
 
-Four checks run and have each caught real defects:
+### Checked against available structural constraints
+
+Seven checks run, and each exists because it caught something:
 
 - `scripts/cascade_check.py` — every pattern id resolves, its declaration
   matches its path, every receipt's sha256 still matches the file's bytes,
-  every token used is declared. 5/5 pass.
-- `scripts/wiring_check.py` — an edge carries a token its source produces and
-  its target needs; `:licensed-by` resolves to a pattern of the named cascade;
-  recorded dangling outputs equal what the ports imply. 5/5 pass.
-- `exemplar/proof2a_check.clj` (claude-10) — PROOF-2a's W_t and W_0 with nine
-  falsifiers. W_t passes; W_0 fails on the construction condition, by
-  construction, because the candidates are hand-built.
+  every token used is declared. **5/5**.
+- `scripts/wiring_check.py` — derives the edges the *cascade* implies and
+  compares in both directions, so a wiring cannot be internally consistent and
+  wrong. **5/5**.
+- `scripts/grain_check.py` — the grain the cascade chose against the argument
+  list of the enacted resolver, and that resolver must exist at the recorded
+  sha. **Passes** on the second enactment, **fails** on the first.
+- `exemplar/proof2a_check.clj` (claude-10) — W_t, W₀ and W_c with nine
+  falsifiers. W_t and **W₀ both pass**, W₀ by constructor replay since
+  `a3f65fcc`; W_c checks the enactment against the chosen candidate and fails
+  on the first attempt alone, on attempts with their checks removed, and on an
+  untyped deviation.
+- `scripts/mission_c_check.py` — every cue-quote is the text at its cue, every
+  quote occurs exactly once, every served-by want exists in its cascade.
 - `scripts/check_seams_layout.js` — the rendering, measured rather than
-  eyeballed. 40 measurements, 0 failing.
+  eyeballed. **40 measurements, 0 failing**.
+- `holes/labs/M-futon-seams/proto/meets.clj` — the restricted semilattice
+  condition, computed rather than assumed.
+
+### Risks that cannot be checked statically, and what was done about each
+
+| risk | spiked? | how |
+|---|---|---|
+| Does a role indirection actually let a different seat serve? | **yes** | `roles_test`: rebind `:reviewer` claude-1 → oxf-codex-7, behaviour follows; 8 of its 14 assertions fail against the old definitions |
+| Does the replay reproduce the candidates, or merely echo them? | **yes** | `proof2a_check.clj` fails W₀ on a replay that does not reproduce the candidate |
+| Does a grain declaration correspond to real code? | **yes** | `grain_check.py` resolves the named resolver and compares its argument list; tested against a renamed function and a drifted arglist |
+| Do the recorded predictions reproduce? | **yes** | clause 4 recomputes from the recorded inputs: 0.260 against the recorded 0.26 |
+| **Is a coupling carried in prompt text really invisible to tooling?** | **yes** | `exemplar/spike-prompt-coupling.edn` — see below |
+| Are the check error rates real? | **no** | `check-ledger.edn` has 22 rows and no ground truth on any of them; clause 1 is `:declared` for exactly this reason. Being measured by kimi-3 under claude-8's H-witness packet — **not this mission's to close** |
+
+**The prompt-coupling spike.** Instance 6 *claims* a coupling in prompt text is
+invisible to tooling. That is a claim, so it was tried: change
+`upstream-strategy-doc-ref` in `mfuton_prompt_override.clj` to name a file that
+does not exist, run the test namespace for that area, restore, run again.
+**22 tests, 75 assertions, 1 failure — identical both ways.** The one failure
+is pre-existing and unrelated (a channel assertion, `#math` against `#futon`),
+recorded so it is not mistaken for the result. Nothing noticed.
+
+Two things turned up that the mission had not claimed:
+
+- **The coupling is not at risk of breaking; it is already broken.** Both
+  upstream doc refs name files that do not exist in the working tree today.
+  The spike did not need to introduce a fault — one was there, unreported.
+- **The second copy is inside the file.** Each path is written twice, once as
+  a private `def` and once as a literal argument to `frontiermath-doc-ref`.
+  Instance 6's "two sources kept in sync by hand" is not only between the
+  dependency map and this file.
+
+### DERIVE revisions recorded
+
+The reflexive-descendants correction, which reduced five missing meets to one
+(`4d748660`); `software-design/adapter-pattern` becoming citable and closing
+instance 5's unproduced want; `gauntlet/placenta-transfer` replacing a
+stretched reading in instance 4; and the grain declarations added to all four
+cascades that choose one.
 
 PROOF-2a clauses 1–6 have been computed over this click by claude-10 —
-`exemplar/clauses_1_6.clj` → `click-001-clauses.edn`, covering the check
-error rates, the posterior over want-states, free energy, the
-action→outcome→belief link, the per-pattern Beta update and the summary.
-The results are in that file rather than restated here.
-
-DERIVE revisions recorded: the reflexive-descendants correction, which
-reduced five missing meets to one (`4d748660`); `software-design/adapter-pattern`
-becoming citable and closing instance 5's unproduced want; and
-`gauntlet/placenta-transfer` replacing a stretched reading in instance 4.
+`exemplar/clauses_1_6.clj` → `click-001-clauses.edn`. The results are in that
+file rather than restated here.
 
 ## INSTANTIATE — demonstrations
 
