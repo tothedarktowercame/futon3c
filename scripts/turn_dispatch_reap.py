@@ -57,7 +57,8 @@ def main():
         print(f"{os.path.basename(rec)}: job {jid}")
         return
 
-    files = a.files or sorted(glob.glob(RECORDS))
+    files = a.files or [f for f in sorted(glob.glob(RECORDS))
+                        if not f.endswith((".analysis.json", ".candidates.json"))]
     counts = {"analyzed": 0, "no-job-id": 0, "running": 0, "refused": 0,
               "failed": 0, "unreachable": 0}
     for f in files:
@@ -65,7 +66,11 @@ def main():
             d = json.load(open(f, encoding="utf-8"))
         except Exception:
             continue
-        if d.get("analysis_status") not in (None, "requested"):
+        # The published analysis is the authority, not the flag. `complete`
+        # did not write the flag until 2026-09-24, so a finished analysis and
+        # a pending one were the same record.
+        if os.path.exists(f + ".analysis.json") or \
+           d.get("analysis_status") not in (None, "requested"):
             counts["analyzed"] += 1
             continue
         jid = (d.get("analysis_dispatch") or {}).get("job_id")

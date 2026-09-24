@@ -198,6 +198,18 @@ def complete(request_path, analysis):
         os.link(name, output)
     finally:
         os.unlink(name)
+    # Say so on the REQUEST too. Until now completion was visible only as the
+    # existence of a sibling file, so a finished analysis and a pending one
+    # were the same record -- 148 of them, which I mistook for a backlog.
+    # The analysis is the authority; this is the flag that makes it findable.
+    try:
+        request["analysis_status"] = "analyzed"
+        request["analysis_file"] = str(output.resolve())
+        tmp = Path(str(request_path) + ".tmp")
+        tmp.write_text(json.dumps(request, ensure_ascii=False, indent=1) + "\n")
+        tmp.replace(request_path)
+    except Exception:
+        pass          # the analysis is published; a flag is not worth losing it over
     return output
 
 
