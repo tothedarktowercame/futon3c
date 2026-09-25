@@ -3,7 +3,7 @@
 Status: HEAD
 
 **Type**: Mission
-**Lifecycle**: HEAD (drafted 2026-05-27) → first IDENTIFY artifact landed 2026-06-07 (corpus-audit pass; see §IDENTIFY). Operator HEAD-verify still pending.
+**Lifecycle**: HEAD (drafted 2026-05-27) → first IDENTIFY artifact landed 2026-06-07 (corpus-audit pass; see §IDENTIFY). Operator HEAD-verify still pending.  Checkpoint 2026-09-24: no real progress on the overt question (see §IDENTIFY, Checkpoint).
 **Owner**: claude-1 (pending operator-direction)
 **Pairing**: TBD
 
@@ -210,6 +210,75 @@ looked complete):**
 operator's work, and a stage-share table can stand in for understanding it. Every chat metric
 therefore needs a check against a source outside itself, as the transcript census checked the
 Minard figure — the same two-sided live-check as `subsumption-claim-discipline.flexiarg`.
+
+### Checkpoint 2026-09-24 — four months on, still no real progress on the overt question
+
+The mission opened on 2026-05-27. Since then it has collected three sweeps of *examples* of the
+crime, but the overt question — are Tornhill-style instruments live in the stack? — has the same
+answer as on day one: **no**. The follow-through steps named above were never taken:
+
+- Operator HEAD-verify: still pending.
+- Per-candidate live-check of the 74 punch-list candidates (`M-the-perfect-crime.audit.edn`,
+  `:audit/next`): not started; no candidate has a verdict.
+- Perfect-crime register: never seeded; no file exists.
+- Sub-question "add Tornhill anyway?": still open, with no one working on it.
+
+**What has moved (Joe, 2026-09-24).** The movement is on the third sweep's side — analytics over
+the agent chat and the stack's commit record — not on code instruments:
+
+- The Minard figure (casebook C3, above), now regenerable from
+  `marimo-zone/notebooks/minard-operator-work-20260921.py` via
+  `futon0/analysis/audits/minard_operator_work.py`. Its failure was caught by the kind of
+  independent check this mission asks for (the transcript census).
+- Marimo notebooks in `marimo-zone/` (all 2026-09-21 unless noted): blind pattern-stage
+  labelling with an agreement check (`pattern-stages-20260921.py`), the operator-reply stance
+  pilot (`chat-operator-reply-pilot-20260921.py`), park/wake usage cost
+  (`chat-park-wake-pilot-20260921.py`), a commit-activity audit in
+  `chat-business-ideas-20260921.py` (`futon0/analysis/audits/commit_timeseries.py`), and
+  earlier the WM closure view (`wm-closure.py`, 2026-09-17).
+
+None of these is at the Tornhill level yet. The nearest is the commit-activity audit, which
+counts commits per repo per day: churn at repo grain, with no file or var breakdown, no
+complexity axis and no coupling. The chat-side notebooks are early versions of the third
+sweep's table (hotspot ≈ correction rate, coordination cost ≈ park/wake usage), and their
+labels are provisional until Joe's blind labels are in.
+
+**A correction to the HEAD audit.** "Zero `.clj` matches" was true only for the words that audit
+searched for. A churn/complexity pipeline was built on 2026-03-06 (futon4 `b47a852`), before the
+mission opened, and the audit did not find it:
+
+- producer: `futon4/scripts/ingest-three-columns.py` — `ingest_file_churn` writes `code/file-churn`
+  (commits all-time / last 90 days / last touch per file); `ingest_indentation_complexity` writes
+  `code/indentation-complexity` (Tornhill's own complexity proxy);
+- consumer: `futon3c/src/futon3c/enrichment/query.clj` (`classify-hyperedge` → `:churn`,
+  `:complexity`; property keys match the producer);
+- display: `futon4/dev/arxana-browser-enrich.el` "Churn / Complexity" panel.
+
+**It is not live.** futon1b census (`/api/alpha/census?type=…`, 2026-09-24): `code/file-churn` 0,
+`code/indentation` 0, `code/indentation-complexity` 0 (control: `code/v05/commit` 17,850). Two
+defects are visible in the code:
+
+1. The futon1b migration candidate list (`futon1b/migration/export.clj`,
+   `futon1b/hx-backfill-per-type.bb`) names `code/indentation`, which nothing writes, and omits
+   `code/indentation-complexity`, which the producer does write. Export only probes listed types, so
+   complexity data could not have survived migration. `code/file-churn` is listed and still reads 0;
+   whether it was ever ingested into futon1a is unknown (futon1a :7071 is down).
+2. The Arxana panel renders only `(when (or churn complexity) …)`, so an empty store shows as a file
+   with no churn, not as a dead instrument. This is the mission's own crime in miniature: consumer
+   code present and correct, no data behind it, nothing on screen to say so.
+
+**Raw material that is live but unused.** futon1b holds `code/v05/edits` 542,936 (commit → var),
+`code/v05/var` 47,827, `code/v05/calls` 39,364. Var-level churn and temporal coupling (vars edited
+in the same commits) could be computed from these directly, from one source instead of a second
+`git log` pass. Nothing computes them. No complexity data is live in any form, and churn × complexity
+is not computed anywhere. (Not checked: whether the v05 commit ingest is current, and how much of it
+comes from worktree repos such as `futon3c-d`.)
+
+**What would count as progress.** Smallest step: fix the type name in the migration list, re-run the
+L0 ingest into futon1b, make the Arxana panel say "no churn data in store" when it has none, and pass
+a census check with non-zero counts. Any later churn/coupling metric derived from `code/v05/edits`
+needs a check against a source outside itself (e.g. `git log --numstat` on one repo), per
+`subsumption-claim-discipline.flexiarg`.
 
 ---
 
