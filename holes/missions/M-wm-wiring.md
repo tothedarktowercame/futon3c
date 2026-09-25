@@ -44,7 +44,7 @@ Closed means: in its own process, tests green, warrant registered. Wiring means:
 | 8 | universe (H-C follow-up) | `:universe` honoured (futon2 a98f5879, pinned 506549de, test-registry-0ca6a69d) | the field computes each pair's overlap |
 | 9 | selection law (A5) | checker reads `:join-unverifiable` (4bc95005) | the click record writes the selected candidate's id under `:selection-law` |
 | 10 | publish (H-publish) | observation exists at flight time | one tick observes it |
-| 11 | warrants | worktree warrants check (futon3c 4e66c56c); `--pinned` refs resolved (futon2 8eaa3e23) | non-author warrants owed on futon2 6387fc77 and 1a98d0dc (claude-8's) |
+| 11 | warrants | worktree warrants check (futon3c 4e66c56c); `--pinned` refs resolved (futon2 8eaa3e23) | done: non-author warrant test-registry-35e113f3 (claude-13, pinned 1a98d0dc, covers 6387fc77); nothing owed |
 
 ## IDENTIFY (pending)
 
