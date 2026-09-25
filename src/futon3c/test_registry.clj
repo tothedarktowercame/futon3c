@@ -31,7 +31,7 @@
             [futon3c.evidence.store :as store]
             [futon3c.test-registry.ledger :as ledger])
   (:import [java.net URL]
-           [java.nio.file Files]
+           [java.nio.file Files StandardOpenOption]
            [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
@@ -690,9 +690,16 @@
         start (System/nanoTime) process (.start builder) exit (.waitFor process)]
     (parse-command-results command exit (slurp log-file) (long (/ (- (System/nanoTime) start) 1000000)))))
 
+(declare record-namespace-run!)
+
 (defn register-run!
   "Run and register mechanically. Intent survives interrupted runs; a failed
-  append leaves no warrant. Logs are artifacts, not a separate ledger."
+  append leaves no warrant. Logs are artifacts, not a separate ledger. When a
+  namespace ledger is configured (:namespace-ledger-file or
+  FUTON3C_NAMESPACE_LEDGER) the minted :run is recorded there too, so the
+  namespace lookup can answer without a store scan; a ledger that cannot take
+  the append fails the registration, because a ledger that silently misses a
+  run would later swear a false absence."
   [backend {:keys [repo-root command author artifact-dir] :as options}]
   (test-environment options)
   (validate-command! command)
@@ -770,8 +777,10 @@
                                            :else (refusal :inputs-changed-during-run post))
                               :warrant? (and stable? (nil? closure-uncommitted)
                                              (vector? closure)
-                                             (command-successful? command results))})]
-    (append-record! backend record (:evidence/id intent))))
+                                             (command-successful? command results))})
+        row (append-record! backend record (:evidence/id intent))]
+    (record-namespace-run! options row)
+    row))
 
 (defn check-record!
   "Cheap relative to execution, but hashes actual scope, resolved dependencies
@@ -901,8 +910,180 @@
                         (if i [(.getEpochSecond i) (.getNano i)] [-1 -1])))]
     [(stamp :ran-at) (stamp :finished-at) (str (:evidence/id row))]))
 
+;; ---------------------------------------------------------------------------
+;; Namespace ledger (AR-42 finding i). latest-run-for-namespace scans the
+;; evidence store, and over HTTP a full scan cannot fit the client timeout, so
+;; absence could never be concluded that way. The registry already keeps a
+;; subject -> warrant ledger at registration (test-registry.validation); this
+;; is the same mechanism for namespace -> newest run: an append-only EDN log
+;; maintained at registration, consulted first by the lookup. It fills forward
+;; from registrations — no cron, no sweep — with ONE allowed build at first
+;; use, which records what it scanned so completeness is a fact on the record,
+;; not an assumption.
+
+(defn namespace-ledger-file
+  "Where the namespace -> newest-run ledger lives: the explicit
+  :namespace-ledger-file option, else FUTON3C_NAMESPACE_LEDGER. There is no
+  implicit default path: an unconfigured caller keeps the scan behaviour, and
+  nothing writes into a shared checkout by accident."
+  [options]
+  (or (:namespace-ledger-file options)
+      (System/getenv "FUTON3C_NAMESPACE_LEDGER")))
+
+(defn- append-ledger-entry! [file entry]
+  (let [f (io/file file)]
+    (when-let [parent (.getParentFile f)] (.mkdirs parent))
+    (Files/writeString (.toPath f) (str (pr-str entry) "\n")
+                       (into-array StandardOpenOption
+                                   [StandardOpenOption/CREATE StandardOpenOption/APPEND]))
+    entry))
+
+(defn- read-namespace-ledger [file]
+  (let [f (io/file file)]
+    (if-not (.isFile f)
+      []
+      (mapv (fn [line]
+              (try (edn/read-string line)
+                   (catch Exception e
+                     (fail! :namespace-ledger-invalid
+                            {:path (str f) :line line :error (.getMessage e)}))))
+            (remove str/blank? (str/split-lines (slurp f)))))))
+
+(defn- namespace-run-key
+  "Newest-wins key for one ledger entry: :ran-at, then :finished-at, then the
+  record id — the same rule ran-at-key applies to scanned rows, instants as
+  [second nano] for the same reason."
+  [entry]
+  (let [stamp (fn [k] (let [i (try (Instant/parse (get entry k))
+                                   (catch Exception _ nil))]
+                        (if i [(.getEpochSecond i) (.getNano i)] [-1 -1])))]
+    [(stamp :ran-at) (stamp :finished-at) (str (:entry-id entry))]))
+
+(defn namespace-ledger
+  "Reduce the ledger file to {:runs {namespace -> newest :namespace-run entry}
+  :built <the last build marker, or nil>}. An unknown entry type or an
+  unreadable line is a ledger-corruption refusal, never a skipped line: a
+  ledger that drops what it cannot read would conclude absence over a gap."
+  [file]
+  (reduce (fn [acc entry]
+            (case (:entry/type entry)
+              :namespace-run
+              (update-in acc [:runs (:namespace entry)]
+                         (fn [current]
+                           (if (or (nil? current)
+                                   (neg? (compare (namespace-run-key current)
+                                                  (namespace-run-key entry))))
+                             entry current)))
+              :namespace-ledger-built (assoc acc :built entry)
+              (fail! :namespace-ledger-invalid {:path (str file) :entry entry})))
+          {:runs {} :built nil}
+          (read-namespace-ledger file)))
+
+(defn build-namespace-ledger!
+  "The ONE history-read the ledger is allowed: a single full scan at first
+  use, recording exactly what it saw. Every decodable :run naming a namespace
+  is appended as a :namespace-run entry, then a :namespace-ledger-built marker
+  records :scanned against the store's own count. The marker is :complete?
+  only when the scan is KNOWN to have seen every registry entry — positive
+  scanned, scanned >= held, nothing undecodable (an undecodable entry could
+  have named any namespace, so a build over one cannot swear the index is
+  whole). An incomplete marker is still recorded: it is the evidence that
+  absence must keep refusing. Returns the marker."
+  [backend options]
+  (let [file (namespace-ledger-file options)
+        _ (when-not (nonblank? file) (fail! :namespace-ledger-file-required {}))
+        limit (or (:limit options) default-namespace-scan-limit)
+        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
+        held (store/count* backend {:query/tags [:test-registry]})
+        scanned (count entries)
+        runs (mapv (fn [entry]
+                     (try
+                       (let [payload (decode entry)
+                             namespace (commanded-namespace (:command payload))]
+                         (when (and (= :run (:kind payload)) (nonblank? namespace))
+                           {:namespace namespace :entry-id (:evidence/id entry)
+                            :ran-at (:ran-at payload) :finished-at (:finished-at payload)
+                            :warrant? (boolean (:warrant? payload))}))
+                       (catch Exception _ ::undecodable)))
+                   entries)
+        undecodable? (boolean (some #{::undecodable} runs))
+        complete? (and (pos? scanned) (>= scanned held) (not undecodable?))]
+    (doseq [run (remove #{::undecodable} (remove nil? runs))]
+      (append-ledger-entry! file (assoc run :entry/type :namespace-run)))
+    (append-ledger-entry! file
+                          {:entry/type :namespace-ledger-built
+                           :scanned scanned :registry-entries held
+                           :complete? complete? :at (str (Instant/now))})))
+
+(defn record-namespace-run!
+  "Maintain the ledger for one minted :run row (append-record!'s return).
+  Called by register-run! at registration, the same point where validation's
+  subjects ledger is bound. A no-op when no ledger is configured, or when the
+  record names no namespace (a Lean command names a module, not a namespace)."
+  [options row]
+  (when-let [file (namespace-ledger-file options)]
+    (let [payload (:payload row)
+          namespace (commanded-namespace (:command payload))]
+      (when (and (= :run (:kind payload)) (nonblank? namespace))
+        (append-ledger-entry! file
+                              {:entry/type :namespace-run :namespace namespace
+                               :entry-id (:evidence/id row)
+                               :ran-at (:ran-at payload)
+                               :finished-at (:finished-at payload)
+                               :warrant? (boolean (:warrant? payload))})))))
+
+(defn- scan-latest-run-for-namespace
+  "The store-scan path of latest-run-for-namespace, reached when no namespace
+  ledger is configured. See that fn's docstring for the absence rules."
+  [backend {:keys [namespace limit]}]
+  (let [limit (or limit default-namespace-scan-limit)
+        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
+        {:keys [rows undecodable]}
+        (reduce (fn [acc entry]
+                  (let [id (:evidence/id entry)]
+                    (try
+                      (let [payload (decode entry)]
+                        (if (and (= :run (:kind payload))
+                                 (= namespace (commanded-namespace (:command payload))))
+                          (update acc :rows conj
+                                  {:evidence/id id
+                                   :sha256 (get-in entry [:evidence/body :sha256])
+                                   :payload payload})
+                          acc))
+                      (catch Exception e
+                        (update acc :undecodable conj
+                                {:evidence/id id
+                                 :reason (or (:reason (ex-data e)) :undecodable)})))))
+                {:rows [] :undecodable []}
+                entries)
+        unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
+        newest (first (sort-by ran-at-key #(compare %2 %1) rows))
+        scanned (count entries)]
+    (cond-> (if newest
+              (assoc newest :scanned scanned)
+              ;; No match. Before calling that absence, ask the store how many
+              ;; entries carry the tag: a scan that saw fewer than that saw a
+              ;; window, and a window says nothing about what lies outside it.
+              (let [held (store/count* backend {:query/tags [:test-registry]})]
+                ;; Absence needs a POSITIVE sign that the scan was whole. A
+                ;; scan of nothing is never one: futon3c.evidence.http-backend
+                ;; substitutes [] for a failed -query and 0 for a failed
+                ;; -count, so "no entries, none held" is exactly what a timed
+                ;; out read looks like (2026-09-25, live: limit 2000 over 3108
+                ;; entries timed out at 10s and reported an empty registry
+                ;; through both). An empty registry also lands here and
+                ;; refuses; that costs a refusal, where the other reading
+                ;; costs a false "these tests were never registered".
+                (if (and (pos? scanned) (>= scanned held))
+                  (assoc (none :no-run-for-namespace)
+                         :scanned scanned :registry-entries held)
+                  (assoc (none :scan-window-exhausted)
+                         :limit limit :scanned scanned :registry-entries held))))
+      (seq undecodable) (assoc :undecodable undecodable)
+      (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable)))))
 (defn latest-run-for-namespace
-  "READ-ONLY. The newest :run record whose logical command names NAMESPACE.
+  "READ-ONLY with one recorded exception. The newest :run record whose logical
+  command names NAMESPACE.
 
   Regardless of :warrant?, :postcheck and results. Returning only warranted
   runs would let a later failing run hide behind an earlier green one, which is
@@ -911,14 +1092,40 @@
   record that is actually newest.
 
   Newest by :ran-at; ties break by :finished-at, then by :evidence/id compared
-  as a string. So the answer is a function of the store's contents and never of
-  the order the query returned.
+  as a string. So the answer is a function of the record, never of the order
+  any query or ledger returned it in.
 
-  Returns the row shape read-chain! returns -- {:evidence/id :sha256 :payload}
-  -- plus :scanned and :registry-entries. Absence is typed and never nil, and
-  is only ever claimed when the scan is KNOWN to have seen every registry
-  entry, which it establishes by counting them, not by assuming that a short
-  page means the end:
+  NAMESPACE LEDGER FIRST. When a ledger is configured (:namespace-ledger-file
+  or FUTON3C_NAMESPACE_LEDGER), the lookup consults it before touching the
+  store:
+
+    - a namespace PRESENT in the ledger resolves to that entry's record (one
+      targeted read, not a scan), returned with :resolved-by
+      :namespace-ledger. Presence never depends on ledger completeness: a run
+      registered after an incomplete build is still in the ledger;
+    - a namespace ABSENT from the ledger is (none :no-run-for-namespace) ONLY
+      when the ledger is complete. Completeness is a fact on the ledger's own
+      record: it was built at first use by one full scan whose
+      :namespace-ledger-built marker carries :scanned against the store's
+      count, and :complete? is true only when that scan was whole (see
+      build-namespace-ledger!). Registrations since then fill the ledger
+      forward, so a complete marker plus forward fills means the index is
+      whole;
+    - absent with no complete marker is (none :scan-window-exhausted) with
+      the marker's numbers -- an incomplete build refuses to conclude absence,
+      exactly as a windowed scan does. Rebuild with build-namespace-ledger!
+      when the store can serve a full scan.
+
+  On first use (no ledger file) the lookup performs that one build. There is
+  no other backfill: no cron, no sweep -- the registry fills forward from
+  registrations (Joe, 2026-09-19).
+
+  With no ledger configured the lookup scans the store
+  (scan-latest-run-for-namespace). Returns the row shape read-chain! returns
+  -- {:evidence/id :sha256 :payload} -- plus :scanned and :registry-entries.
+  Absence is typed and never nil, and is only ever claimed when the scan is
+  KNOWN to have seen every registry entry, which it establishes by counting
+  them, not by assuming that a short page means the end:
 
     (none :no-run-for-namespace)  :scanned is positive, reached
                                   :registry-entries, and no run names this
@@ -940,54 +1147,30 @@
   Records that will not decode are named in :undecodable, and a record whose
   :ran-at will not parse is named in :unorderable, rather than either being
   dropped where a reader cannot see them."
-  [backend {:keys [namespace limit]}]
+  [backend {:keys [namespace limit] :as options}]
   (if-not (nonblank? namespace)
     (refusal :namespace-required {})
-    (let [limit (or limit default-namespace-scan-limit)
-          entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
-          {:keys [rows undecodable]}
-          (reduce (fn [acc entry]
-                    (let [id (:evidence/id entry)]
-                      (try
-                        (let [payload (decode entry)]
-                          (if (and (= :run (:kind payload))
-                                   (= namespace (commanded-namespace (:command payload))))
-                            (update acc :rows conj
-                                    {:evidence/id id
-                                     :sha256 (get-in entry [:evidence/body :sha256])
-                                     :payload payload})
-                            acc))
-                        (catch Exception e
-                          (update acc :undecodable conj
-                                  {:evidence/id id
-                                   :reason (or (:reason (ex-data e)) :undecodable)})))))
-                  {:rows [] :undecodable []}
-                  entries)
-          unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
-          newest (first (sort-by ran-at-key #(compare %2 %1) rows))
-          scanned (count entries)]
-      (cond-> (if newest
-                (assoc newest :scanned scanned)
-                ;; No match. Before calling that absence, ask the store how many
-                ;; entries carry the tag: a scan that saw fewer than that saw a
-                ;; window, and a window says nothing about what lies outside it.
-                (let [held (store/count* backend {:query/tags [:test-registry]})]
-                  ;; Absence needs a POSITIVE sign that the scan was whole. A
-                  ;; scan of nothing is never one: futon3c.evidence.http-backend
-                  ;; substitutes [] for a failed -query and 0 for a failed
-                  ;; -count, so "no entries, none held" is exactly what a timed
-                  ;; out read looks like (2026-09-25, live: limit 2000 over 3108
-                  ;; entries timed out at 10s and reported an empty registry
-                  ;; through both). An empty registry also lands here and
-                  ;; refuses; that costs a refusal, where the other reading
-                  ;; costs a false \"these tests were never registered\".
-                  (if (and (pos? scanned) (>= scanned held))
-                    (assoc (none :no-run-for-namespace)
-                           :scanned scanned :registry-entries held)
-                    (assoc (none :scan-window-exhausted)
-                           :limit limit :scanned scanned :registry-entries held))))
-        (seq undecodable) (assoc :undecodable undecodable)
-        (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable))))))
+    (if-let [ledger-file (namespace-ledger-file options)]
+      (do
+        (when-not (.isFile (io/file ledger-file))
+          (build-namespace-ledger! backend options))
+        (let [{:keys [runs built]} (namespace-ledger ledger-file)
+              hit (get runs namespace)]
+          (cond
+            hit
+            (assoc (last (read-chain! backend (:entry-id hit)))
+                   :resolved-by :namespace-ledger)
+
+            (:complete? built)
+            (assoc (none :no-run-for-namespace)
+                   :resolved-by :namespace-ledger
+                   :scanned (:scanned built) :registry-entries (:registry-entries built))
+
+            :else
+            (assoc (none :scan-window-exhausted)
+                   :resolved-by :namespace-ledger-incomplete
+                   :scanned (:scanned built) :registry-entries (:registry-entries built)))))
+      (scan-latest-run-for-namespace backend {:namespace namespace :limit limit}))))
 
 (defn execution-policy
   "Decision authority for the review's execution lane. Delegates to

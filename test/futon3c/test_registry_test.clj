@@ -764,6 +764,84 @@
          ;; reader can see it
          (is (every? :evidence/id (:undecodable found))))))))
 
+;; ---------------------------------------------------------------------------
+;; AR-42 finding i: the namespace ledger. Registration maintains a
+;; namespace -> newest-run index, the lookup consults it first, and absence
+;; from it is only as good as the recorded completeness of its build.
+
+(deftest namespace-ledger-holds-the-newer-run-not-the-warranted
+  ;; two runs for one namespace, older warranted and newer failing: the
+  ;; ledger holds the newer, by the same rule the scan applies
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           options (assoc options :namespace-ledger-file ledger)
+           older (registry/register-run! backend options)
+           newer (failing-run! backend options)
+           found (registry/latest-run-for-namespace
+                  backend {:namespace "demo-test" :namespace-ledger-file ledger})]
+       (is (true? (get-in older [:payload :warrant?])))
+       (is (false? (get-in newer [:payload :warrant?])))
+       (is (= (:evidence/id newer) (:evidence/id found)))
+       (is (= :namespace-ledger (:resolved-by found)))
+       (is (= 1 (get-in found [:payload :results :failures])))))))
+
+(deftest namespace-ledger-fills-forward-from-registration
+  ;; a run registered after the ledger was built appears without a rescan:
+  ;; presence never waits on the build marker's completeness
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger! backend {:namespace-ledger-file ledger})]
+       ;; an empty registry is never a complete scan (a failed read looks
+       ;; exactly like one), but that only gates absence, not presence
+       (is (false? (:complete? built)))
+       (let [run (registry/register-run! backend (assoc options :namespace-ledger-file ledger))
+             found (registry/latest-run-for-namespace
+                    backend {:namespace "demo-test" :namespace-ledger-file ledger})]
+         (is (= (:evidence/id run) (:evidence/id found)))
+         (is (= :namespace-ledger (:resolved-by found))))))))
+
+(deftest an-incomplete-namespace-ledger-refuses-absence
+  ;; a ledger built from a scan that saw fewer entries than the store holds
+  ;; cannot conclude absence: it reports the window it recorded
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))]
+       (registry/register-run! backend options)
+       (registry/register-run! backend options)
+       (let [built (registry/build-namespace-ledger!
+                    backend {:namespace-ledger-file ledger :limit 1})]
+         (is (false? (:complete? built)))
+         (is (= 1 (:scanned built)))
+         (is (= 4 (:registry-entries built)))) ;; intent + run, twice
+       (let [none (registry/latest-run-for-namespace
+                   backend {:namespace "futon3c.not-registered-test"
+                            :namespace-ledger-file ledger})]
+         (is (= :none (:status none)))
+         (is (= :scan-window-exhausted (:reason none)))
+         (is (= :namespace-ledger-incomplete (:resolved-by none)))
+         (is (= 1 (:scanned none)))
+         (is (= 4 (:registry-entries none))))))))
+
+(deftest a-complete-namespace-ledger-concludes-absence
+  ;; first use builds the ledger from one full scan; a complete build plus
+  ;; forward fills is the positive sign absence needs
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))]
+       (registry/register-run! backend options)
+       (let [none (registry/latest-run-for-namespace
+                   backend {:namespace "futon3c.not-registered-test"
+                            :namespace-ledger-file ledger})]
+         (is (= :no-run-for-namespace (:reason none)))
+         (is (= :namespace-ledger (:resolved-by none)))
+         (is (= (:scanned none) (:registry-entries none))))
+       ;; and the build did not disturb the scan path for the registered one
+       (let [found (registry/latest-run-for-namespace
+                    backend {:namespace "demo-test" :namespace-ledger-file ledger})]
+         (is (= :namespace-ledger (:resolved-by found))))))))
+
 (deftest latest-run-for-namespace-will-not-call-a-failed-read-absence
   ;; http-backend substitutes [] for a failed -query and 0 for a failed -count,
   ;; so "nothing scanned, nothing held" is what a timed out read looks like.
