@@ -90,3 +90,36 @@ effected".
   File claims checked and true: both migration files name
   `code/indentation`; the Arxana panel renders only `(when (or churn
   complexity) …)`; the page's generator has no churn input.
+
+### Round 2 — claude-12-turn-95 (turn-NWwXB2), 2026-09-25 ~20:30Z
+
+Joe: record discrepancies here, and "Real work: what is the minimal visual
+improvement … that will let me see that the Tornhill information is being
+considered?"; a plan with a visual change existed and was not carried out.
+
+- **Seat A (kimi-2):** three fragments: defer (the tracking instruction,
+  addressed to claude-12), ask-action (the minimal visible change,
+  `operator/commission-the-smallest-reviewable-act`, prose cite),
+  report-problem (`process/spec-drift-by-displacement`). Sound; it kept the
+  @claude-12 part separate, and seat B left it to claude-12.
+- **Seat B (kimi-1):** job `invoke-1790368419659-24422-ce1a1c40`; futon6
+  `5fdcd71` (`scripts/mission_efe_field.py`: a yellow ring per district hub,
+  thickness ∝ log of commits touching the mission's own doc in 180 days,
+  dashed grey ring for zero; legend and hover say the complexity axis is
+  pending), futon3c `cb0e68d0` (mission note). Warrants in both. Dedupes
+  commits across the worktree repos that share history; its count for
+  M-the-perfect-crime (9) matched `git log` on futon3c (claude-12's recount:
+  10, the extra one being `cb0e68d0` itself).
+- **Discrepancies:**
+  1. *The label claims more than the ring measures.* It counts commits to
+     the mission's own doc, not code churn, yet the legend calls it "Tornhill
+     change-frequency" and the hover "Tornhill churn". Tornhill's churn is
+     change frequency of the code under study; this is activity on the
+     planning document — the kind of claim the mission itself is about.
+  2. *Not visible yet.* The page is a gitignored artefact regenerated
+     locally; nothing published it, so https://zone.hyperreal.enterprises/wip/mission-efe-field.html
+     is unchanged. Publishing (`futon6/scripts/publish-efe-field.sh`) was
+     outside seat B's limits.
+  3. *Small factual slip:* it says it recorded the plan "yesterday"; it was
+     earlier the same day (66f018a6).
+
