@@ -92,11 +92,14 @@
    [{:test "futon2.aif.enactment-habit-test" :status :in-place
      :assertion "policy key, increment and fold rows a a' b c d d' e f"
      :warrant "test-registry-2730f868"}
-    {:test "futon2.aif.selection-reads-fold-test" :status :to-write
-     :assertion "selection's E is the fold's masses; with an empty fold it is uniform, never the legacy store's counts"}]
+    {:test "futon2.aif.selection-reads-fold-test" :status :in-place
+     :assertion "two passing enactments give E 1/4, 3/4 at alpha 1.0; an empty fold is uniform with :records 0 on :e-source; a populated store is not read; :join-unverifiable verdicts count 0"
+     :warrant "test-registry-4a6fbdaf"}]
    :drops [{:what "cascade-habit-store (data/cascade-prior.edn, :cascade-habit-path) as E's source at selection"
-            :when "row 7 lands"
-            :tripwire "futon2.aif.selection-reads-fold-test (no read of :cascade-habit-path on the selection path)"}]}
+            :status :done :landed "futon2 781335f1"
+            :history "the store's 21 samples (17 legacy selection writer, 4 close rule) stay on disk, not read"
+            :tripwire "futon2.aif.selection-reads-fold-test a-populated-store-is-not-read"
+            :warrant "test-registry-4a6fbdaf"}]}
 
   {:row 8 :component "pair overlap in the target field"
    :disposition :adapt

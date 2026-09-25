@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "065dfefe" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "781335f1" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -120,10 +120,10 @@
    :reads [:delta] :writes [:enactment-records]}
   {:box/id :r7-selection :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
-   :reads [:enactment-records]}
+   :reads [:enactment-records] :writes [:e-source]}
   {:box/id :r7-test :row 7 :box/kind :test
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"}
-   :reads [:enactment-records]}
+   :reads [:e-source :delta :wc-verdict]}
   {:box/id :r9-selection-law :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
    :writes [:per-policy-argmax :candidate :enacted-steps]}
@@ -235,7 +235,11 @@
  ;; fixture entries carry :next-step). Step 7 wired at futon2 aba5d260
  ;; (flight-driver/resolve-target reads :chosen-target and :draw-seed, writes
  ;; :target-source): the flight-entry entry and the loop-closure test file
- ;; entry are gone; one :standing (the test supplies :chosen-target). :kind :to-do is the
+ ;; entry are gone; one :standing (the test supplies :chosen-target). Step 8
+ ;; wired at futon2 781335f1 (selection reads :enactment-records from the
+ ;; fold and writes :e-source; the legacy store dropped as E's source): the
+ ;; r7-selection and row-7 test-file entries gone; two :standing (the row-7
+ ;; test's enactment fixtures; row 9's test projects :e-source away). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -261,15 +265,6 @@
    :note
    "persist-clock! writes the lineage edge with string prop keys into futon1b; no keyword names it at the site"}
   {:finding :declaration-without-occurrence,
-   :box/id :r7-selection,
-   :field :enactment-records,
-   :role :reads,
-   :site
-   {:file "futon2/src/futon2/aif/policy.clj",
-    :var "select-action-cascades"},
-   :rows [7 9],
-   :kind :to-do}
-  {:finding :declaration-without-occurrence,
    :box/id :r2-served-by-reading,
    :field :owner-text,
    :role :reads,
@@ -294,6 +289,22 @@
    :kind :standing,
    :finding :declared-read-not-found}
   {:finding :occurrence-without-declaration,
+   :field :attempts,
+   :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "the row-7 test builds enactment records (:attempts, :candidate) through increment; write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "the row-7 test builds enactment records (:attempts, :candidate) through increment; write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
    :field :chosen-target,
    :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
    :declared-by [],
@@ -301,6 +312,15 @@
    :kind :standing,
    :note
    "the loop-closure test supplies :chosen-target as input (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :e-source,
+   :site
+   {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "the row-9 test projects :e-source away from its pre-step-8 fixture (a dissoc, not a read)"}
   {:finding :occurrence-without-declaration,
    :field :next-step,
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
@@ -327,11 +347,6 @@
    :kind :standing,
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
-   :error? true,
-   :rows [7],
-   :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
    :error? true,
