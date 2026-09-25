@@ -320,7 +320,15 @@
   no occurrence in the declared role's position is the finding
   :declared-write-not-found or :declared-read-not-found, carrying the
   `field-usage` counts and :heuristic true. Off by default, so a map's report
-  without the option is the report it had before the heuristic existed."
+  without the option is the report it had before the heuristic existed.
+
+  Direction is checked only with :heuristic? true: a default run checks that
+  each declared field occurs at its site, never whether it is read or
+  written there. An :unclassified occurrence is the heuristic's stated
+  limit, not a defect. Example: the worked War Machine map's live-wiring
+  test reads the three A/B/D hashes as members of a set literal
+  (`(= #{:observation-model-hash ...} ...)`), a read no position rule sees,
+  so each is :declared-read-not-found with {:unclassified 1}."
   ([repo-root spec] (conformance repo-root spec {}))
   ([repo-root {:keys [boxes]} {:keys [heuristic?]}]
    (let [boxes (or boxes [])
