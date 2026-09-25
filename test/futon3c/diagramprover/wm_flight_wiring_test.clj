@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "f4a8a7930542e9173b64a28b03687c759e2a7c14a6d9d6cdbdfd453a0e9b3c9d")
-(def repos {"futon2" "fcc31531" "futon3c" "58f1a8cb"})
+(def map-sha256 "64d62f072ab4230a76999b7b797134a3a7a7e8866e9812a1d8433b93db706a26")
+(def repos {"futon2" "d6df5909" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -103,7 +103,7 @@
 
 (deftest not-built-boxes-are-absent-at-the-pinned-shas
   (let [s (spec) root (materialise s)]
-    (is (= 3 (count (filter #(= :not-built (:status %)) (:boxes s)))) "the outer cascade, the W_c call, observe-publication-fn (enact-fn built at step 10)")
+    (is (= 2 (count (filter #(= :not-built (:status %)) (:boxes s)))) "the outer cascade and observe-publication-fn (enact-fn built at step 10, the W_c call at step 11)")
     (is (= [] (not-built-present root s)))
     (testing "planted: create one intended var in the temp root and the check reports it"
       (let [f (io/file root "futon2/src/futon2/aif/outer_cascade.clj")]
@@ -117,7 +117,7 @@
     (is (= [] (trace-findings s t)))
     (is (= 5 (count (filter #(= :positional (:hop %)) (filter map? (:boxes t)))))
         "positional hops, checked only as declared")
-    (is (= [:r1-outer-cascade :r7-flight-call] (trace-gaps s t)))
+    (is (= [:r1-outer-cascade] (trace-gaps s t)))
     (testing "planted: an unknown box and a non-adjacent pair are caught"
       (is (= [{:finding :trace-box-unknown :box :no-such-box}]
              (trace-findings s (update t :boxes conj :no-such-box))))

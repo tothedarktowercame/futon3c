@@ -251,7 +251,11 @@
  ;; 10 built at futon2 fcc31531: enact-fn is a real site for rows 0 and 5
  ;; (writes :attempts, :grain-gate, :grain; reads :candidate), its not-built
  ;; assertion removed; row 0 keeps one to-do (starting at the recorded
- ;; enacted step); occurrences in test files are :standing fixtures. :kind :to-do is the
+ ;; enacted step); occurrences in test files are :standing fixtures. Step
+ ;; 11 built at futon2 d6df5909: wc-verdict-fn is a real site (reads the
+ ;; attempts, writes :wc; the verdict reaches increment positionally, the
+ ;; trace's hop to the checker is positional), its test box added; the
+ ;; not-built count is 2 and the trace's one gap the outer cascade. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -312,7 +316,23 @@
    :finding :declared-read-not-found}
   {:finding :occurrence-without-declaration,
    :field :attempts,
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :attempts,
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
    :declared-by [],
    :rows [],
    :kind :standing,
@@ -394,6 +414,14 @@
    :kind :standing,
    :note
    "enact-fn copies the publication observation onto the enactment record (row 10's read side, folded in); observe-publication-fn remains its writer"}
+  {:finding :occurrence-without-declaration,
+   :field :wc-verdict,
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "the verdict enters increment positionally; :wc-verdict there is the receipt's typed absence when no verdict was passed"}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
    :error? true,

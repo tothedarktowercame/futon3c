@@ -94,6 +94,9 @@
    [{:test "futon2.aif.enactment-habit-test" :status :in-place
      :assertion "policy key, increment and fold rows a a' b c d d' e f"
      :warrant "test-registry-2730f868"}
+    {:test "futon2.aif.flight-wc-call-test" :status :in-place
+     :assertion "the flight runs the one W_c checker (--wc --edn) and hands its verdict to increment unchanged: [] counts 1, failures and :join-unverifiable count 0 with their record; no checker a typed absence with no increment; a failing checker a typed failure; the real checker on click-001 gives the X_c(d) failure"
+     :warrant "test-registry-51018188"}
     {:test "futon2.aif.selection-reads-fold-test" :status :in-place
      :assertion "two passing enactments give E 1/4, 3/4 at alpha 1.0; an empty fold is uniform with :records 0 on :e-source; a populated store is not read; :join-unverifiable verdicts count 0"
      :warrant "test-registry-4a6fbdaf"}]
