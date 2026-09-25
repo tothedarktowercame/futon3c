@@ -19,7 +19,8 @@
     written and read by no box is an OUTPUT port :out/<field>;
   - each (writer, field, reader) is an edge {:from writer :to reader :field f}.
     Fields carry no types, so edges carry no :type;
-  - a field in :preference-fields is an INPUT port :pref/<field> with
+  - a preference field (`preference-fields-of`: the map's :field-roles
+    :constraint entries when it has them) is an INPUT port :pref/<field> with
     :constraint true and :timescale :glacial (the owner's text changes
     slowest); its writers' edges go INTO the port and its readers' edges
     come out of it, so I3 sees any box that writes a preference.")
@@ -29,6 +30,18 @@
   mission text, and the text's sha. :next-step and :eligible are support
   (Clause T: feasibility is support, not a term of G), not preferences."
   #{:want-span :text-sha256})
+
+(defn preference-fields-of
+  "The fields projected as constraint (preference) ports. In order: OPTS'
+  :preference-fields; else, when the map carries :field-roles
+  {field role}, the fields whose role is :constraint (a field with role
+  :observation locates or pins the owner's text and is an ordinary edge);
+  else `default-preference-fields`."
+  [m opts]
+  (cond (contains? opts :preference-fields) (set (:preference-fields opts))
+        (contains? m :field-roles) (set (keep (fn [[f role]] (when (= :constraint role) f))
+                                              (:field-roles m)))
+        :else default-preference-fields))
 
 (def timescale-rules
   "Site file -> ct/mission timescale. :fast = inside one click (the tick);
@@ -49,9 +62,9 @@
 (defn project
   "MAP (wiring-map EDN) -> ct/mission diagram EDN."
   ([m] (project m {}))
-  ([{:keys [spec/id repos boxes]} {:keys [preference-fields map-sha]
-                                   :or {preference-fields default-preference-fields}}]
-   (let [writers (field-index boxes :writes)
+  ([{:keys [spec/id repos boxes] :as m} {:keys [map-sha] :as opts}]
+   (let [preference-fields (preference-fields-of m opts)
+         writers (field-index boxes :writes)
          readers (field-index boxes :reads)
          kind (into {} (map (juxt :box/id :box/kind)) boxes)
          node (fn [box-id] (if (= :test (kind box-id)) (keyword "test" (name box-id)) box-id))
@@ -175,11 +188,12 @@
   each with its writers, whether a writer is an observation box, and the
   bypass paths into it (`bypass-paths`, field edges only and with positional
   trace hops). SCORED-BY names the box whose :reads are the scored facts."
-  [m {:keys [preference-fields scored-by observation-boxes]
-      :or {preference-fields default-preference-fields
-           scored-by :r1-outer-cascade
-           observation-boxes default-observation-boxes}}]
-  (let [writers (field-index (:boxes m) :writes)
+  [m {:keys [scored-by observation-boxes]
+      :or {scored-by :r1-outer-cascade
+           observation-boxes default-observation-boxes}
+      :as opts}]
+  (let [preference-fields (preference-fields-of m opts)
+        writers (field-index (:boxes m) :writes)
         scored (vec (:reads (first (filter #(= scored-by (:box/id %)) (:boxes m)))))
         describe (fn [fs] (vec (for [f (sort-by str fs)]
                                  {:field f :writers (vec (sort-by str (writers f)))

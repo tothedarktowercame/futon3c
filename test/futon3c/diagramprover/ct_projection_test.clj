@@ -98,3 +98,42 @@
         r (proj/i4-report m {})]
     (is (some #(= [:r1-outer-cascade :planted-writer] (:path %))
               (get-in r [:bypass :to-preferences])))))
+
+;; ---------------------------------------------------------------------------
+;; :field-roles (claude-10's request, 2026-09-25): the spans locate and pin the
+;; owner's text; the constraint is the text itself, exogenous by declaration.
+
+(defn- with-owner-text [m]
+  (-> m
+      (assoc :field-roles {:owner-text :constraint
+                           :want-span :observation
+                           :text-sha256 :observation})
+      (update :boxes (fn [bs] (mapv #(if (= :r2-served-by-reading (:box/id %))
+                                       (update % :reads (fnil conj []) :owner-text)
+                                       %)
+                                    bs)))))
+
+(deftest field-roles-move-the-constraint-to-the-owner-text
+  (let [m (with-owner-text (head-map))
+        {:keys [d v]} (validated m)
+        inputs (get-in d [:ports :input])]
+    (is (= [:pref/owner-text] (map :id (filter :constraint inputs))))
+    (is (not-any? #(#{:pref/want-span :pref/text-sha256} (:id %)) inputs))
+    (is (not-any? #(= :world/r2-served-by-reading (:id %)) inputs)
+        "the reading box now reads a declared field")
+    (is (:valid (check v :timescale-ordering)) "no box writes the constraint")
+    (is (= [{:field :owner-text :writers [] :observed-by []}]
+           (:preference-fields (proj/i4-report m {}))))
+    (testing "a box that writes the owner's text is an I3 finding and an I4 bypass"
+      (let [planted (update m :boxes conj {:box/id :planted-editor :box/kind :component
+                                           :site {:file "futon2/src/futon2/aif/flight_runner.clj"}
+                                           :reads [:chosen-target] :writes [:owner-text]})]
+        (is (= [:planted-editor]
+               (map (comp :from :edge) (:violations (check (:v (validated planted)) :timescale-ordering)))))
+        (is (some #(= [:r1-outer-cascade :planted-editor] (:path %))
+                  (get-in (proj/i4-report planted {}) [:bypass :to-preferences])))))))
+
+(deftest opts-override-field-roles
+  (is (= #{:x} (proj/preference-fields-of {:field-roles {:owner-text :constraint}}
+                                          {:preference-fields [:x]})))
+  (is (= proj/default-preference-fields (proj/preference-fields-of {} {}))))

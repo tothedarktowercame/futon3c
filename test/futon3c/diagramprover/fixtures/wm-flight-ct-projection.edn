@@ -3,7 +3,8 @@
 ;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
 ;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "826883de",
+ :map-sha "3713fe90",
+ ;; results first pinned at 826883de; unchanged at 3713fe90 (row 9 wired)
  :futon5-sha "aeeee96",
  :counts {:inputs 15, :outputs 12, :components 28, :edges 53},
  :validate
