@@ -6835,11 +6835,14 @@
   "GET /api/alpha/agent-clock?agent-id=X&session-id=Y — the live auto-clock for
    that agent session (campaign/mission/excursion + witness). The repl buffer polls
    this on turn-end so its display reflects the durable clock the agent's tool-edits
-   feed, instead of a disconnected Emacs-side clock (C-cascade-real D1/O3 sync)."
+   feed, instead of a disconnected Emacs-side clock (C-cascade-real D1/O3 sync).
+   Without session-id, the agent's registered session is used: clocks are kept
+   per session, so the session-less key alone read as unclocked."
   [request]
   (let [params (parse-query-params request)
         agent-id (get params "agent-id")
-        session-id (get params "session-id")]
+        session-id (or (not-empty (str/trim (str (get params "session-id"))))
+                       (some-> (reg/get-agent (str agent-id)) :agent/session-id str))]
     (if (str/blank? (str agent-id))
       (json-response 400 {:ok false :error "agent-id required"})
       (let [state (clock-store/current-state agent-id session-id)

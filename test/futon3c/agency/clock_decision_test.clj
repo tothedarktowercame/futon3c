@@ -52,6 +52,20 @@
                         :type :claude :session-id "clock-session"
                         :capabilities [:edit] :invoke-fn invoke}))
 
+(deftest agent-clock-without-session-reads-the-registered-session
+  (register! (fn [& _] {:result "unused"}))
+  (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")
+  (let [handler (http/make-handler {})
+        read-clock (fn [qs] (json/parse-string
+                             (:body (handler {:request-method :get
+                                              :uri "/api/alpha/agent-clock"
+                                              :query-string qs}))
+                             true))
+        bare (read-clock "agent-id=clock-worker")]
+    (is (= "M-clock-fixture" (:mission-id bare)))
+    (is (= "clock-session" (:session-id bare)))
+    (is (nil? (:mission-id (read-clock "agent-id=clock-worker&session-id=other-session"))))))
+
 (deftest persistence-failure-prevents-agent-execution
   (let [called (atom false)]
     (register! (fn [& _] (reset! called true) {:result "wrong"}))
