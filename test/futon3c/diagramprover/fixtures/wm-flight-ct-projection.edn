@@ -5,10 +5,11 @@
 ;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
 ;; Re-pinned by claude-10 at map 47a88fc6 (:enacted-steps declared: two edges; :i4 gains the parallel selection -> enactment paths via :enacted-steps).
 ;; Re-pinned by claude-10 at map d638fb0e (step 7: flight-entry writes :target-source, reads :draw-seed; edges 57->59; :i4 positional paths 32->50, no new (target, first box) pair).
+;; Re-pinned by claude-10 at map 9c410d11 (step 8: r7-selection writes :e-source, read by the row-7 test box; :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "d638fb0e",
+ :map-sha "9c410d11",
  :futon5-sha "aeeee96",
- :counts {:inputs 14, :outputs 12, :components 30, :edges 59},
+ :counts {:inputs 14, :outputs 12, :components 30, :edges 61},
  :validate
  {:all-valid false,
   :checks
@@ -25,7 +26,6 @@
      :r3-prompt
      :r4-order-use
      :r2-verifier
-     :r7-selection
      :r6-cascade-lane
      :r5-grain-gate]}
    {:valid true, :check :no-orphan-inputs, :orphan-inputs []}
