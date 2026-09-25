@@ -2,7 +2,10 @@
   "Live-gate tests for C-cascade-real RUN/DELIVER. The HTTP fetch is exercised live
    over Drawbridge; here we pin the pure extractor and prove the cross-dimension
    composition gate bites on REAL-shaped node-ids (so a bad future car is caught)."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [cheshire.core :as json]
+            [clojure.edn]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
             [futon3c.logic.cascade-real :as cr]
             [futon3c.logic.cascade-real-live :as live]
@@ -311,3 +314,97 @@
             (is (= 2 (:count-total tickets)))
             (is (= ["E-newer" "M-older"] stems))
             (is (= ["futon3c" "futon6"] (mapv :repo (:items tickets))))))))))
+
+;; --- the outer cascade's field: excursion and ticket nodes (CASCADE-LIVE-I) ---
+
+(def ^:private three-kind-clock-edges
+  [{:hx/endpoints ["agent:claude-4" "futon3c-d/mission/autoclock-in"]
+    :hx/props {:agent-id "claude-4" :session-id "s1" :clocked-at-ms 100}}
+   {:hx/endpoints ["agent:kimi-7" "futon2-d/excursion/kimi-task-28"]
+    :hx/props {:agent-id "kimi-7" :session-id "s2" :clocked-at-ms 200}}
+   {:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]
+    :hx/props {:agent-id "codex-3" :session-id "s3" :clocked-at-ms 300}}])
+
+(deftest node-kind-matches-the-three-work-objects-only
+  (is (= :mission (live/node-kind "futon3c-d/mission/autoclock-in")))
+  (is (= :excursion (live/node-kind "futon2-d/excursion/kimi-task-28")))
+  (is (= :ticket (live/node-kind "futon3c-d/ticket/fail-invoke-error")))
+  (testing "the bad case: a kind that merely starts with a work-object word"
+    (is (nil? (live/node-kind "futon3c-d/missionary/x")))
+    (is (empty? (live/o3-claims-from
+                 [{:hx/endpoints ["futon3c-d/missionary/x" "futon3c-d/ticketing/y"]}])))))
+
+(deftest excursion-and-ticket-nodes-join-the-spine
+  (let [claims (live/o3-claims-from three-kind-clock-edges)]
+    (is (some #{[claims-typeo-rel :O3 "futon3c-d/mission/autoclock-in" :mission]} claims))
+    (is (some #{[claims-typeo-rel :O3 "futon2-d/excursion/kimi-task-28" :excursion]} claims))
+    (is (some #{[claims-typeo-rel :O3 "futon3c-d/ticket/fail-invoke-error" :ticket]} claims)))
+  (with-redefs [live/fetch-edges (fn [hx-type] (if (= "clock/clocked-on" hx-type) three-kind-clock-edges []))]
+    (let [spine (:spine (live/cascade-real-summary))]
+      (is (= {:canonical-mission-nodes 1 :canonical-excursion-nodes 1 :canonical-ticket-nodes 1
+              :O1-missions 0 :O4-missions 0}
+             spine))))
+  (testing "a store with no ticket ends reports a measured zero"
+    (with-redefs [live/fetch-edges (fn [hx-type] (if (= "clock/clocked-on" hx-type) (take 2 three-kind-clock-edges) []))]
+      (is (= 0 (get-in (live/cascade-real-summary) [:spine :canonical-ticket-nodes])))))
+  (testing "the excursion's lineage row is present"
+    (is (= #{"futon3c-d/mission/autoclock-in" "futon2-d/excursion/kimi-task-28" "futon3c-d/ticket/fail-invoke-error"}
+           (set (map :target (live/lineage-section three-kind-clock-edges)))))))
+
+(deftest tickets-section-lists-ticket-docs
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory "cascade-t-docs" (make-array java.nio.file.attribute.FileAttribute 0)))
+        f (io/file root "futon3c" "holes" "tickets" "T-fail-invoke-error.md")]
+    (.mkdirs (.getParentFile f))
+    (spit f "# T-fail-invoke-error\n")
+    (with-redefs-fn {#'live/code-root (.getCanonicalPath root)
+                     #'live/live-clocked-stems (constantly #{})}
+      (fn []
+        (is (= [{:stem "T-fail-invoke-error" :kind "ticket" :repo "futon3c"}]
+               (mapv #(select-keys % [:stem :kind :repo])
+                     (:items ((var-get #'live/tickets-section) [])))))
+        (testing "a clock edge on the ticket node takes it off the list"
+          (is (= [] (:items ((var-get #'live/tickets-section)
+                             [{:hx/endpoints ["agent:codex-3" "futon3c-d/ticket/fail-invoke-error"]}])))))))))
+
+;; --- control: the mission part is unchanged on today's store (pinned) ---------
+;; Edges read from futon1b around GET /api/alpha/cascade-real (as-of 1790358119151)
+;; and /cascade-real/graph (as-of 1790358124816), 2026-09-25; the edge reads
+;; before and after both GETs were byte-identical.
+
+(def ^:private fixture-dir "test/fixtures/cascade-real-live/")
+
+(defn- pinned-edges [hx-type]
+  (:hyperedges (clojure.edn/read-string
+                (slurp (str fixture-dir (str/replace hx-type "/" "_") ".edn")))))
+
+(defn- as-json [x] (json/parse-string (json/generate-string x)))
+
+(deftest control-mission-part-unchanged-on-pinned-store
+  (with-redefs [live/fetch-edges pinned-edges]
+    (let [pinned (json/parse-string (slurp (str fixture-dir "summary.json")))
+          now (as-json (update-in (live/cascade-real-summary) [:standards :s4-evidence] dissoc :as-of))
+          mission-part (fn [m] (-> m
+                                   (select-keys ["consistent?" "composition" "holes" "owners"])
+                                   (assoc "spine" (select-keys (get m "spine") ["canonical-mission-nodes" "O1-missions" "O4-missions"])
+                                          "dimensions" (dissoc (get m "dimensions") "O3")
+                                          "standards" (update (get m "standards") "s4-evidence" dissoc "as-of"))))]
+      (is (= (mission-part pinned) (mission-part now)))
+      (testing "O3 grows by one claim per excursion-ended clock edge (12 edges on 5 nodes)"
+        (let [ends (count (for [e (pinned-edges "clock/clocked-on")
+                                ep (:hx/endpoints e)
+                                :when (= :excursion (live/node-kind ep))]
+                            ep))]
+          (is (= 12 ends))
+          (is (= (+ (get-in pinned ["dimensions" "O3"]) ends)
+                 (get-in now ["dimensions" "O3"])))))
+      (is (= 229 (get-in now ["spine" "canonical-mission-nodes"])))
+      (is (= 5 (get-in now ["spine" "canonical-excursion-nodes"])))
+      (is (= 0 (get-in now ["spine" "canonical-ticket-nodes"]))))
+    (let [pinned (json/parse-string (slurp (str fixture-dir "graph-sections.json")))
+          strip (fn [rows] (mapv #(dissoc % "dispatched-by") rows))]
+      (is (= (strip (get pinned "lineage"))
+             (strip (as-json (live/lineage-section (pinned-edges "clock/clocked-on"))))))
+      (is (= (get pinned "clusters") (as-json (live/cluster-section (pinned-edges "cascade/cluster-member")))))
+      (is (= (get pinned "holes") (as-json (live/hole-section (pinned-edges "cascade/hole-target")))))
+      (is (= (get pinned "arrows") (as-json (live/arrow-section (pinned-edges "code/v05/mined-move")))))
+      (is (= (get pinned "held") (as-json (live/held-section (pinned-edges "held/on-mission"))))))))

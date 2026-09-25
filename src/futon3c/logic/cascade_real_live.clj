@@ -49,12 +49,25 @@
 ;; Each is pure (takes edges); the *-claims wrapper fetches.
 ;; ---------------------------------------------------------------------------
 
+;; A canonical work-object node: `<repo>-d/mission/<id>`, `<repo>-d/excursion/<id>`
+;; or `<repo>-d/ticket/<id>`. The trailing slash is part of the match, so
+;; `-d/missionary/x` is not a mission node.
+(def ^:private node-kind-re #"-d/(mission|excursion|ticket)/")
+
+(defn node-kind
+  "The kind of canonical work-object node S names (:mission, :excursion or
+   :ticket), or nil."
+  [s]
+  (some-> (re-find node-kind-re (str s)) second keyword))
+
 (defn o3-claims-from
   "O3/D1 — the durable agent↔session↔mission lineage (`clock/clocked-on` edges).
    Keys on the EDGE ENDPOINTS (the CANONICAL node-ids the lineage now writes,
    `<repo>-d/mission/<id>`), so O3's mission claim shares its node-id with O1/D4 —
    that's the cross-dimension composition. Claims the canonical mission node
    `:mission` (same type O1 claims it → composes cleanly), the agent node `:agent`.
+   Excursion and ticket nodes are claimed as `:excursion` / `:ticket` where a
+   clock edge ends on one (the outer cascade's field has all three kinds).
    Pure: EDGES → claims-typeo fact-vectors."
   [edges]
   (for [e   edges
@@ -62,7 +75,7 @@
         :let [s (str ep)
               [nid type] (cond
                            (str/starts-with? s "agent:")    [s :agent]
-                           (re-find #"-d/mission/" s)        [s :mission]
+                           (node-kind s)                     [s (node-kind s)]
                            (str/starts-with? s "campaign:")  [s :campaign]
                            :else                             nil)]
         :when nid]
@@ -185,8 +198,11 @@
 ;; live summary — the JSON the pipeline-pattern-cascade view renders
 ;; ---------------------------------------------------------------------------
 
+(defn- nodes-of-type [type claims]
+  (set (map #(nth % 2) (filter #(= type (nth % 3)) claims))))
+
 (defn- mission-nodes [extract]
-  (set (map #(nth % 2) (filter #(= :mission (nth % 3)) (extract)))))
+  (nodes-of-type :mission (extract)))
 
 (defn- claims-consistent?
   "Fast UI consistency check: a shared real node may not be claimed with two
@@ -235,6 +251,9 @@
      :consistent?  (claims-consistent? claims)
      :dimensions   (into {} (map (fn [[dim xs]] [dim (count xs)]) claims-by-dim))
      :spine        {:canonical-mission-nodes (count (set/union o1 o3 o4 o5))
+                    ;; zero is a measured zero: the reads above succeeded
+                    :canonical-excursion-nodes (count (nodes-of-type :excursion claims))
+                    :canonical-ticket-nodes (count (nodes-of-type :ticket claims))
                     :O1-missions (count o1) :O4-missions (count o4)}
      :composition  {:O1xO4 (n o1 o4) :O5xO1 (n o5 o1) :O4xO3 (n o4 o3) :O1xO3 (n o1 o3)}
      :holes        (frequencies (keep #(prop (:hx/props %) :hole-kind)
@@ -281,14 +300,14 @@
            (filter #(.isDirectory ^java.io.File %))
            (filter #(str/starts-with? (.getName ^java.io.File %) "futon"))
            (remove #(= "futon7" (.getName ^java.io.File %)))
-           ;; Walk only <repo>/holes — every M-/E- doc lives there, and a full
+           ;; Walk only <repo>/holes — every M-/E-/T- doc lives there, and a full
            ;; repo file-seq costs ~2.2s (traverses .venv/node_modules/data;
            ;; measured 2026-07-05) on an endpoint the page now polls every 60s.
            (map #(io/file ^java.io.File % "holes"))
            (filter #(.exists ^java.io.File %))
            (mapcat file-seq)
            (filter #(.isFile ^java.io.File %))
-           (filter #(re-matches #"[ME]-[^/]+\.md" (.getName ^java.io.File %)))
+           (filter #(re-matches #"[MET]-[^/]+\.md" (.getName ^java.io.File %)))
            (remove #(str/includes? (.getPath ^java.io.File %) "/.git/"))
            vec))))
 
@@ -304,7 +323,9 @@
   [^java.io.File file]
   (let [stem (str/replace (.getName file) #"\.md$" "")]
     {:stem stem
-     :kind (if (str/starts-with? stem "E-") "excursion" "mission")
+     :kind (cond (str/starts-with? stem "E-") "excursion"
+                 (str/starts-with? stem "T-") "ticket"
+                 :else "mission")
      :repo (repo-name file)
      :path (.getCanonicalPath file)
      :mtime-ms (.lastModified file)}))
@@ -313,7 +334,7 @@
   [x]
   (let [tail (some-> x str (str/split #"/") last)]
     (some-> tail
-            (str/replace #"(?i)^[MEC]-" "")
+            (str/replace #"(?i)^[MECT]-" "")
             str/lower-case)))
 
 (defn- durable-clocked-stems
@@ -321,7 +342,7 @@
   (set (keep (fn [e]
                (some (fn [ep]
                        (let [s (str ep)]
-                         (when (re-find #"-d/(mission|excursion|campaign)/" s)
+                         (when (re-find #"-d/(mission|excursion|ticket|campaign)/" s)
                            (clock-stem-key s))))
                      (:hx/endpoints e)))
              edges)))
@@ -336,7 +357,7 @@
              (:agents (registry/registry-status)))))
 
 (defn tickets-section
-  "Recent unclocked mission/excursion docs. Read-only; degrades empty if disk,
+  "Recent unclocked mission/excursion/ticket docs. Read-only; degrades empty if disk,
    lineage, or live-clock state hiccups."
   ([] (tickets-section (fetch-edges "clock/clocked-on")))
   ([clock-edges]
