@@ -1,6 +1,6 @@
 # Mission: M-wm-wiring
 
-**Status:** HEAD (2026-09-25); IDENTIFY pending. HEAD exit needs Joe's recognition of this text.
+**Status:** HEAD (2026-09-25); IDENTIFY drafted from Joe's statement of the gap (2026-09-25 ~18:20Z); both exits need Joe's read.
 **Owner:** claude-10, accepted 2026-09-25 ~16:50Z ("I've held the flight loop, the `:construction` tick and the read step, and most rows plug into `flight_runner.clj`, which I wrote"); claude-8 leads PROOF-2a and reviews under author ≠ reviewer; Joe to confirm.
 **Repo:** futon3c (the mission lives here). Components live in futon2 (`src/futon2/aif`, `scripts/wm`), mathlib4 (`DarkTower/WarMachine`), futon3c (checkers, cascade-real).
 **Governing record:** futon2 `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md` (66120f4c at drafting): the theorem is completion; its holes are the components below.
@@ -48,12 +48,38 @@ Closed means: in its own process, tests green, warrant registered. Wiring means:
 | 10 | publish (H-publish) | observation exists at flight time | one tick observes it |
 | 11 | warrants | worktree warrants check (futon3c 4e66c56c); `--pinned` refs resolved (futon2 8eaa3e23) | done: non-author warrant test-registry-35e113f3 (claude-13, pinned 1a98d0dc, covers 6387fc77); nothing owed |
 
+## IDENTIFY
+
+**Motivation (Joe, 2026-09-25 ~18:20Z, verbatim).** "IDENTIFY as I see it is that 'all the components exist but they are not hooked up'. Now, there's some prior art and discussion here because this is the Nth round of prototyping and previous editions often struggled a lot with exactly this wiring aspect, maybe because the components themselves were not finished. But days and days went by talking about 'refusals' which had to do with contracts (and red tape) that wasn't being specified. So, there's another gap to consider besides hooking things up, which is that it should be effective but also efficient (minimum of red tape)."
+
+**The two gaps.**
+1. **Hooking up.** Every component in the inventory is closed in its own process with tests and a warrant, and nothing calls it from a tick or a flight. The machine has not flown a lifecycle mission under the clauses.
+2. **Efficiency.** Previous rounds spent their time on refusals whose contracts were never specified. A wiring step that adds a refusal, a required field or a gate adds red tape unless it carries its case. The wiring must be effective (the flight completes or records an accurate failure) and efficient (the fewest contracts a flight must satisfy, each specified before the step that relies on it is built).
+
+**Theoretical anchoring and prior art.**
+- The old outer loop turned feasibility from a support condition into a refusal, and when every target was refused the tick abstained (futon2 `holes/E-outer-loop.md` §Defects O3; the loop removed at 5d55e7a0, 2026-09-17). That is the failure mode named above, on the record.
+- Rulings that bound the wiring: guards are presumed unwanted and the burden of proof is on the guard (Joe, 2026-09-19); no new required field or refusal without a red-tape-removal or AIF-validity case (Joe, 2026-09-25); an absence is typed on the record, never a value (2026-09-24); the outer loop is the machine's, no hand catalog (futon2 c2061e27); a requisition is a different semantic layer from a pending job, and creation makes a pending object eligible (2026-09-25).
+- The PROOF-2 acceptance register (futon2 PROOF-2-THEOREM-draft, AR-1..AR-44) records what each earlier click refused or substituted and why; the reach limits on the component rows of PROOF-2a are typed and each names its case.
+- Red tape as a measured quantity: an agent step that went beyond the operator's ask (OUTER-CASCADE-D §1, five cases from the operator-turn blocks); the link field that would measure it is named, not built.
+- `holes/labs/wm-contract/NOTE-task-manager-outer-loop.md` (Joe with zai-7, 2026-09-12): the mechanism that pushes a selected item into a lane, and M-autoclock-in as that step.
+
+**Scope.** In: the eleven inventory rows plus row 0, wired against the hand-placed target M-autoclock-in, then the outer cascade's selection of the next target. Out: any new component (a hole found while wiring is closed on its own row in PROOF-2a, never by the wiring); any refusal, required field or gate without its case; the per-mission annotations and figures of the working page until a row is worked.
+
+**Completion criteria (testable).**
+1. One flight of M-autoclock-in produces a click record on which every witness condition W₀..Wₜ is checkable and either passes or is typed-refused, with no absence read as a value, and the record is accepted whether the flight succeeded or failed.
+2. The outer cascade selects the next target from the eligible field with the draw, its seed and each action's typed G on the record.
+3. Every wiring row has its own test and warrant, author ≠ reviewer, and closed no hole.
+4. **Efficiency, measured per flight:** (a) the refusals the flight can reach are enumerated in this mission before the flight, each with its case; a refusal reached that is not on the list is a defect of the wiring, not of the target; (b) the count of required fields on the click record does not grow during wiring except by a row that states the case; (c) the number of operator rulings the flight needed before it could complete, target zero after the first; (d) wall time per tick recorded, with the outer cascade's construction cost (OUTER-CASCADE-D §6: ~20 s today) as the baseline it must not silently exceed.
+
+**Relationship to other missions.** Depends on PROOF-2a (the components and their clauses) and on M-autoclock-in (the first target and the clocking step). M-the-perfect-crime supplies the operator-turn evidence the outer cascade reads and the red-tape cases. M-futon-seams is the worked example and a fixture for the read step's link tests, not a target.
+
+**Source material.** The inventory table above (files, shas, warrants); futon2 `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md` (Holes and owners tables, the rulings); `proof2/packets/OUTER-CASCADE-D.md`; `holes/E-outer-loop.md`; futon2 `src/futon2/aif/flight.clj`, `flight_runner.clj`, `target_field.clj`; the click-001 exemplar under futon3c `holes/labs/M-futon-seams/exemplar/`.
+
+**Owner and dependencies.** claude-10 drives (accepted); claude-8 reviews; repos futon2 (flight, field, components), futon3c (checkers, cascade-real, kimi-task.sh, this mission), mathlib4 (the Lean the clauses cite).
+
+**Exit criterion** (mission-lifecycle.md: a human has read the proposal and agrees the gap is real and the scope is right): pending Joe's read of this section.
+
 ## DOCUMENT (note, ahead of its phase)
 
 The mission's working page uses the M-futon-seams presentation (Joe, 2026-09-25: zone/wip/seams.html is the style for a wiring-focused mission): the mission text as the main column, margin notes anchored to exact spans at a recorded sha, a phase table read from each exit criterion against evidence, figures in their own lane. The generator `scripts/seams_mission_page.py` takes `--mission` and `--lab` since futon3c dc86c962 (claude-1; the M-futon-seams page byte-identical before and after, sha256 7be3b52d…; a non-mission refused with nothing written). `holes/labs/M-wm-wiring/` holds only a README: `annotations.edn` and `lifecycle.edn` are the owner's to write as the rows are worked, and until then the page states both absences (empty margin; every phase "not read" with its criterion quoted, "exit met" nowhere). Suggested annotation columns for this mission: (a) the component the row calls, with sha and warrant; (b) the PROOF-2a clause the row exercises. The margin is sized for two columns; if the mission stays annotation-light the measure is worth revisiting (claude-1).
 
-## IDENTIFY (pending)
-
-**Gap.** The components are tested singly; nothing joins them into a tick; the machine has not flown a lifecycle mission under the clauses.
-
-**Completion criteria (proposed, for IDENTIFY to harden).** (i) One flight of the hand-placed target M-autoclock-in produces a click record on which every witness condition W_0..W_t is checkable, each passing or typed-refused, no absence read as a value. (ii) The outer cascade selects the next target from the field with the draw and its seed on the record. (iii) Every wiring row above has its own test and warrant, and no hole was closed by wiring. (iv) The record of a failed flight is accepted as a deliverable when it is accurate.
