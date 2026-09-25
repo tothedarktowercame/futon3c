@@ -2496,6 +2496,55 @@
     (json-response 400 {:record/type :test-registry/refusal
                         :reason :invalid-json})))
 
+(defn handle-test-registry-latest
+  "GET /api/alpha/test-registry/latest?namespace=<ns>[&limit=<n>] — which record
+  covers a namespace (AR-42).
+
+  A question the registry could not be asked before: /check answers whether a
+  record it is GIVEN still holds, so a consumer needed the entry id already.
+  This returns the newest :run record for the namespace REGARDLESS of
+  :warrant?, because a lookup that returned only warranted runs would let a
+  later failing run hide behind an earlier green one.
+
+  It names the record; it does not judge it. The body carries the entry id and
+  not the record, so the consumer reads the record through the evidence API and
+  verifies its digest itself rather than trusting this re-encoding — futon2's
+  :C8 observation class does exactly that. An absent run is 200 with
+  :found false and a typed reason, because a read that establishes absence
+  succeeded; only a malformed request is 4xx."
+  [request config]
+  (try
+    (let [params (parse-query-params request)
+          raw-limit (get params "limit")
+          limit (when (seq (str raw-limit)) (enc/parse-int raw-limit 0))
+          lookup (requiring-resolve 'futon3c.test-registry/latest-run-for-namespace)
+          result (lookup (evidence-store-for-config config)
+                         (cond-> {:namespace (get params "namespace")}
+                           (and limit (pos? limit)) (assoc :limit limit)))]
+      (cond
+        (:record/type result)
+        (json-response 400 {:record/type (str (symbol (:record/type result)))
+                            :reason (name (:reason result))})
+
+        (= :none (:status result))
+        (json-response 200 {:latest (cond-> {:found false
+                                             :reason (name (:reason result))
+                                             :considered (:considered result)}
+                                      (:limit result) (assoc :limit (:limit result)))})
+
+        :else
+        (json-response 200 {:latest (cond-> {:found true
+                                             :entry-id (:evidence/id result)
+                                             :ran-at (get-in result [:payload :ran-at])
+                                             :considered (:considered result)}
+                                      (seq (:undecodable result))
+                                      (assoc :undecodable (mapv #(str (:evidence/id %))
+                                                                (:undecodable result))))})))
+    (catch Throwable throwable
+      (json-response 500 {:record/type :test-registry/refusal
+                          :reason :latest-endpoint-failed
+                          :details {:message (.getMessage throwable)}}))))
+
 (defn handle-test-registry-run
   "POST /api/alpha/test-registry/run — register a mechanical test run.
   The registry executes the command itself (register-run! sets :warrant?
@@ -8967,6 +9016,9 @@
 
       (and (= :post method) (= "/api/alpha/test-registry/run" uri))
       (handle-test-registry-run request config)
+
+      (and (= :get method) (= "/api/alpha/test-registry/latest" uri))
+      (handle-test-registry-latest request config)
 
       (and (= :get method) (= "/api/alpha/test-registry/report" uri))
       (handle-test-registry-report request config)

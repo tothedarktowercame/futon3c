@@ -3420,3 +3420,47 @@
           response (post handler "/api/alpha/portfolio/heartbeat" "{bad")]
       (is (= 400 (:status response)))
       (is (false? (:ok (parse-body response)))))))
+
+;; ---------------------------------------------------------------------------
+;; AR-42: GET /api/alpha/test-registry/latest — which record covers a namespace.
+
+(deftest test-registry-latest-names-the-record-and-types-its-absence
+  (let [backend (atom {:entries {} :order []})
+        append! (requiring-resolve 'futon3c.test-registry/append-record!)
+        ;; an UNWARRANTED, failing run: the lookup must still find it, because a
+        ;; warrant-filtering lookup would let it hide behind an older green run
+        run (append! backend
+                     {:kind :run :author "author" :run/id "r-latest-1"
+                      :ran-at "2026-09-25T01:00:00Z" :finished-at "2026-09-25T01:00:01Z"
+                      :command ["clojure" "-M:test" "-n" "demo-latest-test"]
+                      :code-files {"src/demo.clj" "blob"} :test-files {"test/demo_test.clj" "t"}
+                      :results {:tests 1 :assertions 1 :failures 1 :errors 0 :exit 1}
+                      :postcheck {:status :matched} :warrant? false}
+                     nil)
+        config {:evidence-store backend}
+        ask (fn [query-string]
+              (http/handle-test-registry-latest
+               {:request-method :get :uri "/api/alpha/test-registry/latest"
+                :query-string query-string}
+               config))
+        body (fn [response] (json/parse-string (:body response) true))]
+    (testing "a record that covers the namespace is named, not judged"
+      (let [response (ask "namespace=demo-latest-test")]
+        (is (= 200 (:status response)))
+        (is (true? (get-in (body response) [:latest :found])))
+        (is (= (:evidence/id run) (get-in (body response) [:latest :entry-id])))
+        ;; the record itself is NOT in the body: the consumer reads it through
+        ;; the evidence API and verifies the digest itself
+        (is (nil? (get-in (body response) [:latest :payload])))))
+    (testing "absence is a successful read with a typed reason"
+      (let [response (ask "namespace=futon3c.no-such-test")]
+        (is (= 200 (:status response)))
+        (is (false? (get-in (body response) [:latest :found])))
+        (is (= "no-run-for-namespace" (get-in (body response) [:latest :reason])))))
+    (testing "a scan that filled its window did not establish absence"
+      (let [response (ask "namespace=futon3c.no-such-test&limit=1")]
+        (is (= "scan-window-exhausted" (get-in (body response) [:latest :reason])))))
+    (testing "a request with no namespace is malformed, not absent"
+      (let [response (ask "")]
+        (is (= 400 (:status response)))
+        (is (= "namespace-required" (:reason (body response))))))))

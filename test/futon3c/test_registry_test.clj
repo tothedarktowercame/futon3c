@@ -645,3 +645,116 @@
   (is (registry/instrument? {:ns "resource:x"
                              :path "/somewhere/futon3c/test_registry/runner.clj"}))
   (is (not (registry/instrument? {:ns "futon2.aif.trace" :path "src/futon2/aif/trace.clj"}))))
+
+;; ---------------------------------------------------------------------------
+;; AR-42: lookup by namespace. The registry could be asked "is THIS record
+;; still good" but not "which record covers this namespace", so futon2's :C8
+;; had to be handed an entry id. These cover the rule the lookup states.
+
+(defn- append-run!
+  "A synthetic :run record through the registry's own append, so it decodes
+  exactly as a minted one does. Used where a real run cannot produce the
+  condition under test (two records sharing a :ran-at)."
+  [backend {:keys [namespace ran-at finished-at failures warrant?]
+            :or {failures 0 warrant? true}}]
+  (registry/append-record!
+   backend
+   {:kind :run :author "author" :run/id (str (java.util.UUID/randomUUID))
+    :ran-at ran-at :finished-at (or finished-at ran-at)
+    :command ["clojure" "-M:test" "-n" namespace]
+    :code-files {"src/demo.clj" "blob"} :test-files {"test/demo_test.clj" "test-blob"}
+    :results {:tests 1 :assertions 1 :failures failures :errors 0 :exit 0}
+    :postcheck {:status :matched} :warrant? warrant?}
+   nil))
+
+(defn- failing-run!
+  "Register a real run whose command reports a failure. The record is still
+  appended — a failed run is a fact about the code, not a registry error."
+  [backend options]
+  (with-redefs [registry/run-process!
+                (fn [_ _ log]
+                  (let [text "Ran 3 tests containing 7 assertions.\n1 failures, 0 errors.\n"]
+                    (spit log text)
+                    (registry/parse-results 1 text 40)))]
+    (registry/register-run! backend options)))
+
+(deftest latest-run-for-namespace-resolves-to-the-newest-not-the-warranted
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [older (registry/register-run! backend options)
+           newer (failing-run! backend options)
+           found (registry/latest-run-for-namespace backend {:namespace "demo-test"})]
+       ;; the older run really is the one a warrant-filtering lookup would pick
+       (is (true? (get-in older [:payload :warrant?])))
+       (is (= :matched (get-in older [:payload :postcheck :status])))
+       (is (false? (get-in newer [:payload :warrant?])))
+       ;; ... and the lookup picks the newer one anyway, which is the point
+       (is (= (:evidence/id newer) (:evidence/id found))
+           (str "picked " (:evidence/id found) " ran-at " (get-in found [:payload :ran-at])))
+       (is (= 1 (get-in found [:payload :results :failures])))
+       (is (= :run (get-in found [:payload :kind])))
+       ;; the row shape is the one read-chain! returns, plus what was scanned
+       (is (string? (:sha256 found)))
+       (is (pos? (:considered found)))))))
+
+(deftest latest-run-for-namespace-types-its-absence
+  (fixture
+   (fn [{:keys [backend options]}]
+     (registry/register-run! backend options)
+     (let [none (registry/latest-run-for-namespace backend {:namespace "futon3c.not-registered-test"})]
+       (is (some? none) "absence is a value, never nil")
+       (is (= :none (:status none)))
+       (is (= :no-run-for-namespace (:reason none)))
+       (is (nil? (:payload none))))
+     ;; a scan that filled its window did NOT establish absence, and says so
+     (let [capped (registry/latest-run-for-namespace
+                   backend {:namespace "futon3c.not-registered-test" :limit 1})]
+       (is (= :scan-window-exhausted (:reason capped)))
+       (is (= 1 (:limit capped))))
+     ;; a namespace is required: without one there is nothing to look up
+     (is (= :namespace-required (:reason (registry/latest-run-for-namespace backend {}))))
+     (is (= :test-registry/refusal
+            (:record/type (registry/latest-run-for-namespace backend {:namespace "  "})))))))
+
+(deftest latest-run-for-namespace-breaks-ties-as-documented
+  (fixture
+   (fn [{:keys [backend]}]
+     (let [stamp "2026-09-25T01:00:00Z"
+           first-finished (append-run! backend {:namespace "tie-test" :ran-at stamp
+                                                :finished-at "2026-09-25T01:00:05Z"})
+           last-finished (append-run! backend {:namespace "tie-test" :ran-at stamp
+                                               :finished-at "2026-09-25T01:00:09Z"})
+           found (registry/latest-run-for-namespace backend {:namespace "tie-test"})]
+       ;; same :ran-at, so :finished-at decides
+       (is (= (:evidence/id last-finished) (:evidence/id found)))
+       (is (not= (:evidence/id first-finished) (:evidence/id found)))))))
+
+(deftest latest-run-for-namespace-orders-by-instant-not-by-string
+  (fixture
+   (fn [{:keys [backend]}]
+     ;; "…:40Z" sorts AFTER "…:40.387Z" as a string while being 387ms earlier
+     ;; in fact. The newest here is the fractional one.
+     (let [whole (append-run! backend {:namespace "order-test" :ran-at "2026-09-25T01:00:40Z"})
+           fractional (append-run! backend {:namespace "order-test" :ran-at "2026-09-25T01:00:40.387Z"})
+           found (registry/latest-run-for-namespace backend {:namespace "order-test"})]
+       (is (= (:evidence/id fractional) (:evidence/id found)))
+       (is (not= (:evidence/id whole) (:evidence/id found)))))))
+
+(deftest latest-run-for-namespace-names-what-it-could-not-read
+  (fixture
+   (fn [{:keys [backend]}]
+     (let [good (append-run! backend {:namespace "undecodable-test"
+                                      :ran-at "2026-09-25T01:00:00Z"})]
+       ;; corrupt one entry's body in place: its text no longer hashes to its id
+       (swap! backend update :entries
+              (fn [entries]
+                (reduce-kv (fn [m id entry]
+                             (assoc m id (if (= id (:evidence/id good))
+                                           entry
+                                           (assoc-in entry [:evidence/body :payload-edn] "{:kind :run}"))))
+                           {} entries)))
+       (let [found (registry/latest-run-for-namespace backend {:namespace "undecodable-test"})]
+         (is (= (:evidence/id good) (:evidence/id found)))
+         ;; if anything was unreadable it is named, not dropped where no
+         ;; reader can see it
+         (is (every? :evidence/id (:undecodable found))))))))

@@ -876,6 +876,90 @@
     (catch Exception e (if (:record/type (ex-data e)) (ex-data e)
                           (refusal :record-unavailable {:error (.getMessage e)})))))
 
+(def default-namespace-scan-limit
+  "How many registry entries a namespace lookup scans, newest first. A bound on
+  the read, not a page size: the whole registry was 188 entries on 2026-09-24.
+  When the bound is reached without a match, absence is NOT concluded."
+  2000)
+
+(defn commanded-namespace
+  "The namespace a LOGICAL command names: the argument after -n, which
+  validate-command! requires of every Clojure command. A Lean command names a
+  module and yields nil, so no namespace is claimed for it."
+  [command]
+  (when (sequential? command)
+    (second (drop-while #(not= "-n" %) command))))
+
+(defn- ran-at-key
+  "Sort key for one candidate row: the parsed :ran-at, then :finished-at, then
+  the record's own id. Instants are compared as [second nano] and NOT as
+  strings, because \"…:40Z\" and \"…:40.387Z\" order the wrong way round
+  lexicographically while being 387ms apart in fact."
+  [row]
+  (let [stamp (fn [k] (let [i (try (Instant/parse (get-in row [:payload k]))
+                                   (catch Exception _ nil))]
+                        (if i [(.getEpochSecond i) (.getNano i)] [-1 -1])))]
+    [(stamp :ran-at) (stamp :finished-at) (str (:evidence/id row))]))
+
+(defn latest-run-for-namespace
+  "READ-ONLY. The newest :run record whose logical command names NAMESPACE.
+
+  Regardless of :warrant?, :postcheck and results. Returning only warranted
+  runs would let a later failing run hide behind an earlier green one, which is
+  the case this lookup exists to prevent: the caller judges the record it finds
+  (futon2's :C8 observation class does the judging), and can only judge the
+  record that is actually newest.
+
+  Newest by :ran-at; ties break by :finished-at, then by :evidence/id compared
+  as a string. So the answer is a function of the store's contents and never of
+  the order the query returned.
+
+  Returns the row shape read-chain! returns -- {:evidence/id :sha256 :payload}
+  -- plus :considered. Absence is typed and never nil:
+
+    (none :no-run-for-namespace)  the scan saw the whole registry and no run
+                                  names this namespace;
+    (none :scan-window-exhausted) the scan filled :limit, so absence was not
+                                  established. A caller may NOT read this as
+                                  \"no run exists\"; raise the limit or narrow
+                                  the store.
+
+  Records that will not decode are named in :undecodable, and a record whose
+  :ran-at will not parse is named in :unorderable, rather than either being
+  dropped where a reader cannot see them."
+  [backend {:keys [namespace limit]}]
+  (if-not (nonblank? namespace)
+    (refusal :namespace-required {})
+    (let [limit (or limit default-namespace-scan-limit)
+          entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
+          {:keys [rows undecodable]}
+          (reduce (fn [acc entry]
+                    (let [id (:evidence/id entry)]
+                      (try
+                        (let [payload (decode entry)]
+                          (if (and (= :run (:kind payload))
+                                   (= namespace (commanded-namespace (:command payload))))
+                            (update acc :rows conj
+                                    {:evidence/id id
+                                     :sha256 (get-in entry [:evidence/body :sha256])
+                                     :payload payload})
+                            acc))
+                        (catch Exception e
+                          (update acc :undecodable conj
+                                  {:evidence/id id
+                                   :reason (or (:reason (ex-data e)) :undecodable)})))))
+                  {:rows [] :undecodable []}
+                  entries)
+          unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
+          newest (first (sort-by ran-at-key #(compare %2 %1) rows))]
+      (cond-> (cond
+                newest (assoc newest :considered (count entries))
+                (>= (count entries) limit) (assoc (none :scan-window-exhausted)
+                                                  :limit limit :considered (count entries))
+                :else (assoc (none :no-run-for-namespace) :considered (count entries)))
+        (seq undecodable) (assoc :undecodable undecodable)
+        (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable))))))
+
 (defn execution-policy
   "Decision authority for the review's execution lane. Delegates to
   futon3c.agency.warrant/reviewer-lane so there is ONE lane rule: any
@@ -969,12 +1053,21 @@
           result (case operation
                    "run" (register-run! backend options)
                    "check" (check-record! backend options)
+                   ;; Read-only namespace lookup (AR-42). Same shape of
+                   ;; exposure as "check": one subcommand over one config.
+                   "latest-for-namespace" (latest-run-for-namespace backend options)
                    "review" (review! backend options)
                    "lane" (lane! backend options)
                    (fail! :unknown-operation {:operation operation}))]
       (emit-result options result)
       (shutdown-agents)
-      (when (or (= false (:warrant? result)) (= false (get-in result [:payload :warrant?])))
+      ;; The lookup's question is "does the registry hold a run for this
+      ;; namespace", not "is it warranted": finding an UNWARRANTED run is a
+      ;; successful read, and only a typed absence or refusal is a non-zero
+      ;; exit. Every other operation keeps the warrant-shaped rule it had.
+      (when (if (= "latest-for-namespace" operation)
+              (or (= :none (:status result)) (some? (:record/type result)))
+              (or (= false (:warrant? result)) (= false (get-in result [:payload :warrant?]))))
         (System/exit 1)))
     (catch Exception e
       (emit-result (try (edn/read-string (slurp config-path)) (catch Exception _ {}))
