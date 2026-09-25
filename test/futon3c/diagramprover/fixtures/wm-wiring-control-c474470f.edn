@@ -12,6 +12,26 @@
               "scripts/futon2/report/war_machine.clj"
               "test/futon2/aif/a_matrix_live_wiring_test.clj"]
  :report []
+ ;; Pinned 2026-09-25 after the map's :likelihood-mode direction was corrected
+ ;; (DIAGRAMPROVER-WIRING-I2): conformance {:heuristic? true} over the same
+ ;; sites. The correction leaves :report and :perturbed-report unchanged: the
+ ;; default run checks occurrence only, and :likelihood-mode occurs at both
+ ;; its declared sites either way. Before the correction the heuristic also
+ ;; reported :declared-write-not-found on :belief-model and
+ ;; :declared-read-not-found on :war-machine-report for :likelihood-mode.
+ :heuristic-report
+ [{:finding :declared-read-not-found, :box/id :a-matrix-live-wiring-test,
+   :field :initial-prior-hash, :role :reads,
+   :site {:file "test/futon2/aif/a_matrix_live_wiring_test.clj"},
+   :usage {:reads 0, :writes 0, :unclassified 1}, :heuristic true}
+  {:finding :declared-read-not-found, :box/id :a-matrix-live-wiring-test,
+   :field :observation-model-hash, :role :reads,
+   :site {:file "test/futon2/aif/a_matrix_live_wiring_test.clj"},
+   :usage {:reads 0, :writes 0, :unclassified 1}, :heuristic true}
+  {:finding :declared-read-not-found, :box/id :a-matrix-live-wiring-test,
+   :field :transition-model-hash, :role :reads,
+   :site {:file "test/futon2/aif/a_matrix_live_wiring_test.clj"},
+   :usage {:reads 0, :writes 0, :unclassified 1}, :heuristic true}]
  :perturbed-report
  [{:finding :declaration-without-occurrence, :box/id :belief-model,
    :field :model-manifest-absent, :role :writes, :site {:ns "futon2.aif.belief"}}

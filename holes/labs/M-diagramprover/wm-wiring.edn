@@ -20,17 +20,35 @@
 ;; This sibling also exercises the checker on a machine that does NOT run
 ;; on the futon3c cycle engine and lives in a different repo: no :phases
 ;; section, spec-model generality only.
+;;
+;; CORRECTED 2026-09-25 (claude-11, DIAGRAMPROVER-WIRING-I2): the mode's
+;; direction was declared backwards. At futon2 e1f6d909 war_machine.clj
+;; decides it (arena-likelihood-mode, :818) and writes it twice: into the
+;; options map passed to the belief path (:834) and into the tick's
+;; :wm-version stamp beside :belief-model-manifest (arena-mode-flags,
+;; :1045-1046). belief.clj only reads it (:keys with :or at :400-402, case
+;; at :406) and writes it nowhere; its model-manifest (:286-293) stamps the
+;; three hashes only. So the mode is not stamped by belief-model. Looked
+;; for another writer: git grep of :likelihood-mode over futon2 src/ and
+;; scripts/ at e1f6d909 finds only literal option maps in two bb scripts
+;; (a_matrix_shadow.bb:65-66, aif/a_matrix_simulation.bb:199-225) and a
+;; docstring in trace.clj:196 describing the :wm-version stamp, which
+;; war_machine.clj builds. Found by conformance {:heuristic? true}.
 {:spec/id :war-machine-belief-path-live
  :boxes
  [{:box/id :belief-model
-   ;; model-manifest stamps: A/B/D content hashes + selected likelihood mode
+   ;; model-manifest stamps the A/B/D content hashes (belief.clj:286-293);
+   ;; the likelihood mode is an option it reads (:400-406)
    :site {:ns "futon2.aif.belief"}
    :writes [:observation-model-hash :transition-model-hash
-            :initial-prior-hash :likelihood-mode]}
-  {:box/id :war-machine-report
-   ;; the production seam consumes the mode; hashes pass through untyped
-   :site {:file "scripts/futon2/report/war_machine.clj"}
+            :initial-prior-hash]
    :reads [:likelihood-mode]}
+  {:box/id :war-machine-report
+   ;; the production seam decides the mode and writes it into the belief
+   ;; options (:834) and the :wm-version stamp (:1045); hashes pass through
+   ;; untyped
+   :site {:file "scripts/futon2/report/war_machine.clj"}
+   :writes [:likelihood-mode]}
   {:box/id :a-matrix-live-wiring-test
    ;; the paper-cited wiring evidence: reads all four stamps
    :site {:file "test/futon2/aif/a_matrix_live_wiring_test.clj"}

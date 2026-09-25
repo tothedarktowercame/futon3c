@@ -271,7 +271,9 @@
                       (update-in [:boxes 0 :writes] conj :model-manifest-absent)
                       (update :boxes conj {:box/id :universe-only :reads [:selection-law]}))]
     (is (= (:report control) (wiring/conformance root spec)))
-    (is (= (:perturbed-report control) (wiring/conformance root perturbed)))))
+    (is (= (:perturbed-report control) (wiring/conformance root perturbed)))
+    (is (= (:heuristic-report control) (wiring/conformance root spec {:heuristic? true}))
+        "only the three set-literal hashes; :likelihood-mode's direction matches the code")))
 
 ;; ---------------------------------------------------------------------------
 ;; Var-grain sites
