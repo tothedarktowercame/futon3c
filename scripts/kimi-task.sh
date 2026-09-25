@@ -13,13 +13,16 @@
 #   **Requisition:** in-progress — dispatched <ISO-8601 UTC> to <seat> as <job-id>
 #   **Requisition:** completed — <ISO-8601 UTC>, job <job-id>, state <done|failed>
 #
-# usage: kimi-task.sh --from <caller> --to <kimi-N> --purpose "<one line>" <packet.md> [more.md ...]
+# usage: kimi-task.sh --from <caller> --to <kimi-N> --purpose "<one line>" [--cascade <c.clj>] <packet.md> [more.md ...]
 # Mints futon2/holes/excursions/E-kimi-task-N.md (next N) with the purpose,
 # caller, date and packet text, sends the bell with `Requisition:
 # E-kimi-task-N — <purpose>` prepended, writes the in-progress line with the
 # job id, and commits that one path. If the bell returns no job id, the file
 # is removed and nothing is committed: a dispatch that did not happen leaves
 # no record that could read as pending work. Prints the task id and job id.
+# With --cascade, the bell's body is that pattern cascade (agency_send.py
+# --cascade: it must lint, and the receiver is told how to read one) and the
+# packet files ride as the caller's context; the excursion file holds both.
 #
 # usage: kimi-task.sh --complete <E-kimi-task-N> <job-id>
 # Reads the job's final state and time from GET /api/alpha/invoke/jobs/<id>
@@ -79,17 +82,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" -- "holes/excursions/$I
   exit 0
 fi
 
-FROM=""; TO=""; PURPOSE=""
+FROM=""; TO=""; PURPOSE=""; CASCADE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM="$2"; shift 2;;
     --to) TO="$2"; shift 2;;
     --purpose) PURPOSE="$2"; shift 2;;
+    --cascade) CASCADE="$2"; shift 2;;
     *) break;;
   esac
 done
 [ -n "$FROM" ] && [ -n "$TO" ] && [ -n "$PURPOSE" ] && [ $# -ge 1 ] || { echo "usage: $0 --from <id> --to <kimi-N> --purpose <line> <packet.md>..." >&2; exit 2; }
 for f in "$@"; do [ -f "$f" ] || { echo "no such packet file: $f" >&2; exit 2; }; done
+if [ -n "$CASCADE" ]; then
+  [ -f "$CASCADE" ] || { echo "no such cascade file: $CASCADE" >&2; exit 2; }
+  # Refuse before minting: a cascade that does not lint would be refused by
+  # agency_send after the excursion file exists.
+  python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" | tail -1 | grep -q ' 0 problem(s)$' \
+    || { echo "refusal:cascade-does-not-lint — $CASCADE" >&2; python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" >&2 || true; exit 2; }
+fi
 N=$(ls "$DIR" 2>/dev/null | sed -n 's/^E-kimi-task-\([0-9]*\)\.md$/\1/p' | sort -n | tail -1); N=$(( ${N:-0} + 1 ))
 ID="E-kimi-task-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
 {
@@ -98,9 +109,12 @@ ID="E-kimi-task-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
   echo "conversation starts fresh; see scripts/kimi-task.sh)."; echo
   echo "## Packet"; echo
   cat "$@"
+  if [ -n "$CASCADE" ]; then
+    echo; echo "## Cascade"; echo; echo '```clojure'; cat "$CASCADE"; echo '```'
+  fi
 } > "$FILE"
 AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 /home/joe/code/futon3c/scripts/agency_send.py --from "$FROM" --to "$TO" --kind bell --mode work --requisition "$ID — $PURPOSE" 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
+JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 /home/joe/code/futon3c/scripts/agency_send.py --from "$FROM" --to "$TO" --kind bell --mode work --requisition "$ID — $PURPOSE" ${CASCADE:+--cascade "$CASCADE"} 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
 if [ -z "$JOB" ]; then
   rm -f "$FILE"
   echo "refusal:no-job — the bell to $TO returned no job id; $ID removed, nothing committed" >&2
