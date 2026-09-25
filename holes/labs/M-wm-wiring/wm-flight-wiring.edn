@@ -1,0 +1,307 @@
+;; M-wm-wiring — component map for the flight of a lifecycle mission
+;; (first target M-autoclock-in). Author claude-10, 2026-09-25, DERIVE's first
+;; artefact (WM-MAP-I). Checked by futon3c.diagramprover.wiring over futon2's
+;; files at :futon2-sha, materialised from git into a temp root by
+;; test/futon3c/diagramprover/wm_flight_wiring_test.clj (the registered run).
+;;
+;; REFERENT. The sites are the code that flies: flight/run! (flight.clj:246),
+;; whose production caller is flight_driver.clj:123 under --run; each click is
+;; a POST to /api/alpha/wm/click that runs the tick in
+;; scripts/futon2/report/war_machine.clj. N0 checks each component site
+;; against a registered load closure (test-registry-307b8969, the
+;; mission-reading-c8-test run, which loads the flight and the tick). The
+;; earlier holes/labs/M-diagramprover/wm-wiring.edn records how close the
+;; paper map came to mapping the futon3c pilot peripheral instead of the
+;; futon2 War Machine; this map names futon2 files only.
+;;
+;; FORM. One component box per inventory row (0-11 of M-wm-wiring), plus a
+;; test box per row as its declared reader. A box declares the fields the
+;; WIRED code will read and write, at var grain; where the code does not do so
+;; yet, the checker's finding is the row's to-do, and :expected-findings in
+;; the registered test lists them exactly. Wiring a row deletes its expected
+;; findings in the same commit as the code. Keys are chosen to be distinctive
+;; at their site: conformance is textual (it counts comments) and direction is
+;; checked only under {:heuristic? true}.
+;;
+;; Components outside futon2 are siteless (exempt from conformance, still in
+;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
+;; proof2a_check.clj, warranted separately, test-registry-1757d974).
+{:spec/id :wm-flight-wiring
+ :futon2-sha "dd1c0561"
+ :boxes
+ [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
+  {:box/id :r1-target-field :row 1 :box/kind :component
+   :site {:file "src/futon2/aif/target_field.clj" :var "step"}
+   :writes [:next-step]}
+  {:box/id :r1-outer-cascade :row 1 :box/kind :component
+   :site {:file "src/futon2/aif/outer_cascade.clj" :var "select"}
+   :reads [:next-step :pair-overlap] :writes [:draw-seed]}
+  {:box/id :r1-test :row 1 :box/kind :test
+   :site {:file "test/futon2/aif/outer_cascade_test.clj"}
+   :reads [:draw-seed]}
+
+  ;; ---- row 2, Clause C: the read step. Components exist; the flight does not call them.
+  {:box/id :r2-served-by-reading :row 2 :box/kind :component
+   :site {:ns "futon2.aif.served-by-reading" :var "proposal"}
+   :writes [:want-span :text-sha256]}
+  {:box/id :r2-verifier :row 2 :box/kind :component
+   :site {:file "scripts/wm/extract-outcomes.clj" :var "verify-proposed-link"}
+   :reads [:want-span :text-sha256]}
+  {:box/id :r2-flight-read :row 2 :box/kind :component
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "read-fn"}
+   :reads [:text-sha256]}
+  {:box/id :r2-test :row 2 :box/kind :test
+   :site {:file "test/futon2/aif/served_by_reading_test.clj"}
+   :reads [:want-span :text-sha256]}
+
+  ;; ---- row 3, Clause C: the ask step passes the library root.
+  {:box/id :r3-flight-ask :row 3 :box/kind :component
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "agency-answer-fn"}
+   :writes [:library-root]}
+  {:box/id :r3-prompt :row 3 :box/kind :component
+   :site {:ns "futon2.aif.want-interpretation" :var "prompt"}
+   :reads [:library-root]}
+  {:box/id :r3-test :row 3 :box/kind :test
+   :site {:file "test/futon2/aif/flight_ask_library_test.clj"}
+   :reads [:library-root]}
+
+  ;; ---- row 4, Clause D: the kernel reads :order when the precedence is a linear extension.
+  {:box/id :r4-constructor :row 4 :box/kind :component
+   :site {:ns "futon2.aif.construction" :var "containment-order"}
+   :writes [:precedence-violations]}
+  {:box/id :r4-kernel :row 4 :box/kind :component
+   :site {:ns "futon2.aif.efe" :var "rank-cascade-actions"}
+   :reads [:precedence-violations]}
+  {:box/id :r4-test :row 4 :box/kind :test
+   :site {:file "test/futon2/aif/order_kernel_test.clj"}
+   :reads [:precedence-violations]}
+
+  ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
+  {:box/id :r0-enact-step :row 0 :box/kind :component
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   :writes [:attempts :grain-gate]}
+  {:box/id :r0-test :row 0 :box/kind :test
+   :site {:file "test/futon2/aif/flight_enact_test.clj"}
+   :reads [:attempts]}
+  {:box/id :r5-grain-gate :row 5 :box/kind :component
+   :site {:ns "futon2.aif.grain-gate" :var "grain-gate"}
+   :reads [:keyed-by]}
+  {:box/id :r5-flight-call :row 5 :box/kind :component
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   :writes [:keyed-by]}
+  {:box/id :r5-test :row 5 :box/kind :test
+   :site {:file "test/futon2/aif/flight_grain_gate_test.clj"}
+   :reads [:grain-gate]}
+  {:box/id :wc-checker :box/kind :component
+   ;; futon3c bb script, siteless here
+   :reads [:attempts :grain-gate :selection-candidate] :writes [:wc-verdict]}
+  {:box/id :r7-increment :row 7 :box/kind :component
+   :site {:ns "futon2.aif.enactment-habit" :var "increment"}
+   :reads [:attempts] :writes [:delta]}
+  {:box/id :r7-flight-call :row 7 :box/kind :component
+   ;; the flight hands check-c's verdict to increment unchanged
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   :reads [:wc-verdict]}
+  {:box/id :r7-fold :row 7 :box/kind :component
+   :site {:ns "futon2.aif.enactment-habit" :var "fold"}
+   :reads [:delta] :writes [:enactment-records]}
+  {:box/id :r7-selection :row 7 :box/kind :component
+   :site {:ns "futon2.aif.policy" :var "select-action-cascades"}
+   :reads [:enactment-records]}
+  {:box/id :r7-test :row 7 :box/kind :test
+   :site {:file "test/futon2/aif/selection_reads_fold_test.clj"}
+   :reads [:enactment-records]}
+  {:box/id :r9-selection-law :row 9 :box/kind :component
+   :site {:ns "futon2.aif.policy" :var "select-action-cascades"}
+   :writes [:per-policy-argmax :selection-candidate]}
+  {:box/id :r9-decision :row 9 :box/kind :component
+   :site {:file "scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
+   :reads [:per-policy-argmax]}
+  {:box/id :r9-test :row 9 :box/kind :test
+   :site {:file "test/futon2/aif/selection_law_candidate_test.clj"}
+   :reads [:selection-candidate]}
+
+  ;; ---- row 6, Clause A: :measurement on the click record.
+  {:box/id :r6-sourced-rates :row 6 :box/kind :component
+   :site {:ns "futon2.aif.observation-rates" :var "sourced-rates"}
+   :writes [:measurement]}
+  {:box/id :r6-cascade-lane :row 6 :box/kind :component
+   :site {:file "scripts/futon2/report/war_machine.clj" :var "cascade-lane"}
+   :reads [:measurement]}
+  {:box/id :r6-test :row 6 :box/kind :test
+   :site {:file "test/futon2/aif/click_measurement_test.clj"}
+   :reads [:measurement]}
+
+  ;; ---- row 8, Clause T: pair overlap in the field.
+  {:box/id :r8-overlap :row 8 :box/kind :component
+   :site {:file "src/futon2/aif/target_field.clj" :var "target-field"}
+   :writes [:pair-overlap]}
+  {:box/id :r8-test :row 8 :box/kind :test
+   :site {:file "test/futon2/aif/target_field_overlap_test.clj"}
+   :reads [:pair-overlap]}
+
+  ;; ---- row 10, publish: one tick observes publication.
+  {:box/id :r10-observe-publication :row 10 :box/kind :component
+   :site {:file "src/futon2/aif/flight_runner.clj" :var "observe-publication-fn"}
+   :writes [:publication-observed]}
+  {:box/id :r10-test :row 10 :box/kind :test
+   :site {:file "test/futon2/aif/publication_observed_test.clj"}
+   :reads [:publication-observed]}
+
+  ;; ---- row 11, warrants: done (futon3c 4e66c56c; futon2 8eaa3e23); no field.
+  {:box/id :r11-warrants :row 11 :box/kind :component}]
+ ;; The checker's report over :boxes with {:heuristic? true}, exactly. :kind
+ ;; :to-do is the wiring's to-do list (a row wired deletes its entries in the
+ ;; same commit); :heuristic-limit and :standing say why an entry stays after
+ ;; wiring. :error of a :site-unreadable finding is compared as :error? true
+ ;; (the message names the temp root). :rows and :note are annotations the
+ ;; test strips before comparing.
+ :expected-findings
+ [{:finding :declaration-without-occurrence,
+   :box/id :r7-selection,
+   :field :enactment-records,
+   :role :reads,
+   :site {:ns "futon2.aif.policy", :var "select-action-cascades"},
+   :rows [7 9],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r3-flight-ask,
+   :field :library-root,
+   :role :writes,
+   :site
+   {:file "src/futon2/aif/flight_runner.clj", :var "agency-answer-fn"},
+   :rows [3],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r6-cascade-lane,
+   :field :measurement,
+   :role :reads,
+   :site
+   {:file "scripts/futon2/report/war_machine.clj", :var "cascade-lane"},
+   :rows [6],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r8-overlap,
+   :field :pair-overlap,
+   :role :writes,
+   :site {:file "src/futon2/aif/target_field.clj", :var "target-field"},
+   :rows [8],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r4-kernel,
+   :field :precedence-violations,
+   :role :reads,
+   :site {:ns "futon2.aif.efe", :var "rank-cascade-actions"},
+   :rows [4],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r9-selection-law,
+   :field :selection-candidate,
+   :role :writes,
+   :site {:ns "futon2.aif.policy", :var "select-action-cascades"},
+   :rows [7 9],
+   :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r2-flight-read,
+   :field :text-sha256,
+   :role :reads,
+   :site {:file "src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :rows [2],
+   :kind :to-do}
+  {:role :writes,
+   :site {:ns "futon2.aif.enactment-habit", :var "fold"},
+   :box/id :r7-fold,
+   :field :enactment-records,
+   :heuristic true,
+   :note
+   "written inside a thread-first form (cond-> / -> assoc, assoc-in); the heuristic classifies thread-first only for reads, so this stays until the checker does",
+   :rows [7],
+   :usage {:reads 2, :writes 0, :unclassified 2},
+   :kind :heuristic-limit,
+   :finding :declared-write-not-found}
+  {:role :writes,
+   :site {:ns "futon2.aif.construction", :var "containment-order"},
+   :box/id :r4-constructor,
+   :field :precedence-violations,
+   :heuristic true,
+   :note
+   "written inside a thread-first form (cond-> / -> assoc, assoc-in); the heuristic classifies thread-first only for reads, so this stays until the checker does",
+   :rows [4],
+   :usage {:reads 0, :writes 0, :unclassified 2},
+   :kind :heuristic-limit,
+   :finding :declared-write-not-found}
+  {:finding :occurrence-without-declaration,
+   :field :wc-verdict,
+   :site {:ns "futon2.aif.enactment-habit", :var "increment"},
+   :declared-by [],
+   :rows [7],
+   :kind :standing,
+   :note
+   "the verdict enters increment positionally; :wc-verdict there is the receipt's typed absence when no verdict was passed"}
+  {:finding :site-unreadable,
+   :site {:file "src/futon2/aif/outer_cascade.clj", :var "select"},
+   :error? true,
+   :rows [1],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/target_field_overlap_test.clj"},
+   :error? true,
+   :rows [8],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/publication_observed_test.clj"},
+   :error? true,
+   :rows [10],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/outer_cascade_test.clj"},
+   :error? true,
+   :rows [1],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/selection_law_candidate_test.clj"},
+   :error? true,
+   :rows [9],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/flight_ask_library_test.clj"},
+   :error? true,
+   :rows [3],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/flight_grain_gate_test.clj"},
+   :error? true,
+   :rows [5],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/selection_reads_fold_test.clj"},
+   :error? true,
+   :rows [7],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/order_kernel_test.clj"},
+   :error? true,
+   :rows [4],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/flight_enact_test.clj"},
+   :error? true,
+   :rows [0],
+   :kind :to-do}
+  {:finding :site-unreadable,
+   :site {:file "test/futon2/aif/click_measurement_test.clj"},
+   :error? true,
+   :rows [6],
+   :kind :to-do}
+  {:finding :var-not-found,
+   :site {:file "src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+   :var "enact-fn",
+   :rows [0 5 7],
+   :kind :to-do}
+  {:finding :var-not-found,
+   :site
+   {:file "src/futon2/aif/flight_runner.clj",
+    :var "observe-publication-fn"},
+   :var "observe-publication-fn",
+   :rows [10],
+   :kind :to-do}]}
