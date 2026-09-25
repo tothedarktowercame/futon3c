@@ -219,6 +219,40 @@
                (for [child files]
                  [(str (.relativize (.toPath directory) (.toPath child))) (file-sha child)])))))
 
+(defn- classpath-entry
+  "One classpath entry of the fingerprint. An entry under REPO-ROOT is recorded
+  by its repo-relative path (`src`, `test`); an entry outside it (a sibling
+  `:local/root` such as /home/joe/code/futon1/apps/common, a ~/.m2 jar) stays
+  absolute.
+
+  Why relative: register-warrant.sh --pinned runs from a worktree
+  (/home/joe/code/wt-warrant-<sha8>), and check runs from the canonical
+  checkout. A worktree is a different path to the same content. Directory
+  content is pinned by the load closure, so the absolute prefix pinned only the
+  path, and every worktree warrant was refused :environment-mismatch at check.
+  A record written before this change still carries absolute worktree paths
+  and keeps refusing until it is re-registered; nothing migrates it."
+  [repo-root p]
+  (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file p)) p (str repo-root "/" p))))
+        base (.toPath (.getCanonicalFile (io/file repo-root)))
+        fp (.toPath f)
+        path (if (.startsWith fp base)
+               (let [rel (str (.relativize base fp))] (if (str/blank? rel) "." rel))
+               (str f))]
+    (cond
+      ;; A classpath entry that does not exist loads nothing;
+      ;; if it appears later the fingerprint differs.
+      (not (.exists f))
+      {:path path :sha256 (none :absent)}
+
+      (.isDirectory f)
+      ;; Directory classpath entries are pinned by the LOAD
+      ;; CLOSURE (see compute-closure), not by walking them.
+      {:path path :sha256 :load-closure-only}
+
+      :else
+      {:path path :sha256 (file-sha f)})))
+
 (defn- fingerprint*
   "Resolve the test command's actual Clojure classpath and hash JAR bytes and
   local dependencies. Files under classpath DIRECTORIES are pinned by the LOAD
@@ -233,21 +267,7 @@
   (let [alias (second command)
         cp (command! repo-root ["clojure" "-Spath" alias])
         paths (str/split cp (re-pattern (java.util.regex.Pattern/quote java.io.File/pathSeparator)))
-        deps (mapv (fn [p]
-                     (let [f (.getCanonicalFile (io/file (if (.isAbsolute (io/file p)) p (str repo-root "/" p))))]
-                       (cond
-                         ;; A classpath entry that does not exist loads nothing;
-                         ;; if it appears later the fingerprint differs.
-                         (not (.exists f))
-                         {:path (str f) :sha256 (none :absent)}
-
-                         (.isDirectory f)
-                         ;; Directory classpath entries are pinned by the LOAD
-                         ;; CLOSURE (see compute-closure), not by walking them.
-                         {:path (str f) :sha256 :load-closure-only}
-
-                         :else
-                         {:path (str f) :sha256 (file-sha f)}))) paths)
+        deps (mapv #(classpath-entry repo-root %) paths)
         executable (command! repo-root ["which" "clojure"])
         probe-form "(prn (select-keys (into {} (System/getProperties)) [\"java.home\" \"java.runtime.version\" \"java.vendor\" \"os.name\" \"os.arch\" \"os.version\" \"file.encoding\" \"user.language\" \"user.country\"]))"
         probe-config (pr-str {:aliases {:futon3c.test-registry/jvm-probe {:main-opts ["-e" probe-form]}}})

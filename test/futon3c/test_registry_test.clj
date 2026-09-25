@@ -1410,3 +1410,56 @@
          (registry/namespace-ledger-path
           {:futon3c-root "/tmp/some-checkout"
            :agency-url "http://elsewhere:9999"}))))
+
+;; WARRANT-PREFIX-I: classpath entries under repo-root are recorded repo-relative,
+;; so a warrant registered from a --pinned worktree checks from the canonical
+;; checkout of the same commit.
+
+(defn- temp-dir! [prefix]
+  (.toFile (Files/createTempDirectory prefix (make-array FileAttribute 0))))
+
+(defn- fingerprint-repo!
+  "A minimal deps.edn repo with src/ and test/ on the :test classpath, plus
+  OUTSIDE (an absolute directory outside the repo)."
+  [outside src-text]
+  (let [root (temp-dir! "fingerprint-repo-")]
+    (io/make-parents (io/file root "src/demo.clj"))
+    (spit (io/file root "src/demo.clj") src-text)
+    (io/make-parents (io/file root "test/demo_test.clj"))
+    (spit (io/file root "test/demo_test.clj") "(ns demo-test)")
+    (spit (io/file root "deps.edn")
+          (pr-str {:paths ["src"]
+                   :aliases {:test {:extra-paths ["test" (str outside)]}}}))
+    root))
+
+(deftest classpath-entries-under-repo-root-are-relative
+  (let [outside (temp-dir! "fingerprint-outside-")
+        a (fingerprint-repo! outside "(ns demo)")
+        b (fingerprint-repo! outside "(ns demo)")
+        fp (fn [root] (#'registry/fingerprint* {:repo-root (str root) :command ["clojure" "-M:test"]}))
+        fa (fp a) fb (fp b)
+        paths (set (map :path (:dependencies fa)))]
+    (testing "rel-1: src and test are recorded as repo-relative paths"
+      (is (contains? paths "src"))
+      (is (contains? paths "test"))
+      (is (not-any? #(str/starts-with? % (str (.getCanonicalFile a))) paths)))
+    (testing "rel-2: the same content at two roots fingerprints equal"
+      (is (= (:sha256 fa) (:sha256 fb)))
+      (is (= fa fb)))
+    (testing "abs-1: an entry outside repo-root stays absolute"
+      (is (contains? paths (str (.getCanonicalFile outside))))
+      (is (= :load-closure-only
+             (:sha256 (first (filter #(= (str (.getCanonicalFile outside)) (:path %))
+                                     (:dependencies fa)))))))))
+
+(deftest relative-classpath-does-not-weaken-the-closure-pin
+  (testing "bad case: a worktree whose src CONTENT differs still refuses via the closure"
+    (let [outside (temp-dir! "fingerprint-outside-")
+          worktree (fingerprint-repo! outside "(ns demo)")
+          canonical (fingerprint-repo! outside "(ns demo) (def changed 1)")
+          url (str (.toURL (.toURI (io/file worktree "src/demo.clj"))))
+          recorded (registry/closure-from-entries [{:ns "demo" :url url}] (str worktree))]
+      (is (= ["src/demo.clj"] (mapv :path recorded)))
+      (is (= ["src/demo.clj"]
+             (registry/closure-diff (registry/closure-shas recorded)
+                                    (registry/current-closure-shas (str canonical) recorded)))))))
