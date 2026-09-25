@@ -2498,11 +2498,13 @@
 
 (defn handle-test-registry-latest
   "GET /api/alpha/test-registry/latest?namespace=<ns>[&limit=<n>] — which record
-  covers a namespace (AR-42).
+  covers a namespace (AR-42); or ?command=<edn vector> — which record covers an
+  exact logical command (a gate run — bb, sh, lake build — names no -n
+  namespace, so without this it is never lookupable).
 
   A question the registry could not be asked before: /check answers whether a
   record it is GIVEN still holds, so a consumer needed the entry id already.
-  This returns the newest :run record for the namespace REGARDLESS of
+  This returns the newest :run record for the namespace or command REGARDLESS of
   :warrant?, because a lookup that returned only warranted runs would let a
   later failing run hide behind an earlier green one.
 
@@ -2517,38 +2519,48 @@
     (let [params (parse-query-params request)
           raw-limit (get params "limit")
           limit (when (seq (str raw-limit)) (enc/parse-int raw-limit 0))
-          lookup (requiring-resolve 'futon3c.test-registry/latest-run-for-namespace)
-          ledger-path (requiring-resolve 'futon3c.test-registry/namespace-ledger-path)
-          ;; The ledger path is a server option, not request input: the
-          ;; :test-registry-root option locates the checkout, and the resolved
-          ;; default under its data directory is the same file the registry
-          ;; CLI's register subcommand writes to, so live registrations are
-          ;; ledgered where this lookup reads.
-          root (:test-registry-root config default-test-registry-root)
-          result (lookup (evidence-store-for-config config)
-                         (cond-> {:namespace (get params "namespace")
-                                  :namespace-ledger-file (ledger-path {:futon3c-root root})}
-                           (and limit (pos? limit)) (assoc :limit limit)))]
-      (cond
-        (:record/type result)
-        (json-response 400 {:record/type (str (symbol (:record/type result)))
-                            :reason (name (:reason result))})
+          raw-command (get params "command")
+          command (when (seq (str raw-command))
+                    (try (edn/read-string raw-command)
+                         (catch Exception _ ::invalid-command)))]
+      (if (= ::invalid-command command)
+        (json-response 400 {:record/type "test-registry/refusal"
+                            :reason "invalid-command"})
+        (let [lookup (requiring-resolve
+                      (if command
+                        'futon3c.test-registry/latest-run-for-command
+                        'futon3c.test-registry/latest-run-for-namespace))
+              ledger-path (requiring-resolve 'futon3c.test-registry/namespace-ledger-path)
+              ;; The ledger path is a server option, not request input: the
+              ;; :test-registry-root option locates the checkout, and the resolved
+              ;; default under its data directory is the same file the registry
+              ;; CLI's register subcommand writes to, so live registrations are
+              ;; ledgered where this lookup reads.
+              root (:test-registry-root config default-test-registry-root)
+              result (lookup (evidence-store-for-config config)
+                             (cond-> (if command {:command command} {:namespace (get params "namespace")})
+                               true (assoc :namespace-ledger-file (ledger-path {:futon3c-root root}))
+                               (and limit (pos? limit)) (assoc :limit limit)))]
+          (cond
+            (:record/type result)
+            (json-response 400 {:record/type (str (symbol (:record/type result)))
+                                :reason (name (:reason result))})
 
-        (= :none (:status result))
-        (json-response 200 {:latest (cond-> {:found false
-                                             :reason (name (:reason result))
-                                             :scanned (:scanned result)
-                                             :registry-entries (:registry-entries result)}
-                                      (:limit result) (assoc :limit (:limit result)))})
+            (= :none (:status result))
+            (json-response 200 {:latest (cond-> {:found false
+                                                 :reason (name (:reason result))
+                                                 :scanned (:scanned result)
+                                                 :registry-entries (:registry-entries result)}
+                                          (:limit result) (assoc :limit (:limit result)))})
 
-        :else
-        (json-response 200 {:latest (cond-> {:found true
-                                             :entry-id (:evidence/id result)
-                                             :ran-at (get-in result [:payload :ran-at])
-                                             :scanned (:scanned result)}
-                                      (seq (:undecodable result))
-                                      (assoc :undecodable (mapv #(str (:evidence/id %))
-                                                                (:undecodable result))))})))
+            :else
+            (json-response 200 {:latest (cond-> {:found true
+                                                 :entry-id (:evidence/id result)
+                                                 :ran-at (get-in result [:payload :ran-at])
+                                                 :scanned (:scanned result)}
+                                          (seq (:undecodable result))
+                                          (assoc :undecodable (mapv #(str (:evidence/id %))
+                                                                    (:undecodable result))))})))))
     (catch Throwable throwable
       (json-response 500 {:record/type :test-registry/refusal
                           :reason :latest-endpoint-failed

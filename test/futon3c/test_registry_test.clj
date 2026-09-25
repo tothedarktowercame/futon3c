@@ -960,6 +960,134 @@
            (is (pos? (:scanned built)))
            (is (= (:scanned built) (:registry-entries built)))))))))
 
+;; ---------------------------------------------------------------------------
+;; E-kimi-task-19: lookup by COMMAND. A mission's VERIFY exit is a gate command
+;; (bb, sh, lake build) naming no -n namespace, so latest-run-for-namespace can
+;; never observe it; latest-run-for-command keys on the exact recorded logical
+;; command vector.
+
+(deftest latest-run-for-command-finds-a-gate-run-no-namespace-can-see
+  (fixture
+   (fn [{:keys [backend]}]
+     (let [run (append-run! backend {:command ["bb" "scripts/gates.clj"]
+                                     :ran-at "2026-09-25T01:00:00Z"})
+           found (registry/latest-run-for-command
+                  backend {:command ["bb" "scripts/gates.clj"]})]
+       (is (= (:evidence/id run) (:evidence/id found)))
+       (is (= ["bb" "scripts/gates.clj"] (get-in found [:payload :command])))
+       ;; the ledger reduce indexes it under its command key, not a namespace
+       (is (= (registry/command-key ["bb" "scripts/gates.clj"])
+              (registry/command-key (get-in found [:payload :command]))))
+       ;; ...and no namespace lookup can ever find it
+       (doseq [ns ["bb" "scripts/gates.clj" "gates" "demo-test"]]
+         (let [none (registry/latest-run-for-namespace backend {:namespace ns})]
+           (is (= :none (:status none)))
+           (is (= :no-run-for-namespace (:reason none)))))))))
+
+(deftest latest-run-for-command-resolves-to-the-newer-of-two-runs
+  (fixture
+   (fn [{:keys [backend]}]
+     (let [older (append-run! backend {:command ["sh" "scripts/verify.sh"]
+                                       :ran-at "2026-09-25T01:00:00Z"})
+           newer (append-run! backend {:command ["sh" "scripts/verify.sh"]
+                                       :ran-at "2026-09-25T02:00:00Z"
+                                       :failures 1 :warrant? false})
+           found (registry/latest-run-for-command
+                  backend {:command ["sh" "scripts/verify.sh"]})]
+       (is (true? (get-in older [:payload :warrant?])))
+       (is (false? (get-in newer [:payload :warrant?])))
+       (is (= (:evidence/id newer) (:evidence/id found)))
+       (is (= 1 (get-in found [:payload :results :failures])))))))
+
+(deftest a-command-differing-by-one-argument-is-a-different-key
+  (fixture
+   (fn [{:keys [backend]}]
+     (append-run! backend {:command ["bb" "scripts/gates.clj" "--fast"]
+                           :ran-at "2026-09-25T01:00:00Z"})
+     (let [none (registry/latest-run-for-command
+                 backend {:command ["bb" "scripts/gates.clj"]})]
+       (is (= :none (:status none)))
+       (is (= :no-run-for-command (:reason none)))
+       ;; absence is only claimed because the scan saw every registry entry
+       (is (= (:scanned none) (:registry-entries none))))
+     ;; and the exact command IS found
+     (let [found (registry/latest-run-for-command
+                  backend {:command ["bb" "scripts/gates.clj" "--fast"]})]
+       (is (some? (:evidence/id found))))
+     ;; a command is required: without one there is nothing to look up
+     (is (= :command-required (:reason (registry/latest-run-for-command backend {}))))
+     (is (= :command-required (:reason (registry/latest-run-for-command backend {:command []})))))))
+
+(deftest command-ledger-fills-forward-and-answers-gate-runs
+  ;; a registered gate run is ledgered under its command key at registration,
+  ;; and the lookup answers from the ledger without a store scan
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "commands.ednlog"))
+           run (append-run! backend {:command ["lake" "build" "Demo.Gates"]
+                                     :ran-at "2026-09-25T01:00:00Z"})
+           _ (registry/record-namespace-run! {:namespace-ledger-file ledger} run)
+           found (registry/latest-run-for-command
+                  backend {:command ["lake" "build" "Demo.Gates"]
+                           :namespace-ledger-file ledger})]
+       (is (= (:evidence/id run) (:evidence/id found)))
+       (is (= :namespace-ledger (:resolved-by found)))))))
+
+(deftest command-ledger-absence-needs-a-command-keyed-build
+  ;; a ledger built whole by THIS build concludes command absence; a legacy
+  ;; build (no :keying :command marker) indexed only namespaces and must
+  ;; refuse to conclude command absence
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:command ["bb" "scripts/gates.clj"]
+                           :ran-at "2026-09-25T01:00:00Z"})
+     (let [ledger (str (io/file (:artifact-dir options) "commands.ednlog"))
+           built (registry/build-namespace-ledger!
+                  backend {:namespace-ledger-file ledger})]
+       (is (:complete? built))
+       (is (= :command (:keying built)))
+       (let [none (registry/latest-run-for-command
+                   backend {:command ["bb" "scripts/other.clj"]
+                            :namespace-ledger-file ledger})]
+         (is (= :no-run-for-command (:reason none)))
+         (is (= :namespace-ledger (:resolved-by none)))))
+     ;; a legacy ledger: namespace-keyed entries, a complete marker with no
+     ;; :keying — command absence is NOT established
+     (let [legacy (str (io/file (:artifact-dir options) "legacy.ednlog"))]
+       (spit legacy
+             (str "{:entry/type :namespace-run :namespace \"demo-test\" "
+                  ":entry-id \"e-old\" :ran-at \"2026-09-25T01:00:00Z\"}\n"
+                  "{:entry/type :namespace-ledger-built :scanned 2 "
+                  ":registry-entries 2 :complete? true :at \"2026-09-25T01:00:00Z\"}\n"))
+       (let [none (registry/latest-run-for-command
+                   backend {:command ["bb" "scripts/gates.clj"]
+                            :namespace-ledger-file legacy})]
+         (is (= :scan-window-exhausted (:reason none)))
+         (is (= :namespace-ledger-incomplete (:resolved-by none))))
+       ;; ...while the legacy ledger still answers namespace lookups as before
+       (let [none (registry/latest-run-for-namespace
+                   backend {:namespace "unregistered-test"
+                            :namespace-ledger-file legacy})]
+         (is (= :no-run-for-namespace (:reason none))))))))
+
+(deftest latest-run-for-namespace-still-wraps-the-same-ledger
+  ;; the namespace lookup is a thin wrapper over the same command-keyed
+  ;; ledger: one build serves both lookups
+  (fixture
+   (fn [{:keys [backend options]}]
+     (registry/register-run! backend options)
+     (let [ledger (str (io/file (:artifact-dir options) "shared.ednlog"))
+           _ (registry/build-namespace-ledger!
+              backend {:namespace-ledger-file ledger})
+           by-ns (registry/latest-run-for-namespace
+                  backend {:namespace "demo-test" :namespace-ledger-file ledger})
+           by-cmd (registry/latest-run-for-command
+                   backend {:command ["clojure" "-M:test" "-n" "demo-test"]
+                            :namespace-ledger-file ledger})]
+       (is (= (:evidence/id by-ns) (:evidence/id by-cmd)))
+       (is (= :namespace-ledger (:resolved-by by-ns)))
+       (is (= :namespace-ledger (:resolved-by by-cmd)))))))
+
 (deftest latest-run-for-namespace-will-not-call-a-failed-read-absence
   ;; http-backend substitutes [] for a failed -query and 0 for a failed -count,
   ;; so "nothing scanned, nothing held" is what a timed out read looks like.
