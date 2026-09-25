@@ -3,10 +3,11 @@
 ;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
 ;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
 ;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
+;; Re-pinned by claude-10 at map 47a88fc6 (:enacted-steps declared: two edges; :i4 gains the parallel selection -> enactment paths via :enacted-steps).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "10a1e2d9",
+ :map-sha "47a88fc6",
  :futon5-sha "aeeee96",
- :counts {:inputs 14, :outputs 12, :components 30, :edges 55},
+ :counts {:inputs 14, :outputs 12, :components 30, :edges 57},
  :validate
  {:all-valid false,
   :checks
@@ -73,6 +74,9 @@
      :to :enactment-records}
     {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
      :via [:candidate :attempts :delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
+     :via [:enacted-steps :attempts :delta],
      :to :enactment-records}
     {:path [:r9-selection-law :r7-increment :r7-fold],
      :via [:candidate :delta],
@@ -149,6 +153,28 @@
      [:r2-verifier
       :r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -178,6 +204,26 @@
      :via
      [:positional
       :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :enacted-steps
       :attempts
       :delta
       :enactment-records
@@ -261,6 +307,24 @@
      :to :clock-lineage}
     {:path
      [:r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -291,6 +355,15 @@
      [:r2-verifier
       :r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:positional :positional :enacted-steps :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold],
      :via [:positional :positional :candidate :delta],
@@ -303,6 +376,14 @@
       :r7-fold],
      :via [:positional :candidate :attempts :delta],
      :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:positional :enacted-steps :attempts :delta],
+     :to :enactment-records}
     {:path [:r6-cascade-lane :r9-selection-law :r7-increment :r7-fold],
      :via [:positional :candidate :delta],
      :to :enactment-records}
@@ -314,6 +395,9 @@
      :to :enactment-records}
     {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
      :via [:candidate :attempts :delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
+     :via [:enacted-steps :attempts :delta],
      :to :enactment-records}
     {:path [:r9-selection-law :r7-increment :r7-fold],
      :via [:candidate :delta],
