@@ -110,7 +110,7 @@
                            :want-span :observation
                            :text-sha256 :observation})
       (update :boxes (fn [bs] (mapv #(if (= :r2-served-by-reading (:box/id %))
-                                       (update % :reads (fnil conj []) :owner-text)
+                                       (update % :reads (fn [rs] (if (some #{:owner-text} rs) (vec rs) (conj (vec rs) :owner-text))))
                                        %)
                                     bs)))))
 
@@ -133,6 +133,20 @@
                (map (comp :from :edge) (:violations (check (:v (validated planted)) :timescale-ordering)))))
         (is (some #(= [:r1-outer-cascade :planted-editor] (:path %))
                   (get-in (proj/i4-report planted {}) [:bypass :to-preferences])))))))
+
+(deftest the-committed-roles-are-the-tested-form
+  ;; not a tautology: strip the committed map's roles and its :owner-text
+  ;; read, apply the form tested above, and the projection is the committed
+  ;; map's projection
+  (let [m (head-map)
+        stripped (-> m
+                     (dissoc :field-roles)
+                     (update :boxes (fn [bs] (mapv #(if (= :r2-served-by-reading (:box/id %))
+                                                      (update % :reads (fn [rs] (vec (remove #{:owner-text} rs))))
+                                                      %)
+                                                   bs))))]
+    (is (not= (proj/project m) (proj/project stripped)) "the roles change the projection")
+    (is (= (proj/project m) (proj/project (with-owner-text stripped))))))
 
 (deftest opts-override-field-roles
   (is (= #{:x} (proj/preference-fields-of {:field-roles {:owner-text :constraint}}
