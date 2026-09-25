@@ -62,7 +62,9 @@
 2026-09-25T23:15:30Z agency  job invoke-1790378130846-24500-f7629c5b to claude-5 created
 2026-09-25T23:15:30Z store   request written request-d55cc6f7dfc46919.edn kind extracted-criterion
 2026-09-25T23:15:53Z agency  job f7629c5b done reply wm/want-interpretation-response-v1 (2505 chars, 1 fenced)
+2026-09-25T23:16:12Z click   POST /api/alpha/wm/click accepted: click wm-click-cb691bd2-72bd-4198-bd6c-50cce09e2cd5 started (the cast preflight passed; no cast given); phases observed in order by claude-8's monitor (polling every 25s, times are the poll's): starting, agent-readiness, substrate-preflight, preference-refresh, selection
 2026-09-25T23:16:12Z click   click wm-click-cb691bd2-72bd-4198-bd6c-50cce09e2cd5 running? False phase None
+2026-09-25T23:21:04Z click   click finished: outcome abstained (run record :abstention :universe-not-admitted :missing :universes for M-autoclock-in and every other target; attempt-002)
 2026-09-25T23:21:04Z server  run record written tick-run-record-2026-09-25-flight-ffcd772b-click-1.edn
 2026-09-25T23:21:18Z store   written flights/flight-ffcd772b.edn
 2026-09-25T23:21:19Z driver  flight-driver process ended: EXIT 0
