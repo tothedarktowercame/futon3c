@@ -422,7 +422,13 @@
     (is (true? (http/should-auto-bellback? base :codex true true
                                            [{:id "park-2" :agent "other-agent"}]))
         "a released park for another agent does not suppress this caller")
-    (is (false? (http/should-auto-bellback? base :codex true false)))))
+    (is (false? (http/should-auto-bellback? base :codex true false)))
+    (is (false? (http/should-auto-bellback? (assoc base :state "cancelled") :codex true true))
+        "cancelled while queued: nothing ran, the canceller already knows")
+    (is (true? (http/should-auto-bellback? (assoc base :state "cancelled"
+                                                  :started-at "2026-09-25T10:00:00Z")
+                                           :codex true true))
+        "cancelled mid-run still reports back")))
 
 ;; --- Bell router (E-crossed-bells): explicit, self-describing bellback replies ---
 
@@ -691,3 +697,22 @@
       (is (str/includes? header "Type: query"))
       (is (str/includes? header "help resolve ArSE `ask-typed-1`")))
     (finally (System/clearProperty "FUTON3C_TYPED_BELLS"))))
+
+(deftest cancelling-a-queued-job-draws-no-bellback
+  ;; Joe, 2026-09-25: 27 queued kimi-1 jobs cancelled by claude-12 became 27
+  ;; claude-12 turns saying "nothing to do". Through the real cancel handler.
+  (register-agent! "codex-1" :codex)
+  (register-agent! "claude-6" :claude)
+  (create-job! {:job-id "job-cancel-queued" :agent-id "codex-1" :caller "claude-6"})
+  (create-job! {:job-id "job-cancel-running" :agent-id "codex-1" :caller "claude-6"})
+  (set-job-field! "job-cancel-running" :state "running")
+  (set-job-field! "job-cancel-running" :started-at "2026-09-25T10:00:00Z")
+  (let [enqueued (atom [])]
+    (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
+                     #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
+      #(do (#'http/handle-cancel-invoke-job "job-cancel-queued" (json-request {}))
+           (is (= "cancelled" (:state (job "job-cancel-queued"))))
+           (is (empty? @enqueued) "queued job cancelled: no bellback")
+           (#'http/handle-cancel-invoke-job "job-cancel-running" (json-request {}))
+           (is (= ["auto-bellback-job-cancel-running"] (map :bell-job-id @enqueued))
+               "running job cancelled: the caller hears about it")))))

@@ -1109,6 +1109,16 @@
   (println (str "[parked-on] auto-bellback suppressed for " (:job-id job)
                 ": park " (:id park) " will wake " (:agent park))))
 
+(defn- cancelled-before-start?
+  "A job cancelled while still queued: the worker did nothing, and whoever
+   cancelled it already knows. Bellbacks for these carry no information;
+   claude-12 cancelling 27 queued kimi-1 jobs drew 27 turns of \"another
+   cancellation notice; nothing to do\" (Joe, 2026-09-25). A job cancelled
+   mid-run still bellbacks: its partial work is news."
+  [job]
+  (and (= "cancelled" (some-> (:state job) str))
+       (nil? (:started-at job))))
+
 (defn should-auto-bellback?
   "Pure auto-bellback decision predicate. Recipient type and caller registration
    are passed in so tests and future recipient widening stay local."
@@ -1122,6 +1132,7 @@
          (valid-auto-bellback-caller? (:caller job) (:agent-id job) caller-registered?)
          (not (auto-bellback-job? job))
          (nil? (:auto-bellback job))
+         (not (cancelled-before-start? job))
          (not (auto-bellback-suppressing-park job released-park-records))))))
 
 (defn- auto-bellback-recipient-type
@@ -1182,6 +1193,7 @@
        (valid-auto-bellback-caller? (:caller job) (:agent-id job) true)
        (not (auto-bellback-job? job))
        (nil? (:auto-bellback job))
+       (not (cancelled-before-start? job))
        (not (auto-bellback-suppressing-park job released-park-records))))
 
 (defn- auto-bellback-request
