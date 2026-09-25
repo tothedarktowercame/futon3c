@@ -2939,9 +2939,18 @@
                   (and (int? limit) (pos? limit))
                   (take limit)
                   true
-                  vec)]
+                  vec)
+        ;; Stamp every default this read applied (AR-43): a broad page with no
+        ;; explicit since/before is silently bounded to the newest 48h, and a
+        ;; 200 that does not SAY so reads as a complete empty result.
+        defaulted? broad-page?
+        applied-since (or explicit-since (when broad-page? (default-evidence-since)))]
     (json-response 200 {:ok true
                         :count (count entries)
+                        :count-post-window? (or defaulted? (some? explicit-since) (some? explicit-before))
+                        :window {:since applied-since
+                                 :before explicit-before
+                                 :defaulted? defaulted?}
                         :entries entries})))
 
 (defn- handle-evidence-count

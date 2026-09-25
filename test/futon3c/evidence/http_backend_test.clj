@@ -4,6 +4,7 @@
             [futon3c.evidence.backend :as backend]
             [futon3c.social.test-fixtures :as fix]
             [cheshire.core :as json]
+            [org.httpkit.client]
             [org.httpkit.server :as hk]))
 
 (defn- with-mock-server
@@ -131,15 +132,18 @@
       (is (= "type=coordination&limit=10" (:query-string @captured)))
       (is (= normalized-entries result)))))
 
-(deftest query-returns-empty-on-error
-  (testing "query returns [] when the endpoint responds with an error payload"
+(deftest query-returns-typed-failure-on-error
+  (testing "query returns the typed read-failed map when the endpoint responds 500 — never a substituted []"
     (let [result (with-mock-server
                    (fn [_]
                      (json-response 500 {:error "server-error"}))
                    (fn [base-url]
                      (backend/-query (http-be/->HttpBackend base-url)
                                      {:query/type :coordination})))]
-      (is (= [] result)))))
+      (is (= :E-store (:error/component result)))
+      (is (= :read-failed (:error/code result)))
+      (is (= :http (:error/kind result)))
+      (is (= 500 (:status result))))))
 
 (deftest count-builds-count-query-string-from-params
   (testing "count sends supported filters to /api/alpha/evidence/count"
@@ -170,3 +174,82 @@
                    (fn [base-url]
                      (backend/-all (http-be/->HttpBackend base-url))))]
       (is (= normalized-entries result)))))
+
+;; ---------------------------------------------------------------------------
+;; AR-43: a failed or silently windowed read never reads as a complete empty
+;; result. Every failure mode returns the typed read-failed map (the same
+;; social-error shape -append returns); a defaulted server window travels on
+;; the entries' metadata.
+
+(deftest query-returns-typed-failure-on-unparseable-body
+  (testing "a 200 whose body is not JSON is a :parse failure, not an empty page"
+    (let [result (with-mock-server
+                   (fn [_]
+                     {:status 200
+                      :headers {"Content-Type" "application/json"}
+                      :body "this is not json"})
+                   (fn [base-url]
+                     (backend/-query (http-be/->HttpBackend base-url)
+                                     {:query/type :coordination})))]
+      (is (= :read-failed (:error/code result)))
+      (is (= :parse (:error/kind result)))
+      (is (= 200 (:status result))))))
+
+(deftest query-returns-typed-failure-on-timeout
+  (testing "a transport timeout is a :timeout failure, not an empty page"
+    (with-redefs [org.httpkit.client/get
+                  (fn [& _]
+                    (future {:error (java.util.concurrent.TimeoutException. "timed out")
+                             :status nil}))]
+      (let [result (backend/-query (http-be/->HttpBackend "http://localhost:1")
+                                   {:query/type :coordination})]
+        (is (= :read-failed (:error/code result)))
+        (is (= :timeout (:error/kind result)))))))
+
+(deftest count-returns-typed-failure-on-error
+  (testing "count returns the typed failure on HTTP error — never a substituted 0"
+    (let [result (with-mock-server
+                   (fn [_]
+                     (json-response 500 {:error "server-error"}))
+                   (fn [base-url]
+                     (backend/-count (http-be/->HttpBackend base-url)
+                                     {:query/type :coordination})))]
+      (is (= :read-failed (:error/code result)))
+      (is (= :http (:error/kind result))))))
+
+(deftest all-returns-typed-failure-on-error
+  (testing "all returns the typed failure on HTTP error — never a substituted []"
+    (let [result (with-mock-server
+                   (fn [_]
+                     (json-response 500 {:error "server-error"}))
+                   (fn [base-url]
+                     (backend/-all (http-be/->HttpBackend base-url))))]
+      (is (= :read-failed (:error/code result))))))
+
+(deftest query-carries-the-servers-window-stamp-as-metadata
+  (testing "a defaulted window rides on the entries' metadata so a consumer concluding absence can see it"
+    (let [result (with-mock-server
+                   (fn [_]
+                     (json-response 200 {:entries []
+                                         :window {:since "2026-09-23T00:00:00Z"
+                                                  :before nil
+                                                  :defaulted? true}}))
+                   (fn [base-url]
+                     (backend/-query (http-be/->HttpBackend base-url)
+                                     {:query/tags [:test-registry]})))]
+      (is (= [] result))
+      (is (true? (:defaulted? (:window (meta result))))))))
+
+(deftest query-genuine-empty-200-still-reads-as-empty
+  (testing "a clean 200 with no entries and no defaulted window is genuinely empty"
+    (let [result (with-mock-server
+                   (fn [_]
+                     (json-response 200 {:entries []
+                                         :window {:since "1970-01-01T00:00:00Z"
+                                                  :before nil
+                                                  :defaulted? false}}))
+                   (fn [base-url]
+                     (backend/-query (http-be/->HttpBackend base-url)
+                                     {:query/since "1970-01-01T00:00:00Z"})))]
+      (is (= [] result))
+      (is (false? (:defaulted? (:window (meta result))))))))

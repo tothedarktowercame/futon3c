@@ -881,3 +881,60 @@
     (is (= :scan-window-exhausted (:reason answer)))
     (is (= 0 (:scanned answer)))
     (is (not= :no-run-for-namespace (:reason answer)))))
+
+;; ---------------------------------------------------------------------------
+;; AR-43: a failed or silently windowed evidence read never reads as a
+;; complete empty result. The lookup must refuse, typed, on a backend
+;; read-failed map or on a page the server windowed by default.
+
+(defn- failing-backend
+  "An EvidenceBackend whose -query and -count return the AR-43 typed failure."
+  [query-result count-result]
+  (reify futon3c.evidence.backend/EvidenceBackend
+    (-append [_ _] nil)
+    (-get [_ _] nil)
+    (-exists? [_ _] false)
+    (-query [_ _] query-result)
+    (-count [_ _] count-result)
+    (-forks-of [_ _] [])
+    (-delete! [_ _] {:compacted 0})
+    (-all [_] [])))
+
+(deftest latest-run-for-namespace-refuses-a-failed-query
+  ;; the read itself failed: the typed failure surfaces as
+  ;; :registry-read-failed, never :no-run-for-namespace
+  (let [failure {:error/component :E-store :error/code :read-failed
+                 :error/kind :timeout :status nil}
+        answer (registry/latest-run-for-namespace
+                (failing-backend failure 0) {:namespace "demo-test"})]
+    (is (= :none (:status answer)))
+    (is (= :registry-read-failed (:reason answer)))
+    (is (= :timeout (get-in answer [:read-error :error/kind])))))
+
+(deftest latest-run-for-namespace-refuses-a-failed-count
+  ;; the page read fine but named no namespace, and the completeness count
+  ;; failed: absence is not established
+  (fixture
+   (fn [{:keys [backend]}]
+     (append-run! backend {:namespace "other-test" :ran-at "2026-09-25T01:00:00Z"})
+     (with-redefs [store/count* (fn [_ _]
+                                  {:error/component :E-store :error/code :read-failed
+                                   :error/kind :http :status 500})]
+       (let [answer (registry/latest-run-for-namespace backend {:namespace "demo-test"})]
+         (is (= :registry-read-failed (:reason answer)))
+         (is (= 500 (get-in answer [:read-error :status]))))))))
+
+(deftest latest-run-for-namespace-refuses-a-defaulted-window
+  ;; a clean 200 whose window the server applied BY DEFAULT is an incomplete
+  ;; scan, even though the read succeeded
+  (fixture
+   (fn [{:keys [backend]}]
+     (append-run! backend {:namespace "other-test" :ran-at "2026-09-25T01:00:00Z"})
+     (let [real-query* store/query*]
+       (with-redefs [store/query* (fn [b q]
+                                    (with-meta (real-query* b q)
+                                               {:window {:since "2026-09-23T00:00:00Z"
+                                                         :before nil :defaulted? true}}))]
+         (let [answer (registry/latest-run-for-namespace backend {:namespace "demo-test"})]
+           (is (= :scan-window-exhausted (:reason answer)))
+           (is (true? (get-in answer [:window :defaulted?])))))))))

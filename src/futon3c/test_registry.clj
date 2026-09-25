@@ -993,8 +993,18 @@
   (let [file (namespace-ledger-file options)
         _ (when-not (nonblank? file) (fail! :namespace-ledger-file-required {}))
         limit (or (:limit options) default-namespace-scan-limit)
-        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
-        held (store/count* backend {:query/tags [:test-registry]})
+        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit
+                                       :query/since "1970-01-01T00:00:00Z"})
+        _ (when (:error/code entries)
+            (fail! :registry-read-failed
+                   {:read-error (select-keys entries [:error/code :error/kind :status])}))
+        _ (when (:defaulted? (:window (meta entries)))
+            (fail! :scan-window-exhausted {:window (:window (meta entries))}))
+        held (store/count* backend {:query/tags [:test-registry]
+                                    :query/since "1970-01-01T00:00:00Z"})
+        _ (when (:error/code held)
+            (fail! :registry-read-failed
+                   {:read-error (select-keys held [:error/code :error/kind :status])}))
         scanned (count entries)
         runs (mapv (fn [entry]
                      (try
@@ -1037,50 +1047,70 @@
   ledger is configured. See that fn's docstring for the absence rules."
   [backend {:keys [namespace limit]}]
   (let [limit (or limit default-namespace-scan-limit)
-        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit})
-        {:keys [rows undecodable]}
-        (reduce (fn [acc entry]
-                  (let [id (:evidence/id entry)]
-                    (try
-                      (let [payload (decode entry)]
-                        (if (and (= :run (:kind payload))
-                                 (= namespace (commanded-namespace (:command payload))))
-                          (update acc :rows conj
-                                  {:evidence/id id
-                                   :sha256 (get-in entry [:evidence/body :sha256])
-                                   :payload payload})
-                          acc))
-                      (catch Exception e
-                        (update acc :undecodable conj
-                                {:evidence/id id
-                                 :reason (or (:reason (ex-data e)) :undecodable)})))))
-                {:rows [] :undecodable []}
-                entries)
-        unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
-        newest (first (sort-by ran-at-key #(compare %2 %1) rows))
-        scanned (count entries)]
-    (cond-> (if newest
-              (assoc newest :scanned scanned)
-              ;; No match. Before calling that absence, ask the store how many
-              ;; entries carry the tag: a scan that saw fewer than that saw a
-              ;; window, and a window says nothing about what lies outside it.
-              (let [held (store/count* backend {:query/tags [:test-registry]})]
-                ;; Absence needs a POSITIVE sign that the scan was whole. A
-                ;; scan of nothing is never one: futon3c.evidence.http-backend
-                ;; substitutes [] for a failed -query and 0 for a failed
-                ;; -count, so "no entries, none held" is exactly what a timed
-                ;; out read looks like (2026-09-25, live: limit 2000 over 3108
-                ;; entries timed out at 10s and reported an empty registry
-                ;; through both). An empty registry also lands here and
-                ;; refuses; that costs a refusal, where the other reading
-                ;; costs a false "these tests were never registered".
-                (if (and (pos? scanned) (>= scanned held))
-                  (assoc (none :no-run-for-namespace)
-                         :scanned scanned :registry-entries held)
-                  (assoc (none :scan-window-exhausted)
-                         :limit limit :scanned scanned :registry-entries held))))
-      (seq undecodable) (assoc :undecodable undecodable)
-      (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable)))))
+        ;; An explicit since (epoch) keeps the HTTP server from applying its
+        ;; silent newest-48h window (handle-evidence-query's broad-page?), so
+        ;; this scan is never windowed by default.
+        entries (store/query* backend {:query/tags [:test-registry] :query/limit limit
+                                       :query/since "1970-01-01T00:00:00Z"})]
+    (cond
+      ;; A FAILED read is never an empty result (AR-43): http-backend returns
+      ;; the typed read-failed map, which must surface as a refusal, not flow
+      ;; into the scan arithmetic.
+      (:error/code entries)
+      (assoc (none :registry-read-failed)
+             :read-error (select-keys entries [:error/code :error/kind :status]))
+
+      ;; A 200 whose window was applied BY DEFAULT is an incomplete scan even
+      ;; though the read succeeded.
+      (:defaulted? (:window (meta entries)))
+      (assoc (none :scan-window-exhausted)
+             :window (:window (meta entries)))
+
+      :else
+      (let [{:keys [rows undecodable]}
+            (reduce (fn [acc entry]
+                      (let [id (:evidence/id entry)]
+                        (try
+                          (let [payload (decode entry)]
+                            (if (and (= :run (:kind payload))
+                                     (= namespace (commanded-namespace (:command payload))))
+                              (update acc :rows conj
+                                      {:evidence/id id
+                                       :sha256 (get-in entry [:evidence/body :sha256])
+                                       :payload payload})
+                              acc))
+                          (catch Exception e
+                            (update acc :undecodable conj
+                                    {:evidence/id id
+                                     :reason (or (:reason (ex-data e)) :undecodable)})))))
+                    {:rows [] :undecodable []}
+                    entries)
+            unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
+            newest (first (sort-by ran-at-key #(compare %2 %1) rows))
+            scanned (count entries)]
+        (cond-> (if newest
+                  (assoc newest :scanned scanned)
+                  ;; No match. Before calling that absence, ask the store how many
+                  ;; entries carry the tag: a scan that saw fewer than that saw a
+                  ;; window, and a window says nothing about what lies outside it.
+                  (let [held (store/count* backend {:query/tags [:test-registry]
+                                                    :query/since "1970-01-01T00:00:00Z"})]
+                    (if (:error/code held)
+                      (assoc (none :registry-read-failed)
+                             :read-error (select-keys held [:error/code :error/kind :status]))
+                      ;; Absence needs a POSITIVE sign that the scan was whole. A
+                      ;; scan of nothing is never one: a timed-out read is now a
+                      ;; typed failure rather than a substituted []/0 (AR-43), and
+                      ;; an empty registry lands here and refuses; that costs a
+                      ;; refusal, where the other reading costs a false "these
+                      ;; tests were never registered".
+                      (if (and (pos? scanned) (>= scanned held))
+                        (assoc (none :no-run-for-namespace)
+                               :scanned scanned :registry-entries held)
+                        (assoc (none :scan-window-exhausted)
+                               :limit limit :scanned scanned :registry-entries held)))))
+          (seq undecodable) (assoc :undecodable undecodable)
+          (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable)))))))
 (defn latest-run-for-namespace
   "READ-ONLY with one recorded exception. The newest :run record whose logical
   command names NAMESPACE.

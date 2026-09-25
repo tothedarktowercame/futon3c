@@ -2766,6 +2766,22 @@
           (is (= 200 (:status response)))
           (is (= 100 (:query/limit @seen-query))))))))
 
+
+(deftest evidence-query-stamps-the-default-it-applied
+  (testing "AR-43: a broad page stamps its defaulted window; an explicit since is stamped not-defaulted"
+    (let [handler (make-handler)]
+      (with-redefs [estore/query* (fn [_store _query] [])]
+        (let [broad (parse-body (get-req handler "/api/alpha/evidence"))]
+          (is (true? (get-in broad [:window :defaulted?])))
+          (is (some? (get-in broad [:window :since])))
+          (is (true? (:count-post-window? broad)))
+          (is (= 0 (:count broad))))
+        (let [explicit (parse-body
+                        (get-req-with-query handler "/api/alpha/evidence"
+                                            "since=1970-01-01T00:00:00Z"))]
+          (is (false? (get-in explicit [:window :defaulted?])))
+          (is (= "1970-01-01T00:00:00Z" (get-in explicit [:window :since]))))))))
+
 (deftest evidence-count-author-filter-is-pushed-to-backend
   (testing "GET /api/alpha/evidence/count pushes author into the backend count query"
     (let [handler (make-handler)

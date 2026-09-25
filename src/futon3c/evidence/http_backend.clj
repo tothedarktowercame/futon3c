@@ -21,6 +21,39 @@
     (try (json/parse-string body true)
          (catch Exception _ nil))))
 
+(defn- read-failure
+  "The typed failure every failed READ returns (AR-43): the same social-error
+  shape -append already returns, never a substituted [] or 0. kind classifies
+  the failure: :timeout (the client gave up waiting), :http (a non-200 status
+  or a transport error), :parse (a 200 whose body was not decodable JSON)."
+  [kind url status]
+  {:error/component :E-store
+   :error/code :read-failed
+   :error/kind kind
+   :status status
+   :url url
+   :error/at (str (Instant/now))})
+
+(defn- classify-read-response
+  "Nil when RESP read cleanly; the read-failure map otherwise. A response is a
+  failure when the transport errored (httpkit dereferences a failed request
+  into an :error map rather than throwing), when the status is non-200, or
+  when a 200 body will not parse — every one of those previously collapsed to
+  the same value as an empty 200, so a timed-out registry read looked like an
+  empty registry (2026-09-25: limit 2000 over 3108 entries took 18.7s and
+  returned nothing)."
+  [resp url]
+  (let [error (:error resp)
+        status (:status resp)]
+    (cond
+      error (read-failure (if (or (instance? java.util.concurrent.TimeoutException error)
+                                  (instance? org.httpkit.client.TimeoutException error))
+                            :timeout :http)
+                          url status)
+      (not= 200 status) (read-failure :http url status)
+      (nil? (parse-response resp)) (read-failure :parse url status)
+      :else nil)))
+
 (defn- enum-name [x]
   (cond
     (keyword? x) (name x)
@@ -96,8 +129,15 @@
           url (str (api-url base-url "/api/alpha/evidence")
                    (when (seq qs) (str "?" qs)))
           resp @(http/get url {:timeout 10000})
-          parsed (parse-response resp)]
-      (or (:entries parsed) [])))
+          failure (classify-read-response resp url)
+          parsed (when-not failure (parse-response resp))]
+      (if failure
+        failure
+        ;; Entries carry the server's :window stamp as metadata: a defaulted
+        ;; window means this page is NOT the whole store, and a consumer
+        ;; concluding absence from it must see that (AR-43).
+        (with-meta (or (:entries parsed) [])
+                   (when (:window parsed) {:window (:window parsed)})))))
 
   (-count [_ params]
     (let [query-params (cond-> {}
@@ -111,8 +151,11 @@
           url (str (api-url base-url "/api/alpha/evidence/count")
                    (when (seq qs) (str "?" qs)))
           resp @(http/get url {:timeout 10000})
-          parsed (parse-response resp)]
-      (long (or (:count parsed) 0))))
+          failure (classify-read-response resp url)
+          parsed (when-not failure (parse-response resp))]
+      (if failure
+        failure
+        (long (or (:count parsed) 0)))))
 
   (-forks-of [_ _evidence-id]
     ;; Not exposed via HTTP API — return empty for now
@@ -123,10 +166,13 @@
     {:compacted 0})
 
   (-all [_]
-    (let [resp @(http/get (api-url base-url "/api/alpha/evidence")
-                          {:timeout 10000})
-          parsed (parse-response resp)]
-      (or (:entries parsed) []))))
+    (let [url (api-url base-url "/api/alpha/evidence")
+          resp @(http/get url {:timeout 10000})
+          failure (classify-read-response resp url)
+          parsed (when-not failure (parse-response resp))]
+      (if failure
+        failure
+        (or (:entries parsed) [])))))
 
 (defn make-http-backend
   "Create an EvidenceBackend that queries a remote Agency's HTTP API.
