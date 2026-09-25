@@ -61,3 +61,36 @@
     (doseq [[label _] cases]
       (is (str/includes? text (str "caught  " label)) label))
     (is (every? #(str/includes? text %) verdict) "the text mode lists the same failures")))
+
+;; The tick's run-record shape (WM-PRESPIKE-I): check-c reads the candidate's
+;; derivation from [:decision :selection-certificate :candidates n :id] when
+;; the hand key is absent. Fixtures: a run record reduced from a real one
+;; (provenance in its header) and an enactment in enact-fn's shape.
+(def machine-record "test/futon3c/exemplar/fixtures/tick-run-record-reduced@a4b4fc78.edn")
+(def machine-enactment "test/futon3c/exemplar/fixtures/enactment-machine@a4b4fc78.edn")
+
+(defn- verdict [rec-path enact-path]
+  (let [{:keys [exit out err]} (sh/sh "bb" (str dir "/proof2a_check.clj") rec-path enact-path "--wc" "--edn")]
+    (is (zero? exit) err)
+    (clojure.edn/read-string out)))
+
+(defn- variant [path f]
+  (let [tmp (java.io.File/createTempFile "wc-variant" ".edn")]
+    (spit tmp (pr-str (f (clojure.edn/read-string (slurp path)))))
+    (str tmp)))
+
+(deftest the-tick-run-record-shape-gives-a-verdict
+  (is (= [] (verdict machine-record machine-enactment)) "a consistent pair passes")
+  (is (= ["W_c: enactment candidate :C1 differs from the click's selected candidate :C9"]
+         (verdict (variant machine-record #(assoc-in % [:decision :selection-law :candidate] :C9))
+                  machine-enactment))
+      "the candidate mismatch fails")
+  (let [v (verdict (variant machine-record #(update % :decision dissoc :selection-certificate)) machine-enactment)]
+    (is (= :join-unverifiable (:status v)))
+    (is (str/includes? (:reason v) "carries neither")))
+  (is (= ["W_c: the run record's precedence names patterns with no interpretation receipt: [:apparatus/one-authority-per-question]"]
+         (verdict (variant machine-record
+                           #(update-in % [:decision :selection-certificate :candidates 0 :id]
+                                       dissoc :interpretation-receipts))
+                  machine-enactment))
+      "the bad case names the pattern, not a nil"))

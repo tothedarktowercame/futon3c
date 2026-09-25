@@ -205,6 +205,34 @@
                  :when f]
              f)))))
 
+(defn- candidate-derivation
+  "The enactment's candidate as the click recorded it. A hand click record
+  carries [:decision :selection-certificate :candidate-derivations cid]
+  (read as it always was). A tick run record carries the candidates at
+  [:decision :selection-certificate :candidates n :id] (the cascade action:
+  :id, :target, :precedence as pattern maps with :produces, and
+  :interpretation-receipts keyed by pattern id); the derivation is read from
+  there, one authority, no copy. :produces tokens are target-qualified
+  [target token] pairs on the tick record; both forms are kept so an
+  attempt's bare :produced token matches. Returns {:cand ... :missing
+  [...]} or {:neither true}."
+  [rec cid]
+  (let [cert (get-in rec [:decision :selection-certificate])]
+    (cond
+      (contains? cert :candidate-derivations)
+      {:cand (get-in cert [:candidate-derivations cid])}
+      (seq (:candidates cert))
+      (let [action (:id (first (filter #(= cid (get-in % [:id :id])) (:candidates cert))))
+            receipts (:interpretation-receipts action)]
+        (if-not action
+          {:cand nil}
+          {:cand {:interpretations
+                  (into {} (for [p (:precedence action)]
+                             [(:id p) {:produces (set (mapcat #(if (vector? %) [% (second %)] [%]) (:produces p)))
+                                       :receipt (get receipts (:id p))}]))}
+           :missing (vec (for [p (:precedence action) :when (nil? (get receipts (:id p)))] (:id p)))}))
+      :else {:neither true})))
+
 (defn check-c
   "W_c's failures as a vector (empty is a pass), or, when nothing else fails
   and the click's [:decision :selection-law] carries no :candidate id, the
@@ -213,14 +241,16 @@
   made and the record is neither a pass nor a failure."
   [rec enact]
   (let [cid (:candidate enact)
-        cand (get-in rec [:decision :selection-certificate :candidate-derivations cid])
+        {:keys [cand missing neither]} (candidate-derivation rec cid)
         selected (get-in rec [:decision :selection-law :candidate])
         pats (set (keys (:interpretations cand)))
         atts (:attempts enact)
         ok (filter :success atts)
         failures
     (cond-> []
-      (nil? cand) (conj (str "W_c: enactment names candidate " cid ", which the click did not record"))
+      (and (nil? cand) (not neither)) (conj (str "W_c: enactment names candidate " cid ", which the click did not record"))
+      (seq missing)
+      (conj (str "W_c: the run record's precedence names patterns with no interpretation receipt: " missing))
       (and (some? selected) (not= cid selected))
       (conj (str "W_c: enactment candidate " cid " differs from the click's selected candidate " selected))
       (some #(not (contains? pats (:pattern %))) atts)
@@ -237,8 +267,14 @@
       true (into (gc-failures enact ok)))]
     ;; a failure is decidable without the join; only a record that fails
     ;; nothing else is left unverifiable by the missing id
-    (if (or (some? selected) (seq failures))
+    (cond
+      neither
+      {:status :join-unverifiable
+       :reason "the click record carries neither [:decision :selection-certificate :candidate-derivations] (hand) nor [:decision :selection-certificate :candidates] (tick run record), so the enactment's candidate cannot be read"
+       :failures []}
+      (or (some? selected) (seq failures))
       failures
+      :else
       {:status :join-unverifiable
        :reason "[:decision :selection-law] carries no :candidate id, so the enactment cannot be joined to the selected candidate"
        :failures failures})))
