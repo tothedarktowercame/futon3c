@@ -52,8 +52,9 @@
    :disposition :preserve
    :change "the prompt's one-argument form and validate-response's rules unchanged; the flight passes the root it already defaults to"
    :tripwires
-   [{:test "futon2.aif.flight-ask-library-test" :status :to-write
-     :assertion "the flight's prompt names the library root; a reply's :retrieval reaches validate-response; an answer pending when the click posts is a pending :need, not :no-progress"}]}
+   [{:test "futon2.aif.flight-ask-library-test" :status :in-place
+     :assertion "the flight's prompt names the library root (absent typed); a reply's :retrieval reaches validate-response and its outcome is recorded; the ask step's publication is in the click's view; an answer pending at the click is a :pending need and the flight ends :awaiting-answer, not :no-progress"
+     :warrant "test-registry-8afc317e"}]}
 
   {:row 4 :component "kernel reads the constructor's :order"
    :disposition :adapt

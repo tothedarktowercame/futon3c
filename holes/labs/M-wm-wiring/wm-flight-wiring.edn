@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "db1f79c7" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "821f6ace" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -225,7 +225,8 @@
  ;; one :standing added (the test's fixture receipts). Row 2 wired at futon2
  ;; 9c7cd7bd (the extractor a namespace, scripts/futon2/wm/extract_outcomes.clj)
  ;; and db1f79c7 (read-fn records the served-by reading and :text-sha256):
- ;; its entry is gone. :kind :to-do is the
+ ;; its entry is gone. Row 3 wired at futon2 821f6ace (agency-answer-fn
+ ;; passes :library-root; pending answers awaited): its two entries gone. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -269,15 +270,6 @@
    {:file "futon2/src/futon2/aif/policy.clj",
     :var "select-action-cascades"},
    :rows [7 9],
-   :kind :to-do}
-  {:finding :declaration-without-occurrence,
-   :box/id :r3-flight-ask,
-   :field :library-root,
-   :role :writes,
-   :site
-   {:file "futon2/src/futon2/aif/flight_runner.clj",
-    :var "agency-answer-fn"},
-   :rows [3],
    :kind :to-do}
   {:finding :declaration-without-occurrence,
    :box/id :r2-served-by-reading,
@@ -334,11 +326,6 @@
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
    :error? true,
    :rows [8],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/flight_ask_library_test.clj"},
-   :error? true,
-   :rows [3],
    :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
