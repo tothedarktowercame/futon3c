@@ -7,6 +7,17 @@ the margin carries two columns of annotations, (a) the pattern working and
 re-run it and it follows whatever the mission and the annotations now say.
 
   seams_mission_page.py OUT.html [--rev HEAD] [--worktree]
+                        [--mission PATH] [--lab DIR]
+
+--mission and --lab default to M-futon-seams, so every existing invocation
+renders exactly what it did before -- byte for byte, which is the control
+test for this change. A lab is a directory: annotations.edn and lifecycle.edn
+are read from under it, and so are the cascade prototypes the figures come
+from. Either file may be absent. An absent file is drawn as a typed absence
+on the page: no annotations means an empty margin saying that it is empty,
+and no lifecycle means every phase reads "not read" with its exit criterion
+quoted from futon4/holes/mission-lifecycle.md. A phase is never reported as
+met by a page that has nothing to read a verdict from.
 
 Deterministic for fixed inputs: the mission is read from a git revision, the
 annotations are sorted by (anchor start, id), and nothing in the output is
@@ -18,25 +29,46 @@ quote is no longer at its offsets is drawn FLAGGED in place, never silently
 moved. A moved anchor is a fact about the mission having changed under an
 annotation, which is the thing a reader needs to see.
 """
-import argparse, html, json, os, re, subprocess, sys, hashlib
+import argparse, glob, html, json, os, re, subprocess, sys, hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mission_anchors import heading_changed
 
 REPO = "/home/joe/code/futon3c"
-MISSION = "holes/missions/M-futon-seams.md"
-ANNOTATIONS = "holes/labs/M-futon-seams/annotations.edn"
-LIFECYCLE = "holes/labs/M-futon-seams/lifecycle.edn"
-CASCADES = ["holes/labs/M-futon-seams/proto/instance-4.edn",
-            "holes/labs/M-futon-seams/proto/instance-4b.edn",
-            "holes/labs/M-futon-seams/proto/instance-5.edn",
-            "holes/labs/M-futon-seams/proto/instance-6.edn",
-            "holes/labs/M-futon-seams/proto/instance-7.edn"]
-WIRINGS = ["holes/labs/M-futon-seams/wiring/instance-4-wiring.edn",
-           "holes/labs/M-futon-seams/wiring/instance-4b-wiring.edn",
-           "holes/labs/M-futon-seams/wiring/instance-5-wiring.edn",
-           "holes/labs/M-futon-seams/wiring/instance-6-wiring.edn",
-           "holes/labs/M-futon-seams/wiring/instance-7-wiring.edn"]
+DEFAULT_MISSION = "holes/missions/M-futon-seams.md"
+DEFAULT_LAB = "holes/labs/M-futon-seams"
+
+# These were literals. They are still module-level and still repo-relative,
+# because every reader of them expects that; only where they come from has
+# changed. use_lab() sets them from --lab before anything reads them.
+MISSION = DEFAULT_MISSION
+LAB = DEFAULT_LAB
+ANNOTATIONS = os.path.join(LAB, "annotations.edn")
+LIFECYCLE = os.path.join(LAB, "lifecycle.edn")
+CASCADES = []
+WIRINGS = []
+
+
+def use_lab(lab):
+    """Point the module at a lab directory.
+
+    The cascade and wiring lists were written out by hand. Globbing them
+    gives the same five files in the same order for M-futon-seams -- which
+    the byte-identity control test is what actually checks -- and gives a
+    different lab its own, rather than silently drawing M-futon-seams's
+    figures onto someone else's mission.
+    """
+    global LAB, ANNOTATIONS, LIFECYCLE, CASCADES, WIRINGS
+    LAB = lab
+    ANNOTATIONS = os.path.join(lab, "annotations.edn")
+    LIFECYCLE = os.path.join(lab, "lifecycle.edn")
+
+    def under(sub_dir, pattern):
+        hits = sorted(glob.glob(os.path.join(REPO, lab, sub_dir, pattern)))
+        return [os.path.relpath(h, REPO) for h in hits]
+
+    CASCADES = under("proto", "instance-*.edn")
+    WIRINGS = under("wiring", "instance-*-wiring.edn")
 
 OPEN, CLOSE = "\x00", "\x01"          # anchor sentinels, absent from markdown
 
@@ -60,6 +92,93 @@ def read_mission(rev, worktree):
     if r.returncode:
         sys.exit(f"seams_mission_page: cannot read {MISSION} at {rev}: {r.stderr.strip()}")
     return r.stdout, sh("git", "rev-parse", "--short", rev).stdout.strip()
+
+
+def mission_name(text, path):
+    """The mission's own name, from its `# Mission: <name>` first heading.
+
+    Refusing is the whole point of the check. This script is furniture built
+    around a mission -- a phase table, a status line, a margin of anchored
+    annotations -- and pointed at a file that is not a mission it would
+    render all of that around arbitrary prose and look entirely convincing.
+    """
+    first = next((ln for ln in text.split("\n") if ln.startswith("# ")), None)
+    m = re.match(r"# Mission:\s*(\S.*?)\s*$", first or "")
+    if not m:
+        sys.exit(f"seams_mission_page: {path} is not a mission — its first H1 is "
+                 f"{first if first else '(no H1 at all)'!r}, and a mission's is "
+                 f"'# Mission: <name>'. Nothing written.")
+    return m.group(1)
+
+
+def status_line_of(text):
+    """The mission's own Status line, for the phase table to quote back."""
+    m = re.search(r"^\*\*Status:\*\*\s*(.+?)\s*$", text, re.M)
+    return m.group(1) if m else "(the mission carries no Status line)"
+
+
+def lifecycle_doc():
+    """futon4/holes/mission-lifecycle.md, which defines the eight phases.
+
+    House convention is that every repo sits at its canonical path; a
+    worktree of this one does not, so look beside this checkout first and
+    fall back to canonical. Return None rather than exit: a missing
+    lifecycle document is one more absence to state on the page, and this
+    is the path taken only when the lab had no lifecycle.edn either.
+    """
+    for root in (os.path.dirname(REPO), "/home/joe/code"):
+        doc = os.path.join(root, "futon4", "holes", "mission-lifecycle.md")
+        if os.path.isfile(doc):
+            return doc
+    return None
+
+
+def generic_lifecycle(text):
+    """Every phase unread, each with its exit criterion quoted.
+
+    A lab with no lifecycle.edn has recorded no verdict on any phase, so the
+    page must not report one. It reports the absence instead, and quotes
+    what each phase would have to satisfy -- which is the useful half, and
+    is the same document every lifecycle.edn reads its criteria from.
+    """
+    doc = lifecycle_doc()
+    if not doc:
+        return {"phases": [], "read": False, "doc": None,
+                "overall": {"finding": "No lifecycle.edn in the lab, and "
+                            "futon4/holes/mission-lifecycle.md was not found "
+                            "beside this checkout or at /home/joe/code, so not "
+                            "even the exit criteria can be quoted."},
+                "mission": {"status-line": status_line_of(text)}}
+    lines = open(doc, encoding="utf-8").read().split("\n")
+    phases, cur = [], None
+    for i, ln in enumerate(lines, 1):
+        h = re.match(r"^### (?:(\d+)\. )?([A-Z][A-Z]+)\b(.*)$", ln)
+        if h:
+            cur = {"id": h.group(2),
+                   "n": int(h.group(1)) if h.group(1) else 0,
+                   "title": h.group(2), "status": "not-started",
+                   "label": "not read", "exit": "", "exit-line": i,
+                   # Short, because it is identical on all eight rows and the
+                   # note above the table carries the reason once.
+                   "because": "Not read.",
+                   "evidence": [], "artefacts": []}
+            phases.append(cur)
+            continue
+        if cur is not None and not cur["exit"] and ln.startswith("**Exit criterion:**"):
+            body = [ln.split("**Exit criterion:**", 1)[1].strip()]
+            for nxt in lines[i:]:
+                if not nxt.strip():
+                    break
+                body.append(nxt.strip())
+            cur["exit"] = " ".join(x for x in body if x)
+            cur["exit-line"] = i
+    return {"phases": [q for q in phases if q["exit"]], "read": False,
+            "doc": os.path.relpath(doc, os.path.dirname(REPO)),
+            "overall": {"finding": "Not read. This lab has no lifecycle.edn: "
+                        "no phase has been judged, and none is reported met. "
+                        "The exit criteria below are quoted from the lifecycle "
+                        "document so the table says what would have to hold."},
+            "mission": {"status-line": status_line_of(text)}}
 
 
 def edn_to_json(path):
@@ -201,6 +320,8 @@ STATUS_LABEL = {"exit-met": "exit met", "in-progress": "in progress",
 def status_label(ph):
     """A phase waiting on another says which, because 'in progress' on a phase
     nobody is working reads as a stall rather than as a dependency."""
+    if ph.get("label"):
+        return ph["label"]
     if ph["status"] == "blocked" and ph.get("blocked-on"):
         return f'blocked on {ph["blocked-on"].lstrip(":")}'
     return STATUS_LABEL[ph["status"]]
@@ -223,7 +344,7 @@ def toc_html(life):
         rows.append(
             f'<tr class="ph-{st}">'
             f'<td class="phname"><a href="#anc-phase-{ph["id"]}">{html.escape(ph["title"])}</a>'
-            + ('' if ph.get("mission-anchor") else
+            + ('' if ph.get("mission-anchor") or not life.get("read", True) else
                ' <span class="nosec">no section in the mission</span>') +
             f'</td>'
             f'<td class="phstat"><span class="dot d-{st}"></span>'
@@ -236,13 +357,25 @@ def toc_html(life):
                f'each beside the passage it annotates</p>' if arte else "")
             + '</td></tr>')
     o = life["overall"]
+    if life.get("read", True):
+        note = (f'<p class="tocnote">Status per phase is read from that phase\'s exit criterion in '
+                f'<code>futon4/holes/mission-lifecycle.md</code> against the evidence, not from the '
+                f'mission\'s Status line. The mission\'s Status line says '
+                f'<b>{html.escape(life["mission"]["status-line"])}</b>. '
+                f'Nothing here advances it: that is the owner\'s act, and the owner is unassigned.</p>')
+    else:
+        # No lifecycle.edn in the lab. Every row says so, and none says met:
+        # a page that has read no verdict must not report one.
+        note = (f'<p class="tocnote"><b>No lifecycle.edn in this lab, so no phase has been '
+                f'read.</b> Every row below is unread and the exit criteria are quoted from '
+                + (f'<code>{html.escape(life["doc"])}</code>' if life.get("doc")
+                   else 'the lifecycle document')
+                + f'. The mission\'s own Status line says: '
+                f'<b>{html.escape(life["mission"]["status-line"])}</b> Nothing here confirms '
+                f'or advances it — reading the phases is the owner\'s act.</p>')
     return (f'<section class="toc" id="toc">'
             f'<h2>Where this mission stands</h2>'
-            f'<p class="tocnote">Status per phase is read from that phase\'s exit criterion in '
-            f'<code>futon4/holes/mission-lifecycle.md</code> against the evidence, not from the '
-            f'mission\'s Status line. The mission\'s Status line says '
-            f'<b>{html.escape(life["mission"]["status-line"])}</b>. '
-            f'Nothing here advances it: that is the owner\'s act, and the owner is unassigned.</p>'
+            + note +
             f'<div class="tocwrap"><table class="toctable"><thead><tr><th>phase</th><th>status</th>'
             f'<th>exit criterion</th><th>read from</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>'
@@ -364,13 +497,42 @@ def main():
     ap.add_argument("--rev", default="HEAD")
     ap.add_argument("--worktree", action="store_true",
                     help="render the working copy instead of a committed revision")
+    ap.add_argument("--mission", default=DEFAULT_MISSION,
+                    help="repo-relative path to the mission (default M-futon-seams)")
+    ap.add_argument("--lab", default=DEFAULT_LAB,
+                    help="repo-relative lab dir holding annotations.edn and "
+                         "lifecycle.edn (default holes/labs/M-futon-seams)")
     a = ap.parse_args()
 
+    global MISSION
+    MISSION = os.path.relpath(os.path.abspath(a.mission), REPO) \
+        if os.path.isabs(a.mission) else a.mission
+    use_lab(a.lab)
+    default_lab = (MISSION == DEFAULT_MISSION and a.lab == DEFAULT_LAB)
+
     text, revlabel = read_mission(a.rev, a.worktree)
+    name = mission_name(text, MISSION)
     sha = hashlib.sha256(text.encode()).hexdigest()
-    notes = edn_to_json(ANNOTATIONS)
+
+    # Either file may be absent. An absent file is stated on the page; it is
+    # never filled in with a default, and it never becomes a crash.
+    ann_path = os.path.join(REPO, ANNOTATIONS)
+    life_path = os.path.join(REPO, LIFECYCLE)
+    notes = edn_to_json(ANNOTATIONS) if os.path.isfile(ann_path) else []
+    # The absence is written INTO the margin's head rather than after it. The
+    # head is a two-column colour key, which keys nothing when there are no
+    # annotations -- but the layout script sizes it to the lanes and would
+    # throw on a null if it were dropped, so it stays and carries the absence
+    # instead. Found by running the page, not by reading it.
+    absent = ""
+    if not os.path.isfile(ann_path):
+        absent = (f'<span class="nosec" style="grid-column:1/-1;font-variant:none;'
+                  f'letter-spacing:0">No <code>{html.escape(ANNOTATIONS)}</code>, so this '
+                  f'margin is empty. The mission renders; nothing is annotated. '
+                  f'Annotations are the mission owner\'s to write.</span>')
     notes.sort(key=lambda n: (n["anchor"]["start"], n["id"]))
-    life = edn_to_json(LIFECYCLE)
+    life = (edn_to_json(LIFECYCLE) if os.path.isfile(life_path)
+            else generic_lifecycle(text))
     # Which phase claims each note and each figure. An artefact is placed
     # beside the phase that produced it, in phase order, rather than beside
     # whichever mission sentence happens to mention it.
@@ -554,8 +716,12 @@ def main():
         if i in bar_at:
             body_parts.append(phase_bar(bar_at[i]))
         body_parts.extend(artefacts(i))
-    for ph in unwritten:
-        body_parts.append(unwritten_phase(ph))
+    # A placeholder section per phase is a statement that the mission has not
+    # written that phase. With no lifecycle.edn nothing has been read, so that
+    # is not something this page knows; the table carries the absence instead.
+    if life.get("read", True):
+        for ph in unwritten:
+            body_parts.append(unwritten_phase(ph))
     if by_block.get(LAST):
         body_parts.append('<h2 class="orphanhead">Annotations with no live anchor</h2>'
                           '<p class="orphannote">The span each of these was written '
@@ -571,12 +737,17 @@ def main():
     # happened here: DERIVE read :exit-met in lifecycle.edn while its section
     # still said otherwise, and the page rendered the contradiction until an
     # outside reader found it. Refuse rather than render it again.
-    vc = subprocess.run([sys.executable,
-                         os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      "verdict_check.py")],
-                        capture_output=True, text=True)
-    if vc.returncode:
-        sys.exit("seams_mission_page: " + vc.stdout.strip())
+    # verdict_check.py reads M-futon-seams' mission and lifecycle by fixed
+    # path. Run against another mission it would check the wrong pair and
+    # report a pass about a file nobody asked about, which is worse than not
+    # running it -- so it guards the mission it is actually about.
+    if default_lab:
+        vc = subprocess.run([sys.executable,
+                             os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                          "verdict_check.py")],
+                            capture_output=True, text=True)
+        if vc.returncode:
+            sys.exit("seams_mission_page: " + vc.stdout.strip())
 
     counts = (f'{len(notes)} notes — {len(cols["a"])} pattern, {len(cols["b"])} PROOF-2a; '
               f'{sum(1 for n in notes if n.get("status") == "reviewed")} reviewed, '
@@ -584,10 +755,15 @@ def main():
               f'{sum(1 for p in life["phases"] if p["status"] == "exit-met")} of '
               f'{len(life["phases"])} phase exits met')
 
+    mhead = (MHEAD if not absent
+             else '<p class="mhead">' + absent + '</p>')
+    f = furniture(name)
     open(a.out, "w", encoding="utf-8").write(PAGE.format(
         css=CSS, js=JS, body=body, toc=toc_html(life), rev=html.escape(revlabel),
         sha=sha[:16], counts=html.escape(counts),
-        mission=html.escape(MISSION)))
+        mission=html.escape(MISSION), annpath=html.escape(ANNOTATIONS),
+        title=html.escape(f["title"]), h1=html.escape(f["h1"]),
+        sub=f["sub"], kernels=f["kernels"], mhead=mhead))
     print(a.out)
     print(f"  rev {revlabel} sha {sha[:16]} · {counts}")
     for n in stale:
@@ -939,33 +1115,56 @@ document.addEventListener('click', e => {
 window.addEventListener('load', layout);
 window.addEventListener('resize', layout);
 """
+# The masthead is furniture ABOUT a mission, not a template for missions in
+# general: "worked against PROOF-2a" is true of M-futon-seams, the two-column
+# legend describes annotations that only M-futon-seams has, and the kernels
+# link points at a page built from its lattices. Kept with the mission it
+# describes, so another mission gets a masthead about itself rather than
+# inheriting claims that are not true of it.
+FURNITURE = {
+    "M-futon-seams": {
+        "title": "M-futon-seams — worked against PROOF-2a",
+        "h1": "M-futon-seams, worked",
+        "sub": '<p class="sub">The mission is the main text and grows as it is worked. Each note is set beside\nthe passage it is anchored to, and is one of two readings of that passage: <b class="k-a">the\npattern working</b> — cascade nodes, work-state tokens, context→pattern edges — or <b\nclass="k-b">the PROOF-2a reading</b>, which clause or data shape the passage exercises and\nwhether this example fits the shape, breaks it, or needs a field that does not exist. Breaks\nare the evidence worth most. The figures sit in a lane of their own, beside the phase that\nmade them, each linking back to the passage it draws. Click a marked span or a note to pair\nthem.</p>',
+        "kernels": '<br>\nkernel tables, conflict states and the full-size lattices:\n<a href="seams-kernels.html">seams-kernels.html</a>',
+    },
+}
+
+
+def furniture(name):
+    """The masthead for a mission, or a plain one that claims nothing."""
+    if name in FURNITURE:
+        return FURNITURE[name]
+    return {
+        "title": f"{name} — worked",
+        "h1": f"{name}, worked",
+        "sub": '<p class="sub">The mission is the main text and grows as it '
+               'is worked. Annotations, where there are any, are set in the '
+               'margin beside the passage each is anchored to.</p>',
+        "kernels": "",
+    }
+
+MHEAD = ('<p class="mhead"><span class="mh-a">green: the pattern working</span>'
+         '<span class="mh-b">blue: the PROOF-2a reading</span></p>')
+
 PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>M-futon-seams — worked against PROOF-2a</title>
+<title>{title}</title>
 <style>{css}</style></head><body>
 <div class="masthead">
-<h1>M-futon-seams, worked</h1>
-<p class="sub">The mission is the main text and grows as it is worked. Each note is set beside
-the passage it is anchored to, and is one of two readings of that passage: <b class="k-a">the
-pattern working</b> — cascade nodes, work-state tokens, context→pattern edges — or <b
-class="k-b">the PROOF-2a reading</b>, which clause or data shape the passage exercises and
-whether this example fits the shape, breaks it, or needs a field that does not exist. Breaks
-are the evidence worth most. The figures sit in a lane of their own, beside the phase that
-made them, each linking back to the passage it draws. Click a marked span or a note to pair
-them.</p>
-<p class="prov">{mission} at {rev} · sha256 {sha}… · {counts}<br>
-kernel tables, conflict states and the full-size lattices:
-<a href="seams-kernels.html">seams-kernels.html</a></p>
+<h1>{h1}</h1>
+{sub}
+<p class="prov">{mission} at {rev} · sha256 {sha}… · {counts}{kernels}</p>
 </div>
 {toc}
 <div class="page">
   <article class="main">{body}</article>
   <div class="margin" aria-hidden="false">
-    <p class="mhead"><span class="mh-a">green: the pattern working</span><span class="mh-b">blue: the PROOF-2a reading</span></p>
+    {mhead}
   </div>
 </div>
 <footer>Generated by <code>scripts/seams_mission_page.py</code> from
-<code>{mission}</code> and <code>holes/labs/M-futon-seams/annotations.edn</code>.
+<code>{mission}</code> and <code>{annpath}</code>.
 Re-runnable and byte-deterministic for a fixed revision and annotation set.
 Anchors are checked against the revision rendered; a note whose quote has moved is
 drawn flagged in place rather than relocated.</footer>
