@@ -1,3 +1,13 @@
+;; futon3c.diagramprover.ct-projection over holes/labs/M-wm-wiring/wm-flight-wiring.edn
+;; at :map-sha, validated by futon5 src/futon5/ct/mission.clj at :futon5-sha (loaded from
+;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
+;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
+;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
+;; Re-pinned by claude-10 at map 47a88fc6 (:enacted-steps declared: two edges; :i4 gains the parallel selection -> enactment paths via :enacted-steps).
+;; Re-pinned by claude-10 at map d638fb0e (step 7: flight-entry writes :target-source, reads :draw-seed; edges 57->59; :i4 positional paths 32->50, no new (target, first box) pair).
+;; Re-pinned by claude-10 at map 9c410d11 (step 8: r7-selection writes :e-source, read by the row-7 test box; :i4 unchanged).
+;; Re-pinned by claude-10 at map 89b1c3ad (step 10: enact-fn built; edges 61->65; :i4 unchanged).
+;; Re-pinned by claude-10 at map 1f73ead3 (step 11: the W_c call built; the trace routes it through the checker; :i4 positional 50->47, two (target, first box) pairs starting at r7-flight-call gone).
 ;; Re-pinned by claude-10 at map 8f2c3f50 (step 12: observe-publication-fn built and the declared writer of :publication-observed; edges 68->69; :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha "8f2c3f50",
