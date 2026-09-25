@@ -78,8 +78,9 @@
    :disposition :preserve
    :change "no number changes today (no class-level admitted labels exist); the record gains :measurement"
    :tripwires
-   [{:test "futon2.aif.click-measurement-test" :status :to-write
-     :assertion "the click's rates are byte-identical to before the wiring, and every class carries :measurement :absent"}]}
+   [{:test "futon2.aif.click-measurement-test" :status :in-place
+     :assertion "every token :measurement :absent with none admitted; each candidate's id, G and certificate rates byte-identical to a fixture from b321efab; fixture labels for one class measure it and leave the others :absent"
+     :warrant "test-registry-c574129f"}]}
 
   {:row 7 :component "enactment into the habit fold; selection reads the folded state"
    :disposition :adapt

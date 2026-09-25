@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "f498f3f3" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "946405c5" "futon3c" "58f1a8cb"}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
   {:box/id :r1-target-field :row 1 :box/kind :component
@@ -194,7 +194,9 @@
  ;; The checker's report over :boxes with {:heuristic? true}, exactly (futon3c
  ;; 58f1a8cb's checker, which classifies thread-first writes: the two
  ;; :heuristic-limit entries of 3e96fdce are gone). Row 9 wired at futon2
- ;; f498f3f3 (:candidate on the selection law): its two entries are gone. :kind :to-do is the
+ ;; f498f3f3 (:candidate on the selection law): its two entries are gone.
+ ;; Row 6 wired at futon2 946405c5 (:measurement on the certificate): its
+ ;; two entries are gone. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -229,15 +231,6 @@
    {:file "futon2/src/futon2/aif/flight_runner.clj",
     :var "agency-answer-fn"},
    :rows [3],
-   :kind :to-do}
-  {:finding :declaration-without-occurrence,
-   :box/id :r6-cascade-lane,
-   :field :measurement,
-   :role :reads,
-   :site
-   {:file "futon2/scripts/futon2/report/war_machine.clj",
-    :var "cascade-lane"},
-   :rows [6],
    :kind :to-do}
   {:finding :declaration-without-occurrence,
    :box/id :r8-overlap,
@@ -293,11 +286,6 @@
    :site {:file "futon2/test/futon2/aif/flight_ask_library_test.clj"},
    :error? true,
    :rows [3],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
-   :error? true,
-   :rows [6],
    :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
