@@ -657,13 +657,13 @@
   "A synthetic :run record through the registry's own append, so it decodes
   exactly as a minted one does. Used where a real run cannot produce the
   condition under test (two records sharing a :ran-at)."
-  [backend {:keys [namespace ran-at finished-at failures warrant?]
+  [backend {:keys [namespace command ran-at finished-at failures warrant?]
             :or {failures 0 warrant? true}}]
   (registry/append-record!
    backend
    {:kind :run :author "author" :run/id (str (java.util.UUID/randomUUID))
     :ran-at ran-at :finished-at (or finished-at ran-at)
-    :command ["clojure" "-M:test" "-n" namespace]
+    :command (or command ["clojure" "-M:test" "-n" namespace])
     :code-files {"src/demo.clj" "blob"} :test-files {"test/demo_test.clj" "test-blob"}
     :results {:tests 1 :assertions 1 :failures failures :errors 0 :exit 0}
     :postcheck {:status :matched} :warrant? warrant?}
@@ -803,27 +803,68 @@
          (is (= (:evidence/id run) (:evidence/id found)))
          (is (= :namespace-ledger (:resolved-by found))))))))
 
-(deftest an-incomplete-namespace-ledger-refuses-absence
-  ;; a ledger built from a scan that saw fewer entries than the store holds
-  ;; cannot conclude absence: it reports the window it recorded
+(defn- fail-on-paged-backend
+  "Wraps backend: the first page reads fine, any :query/before page returns
+  the AR-43 typed read-failed map — a store that dies mid-scan."
+  [backend]
+  (reify futon3c.evidence.backend/EvidenceBackend
+    (-append [_ _] nil)
+    (-get [_ _] nil)
+    (-exists? [_ _] false)
+    (-query [_ q] (if (:query/before q)
+                    {:error/component :E-store :error/code :read-failed
+                     :error/kind :timeout :status nil}
+                    (store/query* backend q)))
+    (-count [_ q] (store/count* backend q))
+    (-forks-of [_ _] [])
+    (-delete! [_ _] {:compacted 0})
+    (-all [_] [])))
+
+(deftest a-ledger-build-pages-until-the-scan-is-whole
+  ;; more entries than one page: the build pages on :query/before cursors
+  ;; until a short page, so :scanned reaches the store's count with no fixed
+  ;; cap (the capped one-page build recorded scanned 2000 of 3166 and could
+  ;; never complete)
   (fixture
    (fn [{:keys [backend options]}]
-     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))]
-       (registry/register-run! backend options)
-       (registry/register-run! backend options)
-       (let [built (registry/build-namespace-ledger!
-                    backend {:namespace-ledger-file ledger :limit 1})]
-         (is (false? (:complete? built)))
-         (is (= 1 (:scanned built)))
-         (is (= 4 (:registry-entries built)))) ;; intent + run, twice
+     (dotimes [i 12]
+       (append-run! backend {:namespace (str "paged-" i "-test")
+                             :ran-at (format "2026-09-25T01:00:%02dZ" i)}))
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger!
+                  backend {:namespace-ledger-file ledger :page-size 5})]
+       (is (true? (:complete? built)))
+       (is (= 12 (:scanned built)))
+       (is (= 12 (:registry-entries built)))
+       ;; and a paged-in run resolves through the ledger, not a rescan
+       (let [found (registry/latest-run-for-namespace
+                    backend {:namespace "paged-3-test" :namespace-ledger-file ledger})]
+         (is (= :namespace-ledger (:resolved-by found))))))))
+
+(deftest an-incomplete-namespace-ledger-refuses-absence
+  ;; a build whose second page fails records :complete? false carrying the
+  ;; typed failure — never a silent short scan — and absence keeps refusing
+  ;; with that failure named
+  (fixture
+   (fn [{:keys [backend options]}]
+     (dotimes [i 12]
+       (append-run! backend {:namespace (str "paged-" i "-test")
+                             :ran-at (format "2026-09-25T01:00:%02dZ" i)}))
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           paged (fail-on-paged-backend backend)
+           built (registry/build-namespace-ledger!
+                  paged {:namespace-ledger-file ledger :page-size 5})]
+       (is (false? (:complete? built)))
+       (is (= 5 (:scanned built)) "only the first page was read")
+       (is (= :timeout (get-in built [:read-error :error/kind])))
        (let [none (registry/latest-run-for-namespace
-                   backend {:namespace "futon3c.not-registered-test"
-                            :namespace-ledger-file ledger})]
+                   paged {:namespace "futon3c.not-registered-test"
+                          :namespace-ledger-file ledger})]
          (is (= :none (:status none)))
          (is (= :scan-window-exhausted (:reason none)))
          (is (= :namespace-ledger-incomplete (:resolved-by none)))
-         (is (= 1 (:scanned none)))
-         (is (= 4 (:registry-entries none))))))))
+         (is (= 5 (:scanned none)))
+         (is (= :timeout (get-in none [:read-error :error/kind]))))))))
 
 (deftest a-ledger-hit-never-fetches-an-evidence-page
   ;; the lookup answers within the client's timeout because a ledger hit is
