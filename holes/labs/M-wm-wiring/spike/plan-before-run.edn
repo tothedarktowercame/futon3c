@@ -1,0 +1,110 @@
+{:constraints [],
+ :owner-questions [],
+ :construction-parameters
+ {:budget
+  {:value {:max-moves 4, :max-expansions 20000},
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :commit "891b4af6"}},
+  :move-cost
+  {:value 0,
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :reason
+    "a construction move is computation inside the tick, not in G's units; cost 1 made the constructor decline M-aif-eig's plan (gain 0.33, :acting-worth-more)",
+    :commit "891b4af6"}}},
+ :answer-path
+ "Agency bell (mode work, requisition = target), poll to terminal, reply grammar :wm/want-interpretation-response-v1",
+ :unlocated [],
+ :store "/home/joe/code/futon2/data/wm-interpretations",
+ :clicks
+ {:max 1,
+  :run-ids "<date>-flight-6b428851-click-<n>",
+  :via
+  "POST /api/alpha/wm/click with flight-edn: an ordinary click (budget consume + cast-seat preflight); runner/run-opportunity! in the serving JVM"},
+ :coverage-questions nil,
+ :resolved-steps
+ {:bb "bb",
+  :enact
+  "flight-runner/enact-fn over the click's run record (observe-publication-fn inside it)",
+  :library-root "/home/joe/code/futon3/library",
+  :cascades {:absent :no-cascades-dir},
+  :checker
+  "/home/joe/code/futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj",
+  :quotes {:absent :no-quotes},
+  :dispatch-step {:absent :no-dispatch-configured},
+  :wc "flight-runner/wc-verdict-fn with the checker and bb",
+  :field-entry {:absent :no-field-entry}},
+ :run? false,
+ :horizon
+ {:value 4,
+  :authority
+  {:source :cascade-sources,
+   :declarations
+   [{:source "T-repair-occ-444fb018.edn", :horizon-steps 4}]}},
+ :want-source
+ {:kind :a-exits,
+  :repo "futon3c",
+  :path "holes/missions/M-autoclock-in.md",
+  :lifecycle nil,
+  :text-read? true},
+ :criteria-from :none,
+ :open-wants [],
+ :requisition "M-autoclock-in",
+ :readings-it-would-request
+ {:coverage nil,
+  :constraints
+  {:mission-sha "text-8c765057668d3e96", :tokens-an-edge-may-join 0},
+  :criteria
+  {:sections-read
+   ["Mission: M-autoclock-in"
+    "HEAD (Joe, 2026-06-02, verbatim sense)"
+    "The tension"
+    "The idea (to refine in MAP/DERIVE)"
+    "Relations"
+    "IDENTIFY exit (when picked up)"
+    "MAP (2026-06-03)"
+    "Existing Infrastructure"
+    "Ready vs Missing"
+    "MAP Findings"
+    "DERIVE (2026-06-03)"
+    "Witnessed-Promotion Rule"
+    "Design Decisions"
+    "Audit Shape"
+    "INSTANTIATE-1 (2026-06-03)"
+    "INSTANTIATE-1 Smoke Checks"
+    "INSTANTIATE-1.1 (2026-06-03) — floor-only guard (review fix, claude-3)"
+    "Remaining Work"
+    "INSTANTIATE-2 (2026-06-04) — creation-clock"
+    "INSTANTIATE-3 candidate — edit-activity reclock (Joe, 2026-06-08)"
+    "INSTANTIATE-3 checkpoint — edit-activity reclock (codex-2, 2026-06-08)"
+    "INSTANTIATE-4 candidate — AGENT-side reclock (Joe, 2026-06-14)"
+    "DIAGNOSIS 2026-09-21"
+    "1. Implementation, runtime evidence, and firing receipts"
+    "2. Last-seven-day coverage"
+    "3. Why today's roster is nil"
+    "4. Missing inference and the first fix"
+    "INSTANTIATE-5 — durable clock decisions (FIX 1, 2026-09-21)"
+    "INSTANTIATE-6 — restore durable decisions (FIX 2, 2026-09-21)"
+    "Surface check, 2026-09-21 18:47:40Z (report only)"
+    "INSTANTIATE-7a — dispatch lineage (FIX 3a, 2026-09-21)"
+    "INSTANTIATE-7b — Codex edit activity (FIX 3b, 2026-09-21)"
+    "Top-level catalog correction (2026-09-21)"
+    "INSTANTIATE-8 — kimi seats work by requisition (claude-11, 2026-09-24)"]},
+  :locators []},
+ :constraint-questions nil,
+ :answering-seat "claude-5",
+ :requests-it-would-issue [],
+ :placement {:target "M-autoclock-in", :target-source :hand-placed},
+ :published-already [],
+ :wants {:in-view [], :out-of-view [], :unlocated []},
+ :needs-in-serving-jvm
+ "futon3c b7340968 (flight-edn) and futon2 runner/war-machine at this checkout, reloaded from master",
+ :flight-id "flight-6b428851",
+ :machine-located []}
+
+Plan only. Nothing sent, nothing written. Add --read to run the read step only, --run to fly this flight once.
