@@ -58,8 +58,9 @@
    :disposition :adapt
    :change "G changes only on non-chain containment, recorded against Lean 69c2; chain containment unchanged"
    :tripwires
-   [{:test "futon2.aif.order-kernel-test" :status :to-write
-     :assertion "when :order is a chain and :precedence-violations is empty, G equals the list kernel's exactly"}
+   [{:test "futon2.aif.order-kernel-test" :status :in-place
+     :assertion "a chain with no violations scores its order's one linear extension and G equals the list kernel's exactly (every G byte-identical to a fixture from f8e766a5); violations, a refused or absent order, and a non-chain keep the list with a typed :order-use reason. The G change on non-chain containment needs the co-application kernel (coApplyKernel, mathlib4 69c2432f2b), which futon2 does not have: a stage-2 module"
+     :warrant "test-registry-a8b2735c"}
     {:test "futon2.aif.interpretation-construction-test" :status :in-place
      :assertion "nf-4 and nb-4: all-finite constructor output and a finite baseline byte-identical to fixtures from 3bbf5059 and 082dfe5e"
      :warrant "test-registry-21b3bb44"}]}
