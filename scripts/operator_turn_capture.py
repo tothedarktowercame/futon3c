@@ -11,8 +11,8 @@ interpretation by the same code, then sets the record's created_at to the
 turn's own time.
 
 A turn is skipped when a record with its turn_id already exists, and when it
-is a park wake (its text carries "--- resumed:"), which is the harness
-talking in Joe's name rather than Joe.
+is the harness talking in Joe's name rather than Joe: a park wake (its text
+carries "--- resumed:") or a clock reminder (HARNESS_MARKERS).
 
   operator_turn_capture.py --agents claude-12 [--since 2026-09-25T19:00:00Z] [--loop 30]
 """
@@ -51,6 +51,16 @@ def turns(limit):
                "at": field(entry, "evidence/at")}
 
 
+# Text the harness posts in Joe's name. The clock reminder (futon3c
+# followups) arrives as an operator turn; interpreting it would teach the
+# corpus a move Joe never made (kimi-1 declined candidates for it, 09-25).
+HARNESS_MARKERS = ("so your clock says what you are doing",)
+
+
+def is_harness_text(text):
+    return any(m in text for m in HARNESS_MARKERS)
+
+
 def known_turn_ids():
     ids = set()
     for p in glob.glob(f"{RECORDS}/turn-*.json"):
@@ -77,7 +87,7 @@ def capture(agents, since, limit):
         agent = tid.rsplit("-turn-", 1)[0]
         if agent not in agents or tid in known or (since and t["at"] < since):
             continue
-        if "--- resumed:" in text:
+        if "--- resumed:" in text or is_harness_text(text):
             continue
         new.append((t, agent))
     for t, agent in sorted(new, key=lambda x: x[0]["at"]):
