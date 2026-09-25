@@ -5,8 +5,11 @@
 # it, and cites a join and pattern as the warrant for every change. Both go
 # through kimi-task.sh, so each is a fresh seat on its own requisition.
 #
-# usage: operator-round.sh translate --from <id> --to <kimi-N> <turn-id>
-#        operator-round.sh apply     --from <id> --to <kimi-N> <turn-id> <translation.md>
+# usage: operator-round.sh translate --from <id> --to <kimi-N> [--turn-json F] <turn-id>
+#        operator-round.sh apply     --from <id> --to <kimi-N> [--turn-json F] <turn-id> <translation.md>
+# The turn is read from ~/.emacs-graph/session-turn-analysis/<turn-id>.json
+# (claude-1's capture) unless --turn-json names another file with the same
+# `source_text` field, e.g. a turn Joe wrote to another seat.
 # The round's files are under storage/operator-turns/rounds/<turn-id>/.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -14,17 +17,18 @@ TURNS=/home/joe/.emacs-graph/session-turn-analysis
 XL=/home/joe/code/storage/operator-turns/translations
 ROUNDS=/home/joe/code/storage/operator-turns/rounds
 STEP="${1:-}"; shift || true
-FROM=""; TO=""
+FROM=""; TO=""; TURN_JSON=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM="$2"; shift 2;;
     --to) TO="$2"; shift 2;;
+    --turn-json) TURN_JSON="$2"; shift 2;;
     *) break;;
   esac
 done
 TURN="${1:-}"
-[ -n "$FROM" ] && [ -n "$TO" ] && [ -n "$TURN" ] || { sed -n 9,10p "$0" >&2; exit 2; }
-TURN_JSON="$TURNS/$TURN.json"
+[ -n "$FROM" ] && [ -n "$TO" ] && [ -n "$TURN" ] || { sed -n 9,13p "$0" >&2; exit 2; }
+TURN_JSON="${TURN_JSON:-$TURNS/$TURN.json}"
 [ -f "$TURN_JSON" ] || { echo "refusal:no-such-turn — $TURN_JSON" >&2; exit 2; }
 DIR="$ROUNDS/$TURN"; mkdir -p "$DIR"
 
@@ -54,7 +58,7 @@ PY
     R=$(bash "$HERE/../kimi-task.sh" --from "$FROM" --to "$TO" --cascade "$DIR/cascade.clj" \
           --purpose "operator round $TURN: seat B, carry out the cascade with warrants" "$DIR/seat-b-packet.md")
     ;;
-  *) sed -n 9,10p "$0" >&2; exit 2;;
+  *) sed -n 9,13p "$0" >&2; exit 2;;
 esac
 echo "$R"
 echo "$(date -u +%FT%TZ) $STEP $TO $R" >> "$DIR/log.txt"
