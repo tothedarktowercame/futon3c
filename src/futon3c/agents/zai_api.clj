@@ -5,6 +5,7 @@
    the local agent loop and delegates real work to futon3c.peripheral.real-backend."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.agency.invoke-activity :as invoke-activity]
             [futon3c.agency.invoke-controls :as invoke-controls]
@@ -1538,6 +1539,95 @@ CALLS contains maps of tool name, arguments, and result digest."
               (seq refusal) (assoc :refusal refusal))))
         details executed))
 
+;; ---------------------------------------------------------------------------
+;; Turn commits: which commits this seat's own `git commit` calls made
+;; ---------------------------------------------------------------------------
+;; The Emacs REPLs record turn-commits by diffing every repo's HEAD across the
+;; turn, which also picks up commits other seats made meanwhile. Here the seat's
+;; own shell calls say which commits are its: a printed `[branch sha] subject`
+;; line, or, for a quiet commit, the message the command passed, looked up in
+;; the repo it ran in. A commit that cannot be resolved is kept with :sha nil.
+
+(def ^:private commit-line-re #"\[[\w./-]+(?: \([^)\]]*\))? ([0-9a-f]{7,40})\] ([^\n]+)")
+
+(defn- commit-repo-dir
+  "The repo a shell COMMAND committed in: `git -C DIR`, else the last `cd DIR`
+   before the commit, else CWD."
+  [command cwd]
+  (let [before (first (str/split command #"git\s+(?:-C\s+\S+\s+)?commit\b" 2))]
+    (or (second (re-find #"git\s+-C\s+['\"]?([^\s'\";&|]+)['\"]?\s+commit" command))
+        (some-> (re-seq #"\bcd\s+['\"]?([^\s'\";&|]+)" before) last second)
+        cwd)))
+
+(defn- commit-message-line
+  "First line of the message a `git commit` COMMAND passes: a heredoc for
+   -F -, else the first -m argument."
+  [command]
+  (let [line (fn [s] (some-> s str/split-lines first str/trim not-empty))]
+    (or (when (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[^\n]*-F\s*-" command)
+          (some-> (re-find #"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n([\s\S]*?)\n\1\b" command) (nth 2) line))
+        (some-> (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[\s\S]*?-m\s*\"((?:[^\"\\]|\\.)*)\"" command)
+                second (str/replace #"\\(.)" "$1") line)
+        (some-> (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b[\s\S]*?-m\s*'([^']*)'" command) second line))))
+
+(defn round-commits
+  "Commits made by the git commit calls among one round's DETAILS/EXECUTED.
+   GIT-FN is (fn [dir args]) -> stdout string or nil. Returns maps of
+   :repo :sha :subject :committed-at :match (:sha-printed | :subject | :unresolved)."
+  [details executed cwd git-fn]
+  (vec
+   (for [[detail ex] (map vector details executed)
+         :let [command (str (get-in detail [:input :command]))]
+         :when (and (#{"run_shell"} (:name detail))
+                    (re-find #"git\s+(?:-C\s+\S+\s+)?commit\b" command)
+                    (not (:error? ex)))
+         :let [dir (commit-repo-dir command cwd)
+               output (str (get-in ex [:message :content]))
+               printed (re-seq commit-line-re output)
+               lookup (fn [rev]
+                        (when-let [out (some-> (git-fn dir ["log" "-1" "--format=%H%x1f%cI%x1f%s" rev])
+                                               str/trim not-empty)]
+                          (let [[sha at subject] (str/split out #"\x1f" 3)]
+                            {:sha sha :committed-at at :subject subject})))
+               msg (commit-message-line command)
+               recent (when (and (empty? printed) msg)
+                        (some->> (git-fn dir ["log" "-10" "--format=%H%x1f%cI%x1f%s"])
+                                 str/split-lines
+                                 (map #(str/split % #"\x1f" 3))
+                                 (filter #(= msg (nth % 2 nil)))
+                                 first))]
+         c (cond
+             (seq printed)
+             (for [[_ short subject] printed]
+               (merge {:repo dir :sha nil :subject (str/trim subject) :match :unresolved}
+                      (some-> (lookup short) (assoc :match :sha-printed))))
+             recent
+             [{:repo dir :sha (nth recent 0) :committed-at (nth recent 1)
+               :subject (nth recent 2) :match :subject}]
+             :else
+             [{:repo dir :sha nil :subject msg :match :unresolved}])]
+     c)))
+
+(defn- shell-git
+  [dir args]
+  (try
+    (let [{:keys [exit out]} (apply shell/sh "git" "-C" (str dir) args)]
+      (when (zero? exit) out))
+    (catch Throwable _ nil)))
+
+(defn- persist-round-commits!
+  "Record the commits a round's git commit calls made, beside its turn-round."
+  [{:keys [evidence-store agent-id sid turn-id profile round cwd details executed]}]
+  (let [commits (try (round-commits details executed cwd shell-git)
+                     (catch Throwable _ []))]
+    (when (seq commits)
+      (persist-transcript-safely!
+       agent-id evidence-store
+       (transcript-entry
+        {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
+         :event :turn-commits
+         :body {:round round :commits commits}})))))
+
 (def ^:private tool-round-budget
   ;; 24 rounds: the original 8 demonstrably binds - the first real handoff
   ;; (M-custom-harness slice 2, 2026-07-04) exhausted all 8 on spec/source
@@ -1844,6 +1934,11 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :text text
                                    :calls (transcript-calls details executed)
                                    :usage usage})
+                  (persist-round-commits! {:evidence-store (:evidence-store ctx)
+                                           :agent-id agent-id :sid sid
+                                           :turn-id (:turn-id ctx) :profile (:profile ctx)
+                                           :round round-n :cwd (:cwd tool-opts)
+                                           :details details :executed executed})
                   (swap! !messages into (mapv :message executed))
               (swap! !messages elide-stale-images
                      (or (:retained-images opts) default-retained-images))

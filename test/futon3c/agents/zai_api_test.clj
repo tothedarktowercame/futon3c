@@ -1,5 +1,6 @@
 (ns futon3c.agents.zai-api-test
-  (:require [clojure.string :as str]
+  (:require [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.agents.zai-api :as zai]
             [futon3c.evidence.boundary :as boundary]
@@ -480,3 +481,33 @@
         "an ordinary excursion the caller did not mint")
     (is (false? (zai/caller-minted-task? "E-kimi-task-9" "claude-8" "kimi-5" (fn [_] nil)))
         "an unresolvable target is not a minted task")))
+
+(deftest round-commits-names-the-seats-own-commits-in-a-real-repo
+  (let [dir (str (java.nio.file.Files/createTempDirectory
+                  "zai-commits" (make-array java.nio.file.attribute.FileAttribute 0)))
+        git (fn [& args] (apply shell/sh "git" "-C" dir args))
+        commit! (fn [msg] (spit (str dir "/f.txt") msg :append true)
+                  (git "add" "f.txt")
+                  (git "-c" "user.name=t" "-c" "user.email=t@t" "commit" "-q" "-m" msg)
+                  (str/trim (:out (git "rev-parse" "HEAD"))))
+        _ (git "init" "-q")
+        other (commit! "someone else's commit")
+        quiet (commit! "Quiet commit made by the seat")
+        loud (commit! "Loud commit")
+        shell (fn [command output & [error?]]
+                [{:name "run_shell" :input {:command command}}
+                 (cond-> {:message {:content output}} error? (assoc :error? true))])
+        rounds [(shell (str "cd " dir " && git commit -q -F - <<'MSG'\nQuiet commit made by the seat\n\nbody\nMSG") "")
+                (shell (str "git -C " dir " commit -m \"Loud commit\"")
+                       (str "[master " (subs loud 0 7) "] Loud commit\n 1 file changed"))
+                (shell (str "git -C " dir " commit -m \"never landed\"") "error" true)
+                (shell (str "git -C " dir " log --oneline") (str (subs other 0 7) " someone else's commit"))
+                (shell (str "git -C " dir " commit -q -m 'No such subject'") "")]
+        got (zai/round-commits (mapv first rounds) (mapv second rounds) "/nonexistent"
+                               @#'zai/shell-git)]
+    (is (= [[quiet :subject] [loud :sha-printed] [nil :unresolved]]
+           (mapv (juxt :sha :match) got))
+        "quiet commit found by its message, printed commit by its sha, an unfound one kept as nil; the failed call and the log read are not commits")
+    (is (not-any? #(= other (:sha %)) got)
+        "a commit the seat did not make is never attributed to it")
+    (is (= "No such subject" (:subject (last got))))))
