@@ -1266,6 +1266,34 @@
           :metadata metadata})))
     (catch Throwable _ nil)))
 
+(defn remind-caller-of-clock!
+  "A requisition for something other than the caller's clock gets one reminder
+   per caller session and target, so callers keep their own clock current
+   (Joe, 2026-09-24). Not for a continuation, and not for a task the caller
+   minted for this seat (E-kimi-task-N; caller-minted-task?), which is the
+   seat's target, not the caller's work. Top-level, called through its var:
+   a seat's invoke fn is a closure built at registration, so a change here
+   reaches running seats on reload; one inlined in make-invoke-fn did not
+   (2026-09-25)."
+  [agent-id caller job-target caller-target continuation?]
+  (when (and job-target (not= job-target caller-target)
+             (not continuation?)
+             (not (caller-minted-task? job-target caller agent-id)))
+    (enqueue-caller-followup!
+     caller (str "clock:" job-target)
+     ;; Name only the requisitioned target: this reminder arrives as an
+     ;; operator turn, where naming two targets makes the clock decision
+     ;; :ambiguous and unclocks the caller (seen live 2026-09-24). Naming
+     ;; one clocks the caller onto it.
+     (str "You requisitioned " agent-id " for " job-target
+          (if caller-target
+            ", which is not what your clock said."
+            " while not clocked in.")
+          " If your work has moved to " job-target
+          ", this reminder clocks you onto it; if it hasn't, "
+          "clock back onto what you are doing.")
+     {:requisitioned job-target :caller-clock caller-target})))
+
 (defn requisition-decision
   "Admit or refuse a job on a requisition-gated seat. Continuations without a
    requisition inherit the seat's target. Returns {:action :admit|:refuse
@@ -2106,28 +2134,11 @@ CALLS contains maps of tool name, arguments, and result digest."
           ;; now owns the conversation.
           (when job-target
             (reset! !context-target job-target))
-          ;; Side effect Joe wants: callers keep their own clock current. A
-          ;; requisition for something other than the caller's clock gets one
-          ;; reminder per caller session and target.
-          (when (and job-target (not= job-target caller-target)
-                     (not continuation?)
-                     ;; A task the caller minted for this seat (E-kimi-task-N)
-                     ;; is the seat's target, not the caller's work.
-                     (not (caller-minted-task? job-target (:caller invoke-context) agent-id)))
-            (enqueue-caller-followup!
-             (:caller invoke-context) (str "clock:" job-target)
-             ;; Name only the requisitioned target: this reminder arrives as
-             ;; an operator turn, where naming two targets makes the clock
-             ;; decision :ambiguous and unclocks the caller (seen live
-             ;; 2026-09-24). Naming one clocks the caller onto it.
-             (str "You requisitioned " agent-id " for " job-target
-                  (if caller-target
-                    ", which is not what your clock said."
-                    " while not clocked in.")
-                  " If your work has moved to " job-target
-                  ", this reminder clocks you onto it; if it hasn't, "
-                  "clock back onto what you are doing.")
-             {:requisitioned job-target :caller-clock caller-target}))
+          ;; Side effect Joe wants: callers keep their own clock current
+          ;; (remind-caller-of-clock!, a var so a reload reaches seats whose
+          ;; invoke closure was built before it).
+          (remind-caller-of-clock! agent-id (:caller invoke-context)
+                                   job-target caller-target continuation?)
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
                                 :sid sid
