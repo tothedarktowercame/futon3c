@@ -22,7 +22,7 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "033b5aee377fc28ec3af4d97269a0a1b97e350a91a98f16acdb0eccd2fbf61ba")
+(def map-sha256 "5cf30532c57200f11630609f7e31a8f358bd5f0f31b80967eb28bc6fef5ffd6f")
 (def repos {"futon2" "946405c5" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
@@ -134,7 +134,7 @@
     "futon2/src/futon2/aif/grain_gate.clj"
     "futon2/src/futon2/aif/served_by_reading.clj"
     "futon2/src/futon2/aif/target_field.clj"
-    "futon3c/src/futon3c/agency/clock_store.clj"})
+    "futon3c/src/futon3c/agency/clock_lineage.clj"})
 
 (deftest component-sites-against-a-registered-load-closure
   (let [s (spec)

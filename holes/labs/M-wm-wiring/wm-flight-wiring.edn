@@ -28,6 +28,10 @@
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
  :repos {"futon2" "946405c5" "futon3c" "58f1a8cb"}
+ ;; The owner's text is the one constraint (exogenous: nothing on the map
+ ;; writes it); the spans that locate and pin it are observations of it.
+ ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
+ :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
   {:box/id :r1-target-field :row 1 :box/kind :component
@@ -35,7 +39,8 @@
    :writes [:next-step]}
   {:box/id :r1-outer-cascade :row 1 :box/kind :component
    :status :not-built :intended-site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}
-   :reads [:trigger :next-step :eligible :pair-overlap :enactment-records :publication-observed]
+   :reads [:trigger :next-step :eligible :pair-overlap :enactment-records :publication-observed
+           :clock-lineage]
    :writes [:chosen-target :draw-seed]}
   {:box/id :r1-test :row 1 :box/kind :test
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"}
@@ -44,7 +49,7 @@
   ;; ---- row 2, Clause C: the read step. Components exist; the flight does not call them.
   {:box/id :r2-served-by-reading :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/served_by_reading.clj" :var "proposal"}
-   :writes [:want-span :text-sha256]}
+   :reads [:owner-text] :writes [:want-span :text-sha256]}
   {:box/id :r2-verifier :row 2 :box/kind :component
    :site {:file "futon2/scripts/wm/extract-outcomes.clj" :var "verify-proposed-link"}
    :reads [:want-span :text-sha256]}
@@ -98,7 +103,10 @@
    :reads [:attempts :grain-gate :candidate] :writes [:wc-verdict]}
   {:box/id :r7-increment :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_habit.clj" :var "increment"}
-   :reads [:attempts :candidate] :writes [:delta]}
+   ;; the count is decided by :wc-verdict (delta 1 only on an empty
+   ;; verdict); :attempts refuses attempts outside the candidate and
+   ;; :candidate is the P_c join; both are identity, not the count
+   :reads [:attempts :candidate :wc-verdict] :writes [:delta]}
   {:box/id :r7-flight-call :row 7 :box/kind :component
    ;; the flight hands check-c's verdict to increment unchanged
    :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
@@ -160,10 +168,18 @@
   {:box/id :flight-entry :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "run-flight!"}
    :reads [:chosen-target]}
+  {:box/id :dispatch :box/kind :component
+   ;; run-flight! dispatches the seat through the runner, naming the target
+   ;; as the mission (positional from the flight entry)
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "dispatch!"}
+   :writes [:mission-id]}
   {:box/id :clock-in :box/kind :component
-   ;; the flight's seat is dispatched with the mission id, which clocks its
-   ;; session to the target; the hop is positional (a mission-id argument)
-   :site {:file "futon3c/src/futon3c/agency/clock_store.clj" :var "set-dispatch-mission!"}}
+   ;; the invoke receipt clocks the seat's session to the mission and
+   ;; persists the transition as a futon1b edge with STRING prop keys, so the
+   ;; lineage it writes has no keyword at the site (a standing finding); the
+   ;; outer cascade reading it is the self-caused path I4 asks about
+   :site {:file "futon3c/src/futon3c/agency/clock_lineage.clj" :var "persist-clock!"}
+   :reads [:mission-id] :writes [:clock-lineage]}
   {:box/id :loop-test :box/kind :test
    :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"}
    :reads [:chosen-target]}
@@ -180,7 +196,8 @@
    :boxes [:loop-entry
            :r1-outer-cascade
            :flight-entry
-           {:box :clock-in :hop :positional :via "run-flight! dispatches the seat with the mission id (set-dispatch-mission!)"}
+           {:box :dispatch :hop :positional :via "run-flight! calls runner/dispatch! with the target as the mission"}
+           :clock-in
            {:box :r2-served-by-reading :hop :positional :via "read-fn calls proposal on the seat's quotes"}
            :r2-verifier
            {:box :r6-cascade-lane :hop :positional :via "the click: a POST that runs the tick's cascade lane"}
@@ -196,14 +213,23 @@
  ;; :heuristic-limit entries of 3e96fdce are gone). Row 9 wired at futon2
  ;; f498f3f3 (:candidate on the selection law): its two entries are gone.
  ;; Row 6 wired at futon2 946405c5 (:measurement on the certificate): its
- ;; two entries are gone. :kind :to-do is the
+ ;; two entries are gone. :field-roles, :owner-text, the :wc-verdict read and
+ ;; the lineage chain (dispatch -> clock-in -> :clock-lineage -> outer
+ ;; cascade) added with ct-projection 296a08ca: 4 new :standing entries. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :declaration-without-occurrence,
+ [{:finding :read-never-written,
+   :field :owner-text,
+   :readers [:r2-served-by-reading],
+   :rows [2],
+   :kind :standing,
+   :note
+   "the owner's text is exogenous by design: the one constraint, written by nothing on the map"}
+  {:finding :declaration-without-occurrence,
    :box/id :flight-entry,
    :field :chosen-target,
    :role :reads,
@@ -214,6 +240,17 @@
    :kind :to-do,
    :note
    "loop closure: the flight entry takes the outer cascade's chosen target instead of --target"}
+  {:finding :declaration-without-occurrence,
+   :box/id :clock-in,
+   :field :clock-lineage,
+   :role :writes,
+   :site
+   {:file "futon3c/src/futon3c/agency/clock_lineage.clj",
+    :var "persist-clock!"},
+   :rows [],
+   :kind :standing,
+   :note
+   "persist-clock! writes the lineage edge with string prop keys into futon1b; no keyword names it at the site"}
   {:finding :declaration-without-occurrence,
    :box/id :r7-selection,
    :field :enactment-records,
@@ -232,6 +269,17 @@
     :var "agency-answer-fn"},
    :rows [3],
    :kind :to-do}
+  {:finding :declaration-without-occurrence,
+   :box/id :r2-served-by-reading,
+   :field :owner-text,
+   :role :reads,
+   :site
+   {:file "futon2/src/futon2/aif/served_by_reading.clj",
+    :var "proposal"},
+   :rows [2],
+   :kind :standing,
+   :note
+   "the owner's text enters proposal as its TEXT argument (positional); no keyword names it at the site"}
   {:finding :declaration-without-occurrence,
    :box/id :r8-overlap,
    :field :pair-overlap,
@@ -257,6 +305,19 @@
    {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
    :rows [2],
    :kind :to-do}
+  {:role :reads,
+   :site
+   {:file "futon2/src/futon2/aif/enactment_habit.clj",
+    :var "increment"},
+   :box/id :r7-increment,
+   :field :wc-verdict,
+   :heuristic true,
+   :note
+   "the verdict enters increment positionally; the one :wc-verdict keyword at the site writes the receipt's typed absence, so no read position exists",
+   :rows [7],
+   :usage {:reads 0, :writes 1, :unclassified 0},
+   :kind :standing,
+   :finding :declared-read-not-found}
   {:finding :occurrence-without-declaration,
    :field :next-step,
    :site
@@ -267,16 +328,6 @@
    :kind :standing,
    :note
    "with-eligibility's docstring names :next-step (textual scan counts docstrings); the function neither reads nor writes it"}
-  {:finding :occurrence-without-declaration,
-   :field :wc-verdict,
-   :site
-   {:file "futon2/src/futon2/aif/enactment_habit.clj",
-    :var "increment"},
-   :declared-by [],
-   :rows [7],
-   :kind :standing,
-   :note
-   "the verdict enters increment positionally; :wc-verdict there is the receipt's typed absence when no verdict was passed"}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
    :error? true,

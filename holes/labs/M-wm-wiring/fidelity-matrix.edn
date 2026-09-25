@@ -163,7 +163,14 @@
    [{:test "futon2.aif.loop-closure-test" :status :to-write
      :assertion "run-flight! with a chosen target flies that target; with --target it flies the hand-placed one exactly as before"}]}
 
-  {:row :clock-in :component "the flight's seat clocked to the target (futon3c clock_store set-dispatch-mission!)"
+  {:row :dispatch :component "the flight's seat dispatched with the target as the mission (futon2 full_loop_runner dispatch!)"
+   :disposition :preserve
+   :change "none: dispatch! already writes :mission-id into the invoke payload"
+   :tripwires
+   [{:test "futon2.aif.loop-closure-test" :status :to-write
+     :assertion "a flight's dispatch names the chosen target as :mission-id"}]}
+
+  {:row :clock-in :component "the flight's seat clocked to the target and the transition persisted as lineage (futon3c clock_lineage persist-clock!, via clock-dispatch!)"
    :disposition :preserve
    :change "none: dispatch with a mission id already clocks the session"
    :tripwires
