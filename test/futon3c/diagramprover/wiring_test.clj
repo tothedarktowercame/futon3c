@@ -313,3 +313,50 @@
            (:text (wiring/var-form text "after-the-string")))
         "a string holding parens and an escaped quote does not shift the next form")
     (is (nil? (wiring/var-form text "comment-field")))))
+
+;; ---------------------------------------------------------------------------
+;; The textual read/write heuristic
+
+(deftest field-usage-classifies-positions
+  (let [text (slurp var-sample)
+        u #(wiring/field-usage text %)]
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :g-terms)) "argument of get")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :measurement)) "key of assoc")
+    (is (= {:reads 0 :writes 1 :unclassified 1} (u :g))
+        "a map-literal key; the one in a string is unclassified; :g-terms is not counted")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :selected)) "keyword in function position")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :selection-law)) "a key in a get-in path")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :path)) "a key in an update-in path")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :universe)) "a destructuring :keys entry")
+    (is (= {:reads 0 :writes 0 :unclassified 1} (u :comment-field)) "only in a comment")))
+
+(deftest declared-role-without-a-positioned-occurrence
+  (let [site {:file var-sample}
+        spec {:spec/id :heuristic
+              :boxes [{:box/id :commenter :site site :writes [:comment-field]}
+                      {:box/id :writer :site site :reads [:measurement]}
+                      {:box/id :reader :site site :reads [:g-terms]}]}
+        findings (wiring/conformance "." spec {:heuristic? true})]
+    (is (= [{:finding :declared-read-not-found :box/id :writer :field :measurement
+             :role :reads :site site :usage {:reads 0 :writes 1 :unclassified 0}
+             :heuristic true}
+            {:finding :declared-write-not-found :box/id :commenter :field :comment-field
+             :role :writes :site site :usage {:reads 0 :writes 0 :unclassified 1}
+             :heuristic true}]
+           findings))
+    (is (= [] (wiring/conformance "." spec)) "off by default: today's report")))
+
+(deftest heuristic-is-per-var-at-var-grain
+  (let [site {:file var-sample :var "string-with-parens"}]
+    (is (= [{:finding :declared-write-not-found :box/id :b :field :g :role :writes
+             :site site :usage {:reads 0 :writes 0 :unclassified 1} :heuristic true}]
+           (wiring/conformance "." {:spec/id :var-heuristic
+                                    :boxes [{:box/id :b :site site :writes [:g]}]}
+                               {:heuristic? true}))
+        "the map-literal write of :g is in another form; in this one :g is in a string")))
+
+(deftest usage-reports-every-declared-field
+  (is (= [{:box/id :b :site {:file var-sample} :role :writes :field :order
+           :usage {:reads 0 :writes 1 :unclassified 0} :heuristic true}]
+         (wiring/usage "." {:spec/id :u :boxes [{:box/id :b :site {:file var-sample}
+                                                 :writes [:order]}]}))))

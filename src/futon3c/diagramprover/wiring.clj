@@ -209,6 +209,84 @@
              (str (java.util.regex.Pattern/quote (str field)) "(?![\\w-])"))
             text)))
 
+;; ---------------------------------------------------------------------------
+;; A textual read/write distinction. HEURISTIC: it classifies where a keyword
+;; token sits in the form tree, not what the code does at runtime. A keyword
+;; passed through a variable, built with `keyword`, or read by a helper that
+;; takes it as data is :unclassified, and so is every occurrence in a string,
+;; regex, comment or #_ form.
+
+(def ^:private thread-heads #{"->" "->>" "some->" "some->>"})
+
+(defn- head-text [node]
+  (let [h (first (:children node))]
+    (when (= :token (:kind h)) (:text h))))
+
+(defn- keys-vector?
+  "PARENT (a vector) is the value of :keys (or :ns/keys for a field in ns) in
+  GRAND, a destructuring map."
+  [grand gidx field]
+  (and (= :map (:kind grand)) (odd? gidx)
+       (let [k (:text (nth (:children grand) (dec gidx)))]
+         (= k (if-let [ns (namespace field)] (str ":" ns "/keys") ":keys")))))
+
+(defn- classify-keyword
+  "WRITE: map-literal key, key argument of assoc/update, a key in the path of
+  assoc-in/update-in. READ: argument of get, a key in the path of get-in, a
+  keyword in function position (also as a step of ->, ->>, some->, some->>),
+  an entry of a destructuring :keys vector. Else :unclassified."
+  [parent idx grand gidx field]
+  (let [h (head-text parent)]
+    (case (:kind parent)
+      (:list :fn) (cond (zero? idx) :reads
+                        (and (= "get" h) (= 2 idx)) :reads
+                        (and (thread-heads h) (<= 2 idx)) :reads
+                        (and (= "assoc" h) (<= 2 idx) (even? idx)) :writes
+                        (and (= "update" h) (= 2 idx)) :writes
+                        :else :unclassified)
+      :vector (let [gh (when (#{:list :fn} (:kind grand)) (head-text grand))]
+                (cond (and (= 2 gidx) (= "get-in" gh)) :reads
+                      (and (= 2 gidx) (#{"assoc-in" "update-in"} gh)) :writes
+                      (keys-vector? grand gidx field) :reads
+                      :else :unclassified))
+      :map (if (even? idx) :writes :unclassified)
+      :unclassified)))
+
+(defn field-usage
+  "Occurrences of FIELD in TEXT as {:reads n :writes m :unclassified k}.
+  Textual and heuristic (see `classify-keyword`): every occurrence the
+  boundary-aware text match finds is counted exactly once, and one the form
+  tree cannot place in a read or write position is :unclassified. A
+  destructuring `{:keys [field-name]}` entry is a read (it is a symbol, not
+  the keyword, in the text)."
+  [^String text field]
+  (let [fstr (str field)
+        fname (name field)
+        text-matches (count (re-seq (re-pattern
+                                     (str (java.util.regex.Pattern/quote fstr) "(?![\\w-])"))
+                                    text))
+        uses (volatile! [])
+        token-hits (volatile! 0)]
+    (letfn [(visit [node parent idx grand gidx]
+              (if (= :token (:kind node))
+                (cond
+                  (= fstr (:text node))
+                  (do (vswap! token-hits inc)
+                      (vswap! uses conj (if parent
+                                          (classify-keyword parent idx grand gidx field)
+                                          :unclassified)))
+                  (and (= fname (:text node)) parent (= :vector (:kind parent))
+                       (keys-vector? grand gidx field))
+                  (vswap! uses conj :reads))
+                (doseq [[i child] (map-indexed vector (:children node))]
+                  (visit child node i parent idx))))]
+      (doseq [form (:forms (parse-forms text))]
+        (visit form nil nil nil nil)))
+    (let [f (frequencies @uses)]
+      {:reads (get f :reads 0)
+       :writes (get f :writes 0)
+       :unclassified (+ (get f :unclassified 0) (max 0 (- text-matches @token-hits)))})))
+
 (defn- site-scope
   "{:text …} for SITE: the whole file, or with :var only that top-level form;
   {:error …} when the file cannot be read; {:var-not-found true} when :var
@@ -233,53 +311,94 @@
   scanned whole, or either with :var \"name\", scanned over that one
   top-level form only (found by `var-form`'s paren-aware text scan); a :var
   naming no form is the finding :var-not-found. Boxes without a site are
-  exempt from conformance findings."
+  exempt from conformance findings.
+
+  With {:heuristic? true}, a declared field that occurs at its site but has
+  no occurrence in the declared role's position is the finding
+  :declared-write-not-found or :declared-read-not-found, carrying the
+  `field-usage` counts and :heuristic true. Off by default, so a map's report
+  without the option is the report it had before the heuristic existed."
+  ([repo-root spec] (conformance repo-root spec {}))
+  ([repo-root {:keys [boxes]} {:keys [heuristic?]}]
+   (let [boxes (or boxes [])
+         field-universe (set (fields-in boxes))
+         boxes-by-site (group-by :site (filter :site boxes))
+         ;; An unreadable or malformed site is a FINDING, not an exception: the
+         ;; checker's own boundary must not escape unstructured (the ToolBackend
+         ;; lesson from the peripheral session, applied to the verifier itself).
+         site-text (into {}
+                         (map (fn [[site _]]
+                                [site (site-scope repo-root site)]))
+                         boxes-by-site)
+         unreadable-sites
+         (for [[site {:keys [error var-not-found]}] site-text
+               :when (or error var-not-found)]
+           (if error
+             {:finding :site-unreadable :site site :error error}
+             {:finding :var-not-found :site site :var (:var site)}))
+         missing-declarations
+         (for [box boxes
+               :let [site (:site box)
+                     text (get-in site-text [site :text])]
+               :when (and site text)
+               [role fields] [[:reads (or (:reads box) [])]
+                              [:writes (or (:writes box) [])]]
+               field fields
+               :when (not (field-occurs? text field))]
+           {:finding :declaration-without-occurrence
+            :box/id (:box/id box)
+            :field field
+            :role role
+            :site site})
+         undeclared-occurrences
+         (for [[site site-boxes] boxes-by-site
+               :let [text (get-in site-text [site :text])
+                     declared-here (set (fields-in site-boxes))]
+               :when text
+               field field-universe
+               :when (and (not (contains? declared-here field))
+                          (field-occurs? text field))]
+           {:finding :occurrence-without-declaration
+            :field field
+            :site site
+            :declared-by []})
+         role-mismatches
+         (when heuristic?
+           (for [box boxes
+                 :let [site (:site box)
+                       text (get-in site-text [site :text])]
+                 :when (and site text)
+                 [role fields] [[:reads (or (:reads box) [])]
+                                [:writes (or (:writes box) [])]]
+                 field fields
+                 :when (field-occurs? text field)
+                 :let [u (field-usage text field)]
+                 :when (zero? (get u role))]
+             {:finding (if (= :writes role) :declared-write-not-found :declared-read-not-found)
+              :box/id (:box/id box)
+              :field field
+              :role role
+              :site site
+              :usage u
+              :heuristic true}))]
+     (->> (concat unreadable-sites missing-declarations undeclared-occurrences role-mismatches)
+          (sort-by (juxt (comp str :finding) (comp str :field)))
+          vec))))
+
+(defn usage
+  "Per declared (box, role, field) at a readable site, the `field-usage`
+  counts {:reads n :writes m :unclassified k}, marked :heuristic true."
   [repo-root {:keys [boxes]}]
-  (let [boxes (or boxes [])
-        field-universe (set (fields-in boxes))
-        boxes-by-site (group-by :site (filter :site boxes))
-        ;; An unreadable or malformed site is a FINDING, not an exception: the
-        ;; checker's own boundary must not escape unstructured (the ToolBackend
-        ;; lesson from the peripheral session, applied to the verifier itself).
-        site-text (into {}
-                        (map (fn [[site _]]
-                               [site (site-scope repo-root site)]))
-                        boxes-by-site)
-        unreadable-sites
-        (for [[site {:keys [error var-not-found]}] site-text
-              :when (or error var-not-found)]
-          (if error
-            {:finding :site-unreadable :site site :error error}
-            {:finding :var-not-found :site site :var (:var site)}))
-        missing-declarations
-        (for [box boxes
-              :let [site (:site box)
-                    text (get-in site-text [site :text])]
-              :when (and site text)
-              [role fields] [[:reads (or (:reads box) [])]
-                             [:writes (or (:writes box) [])]]
-              field fields
-              :when (not (field-occurs? text field))]
-          {:finding :declaration-without-occurrence
-           :box/id (:box/id box)
-           :field field
-           :role role
-           :site site})
-        undeclared-occurrences
-        (for [[site site-boxes] boxes-by-site
-              :let [text (get-in site-text [site :text])
-                    declared-here (set (fields-in site-boxes))]
-              :when text
-              field field-universe
-              :when (and (not (contains? declared-here field))
-                         (field-occurs? text field))]
-          {:finding :occurrence-without-declaration
-           :field field
-           :site site
-           :declared-by []})]
-    (->> (concat unreadable-sites missing-declarations undeclared-occurrences)
-         (sort-by (juxt (comp str :finding) (comp str :field)))
-         vec)))
+  (vec
+   (for [box (or boxes [])
+         :let [site (:site box)
+               text (when site (:text (site-scope repo-root site)))]
+         :when text
+         [role fields] [[:reads (or (:reads box) [])]
+                        [:writes (or (:writes box) [])]]
+         field fields]
+     {:box/id (:box/id box) :site site :role role :field field
+      :usage (field-usage text field) :heuristic true})))
 
 (defn phase-chain-findings
   "Report structural defects in a declared cycle phase chain.
