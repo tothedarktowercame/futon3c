@@ -339,6 +339,14 @@ surfaces. Each layer has an acceptance check against a source outside itself, pe
 **Sequencing.** 1 → 2 → {3, 4} (3 and 4 are independent). Layer 1 is the smallest step and
 unblocks everything; it is also the checkpoint's own named next step, unchanged.
 
+**Landed 2026-09-25 (claude-12-turn-95):** a minimal layer-4 form — before layers 1–2, since
+Joe asked for the smallest visible change. `futon6/scripts/mission_efe_field.py` now draws a
+Tornhill change-frequency ring per district (commits touching the mission's own doc, 180-day
+window, thickness ∝ log churn, deduped across worktree repos by commit hash) with a thin
+dashed grey ring as the explicit zero state, and legend/tooltip stating the complexity axis
+is pending. Cross-checked: M-the-perfect-crime ring reads 9, `git log` on futon3c reads 9.
+This is change-frequency only — churn × complexity still awaits layers 1–2.
+
 **Discipline carried.** Every metric above gets its check against a source outside itself
 (census, `git log --numstat`, transcript census precedent) — the two-sided live-check; the
 detective must not become another high-definition cover. The sub-question ("add Tornhill
