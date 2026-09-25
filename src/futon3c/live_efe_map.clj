@@ -297,6 +297,14 @@
           {}
           jobs))
 
+(defn- active-this-epoch?
+  "Warrant: turn-c12-saucers F3-diagnose-the-false-attachment agent/state-is-hypothesis —
+   presence is a witnessed hypothesis about current state, so 'attached' requires an
+   agent alive this server epoch (same predicate ship-position already uses for its
+   contributors): status invoking/idle, not merely restored."
+  [status]
+  (contains? #{"invoking" "idle" :invoking :idle} status))
+
 (defn- agent-row
   [positions doc-index jobs-by-agent durable-by-agent [agent-id info]]
   (let [session-id (:session-id info)
@@ -305,7 +313,18 @@
         live-mission (or (:excursion-id live-clock)
                          (:mission-id live-clock)
                          (:campaign-id live-clock))
-        mission-id (or live-mission (:target durable))
+        durable-mission (:target durable)
+        active? (active-this-epoch? (:status info))
+        ;; Warrant: turn-c12-saucers F5-prune-the-inactive code-coherence/dead-code-hygiene,
+        ;; hygiene/exempt-the-in-use — non-active roster entries are pruned from the
+        ;; mission attachment list so the display points only at active paths; active
+        ;; agents are exempt from the pruning by structural fact (alive this epoch),
+        ;; decided before and independent of any scoring of their attachment.
+        ;; Warrant: turn-c12-saucers HOLE-1 [196,368] — a family-wide enumeration of
+        ;; attachments ('from codex-1 onwards') is a fallback rendering, not per-agent
+        ;; witnessed presence; the pruned attachment is not deleted but downgraded to
+        ;; a recorded hypothesis under :attachment so it stays distinguishable.
+        mission-id (when active? (or live-mission durable-mission))
         place (placement mission-id positions doc-index)
         job (get jobs-by-agent agent-id)]
     {:agent-id agent-id
@@ -313,6 +332,20 @@
      :status (:status info)
      :session-id session-id
      :mission-id mission-id
+     :attachment (if active?
+                   ;; Warrant: turn-c12-saucers F2-confirm-the-true-attachment
+                   ;; corps/working-where-others-can-see — the witnessed case (live
+                   ;; clock on an active agent, e.g. claude saucers on M-wm-wiring)
+                   ;; is affirmed unchanged and now says so explicitly.
+                   {:witnessed (boolean live-mission)
+                    :basis (cond
+                             live-mission :live-clock-store
+                             durable-mission :durable-clock-lineage
+                             :else :none)}
+                   {:witnessed false
+                    :pruned true
+                    :pruned-mission-id (or live-mission durable-mission)
+                    :reason :agent-not-active-this-server-epoch})
      :clock-source (cond
                      live-mission :live-clock-store
                      durable :durable-clock-lineage
