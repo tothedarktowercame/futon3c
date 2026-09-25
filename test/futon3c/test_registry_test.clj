@@ -1,6 +1,7 @@
 (ns futon3c.test-registry-test
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [futon3c.evidence.backend]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.test-registry.ledger :as registry-ledger]
             [clojure.java.shell :as shell]
@@ -695,7 +696,7 @@
        (is (= :run (get-in found [:payload :kind])))
        ;; the row shape is the one read-chain! returns, plus what was scanned
        (is (string? (:sha256 found)))
-       (is (pos? (:considered found)))))))
+       (is (pos? (:scanned found)))))))
 
 (deftest latest-run-for-namespace-types-its-absence
   (fixture
@@ -705,12 +706,16 @@
        (is (some? none) "absence is a value, never nil")
        (is (= :none (:status none)))
        (is (= :no-run-for-namespace (:reason none)))
-       (is (nil? (:payload none))))
-     ;; a scan that filled its window did NOT establish absence, and says so
+       (is (nil? (:payload none)))
+       ;; absence is only claimed because the scan saw every registry entry
+       (is (= (:scanned none) (:registry-entries none))))
+     ;; a scan that saw less than the registry holds did NOT establish absence
      (let [capped (registry/latest-run-for-namespace
                    backend {:namespace "futon3c.not-registered-test" :limit 1})]
        (is (= :scan-window-exhausted (:reason capped)))
-       (is (= 1 (:limit capped))))
+       (is (= 1 (:limit capped)))
+       (is (= 1 (:scanned capped)))
+       (is (< (:scanned capped) (:registry-entries capped))))
      ;; a namespace is required: without one there is nothing to look up
      (is (= :namespace-required (:reason (registry/latest-run-for-namespace backend {}))))
      (is (= :test-registry/refusal
@@ -758,3 +763,21 @@
          ;; if anything was unreadable it is named, not dropped where no
          ;; reader can see it
          (is (every? :evidence/id (:undecodable found))))))))
+
+(deftest latest-run-for-namespace-will-not-call-a-failed-read-absence
+  ;; http-backend substitutes [] for a failed -query and 0 for a failed -count,
+  ;; so "nothing scanned, nothing held" is what a timed out read looks like.
+  ;; It must refuse, not report an unregistered namespace.
+  (let [dead (reify futon3c.evidence.backend/EvidenceBackend
+               (-append [_ _] nil)
+               (-get [_ _] nil)
+               (-exists? [_ _] false)
+               (-query [_ _] [])
+               (-count [_ _] 0)
+               (-forks-of [_ _] [])
+               (-delete! [_ _] {:compacted 0})
+               (-all [_] []))
+        answer (registry/latest-run-for-namespace dead {:namespace "demo-test"})]
+    (is (= :scan-window-exhausted (:reason answer)))
+    (is (= 0 (:scanned answer)))
+    (is (not= :no-run-for-namespace (:reason answer)))))

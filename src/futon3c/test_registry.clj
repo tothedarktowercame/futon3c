@@ -915,14 +915,27 @@
   the order the query returned.
 
   Returns the row shape read-chain! returns -- {:evidence/id :sha256 :payload}
-  -- plus :considered. Absence is typed and never nil:
+  -- plus :scanned and :registry-entries. Absence is typed and never nil, and
+  is only ever claimed when the scan is KNOWN to have seen every registry
+  entry, which it establishes by counting them, not by assuming that a short
+  page means the end:
 
-    (none :no-run-for-namespace)  the scan saw the whole registry and no run
-                                  names this namespace;
-    (none :scan-window-exhausted) the scan filled :limit, so absence was not
-                                  established. A caller may NOT read this as
-                                  \"no run exists\"; raise the limit or narrow
-                                  the store.
+    (none :no-run-for-namespace)  :scanned is positive, reached
+                                  :registry-entries, and no run names this
+                                  namespace;
+    (none :scan-window-exhausted) the scan saw fewer entries than the store
+                                  holds, so absence was NOT established. A
+                                  caller may NOT read this as \"no run exists\".
+
+  Two transports window results in ways that would otherwise be read as
+  absence, which is why the count is not optional:
+    - GET /api/alpha/evidence applies a newest-48h window unless `since` or
+      `before` is given (handle-evidence-query's broad-page?), so an
+      http-backend scan sees recent entries only;
+    - that client times out at 10s, and a page large enough to be slow comes
+      back EMPTY rather than as an error (2026-09-25: limit 2000 over 3108
+      entries took 18.7s and returned nothing).
+  Both now refuse instead of reporting an empty registry.
 
   Records that will not decode are named in :undecodable, and a record whose
   :ran-at will not parse is named in :unorderable, rather than either being
@@ -951,12 +964,28 @@
                   {:rows [] :undecodable []}
                   entries)
           unorderable (filterv #(= [-1 -1] (first (ran-at-key %))) rows)
-          newest (first (sort-by ran-at-key #(compare %2 %1) rows))]
-      (cond-> (cond
-                newest (assoc newest :considered (count entries))
-                (>= (count entries) limit) (assoc (none :scan-window-exhausted)
-                                                  :limit limit :considered (count entries))
-                :else (assoc (none :no-run-for-namespace) :considered (count entries)))
+          newest (first (sort-by ran-at-key #(compare %2 %1) rows))
+          scanned (count entries)]
+      (cond-> (if newest
+                (assoc newest :scanned scanned)
+                ;; No match. Before calling that absence, ask the store how many
+                ;; entries carry the tag: a scan that saw fewer than that saw a
+                ;; window, and a window says nothing about what lies outside it.
+                (let [held (store/count* backend {:query/tags [:test-registry]})]
+                  ;; Absence needs a POSITIVE sign that the scan was whole. A
+                  ;; scan of nothing is never one: futon3c.evidence.http-backend
+                  ;; substitutes [] for a failed -query and 0 for a failed
+                  ;; -count, so "no entries, none held" is exactly what a timed
+                  ;; out read looks like (2026-09-25, live: limit 2000 over 3108
+                  ;; entries timed out at 10s and reported an empty registry
+                  ;; through both). An empty registry also lands here and
+                  ;; refuses; that costs a refusal, where the other reading
+                  ;; costs a false \"these tests were never registered\".
+                  (if (and (pos? scanned) (>= scanned held))
+                    (assoc (none :no-run-for-namespace)
+                           :scanned scanned :registry-entries held)
+                    (assoc (none :scan-window-exhausted)
+                           :limit limit :scanned scanned :registry-entries held))))
         (seq undecodable) (assoc :undecodable undecodable)
         (seq unorderable) (assoc :unorderable (mapv :evidence/id unorderable))))))
 

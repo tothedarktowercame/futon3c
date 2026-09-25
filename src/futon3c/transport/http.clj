@@ -2529,14 +2529,15 @@
         (= :none (:status result))
         (json-response 200 {:latest (cond-> {:found false
                                              :reason (name (:reason result))
-                                             :considered (:considered result)}
+                                             :scanned (:scanned result)
+                                             :registry-entries (:registry-entries result)}
                                       (:limit result) (assoc :limit (:limit result)))})
 
         :else
         (json-response 200 {:latest (cond-> {:found true
                                              :entry-id (:evidence/id result)
                                              :ran-at (get-in result [:payload :ran-at])
-                                             :considered (:considered result)}
+                                             :scanned (:scanned result)}
                                       (seq (:undecodable result))
                                       (assoc :undecodable (mapv #(str (:evidence/id %))
                                                                 (:undecodable result))))})))
