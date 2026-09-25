@@ -164,8 +164,9 @@
    :disposition :adapt
    :change "the target comes from the outer cascade's :chosen-target instead of --target; a hand-placed target stays available for the first flight"
    :tripwires
-   [{:test "futon2.aif.loop-closure-test" :status :to-write
-     :assertion "run-flight! with a chosen target flies that target; with --target it flies the hand-placed one exactly as before"}]}
+   [{:test "futon2.aif.loop-closure-test" :status :in-place
+     :assertion "resolve-target: a chosen target wins (:target-source :chosen, seed or its typed absence, a hand target kept as overridden); --target alone is :hand-placed exactly as before; neither is the driver's missing-target refusal; the placement is on the flight record"
+     :warrant "test-registry-10dd3bad"}]}
 
   {:row :dispatch :component "the flight's seat dispatched with the target as the mission (futon2 full_loop_runner dispatch!)"
    :disposition :preserve

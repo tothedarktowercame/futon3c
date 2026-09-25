@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "058c995e" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "065dfefe" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -170,8 +170,8 @@
    :site {:file "futon2/src/futon2/aif/target_field.clj" :var "with-eligibility"}
    :writes [:eligible]}
   {:box/id :flight-entry :box/kind :component
-   :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "run-flight!"}
-   :reads [:chosen-target]}
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "resolve-target"}
+   :reads [:chosen-target :draw-seed] :writes [:target-source]}
   {:box/id :dispatch :box/kind :component
    ;; run-flight! dispatches the seat through the runner, naming the target
    ;; as the mission (positional from the flight entry)
@@ -186,7 +186,7 @@
    :reads [:mission-id] :writes [:clock-lineage]}
   {:box/id :loop-test :box/kind :test
    :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"}
-   :reads [:chosen-target]}
+   :reads [:target-source :draw-seed]}
 
   ;; ---- row 11, warrants: done (futon3c 4e66c56c; futon2 8eaa3e23); no field.
   {:box/id :r11-warrants :row 11 :box/kind :component}]
@@ -232,7 +232,10 @@
  ;; read it to know which pattern to enact first; no new finding. Row 8
  ;; wired at futon2 b44998f6/058c995e (target-field/with-pair-overlap writes
  ;; :pair-overlap): its two entries gone, one :standing added (the test's
- ;; fixture entries carry :next-step). :kind :to-do is the
+ ;; fixture entries carry :next-step). Step 7 wired at futon2 aba5d260
+ ;; (flight-driver/resolve-target reads :chosen-target and :draw-seed, writes
+ ;; :target-source): the flight-entry entry and the loop-closure test file
+ ;; entry are gone; one :standing (the test supplies :chosen-target). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -246,17 +249,6 @@
    :kind :standing,
    :note
    "the owner's text is exogenous by design: the one constraint, written by nothing on the map"}
-  {:finding :declaration-without-occurrence,
-   :box/id :flight-entry,
-   :field :chosen-target,
-   :role :reads,
-   :site
-   {:file "futon2/src/futon2/aif/flight_driver.clj",
-    :var "run-flight!"},
-   :rows [],
-   :kind :to-do,
-   :note
-   "loop closure: the flight entry takes the outer cascade's chosen target instead of --target"}
   {:finding :declaration-without-occurrence,
    :box/id :clock-in,
    :field :clock-lineage,
@@ -301,6 +293,14 @@
    :usage {:reads 0, :writes 1, :unclassified 0},
    :kind :standing,
    :finding :declared-read-not-found}
+  {:finding :occurrence-without-declaration,
+   :field :chosen-target,
+   :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "the loop-closure test supplies :chosen-target as input (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :next-step,
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
@@ -351,9 +351,4 @@
    :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
    :error? true,
    :rows [10],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
-   :error? true,
-   :rows [],
    :kind :to-do}]}
