@@ -17,3 +17,15 @@
 (defn destructures [{:keys [universe] :as m}] [(update-in m [:field :path] inc) universe])
 
 (def uses-the-private-fn reads-g-terms)
+
+(defn thread-steps [m t]
+  (cond-> (-> m (assoc :t-assoc 1 :t-assoc-2 2) (update :t-update inc) (get :t-get))
+    t (assoc-in [:t-assoc-in :x] 1)
+    (get-in m [:t-test]) (update-in [:t-update-in] inc)
+    t (assoc :other {:t-in-value 1})
+    t (assoc :other2 [:t-in-vector])))
+
+(defn thread-as [m]
+  (as-> m x (assoc x :t-as 1)))
+
+(defn not-a-thread [m] (assoc m :plain-k :plain-v))

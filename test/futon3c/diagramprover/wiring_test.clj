@@ -387,3 +387,54 @@
     (testing "relative closure paths resolve against :closure-root, not the map's root"
       (is (= 3 (count (wiring/load-closure-findings
                        "." spec (map :path registry-shape) {:closure-root "/elsewhere"})))))))
+
+;; ---------------------------------------------------------------------------
+;; Thread-first steps (DIAGRAMPROVER-WIRING-I3)
+
+(deftest thread-first-steps-classify-the-threaded-call
+  (let [text (:text (wiring/var-form (slurp var-sample) "thread-steps"))
+        u #(wiring/field-usage text %)]
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc)) "-> (assoc :k v)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc-2)) "a second key of the same assoc")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-update)) "-> (update :k f)")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :t-get)) "-> (get :k)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-assoc-in)) "cond-> (assoc-in [:k …] v)")
+    (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-update-in)) "cond-> (update-in [:k] f)")
+    (is (= {:reads 1 :writes 0 :unclassified 0} (u :t-test)) "a cond-> test is a plain call")
+    (testing "bad case: a key inside the step's VALUE is not the step's key"
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :other)))
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :t-in-value))
+          "counted once, as a map-literal key (the rule it has outside any thread)")
+      (is (= {:reads 0 :writes 1 :unclassified 0} (u :other2)))
+      (is (= {:reads 0 :writes 0 :unclassified 1} (u :t-in-vector))
+          "a keyword in a vector value is not a path: unclassified")))
+  (is (= {:reads 0 :writes 1 :unclassified 0}
+         (wiring/field-usage (:text (wiring/var-form (slurp var-sample) "thread-as")) :t-as))
+      "as-> names its value: an ordinary (assoc x :k v)")
+  (is (= {:reads 0 :writes 0 :unclassified 1}
+         (wiring/field-usage (:text (wiring/var-form (slurp var-sample) "not-a-thread")) :plain-v))
+      "outside a thread, a keyword VALUE at an odd position of assoc is not a key"))
+
+(def ^:private futon2-cases-sha "dd1c0561")
+
+(deftest recorded-heuristic-limits-are-writes-now
+  ;; the two :heuristic-limit entries of futon3c
+  ;; holes/labs/M-wm-wiring/wm-flight-wiring.edn (3e96fdce), at futon2 dd1c0561
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wiring-i3" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (doseq [p ["src/futon2/aif/enactment_habit.clj" "src/futon2/aif/construction.clj"]]
+      (let [{:keys [exit out]} (clojure.java.shell/sh "git" "-C" "/home/joe/code/futon2" "show"
+                                                      (str futon2-cases-sha ":" p))
+            f (clojure.java.io/file root p)]
+        (is (zero? exit))
+        (clojure.java.io/make-parents f)
+        (spit f out)))
+    (let [spec {:spec/id :i3
+                :boxes [{:box/id :r7 :site {:ns "futon2.aif.enactment-habit" :var "fold"}
+                         :writes [:enactment-records]}
+                        {:box/id :r4 :site {:ns "futon2.aif.construction" :var "containment-order"}
+                         :writes [:precedence-violations]}]}]
+      (is (= [] (wiring/conformance (str root) spec {:heuristic? true})))
+      ;; before I3 (the map's :usage): {2 0 2} and {0 0 2}; the docstring mentions stay unclassified
+      (is (= [{:reads 2 :writes 1 :unclassified 1} {:reads 0 :writes 1 :unclassified 1}]
+             (map :usage (wiring/usage (str root) spec)))))))

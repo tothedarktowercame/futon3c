@@ -233,23 +233,47 @@
        (let [k (:text (nth (:children grand) (dec gidx)))]
          (= k (if-let [ns (namespace field)] (str ":" ns "/keys") ":keys")))))
 
+(defn- thread-first-step?
+  "NODE (a list) is a step of a thread-first form: position 2 onward of ->
+  or some->, or a step position (3, 5, …; the tests are not threaded) of
+  cond->. The threaded value is the step's missing first
+  argument, so every argument sits one position earlier than in a plain
+  call. ->> and cond->> thread last and are not covered; as-> names its
+  value explicitly, so its steps are plain calls the ordinary rules read."
+  [form idx]
+  (when (and form idx (#{:list :fn} (:kind form)))
+    (let [h (head-text form)]
+      (or (and (#{"->" "some->"} h) (<= 2 idx))
+          (and (= "cond->" h) (<= 3 idx) (odd? idx))))))
+
 (defn- classify-keyword
   "WRITE: map-literal key, key argument of assoc/update, a key in the path of
   assoc-in/update-in. READ: argument of get, a key in the path of get-in, a
   keyword in function position (also as a step of ->, ->>, some->, some->>),
-  an entry of a destructuring :keys vector. Else :unclassified."
-  [parent idx grand gidx field]
-  (let [h (head-text parent)]
+  an entry of a destructuring :keys vector. Inside a thread-first step
+  (`thread-first-step?`: ->, some->, cond->) the same calls with the
+  threaded argument omitted: (assoc :k v …) and (update :k f) write :k,
+  (assoc-in [:k …] v) and (update-in [:k …] f) write the path's keys,
+  (get :k) and (get-in [:k …]) read them. Else :unclassified."
+  [parent idx grand gidx great ggidx field]
+  (let [h (head-text parent)
+        step? (thread-first-step? grand gidx)]
     (case (:kind parent)
       (:list :fn) (cond (zero? idx) :reads
                         (and (= "get" h) (= 2 idx)) :reads
                         (and (thread-heads h) (<= 2 idx)) :reads
                         (and (= "assoc" h) (<= 2 idx) (even? idx)) :writes
                         (and (= "update" h) (= 2 idx)) :writes
+                        (and step? (= "get" h) (= 1 idx)) :reads
+                        (and step? (= "assoc" h) (odd? idx)) :writes
+                        (and step? (= "update" h) (= 1 idx)) :writes
                         :else :unclassified)
-      :vector (let [gh (when (#{:list :fn} (:kind grand)) (head-text grand))]
+      :vector (let [gh (when (#{:list :fn} (:kind grand)) (head-text grand))
+                    gstep? (thread-first-step? great ggidx)]
                 (cond (and (= 2 gidx) (= "get-in" gh)) :reads
                       (and (= 2 gidx) (#{"assoc-in" "update-in"} gh)) :writes
+                      (and gstep? (= 1 gidx) (= "get-in" gh)) :reads
+                      (and gstep? (= 1 gidx) (#{"assoc-in" "update-in"} gh)) :writes
                       (keys-vector? grand gidx field) :reads
                       :else :unclassified))
       :map (if (even? idx) :writes :unclassified)
@@ -270,21 +294,21 @@
                                     text))
         uses (volatile! [])
         token-hits (volatile! 0)]
-    (letfn [(visit [node parent idx grand gidx]
+    (letfn [(visit [node parent idx grand gidx great ggidx]
               (if (= :token (:kind node))
                 (cond
                   (= fstr (:text node))
                   (do (vswap! token-hits inc)
                       (vswap! uses conj (if parent
-                                          (classify-keyword parent idx grand gidx field)
+                                          (classify-keyword parent idx grand gidx great ggidx field)
                                           :unclassified)))
                   (and (= fname (:text node)) parent (= :vector (:kind parent))
                        (keys-vector? grand gidx field))
                   (vswap! uses conj :reads))
                 (doseq [[i child] (map-indexed vector (:children node))]
-                  (visit child node i parent idx))))]
+                  (visit child node i parent idx grand gidx))))]
       (doseq [form (:forms (parse-forms text))]
-        (visit form nil nil nil nil)))
+        (visit form nil nil nil nil nil nil)))
     (let [f (frequencies @uses)]
       {:reads (get f :reads 0)
        :writes (get f :writes 0)
