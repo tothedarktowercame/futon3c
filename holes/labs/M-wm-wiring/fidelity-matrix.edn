@@ -105,8 +105,9 @@
    [{:test "futon2.aif.target-field-test" :status :in-place
      :assertion "the 7bd17dfb live read and earlier fixtures unchanged"
      :warrant "test-registry-4ef4b04b"}
-    {:test "futon2.aif.target-field-overlap-test" :status :to-write
-     :assertion "disjoint universes compare; a shared token is recorded :incommensurable with the tokens, never a number"}]}
+    {:test "futon2.aif.target-field-overlap-test" :status :in-place
+     :assertion "a shared token is :incommensurable with the tokens named, disjoint is comparable, no candidate or universe typed, never {}; the pinned live field all absent (343); the field's other keys byte-identical to a fixture from 42b5abdc"
+     :warrant "test-registry-b70a6a25"}]}
 
   {:row 9 :component "selected candidate id under :selection-law"
    :disposition :preserve

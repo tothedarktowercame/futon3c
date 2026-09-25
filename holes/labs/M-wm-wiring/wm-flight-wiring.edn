@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "27d6072d" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "058c995e" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -147,7 +147,7 @@
 
   ;; ---- row 8, Clause T: pair overlap in the field.
   {:box/id :r8-overlap :row 8 :box/kind :component
-   :site {:file "futon2/src/futon2/aif/target_field.clj" :var "target-field"}
+   :site {:file "futon2/src/futon2/aif/target_field.clj" :var "with-pair-overlap"}
    :writes [:pair-overlap]}
   {:box/id :r8-test :row 8 :box/kind :test
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"}
@@ -229,7 +229,10 @@
  ;; passes :library-root; pending answers awaited): its two entries gone.
  ;; :enacted-steps added as a field (futon2 27d6072d: a step id or a typed
  ;; absence, never nil): the selection law writes it, the enactment step will
- ;; read it to know which pattern to enact first; no new finding. :kind :to-do is the
+ ;; read it to know which pattern to enact first; no new finding. Row 8
+ ;; wired at futon2 b44998f6/058c995e (target-field/with-pair-overlap writes
+ ;; :pair-overlap): its two entries gone, one :standing added (the test's
+ ;; fixture entries carry :next-step). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -285,15 +288,6 @@
    :kind :standing,
    :note
    "the owner's text enters proposal as its TEXT argument (positional); no keyword names it at the site"}
-  {:finding :declaration-without-occurrence,
-   :box/id :r8-overlap,
-   :field :pair-overlap,
-   :role :writes,
-   :site
-   {:file "futon2/src/futon2/aif/target_field.clj",
-    :var "target-field"},
-   :rows [8],
-   :kind :to-do}
   {:role :reads,
    :site
    {:file "futon2/src/futon2/aif/enactment_habit.clj",
@@ -307,6 +301,14 @@
    :usage {:reads 0, :writes 1, :unclassified 0},
    :kind :standing,
    :finding :declared-read-not-found}
+  {:finding :occurrence-without-declaration,
+   :field :next-step,
+   :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
+   :declared-by [],
+   :rows [1],
+   :kind :standing,
+   :note
+   "with-eligibility's docstring names :next-step (textual scan counts docstrings); the function neither reads nor writes it"}
   {:finding :occurrence-without-declaration,
    :field :next-step,
    :site
@@ -325,11 +327,6 @@
    :kind :standing,
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
-   :error? true,
-   :rows [8],
-   :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
    :error? true,
