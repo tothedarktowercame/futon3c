@@ -193,7 +193,8 @@
            :r1-outer-cascade]}]
  ;; The checker's report over :boxes with {:heuristic? true}, exactly (futon3c
  ;; 58f1a8cb's checker, which classifies thread-first writes: the two
- ;; :heuristic-limit entries of 3e96fdce are gone). :kind :to-do is the
+ ;; :heuristic-limit entries of 3e96fdce are gone). Row 9 wired at futon2
+ ;; f498f3f3 (:candidate on the selection law): its two entries are gone. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -254,15 +255,6 @@
    :site
    {:file "futon2/src/futon2/aif/efe.clj", :var "rank-cascade-actions"},
    :rows [4],
-   :kind :to-do}
-  {:finding :declaration-without-occurrence,
-   :box/id :r9-selection-law,
-   :field :candidate,
-   :role :writes,
-   :site
-   {:file "futon2/src/futon2/aif/policy.clj",
-    :var "select-action-cascades"},
-   :rows [7 9],
    :kind :to-do}
   {:finding :declaration-without-occurrence,
    :box/id :r2-flight-read,
@@ -326,12 +318,6 @@
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
    :error? true,
    :rows [1],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site
-   {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
-   :error? true,
-   :rows [9],
    :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},

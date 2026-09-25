@@ -108,8 +108,9 @@
    :disposition :preserve
    :change "additive: one key; every existing :selection-law key unchanged"
    :tripwires
-   [{:test "futon2.aif.selection-law-candidate-test" :status :to-write
-     :assertion "the id equals :per-policy-argmax's candidate; the other keys are byte-identical to before"}
+   [{:test "futon2.aif.selection-law-candidate-test" :status :in-place
+     :assertion "the id is the chosen entry's :cascade-id, not :per-policy-argmax (a case where the posterior mode and the chosen action differ); every other key byte-identical to a fixture from 54e3c396; no :cascade-id leaves the key out"
+     :warrant "test-registry-0317a2cc"}
     {:test "futon3c.exemplar.proof2a-wc-check-test" :status :in-place
      :assertion "a missing id reads :join-unverifiable, a different id fails W_c"
      :warrant "test-registry-1757d974"}]}
