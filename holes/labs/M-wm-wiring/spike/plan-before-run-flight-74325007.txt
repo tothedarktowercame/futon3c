@@ -1,0 +1,184 @@
+{:constraints [],
+ :owner-questions [],
+ :construction-parameters
+ {:budget
+  {:value {:max-moves 4, :max-expansions 20000},
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :commit "891b4af6"}},
+  :move-cost
+  {:value 0,
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :reason
+    "a construction move is computation inside the tick, not in G's units; cost 1 made the constructor decline M-aif-eig's plan (gain 0.33, :acting-worth-more)",
+    :commit "891b4af6"}}},
+ :answer-path
+ "Agency bell (mode work, requisition = target), poll to terminal, reply grammar :wm/want-interpretation-response-v1",
+ :unlocated
+ [{:token :exit/h5c6933e5e2fc, :line 19}
+  {:token :exit/h7afd70f40a29, :line 15}
+  {:token :exit/h64ddcd0e8811, :line 69}
+  {:token :exit/h0c55648e57e5, :line 519}
+  {:token :exit/h0f3acdf222d7, :line 511}
+  {:token :exit/h59adca2cd730, :line 529}],
+ :store "/home/joe/code/futon2/data/wm-interpretations",
+ :clicks
+ {:max 1,
+  :run-ids "<date>-flight-74325007-click-<n>",
+  :via
+  "POST /api/alpha/wm/click with flight-edn: an ordinary click (budget consume + cast-seat preflight); runner/run-opportunity! in the serving JVM"},
+ :coverage-questions nil,
+ :resolved-steps
+ {:bb "bb",
+  :enact
+  "flight-runner/enact-fn over the click's run record (observe-publication-fn inside it)",
+  :library-root "/home/joe/code/futon3/library",
+  :cascades {:absent :no-cascades-dir},
+  :checker
+  "/home/joe/code/futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj",
+  :quotes {:absent :no-quotes},
+  :dispatch-step {:absent :no-dispatch-configured},
+  :wc "flight-runner/wc-verdict-fn with the checker and bb",
+  :field-entry {:absent :no-field-entry}},
+ :run? false,
+ :horizon
+ {:value 4,
+  :authority
+  {:source :cascade-sources,
+   :declarations
+   [{:source "T-repair-occ-444fb018.edn", :horizon-steps 4}]}},
+ :want-source
+ {:kind :a-exits,
+  :repo "futon3c",
+  :path "holes/missions/M-autoclock-in.md",
+  :lifecycle nil,
+  :text-read? true},
+ :criteria-from :machine-reading,
+ :open-wants
+ [:exit/h1dae607747ce
+  :exit/h5c6933e5e2fc
+  :exit/h7afd70f40a29
+  :exit/h64ddcd0e8811
+  :exit/h203ce9577ebe
+  :exit/h0c55648e57e5
+  :exit/h0f3acdf222d7
+  :exit/h59adca2cd730],
+ :requisition "M-autoclock-in",
+ :readings-it-would-request
+ {:coverage nil,
+  :constraints
+  {:mission-sha "text-c3cb73aa43ec8ddd", :tokens-an-edge-may-join 9},
+  :criteria nil,
+  :locators
+  [{:want :exit/h5c6933e5e2fc,
+    :line 19,
+    :criterion
+    "Auto-promote a mission/campaign/excursion target identified in a turn **iff**:"}
+   {:want :exit/h7afd70f40a29,
+    :line 15,
+    :criterion
+    "- *Risk:* auto-clocking on a fuzzy mention (the exact anti-pattern `M-vsatarcs-invariants-integration` principle #8 warns about — *explicit, not fuzzy*) would mislabel turns and corrupt `turn→mission` ground truth. A wrong auto-clock is worse than `[no mission]`."}
+   {:want :exit/h64ddcd0e8811,
+    :line 69,
+    :criterion
+    "   **Amended 2026-09-25 (claude-4, owner, answering the War Machine's question"}
+   {:want :exit/h0c55648e57e5,
+    :line 519,
+    :criterion
+    "**Proposed first fix: one behaviour—every accepted turn has one durable,"}
+   {:want :exit/h0f3acdf222d7,
+    :line 511,
+    :criterion
+    "**No inferable mission must be a recorded decision**, e.g."}
+   {:want :exit/h59adca2cd730,
+    :line 529,
+    :criterion
+    "Acceptance must construct the current bad case: run a complete isolated"}]},
+ :constraint-questions nil,
+ :answering-seat "claude-5",
+ :requests-it-would-issue
+ [{:want :exit/h1dae607747ce,
+   :phase "EXTRACTED",
+   :line 33,
+   :criterion "## IDENTIFY exit (when picked up)"}
+  {:want :exit/h5c6933e5e2fc,
+   :phase "EXTRACTED",
+   :line 19,
+   :criterion
+   "Auto-promote a mission/campaign/excursion target identified in a turn **iff**:"}
+  {:want :exit/h7afd70f40a29,
+   :phase "EXTRACTED",
+   :line 15,
+   :criterion
+   "- *Risk:* auto-clocking on a fuzzy mention (the exact anti-pattern `M-vsatarcs-invariants-integration` principle #8 warns about — *explicit, not fuzzy*) would mislabel turns and corrupt `turn→mission` ground truth. A wrong auto-clock is worse than `[no mission]`."}
+  {:want :exit/h64ddcd0e8811,
+   :phase "EXTRACTED",
+   :line 69,
+   :criterion
+   "   **Amended 2026-09-25 (claude-4, owner, answering the War Machine's question"}
+  {:want :exit/h203ce9577ebe,
+   :phase "EXTRACTED",
+   :line 91,
+   :criterion
+   "   **Consequence, and the locator this criterion now needs.** The Emacs buffer"}
+  {:want :exit/h0c55648e57e5,
+   :phase "EXTRACTED",
+   :line 519,
+   :criterion
+   "**Proposed first fix: one behaviour—every accepted turn has one durable,"}
+  {:want :exit/h0f3acdf222d7,
+   :phase "EXTRACTED",
+   :line 511,
+   :criterion
+   "**No inferable mission must be a recorded decision**, e.g."}
+  {:want :exit/h59adca2cd730,
+   :phase "EXTRACTED",
+   :line 529,
+   :criterion
+   "Acceptance must construct the current bad case: run a complete isolated"}],
+ :placement {:target "M-autoclock-in", :target-source :hand-placed},
+ :published-already [],
+ :wants
+ {:in-view
+  [{:token :exit/h1dae607747ce, :phase "EXTRACTED", :met? false}
+   {:token :exit/h5c6933e5e2fc, :phase "EXTRACTED", :met? nil}
+   {:token :exit/h7afd70f40a29, :phase "EXTRACTED", :met? nil}
+   {:token :exit/h64ddcd0e8811, :phase "EXTRACTED", :met? nil}
+   {:token :exit/h203ce9577ebe, :phase "EXTRACTED", :met? false}
+   {:token :exit/h0c55648e57e5, :phase "EXTRACTED", :met? nil}
+   {:token :exit/h0f3acdf222d7, :phase "EXTRACTED", :met? nil}
+   {:token :exit/h59adca2cd730, :phase "EXTRACTED", :met? nil}],
+  :out-of-view
+  [{:token :exit/h82097c2c3790,
+    :reason :owner-question,
+    :questions
+    [{:question
+      "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+      :span
+      {:lines [66 66],
+       :quote
+       "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+      :alternatives
+      ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+       "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+       "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."]}]}],
+  :unlocated
+  [{:token :exit/h5c6933e5e2fc, :line 19, :kind :extracted-criterion}
+   {:token :exit/h7afd70f40a29, :line 15, :kind :extracted-criterion}
+   {:token :exit/h64ddcd0e8811, :line 69, :kind :extracted-criterion}
+   {:token :exit/h0c55648e57e5, :line 519, :kind :extracted-criterion}
+   {:token :exit/h0f3acdf222d7, :line 511, :kind :extracted-criterion}
+   {:token :exit/h59adca2cd730,
+    :line 529,
+    :kind :extracted-criterion}]},
+ :needs-in-serving-jvm
+ "futon3c b7340968 (flight-edn) and futon2 runner/war-machine at this checkout, reloaded from master",
+ :flight-id "flight-74325007",
+ :machine-located [:exit/h1dae607747ce :exit/h203ce9577ebe]}
+
+Plan only. Nothing sent, nothing written. Add --read to run the read step only, --run to fly this flight once.

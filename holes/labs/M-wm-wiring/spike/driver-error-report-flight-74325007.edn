@@ -1,0 +1,110 @@
+{:clojure.main/message
+ "Execution error (HttpTimeoutException) at jdk.internal.net.http.HttpClientImpl/send (HttpClientImpl.java:953).\nrequest timed out\n",
+ :clojure.main/triage
+ {:clojure.error/class java.net.http.HttpTimeoutException,
+  :clojure.error/line 953,
+  :clojure.error/cause "request timed out",
+  :clojure.error/symbol jdk.internal.net.http.HttpClientImpl/send,
+  :clojure.error/source "HttpClientImpl.java",
+  :clojure.error/phase :execution},
+ :clojure.main/trace
+ {:via
+  [{:type java.net.http.HttpTimeoutException,
+    :message "request timed out",
+    :at
+    [jdk.internal.net.http.HttpClientImpl
+     send
+     "HttpClientImpl.java"
+     953]}],
+  :trace
+  [[jdk.internal.net.http.HttpClientImpl
+    send
+    "HttpClientImpl.java"
+    953]
+   [jdk.internal.net.http.HttpClientFacade
+    send
+    "HttpClientFacade.java"
+    133]
+   [babashka.http_client.internal$request
+    invokeStatic
+    "internal.clj"
+    322]
+   [babashka.http_client.internal$request invoke "internal.clj" 303]
+   [babashka.http_client$request invokeStatic "http_client.clj" 125]
+   [babashka.http_client$request invoke "http_client.clj" 100]
+   [babashka.http_client$get invokeStatic "http_client.clj" 132]
+   [babashka.http_client$get invoke "http_client.clj" 127]
+   [futon2.aif.full_loop_runner$read_job_BANG_
+    invokeStatic
+    "full_loop_runner.clj"
+    1183]
+   [futon2.aif.full_loop_runner$read_job_BANG_
+    invoke
+    "full_loop_runner.clj"
+    1181]
+   [futon2.aif.full_loop_runner$poll_job_BANG_
+    invokeStatic
+    "full_loop_runner.clj"
+    1200]
+   [futon2.aif.full_loop_runner$poll_job_BANG_
+    invoke
+    "full_loop_runner.clj"
+    1191]
+   [futon2.aif.flight_runner$agency_answer_fn$fn__24492
+    invoke
+    "flight_runner.clj"
+    139]
+   [futon2.aif.flight_runner$ask_one
+    invokeStatic
+    "flight_runner.clj"
+    330]
+   [futon2.aif.flight_runner$ask_one invoke "flight_runner.clj" 319]
+   [futon2.aif.flight_runner$ask_fn$fn__24573$fn__24574
+    invoke
+    "flight_runner.clj"
+    371]
+   [clojure.core$mapv$fn__8535 invoke "core.clj" 6979]
+   [clojure.lang.PersistentVector reduce "PersistentVector.java" 343]
+   [clojure.core$reduce invokeStatic "core.clj" 6885]
+   [clojure.core$mapv invokeStatic "core.clj" 6970]
+   [clojure.core$mapv invoke "core.clj" 6970]
+   [futon2.aif.flight_runner$ask_fn$fn__24573
+    invoke
+    "flight_runner.clj"
+    371]
+   [futon2.aif.flight$run_BANG_ invokeStatic "flight.clj" 286]
+   [futon2.aif.flight$run_BANG_ invoke "flight.clj" 247]
+   [futon2.aif.flight_driver$run_flight_BANG_
+    invokeStatic
+    "flight_driver.clj"
+    219]
+   [futon2.aif.flight_driver$run_flight_BANG_
+    invoke
+    "flight_driver.clj"
+    191]
+   [futon2.aif.flight_driver$main_STAR_
+    invokeStatic
+    "flight_driver.clj"
+    275]
+   [futon2.aif.flight_driver$main_STAR_
+    doInvoke
+    "flight_driver.clj"
+    261]
+   [clojure.lang.RestFn invoke "RestFn.java" 410]
+   [futon2.aif.flight_driver$_main
+    invokeStatic
+    "flight_driver.clj"
+    278]
+   [futon2.aif.flight_driver$_main doInvoke "flight_driver.clj" 277]
+   [clojure.lang.RestFn applyTo "RestFn.java" 137]
+   [clojure.lang.Var applyTo "Var.java" 705]
+   [clojure.core$apply invokeStatic "core.clj" 667]
+   [clojure.main$main_opt invokeStatic "main.clj" 514]
+   [clojure.main$main_opt invoke "main.clj" 510]
+   [clojure.main$main invokeStatic "main.clj" 664]
+   [clojure.main$main doInvoke "main.clj" 616]
+   [clojure.lang.RestFn applyTo "RestFn.java" 137]
+   [clojure.lang.Var applyTo "Var.java" 705]
+   [clojure.main main "main.java" 40]],
+  :cause "request timed out"}}
+
