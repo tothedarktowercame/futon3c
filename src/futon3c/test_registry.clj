@@ -923,12 +923,49 @@
 
 (defn namespace-ledger-file
   "Where the namespace -> newest-run ledger lives: the explicit
-  :namespace-ledger-file option, else FUTON3C_NAMESPACE_LEDGER. There is no
-  implicit default path: an unconfigured caller keeps the scan behaviour, and
-  nothing writes into a shared checkout by accident."
+  :namespace-ledger-file option, else FUTON3C_NAMESPACE_LEDGER. Nil when
+  neither is set — the caller then keeps the scan behaviour. Entry points
+  that must AGREE on a ledger without configuration use
+  namespace-ledger-path, which adds the documented default."
   [options]
   (or (:namespace-ledger-file options)
       (System/getenv "FUTON3C_NAMESPACE_LEDGER")))
+
+(defn- futon3c-checkout-root
+  "The checkout this code runs from: two directories above this namespace's
+  own classpath resource (src/futon3c/test_registry.clj), falling back to the
+  working directory when the resource is not a file (a jar). The server and
+  the registry CLI both run from the futon3c checkout, so this is the one
+  root they share."
+  []
+  (let [resource (io/resource "futon3c/test_registry.clj")]
+    (if (and resource (= "file" (.getProtocol resource)))
+      (str (.getParentFile (.getParentFile (io/file (.getPath resource)))))
+      (System/getProperty "user.dir"))))
+
+(def default-namespace-ledger-relative-path
+  "The ledger's home inside a futon3c checkout."
+  (str "data" (System/getProperty "file.separator") "test-registry"
+       (System/getProperty "file.separator") "namespace-ledger.edn"))
+
+(defn namespace-ledger-path
+  "Resolve the namespace -> newest-run ledger path, in order:
+  1. the explicit :namespace-ledger-file option;
+  2. FUTON3C_NAMESPACE_LEDGER;
+  3. the documented default data/test-registry/namespace-ledger.edn under
+     the futon3c checkout (:futon3c-root option, else the checkout this code
+     runs from).
+
+  A default is acceptable here where namespace-ledger-file deliberately has
+  none: the server and the registry CLI run in the SAME checkout, so both
+  resolve the same file with no env var, and the ledger is append-only, so
+  two writers interleave entries rather than corrupt one. Never nil; the
+  /latest handler and the CLI register subcommand thread this so a live
+  registration is ledgered where the live lookup reads."
+  [options]
+  (or (namespace-ledger-file options)
+      (str (io/file (or (:futon3c-root options) (futon3c-checkout-root))
+                    default-namespace-ledger-relative-path))))
 
 (defn- append-ledger-entry! [file entry]
   (let [f (io/file file)]
@@ -1293,7 +1330,13 @@
     (let [options (edn/read-string (slurp config-path))
           backend (http-backend/make-http-backend (:agency-url options "http://localhost:7070"))
           result (case operation
-                   "run" (register-run! backend options)
+                   ;; The register subcommand threads the resolved ledger path
+                   ;; (option, env, else the checkout default) so a live
+                   ;; registration is ledgered where the /latest handler —
+                   ;; which resolves the same default — reads it.
+                   "run" (register-run! backend
+                                        (assoc options :namespace-ledger-file
+                                               (namespace-ledger-path options)))
                    "check" (check-record! backend options)
                    ;; Read-only namespace lookup (AR-42). Same shape of
                    ;; exposure as "check": one subcommand over one config.

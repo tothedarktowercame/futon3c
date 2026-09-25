@@ -864,6 +864,61 @@
                     backend {:namespace "demo-test" :namespace-ledger-file ledger})]
          (is (= :namespace-ledger (:resolved-by found))))))))
 
+;; ---------------------------------------------------------------------------
+;; AR-42 follow-up: the ledger reaches the live lookup and the CLI. Both entry
+;; points thread namespace-ledger-path, whose documented default sits under
+;; the checkout's data directory, so a configured server and the CLI agree on
+;; one append-only ledger with no env var.
+
+(deftest namespace-ledger-path-resolves-option-then-default
+  ;; the explicit option overrides the documented default; unset, the default
+  ;; is <root>/data/test-registry/namespace-ledger.edn under the given root
+  (is (= "/tmp/explicit/namespaces.ednlog"
+         (registry/namespace-ledger-path
+          {:namespace-ledger-file "/tmp/explicit/namespaces.ednlog"
+           :futon3c-root "/tmp/some-checkout"})))
+  (is (= (str (io/file "/tmp/some-checkout" "data" "test-registry"
+                       "namespace-ledger.edn"))
+         (registry/namespace-ledger-path {:futon3c-root "/tmp/some-checkout"}))))
+
+(deftest a-cli-registration-is-found-through-the-handler-path
+  ;; the register subcommand and the /latest handler both thread
+  ;; namespace-ledger-path over the same root: a registration ledgered by the
+  ;; CLI path resolves live by the handler path with no option and no env var
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [root (str (io/file (:artifact-dir options) "checkout"))
+           cli-options (assoc options :namespace-ledger-file
+                              (registry/namespace-ledger-path {:futon3c-root root}))
+           run (registry/register-run! backend cli-options)
+           found (registry/latest-run-for-namespace
+                  backend {:namespace "demo-test"
+                           :namespace-ledger-file
+                           (registry/namespace-ledger-path {:futon3c-root root})})]
+       (is (= (:evidence/id run) (:evidence/id found)))
+       (is (= :namespace-ledger (:resolved-by found)))))))
+
+(deftest an-unset-option-builds-the-default-ledger-once
+  ;; with the option unset and the default file absent, the first lookup
+  ;; performs the one allowed build and records its scan in the marker
+  (fixture
+   (fn [{:keys [backend options]}]
+     (registry/register-run! backend options)
+     (let [root (str (io/file (:artifact-dir options) "checkout"))
+           default-file (registry/namespace-ledger-path {:futon3c-root root})]
+       (is (not (.isFile (io/file default-file)))
+           "no ledger exists before first use")
+       (let [found (registry/latest-run-for-namespace
+                    backend {:namespace "demo-test"
+                             :namespace-ledger-file default-file})]
+         (is (= :namespace-ledger (:resolved-by found)))
+         (is (.isFile (io/file default-file)) "first use built the ledger")
+         (let [{:keys [built]} (registry/namespace-ledger default-file)]
+           (is (some? built) "the build recorded its marker")
+           (is (true? (:complete? built)))
+           (is (pos? (:scanned built)))
+           (is (= (:scanned built) (:registry-entries built)))))))))
+
 (deftest latest-run-for-namespace-will-not-call-a-failed-read-absence
   ;; http-backend substitutes [] for a failed -query and 0 for a failed -count,
   ;; so "nothing scanned, nothing held" is what a timed out read looks like.

@@ -2518,8 +2518,16 @@
           raw-limit (get params "limit")
           limit (when (seq (str raw-limit)) (enc/parse-int raw-limit 0))
           lookup (requiring-resolve 'futon3c.test-registry/latest-run-for-namespace)
+          ledger-path (requiring-resolve 'futon3c.test-registry/namespace-ledger-path)
+          ;; The ledger path is a server option, not request input: the
+          ;; :test-registry-root option locates the checkout, and the resolved
+          ;; default under its data directory is the same file the registry
+          ;; CLI's register subcommand writes to, so live registrations are
+          ;; ledgered where this lookup reads.
+          root (:test-registry-root config default-test-registry-root)
           result (lookup (evidence-store-for-config config)
-                         (cond-> {:namespace (get params "namespace")}
+                         (cond-> {:namespace (get params "namespace")
+                                  :namespace-ledger-file (ledger-path {:futon3c-root root})}
                            (and limit (pos? limit)) (assoc :limit limit)))]
       (cond
         (:record/type result)
