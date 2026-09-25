@@ -275,7 +275,9 @@
 (defn- scope-tree-binders [stem]
   (let [path (mission-scope-tree-path stem)
         data (json/parse-string (slurp path) true)
-        by-count (-> data :scope-count-by-binder-type keys)
+        ;; parse-string keywordizes, so these keys are keywords; binder
+        ;; names are strings everywhere downstream (cf. mission-scope-ingest).
+        by-count (->> data :scope-count-by-binder-type keys (map name))
         by-scope (->> (:scope-hyperedges data)
                       (keep :binder-type)
                       distinct)]

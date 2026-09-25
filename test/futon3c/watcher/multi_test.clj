@@ -606,3 +606,16 @@
                                       (fn [arg] (reset! seen arg) {:status :unchanged}))]
       (is (= :unchanged (:status (refresh "M-alpha" "/x/holes/missions/M-alpha.md"))))
       (is (= {:path "/x/holes/missions/M-alpha.md"} @seen)))))
+
+(deftest scope-tree-binders-reads-keywordized-count-map
+  (testing "binder names from :scope-count-by-binder-type come back as strings, not keywords"
+    (let [f (doto (java.io.File/createTempFile "scope-tree-" ".json") .deleteOnExit)]
+      (spit f "{\"scope-count-by-binder-type\": {\"loose-section\": 3, \"map-item\": 1},\n \"scope-hyperedges\": [{\"binder-type\": \"ignored\"}]}")
+      (with-redefs-fn {#'sut/mission-scope-tree-path (fn [_] (.getPath f))}
+        #(is (= ["loose-section" "map-item"]
+                (#'sut/scope-tree-binders "E-any"))))))
+  (testing "without a count map, binder-type values from the hyperedges are used"
+    (let [f (doto (java.io.File/createTempFile "scope-tree-" ".json") .deleteOnExit)]
+      (spit f "{\"scope-hyperedges\": [{\"binder-type\": \"map-item\"}, {\"binder-type\": \"map-item\"}, {}]}")
+      (with-redefs-fn {#'sut/mission-scope-tree-path (fn [_] (.getPath f))}
+        #(is (= ["map-item"] (#'sut/scope-tree-binders "E-any")))))))
