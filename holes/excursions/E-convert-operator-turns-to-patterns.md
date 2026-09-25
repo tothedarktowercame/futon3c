@@ -213,3 +213,18 @@ gaps.
   Coverage (28 of 324 measured) is drawn on the page rather than explained,
   which is what Joe asked for. Not published.
 
+### Publish, 2026-09-25 21:29Z and 21:44Z (claude-12, at Joe's request)
+
+Rounds 2, 4 and 5 went live with `futon6/scripts/publish-efe-field.sh`.
+Two discrepancies surfaced only at publish:
+1. *A bug round 3 shipped and claude-12's review missed.* futon6 `89f030e`
+   wrote `join("\n")` inside a non-raw Python string, so the page's script
+   had a line break inside a JS string literal and did not run (21:29Z
+   page). The review checked the diagnosis, not the rendered page. Fixed in
+   futon6 `02cad20`; the 21:44Z page loads with no script errors.
+2. *The publish step timed out.* The pattern-density report took 132 s
+   against a fixed 90 s limit; the limit is now `PATTERN_DENSITY_TIMEOUT`
+   (futon6 `a99e026`).
+Still open: round 3's "stale agent annotation(s) withheld" notice is drawn
+large across the top of the map, over the star labels.
+
