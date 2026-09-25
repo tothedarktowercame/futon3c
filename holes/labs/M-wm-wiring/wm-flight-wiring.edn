@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "821f6ace" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "27d6072d" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -89,7 +89,7 @@
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
    :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   :reads [:candidate] :writes [:attempts :grain-gate]}
+   :reads [:candidate :enacted-steps] :writes [:attempts :grain-gate]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
    :reads [:attempts]}
@@ -126,13 +126,13 @@
    :reads [:enactment-records]}
   {:box/id :r9-selection-law :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
-   :writes [:per-policy-argmax :candidate]}
+   :writes [:per-policy-argmax :candidate :enacted-steps]}
   {:box/id :r9-decision :row 9 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
    :reads [:per-policy-argmax]}
   {:box/id :r9-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"}
-   :reads [:candidate :per-policy-argmax]}
+   :reads [:candidate :per-policy-argmax :enacted-steps]}
 
   ;; ---- row 6, Clause A: :measurement on the click record.
   {:box/id :r6-sourced-rates :row 6 :box/kind :component
@@ -226,7 +226,10 @@
  ;; 9c7cd7bd (the extractor a namespace, scripts/futon2/wm/extract_outcomes.clj)
  ;; and db1f79c7 (read-fn records the served-by reading and :text-sha256):
  ;; its entry is gone. Row 3 wired at futon2 821f6ace (agency-answer-fn
- ;; passes :library-root; pending answers awaited): its two entries gone. :kind :to-do is the
+ ;; passes :library-root; pending answers awaited): its two entries gone.
+ ;; :enacted-steps added as a field (futon2 27d6072d: a step id or a typed
+ ;; absence, never nil): the selection law writes it, the enactment step will
+ ;; read it to know which pattern to enact first; no new finding. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
