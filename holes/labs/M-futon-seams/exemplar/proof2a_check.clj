@@ -1,6 +1,8 @@
 ;; PROOF-2a checker for a hand-worked click record (claude-10, 2026-09-24).
 ;; Run from /home/joe/code/futon3c:
-;;   bb holes/labs/M-futon-seams/exemplar/proof2a_check.clj holes/labs/M-futon-seams/exemplar/click-001.edn
+;;   bb holes/labs/M-futon-seams/exemplar/proof2a_check.clj holes/labs/M-futon-seams/exemplar/click-001.edn [enactment.edn [--wc]]
+;; With --wc the run exits after W_c: 0 when the positive control passes and
+;; every W_c bad case is caught, 1 otherwise (the W_c checker's own test).
 ;; Checks W_t (Clause T) and W_0 (Clause 0) of
 ;; futon2 holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md (4c502847),
 ;; then builds each X falsifier's bad extract from the record and confirms the
@@ -167,18 +169,54 @@
 ;; Clause C (enactment conformance): the change that was made IS the chosen
 ;; candidate. Every pattern of the chosen candidate has a successful attempt
 ;; whose check names what observes its produced token; every attempt names a
-;; pattern of that candidate; deviations are typed. Checked against an
+;; pattern of that candidate; deviations are typed; and (G_c, X_c(d)) a
+;; successful attempt names G_c's pass as its check. Checked against an
 ;; enactment record (click-001-enactment.edn form).
-(defn check-c [rec enact]
+;;
+;; G_c is futon2.aif.grain-gate, loaded from futon2's checkout and RE-RUN here
+;; on the enactment's :grain (the grain the candidate chose) against the grain
+;; the gated attempt declares, so a recorded pass is evidence only when the
+;; gate still passes on the files as they are. A gated attempt's check is
+;; {:kind :grain-gate :repo "<dir under /home/joe/code>" :attempt-grain {...}
+;;  :result {:status :pass}}.
+(load-file "/home/joe/code/futon2/src/futon2/aif/grain_gate.clj")
+(def grain-gate (resolve 'futon2.aif.grain-gate/grain-gate))
+
+(defn- gc-failures [enact ok]
+  (let [gated (filter #(= :grain-gate (get-in % [:check :kind])) ok)]
+    (if (empty? gated)
+      ["W_c: no successful attempt names a G_c pass (X_c(d)): the grain attempt's check is not grain-gate"]
+      (vec (for [a gated
+                 :let [chk (:check a)
+                       run (grain-gate {:grain (:grain enact)} {:grain (:attempt-grain chk)}
+                                       (str "/home/joe/code/" (:repo chk)))]
+                 f [(when-not (= :pass (:status run))
+                      (str "W_c: G_c refuses attempt " (:n a) " at " (:pattern a) ": "
+                           (:reason run) " (" (:detail run) ")"))
+                    (when (and (= :pass (:status run)) (not= :pass (get-in chk [:result :status])))
+                      (str "W_c: attempt " (:n a) " records G_c " (pr-str (:result chk))
+                           " but the gate passes on re-run"))]
+                 :when f]
+             f)))))
+
+(defn check-c
+  "W_c's failures as a vector (empty is a pass), or, when nothing else fails
+  and the click's [:decision :selection-law] carries no :candidate id, the
+  typed {:status :join-unverifiable :failures []}: P_c joins the enactment to the
+  decision by that id, so without it the enacted-vs-selected test cannot be
+  made and the record is neither a pass nor a failure."
+  [rec enact]
   (let [cid (:candidate enact)
         cand (get-in rec [:decision :selection-certificate :candidate-derivations cid])
+        selected (get-in rec [:decision :selection-law :candidate])
         pats (set (keys (:interpretations cand)))
         atts (:attempts enact)
-        ok (filter :success atts)]
+        ok (filter :success atts)
+        failures
     (cond-> []
       (nil? cand) (conj (str "W_c: enactment names candidate " cid ", which the click did not record"))
-      (not= cid (:candidate (get-in rec [:decision :selection-law]) cid))
-      (conj "W_c: enactment candidate differs from the click's selected candidate")
+      (and (some? selected) (not= cid selected))
+      (conj (str "W_c: enactment candidate " cid " differs from the click's selected candidate " selected))
       (some #(not (contains? pats (:pattern %))) atts)
       (conj (str "W_c: attempts at patterns outside the chosen candidate: "
                  (vec (remove pats (map :pattern atts)))))
@@ -189,7 +227,30 @@
       (some #(not (contains? (set (get-in cand [:interpretations (:pattern %) :produces])) (:produced %))) ok)
       (conj "W_c: an attempt claims a token its pattern does not produce")
       (some #(not (keyword? (:kind %))) (get-in enact [:conformance :deviations]))
-      (conj "W_c: a deviation is not typed"))))
+      (conj "W_c: a deviation is not typed")
+      true (into (gc-failures enact ok)))]
+    ;; a failure is decidable without the join; only a record that fails
+    ;; nothing else is left unverifiable by the missing id
+    (if (or (some? selected) (seq failures))
+      failures
+      {:status :join-unverifiable
+       :reason "[:decision :selection-law] carries no :candidate id, so the enactment cannot be joined to the selected candidate"
+       :failures failures})))
+
+(def wc-defects (atom 0))
+(defn wc-failures [verdict] (if (map? verdict) (:failures verdict) verdict))
+
+(defn gated
+  "ENACT with attempt N's check replaced by a grain-gate check at ATTEMPT-GRAIN
+  (the positive control and its bad cases are built from the recorded
+  enactment this way; the record itself is never rewritten)."
+  [enact n pattern attempt-grain result]
+  (update enact :attempts
+          (fn [as] (mapv #(if (and (= n (:n %)) (= pattern (:pattern %)))
+                            (assoc % :check {:kind :grain-gate :repo "futon3c"
+                                             :attempt-grain attempt-grain :result result})
+                            %)
+                         as))))
 
 ;; ---------------------------------------------------------------- X falsifiers
 (defn first-cand [rec] (first (keys (get-in rec [:decision :selection-certificate :candidate-derivations]))))
@@ -243,21 +304,55 @@
   (when ef
     (let [enact (edn/read-string (slurp ef))
           pc (check-c rec enact)
-          first-only (update enact :attempts (fn [as] (filterv #(= 1 (:n %)) as)))
-          untyped (update-in enact [:conformance :deviations] (fn [ds] (conj (vec ds) {:statement "untyped"})))
-          nocheck (update enact :attempts (fn [as] (mapv #(dissoc % :check) as)))]
+          show (fn [v] (cond (map? v) (str "    " (:status v) " (neither pass nor fail): " (:reason v)
+                                           (when (seq (:failures v)) (str "; and FAIL (" (count (:failures v)) ")")))
+                             (empty? v) "    PASS"
+                             :else (str "    FAIL (" (count v) ")")))
+          grain-n 3 grain-p :cascade-construction/choose-the-grain-where-state-lives
+          outcome-grain (:grain (edn/read-string (slurp (str (.getParent (.getAbsoluteFile (java.io.File. ef))) "/click-001-outcome.edn"))))
+          ;; positive control: the recorded enactment with its grain attempt
+          ;; carrying a G_c pass at the candidate's grain, and the click's
+          ;; selection law naming the enacted candidate. It must PASS, so each
+          ;; bad case below fails for the condition it names.
+          good-e (gated enact grain-n grain-p (:grain enact) {:status :pass})
+          good-r (assoc-in rec [:decision :selection-law :candidate] (:candidate enact))
+          good (check-c good-r good-e)
+          first-only (update good-e :attempts (fn [as] (filterv #(= 1 (:n %)) as)))
+          untyped (update-in good-e [:conformance :deviations] (fn [ds] (conj (vec ds) {:statement "untyped"})))
+          nocheck (update good-e :attempts (fn [as] (mapv #(if (= :grain-gate (get-in % [:check :kind])) % (dissoc % :check)) as)))
+          wrong-grain (gated enact grain-n grain-p outcome-grain {:status :pass})
+          wrong-arglist (gated enact grain-n grain-p (assoc-in (:grain enact) [:evidence :arglist] "[agent-id]") {:status :pass})
+          other-id (assoc-in rec [:decision :selection-law :candidate] :cand/b-observe-first)]
       (println "  W_c (enactment is the chosen candidate):" ef)
-      (println (if (empty? pc) "    PASS" (str "    FAIL (" (count pc) ")")))
-      (doseq [p pc] (println "     -" p))
-      (doseq [[label bad] [["X_c(first) only the first attempt (8e5c431e, provider grain)" first-only]
-                           ["X_c(check) successful attempts with their checks removed" nocheck]
-                           ["X_c(untyped) an untyped deviation" untyped]]]
-        (println "   " (if (seq (check-c rec bad)) "caught " "VACUOUS") label))))
+      (println (show pc))
+      (doseq [p (wc-failures pc)] (println "     -" p))
+      (println "  W_c positive control (grain attempt carries a G_c pass; selection law names the candidate):"
+               (if (= [] good) "PASS" (str "FAIL " (pr-str good))))
+      (let [bad-cases [["X_c(first) only the first attempt (8e5c431e, provider grain)" good-r first-only]
+                       ["X_c(check) successful attempts with their checks removed" good-r nocheck]
+                       ["X_c(untyped) an untyped deviation" good-r untyped]
+                       ["X_c(d) the recorded enactment: its grain attempt names no G_c pass" good-r enact]
+                       ["X_c(d) G_c at the outcome's provider grain (:agent-id)" good-r wrong-grain]
+                       ["X_c(d) G_c recorded as a pass, re-run refuses :arglist-mismatch" good-r wrong-arglist]
+                       ["X_c(join) selection law names a DIFFERENT candidate" other-id good-e]]
+            unverifiable (check-c rec good-e)
+            vac (atom (if (= [] good) 0 1))]
+        (doseq [[label r e] bad-cases]
+          (let [v (check-c r e) caught (and (vector? v) (seq v))]
+            (when-not caught (swap! vac inc))
+            (println "   " (if caught "caught " "VACUOUS") label)))
+        (let [ok? (and (map? unverifiable) (= :join-unverifiable (:status unverifiable)) (empty? (:failures unverifiable)))]
+          (when-not ok? (swap! vac inc))
+          (println "   " (if ok? "typed  " "WRONG  ") "X_c(join) selection law with no candidate id reads :join-unverifiable, neither pass nor fail"))
+        (when (pos? @vac) (println "  W_c checker defect: a bad case was not caught or the control did not pass"))
+        (reset! wc-defects @vac)
+        (when (= "--wc" (nth *command-line-args* 2 nil))
+          (System/exit (if (pos? @wc-defects) 1 0))))))
   (println "  falsifiers (each bad extract must fail):")
   (let [vac (atom 0)]
     (doseq [[label bad] (falsifiers rec)]
       (let [caught (binding [*require-machine-construction* false] (seq (:problems (check bad))))]
         (when-not caught (swap! vac inc))
         (println "   " (if caught "caught " "VACUOUS") label)))
-    (System/exit (if (or (seq problems) (pos? @vac)) 1 0))))
+    (System/exit (if (or (seq problems) (pos? @vac) (pos? @wc-defects)) 1 0))))
 ;; Exit 1 on this record today is expected: both candidates are hand-built.
