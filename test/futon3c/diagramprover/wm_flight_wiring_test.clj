@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "64d62f072ab4230a76999b7b797134a3a7a7e8866e9812a1d8433b93db706a26")
-(def repos {"futon2" "d6df5909" "futon3c" "58f1a8cb"})
+(def map-sha256 "61d4763d633ed997d80dcf6f8b52628da7ee079e5132e5b4f92d0c4cffd77c59")
+(def repos {"futon2" "8f40f425" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -103,7 +103,7 @@
 
 (deftest not-built-boxes-are-absent-at-the-pinned-shas
   (let [s (spec) root (materialise s)]
-    (is (= 2 (count (filter #(= :not-built (:status %)) (:boxes s)))) "the outer cascade and observe-publication-fn (enact-fn built at step 10, the W_c call at step 11)")
+    (is (= 1 (count (filter #(= :not-built (:status %)) (:boxes s)))) "the outer cascade (enact-fn built at step 10, the W_c call at 11, observe-publication-fn at 12)")
     (is (= [] (not-built-present root s)))
     (testing "planted: create one intended var in the temp root and the check reports it"
       (let [f (io/file root "futon2/src/futon2/aif/outer_cascade.clj")]

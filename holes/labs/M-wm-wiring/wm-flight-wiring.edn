@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "d6df5909" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "8f40f425" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -89,7 +89,7 @@
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   :reads [:candidate :enacted-steps] :writes [:attempts :grain-gate]}
+   :reads [:candidate :enacted-steps] :writes [:attempts :grain-gate :publication-observed]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
    :reads [:attempts :grain-gate :publication-observed]}
@@ -163,8 +163,13 @@
 
   ;; ---- row 10, publish: one tick observes publication.
   {:box/id :r10-observe-publication :row 10 :box/kind :component
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "observe-publication-fn"}
-   :writes [:publication-observed]}
+   ;; H-publish: the click's run record :repair/publication, :receipt-committed
+   ;; for the chosen action's repair id; enact-fn copies the value (step 12)
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "observe-publication-fn"}
+   ;; it RETURNS the observation to enact-fn (positional: enact-fn calls it
+   ;; with the click), which records it under :publication-observed; the
+   ;; writer of the value is this function, the key's writer is enact-fn
+   }
   {:box/id :r10-test :row 10 :box/kind :test
    :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"}
    :reads [:publication-observed]}
@@ -255,7 +260,11 @@
  ;; 11 built at futon2 d6df5909: wc-verdict-fn is a real site (reads the
  ;; attempts, writes :wc; the verdict reaches increment positionally, the
  ;; trace's hop to the checker is positional), its test box added; the
- ;; not-built count is 2 and the trace's one gap the outer cascade. :kind :to-do is the
+ ;; not-built count is 2 and the trace's one gap the outer cascade. Step 12
+ ;; built at futon2 8f40f425: observe-publication-fn is a real site (it
+ ;; returns the observation to enact-fn, which writes :publication-observed:
+ ;; the standing copy note is gone, enact-fn is the key's declared writer);
+ ;; one box left unbuilt, the outer cascade. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -363,6 +372,14 @@
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
    :field :chosen-target,
    :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
    :declared-by [],
@@ -406,15 +423,6 @@
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
-   :field :publication-observed,
-   :site
-   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
-   :declared-by [],
-   :rows [0 10],
-   :kind :standing,
-   :note
-   "enact-fn copies the publication observation onto the enactment record (row 10's read side, folded in); observe-publication-fn remains its writer"}
-  {:finding :occurrence-without-declaration,
    :field :wc-verdict,
    :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
    :declared-by [],
@@ -426,9 +434,4 @@
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
    :error? true,
    :rows [1],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
-   :error? true,
-   :rows [10],
    :kind :to-do}]}
