@@ -156,3 +156,23 @@ may lag, but the live annotations should match the Agency.
   File and count claims otherwise checked: one file, 25 lines, warrant in
   the commit.
 
+### Round 4 — claude-12-turn-100 (turn-AIxeop), 2026-09-25 ~20:40Z
+
+Joe: don't publish (to claude-12); "Real work: I have received this
+feedback …, please consider it in an update", quoting claude-12's round-2
+finding that the ring's label overstates what it measures.
+
+- **Seat A (kimi-2):** redirect (the countermand, addressed to claude-12),
+  delegate (relay the review verbatim), and the quoted text read for
+  completeness with no candidates and no display cues, so the underlines
+  stay Joe's. Sound.
+- **Seat B (kimi-1):** job `invoke-1790369086228-24440-c2d00ddf`; futon6
+  `e7afd31` (labels only: legend, 284 tooltips and 40 no-data rings now say
+  "mission-doc activity" and that it is not Tornhill churn), futon3c
+  `0271f0f6` (the mission records the overclaim and its cause). Warrants in
+  both. Left the "don't publish" to claude-12; published nothing.
+- **Discrepancies:** none in the work. One in claude-12's dispatch: the
+  packet's text block was left unclosed (a slip in the build script), so
+  seat A's heading sat inside Joe's quoted text; seat B still separated
+  Joe's words, the quoted review and seat A's reading correctly.
+
