@@ -170,6 +170,7 @@
      :warrant nil :warrant-note "the eligibility commit's warrant was not read this sitting"}]}
 
   {:row :flight-entry :component "flight entry (flight_driver run-flight!) takes the chosen target"
+   :note "WM-DRIVER-I (futon2 cf9684c4): run-flight! passes the wired steps (read with cascades, ask with the library root, enact-fn, wc-fn); plan shows :resolved-steps with typed absences; flight-driver-test test-registry-bffeb8b4"
    :disposition :adapt
    :change "the target comes from the outer cascade's :chosen-target instead of --target; a hand-placed target stays available for the first flight"
    :tripwires

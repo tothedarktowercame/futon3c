@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "726b4d0b" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "cf9684c4" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -264,7 +264,9 @@
  ;; is a real site and the declared writer of :publication-observed (it
  ;; returns {:publication-observed obs}; enact-fn reads it and records it),
  ;; so the value's path runs through an observation box; one box left
- ;; unbuilt, the outer cascade. :kind :to-do is the
+ ;; unbuilt, the outer cascade. WM-DRIVER-I at futon2 cf9684c4: run-flight!
+ ;; passes the wired steps (enact-fn, wc-fn, the library root, the cascades);
+ ;; no box's declaration moves, findings unchanged. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
