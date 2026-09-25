@@ -1126,12 +1126,19 @@
                                     :ran-at (:ran-at payload) :finished-at (:finished-at payload)
                                     :warrant? (boolean (:warrant? payload))}
                              (nonblank? namespace) (assoc :namespace namespace))))
-                       (catch Exception _ ::undecodable)))
+                       ;; named, never a bare flag: the marker says WHICH
+                       ;; entries it could not read and why, so an
+                       ;; incomplete build over a whole scan is not mute
+                       ;; (claude-8 review, 2026-09-25: the live rebuild read
+                       ;; scanned 3196 of 3196, :complete? false, no reason)
+                       (catch Exception e
+                         {::undecodable {:evidence/id (:evidence/id entry)
+                                         :reason (or (:reason (ex-data e)) :undecodable)}})))
                    entries)
-        undecodable? (boolean (some #{::undecodable} runs))
+        undecodable (into [] (keep ::undecodable) runs)
         complete? (and (nil? failure) (pos? scanned) (= scanned held)
-                       (not undecodable?))]
-    (doseq [run (remove #{::undecodable} (remove nil? runs))]
+                       (empty? undecodable))]
+    (doseq [run (remove ::undecodable (remove nil? runs))]
       (append-ledger-entry! file (assoc run :entry/type :namespace-run)))
     (append-ledger-entry! file
                           (cond-> {:entry/type :namespace-ledger-built
@@ -1141,7 +1148,8 @@
                                    :complete? complete? :at (str (Instant/now))}
                             (:read-error failure) (assoc :read-error (:read-error failure))
                             (:window failure) (assoc :window (:window failure))
-                            (:reason failure) (assoc :failure-reason (:reason failure))))))
+                            (:reason failure) (assoc :failure-reason (:reason failure))
+                            (seq undecodable) (assoc :undecodable undecodable)))))
 
 (defn record-namespace-run!
   "Maintain the ledger for one minted :run row (append-record!'s return).
@@ -1328,7 +1336,8 @@
                            :registry-entries (:registry-entries built))
               (:read-error built) (assoc :read-error (:read-error built))
               (:window built) (assoc :window (:window built))
-              (:failure-reason built) (assoc :failure-reason (:failure-reason built))))))
+              (:failure-reason built) (assoc :failure-reason (:failure-reason built))
+              (seq (:undecodable built)) (assoc :undecodable (:undecodable built))))))
       (scan-latest-run backend {:match? (fn [payload]
                                           (= namespace (commanded-namespace (:command payload))))
                                 :absent-reason :no-run-for-namespace
@@ -1378,7 +1387,8 @@
                            :registry-entries (:registry-entries built))
               (:read-error built) (assoc :read-error (:read-error built))
               (:window built) (assoc :window (:window built))
-              (:failure-reason built) (assoc :failure-reason (:failure-reason built))))))
+              (:failure-reason built) (assoc :failure-reason (:failure-reason built))
+              (seq (:undecodable built)) (assoc :undecodable (:undecodable built))))))
       (scan-latest-run backend {:match? (fn [payload]
                                           (= (command-key command)
                                              (command-key (:command payload))))

@@ -841,6 +841,40 @@
                     backend {:namespace "paged-3-test" :namespace-ledger-file ledger})]
          (is (= :namespace-ledger (:resolved-by found))))))))
 
+(deftest an-undecodable-entry-is-named-on-the-marker-not-a-mute-incomplete
+  ;; review bad case (claude-8, 2026-09-25): the live rebuild over the whole
+  ;; store read scanned 3196 of 3196 and :complete? false with NO reason on
+  ;; the marker. An entry the build cannot decode must be named, with its
+  ;; reason, on the marker and on the absence refusal that cites it.
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:namespace "decodable-test" :ran-at "2026-09-25T01:00:00Z"})
+     (let [text "{:kind :run :schema \"test-registry/v1\" :author \"author\"}"
+           bad-id (str "test-registry-" (digest/sha256 "not the text"))
+           receipt ((requiring-resolve 'futon3c.evidence.boundary/append!)
+                    backend
+                    {:evidence/id bad-id
+                     :evidence/subject {:ref/type :session :ref/id "corrupt"}
+                     :evidence/type :coordination :evidence/claim-type :observation
+                     :evidence/author "author" :evidence/at "2026-09-25T01:00:01Z"
+                     :evidence/tags [:test-registry]
+                     :evidence/body {:payload-edn text :sha256 "0000"}})
+           _ (is (:ok receipt) (pr-str receipt))
+           ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger!
+                  backend {:namespace-ledger-file ledger :page-size 5})]
+       (is (false? (:complete? built)))
+       (is (= 2 (:scanned built)))
+       (is (= [{:evidence/id bad-id :reason :record-digest-mismatch}] (:undecodable built)))
+       (let [none (registry/latest-run-for-namespace
+                   backend {:namespace "futon3c.not-registered-test"
+                            :namespace-ledger-file ledger})]
+         (is (= :namespace-ledger-incomplete (:resolved-by none)))
+         (is (= [{:evidence/id bad-id :reason :record-digest-mismatch}] (:undecodable none))))
+       (let [found (registry/latest-run-for-namespace
+                    backend {:namespace "decodable-test" :namespace-ledger-file ledger})]
+         (is (= :namespace-ledger (:resolved-by found)) "the decodable run still resolves"))))))
+
 (deftest an-incomplete-namespace-ledger-refuses-absence
   ;; a build whose second page fails records :complete? false carrying the
   ;; typed failure — never a silent short scan — and absence keeps refusing
