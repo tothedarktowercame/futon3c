@@ -4,10 +4,11 @@
 ;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
 ;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
 ;; Re-pinned by claude-10 at map 47a88fc6 (:enacted-steps declared: two edges; :i4 gains the parallel selection -> enactment paths via :enacted-steps).
+;; Re-pinned by claude-10 at map d638fb0e (step 7: flight-entry writes :target-source, reads :draw-seed; edges 57->59; :i4 positional paths 32->50, no new (target, first box) pair).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "47a88fc6",
+ :map-sha "d638fb0e",
  :futon5-sha "aeeee96",
- :counts {:inputs 14, :outputs 12, :components 30, :edges 57},
+ :counts {:inputs 14, :outputs 12, :components 30, :edges 59},
  :validate
  {:all-valid false,
   :checks
@@ -26,7 +27,6 @@
      :r2-verifier
      :r7-selection
      :r6-cascade-lane
-     :flight-entry
      :r5-grain-gate]}
    {:valid true, :check :no-orphan-inputs, :orphan-inputs []}
    {:valid true, :check :type-safety, :type-errors []}
@@ -93,12 +93,24 @@
       :clock-in],
      :via [:eligible :chosen-target :positional :mission-id],
      :to :clock-lineage}
+    {:path
+     [:eligibility
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via [:eligible :draw-seed :positional :mission-id],
+     :to :clock-lineage}
     {:path [:flight-entry :dispatch :clock-in],
      :via [:positional :mission-id],
      :to :clock-lineage}
     {:path
      [:loop-entry :r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:trigger :chosen-target :positional :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:loop-entry :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:trigger :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r0-enact-step
@@ -116,8 +128,27 @@
       :positional
       :mission-id],
      :to :clock-lineage}
+    {:path
+     [:r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
     {:path [:r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:chosen-target :positional :mission-id],
+     :to :clock-lineage}
+    {:path [:r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r1-target-field
@@ -128,6 +159,14 @@
      :via [:next-step :chosen-target :positional :mission-id],
      :to :clock-lineage}
     {:path
+     [:r1-target-field
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via [:next-step :draw-seed :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r2-verifier
       :r6-cascade-lane
       :r9-selection-law
@@ -175,6 +214,50 @@
      [:r2-verifier
       :r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -188,6 +271,26 @@
       :delta
       :enactment-records
       :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :positional
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -234,6 +337,46 @@
     {:path
      [:r6-cascade-lane
       :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -246,6 +389,24 @@
       :delta
       :enactment-records
       :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
       :positional
       :mission-id],
      :to :clock-lineage}
@@ -266,8 +427,28 @@
       :mission-id],
      :to :clock-lineage}
     {:path
+     [:r7-flight-call
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r7-fold :r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:enactment-records :chosen-target :positional :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r7-fold :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:enactment-records :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r7-increment
@@ -284,8 +465,22 @@
       :mission-id],
      :to :clock-lineage}
     {:path
+     [:r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:delta :enactment-records :draw-seed :positional :mission-id],
+     :to :clock-lineage}
+    {:path
      [:r8-overlap :r1-outer-cascade :flight-entry :dispatch :clock-in],
      :via [:pair-overlap :chosen-target :positional :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r8-overlap :r1-outer-cascade :flight-entry :dispatch :clock-in],
+     :via [:pair-overlap :draw-seed :positional :mission-id],
      :to :clock-lineage}
     {:path
      [:r9-selection-law
@@ -325,6 +520,42 @@
      :to :clock-lineage}
     {:path
      [:r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
       :r7-increment
       :r7-fold
       :r1-outer-cascade
@@ -336,6 +567,22 @@
       :delta
       :enactment-records
       :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:candidate
+      :delta
+      :enactment-records
+      :draw-seed
       :positional
       :mission-id],
      :to :clock-lineage}
