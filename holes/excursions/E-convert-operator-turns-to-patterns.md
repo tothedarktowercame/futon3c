@@ -176,3 +176,40 @@ finding that the ring's label overstates what it measures.
   seat A's heading sat inside Joe's quoted text; seat B still separated
   Joe's words, the quoted review and seat A's reading correctly.
 
+### Round 5 — claude-12-turn-104 (turn-AL0y9C), 2026-09-25 ~20:50Z
+
+Joe: too many turns spent on whether the page can show something; say so if
+it is too hard, otherwise show churn data meaningfully, not explanations of
+gaps.
+
+- **Seat A (kimi-2):** four fragments: disagree (the frame, not the work),
+  report-problem (turns metered against no artefact), constrain
+  (`memory/licence-to-fail`), ask-action
+  (`war-machine/operational-not-decorative`). Sound.
+- **Seat B (kimi-1):** job `invoke-1790369616704-24450-a6230ba1`; futon6
+  `84069cc` (EFE page: a pink ring per district for commits in 90 days to
+  the code files its mission doc touches, from `data/mission-activity.json`
+  — `scripts/mission_activity.py`, futon6 `f3820f5`/`eb32e27`, 03:11Z the
+  same day, from `data/fold-embed/edges.jsonl` touches edges; hover gives
+  churn × indent complexity, all-time commits and coupled missions; solid /
+  dashed / dotted for measured / link without files / no link: 28 / 7 /
+  289 of 324); futon3c `a3acb76b` (mission note). Warrants present. It found
+  the mission→code link already in the data, which rounds 1–4 missed.
+- **Discrepancies:**
+  1. *What "hot" means here.* The link is doc → vars → files, and big shared
+     files dominate: M-capability-star-map, CLOSED since 2026-06-10, ranks
+     third (239 commits in 90 days over 5 files, 506 vars). The ring shows
+     how hot the files a mission's doc refers to are, not how active the
+     mission's own work is; the legend should say so.
+  2. *The data is not live.* `mission-activity.json` was generated
+     2026-09-25T03:12Z; the page reads that file, so the ring is as old as
+     its last run. The hover carries the timestamp; the legend does not
+     say how to refresh it.
+  3. *An orphaned change.* `scripts/mission_activity.py` has 214 uncommitted
+     added lines (per-doc commit history), which seat B attributes to
+     claude-12's in-flight work. They are most likely from the Kimi job
+     cancelled when the old seats were deleted (kimi-10, stuck since 07:03);
+     nobody owns them now.
+  Coverage (28 of 324 measured) is drawn on the page rather than explained,
+  which is what Joe asked for. Not published.
+
