@@ -2,6 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [futon3c.evidence.backend]
+            [futon3c.evidence.store :as store]
             [futon2.aif.c-fold-config :as digest]
             [futon3c.test-registry.ledger :as registry-ledger]
             [clojure.java.shell :as shell]
@@ -823,6 +824,27 @@
          (is (= :namespace-ledger-incomplete (:resolved-by none)))
          (is (= 1 (:scanned none)))
          (is (= 4 (:registry-entries none))))))))
+
+(deftest a-ledger-hit-never-fetches-an-evidence-page
+  ;; the lookup answers within the client's timeout because a ledger hit is
+  ;; one targeted store read -- no evidence page is ever fetched (2026-09-25,
+  ;; live: the endpoint answers a ledger hit in ~4s, while the default page
+  ;; times the 5s client out)
+  (fixture
+   (fn [{:keys [backend options]}]
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           run (registry/register-run! backend (assoc options :namespace-ledger-file ledger))
+           real-get-entry* store/get-entry*
+           pages (atom 0) reads (atom 0)]
+       (with-redefs [store/query* (fn [_ _] (swap! pages inc) [])
+                     store/count* (fn [_ _] (swap! pages inc) 0)
+                     store/get-entry* (fn [b id] (swap! reads inc) (real-get-entry* b id))]
+         (let [found (registry/latest-run-for-namespace
+                      backend {:namespace "demo-test" :namespace-ledger-file ledger})]
+           (is (= (:evidence/id run) (:evidence/id found)))
+           (is (= :namespace-ledger (:resolved-by found)))
+           (is (zero? @pages) "no evidence page was fetched for a ledger hit")
+           (is (= 3 @reads) "targeted reads only: the chain's links and parent, never a page")))))))
 
 (deftest a-complete-namespace-ledger-concludes-absence
   ;; first use builds the ledger from one full scan; a complete build plus
