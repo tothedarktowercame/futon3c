@@ -19,8 +19,36 @@ Exit 1 if any check fails. Unproduced wants alone do not fail the file.
 """
 import offset_unit
 import hashlib, json, os, re, subprocess, sys
+from pathlib import Path
 
-LIB = "/home/joe/code/futon3/library"
+CANONICAL = Path("/home/joe/code")
+
+
+def futon3_library():
+    """Where futon3's pattern library is.
+
+    House convention is that every repo lives at its canonical path and
+    cross-repo references resolve there, which is why this was written as a
+    literal. A worktree of this repo does not live there, so look in the
+    workspace beside THIS checkout first and fall back to the canonical one.
+    Refuse naming both paths rather than guess a third: a wrong library
+    silently reports every pattern id as missing, which reads as a broken
+    cascade rather than a broken path.
+    """
+    here = Path(__file__).resolve().parents[1].parent
+    tried = []
+    for root in (here, CANONICAL):
+        lib = root / "futon3" / "library"
+        if lib.is_dir():
+            return str(lib)
+        if str(lib) not in tried:
+            tried.append(str(lib))
+    sys.exit("futon3 pattern library not found. Tried " + " and ".join(tried)
+             + ". Put the checkout at its canonical path or run from a "
+               "workspace that holds one.")
+
+
+LIB = futon3_library()
 IDLINE = re.compile(r"^@(?:arg|flexiarg|multiarg)\s+(.+?)\s*$", re.M)
 
 
