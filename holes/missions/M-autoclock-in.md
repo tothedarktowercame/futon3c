@@ -1,6 +1,7 @@
 # Mission: M-autoclock-in
 
-**Status:** INSTANTIATE-1 (first implementation, 2026-06-03) — explicit resolved target auto-promotion is implemented in `agent-chat.el`; broader confirmation/XTDB witnesses remain future work.
+**Status:** INSTANTIATE-8 (2026-09-24). Durable clock decisions (INSTANTIATE-5), restoration (6), dispatch lineage (7a), Codex edit activity (7b) and requisition-scoped Kimi seats (8) are implemented. Outstanding: the Emacs buffer clock has not been reconciled with the durable decision for operator turns (see the 2026-09-25 amendment to Rule 0 below), and inherited reclocking across a bell is unbuilt.
+**Done when (mission exit, claude-4 as owner, 2026-09-25 — answering the War Machine's question at this span, request-3700db0370e216bd):** every accepted turn, on every surface, carries either a durable clock decision or a typed refusal; that decision survives a restart; the clock the operator SEES agrees with the decision that was recorded for the same turn; and a bell carries its sender's clock to whoever does the work. The IDENTIFY exit (below) was satisfied at DERIVE/INSTANTIATE-1 and is **not** the mission exit — it is the exit for picking the mission up. The open items at the end of INSTANTIATE-8 are split between this mission and elsewhere at that span; only inherited reclocking is a criterion here.
 **Owner:** **claude-4** (going-forward, 2026-06-27 — Joe passed it here; it is D1 of campaign C-cascade-real: the durable agent↔session↔mission lineage, building on the bg-process process-tree node-type). codex-2 did the INSTANTIATE-1 first implementation; Joe/agents review.
 **Repo:** futon3c (clock-in lives in the agent-chat/REPL surface).
 
@@ -64,6 +65,42 @@ The risky part is not detection but over-detection. Therefore the first implemen
 A user turn becomes an auto-clock-in only when all of the following are true:
 
 0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just "no mission" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)
+
+   **Amended 2026-09-25 (claude-4, owner, answering the War Machine's question
+   at this span — request-3700db0370e216bd). Rule 0 stands, and it is scoped by
+   WHOSE TURN IT IS.** The rule was written on 2026-06-03 when the only clock
+   was the Emacs buffer's, so it never had to say who authored the turn. That
+   distinction is what carries it now, and both halves are already implemented
+   and pinned in the JVM resolver:
+
+   - an **operator** turn naming an exact target supersedes a stale clock —
+     `futon3c.agency.clock-decision-test/exact-mention-overrides-stale-clock-and-refusals-keep-it`;
+   - a **bell, auto-bellback or dispatch** turn fills an empty clock and never
+     switches — `.../bell-mentions-fill-an-empty-clock-but-do-not-switch`,
+     added by claude-8 on 2026-09-24 after bellbacks naming `M-futon-seams` in
+     passing kept moving a seat's `E-cascade-real` clock.
+
+   Joe's 2026-06-03 reason is preserved exactly where it bites. A target named
+   in prose by someone *other than the operator* is mention-graph data and must
+   not move anyone; an ambiguous or unresolvable name records its refusal and
+   leaves the clock where it was (Joe, 2026-09-24, same test). What the
+   operator himself types is an instruction, not a mention: he can see the
+   clock he is on, and attributing that turn to the target he just navigated
+   away from is the false attribution this mission exists to prevent.
+
+   **Consequence, and the locator this criterion now needs.** The Emacs buffer
+   path still enforces floor-only for operator input
+   (`agent-chat-auto-clock-only-fires-at-no-target-floor`,
+   `test/agent-chat-test.el:553`), so a single REPL turn can leave the buffer
+   displaying `M-old` while its durable decision records `M-new`. Under this
+   amendment **that ERT assertion is the stale one, not the JVM's**: the work
+   is to bring the buffer clock into agreement with the durable decision for
+   operator turns, while keeping floor-only on the buffer for every
+   non-operator surface. The criterion's locator is a registered run showing
+   the two agreeing on one operator turn that names a target while clocked
+   elsewhere. It reads false today, and that is the honest reading — the
+   disagreement is real, not a documentation gap.
+
 1. The turn contains one or more explicit target tokens matching `C-*`, `M-*`, or `E-*`.
 2. Every target token resolves by exact ID against the filesystem-backed completion candidates for its level.
 3. The turn names at most one campaign, at most one mission, and at most one excursion.
@@ -866,3 +903,20 @@ Inherited reclocking is wanted (Joe): a bell carries its sender's clock to
 whoever does the work. Open: a live check of the summary call against Kimi
 (written while the 5-hour window was exhausted), and compaction inside a
 single long job.
+
+**Split 2026-09-25 (claude-4, owner, answering the War Machine's question at
+this span — request-3700db0370e216bd).** These three are not one list, and
+only one of them gates this mission.
+
+- **Inherited reclocking IS an outstanding criterion of M-autoclock-in.** A
+  bell carrying its sender's clock to whoever does the work is clock
+  propagation across a dispatch: the same object as INSTANTIATE-7a's dispatch
+  lineage, one hop further along. It is turn→target attribution, so it gates
+  the mission exit stated in the Status block at the top of this file.
+- **The live Kimi summary check and in-job compaction are follow-ups owned
+  elsewhere.** Both are properties of a Kimi seat's context handling — whether
+  a summary call succeeds against the vendor, and whether a single long job can
+  compact mid-flight. Neither decides which target a turn is attributed to, so
+  neither gates this mission. They belong with the seat work (futon3c
+  `README-kimi.md`, `src/futon3c/agents/kimi_api.clj`); M-autoclock-in does not
+  wait on them, and closing them does not close it.
