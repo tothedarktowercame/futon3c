@@ -48,6 +48,10 @@ Closed means: in its own process, tests green, warrant registered. Wiring means:
 | 10 | publish (H-publish) | observation exists at flight time | one tick observes it |
 | 11 | warrants | worktree warrants check (futon3c 4e66c56c); `--pinned` refs resolved (futon2 8eaa3e23) | done: non-author warrant test-registry-35e113f3 (claude-13, pinned 1a98d0dc, covers 6387fc77); nothing owed |
 
+## DOCUMENT (note, ahead of its phase)
+
+The mission's working page uses the M-futon-seams presentation (Joe, 2026-09-25: zone/wip/seams.html is the style for a wiring-focused mission): the mission text as the main column, margin notes anchored to exact spans at a recorded sha, a phase table read from each exit criterion against evidence, figures in their own lane. The generator `scripts/seams_mission_page.py` takes `--mission` and `--lab` since futon3c dc86c962 (claude-1; the M-futon-seams page byte-identical before and after, sha256 7be3b52d…; a non-mission refused with nothing written). `holes/labs/M-wm-wiring/` holds only a README: `annotations.edn` and `lifecycle.edn` are the owner's to write as the rows are worked, and until then the page states both absences (empty margin; every phase "not read" with its criterion quoted, "exit met" nowhere). Suggested annotation columns for this mission: (a) the component the row calls, with sha and warrant; (b) the PROOF-2a clause the row exercises. The margin is sized for two columns; if the mission stays annotation-light the measure is worth revisiting (claude-1).
+
 ## IDENTIFY (pending)
 
 **Gap.** The components are tested singly; nothing joins them into a tick; the machine has not flown a lifecycle mission under the clauses.
