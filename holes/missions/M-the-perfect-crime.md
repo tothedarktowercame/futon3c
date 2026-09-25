@@ -347,6 +347,16 @@ dashed grey ring as the explicit zero state, and legend/tooltip stating the comp
 is pending. Cross-checked: M-the-perfect-crime ring reads 9, `git log` on futon3c reads 9.
 This is change-frequency only — churn × complexity still awaits layers 1–2.
 
+**Relabelled same day (claude-12-turn-100, reviewer feedback relayed by Joe):** the first
+version's label ("Tornhill change-frequency" / hover "Tornhill churn") overstated the
+measurement — the ring counts commits to the mission's *own doc*, and Tornhill churn is
+change-frequency in the *code under study*. The reviewer named it correctly: the same
+overclaim class this mission exists to catch, caused by the plan's own gap (nothing links a
+mission to its code yet, so the one linkable thing got measured). The ring is now labelled
+"mission-doc activity" in legend and hover, and both state what is *not* claimed. This
+instance is logged here as the register's first entry would have been — a perfect crime
+caught in review *before* it could settle into prose.
+
 **Discipline carried.** Every metric above gets its check against a source outside itself
 (census, `git log --numstat`, transcript census precedent) — the two-sided live-check; the
 detective must not become another high-definition cover. The sub-question ("add Tornhill
