@@ -37,9 +37,22 @@ There is no install step and nothing to configure. If you produce records that
 pass, your implementation and this one agree about what a turn is, and either
 can be replaced without the other being edited. That is the whole claim.
 
-The schema was **derived from 159 real records and checked against all of
-them**, not designed in advance. Where a field exists because of a mistake,
-the description says which mistake.
+The schema was **derived from real records and checked against all of them**,
+not designed in advance. Where a field exists because of a mistake, the
+description says which mistake.
+
+That claim is a measurement with a date, not a constant, so here is how to
+repeat it. It was 159 of 159 on 2026-09-24, against the session-turn-analysis
+store of the implementation that produced this package; the same store read
+162 of 162 on 2026-09-25, three turns having been recorded in between. The
+records are run data and are not shipped here -- they are one operator's
+conversations -- so the number you can check is the one over your own:
+
+    python3 conformance.py --dir PATH/TO/YOUR/RECORDS
+
+A figure nobody can re-derive is a decoration, and this one was one: it
+travelled as "159 of 159" with no input named, which an outside reader called
+out (H-WITNESS-ii, futon2 417bfb4f).
 
 ## If you are implementing the other side
 

@@ -7,7 +7,8 @@ An edit to M-futon-seams.md moves every offset after it. Five things point at
 those offsets and all five must move together:
 
   1. annotations.edn      — via reanchor.py, which refuses a changed quote
-  2. lifecycle.edn        — the :mission-anchor of each phase
+  2. lifecycle.edn        — the :mission-anchor of each phase, and the
+                            :mission :sha256 the whole record is pinned to
   3. proto/*.edn          — every :cue
   4. every :mission-sha   — across proto, wiring, exemplar, item6
   5. mission-C.edn        — :cue and :cue-quote
@@ -46,6 +47,18 @@ LAB = os.path.join(REPO, "holes/labs/M-futon-seams")
 DRY = "--dry-run" in sys.argv
 
 
+def set_pin(life, new_sha):
+    """Put the record's :mission :sha256 on the text, and say so."""
+    pin = re.search(r'(:mission \{[^}]*?:sha256 ")([0-9a-f]{64})(")', life)
+    if not pin:
+        sys.exit("  lifecycle.edn: no :mission :sha256 to set — pin cannot be kept")
+    if pin.group(2) == new_sha:
+        print("  mission pin: already current")
+        return life
+    print(f"  mission pin: {pin.group(2)[:12]}… → {new_sha[:12]}…")
+    return life[:pin.start(2)] + new_sha + life[pin.end(2):]
+
+
 def sh(*cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, **kw)
 
@@ -56,7 +69,14 @@ def main():
     prev = sh("git", "show", "HEAD:holes/missions/M-futon-seams.md").stdout
     old_sha = hashlib.sha256(prev.encode()).hexdigest()
     if new_sha == old_sha:
-        print("mission unchanged since HEAD — nothing to repin")
+        # No offsets moved, but the pin can still be wrong: it is the one
+        # thing here that drifts without the text changing, and this early
+        # return is how it stayed wrong. Check it before standing down.
+        print("mission unchanged since HEAD — offsets all hold")
+        life = open(LIFECYCLE, encoding="utf-8").read()
+        fixed = set_pin(life, new_sha)
+        if fixed != life and not DRY:
+            open(LIFECYCLE, "w", encoding="utf-8").write(fixed)
         return
     print(f"mission {old_sha[:12]}… → {new_sha[:12]}…")
     omap = offset_map(prev, text)
@@ -92,6 +112,17 @@ def main():
     for a, b, repl in sorted(edits, reverse=True):
         life = life[:a] + repl + life[b:]
     print(f"  phase anchors: {moved} moved, {missing} left")
+
+    # 2b. the pin itself. This used to ride on the blind `replace(old_sha,
+    # new_sha)` in step 4, which only lands while the pin still holds HEAD's
+    # sha -- edit twice without committing in between and it can never match
+    # again. It had been stuck at 288ce657 (the text at 52dd90ec) through
+    # every later repin while all eight anchors beside it moved correctly,
+    # because a replacement that matches nothing says nothing. That is the
+    # same failure verdict_check.py's own docstring was written about. Set
+    # the pin from the computed sha; do not go looking for its old value.
+    life = set_pin(life, new_sha)
+
     if not DRY:
         open(LIFECYCLE, "w", encoding="utf-8").write(life)
 

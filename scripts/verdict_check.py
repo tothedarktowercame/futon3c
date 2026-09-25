@@ -18,7 +18,7 @@ on, and the qualification belongs in the paragraph beneath.
 
 Exit 1 on any disagreement.
 """
-import json, os, re, subprocess, sys
+import hashlib, json, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MISSION = os.path.join(REPO, "holes/missions/M-futon-seams.md")
@@ -42,12 +42,31 @@ def main():
         f'(print (j/generate-string (edn/read-string (slurp "{LIFECYCLE}"))))'],
         capture_output=True, text=True).stdout)
     text = open(MISSION, encoding="utf-8").read()
-    bad, checked = [], 0
+    bad, checked, data_only, anchored = [], 0, 0, 0
+
+    # The record pins the mission it was written against. Nothing compared
+    # the pin to the file, so it sat at 288ce657 -- the text at 52dd90ec,
+    # where ARGUE read "Not met" and DOCUMENT "Not started" -- while the
+    # eight anchors beside it were kept exact and every verdict below was
+    # checked against the CURRENT text. Every check passed and the record
+    # still said it was describing a different document. An outside reader
+    # found that too (H-WITNESS-ii, futon2 417bfb4f), which is twice now.
+    pin = (life.get("mission") or {}).get("sha256")
+    sha = hashlib.sha256(text.encode()).hexdigest()
+    if not pin:
+        bad.append("lifecycle.edn: :mission has no :sha256 — nothing says "
+                   "which text these verdicts were read against")
+    elif pin != sha:
+        bad.append(f"lifecycle.edn is pinned to mission {pin[:12]}… but the "
+                   f"file is {sha[:12]}… — the verdicts below were checked "
+                   f"against text the record does not claim to describe. "
+                   f"Run scripts/repin.py")
 
     for ph in life["phases"]:
         anc = ph.get("mission-anchor")
         if not anc:
             continue
+        anchored += 1
         if not ph.get("verdict-source"):
             bad.append(f"{ph['id']}: no :verdict-source — say whether its "
                        f"verdict is :prose or :data-only")
@@ -64,7 +83,7 @@ def main():
                            f"a reader cannot act on it; put the qualification "
                            f"in the paragraph and make the verdict exact")
             elif ph.get("verdict-source") == "data-only":
-                pass     # closure recorded in lifecycle.edn and nowhere else
+                data_only += 1   # closure recorded in lifecycle.edn, nowhere else
             else:
                 bad.append(f"{ph['id']}: no verdict line at all")
             continue
@@ -78,7 +97,12 @@ def main():
             bad.append(f"{ph['id']}: :blocked without :blocked-on — say which "
                        f"phase it waits for")
 
-    print(f"{checked} verdict lines checked against lifecycle.edn — "
+    # Report all three numbers. Saying only "6 verdict lines checked" beside
+    # a Status line that says eight exits were met reads as two of them going
+    # unchecked, when what is true is that two are closed in the data by
+    # declaration and have no prose line to check.
+    print(f"{anchored} phases — {checked} verdict lines checked against "
+          f"lifecycle.edn, {data_only} closed in the data only — "
           + ("OK" if not bad else f"{len(bad)} DISAGREEMENT(S)"))
     for b in bad:
         print("  FAIL " + b)
