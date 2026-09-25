@@ -17,6 +17,7 @@ Checks, per file:
 
 Exit 1 if any check fails. Unproduced wants alone do not fail the file.
 """
+import offset_unit
 import hashlib, json, os, re, subprocess, sys
 
 LIB = "/home/joe/code/futon3/library"
@@ -34,12 +35,17 @@ def edn(path):
     return json.loads(r.stdout)
 
 
-MISSION = "/home/joe/code/futon3c/holes/missions/M-futon-seams.md"
+MISSION = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "holes/missions/M-futon-seams.md")
 
 
 def check(path):
     c = edn(path)
     bad, notes = [], []
+
+    u = offset_unit.complaint(c.get("offset-unit"), os.path.basename(path))
+    if u:
+        bad.append(u)
 
     # A :cue is an anchor into the mission exactly as an annotation's is, but
     # it carries no quote to re-check, so the most that can be verified is the

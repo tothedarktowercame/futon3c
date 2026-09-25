@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Print z.ai plan usage in human terms.
+
+The z.ai web app has no discoverable usage page -- their own in-app agent does
+not know where it is -- but the API the coding plan uses exposes the numbers
+directly at /api/monitor/usage/quota/limit. This reads the same endpoint the
+APM cron gate already reads (scripts/apm_formal_zai_cron.py), with no gating:
+it just tells you where you stand.
+
+  ./scripts/zai-usage           human summary
+  ./scripts/zai-usage --json    the raw response
+
+Auth: ZAI_API_KEY, else ~/.zaikey, else ~/.zai-key. The key is never printed.
+"""
+import json, os, sys, time, urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+URL = os.environ.get("ZAI_QUOTA_URL", "https://api.z.ai/api/monitor/usage/quota/limit")
+
+# z.ai reports a window as (unit, number): the unit names the period and the
+# number how many of them. Decoded from observed data against the plan's own
+# behaviour -- unit 3 number 5 is the five-hour window whose exhaustion returns
+# HTTP 429 code 1308 "Usage limit reached for 5 hour".
+UNITS = {1: "minute", 2: "hour", 3: "hour", 4: "day", 5: "day", 6: "month"}
+
+
+def api_key():
+    key = os.environ.get("ZAI_API_KEY", "").strip()
+    if key:
+        return key
+    for path in (Path.home() / ".zaikey", Path.home() / ".zai-key"):
+        try:
+            key = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if key:
+            return key
+    sys.exit("no key: set ZAI_API_KEY or create ~/.zaikey")
+
+
+def window_name(item):
+    unit, number = item.get("unit", -1), item.get("number", -1)
+    name = UNITS.get(unit, f"unit-{unit}")
+    return f"{number} {name}" + ("s" if number != 1 and not name.startswith("unit") else "")
+
+
+def when(ms):
+    if not ms:
+        return "unknown"
+    t = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+    delta = ms / 1000 - time.time()
+    if delta < 0:
+        return f"{t:%Y-%m-%d %H:%M}Z (passed)"
+    h, m = divmod(int(delta // 60), 60)
+    return f"{t:%Y-%m-%d %H:%M}Z (in {h}h{m:02d}m)"
+
+
+def bar(pct, width=24):
+    filled = int(round(width * pct / 100))
+    return "█" * filled + "░" * (width - filled)
+
+
+def main():
+    req = urllib.request.Request(URL, headers={
+        "Authorization": api_key(),
+        "Accept-Language": "en-US,en",
+        "Content-Type": "application/json",
+    })
+    with urllib.request.urlopen(req, timeout=20) as response:
+        obj = json.load(response)
+    if "--json" in sys.argv:
+        print(json.dumps(obj, indent=1))
+        return
+    if obj.get("success") is not True:
+        sys.exit(f"z.ai refused: code={obj.get('code')} msg={obj.get('msg')}")
+    data = obj.get("data") or {}
+    print(f"z.ai plan: {data.get('level', '?')}    checked {datetime.now(timezone.utc):%Y-%m-%d %H:%M}Z\n")
+    for item in data.get("limits") or []:
+        pct = item.get("percentage")
+        if item.get("type") == "TOKENS_LIMIT":
+            used = float(pct)
+            flag = "  EXHAUSTED" if used >= 100 else ("  LOW" if used >= 85 else "")
+            print(f"  tokens / {window_name(item):<10} {bar(used)} {used:5.1f}% used{flag}")
+            print(f"  {'':<19} resets {when(item.get('nextResetTime'))}\n")
+        elif item.get("type") == "TIME_LIMIT":
+            print(f"  tools  / {window_name(item):<10} {item.get('currentValue', 0)}"
+                  f" of {item.get('usage', 0)} calls")
+            for d in item.get("usageDetails") or []:
+                print(f"  {'':<19}   {d.get('modelCode')}: {d.get('usage')}")
+            print(f"  {'':<19} resets {when(item.get('nextResetTime'))}\n")
+
+
+if __name__ == "__main__":
+    main()

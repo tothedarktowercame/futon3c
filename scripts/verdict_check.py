@@ -18,6 +18,7 @@ on, and the qualification belongs in the paragraph beneath.
 
 Exit 1 on any disagreement.
 """
+import offset_unit
 import hashlib, json, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,10 @@ def main():
     # checked against the CURRENT text. Every check passed and the record
     # still said it was describing a different document. An outside reader
     # found that too (H-WITNESS-ii, futon2 417bfb4f), which is twice now.
+    u = offset_unit.complaint(life.get("offset-unit"), "lifecycle.edn")
+    if u:
+        bad.append(u)
+
     pin = (life.get("mission") or {}).get("sha256")
     sha = hashlib.sha256(text.encode()).hexdigest()
     if not pin:

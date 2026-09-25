@@ -11,6 +11,11 @@
 ;; construction condition does not hold on it. That is recorded as a finding,
 ;; not dressed up.
 {:schema :m-futon-seams/proof2a-click-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
  :click "click-001"
  :authored-by "claude-1"
  :authored-at "2026-09-24"

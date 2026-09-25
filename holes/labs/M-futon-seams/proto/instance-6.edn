@@ -17,6 +17,11 @@
 ;; it lets the two shapes be compared against clause 0's meets requirement.
 ;; Authored by claude-1, 2026-09-24. DRAFT pending claude-10's review.
 {:schema :m-futon-seams/proto-cascade-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
  :instance 6
  :mission-sha "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
 

@@ -21,6 +21,8 @@ those need a decision, and are reported instead.
 """
 import argparse, hashlib, json, os, re, subprocess, sys
 
+import offset_unit
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mission_anchors import heading_for
 
@@ -42,6 +44,18 @@ def main():
          '(require (quote [clojure.edn :as edn]) (quote [cheshire.core :as j]))'
          f'(print (j/generate-string (edn/read-string (slurp "{ANN}"))))'],
         capture_output=True, text=True).stdout)
+
+    # These are character offsets. Refuse to move spans whose unit is
+    # unstated: a consumer reading bytes gets the wrong span and no error,
+    # and an outside reader already drew the wrong conclusion from them.
+    undeclared = [n["id"] for n in notes
+                  if offset_unit.complaint(n["anchor"].get("offset-unit"),
+                                           n["id"]) is not None]
+    if undeclared:
+        sys.exit(f"annotations.edn: {len(undeclared)} anchor(s) do not declare "
+                 f":offset-unit :{offset_unit.UNIT} — "
+                 f"{', '.join(undeclared[:3])}"
+                 f"{'…' if len(undeclared) > 3 else ''}")
 
     moved = skipped = 0
     moves = []

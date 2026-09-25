@@ -6,6 +6,11 @@
 ;; Every pattern id below resolves in futon3/library AND its @flexiarg
 ;; declaration matches its path; sha256 is of the file at authoring time.
 {:schema :m-futon-seams/proto-cascade-v1
+ ;; offsets into the mission are CHARACTER offsets. Read as bytes,
+ ;; every span below lands in the wrong place -- there are multi-byte
+ ;; characters before the first one. Declared because a reader from
+ ;; outside read them as bytes and concluded the record was stale.
+ :offset-unit :unicode-codepoints-zero-based-end-exclusive
  :instance 4
  :mission-sha "d13c5cfe9e9b19b445bd5bb73507f286a9e5ff3b478a1c5bc6a2250d70c6f6fd"
 

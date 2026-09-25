@@ -11,6 +11,7 @@ span-by-span comparison against an ambiguous quote proves nothing), and every
 
 Exit 1 on any failure.
 """
+import offset_unit
 import hashlib, json, os, subprocess, sys
 
 MISSION = "holes/missions/M-futon-seams.md"
@@ -31,6 +32,10 @@ def main():
     c = edn(sys.argv[1])
     text = open(MISSION, encoding="utf-8").read()
     bad = []
+
+    u = offset_unit.complaint(c.get("offset-unit"), os.path.basename(sys.argv[1]))
+    if u:
+        bad.append(u)
 
     now = hashlib.sha256(text.encode()).hexdigest()
     if c.get("mission-sha") != now:
