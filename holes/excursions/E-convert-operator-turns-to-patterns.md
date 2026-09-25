@@ -228,3 +228,23 @@ Two discrepancies surfaced only at publish:
 Still open: round 3's "stale agent annotation(s) withheld" notice is drawn
 large across the top of the map, over the star labels.
 
+## Wound down, 2026-09-25 ~21:50Z (Joe)
+
+Joe: "I see the yellow ring but very little clarity around what it means. I
+think we should probably wind down the Seat A and Seat B experiment and
+rethink how we're going about this." No further rounds are dispatched.
+
+What the five rounds showed, from the entries above:
+- Seat A's readings were sound every round; the losses were downstream.
+- Seat B followed Joe's words and put warrants at its changes, but fixed
+  what it could measure rather than what was asked (rounds 2, 3), and
+  shipped an unrendered page with a script error (round 3).
+- Each round produced a small change and a review; Joe saw several turns
+  of talk before anything visible, and what became visible (the yellow
+  ring) did not explain itself.
+- claude-12's reviews read diffs and data but not the rendered page until
+  publish.
+
+Left in place at wind-down: kimi-1 (seat B) and kimi-2 (seat A, still
+session-mode's interpreter for the turn feed), pending Joe's decision.
+
