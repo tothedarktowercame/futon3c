@@ -318,6 +318,16 @@ The record is written either way; only who fills it changes."
   :type 'string
   :group 'session-mode)
 
+(defcustom session-mode-analysis-caller "turn-capture"
+  "Sender named on every turn-analysis dispatch.
+Deliberately not the agent the turn was addressed to: a registered sender
+receives an auto-bellback when the job finishes, which put a \"RE: your
+bell\" turn in the buffer Joe was reading for every turn he typed (Joe,
+2026-09-25: turn them off). Nobody reads that bell; the reaper picks the
+result up from the job. Keep this an id that is not on the Agency roster."
+  :type 'string
+  :group 'session-mode)
+
 (defcustom session-mode-analysis-requisition "M-futon-seams"
   "Requisition TARGET sent with every turn-analysis brief.
 A seat may refuse work that does not name what it is for. The dispatcher
@@ -516,7 +526,7 @@ state -- never silently complete."
                                 (shell-quote-argument brief)
                                 (shell-quote-argument session-mode-analysis-sender)
                                 (shell-quote-argument agent)
-                                (shell-quote-argument (or agent-chat--agent-id "emacs")))))
+                                (shell-quote-argument session-mode-analysis-caller))))
       (error (display-warning 'session-mode
                               (format "Analysis dispatch to %s failed: %s"
                                       agent (error-message-string err)))))))
@@ -586,13 +596,9 @@ corrects it to the turn's own time."
     (let ((path (session-mode--record-turn text)))
       (when (and path session-mode-analysis-agent
                  (not (equal session-mode-analysis-agent agent-id)))
-        ;; The dispatch names its sender from agent-chat--agent-id. Here
-        ;; that would make AGENT-ID the requisitioner of the labeller seat
-        ;; (for session-mode-analysis-requisition, not its own mission) and
-        ;; the recipient of every interpretation's bellback; the capture is
-        ;; the sender. The record is read back by the reaper, not by a bell.
-        (let ((agent-chat--agent-id "turn-capture"))
-          (session-mode--dispatch-analysis path)))
+        ;; Sent as session-mode-analysis-caller, like a typed turn; the
+        ;; record is read back by the reaper, not by a bell.
+        (session-mode--dispatch-analysis path))
       path)))
 
 (provide 'session-turn-analysis)
