@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "fcc31531" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "d6df5909" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -112,11 +112,17 @@
    ;; the count is decided by :wc-verdict (delta 1 only on an empty
    ;; verdict); :attempts refuses attempts outside the candidate and
    ;; :candidate is the P_c join; both are identity, not the count
-   :reads [:attempts :candidate :wc-verdict] :writes [:delta]}
+   :reads [:attempts :candidate :wc-verdict] :writes [:delta :wc-failures]}
   {:box/id :r7-flight-call :row 7 :box/kind :component
-   ;; the flight hands check-c's verdict to increment unchanged (step 11)
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "wc-verdict-fn"}
-   :reads [:wc-verdict]}
+   ;; the flight runs the one W_c checker (--wc --edn) and hands its verdict
+   ;; to increment unchanged (step 11)
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "wc-verdict-fn"}
+   ;; the verdict reaches increment positionally; the flight records it under
+   ;; :wc; the attempts' patterns give the policy key
+   :reads [:attempts] :writes [:wc]}
+  {:box/id :r7-call-test :row 7 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"}
+   :reads [:wc :delta :wc-failures]}
   {:box/id :r7-fold :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_habit.clj" :var "fold"}
    :reads [:delta] :writes [:enactment-records]}
@@ -209,9 +215,9 @@
            {:box :r6-cascade-lane :hop :positional :via "the click: a POST that runs the tick's cascade lane"}
            {:box :r9-selection-law :hop :positional :via "the lane's ranked actions reach selection"}
            :r0-enact-step
-           :wc-checker
            :r7-flight-call
-           {:box :r7-increment :hop :positional :via "increment takes the verdict as an argument"}
+           {:box :wc-checker :hop :positional :via "wc-verdict-fn runs bb proof2a_check.clj <click record> <enactment record> --wc --edn"}
+           :r7-increment
            :r7-fold
            :r1-outer-cascade]}]
  ;; The checker's report over :boxes with {:heuristic? true}, exactly (futon3c
