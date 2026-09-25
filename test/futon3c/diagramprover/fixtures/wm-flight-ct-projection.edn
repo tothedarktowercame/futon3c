@@ -1,0 +1,142 @@
+;; futon3c.diagramprover.ct-projection over holes/labs/M-wm-wiring/wm-flight-wiring.edn
+;; at :map-sha, validated by futon5 src/futon5/ct/mission.clj at :futon5-sha (loaded from
+;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
+;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
+{:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
+ :map-sha "826883de",
+ :futon5-sha "aeeee96",
+ :counts {:inputs 15, :outputs 12, :components 28, :edges 53},
+ :validate
+ {:all-valid false,
+  :checks
+  [{:valid true, :check :completeness, :unreachable-outputs []}
+   {:valid false,
+    :check :coverage,
+    :dead-components
+    [:r4-kernel
+     :r2-flight-read
+     :clock-in
+     :r11-warrants
+     :wc-checker
+     :r9-decision
+     :r5-flight-call
+     :r7-flight-call
+     :r3-prompt
+     :r2-verifier
+     :r7-selection
+     :r6-cascade-lane
+     :flight-entry
+     :r5-grain-gate]}
+   {:valid true, :check :no-orphan-inputs, :orphan-inputs []}
+   {:valid true, :check :type-safety, :type-errors []}
+   {:valid true, :check :spec-coverage, :unspecified-outputs []}
+   {:valid false,
+    :check :timescale-ordering,
+    :violations
+    [{:edge
+      {:from :r2-served-by-reading,
+       :to :pref/text-sha256,
+       :field :text-sha256},
+      :from-timescale :medium,
+      :to-timescale :glacial,
+      :message
+      ":r2-served-by-reading (medium) writing to constraint :pref/text-sha256 (glacial) — fast dynamics must not write to slow constraints"}
+     {:edge
+      {:from :r2-served-by-reading,
+       :to :pref/want-span,
+       :field :want-span},
+      :from-timescale :medium,
+      :to-timescale :glacial,
+      :message
+      ":r2-served-by-reading (medium) writing to constraint :pref/want-span (glacial) — fast dynamics must not write to slow constraints"}]}
+   {:valid true, :check :exogeneity, :vulnerable-paths []}
+   {:valid true,
+    :check :compositional-closure,
+    :single-points-of-failure []}],
+  :mission/id :wm-flight-wiring},
+ :i4
+ {:preference-fields
+  [{:field :text-sha256,
+    :writers [:r2-served-by-reading],
+    :observed-by [:r2-served-by-reading]}
+   {:field :want-span,
+    :writers [:r2-served-by-reading],
+    :observed-by [:r2-served-by-reading]}],
+  :scored-facts
+  {:read-by :r1-outer-cascade,
+   :fields
+   [{:field :eligible, :writers [:eligibility], :observed-by []}
+    {:field :enactment-records, :writers [:r7-fold], :observed-by []}
+    {:field :next-step, :writers [:r1-target-field], :observed-by []}
+    {:field :pair-overlap, :writers [:r8-overlap], :observed-by []}
+    {:field :publication-observed,
+     :writers [:r10-observe-publication],
+     :observed-by [:r10-observe-publication]}
+    {:field :trigger, :writers [:loop-entry], :observed-by []}]},
+  :observation-boxes
+  [:r10-observe-publication
+   :r2-flight-read
+   :r2-served-by-reading
+   :r5-grain-gate
+   :r6-sourced-rates
+   :wc-checker],
+  :bypass
+  {:to-preferences [],
+   :to-preferences-positional [],
+   :to-scored-facts
+   [{:path [:r0-enact-step :r7-increment :r7-fold],
+     :via [:attempts :delta],
+     :to :enactment-records}
+    {:path [:r7-increment :r7-fold],
+     :via [:delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
+     :via [:candidate :attempts :delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r7-increment :r7-fold],
+     :via [:candidate :delta],
+     :to :enactment-records}],
+   :to-scored-facts-positional
+   [{:path [:r0-enact-step :r7-increment :r7-fold],
+     :via [:attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:positional :positional :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via [:positional :positional :candidate :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:positional :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path [:r6-cascade-lane :r9-selection-law :r7-increment :r7-fold],
+     :via [:positional :candidate :delta],
+     :to :enactment-records}
+    {:path [:r7-flight-call :r7-increment :r7-fold],
+     :via [:positional :delta],
+     :to :enactment-records}
+    {:path [:r7-increment :r7-fold],
+     :via [:delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r0-enact-step :r7-increment :r7-fold],
+     :via [:candidate :attempts :delta],
+     :to :enactment-records}
+    {:path [:r9-selection-law :r7-increment :r7-fold],
+     :via [:candidate :delta],
+     :to :enactment-records}]}}}
