@@ -7,6 +7,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
+            [futon3c.agency.registry :as registry]
             [futon3c.logic.cascade-real :as cr]
             [futon3c.logic.cascade-real-live :as live]
             [futon3c.substrate.client :as substrate]))
@@ -149,7 +150,8 @@
                   :hx/props {:agent-id "claude-4" :session-id "s1" :clocked-at-ms 100}}
                  {:hx/endpoints ["agent:claude-1" "campaign:C-cascade-real"]
                   :hx/props {:agent-id "claude-1" :session-id "s2" :clocked-at-ms 200}}])]
-      (is (= {:agent "agent:claude-1" :target "campaign:C-cascade-real" :session "s2" :at 200}
+      (is (= {:agent "agent:claude-1" :target "campaign:C-cascade-real" :session "s2" :at 200
+              :dispatched-by {:absent :caller-not-recorded}}
              (first rows)) "most-recent (at=200) first; target is the non-agent endpoint")
       (is (= "futon3c-d/mission/autoclock-in" (:target (second rows)))))))
 
@@ -408,3 +410,41 @@
       (is (= (get pinned "holes") (as-json (live/hole-section (pinned-edges "cascade/hole-target")))))
       (is (= (get pinned "arrows") (as-json (live/arrow-section (pinned-edges "code/v05/mined-move")))))
       (is (= (get pinned "held") (as-json (live/held-section (pinned-edges "held/on-mission"))))))))
+
+;; --- :dispatched-by, as the witness says (CASCADE-LIVE-I 2) ------------------
+
+(defn- clock-edge [agent witness]
+  {:hx/endpoints [(str "agent:" agent) "futon3c-d/mission/the-perfect-crime"]
+   :hx/props {:agent-id agent :clocked-at-ms 1 :witness witness}})
+
+(deftest dispatched-by-reads-the-witness
+  (testing "a named caller (inherited clock)"
+    (is (= "claude-8" (:dispatched-by (first (live/lineage-section
+                                               [(clock-edge "codex-3" {:rule "clock-decision" :source "inherited"
+                                                                       :evidence {:caller-id "claude-8"}})]))))))
+  (testing "no caller recorded: a dispatch receipt, and a clock decision from a named target"
+    (doseq [w [{:rule "dispatch-mission-id" :source "invoke-receipt"}
+               {:rule "clock-decision" :source 1 :evidence {:targets ["M-the-perfect-crime"]}}
+               nil]]
+      (is (= {:absent :caller-not-recorded}
+             (:dispatched-by (first (live/lineage-section [(clock-edge "kimi-15" w)])))))))
+  (testing "the agent's own act"
+    (doseq [w [{:rule "agent-edit-activity" :source "agent-tool-edit"}
+               {:rule "selection-decision"}]]
+      (is (= :self (:dispatched-by (first (live/lineage-section [(clock-edge "claude-19" w)])))))))
+  (testing "string-keyed props, as some writers leave them"
+    (is (= "claude-5" (live/dispatched-by {"witness" {"evidence" {"caller-id" "claude-5"}}})))))
+
+(deftest dispatched-by-keeps-an-off-roster-caller
+  (testing "the field is what the witness says; nothing checks the roster"
+    (with-redefs [registry/registry-status
+                  (fn [] (throw (ex-info "roster must not be read" {})))]
+      (is (= "wm-full-loop"
+             (live/dispatched-by {:witness {:rule "clock-decision" :source "inherited"
+                                            :evidence {:caller-id "wm-full-loop"}}}))))))
+
+(deftest dispatched-by-on-the-pinned-store
+  (is (= {:caller 29 :self 2 :absent 57}
+         (frequencies (for [r (live/lineage-section (pinned-edges "clock/clocked-on"))
+                            :let [d (:dispatched-by r)]]
+                        (cond (string? d) :caller (= :self d) :self :else :absent))))))

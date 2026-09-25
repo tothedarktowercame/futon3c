@@ -375,9 +375,31 @@
        {:count-total 0
         :items []}))))
 
+(def ^:private self-rules
+  "Witness rules that record the agent's own act: its own edits to a doc, or
+   the War Machine's own selection."
+  #{"agent-edit-activity" "selection-decision"})
+
+(defn dispatched-by
+  "Who put the agent on this target, as the clock edge's WITNESS says: the
+   named caller (`:evidence :caller-id`, an inherited clock), `:self` when the
+   rule records the agent's own act, else `{:absent :caller-not-recorded}` --
+   a dispatch receipt without a caller, and a clock decision from a named
+   target, which reads the same for a Kimi seat's requisition and an agent's
+   own turn. Nothing is looked up elsewhere: the field is what the witness
+   says, roster or not."
+  [props]
+  (let [w (prop props :witness)
+        caller (some-> (prop w :evidence) (prop :caller-id) str not-empty)]
+    (cond
+      caller                          caller
+      (self-rules (str (prop w :rule))) :self
+      :else                           {:absent :caller-not-recorded})))
+
 (defn lineage-section
   "O3 — agent→target clock edges (who/which session is on each mission/excursion/
-   campaign), most-recent-first. Target = the canonical non-agent endpoint."
+   campaign), most-recent-first. Target = the canonical non-agent endpoint;
+   `:dispatched-by` as the edge's witness records it (`dispatched-by`)."
   [edges]
   (->> (for [e edges
              :let [eps    (endpoints-of e)
@@ -387,7 +409,8 @@
              :when (and agent target)]
          {:agent agent :target target
           :session (some-> (prop p :session-id) str)
-          :at (or (prop p :clocked-at-ms) 0)})
+          :at (or (prop p :clocked-at-ms) 0)
+          :dispatched-by (dispatched-by p)})
        (sort-by :at >)
        vec))
 
