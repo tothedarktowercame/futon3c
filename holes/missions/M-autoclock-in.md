@@ -1,7 +1,7 @@
 # Mission: M-autoclock-in
 
-**Status:** INSTANTIATE-8 (2026-09-24). Durable clock decisions (INSTANTIATE-5), restoration (6), dispatch lineage (7a), Codex edit activity (7b) and requisition-scoped Kimi seats (8) are implemented. Outstanding: the Emacs buffer clock has not been reconciled with the durable decision for operator turns (see the 2026-09-25 amendment to Rule 0 below), and inherited reclocking across a bell is unbuilt.
-**Done when (mission exit, claude-4 as owner, 2026-09-25 — answering the War Machine's question at this span, request-3700db0370e216bd):** every accepted turn, on every surface, carries either a durable clock decision or a typed refusal; that decision survives a restart; the clock the operator SEES agrees with the decision that was recorded for the same turn; and a bell carries its sender's clock to whoever does the work. The IDENTIFY exit (below) was satisfied at DERIVE/INSTANTIATE-1 and is **not** the mission exit — it is the exit for picking the mission up. The open items at the end of INSTANTIATE-8 are split between this mission and elsewhere at that span; only inherited reclocking is a criterion here.
+**Status:** INSTANTIATE-8 (2026-09-24). Durable clock decisions (INSTANTIATE-5), restoration (6), dispatch lineage (7a), Codex edit activity (7b) and requisition-scoped Kimi seats (8) are implemented. Inherited reclocking across a bell is **implemented and live** (7a; 29 `:source :inherited` decisions in the running Agency as of 2026-09-25) — an earlier revision of this line called it unbuilt, which was wrong. It is **not green**: its `^:slow` pinning test fails two assertions on this tree, because Joe's 2026-09-24 refusal-keeps-the-clock rule widened what `dispatch-inheritance` treats as an inheritable caller. Both are recorded in the second-pass correction at the end of INSTANTIATE-8. Outstanding: two places where a single turn is described by two disagreeing clocks — the Emacs buffer clock versus the durable decision for operator turns (the 2026-09-25 amendment to Rule 0 below), and a seat's requisition target versus the durable decision for a dispatched turn (the correction at the end of INSTANTIATE-8).
+**Done when (mission exit, claude-4 as owner, 2026-09-25 — answering the War Machine's questions at this span, request-3700db0370e216bd and request-baadd72451bfa9c3):** this exit **requires FIX 1 (`:exit/h0c55648e57e5`, INSTANTIATE-5)** rather than restating it — the first clause below is FIX 1's contract, and a mission exit that copies another criterion's contract will drift from it, so it cites instead. FIX 1 is already implemented; the edge records what this exit depends on, not outstanding work. With that edge: every accepted turn, on every surface, carries either a durable clock decision or a typed refusal; that decision survives a restart; the clock the operator SEES agrees with the decision that was recorded for the same turn; and a bell carries its sender's clock to whoever does the work. The IDENTIFY exit (below) was satisfied at DERIVE/INSTANTIATE-1 and is **not** the mission exit — it is the exit for picking the mission up. The open items at the end of INSTANTIATE-8 are split between this mission and elsewhere at that span; of those three, only inherited reclocking was ever a criterion here, and the second-pass correction at that span records that its own property is satisfied — what still gates this exit is the two-disagreeing-clocks defect named in the Status line above.
 **Owner:** **claude-4** (going-forward, 2026-06-27 — Joe passed it here; it is D1 of campaign C-cascade-real: the durable agent↔session↔mission lineage, building on the bg-process process-tree node-type). codex-2 did the INSTANTIATE-1 first implementation; Joe/agents review.
 **Repo:** futon3c (clock-in lives in the agent-chat/REPL surface).
 
@@ -908,11 +908,90 @@ single long job.
 this span — request-3700db0370e216bd).** These three are not one list, and
 only one of them gates this mission.
 
-- **Inherited reclocking IS an outstanding criterion of M-autoclock-in.** A
-  bell carrying its sender's clock to whoever does the work is clock
-  propagation across a dispatch: the same object as INSTANTIATE-7a's dispatch
-  lineage, one hop further along. It is turn→target attribution, so it gates
-  the mission exit stated in the Status block at the top of this file.
+- **Inherited reclocking IS an outstanding criterion of M-autoclock-in** — but
+  see the correction of 2026-09-25 (second pass) below. The bell-carries-the-
+  sender's-clock property itself is INSTANTIATE-7a and is **done**; what
+  remains is narrower than "one hop further along", which was my imprecision.
+
+**Correction 2026-09-25, second pass (claude-4, owner, answering
+request-3698d65a966aee8a).** The machine was right to push back. "Inherited
+reclocking across a bell is unbuilt" was wrong, written without re-reading
+INSTANTIATE-7a, and "one hop further along" was vague where it needed to be
+exact. Three checks settle it:
+
+1. **7a records it.** Job creation snapshots the caller's positive decision
+   into `:inherited-clock`; the recipient's decision carries `:source
+   :inherited` with `:caller-id` and `:caller-decision-id`
+   (`clock_decision.clj:216-219`).
+2. **7a moves the recipient's live clock, not just the record.** `record!`
+   ends in `clock/set-decision!` (`clock_decision.clj:283`), and
+   `set-decision!` assigns `:clock` on the session state
+   (`clock_store.clj:248-260`), which is exactly what `current-clock` reads
+   (`clock_store.clj:244`). So the recipient IS reclocked.
+3. **It is deployed, not merely merged.** The 7a Deployment note warned it
+   could only ship with the FIX-2 restart. That restart happened: the running
+   Agency's last 200 `clock-decision` evidence entries contain **29 with
+   `:source :inherited`** (read 2026-09-25 from `/api/alpha/evidence`,
+   alongside 128 source-1, 38 source-2, 5 source-4).
+
+**But the locator reads FALSE, and not for the reason anyone expected.** The
+criterion's locator is a registered run of `futon3c.agency.clock-decision-test`
+**including** the `^:slow` `dispatch-inheritance-through-real-job-path` — and
+the default `:test` alias excludes `:slow` (`deps.edn:69`), so the ordinary
+13-test / 64-assertion green run does **not** exercise it. Run properly
+(`clojure -M:test:test-all -i :slow -n futon3c.agency.clock-decision-test`,
+2026-09-25) the result is **5 tests, 55 assertions, 2 failures**, both in
+`dispatch-inheritance-through-real-job-path`:
+
+```
+clock_decision_test.clj:426  expected [:unclocked :no-source 4]
+                             actual   [:clocked nil :inherited]
+clock_decision_test.clj:436  expected [:unclocked :no-source 4]
+                             actual   [:clocked nil 2]
+```
+
+**Diagnosis.** 7a's contract says "Unclocked callers supply no inheritance",
+and `dispatch-inheritance` (`clock_decision.clj:113-125`) enforces it by
+guarding on `(= :clocked (:status d))` of the caller's current decision. On
+2026-09-24 Joe's refusal rule landed: an ambiguous or unresolvable name records
+its refusal and **leaves the current clock where it was**. So a caller whose
+latest turn named an unresolvable target now still reads `:status :clocked`,
+the guard passes, and the retained clock is exported to everyone that caller
+bells. Two correct-in-isolation rules, three days apart, and the later one
+silently widened inheritance. The test has been failing ever since, invisibly,
+because the failing assertion lives behind `^:slow`.
+
+**Which side is stale is a real design question, and I will not settle it by
+editing code in a documentation pass.** My reading as owner: a refusal-retained
+clock IS the caller's true current target — Joe's rule says so in as many words
+— so inheriting it is right, 7a's "unclocked" meant *callers with no clock*
+rather than *callers whose last turn refused*, and the stale artefact is the
+test assertion. The opposing reading is that a turn which just failed to
+resolve a target is the worst possible moment to export that target to a third
+agent. Whoever takes it should decide on the merits and change exactly one
+side. Until then the criterion reads **false**, which is the honest state: the
+property is live in production (29 inherited decisions) with its negative-case
+guard provably not doing what its own contract says.
+
+**What actually remains, stated precisely.** Two code paths read two different
+clocks for the same dispatched turn, and they disagree by design:
+
+- the durable decision uses the **snapshot** taken at job creation —
+  INSTANTIATE-7a: "Execution uses that snapshot, not a later caller clock",
+  so a caller who switches while the job is queued cannot retarget it;
+- a Zai or Kimi seat's requisition target uses `caller-clock`
+  (`src/futon3c/agents/zai_api.clj:1197-1207`), which prefers the caller's
+  **current** clock and falls back to the snapshot only if the caller is
+  unregistered — added by claude-8 on 2026-09-24 because "a reminder quoted a
+  clock already replaced".
+
+Each is right about its own failure. Together they mean one dispatched turn
+can be TOLD it is working on one target and RECORDED against another. That is
+the same defect class as the Rule 0 amendment above — two paths, two clocks,
+one turn — and it is what this criterion now names. Its locator is a run
+asserting that a seat's `caller-target` and the durable decision for the same
+job agree, or that their disagreement is itself recorded. **No such test
+exists; it reads false.**
 - **The live Kimi summary check and in-job compaction are follow-ups owned
   elsewhere.** Both are properties of a Kimi seat's context handling — whether
   a summary call succeeds against the vendor, and whether a single long job can
