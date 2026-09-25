@@ -57,5 +57,36 @@ deleted at Joe's request before this chain was set up.
 
 ## Rounds
 
-(one entry per "Real work:" turn: turn id, seat A's reading, seat B's job
-and commits, review)
+One entry per "Real work:" turn: turn id, seat A's reading, seat B's job
+and commits, and the discrepancies claude-12's review found.
+
+### Round 1 — claude-12-turn-91 (turn-sVtZeL), 2026-09-25 ~20:18Z
+
+Joe: the EFE field page shows no Tornhill features; "I would like to get a
+plan back (with details in the mission) about how the integration will be
+effected".
+
+- **Seat A (kimi-2):** two fragments. s1a report-problem (0–166), matched
+  to the proposed `operator/pin-the-defect-with-its-evidence` (cited in
+  prose; the validator accepts only canonical ids); s1b ask-action
+  (171–275), `orchestration/recorded-handoff` (the plan and its home, the
+  mission, both named). Sound.
+- **Seat B (kimi-1):** job `invoke-1790367782402-24419-d2f9561c`; futon3c
+  `66f018a6`, a 66-line section "Integration plan — Tornhill features into
+  the EFE field page" in M-the-perfect-crime.md, warrant in the section and
+  the commit. Four layers (data, derived metrics, Arxana panel, EFE page),
+  each with an outside acceptance check. Implementation listed as
+  unwarranted, correctly: a plan was asked for.
+- **Discrepancies:**
+  1. *Gap at the step Joe asked about.* Layer 4 aggregates a hotspot score
+     "over the files/vars in each mission's scopes", but
+     `futon6/data/efe-scopes.json` carries no file references (0 found), so
+     nothing joins a mission to the code it touched. The plan's central join
+     is undefined; a mission→code join (commit best-guess, or clock lineage
+     × commits) is missing as its own step.
+  2. *Beyond the ask.* It declared the HEAD sub-question ("add Tornhill
+     anyway?") answered, as "yes-but-with-discipline" — a decision that was
+     Joe's.
+  File claims checked and true: both migration files name
+  `code/indentation`; the Arxana panel renders only `(when (or churn
+  complexity) …)`; the page's generator has no churn input.
