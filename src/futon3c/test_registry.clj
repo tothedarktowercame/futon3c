@@ -1132,13 +1132,25 @@
                        ;; (claude-8 review, 2026-09-25: the live rebuild read
                        ;; scanned 3196 of 3196, :complete? false, no reason)
                        (catch Exception e
-                         {::undecodable {:evidence/id (:evidence/id entry)
-                                         :reason (or (:reason (ex-data e)) :undecodable)}})))
+                         ;; a registry record is minted by append-record!
+                         ;; with id test-registry-<sha256 of its body>. An
+                         ;; entry carrying the tag under another id form is
+                         ;; not one (live, 2026-09-25: nine zai-1 :memory
+                         ;; notes tagged :test-registry) and cannot have
+                         ;; named a command as a run; it is listed as
+                         ;; :foreign, not counted against completeness.
+                         (if (str/starts-with? (str (:evidence/id entry)) "test-registry-")
+                           {::undecodable {:evidence/id (:evidence/id entry)
+                                           :reason (or (:reason (ex-data e)) :undecodable)}}
+                           {::foreign {:evidence/id (:evidence/id entry)
+                                       :evidence/type (:evidence/type entry)
+                                       :evidence/author (:evidence/author entry)}}))))
                    entries)
         undecodable (into [] (keep ::undecodable) runs)
+        foreign (into [] (keep ::foreign) runs)
         complete? (and (nil? failure) (pos? scanned) (= scanned held)
                        (empty? undecodable))]
-    (doseq [run (remove ::undecodable (remove nil? runs))]
+    (doseq [run (remove #(or (::undecodable %) (::foreign %)) (remove nil? runs))]
       (append-ledger-entry! file (assoc run :entry/type :namespace-run)))
     (append-ledger-entry! file
                           (cond-> {:entry/type :namespace-ledger-built
@@ -1149,7 +1161,8 @@
                             (:read-error failure) (assoc :read-error (:read-error failure))
                             (:window failure) (assoc :window (:window failure))
                             (:reason failure) (assoc :failure-reason (:reason failure))
-                            (seq undecodable) (assoc :undecodable undecodable)))))
+                            (seq undecodable) (assoc :undecodable undecodable)
+                            (seq foreign) (assoc :foreign foreign)))))
 
 (defn record-namespace-run!
   "Maintain the ledger for one minted :run row (append-record!'s return).

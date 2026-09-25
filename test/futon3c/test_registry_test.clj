@@ -875,6 +875,40 @@
                     backend {:namespace "decodable-test" :namespace-ledger-file ledger})]
          (is (= :namespace-ledger (:resolved-by found)) "the decodable run still resolves"))))))
 
+(deftest a-foreign-entry-under-the-tag-is-listed-and-does-not-block-completeness
+  ;; live, 2026-09-25: nine :memory notes by zai-1 carry the :test-registry
+  ;; tag with e-<uuid> ids. They are not registry records (append-record!
+  ;; mints test-registry-<sha> ids) and cannot have named a command, so the
+  ;; build lists them as :foreign and still completes; an id of the
+  ;; registry's own form that will not decode stays :undecodable (previous
+  ;; test).
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:namespace "decodable-test" :ran-at "2026-09-25T01:00:00Z"})
+     (let [receipt ((requiring-resolve 'futon3c.evidence.boundary/append!)
+                    backend
+                    {:evidence/id "e-00000000-0000-4000-8000-000000000001"
+                     :evidence/subject {:ref/type :component :ref/id "futon3c"}
+                     :evidence/type :memory :evidence/claim-type :observation
+                     :evidence/author "zai-1" :evidence/at "2026-09-25T01:00:01Z"
+                     :evidence/tags [:memory :test-registry]
+                     :evidence/body {:kind "project" :name "a note" :body "text"}})
+           _ (is (:ok receipt) (pr-str receipt))
+           ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger!
+                  backend {:namespace-ledger-file ledger :page-size 5})]
+       (is (true? (:complete? built)))
+       (is (= 2 (:scanned built)))
+       (is (= [{:evidence/id "e-00000000-0000-4000-8000-000000000001"
+                :evidence/type :memory :evidence/author "zai-1"}]
+              (:foreign built)))
+       (is (nil? (:undecodable built)))
+       (let [none (registry/latest-run-for-namespace
+                   backend {:namespace "futon3c.not-registered-test"
+                            :namespace-ledger-file ledger})]
+         (is (= :no-run-for-namespace (:reason none)))
+         (is (= :namespace-ledger (:resolved-by none))))))))
+
 (deftest an-incomplete-namespace-ledger-refuses-absence
   ;; a build whose second page fails records :complete? false carrying the
   ;; typed failure — never a silent short scan — and absence keeps refusing
