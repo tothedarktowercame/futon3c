@@ -1,5 +1,8 @@
 (ns futon3c.diagramprover.wiring-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn]
+            [clojure.java.io]
+            [clojure.java.shell]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.graph :as graph]
             [futon3c.diagramprover.wiring :as wiring]))
 
@@ -236,3 +239,77 @@
           {:spec/id :empty-terminal
            :phases {:order [:start :completed]
                     :tools {:completed #{}}}}))))
+
+;; ---------------------------------------------------------------------------
+;; Control: the worked War Machine map, pinned at c474470f over futon2's files
+;; at a fixed sha (materialised from git, so futon2 moving does not move it).
+
+(def control
+  (clojure.edn/read-string
+   (slurp "test/futon3c/diagramprover/fixtures/wm-wiring-control-c474470f.edn")))
+
+(defn- control-root []
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory
+                       "wiring-control" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (doseq [p (:site-paths control)]
+      (let [{:keys [exit out err]} (clojure.java.shell/sh
+                                    "git" "-C" "/home/joe/code/futon2" "show"
+                                    (str (:futon2-sha control) ":" p))
+            f (clojure.java.io/file root p)]
+        (is (zero? exit) (str "control site not at the pinned futon2 sha: " p " " err))
+        (clojure.java.io/make-parents f)
+        (spit f out)))
+    (str root)))
+
+(defn- control-spec []
+  (clojure.edn/read-string (slurp (:spec control))))
+
+(deftest control-report-is-unchanged
+  (let [root (control-root)
+        spec (control-spec)
+        perturbed (-> spec
+                      (update-in [:boxes 0 :writes] conj :model-manifest-absent)
+                      (update :boxes conj {:box/id :universe-only :reads [:selection-law]}))]
+    (is (= (:report control) (wiring/conformance root spec)))
+    (is (= (:perturbed-report control) (wiring/conformance root perturbed)))))
+
+;; ---------------------------------------------------------------------------
+;; Var-grain sites
+
+(def var-sample "test/futon3c/diagramprover/fixtures/var_sample.clj")
+
+(deftest var-grain-scopes-conformance-to-one-form
+  (let [file-site {:file var-sample}
+        var-site {:file var-sample :var "reads-g-terms"}
+        spec (fn [site] {:spec/id :var-grain
+                         :boxes [{:box/id :reader :site site :reads [:measurement]}]})]
+    (testing "the field is in another form: a finding at var grain"
+      (is (= [{:finding :declaration-without-occurrence :box/id :reader
+               :field :measurement :role :reads :site var-site}]
+             (wiring/conformance "." (spec var-site)))))
+    (testing "and not at file grain"
+      (is (= [] (wiring/conformance "." (spec file-site)))))))
+
+(deftest var-not-found-is-a-finding
+  (let [site {:file var-sample :var "no-such-fn"}
+        findings (wiring/conformance "." {:spec/id :ghost-var
+                                          :boxes [{:box/id :b :site site :reads [:g]}]})]
+    (is (= [{:finding :var-not-found :site site :var "no-such-fn"}] findings)
+        "no drift findings either: the scope does not exist")))
+
+(deftest var-grain-keeps-the-prefix-guard
+  ;; reads-g-terms mentions :g-terms only; :g must not be counted for it
+  (let [site {:file var-sample :var "reads-g-terms"}]
+    (is (= [{:finding :declaration-without-occurrence :box/id :b
+             :field :g :role :reads :site site}]
+           (wiring/conformance "." {:spec/id :prefix
+                                    :boxes [{:box/id :b :site site :reads [:g]}]})))))
+
+(deftest var-form-survives-strings-meta-and-comments
+  (let [text (slurp var-sample)]
+    (is (= "(defn ^:private reads-g-terms [m] (get m :g-terms))"
+           (:text (wiring/var-form text "reads-g-terms"))) "metadata before the name")
+    (is (= "(defn after-the-string [m] (:selected (get-in m [:decision :selection-law])))"
+           (:text (wiring/var-form text "after-the-string")))
+        "a string holding parens and an escaped quote does not shift the next form")
+    (is (nil? (wiring/var-form text "comment-field")))))

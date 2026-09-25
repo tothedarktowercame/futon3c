@@ -1,0 +1,19 @@
+;; Control for futon3c.diagramprover.wiring/conformance, pinned with the
+;; checker at c474470f (before var-grain sites, the read/write heuristic and
+;; the load-closure check). Sites are futon2's files AT :futon2-sha, which the
+;; test materialises from git into a temp root, so futon2 moving does not move
+;; the control. :report is holes/labs/M-diagramprover/wm-wiring.edn as is;
+;; :perturbed-report adds one absent write to :belief-model and one
+;; universe-only reader of :selection-law, so the control is not only [].
+{:computed-by "futon3c.diagramprover.wiring/conformance at c474470f (claude-11, 2026-09-25)"
+ :spec "holes/labs/M-diagramprover/wm-wiring.edn"
+ :futon2-sha "e1f6d9096a3820259405230613f1e5fe2e72a970"
+ :site-paths ["src/futon2/aif/belief.clj"
+              "scripts/futon2/report/war_machine.clj"
+              "test/futon2/aif/a_matrix_live_wiring_test.clj"]
+ :report []
+ :perturbed-report
+ [{:finding :declaration-without-occurrence, :box/id :belief-model,
+   :field :model-manifest-absent, :role :writes, :site {:ns "futon2.aif.belief"}}
+  {:finding :occurrence-without-declaration, :field :selection-law,
+   :site {:file "scripts/futon2/report/war_machine.clj"}, :declared-by []}]}
