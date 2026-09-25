@@ -586,7 +586,13 @@ corrects it to the turn's own time."
     (let ((path (session-mode--record-turn text)))
       (when (and path session-mode-analysis-agent
                  (not (equal session-mode-analysis-agent agent-id)))
-        (session-mode--dispatch-analysis path))
+        ;; The dispatch names its sender from agent-chat--agent-id. Here
+        ;; that would make AGENT-ID the requisitioner of the labeller seat
+        ;; (for session-mode-analysis-requisition, not its own mission) and
+        ;; the recipient of every interpretation's bellback; the capture is
+        ;; the sender. The record is read back by the reaper, not by a bell.
+        (let ((agent-chat--agent-id "turn-capture"))
+          (session-mode--dispatch-analysis path)))
       path)))
 
 (provide 'session-turn-analysis)
