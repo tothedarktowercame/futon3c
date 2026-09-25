@@ -1,6 +1,6 @@
 # Mission: M-wm-wiring
 
-**Status:** HEAD and IDENTIFY drafted (2026-09-25), exits pending Joe's read; MAP met (owner ~19:25Z, Joe ~20:40Z); DERIVE written (the machine's map fbb094f3, matrix and PSRs), exit pending Joe's read; ARGUE drafted (~23:20Z), pending the owner's and Joe's read; VERIFY shaped ahead of its phase.
+**Status:** HEAD, IDENTIFY, MAP, DERIVE, ARGUE met (Joe's read, 2026-09-25 ~23:55Z: "it looks good to me"); VERIFY entered (the wiring as a whole, by the diagramprover run over the machine's map); INSTANTIATE drafted: the overall wiring first, then the missing parts and hops.
 **Owner:** claude-10, accepted 2026-09-25 ~16:50Z ("I've held the flight loop, the `:construction` tick and the read step, and most rows plug into `flight_runner.clj`, which I wrote"); claude-8 leads PROOF-2a and reviews under author ≠ reviewer; Joe to confirm.
 **Repo:** futon3c (the mission lives here). Components live in futon2 (`src/futon2/aif`, `scripts/wm`), mathlib4 (`DarkTower/WarMachine`), futon3c (checkers, cascade-real).
 **Governing record:** futon2 `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md` (66120f4c at drafting): the theorem is completion; its holes are the components below.
@@ -249,7 +249,13 @@ Joe, 2026-09-25 ~23:15Z: "we should supply it. You said 'the outer cascade, the 
 
 **Exit criterion** (inevitable given the constraints and Joe's decision on OUTER-CASCADE-D, now given ~23:45Z: the outer cascade over Cascade Live; understandable from the plain-language argument): HOLDS on the owner's side with the amendments above applied (claude-10, ~23:35Z); pending Joe's read.
 
-## VERIFY (shape, ahead of its phase; ARGUE precedes it in the lifecycle and is not yet written)
+## VERIFY (entered 2026-09-25 ~23:55Z)
+
+Joe: "on the basis of the argument, I think we should VERIFY the wiring as a whole, and do both the overall wiring and the missing parts/hops in INSTANTIATE. That will reverse the previous trend of building components first. Now we'll build the wiring first and then the missing modules." So VERIFY is the structural verification of the machine's map as it stands, whole, before any row is built; the spike (the first flight) moves to INSTANTIATE, where it is the test of the wiring.
+
+**Structural verification, run:** `futon3c.diagramprover.wm-flight-wiring-test` at fbb094f3 (warrant test-registry-b9f1a1a2; run by the owner and once by claude-8 in futon3c's own JVM): the report under `{:heuristic? true}` equals the 21 declared expected findings exactly; `multiply-written` = []; the five `:not-built` intended sites absent at the pinned shas; the M-autoclock-in trace checked three ways with no findings; eight sites outside the registered load closure, the set asserted. The 19 to-do findings are VERIFY's honest remainder and INSTANTIATE's list. **Open decision, the owner's now:** the four checks the diagramprover does not make (type safety, timescale ordering, exogeneity, closure), whose verifiers are futon5's `ct/mission.clj` validators in another format: a projection packet or a priced decline with a trigger. **Exit:** met on the structural side at fbb094f3; the four-validator decision recorded when made; DERIVE revisions logged below.
+
+### VERIFY (shape as drafted before entry; kept for its BOM and pre-check)
 
 Joe, 2026-09-25 ~23:05Z: "VERIFY would rely on the diagram prover doing its thing." The lifecycle says the same in its own words: the process row of the Specification Bill of Materials names `futon3c.diagramprover.wiring` as the verifier that exists (tool status 2026-08-15: five checks over declared ownership maps; "honest grade: detect-level checks over authored, conformance-kept declarations; by-construction unconstructibility remains the Lean/engine layer's territory"). For this mission the registered namespace `futon3c.diagramprover.wm-flight-wiring-test` over `wm-flight-wiring.edn` IS the structural verification, and a row is verified when its expected finding is gone from the map and its test box conforms.
 
@@ -273,6 +279,37 @@ Joe, 2026-09-25 ~23:05Z: "VERIFY would rely on the diagram prover doing its thin
 **Decision log (verification-time revisions of DERIVE so far).** The checker's thread-first classification (58f1a8cb) removed two expected findings from the map (fbb094f3); the direction findings are behind an explicit flag; unbuilt code is stated as a `:not-built` box with its intended site asserted absent, reserving `:var-not-found` for regressions; the exemplar trace is a field on the map, not a file beside it.
 
 **Exit criterion** (checked against available structural constraints; unverifiable risks spiked; DERIVE revisions recorded): the structural checks run and pass at fbb094f3 with the to-do list as their honest remainder; the spike is the first flight, after the rows; the four futon5 validators are the open decision above.
+
+## INSTANTIATE (drafted 2026-09-25 ~23:55Z; the owner sequences)
+
+Joe's order: **the overall wiring first, then the missing modules.** The wiring is every hop between components that exist; the missing modules are the three `:not-built` boxes. Each step deletes its finding from the map's `:expected-findings` in the same commit as its code, adds its test box's namespace, and registers a warrant; the fidelity matrix's tripwire for the row lands with it. The registered map test stays green throughout, which is what "wiring first" means operationally: the map is verified whole at every commit.
+
+**Stage 1, the wiring (hops between existing components), in the owner's order.**
+| step | row | hop |
+|---|---|---|
+| 1 | 9 | `select-action-cascades` writes `:selection-candidate` from `:per-policy-argmax` (no new data) |
+| 2 | 6 | `cascade-lane` reads `:measurement`; `sourced-rates` gets admitted labels; every class reads `:measurement :absent` today, pinned |
+| 3 | 4 | `rank-cascade-actions` reads `:precedence-violations` and uses `:order` when empty; chain case = list kernel exactly, against Lean 69c2 |
+| 4 | 2(b) | the extractor gets an `ns` (with claude-13) and `read-fn` calls served-by-reading, reading `:text-sha256` |
+| 5 | 3 | `agency-answer-fn` passes `:library-root`; `:retrieval` reaches `validate-response`; the publication-inside-the-click test (both halves) |
+| 6 | 8 | `target-field` writes `:pair-overlap` |
+| 7 | flight entry | `run-flight!` reads `:chosen-target` (from a field the scheduled entry will write; `--target` remains as the hand-placed path) |
+| 8 | 7 (read side) | `select-action-cascades` reads `:enactment-records` from the fold (the fold is empty until stage 2; the read is wired and typed) |
+| 9 | 10 (read side) | the outer cascade's `:publication-observed` read is declared; `observe-publication-fn` is stage 2 |
+Row 11 is done. Each step's test box namespace: `selection_law_candidate_test`, `click_measurement_test`, `order_kernel_test`, (row 2's exists), `flight_ask_library_test`, `target_field_overlap_test`, `loop_closure_test`, `selection_reads_fold_test`.
+
+**Stage 2, the missing modules (the `:not-built` boxes), in ARGUE's order.**
+| step | box | what |
+|---|---|---|
+| 10 | `enact-fn` (rows 0, 5) | dispatches the chosen candidate's pattern steps to a seat, collects commits, runs each attempt's check, writes the enactment record (grain attempt marked or `{:absent :candidate-names-no-grain-pattern}`), calls `grain-gate` before the grain attempt's commit; fetches the click's run record; `flight_enact_test`, `flight_grain_gate_test` |
+| 11 | the checker call (`:r7-flight-call`) | `proof2a_check.clj --edn` (the owner's), the shell-out with both files, the verdict to `increment` unchanged; its own test |
+| 12 | `observe-publication-fn` (row 10) | one tick's observation; `publication_observed_test` |
+| 13 | the outer cascade (row 1) | after CASCADE-LIVE-GAPS-D's changes land on Cascade Live's side: `outer_cascade.clj select`, the scheduled entry starting a flight; `outer_cascade_test`, `loop_closure_test` |
+The post-choice refusal register (claude-3) lands before step 10's first enacting flight.
+
+**The spike.** The first flight of M-autoclock-in after stage 1 (it ends at the click today: read, ask, click, abstain or advance; every stop known from the register) and again after step 11 (enacting), its record matched to the `:traces` entry; N-run's witness.
+
+**Exit criterion** (lifecycle §6): each row's tripwire and test box green, the map's `:expected-findings` reduced to the standing two, N0 holding once a flight run's closure includes the wired files, and the first flight's record accepted whether it succeeded or failed.
 
 ## DOCUMENT (note, ahead of its phase)
 
