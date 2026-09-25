@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "dd1c0561" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "f498f3f3" "futon3c" "58f1a8cb"}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
   {:box/id :r1-target-field :row 1 :box/kind :component
@@ -80,7 +80,7 @@
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
    :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   :reads [:selection-candidate] :writes [:attempts :grain-gate]}
+   :reads [:candidate] :writes [:attempts :grain-gate]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
    :reads [:attempts]}
@@ -95,10 +95,10 @@
    :reads [:grain-gate]}
   {:box/id :wc-checker :box/kind :component
    ;; futon3c bb script, siteless here
-   :reads [:attempts :grain-gate :selection-candidate] :writes [:wc-verdict]}
+   :reads [:attempts :grain-gate :candidate] :writes [:wc-verdict]}
   {:box/id :r7-increment :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_habit.clj" :var "increment"}
-   :reads [:attempts] :writes [:delta]}
+   :reads [:attempts :candidate] :writes [:delta]}
   {:box/id :r7-flight-call :row 7 :box/kind :component
    ;; the flight hands check-c's verdict to increment unchanged
    :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
@@ -114,13 +114,13 @@
    :reads [:enactment-records]}
   {:box/id :r9-selection-law :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
-   :writes [:per-policy-argmax :selection-candidate]}
+   :writes [:per-policy-argmax :candidate]}
   {:box/id :r9-decision :row 9 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
    :reads [:per-policy-argmax]}
   {:box/id :r9-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"}
-   :reads [:selection-candidate]}
+   :reads [:candidate :per-policy-argmax]}
 
   ;; ---- row 6, Clause A: :measurement on the click record.
   {:box/id :r6-sourced-rates :row 6 :box/kind :component
@@ -257,7 +257,7 @@
    :kind :to-do}
   {:finding :declaration-without-occurrence,
    :box/id :r9-selection-law,
-   :field :selection-candidate,
+   :field :candidate,
    :role :writes,
    :site
    {:file "futon2/src/futon2/aif/policy.clj",
