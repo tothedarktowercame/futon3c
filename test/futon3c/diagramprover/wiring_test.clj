@@ -360,3 +360,28 @@
            :usage {:reads 0 :writes 1 :unclassified 0} :heuristic true}]
          (wiring/usage "." {:spec/id :u :boxes [{:box/id :b :site {:file var-sample}
                                                  :writes [:order]}]}))))
+
+;; ---------------------------------------------------------------------------
+;; Load closure (N0)
+
+(deftest sites-must-be-in-the-load-closure
+  (let [spec {:spec/id :closure
+              :boxes [{:box/id :in :site {:file var-sample :var "writes-measurement"}}
+                      {:box/id :ns-site :site {:ns "futon3c.diagramprover.wiring"}}
+                      {:box/id :out :site {:file "src/futon3c/not_loaded.clj"}}
+                      {:box/id :no-site :reads [:x]}]}
+        registry-shape [{:ns "futon3c.diagramprover.fixtures.var-sample" :path var-sample
+                         :sha256 "x"}
+                        {:ns "futon3c.diagramprover.wiring"
+                         :path "src/futon3c/diagramprover/wiring.clj" :sha256 "y"}]
+        findings (wiring/load-closure-findings "." spec registry-shape)]
+    (is (= [:site-not-in-load-closure] (map :finding findings)))
+    (is (= {:file "src/futon3c/not_loaded.clj"} (:site (first findings))))
+    (is (not (wiring/sites-resolve? "." spec registry-shape)))
+    (testing "the same closure as plain paths, one of them absolute"
+      (let [abs (str (.normalize (.toAbsolutePath (.toPath (clojure.java.io/file
+                                                            "src/futon3c/not_loaded.clj")))))]
+        (is (wiring/sites-resolve? "." spec (conj (mapv :path registry-shape) abs)))))
+    (testing "relative closure paths resolve against :closure-root, not the map's root"
+      (is (= 3 (count (wiring/load-closure-findings
+                       "." spec (map :path registry-shape) {:closure-root "/elsewhere"})))))))

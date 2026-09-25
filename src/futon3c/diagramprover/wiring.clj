@@ -86,17 +86,20 @@
        (sort-by (comp str :field))
        vec))
 
-(defn- site-path [repo-root site]
+(defn- site-file
+  "SITE's file, relative to its repo root."
+  [site]
   (cond
-    (:file site) (str (java.io.File. repo-root (:file site)))
-    (:ns site) (str (java.io.File.
-                     repo-root
-                     (str "src/"
-                          (-> (:ns site)
-                              (str/replace "." "/")
-                              (str/replace "-" "_"))
-                          ".clj")))
+    (:file site) (:file site)
+    (:ns site) (str "src/"
+                    (-> (:ns site)
+                        (str/replace "." "/")
+                        (str/replace "-" "_"))
+                    ".clj")
     :else (throw (ex-info "Wiring site must name :file or :ns" {:site site}))))
+
+(defn- site-path [repo-root site]
+  (str (java.io.File. (str repo-root) (str (site-file site)))))
 
 ;; ---------------------------------------------------------------------------
 ;; A paren-aware scan of Clojure source text into a form tree. Not a reader:
@@ -399,6 +402,37 @@
          field fields]
      {:box/id (:box/id box) :site site :role role :field field
       :usage (field-usage text field) :heuristic true})))
+
+(defn- normal-path [root path]
+  (let [f (java.io.File. (str path))
+        f (if (.isAbsolute f) f (java.io.File. (str root) (str path)))]
+    (str (.normalize (.toAbsolutePath (.toPath f))))))
+
+(defn load-closure-findings
+  "Every site's file must be in LOAD-CLOSURE, else the finding
+  :site-not-in-load-closure. LOAD-CLOSURE is the test registry's run-record
+  field `:load-closure` (futon3c.test-registry, `closure-from-entries`: a
+  vector of {:ns :path :sha256}, :path repo-relative inside the registered
+  repo and absolute outside it) or a plain collection of paths. Site paths
+  resolve against REPO-ROOT, relative closure paths against :closure-root
+  (default REPO-ROOT); both are normalised, not canonicalised, as the
+  registry records them. Pure apart from path arithmetic: nothing is read."
+  ([repo-root spec load-closure] (load-closure-findings repo-root spec load-closure {}))
+  ([repo-root {:keys [boxes]} load-closure {:keys [closure-root]}]
+   (let [closure (set (map #(normal-path (or closure-root repo-root)
+                                         (if (map? %) (:path %) %))
+                           load-closure))]
+     (->> (for [site (distinct (keep :site boxes))
+                :let [path (normal-path repo-root (site-file site))]
+                :when (not (contains? closure path))]
+            {:finding :site-not-in-load-closure :site site :path path})
+          (sort-by (comp str :path))
+          vec))))
+
+(defn sites-resolve?
+  "True iff every site of SPEC is in LOAD-CLOSURE (see `load-closure-findings`)."
+  [repo-root spec load-closure & [opts]]
+  (empty? (load-closure-findings repo-root spec load-closure (or opts {}))))
 
 (defn phase-chain-findings
   "Report structural defects in a declared cycle phase chain.
