@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "2a89efb9" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "db1f79c7" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -51,7 +51,7 @@
    :site {:file "futon2/src/futon2/aif/served_by_reading.clj" :var "proposal"}
    :reads [:owner-text] :writes [:want-span :text-sha256]}
   {:box/id :r2-verifier :row 2 :box/kind :component
-   :site {:file "futon2/scripts/wm/extract-outcomes.clj" :var "verify-proposed-link"}
+   :site {:file "futon2/scripts/futon2/wm/extract_outcomes.clj" :var "verify-proposed-link"}
    :reads [:want-span :text-sha256]}
   {:box/id :r2-flight-read :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn"}
