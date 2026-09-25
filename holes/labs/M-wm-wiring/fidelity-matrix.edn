@@ -14,9 +14,9 @@
 ;;               drift apart: when the map's test box site exists, this entry
 ;;               moves to :in-place in the same commit.
 ;;
-;; Loop-closure boxes (scheduled entry, clock-in, flight entry, feedback
-;; edges) are not rows here yet: they arrive with the next map commit and get
-;; their entries in it.
+;; Loop-closure boxes (scheduled entry, eligibility, flight entry, clock-in)
+;; have entries keyed by their box id; they arrived with the machine's map
+;; (WM-MAP-I2). The feedback edges are rows 7 (fold into E) and 10 (publish).
 {:matrix/id :m-wm-wiring-fidelity
  :map "holes/labs/M-wm-wiring/wm-flight-wiring.edn"
  :rows
@@ -138,4 +138,33 @@
      :warrant "test-registry-f24589cc"}
     {:test "futon3c.diagramprover.wm-flight-wiring-test" :status :in-place
      :assertion "report = :expected-findings; multiply-written []; six sites outside the load closure"
-     :warrant "test-registry-5cdd0298"}]}]}
+     :warrant "test-registry-5cdd0298"}]}
+  {:row :loop-entry :component "scheduled entry (wm_scheduled_run -main) starts a selection"
+   :disposition :adapt
+   :change "the scheduled run hands its :trigger to the outer cascade and a flight follows; the tick's provenance stamp is unchanged"
+   :tripwires
+   [{:test "futon2.aif.loop-closure-test" :status :to-write
+     :assertion "a scheduled run with the loop closed selects one target by the outer cascade and starts a flight of it; the version stamp's keys are unchanged"}]}
+
+  {:row :eligibility :component "requisition state into eligibility (target_field with-eligibility)"
+   :disposition :preserve
+   :change "none: already written; the outer cascade reads it"
+   :tripwires
+   [{:test "futon2.aif.target-field-test" :status :in-place
+     :assertion "requisition lines make entries ineligible with a reason; entries stay on the record"
+     :warrant nil :warrant-note "the eligibility commit's warrant was not read this sitting"}]}
+
+  {:row :flight-entry :component "flight entry (flight_driver run-flight!) takes the chosen target"
+   :disposition :adapt
+   :change "the target comes from the outer cascade's :chosen-target instead of --target; a hand-placed target stays available for the first flight"
+   :tripwires
+   [{:test "futon2.aif.loop-closure-test" :status :to-write
+     :assertion "run-flight! with a chosen target flies that target; with --target it flies the hand-placed one exactly as before"}]}
+
+  {:row :clock-in :component "the flight's seat clocked to the target (futon3c clock_store set-dispatch-mission!)"
+   :disposition :preserve
+   :change "none: dispatch with a mission id already clocks the session"
+   :tripwires
+   [{:test "futon3c.agency.clock-store-test" :status :in-place
+     :assertion "dispatch-mission-id re-clocks the session"
+     :warrant nil :warrant-note "no warrant of it read this sitting"}]}]}
