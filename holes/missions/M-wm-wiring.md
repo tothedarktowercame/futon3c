@@ -1,7 +1,7 @@
 # Mission: M-wm-wiring
 
 **Status:** HEAD (2026-09-25); IDENTIFY pending. HEAD exit needs Joe's recognition of this text.
-**Owner:** claude-10 (the wiring owner throughout PROOF-2a: flight loop, `:construction` tick, read step), proposed; claude-8 leads PROOF-2a and reviews; Joe to confirm.
+**Owner:** claude-10, accepted 2026-09-25 ~16:50Z ("I've held the flight loop, the `:construction` tick and the read step, and most rows plug into `flight_runner.clj`, which I wrote"); claude-8 leads PROOF-2a and reviews under author ≠ reviewer; Joe to confirm.
 **Repo:** futon3c (the mission lives here). Components live in futon2 (`src/futon2/aif`, `scripts/wm`), mathlib4 (`DarkTower/WarMachine`), futon3c (checkers, cascade-real).
 **Governing record:** futon2 `holes/labs/wm-contract/PROOF-2a-THEOREM-draft-2026-09-24.md` (66120f4c at drafting): the theorem is completion; its holes are the components below.
 
@@ -30,17 +30,18 @@
 
 ## Wiring inventory (carried into IDENTIFY)
 
-Closed means: in its own process, tests green, warrant registered. Wiring means: the call from the tick or the flight that does not exist yet. Owner of every wiring row is claude-10 unless noted.
+Closed means: in its own process, tests green, warrant registered. Wiring means: the call from the tick or the flight that does not exist yet. Owner of every wiring row is claude-10 unless noted. Rows 2-9 can be wired against M-autoclock-in before the outer cascade exists: `flight/start` takes the target directly, and the field's entry for M-autoclock-in has next step `:read-criteria`, so its first flight exercises row 2 first (claude-10, 2026-09-25).
 
 | # | hole / variable | component closed at | wiring to do |
 |---|---|---|---|
-| 1 | Target (Clause T) | Lean `TargetGrainG` (mathlib4 759b8ca884, warrants test-registry-eddbe897); part 2 pending OUTER-CASCADE-D | selection as the outer cascade over the field; `:g` per feasible entry citing `deltaG_localises`; pair overlap → comparable or `:incommensurable`; draw seed on the record; Clause T paragraph |
-| 2 | C, read step (H-C, H-C-reach) | extractor v5 (futon2 bf38b5c5, test-registry-e9d8b317); `verify-proposed-link` (cedf100b + 6387fc77 + 1a98d0dc, test-registry-f4576030) | click computes outcomes at read time (v5 beside the wants); quotes → spans; every proposal recorded with basis or refusal; text sha recorded |
-| 3 | interpretation (H-interp D11) | `wi/prompt`, `validate-response` | the flight's ask step calls them; edge reasons sent and requested |
-| 4 | order (H-order D4) | constructor emits `:order` (Lean 69c2…) | the kernel reads `:order` instead of the list kernel |
-| 5 | grain (H-grain G_c) | `grain-gate`; W_c checker re-runs it (futon3c 4bc95005, test-registry-1757d974) | the flight calls the gate before the grain attempt is committed and marks the grain pattern |
+| 0 | the enactment step | none: `flight.clj` and `flight_runner.clj` have start, read, click, observe and ask, but no step that writes an enactment record | a step that writes the enactment record (attempts, checks, grain, deviations, in the click-001-enactment form); rows 5, 7 and 9 each write into that record, so it comes before them |
+| 1 | Target (Clause T) | Lean `TargetGrainG` (mathlib4 759b8ca884, warrants test-registry-eddbe897); OUTER-CASCADE-D landed (futon2 595de935), claude-10's read pending | selection as the outer cascade over the field; the selection law is the mixture from futon2 d615d06e, not "E alone": every target keeps its E mass, and targets with a ΔG are re-weighted among themselves; the draw's seed and u go on the record; `:g` per feasible entry citing `deltaG_localises`; pair overlap → comparable or `:incommensurable`; Clause T paragraph |
+| 2 | C, read step (H-C, H-C-reach) | extractor v5 (futon2 bf38b5c5, test-registry-e9d8b317); `verify-proposed-link` with `:text-sha256` (cedf100b + 6387fc77 + 1a98d0dc, test-registry-f4576030, non-author test-registry-35e113f3) | click computes outcomes at read time (v5 beside the wants); the text sha is passed, not built. (a) The join from quote to span: seats give quotes, the read step places them in code points (the file stores spans that way; Clojure strings index by UTF-16); two typed outcomes, `:quote-absent` and `:quote-ambiguous`; FIRST PACKET, claude-10 under carve-out (b): `src/futon2/aif/served_by_reading.clj`, pure, test `futon2.aif.served-by-reading-test` on the M-futon-seams text pinned by sha (M-futon-seams is a fixture here, not a target). (b) The flight must be able to call the extractor: `scripts/wm/extract-outcomes.clj` has no `ns`, so a rename plus an `ns` header, agreed with claude-13, whose file it is. Consequence recorded now: M-autoclock-in has no `## … instances` heading, so on that target the served-by half records `{:absent :no-instances-anchor}` and no links, which is correct |
+| 3 | interpretation (H-interp D11) | `wi/prompt`, `validate-response` | the ask step passes the library root explicitly, and `:retrieval` in a reply reaches `validate-response`. Edge reasons are not a closed component: moved to PROOF-2a's Holes table as a hole, not wiring |
+| 4 | order (H-order D4) | constructor emits `:order` (Lean 69c2…) | the kernel reads `:order` instead of the list kernel; a receipt's `:precedence` is used as the chain only when `:precedence-violations` is empty |
+| 5 | grain (H-grain G_c) | `grain-gate`; W_c checker re-runs it (futon3c 4bc95005, test-registry-1757d974) | the flight calls the gate before the grain attempt is committed and marks the grain pattern; the gate's typed refusal is recorded on the enactment as well as its pass |
 | 6 | A, rates (H-A) | `rates-by-class`, `measured-cell` (futon2 7ba427ab, 64f005d4, test-registry-eb815e57) | R5 passes admitted labels; `:measurement` on the click record |
-| 7 | E, habit (H-E) | fold (futon2 47842175, test-registry-b33dc491; 531cfaaa, test-registry-2730f868) | selection reads the folded state; first G_c-bearing enactment |
+| 7 | E, habit (H-E) | fold (futon2 47842175, test-registry-b33dc491; 531cfaaa, test-registry-2730f868) | `increment` gets `check-c`'s verdict unchanged (claude-10's amendment; the status pass-through for a `:join-unverifiable` map landed at 531cfaaa, test join-unverifiable-verdict-keeps-its-status); selection reads the folded state; first G_c-bearing enactment |
 | 8 | universe (H-C follow-up) | `:universe` honoured (futon2 a98f5879, pinned 506549de, test-registry-0ca6a69d) | the field computes each pair's overlap |
 | 9 | selection law (A5) | checker reads `:join-unverifiable` (4bc95005) | the click record writes the selected candidate's id under `:selection-law` |
 | 10 | publish (H-publish) | observation exists at flight time | one tick observes it |
