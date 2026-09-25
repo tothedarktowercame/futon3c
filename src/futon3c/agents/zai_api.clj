@@ -1170,6 +1170,23 @@
                    ["" "missions" "excursions" "tickets"]))
            (canonical-holes-dirs root)))))
 
+(defn caller-minted-task?
+  "True when the requisition TARGET is a task the CALLER clocked in for SEAT:
+   its excursion file says so on its own head line (`Clocked in by <caller>
+   for <seat>`, written by scripts/kimi-task.sh). Such a requisition names the
+   seat's work, not the caller's, so the caller's clock is left alone (Joe,
+   2026-09-25: Kimi seats clock in on unique tasks, E-kimi-task-N, so each
+   conversation starts fresh; the caller stays on its own target)."
+  ([target caller seat] (caller-minted-task? target caller seat resolve-work-target))
+  ([target caller seat resolve-fn]
+   (boolean
+    (when (and (string? target) (seq (str caller)) (seq (str seat)))
+      (when-let [path (resolve-fn target)]
+        (let [head (try (with-open [r (io/reader path)]
+                          (str/join "\n" (take 6 (line-seq r))))
+                        (catch Exception _ ""))]
+          (str/includes? head (str "Clocked in by " caller " for " seat))))))))
+
 (defn parse-requisition
   "Read the caller's requisition from PROMPT: a line
    `Requisition: <M-*|E-*|T-*> — <purpose>`.
@@ -2093,7 +2110,10 @@ CALLS contains maps of tool name, arguments, and result digest."
           ;; requisition for something other than the caller's clock gets one
           ;; reminder per caller session and target.
           (when (and job-target (not= job-target caller-target)
-                     (not continuation?))
+                     (not continuation?)
+                     ;; A task the caller minted for this seat (E-kimi-task-N)
+                     ;; is the seat's target, not the caller's work.
+                     (not (caller-minted-task? job-target (:caller invoke-context) agent-id)))
             (enqueue-caller-followup!
              (:caller invoke-context) (str "clock:" job-target)
              ;; Name only the requisitioned target: this reminder arrives as

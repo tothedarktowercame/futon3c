@@ -459,3 +459,24 @@
     (is (identical? store (:evidence-store (first @captured))))
     (is (= "e-d11811de"
            (get-in executed [:result :result :items 0 :id])))))
+
+(deftest a-task-the-caller-minted-for-the-seat-draws-no-clock-reminder
+  ;; Joe, 2026-09-25: Kimi seats clock in on unique tasks (E-kimi-task-N) so
+  ;; each conversation starts fresh; the caller stays on its own target. The
+  ;; task file's head line names who minted it and for which seat.
+  (let [dir (doto (java.io.File. (System/getProperty "java.io.tmpdir")
+                                 (str "kimi-task-" (System/nanoTime))) .mkdirs)
+        f (java.io.File. dir "E-kimi-task-9.md")
+        _ (spit f (str "# E-kimi-task-9 — fix something\n\n"
+                       "Clocked in by claude-8 for kimi-5 on 2026-09-25 (one Kimi task, one excursion).\n"))
+        resolve (fn [target] (when (= target "E-kimi-task-9") (.getPath f)))]
+    (is (true? (zai/caller-minted-task? "E-kimi-task-9" "claude-8" "kimi-5" resolve))
+        "the caller who minted the task for this seat")
+    (is (false? (zai/caller-minted-task? "E-kimi-task-9" "claude-8" "kimi-6" resolve))
+        "same task, a different seat: the reminder stands")
+    (is (false? (zai/caller-minted-task? "E-kimi-task-9" "claude-10" "kimi-5" resolve))
+        "a different caller requisitioning someone else's task: the reminder stands")
+    (is (false? (zai/caller-minted-task? "E-cascade-real" "claude-8" "kimi-5" resolve))
+        "an ordinary excursion the caller did not mint")
+    (is (false? (zai/caller-minted-task? "E-kimi-task-9" "claude-8" "kimi-5" (fn [_] nil)))
+        "an unresolvable target is not a minted task")))
