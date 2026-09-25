@@ -48,8 +48,8 @@
     (testing "the four asked for"
       (is (:valid (check v :type-safety)) "vacuous: no edge carries a :type")
       (is (not-any? :type (:edges d)) "why: the map's fields carry no types")
-      (is (= #{:r2-served-by-reading}
-             (set (map (comp :from :edge) (:violations (check v :timescale-ordering))))))
+      (is (:valid (check v :timescale-ordering))
+          "the constraint is :owner-text (the map's :field-roles), which no box writes")
       (is (:valid (check v :exogeneity)))
       (is (:valid (check v :compositional-closure))))))
 
@@ -60,7 +60,8 @@
   (let [r (proj/i4-report (head-map) {})]
     (is (= [] (get-in r [:bypass :to-preferences])))
     (is (= [] (get-in r [:bypass :to-preferences-positional])))
-    (is (= [[:r2-served-by-reading] [:r2-served-by-reading]] (map :observed-by (:preference-fields r))))))
+    (is (= [{:field :owner-text :writers [] :observed-by []}] (:preference-fields r))
+        "the owner's text is exogenous by declaration")))
 
 (deftest i4-habit-path-bypasses-the-checker
   ;; the enactment reaches the outer cascade's :enactment-records through
@@ -68,33 +69,33 @@
   (is (some #(= [:r0-enact-step :r7-increment :r7-fold] (:path %))
             (get-in (proj/i4-report (head-map) {}) [:bypass :to-scored-facts]))))
 
-(deftest i4-self-caused-lineage-shows-once-declared
-  ;; Bad case the map cannot show today: clock-in declares no field, and the
-  ;; outer cascade reads no lineage. Declare both and the path appears, with
-  ;; the positional dispatch hop flight-entry -> clock-in from :traces.
+(deftest i4-self-caused-lineage-is-on-the-map
+  ;; Declared since the map's 6305395c: :dispatch writes :mission-id, clock-in
+  ;; reads it and writes :clock-lineage, the outer cascade reads that. No
+  ;; observation box interrupts it: the self-caused path I4 is asked about.
   (let [m (head-map)
-        declared (update m :boxes
-                         (fn [bs] (mapv #(case (:box/id %)
-                                           :clock-in (assoc % :writes [:lineage])
-                                           :r1-outer-cascade (update % :reads conj :lineage)
-                                           %)
-                                        bs)))
-        paths (get-in (proj/i4-report declared {}) [:bypass :to-scored-facts-positional])]
-    (is (not-any? #(= :lineage (:to %))
-                  (get-in (proj/i4-report m {}) [:bypass :to-scored-facts-positional]))
-        "absent from the map as committed")
-    (is (some #(= {:to :lineage :path [:flight-entry :clock-in] :via [:positional]}
+        r (proj/i4-report m {})]
+    (is (some #(= {:to :clock-lineage :path [:dispatch :clock-in] :via [:mission-id]}
                   (select-keys % [:to :path :via]))
-              paths))
-    (is (some #(= [:r1-outer-cascade :flight-entry :clock-in] (:path %)) paths)
-        "the loop: the outer cascade's choice dispatches, dispatch writes lineage")
+              (get-in r [:bypass :to-scored-facts]))
+        "field edges only")
+    (is (some #(= [:r1-outer-cascade :flight-entry :dispatch :clock-in] (:path %))
+              (get-in r [:bypass :to-scored-facts-positional]))
+        "with the trace's hops: the outer cascade's choice dispatches, dispatch writes lineage")
+    (testing "falsifier: the outer cascade not reading lineage removes the path"
+      (let [unread (update m :boxes (fn [bs] (mapv #(if (= :r1-outer-cascade (:box/id %))
+                                                        (update % :reads (fn [rs] (vec (remove #{:clock-lineage} rs))))
+                                                        %)
+                                                     bs)))]
+        (is (not-any? #(= :clock-lineage (:to %))
+                      (get-in (proj/i4-report unread {}) [:bypass :to-scored-facts-positional])))))
     (testing "the validator's I4 does not see it: ct/mission outputs are sinks"
-      (is (:valid (check (:v (validated declared)) :exogeneity))))))
+      (is (:valid (check (:v (validated m)) :exogeneity))))))
 
 (deftest a-preference-written-by-a-non-observation-box-is-a-bypass
   (let [m (update (head-map) :boxes conj
                   {:box/id :planted-writer :box/kind :component
-                   :reads [:chosen-target] :writes [:want-span]})
+                   :reads [:chosen-target] :writes [:owner-text]})
         r (proj/i4-report m {})]
     (is (some #(= [:r1-outer-cascade :planted-writer] (:path %))
               (get-in r [:bypass :to-preferences])))))
