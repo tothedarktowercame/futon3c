@@ -123,3 +123,36 @@ considered?"; a plan with a visual change existed and was not carried out.
   3. *Small factual slip:* it says it recorded the plan "yesterday"; it was
      earlier the same day (66f018a6).
 
+### Round 3 — claude-12-turn-97 (turn-tDqSTw), 2026-09-25 ~20:32Z
+
+Joe: the EFE page shows agents (flying saucers) that don't exist; the layout
+may lag, but the live annotations should match the Agency.
+
+- **Seat A (kimi-2):** two fragments: report-problem (the phantom agents,
+  pinned by URL, hedged), constrain (a freshness contract per layer: layout
+  may lag, annotations may not; candidate
+  `operator/set-the-freshness-contract-per-layer`). Sound, and s2 names the
+  requirement exactly.
+- **Seat B (kimi-1):** job `invoke-1790368573628-24424-a5431739`; futon6
+  `89f030e` (`scripts/mission_efe_field.py`, 25 lines: the page's live
+  layer draws an agent only if its Agency status is invoking/idle, shows
+  "N stale agent annotation(s) withheld"). Warrant present. Diagnosis: the
+  :7070 JVM predates futon3c `5b14a6f6`, so a restart would fix it.
+- **Discrepancies:**
+  1. *Wrong cause.* The published page is a static snapshot: the publish
+     script inlines the overlay and the page "performs no browser-time live
+     fetch" (`futon6/scripts/publish-efe-field.sh:123`). It lists 103
+     agents; 49 of them are not on the roster now (the Kimi and codex seats
+     deleted ~20:05Z, plus claude-7, claude-9). The phantoms are the
+     snapshot's age, not the server's filter. Nothing in the fix makes the
+     annotations track the Agency between publishes, which is what s2 asked.
+  2. *The predicate repeats round 2 of the old chain.* invoking/idle counts
+     almost every agent as active (the reason `5b14a6f6` changed 1 saucer);
+     a deleted agent is simply absent from the registry, so filtering by
+     status neither helps nor is needed for it.
+  3. *"Needs a restart" is wrong on two counts:* a reload from master is
+     enough to load `5b14a6f6`, and loading it would not remove these
+     phantoms.
+  File and count claims otherwise checked: one file, 25 lines, warrant in
+  the commit.
+
