@@ -1318,6 +1318,54 @@
          (is (= (:evidence/id late) (:evidence/id again)))
          (is (= 1 (count (:fills (registry/namespace-ledger ledger))))))))))
 
+(deftest fill-forward-reads-from-the-ledger-watermark-not-its-newest-run
+  ;; the case the live ledger presented on 2026-09-25: after the build, a
+  ;; registration ledgers a NEWER run directly (record-namespace-run!) while
+  ;; an OLDER run registered in between reached only the store (ledgered
+  ;; into a mis-resolved file). A fill reading forward from the ledger's
+  ;; newest run entry starts past the stranded run and never finds it; the
+  ;; fill must read from the point the ledger is known whole through — the
+  ;; build's :whole-through — and the stranded run is found
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:namespace "base-test"
+                           :command ["clojure" "-M:test" "-n" "base-test"]
+                           :ran-at "2026-09-25T01:00:00Z"})
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger! backend {:namespace-ledger-file ledger})
+           _ (is (true? (:complete? built)))
+           _ (is (= "2026-09-25T01:00:00Z" (:whole-through built))
+                 "the build marker records the newest :ran-at the scan saw")
+           stranded (append-run! backend {:command ["lake" "build" "Demo.Module"]
+                                          :ran-at "2026-09-25T02:00:00Z"})
+           direct (append-run! backend {:namespace "later-test"
+                                        :command ["clojure" "-M:test" "-n" "later-test"]
+                                        :ran-at "2026-09-25T03:00:00Z"})
+           _ (registry/record-namespace-run! {:namespace-ledger-file ledger} direct)
+           queries (atom [])
+           found (registry/latest-run-for-command
+                  (recording-backend backend queries)
+                  {:command ["lake" "build" "Demo.Module"]
+                   :namespace-ledger-file ledger})]
+       (is (= ["2026-09-25T01:00:00Z"] (mapv :query/since @queries))
+           "the fill reads from the build's watermark, not the directly ledgered 03:00 run")
+       (is (= (:evidence/id stranded) (:evidence/id found)))
+       (is (= :namespace-ledger (:resolved-by found)))
+       (let [{:keys [fills]} (registry/namespace-ledger ledger)
+             fill (first fills)]
+         (is (= 1 (count fills)))
+         (is (= 1 (:appended fill)) "the stranded run, not the already-ledgered direct one")
+         (is (= [(:evidence/id stranded)] (:entry-ids fill)))
+         (is (= "2026-09-25T03:00:00Z" (:whole-through fill))
+             "the next fill reads forward from the newest :ran-at this read saw"))
+       ;; and the next lookup reads forward from the fill's watermark
+       (let [queries2 (atom [])
+             _ (registry/latest-run-for-command
+                (recording-backend backend queries2)
+                {:command ["lake" "build" "Demo.Module"]
+                 :namespace-ledger-file ledger})]
+         (is (= ["2026-09-25T03:00:00Z"] (mapv :query/since @queries2))))))))
+
 (deftest fill-forward-over-a-failed-read-refuses-and-appends-nothing
   ;; AR-43 in the fill: the typed read-failed map surfaces as
   ;; :registry-read-failed -- never as "nothing new" -- and the ledger file

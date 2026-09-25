@@ -1142,6 +1142,8 @@
                     :evidence/type (:evidence/type entry)
                     :evidence/author (:evidence/author entry)}}))))
 
+(declare newest-ran-at)
+
 (defn build-namespace-ledger!
   "The ONE history-read the ledger is allowed: a single full scan at first
   use, recording exactly what it saw. The scan PAGES through the store
@@ -1189,6 +1191,13 @@
                                    :scanned scanned
                                    :registry-entries (when-not count-failed? held)
                                    :complete? complete? :at (str (Instant/now))}
+                            ;; the watermark the next fill reads forward from:
+                            ;; the newest :ran-at this scan SAW, not the newest
+                            ;; the ledger will hold (registrations append runs
+                            ;; directly and would otherwise move it past runs
+                            ;; ledgered elsewhere in between)
+                            (newest-ran-at (remove nil? runs))
+                            (assoc :whole-through (newest-ran-at (remove nil? runs)))
                             (:read-error failure) (assoc :read-error (:read-error failure))
                             (:window failure) (assoc :window (:window failure))
                             (:reason failure) (assoc :failure-reason (:reason failure))
@@ -1197,28 +1206,53 @@
 
 (def default-namespace-fill-limit
   "Bound on the one since-bounded read fill-namespace-ledger-forward!
-  performs per lookup. The fill reads only what registered AFTER the
-  ledger's newest :ran-at — a trickle in practice — so this bounds the read,
-  never the ledger's coverage: anything beyond the limit is caught by the
-  next lookup's fill, whose since advances with each append."
+  performs per lookup. The fill reads only what registered AFTER the point
+  the ledger is known whole through (ledger-whole-through) — a trickle in
+  practice — so this bounds the read, never the ledger's coverage: anything
+  beyond the limit is caught by the next lookup's fill, whose since advances
+  with each fill that saw something."
   200)
 
-(defn- newest-ledger-ran-at
-  "The newest :ran-at the ledger holds, over both indexes, compared as
-  instants (string sort orders \"…:40Z\" after \"…:40.387Z\" — ran-at-key's
-  rule). Nil on an empty ledger."
-  [ledger]
-  (->> (concat (vals (:runs ledger)) (vals (:namespaces ledger)))
+(defn- newest-ran-at
+  "The newest :ran-at among ROWS, compared as instants (string sort orders
+  \"…:40Z\" after \"…:40.387Z\" — ran-at-key's rule). Nil when none."
+  [rows]
+  (->> rows
        (keep :ran-at)
        (sort-by (fn [s] (let [i (try (Instant/parse s) (catch Exception _ nil))]
                           (if i [(.getEpochSecond i) (.getNano i)] [-1 -1]))))
        (last)))
 
+(defn- ledger-whole-through
+  "The point the ledger is KNOWN whole through: the newest :whole-through
+  over its build marker and fill markers — what a scan or a fill actually
+  saw. Never the newest :ran-at among run entries: registrations append runs
+  directly (record-namespace-run!), and a run ledgered that way attests
+  nothing about the store before it. On 2026-09-25 the ledger's newest run
+  read 03:59Z while six runs registered 03:27–03:31Z sat in the store,
+  ledgered into a mis-resolved file; a fill reading forward from the newest
+  run entry could never reach them. A build marker written before this
+  field carries none, so its :at stands in (the scan finished then; a run
+  appended during the scan with an earlier :ran-at is the overlap dedupe
+  absorbs). A ledger with no marker at all (registrations alone wrote it;
+  no scan ever attested anything) falls back to its newest run entry, the
+  only bound it has; such a ledger is incomplete and its lookup already
+  refuses absence. Nil on an empty ledger."
+  [ledger]
+  (let [built (:built ledger)
+        marks (concat (when built [(or (:whole-through built) (:at built))])
+                      (keep :whole-through (:fills ledger)))]
+    (if (seq marks)
+      (newest-ran-at (map (fn [m] {:ran-at m}) marks))
+      (newest-ran-at (concat (vals (:runs ledger)) (vals (:namespaces ledger)))))))
+
 (defn- fill-namespace-ledger-forward!
   "The live lookup's one write: before answering, append to FILE every
-  decodable :run in the store since the ledger's newest :ran-at (a small
-  bounded read, never the full scan; :query/since is conservative — a run's
-  :ran-at precedes its append — and dedupe by entry-id absorbs the overlap).
+  decodable :run in the store since the point the ledger is KNOWN whole
+  through — the build's or the last fill's :whole-through, never the newest
+  run entry (ledger-whole-through says why) — a small bounded read, never
+  the full scan; :query/since is conservative — a run's :ran-at precedes its
+  append — and dedupe by entry-id absorbs the overlap.
   This is what lets registrations reach the lookup wherever they were
   ledgered at registration — a --pinned worktree, a mis-resolved default —
   so long as they landed in the same store.
@@ -1232,7 +1266,7 @@
   map and the marker: a fill that could not read something cannot swear the
   index is whole forward of :since."
   [backend file ledger]
-  (let [since (newest-ledger-ran-at ledger)]
+  (let [since (ledger-whole-through ledger)]
     (if (nil? since)
       {:appended [] :since nil}
       (let [page (store/query* backend {:query/tags [:test-registry]
@@ -1253,13 +1287,20 @@
                                      (remove #(or (::undecodable %) (::foreign %)))
                                      (remove #(contains? known (:entry-id %))))
                             decoded)
-                undecodable (into [] (keep ::undecodable) decoded)]
+                undecodable (into [] (keep ::undecodable) decoded)
+                ;; the next fill reads forward from the newest :ran-at THIS
+                ;; read saw (known rows included), never below :since
+                whole-through (or (newest-ran-at (cons {:ran-at since}
+                                                       (remove #(or (::undecodable %) (::foreign %))
+                                                               (remove nil? decoded))))
+                                  since)]
             (doseq [run fresh]
               (append-ledger-entry! file (assoc run :entry/type :namespace-run)))
             (when (or (seq fresh) (seq undecodable))
               (append-ledger-entry! file
                                     (cond-> {:entry/type :namespace-ledger-filled
                                              :since since
+                                             :whole-through whole-through
                                              :appended (count fresh)
                                              :entry-ids (mapv :entry-id fresh)
                                              :at (str (Instant/now))}
@@ -1398,7 +1439,7 @@
   no other backfill: no cron, no sweep -- the registry fills forward from
   registrations (Joe, 2026-09-19). Additionally, each lookup fills the
   ledger forward from the store before answering -- one small read bounded
-  by :query/since <the ledger's newest :ran-at>, appending what registered
+  by :query/since <the point the ledger is known whole through>, appending what registered
   after the build wherever it was ledgered at registration (fill-namespace-
   ledger-forward!). A failed fill read refuses :registry-read-failed, never
   answers over the gap.
@@ -1499,7 +1540,7 @@
   :keying :command — a ledger built before command keys existed indexed only
   namespaces, so its completeness says nothing about command absence and the
   lookup refuses with :namespace-ledger-incomplete until rebuilt — AND a
-  fill-forward that read everything new since the ledger's newest :ran-at
+  fill-forward that read everything new since the point the ledger is known whole through
   (same fill as latest-run-for-namespace; a failed fill read refuses
   :registry-read-failed). With no ledger configured the lookup scans the
   store (scan-latest-run)."
