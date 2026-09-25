@@ -2,10 +2,11 @@
 ;; at :map-sha, validated by futon5 src/futon5/ct/mission.clj at :futon5-sha (loaded from
 ;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
 ;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
+;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "6305395c",
+ :map-sha "10a1e2d9",
  :futon5-sha "aeeee96",
- :counts {:inputs 13, :outputs 12, :components 29, :edges 54},
+ :counts {:inputs 14, :outputs 12, :components 30, :edges 55},
  :validate
  {:all-valid false,
   :checks
@@ -13,13 +14,14 @@
    {:valid false,
     :check :coverage,
     :dead-components
-    [:r4-kernel
-     :r2-flight-read
+    [:r2-flight-read
      :r11-warrants
      :r9-decision
+     :r4-constructor
      :r5-flight-call
      :r7-flight-call
      :r3-prompt
+     :r4-order-use
      :r2-verifier
      :r7-selection
      :r6-cascade-lane
