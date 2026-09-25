@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "781335f1" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "fcc31531" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -88,20 +88,22 @@
 
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
    :reads [:candidate :enacted-steps] :writes [:attempts :grain-gate]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
-   :reads [:attempts]}
+   :reads [:attempts :grain-gate :publication-observed]}
   {:box/id :r5-grain-gate :row 5 :box/kind :component
    :site {:file "futon2/src/futon2/aif/grain_gate.clj" :var "grain-gate"}
-   :reads [:keyed-by]}
+   :reads [:grain]}
   {:box/id :r5-flight-call :row 5 :box/kind :component
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   :writes [:keyed-by]}
+   ;; enact-fn hands the candidate's grain and the seat's planned grain to
+   ;; grain-gate before the grain commit is asked for
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   :writes [:grain]}
   {:box/id :r5-test :row 5 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"}
-   :reads [:grain-gate]}
+   :reads [:grain-gate :grain :attempts]}
   {:box/id :wc-checker :box/kind :component
    ;; futon3c bb script, siteless here
    :reads [:attempts :grain-gate :candidate] :writes [:wc-verdict]}
@@ -112,8 +114,8 @@
    ;; :candidate is the P_c join; both are identity, not the count
    :reads [:attempts :candidate :wc-verdict] :writes [:delta]}
   {:box/id :r7-flight-call :row 7 :box/kind :component
-   ;; the flight hands check-c's verdict to increment unchanged
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
+   ;; the flight hands check-c's verdict to increment unchanged (step 11)
+   :status :not-built :intended-site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "wc-verdict-fn"}
    :reads [:wc-verdict]}
   {:box/id :r7-fold :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_habit.clj" :var "fold"}
@@ -239,7 +241,11 @@
  ;; wired at futon2 781335f1 (selection reads :enactment-records from the
  ;; fold and writes :e-source; the legacy store dropped as E's source): the
  ;; r7-selection and row-7 test-file entries gone; two :standing (the row-7
- ;; test's enactment fixtures; row 9's test projects :e-source away). :kind :to-do is the
+ ;; test's enactment fixtures; row 9's test projects :e-source away). Step
+ ;; 10 built at futon2 fcc31531: enact-fn is a real site for rows 0 and 5
+ ;; (writes :attempts, :grain-gate, :grain; reads :candidate), its not-built
+ ;; assertion removed; row 0 keeps one to-do (starting at the recorded
+ ;; enacted step); occurrences in test files are :standing fixtures. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -264,6 +270,16 @@
    :kind :standing,
    :note
    "persist-clock! writes the lineage edge with string prop keys into futon1b; no keyword names it at the site"}
+  {:finding :declaration-without-occurrence,
+   :box/id :r0-enact-step,
+   :field :enacted-steps,
+   :role :reads,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+   :rows [0],
+   :kind :to-do,
+   :note
+   "enact-fn enacts the candidate's steps from the first; starting at the decision's recorded enacted step is not wired yet"}
   {:finding :declaration-without-occurrence,
    :box/id :r2-served-by-reading,
    :field :owner-text,
@@ -292,18 +308,34 @@
    :field :attempts,
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
    :declared-by [],
-   :rows [7],
+   :rows [],
    :kind :standing,
    :note
-   "the row-7 test builds enactment records (:attempts, :candidate) through increment; write positions in the test, not second writers"}
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :candidate,
    :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
    :declared-by [],
-   :rows [7],
+   :rows [],
    :kind :standing,
    :note
-   "the row-7 test builds enactment records (:attempts, :candidate) through increment; write positions in the test, not second writers"}
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :chosen-target,
    :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
@@ -311,16 +343,16 @@
    :rows [],
    :kind :standing,
    :note
-   "the loop-closure test supplies :chosen-target as input (a write position in the test, not a second writer of the field)"}
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :e-source,
    :site
    {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
    :declared-by [],
-   :rows [9],
+   :rows [],
    :kind :standing,
    :note
-   "the row-9 test projects :e-source away from its pre-step-8 fixture (a dissoc, not a read)"}
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :next-step,
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
@@ -347,20 +379,19 @@
    :kind :standing,
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
-   :error? true,
-   :rows [5],
-   :kind :to-do}
+  {:finding :occurrence-without-declaration,
+   :field :publication-observed,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+   :declared-by [],
+   :rows [0 10],
+   :kind :standing,
+   :note
+   "enact-fn copies the publication observation onto the enactment record (row 10's read side, folded in); observe-publication-fn remains its writer"}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
    :error? true,
    :rows [1],
-   :kind :to-do}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
-   :error? true,
-   :rows [0],
    :kind :to-do}
   {:finding :site-unreadable,
    :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},

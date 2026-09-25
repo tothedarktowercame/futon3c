@@ -24,8 +24,9 @@
    :disposition :adapt
    :change "the flight gains a step that writes attempts, checks, grain and deviations; nothing it did before changes"
    :tripwires
-   [{:test "futon2.aif.flight-enact-test" :status :to-write
-     :assertion "a flight with an enactment writes a record in the click-001-enactment form; a flight without one produces the same flight record as before"}]}
+   [{:test "futon2.aif.flight-enact-test" :status :in-place
+     :assertion "a chosen candidate's steps dispatched and recorded in the click-001-enactment form with their checks, the decision's candidate, the run record's id, the typed grain and publication absences; a failed step a deviation; no decision, no record; run! calls it after the click"
+     :warrant "test-registry-f8831a1a"}]}
 
   {:row 1 :component "outer cascade selection over the field"
    :disposition :adapt :proposed-pending "Joe's decision on OUTER-CASCADE-D (mixture law proposed, futon2 d615d06e)"
@@ -74,8 +75,9 @@
    [{:test "futon2.aif.grain-gate-test" :status :in-place
      :assertion "six typed refusals, no-grain candidate refuses, docstring bracket not read as the arglist"
      :warrant "test-registry-9bb4d15f"}
-    {:test "futon2.aif.flight-grain-gate-test" :status :to-write
-     :assertion "the enactment's grain attempt carries {:kind :grain-gate :result} before commit; a mismatched grain is recorded refused, the attempt not taken"}]}
+    {:test "futon2.aif.flight-grain-gate-test" :status :in-place
+     :assertion "the seat's planned grain goes through grain-gate before the grain commit is asked for (plan, gate, commit in call order); a pass on the attempt; a grain mismatch recorded, no commit asked, a deviation, the enactment continuing"
+     :warrant "test-registry-36dcc3b7"}]}
 
   {:row 6 :component "admitted labels into sourced-rates; :measurement on the click record"
    :disposition :preserve
