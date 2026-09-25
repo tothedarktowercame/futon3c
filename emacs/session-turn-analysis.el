@@ -566,5 +566,28 @@ state -- never silently complete."
   (define-key session-mode-turn-tags-mode-map (kbd "C-c s a")
               #'session-mode-inspect-turn-analysis))
 
+;; --- Turns captured outside this Emacs ------------------------------------
+;; The operator does not always type in the Emacs that records turns: a REPL
+;; buffer in another Emacs reaches the same agent, and its turns land in
+;; futon1b's evidence store (author joe, event chat-turn) but not here.
+;; futon3c/scripts/operator_turn_capture.py reads them there and hands each
+;; one to this function, so it is structured and sent for interpretation by
+;; the same code as a turn typed in this Emacs.
+
+(defun session-mode-record-external-turn (text agent-id session-id turn-id)
+  "Record TEXT as an operator turn to AGENT-ID and request its interpretation.
+SESSION-ID and TURN-ID are the ones the evidence store gave it. Returns the
+record's path. The record's created_at is the capture time; the caller
+corrects it to the turn's own time."
+  (let ((agent-chat--agent-id agent-id)
+        (agent-chat--session-id session-id)
+        (agent-chat--current-turn-id turn-id)
+        (session-mode--last-quotes nil))
+    (let ((path (session-mode--record-turn text)))
+      (when (and path session-mode-analysis-agent
+                 (not (equal session-mode-analysis-agent agent-id)))
+        (session-mode--dispatch-analysis path))
+      path)))
+
 (provide 'session-turn-analysis)
 ;;; session-turn-analysis.el ends here

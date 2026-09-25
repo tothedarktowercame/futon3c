@@ -419,6 +419,13 @@ Interpretation lands later than the turn, so a row's state changes in place.</p>
     print(os.path.join(a.out, manifest))
 
 
+def agent_of(path):
+    try:
+        return json.load(open(path, encoding="utf-8")).get("agent_id")
+    except (OSError, ValueError):
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("records", nargs="*")
@@ -435,7 +442,11 @@ def main():
     paths = list(a.records)
     if a.latest:
         every = [p for p in glob.glob(f"{a.records_dir}/turn-*.json")
-                 if not p.endswith(".analysis.json")]
+                 if not p.endswith((".analysis.json", ".candidates.json"))]
+        if a.agent:
+            # The latest N of THIS agent's turns: counted across all agents,
+            # one busy agent's turns push another's out of its own feed.
+            every = [p for p in every if agent_of(p) == a.agent]
         paths += sorted(every, key=os.path.getmtime)[-a.latest:]
     if not paths:
         sys.exit("turn_margin_html: no records (pass paths or --latest N)")
