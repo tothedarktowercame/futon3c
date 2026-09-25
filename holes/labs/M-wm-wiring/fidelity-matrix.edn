@@ -134,7 +134,7 @@
    :tripwires
    [{:test "futon2.aif.publication-observed-test" :status :in-place
      :assertion "H-publish as recorded: the click's run record :repair/publication, :receipt-committed for the chosen action's repair id -> observed true with the entry as evidence; refused or absent -> false with what was checked; no repair obligation or no source typed; observed true without evidence refused; the enactment record and the flight entry carry one value"
-     :warrant "test-registry-ee8a93be"}]}
+     :warrant "test-registry-115c3a50"}]}
 
   {:row 11 :component "warrant checks"
    :disposition :preserve
