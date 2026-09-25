@@ -944,15 +944,16 @@
       (System/getenv "FUTON3C_NAMESPACE_LEDGER")))
 
 (defn- futon3c-checkout-root
-  "The checkout this code runs from: two directories above this namespace's
+  "The checkout this code runs from: three directories above this namespace's
   own classpath resource (src/futon3c/test_registry.clj), falling back to the
-  working directory when the resource is not a file (a jar). The server and
-  the registry CLI both run from the futon3c checkout, so this is the one
-  root they share."
+  working directory when the resource is not a file (a jar). (Two parents was
+  the live bug of 2026-09-25: the CLI default resolved under src/, so every
+  registration that night was ledgered into src/data/test-registry/ where the
+  /latest handler never reads.)"
   []
   (let [resource (io/resource "futon3c/test_registry.clj")]
     (if (and resource (= "file" (.getProtocol resource)))
-      (str (.getParentFile (.getParentFile (io/file (.getPath resource)))))
+      (str (.getParentFile (.getParentFile (.getParentFile (io/file (.getPath resource))))))
       (System/getProperty "user.dir"))))
 
 (def default-namespace-ledger-relative-path
@@ -960,24 +961,50 @@
   (str "data" (System/getProperty "file.separator") "test-registry"
        (System/getProperty "file.separator") "namespace-ledger.edn"))
 
+(def default-canonical-futon3c-root
+  "The one checkout the local agency's evidence store belongs to. A warrant
+  worktree (wt-warrant-*) is never it: --pinned registrations run the CLI
+  from the worktree, and a checkout-relative default would ledger them into
+  the worktree's own data dir, discarded with it."
+  "/home/joe/code/futon3c")
+
+(defn- local-agency-url?
+  "True when the agency-url names the local :7070 store — the store whose
+  canonical checkout is default-canonical-futon3c-root."
+  [url]
+  (boolean (re-matches #"https?://(localhost|127\.0\.0\.1):7070/?" (str url))))
+
 (defn namespace-ledger-path
   "Resolve the namespace -> newest-run ledger path, in order:
-  1. the explicit :namespace-ledger-file option;
-  2. FUTON3C_NAMESPACE_LEDGER;
-  3. the documented default data/test-registry/namespace-ledger.edn under
-     the futon3c checkout (:futon3c-root option, else the checkout this code
-     runs from).
+  1. FUTON3C_NAMESPACE_LEDGER;
+  2. the explicit :namespace-ledger-file option;
+  3. the explicit :futon3c-root option (the /latest handler passes it);
+  4. the CANONICAL checkout — <root>/data/test-registry/namespace-ledger.edn
+     under the :canonical-futon3c-root option, else
+     default-canonical-futon3c-root — when the agency-url is the local
+     :7070. The registration lands in that checkout's store, so its ledger
+     is that checkout's file, wherever the CLI itself runs from: a worktree
+     is never the canonical checkout;
+  5. the checkout-relative default under the checkout this code runs from
+     (a non-local agency-url: the store being registered into is not the
+     local one, so the ledger stays beside the caller).
 
   A default is acceptable here where namespace-ledger-file deliberately has
-  none: the server and the registry CLI run in the SAME checkout, so both
-  resolve the same file with no env var, and the ledger is append-only, so
-  two writers interleave entries rather than corrupt one. Never nil; the
-  /latest handler and the CLI register subcommand thread this so a live
-  registration is ledgered where the live lookup reads."
+  none: the server and the registry CLI agree through rules 3-4, and the
+  ledger is append-only, so two writers interleave entries rather than
+  corrupt one. Never nil; the /latest handler and the CLI register
+  subcommand thread this so a live registration is ledgered where the live
+  lookup reads."
   [options]
-  (or (namespace-ledger-file options)
-      (str (io/file (or (:futon3c-root options) (futon3c-checkout-root))
-                    default-namespace-ledger-relative-path))))
+  (or (System/getenv "FUTON3C_NAMESPACE_LEDGER")
+      (:namespace-ledger-file options)
+      (when-let [root (:futon3c-root options)]
+        (str (io/file root default-namespace-ledger-relative-path)))
+      (when (local-agency-url? (:agency-url options "http://localhost:7070"))
+        (str (io/file (or (:canonical-futon3c-root options)
+                          default-canonical-futon3c-root)
+                      default-namespace-ledger-relative-path)))
+      (str (io/file (futon3c-checkout-root) default-namespace-ledger-relative-path))))
 
 (defn- append-ledger-entry! [file entry]
   (let [f (io/file file)]
@@ -1020,9 +1047,11 @@
   marker, or nil>}. :runs is keyed by command-key (E-kimi-task-19: the ledger
   of b358fd8a keyed on namespace, which a gate run can never be found under);
   entries written before command keys existed carry no :command-key and
-  index only under :namespaces. An unknown entry type or an unreadable line
-  is a ledger-corruption refusal, never a skipped line: a ledger that drops
-  what it cannot read would conclude absence over a gap."
+  index only under :namespaces. :namespace-ledger-filled markers (what a
+  lookup's fill-forward appended, and since when) are kept under :fills as
+  the ledger's own honest record of what it saw. An unknown entry type or an
+  unreadable line is a ledger-corruption refusal, never a skipped line: a
+  ledger that drops what it cannot read would conclude absence over a gap."
   [file]
   (reduce (fn [acc entry]
             (case (:entry/type entry)
@@ -1033,6 +1062,7 @@
                 (nonblank? (:command-key entry))
                 (update-in [:runs (:command-key entry)] newer-entry entry))
               :namespace-ledger-built (assoc acc :built entry)
+              :namespace-ledger-filled (update acc :fills (fnil conj []) entry)
               (fail! :namespace-ledger-invalid {:path (str file) :entry entry})))
           {:runs {} :namespaces {} :built nil}
           (read-namespace-ledger file)))
@@ -1081,6 +1111,37 @@
             :else
             (recur cursor (into seen (map :evidence/id) page) (into acc fresh))))))))
 
+(defn- decode-ledger-run
+  "One scanned registry entry as a ledger :namespace-run map (without
+  :entry/type), or nil when the entry decodes but is not a :run with a
+  command. What will not decode is NAMED, never a bare flag: an entry whose
+  id has the registry's own form (test-registry-<sha256 of its body>, minted
+  by append-record!) is ::undecodable with its reason — it could have named
+  any command, so a scan over it cannot swear the index is whole. An entry
+  carrying the tag under another id form is not a registry record (live,
+  2026-09-25: nine zai-1 :memory notes tagged :test-registry) and cannot
+  have named a command as a run; it is ::foreign, not counted against
+  completeness. Shared by the build and the fill-forward so both read the
+  store the same way."
+  [entry]
+  (try
+    (let [payload (decode entry)
+          command (:command payload)
+          namespace (commanded-namespace command)]
+      (when (and (= :run (:kind payload)) (command-key command))
+        (cond-> {:command-key (command-key command) :command (vec command)
+                 :entry-id (:evidence/id entry)
+                 :ran-at (:ran-at payload) :finished-at (:finished-at payload)
+                 :warrant? (boolean (:warrant? payload))}
+          (nonblank? namespace) (assoc :namespace namespace))))
+    (catch Exception e
+      (if (str/starts-with? (str (:evidence/id entry)) "test-registry-")
+        {::undecodable {:evidence/id (:evidence/id entry)
+                        :reason (or (:reason (ex-data e)) :undecodable)}}
+        {::foreign {:evidence/id (:evidence/id entry)
+                    :evidence/type (:evidence/type entry)
+                    :evidence/author (:evidence/author entry)}}))))
+
 (defn build-namespace-ledger!
   "The ONE history-read the ledger is allowed: a single full scan at first
   use, recording exactly what it saw. The scan PAGES through the store
@@ -1115,37 +1176,7 @@
                     (when count-failed?
                       {:read-error (select-keys held [:error/code :error/kind :status])}))
         scanned (count entries)
-        runs (mapv (fn [entry]
-                     (try
-                       (let [payload (decode entry)
-                             command (:command payload)
-                             namespace (commanded-namespace command)]
-                         (when (and (= :run (:kind payload)) (command-key command))
-                           (cond-> {:command-key (command-key command) :command (vec command)
-                                    :entry-id (:evidence/id entry)
-                                    :ran-at (:ran-at payload) :finished-at (:finished-at payload)
-                                    :warrant? (boolean (:warrant? payload))}
-                             (nonblank? namespace) (assoc :namespace namespace))))
-                       ;; named, never a bare flag: the marker says WHICH
-                       ;; entries it could not read and why, so an
-                       ;; incomplete build over a whole scan is not mute
-                       ;; (claude-8 review, 2026-09-25: the live rebuild read
-                       ;; scanned 3196 of 3196, :complete? false, no reason)
-                       (catch Exception e
-                         ;; a registry record is minted by append-record!
-                         ;; with id test-registry-<sha256 of its body>. An
-                         ;; entry carrying the tag under another id form is
-                         ;; not one (live, 2026-09-25: nine zai-1 :memory
-                         ;; notes tagged :test-registry) and cannot have
-                         ;; named a command as a run; it is listed as
-                         ;; :foreign, not counted against completeness.
-                         (if (str/starts-with? (str (:evidence/id entry)) "test-registry-")
-                           {::undecodable {:evidence/id (:evidence/id entry)
-                                           :reason (or (:reason (ex-data e)) :undecodable)}}
-                           {::foreign {:evidence/id (:evidence/id entry)
-                                       :evidence/type (:evidence/type entry)
-                                       :evidence/author (:evidence/author entry)}}))))
-                   entries)
+        runs (mapv decode-ledger-run entries)
         undecodable (into [] (keep ::undecodable) runs)
         foreign (into [] (keep ::foreign) runs)
         complete? (and (nil? failure) (pos? scanned) (= scanned held)
@@ -1163,6 +1194,77 @@
                             (:reason failure) (assoc :failure-reason (:reason failure))
                             (seq undecodable) (assoc :undecodable undecodable)
                             (seq foreign) (assoc :foreign foreign)))))
+
+(def default-namespace-fill-limit
+  "Bound on the one since-bounded read fill-namespace-ledger-forward!
+  performs per lookup. The fill reads only what registered AFTER the
+  ledger's newest :ran-at — a trickle in practice — so this bounds the read,
+  never the ledger's coverage: anything beyond the limit is caught by the
+  next lookup's fill, whose since advances with each append."
+  200)
+
+(defn- newest-ledger-ran-at
+  "The newest :ran-at the ledger holds, over both indexes, compared as
+  instants (string sort orders \"…:40Z\" after \"…:40.387Z\" — ran-at-key's
+  rule). Nil on an empty ledger."
+  [ledger]
+  (->> (concat (vals (:runs ledger)) (vals (:namespaces ledger)))
+       (keep :ran-at)
+       (sort-by (fn [s] (let [i (try (Instant/parse s) (catch Exception _ nil))]
+                          (if i [(.getEpochSecond i) (.getNano i)] [-1 -1]))))
+       (last)))
+
+(defn- fill-namespace-ledger-forward!
+  "The live lookup's one write: before answering, append to FILE every
+  decodable :run in the store since the ledger's newest :ran-at (a small
+  bounded read, never the full scan; :query/since is conservative — a run's
+  :ran-at precedes its append — and dedupe by entry-id absorbs the overlap).
+  This is what lets registrations reach the lookup wherever they were
+  ledgered at registration — a --pinned worktree, a mis-resolved default —
+  so long as they landed in the same store.
+
+  Returns {:appended [...] :since <ran-at>} on success (a
+  :namespace-ledger-filled entry records what was appended and since when,
+  so the ledger stays an honest record of what it saw); {:read-error ...}
+  on the AR-43 typed read-failed map or {:window ...} on a server-defaulted
+  window — in both cases NOTHING is appended and the caller refuses rather
+  than answering over a gap. Undecodable entries are named on the returned
+  map and the marker: a fill that could not read something cannot swear the
+  index is whole forward of :since."
+  [backend file ledger]
+  (let [since (newest-ledger-ran-at ledger)]
+    (if (nil? since)
+      {:appended [] :since nil}
+      (let [page (store/query* backend {:query/tags [:test-registry]
+                                        :query/limit default-namespace-fill-limit
+                                        :query/since since})]
+        (cond
+          (:error/code page)
+          {:read-error (select-keys page [:error/code :error/kind :status])}
+
+          (:defaulted? (:window (meta page)))
+          {:window (:window (meta page))}
+
+          :else
+          (let [known (into #{} (keep :entry-id)
+                            (concat (vals (:runs ledger)) (vals (:namespaces ledger))))
+                decoded (mapv decode-ledger-run page)
+                fresh (into [] (comp (remove nil?)
+                                     (remove #(or (::undecodable %) (::foreign %)))
+                                     (remove #(contains? known (:entry-id %))))
+                            decoded)
+                undecodable (into [] (keep ::undecodable) decoded)]
+            (doseq [run fresh]
+              (append-ledger-entry! file (assoc run :entry/type :namespace-run)))
+            (when (or (seq fresh) (seq undecodable))
+              (append-ledger-entry! file
+                                    (cond-> {:entry/type :namespace-ledger-filled
+                                             :since since
+                                             :appended (count fresh)
+                                             :entry-ids (mapv :entry-id fresh)
+                                             :at (str (Instant/now))}
+                                      (seq undecodable) (assoc :undecodable undecodable))))
+            {:appended fresh :since since :undecodable undecodable}))))))
 
 (defn record-namespace-run!
   "Maintain the ledger for one minted :run row (append-record!'s return).
@@ -1294,7 +1396,12 @@
 
   On first use (no ledger file) the lookup performs that one build. There is
   no other backfill: no cron, no sweep -- the registry fills forward from
-  registrations (Joe, 2026-09-19).
+  registrations (Joe, 2026-09-19). Additionally, each lookup fills the
+  ledger forward from the store before answering -- one small read bounded
+  by :query/since <the ledger's newest :ran-at>, appending what registered
+  after the build wherever it was ledgered at registration (fill-namespace-
+  ledger-forward!). A failed fill read refuses :registry-read-failed, never
+  answers over the gap.
 
   With no ledger configured the lookup scans the store
   (scan-latest-run). Returns the row shape read-chain! returns
@@ -1330,27 +1437,46 @@
       (do
         (when-not (.isFile (io/file ledger-file))
           (build-namespace-ledger! backend options))
-        (let [{:keys [namespaces built]} (namespace-ledger ledger-file)
-              hit (get namespaces namespace)]
+        (let [ledger (namespace-ledger ledger-file)
+              fill (fill-namespace-ledger-forward! backend ledger-file ledger)]
           (cond
-            hit
-            (assoc (last (read-chain! backend (:entry-id hit)))
-                   :resolved-by :namespace-ledger)
+            ;; A failed fill read is never "nothing new" (AR-43): the lookup
+            ;; refuses rather than answering over a gap.
+            (:read-error fill)
+            (assoc (none :registry-read-failed) :read-error (:read-error fill))
 
-            (:complete? built)
-            (assoc (none :no-run-for-namespace)
-                   :resolved-by :namespace-ledger
-                   :scanned (:scanned built) :registry-entries (:registry-entries built))
+            (:window fill)
+            (assoc (none :registry-read-failed) :window (:window fill))
 
             :else
-            (cond-> (assoc (none :scan-window-exhausted)
-                           :resolved-by :namespace-ledger-incomplete
-                           :scanned (:scanned built)
-                           :registry-entries (:registry-entries built))
-              (:read-error built) (assoc :read-error (:read-error built))
-              (:window built) (assoc :window (:window built))
-              (:failure-reason built) (assoc :failure-reason (:failure-reason built))
-              (seq (:undecodable built)) (assoc :undecodable (:undecodable built))))))
+            (let [{:keys [namespaces built]} (if (seq (:appended fill))
+                                               (namespace-ledger ledger-file)
+                                               ledger)
+                  hit (get namespaces namespace)]
+              (cond
+                hit
+                (assoc (last (read-chain! backend (:entry-id hit)))
+                       :resolved-by :namespace-ledger)
+
+                ;; Absence needs a whole index: a complete build AND a fill
+                ;; that read everything new since (an undecodable fill entry
+                ;; could have named this namespace).
+                (and (:complete? built) (empty? (:undecodable fill)))
+                (assoc (none :no-run-for-namespace)
+                       :resolved-by :namespace-ledger
+                       :scanned (:scanned built) :registry-entries (:registry-entries built))
+
+                :else
+                (cond-> (assoc (none :scan-window-exhausted)
+                               :resolved-by :namespace-ledger-incomplete
+                               :scanned (:scanned built)
+                               :registry-entries (:registry-entries built))
+                  (:read-error built) (assoc :read-error (:read-error built))
+                  (:window built) (assoc :window (:window built))
+                  (:failure-reason built) (assoc :failure-reason (:failure-reason built))
+                  (seq (:undecodable built)) (assoc :undecodable (:undecodable built))
+                  (and (empty? (:undecodable built)) (seq (:undecodable fill)))
+                  (assoc :undecodable (:undecodable fill))))))))
       (scan-latest-run backend {:match? (fn [payload]
                                           (= namespace (commanded-namespace (:command payload))))
                                 :absent-reason :no-run-for-namespace
@@ -1372,8 +1498,11 @@
   whole. For the ledger path that means a complete build whose marker carries
   :keying :command — a ledger built before command keys existed indexed only
   namespaces, so its completeness says nothing about command absence and the
-  lookup refuses with :namespace-ledger-incomplete until rebuilt. With no
-  ledger configured the lookup scans the store (scan-latest-run)."
+  lookup refuses with :namespace-ledger-incomplete until rebuilt — AND a
+  fill-forward that read everything new since the ledger's newest :ran-at
+  (same fill as latest-run-for-namespace; a failed fill read refuses
+  :registry-read-failed). With no ledger configured the lookup scans the
+  store (scan-latest-run)."
   [backend {:keys [command limit] :as options}]
   (if-not (command-key command)
     (refusal :command-required {})
@@ -1381,27 +1510,43 @@
       (do
         (when-not (.isFile (io/file ledger-file))
           (build-namespace-ledger! backend options))
-        (let [{:keys [runs built]} (namespace-ledger ledger-file)
-              hit (get runs (command-key command))]
+        (let [ledger (namespace-ledger ledger-file)
+              fill (fill-namespace-ledger-forward! backend ledger-file ledger)]
           (cond
-            hit
-            (assoc (last (read-chain! backend (:entry-id hit)))
-                   :resolved-by :namespace-ledger)
+            ;; A failed fill read is never "nothing new" (AR-43).
+            (:read-error fill)
+            (assoc (none :registry-read-failed) :read-error (:read-error fill))
 
-            (and (:complete? built) (= :command (:keying built)))
-            (assoc (none :no-run-for-command)
-                   :resolved-by :namespace-ledger
-                   :scanned (:scanned built) :registry-entries (:registry-entries built))
+            (:window fill)
+            (assoc (none :registry-read-failed) :window (:window fill))
 
             :else
-            (cond-> (assoc (none :scan-window-exhausted)
-                           :resolved-by :namespace-ledger-incomplete
-                           :scanned (:scanned built)
-                           :registry-entries (:registry-entries built))
-              (:read-error built) (assoc :read-error (:read-error built))
-              (:window built) (assoc :window (:window built))
-              (:failure-reason built) (assoc :failure-reason (:failure-reason built))
-              (seq (:undecodable built)) (assoc :undecodable (:undecodable built))))))
+            (let [{:keys [runs built]} (if (seq (:appended fill))
+                                        (namespace-ledger ledger-file)
+                                        ledger)
+                  hit (get runs (command-key command))]
+              (cond
+                hit
+                (assoc (last (read-chain! backend (:entry-id hit)))
+                       :resolved-by :namespace-ledger)
+
+                (and (:complete? built) (= :command (:keying built))
+                     (empty? (:undecodable fill)))
+                (assoc (none :no-run-for-command)
+                       :resolved-by :namespace-ledger
+                       :scanned (:scanned built) :registry-entries (:registry-entries built))
+
+                :else
+                (cond-> (assoc (none :scan-window-exhausted)
+                               :resolved-by :namespace-ledger-incomplete
+                               :scanned (:scanned built)
+                               :registry-entries (:registry-entries built))
+                  (:read-error built) (assoc :read-error (:read-error built))
+                  (:window built) (assoc :window (:window built))
+                  (:failure-reason built) (assoc :failure-reason (:failure-reason built))
+                  (seq (:undecodable built)) (assoc :undecodable (:undecodable built))
+                  (and (empty? (:undecodable built)) (seq (:undecodable fill)))
+                  (assoc :undecodable (:undecodable fill))))))))
       (scan-latest-run backend {:match? (fn [payload]
                                           (= (command-key command)
                                              (command-key (:command payload))))

@@ -934,25 +934,29 @@
          (is (= 5 (:scanned none)))
          (is (= :timeout (get-in none [:read-error :error/kind]))))))))
 
-(deftest a-ledger-hit-never-fetches-an-evidence-page
-  ;; the lookup answers within the client's timeout because a ledger hit is
-  ;; one targeted store read -- no evidence page is ever fetched (2026-09-25,
-  ;; live: the endpoint answers a ledger hit in ~4s, while the default page
-  ;; times the 5s client out)
+(deftest a-ledger-hit-fetches-one-bounded-fill-page-never-a-scan
+  ;; the lookup answers within the client's timeout: one SMALL fill-forward
+  ;; read bounded by :query/since <the ledger's newest :ran-at> plus one
+  ;; targeted read for the record itself — never an unbounded evidence page
+  ;; (2026-09-25, live: a full page times the 5s client out, and the
+  ;; endpoint answers a ledger hit in ~4s)
   (fixture
    (fn [{:keys [backend options]}]
      (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
            run (registry/register-run! backend (assoc options :namespace-ledger-file ledger))
            real-get-entry* store/get-entry*
-           pages (atom 0) reads (atom 0)]
-       (with-redefs [store/query* (fn [_ _] (swap! pages inc) [])
-                     store/count* (fn [_ _] (swap! pages inc) 0)
+           queries (atom []) reads (atom 0)]
+       (with-redefs [store/query* (fn [_ q] (swap! queries conj q) [])
+                     store/count* (fn [_ _] (swap! queries conj :count) 0)
                      store/get-entry* (fn [b id] (swap! reads inc) (real-get-entry* b id))]
          (let [found (registry/latest-run-for-namespace
                       backend {:namespace "demo-test" :namespace-ledger-file ledger})]
            (is (= (:evidence/id run) (:evidence/id found)))
            (is (= :namespace-ledger (:resolved-by found)))
-           (is (zero? @pages) "no evidence page was fetched for a ledger hit")
+           (is (= 1 (count @queries)) "one bounded fill read, no scan")
+           (is (= (get-in run [:payload :ran-at]) (:query/since (first @queries)))
+               "the fill reads only what registered after the ledger's newest :ran-at")
+           (is (= registry/default-namespace-fill-limit (:query/limit (first @queries))))
            (is (= 3 @reads) "targeted reads only: the chain's links and parent, never a page")))))))
 
 (deftest a-complete-namespace-ledger-concludes-absence
@@ -1120,15 +1124,22 @@
          (is (= :no-run-for-command (:reason none)))
          (is (= :namespace-ledger (:resolved-by none)))))
      ;; a legacy ledger: namespace-keyed entries, a complete marker with no
-     ;; :keying — command absence is NOT established
+     ;; :keying — command absence is NOT established. The fill-forward still
+     ;; brings a PRESENT gate run into the ledger: presence never depends on
+     ;; the marker's keying.
      (let [legacy (str (io/file (:artifact-dir options) "legacy.ednlog"))]
        (spit legacy
              (str "{:entry/type :namespace-run :namespace \"demo-test\" "
                   ":entry-id \"e-old\" :ran-at \"2026-09-25T01:00:00Z\"}\n"
                   "{:entry/type :namespace-ledger-built :scanned 2 "
                   ":registry-entries 2 :complete? true :at \"2026-09-25T01:00:00Z\"}\n"))
+       (let [found (registry/latest-run-for-command
+                    backend {:command ["bb" "scripts/gates.clj"]
+                             :namespace-ledger-file legacy})]
+         (is (= :namespace-ledger (:resolved-by found))
+             "the fill-forward ledgered the gate run the legacy build could not key"))
        (let [none (registry/latest-run-for-command
-                   backend {:command ["bb" "scripts/gates.clj"]
+                   backend {:command ["bb" "scripts/other.clj"]
                             :namespace-ledger-file legacy})]
          (is (= :scan-window-exhausted (:reason none)))
          (is (= :namespace-ledger-incomplete (:resolved-by none))))
@@ -1230,3 +1241,124 @@
          (let [answer (registry/latest-run-for-namespace backend {:namespace "demo-test"})]
            (is (= :scan-window-exhausted (:reason answer)))
            (is (true? (get-in answer [:window :defaulted?])))))))))
+
+;; ---------------------------------------------------------------------------
+;; E-kimi-task-30: the live lookup fills the ledger forward from the store
+;; before answering, so a registration that never reached the ledger at
+;; registration (a --pinned worktree's discarded data dir; the mis-resolved
+;; src/ default of 2026-09-25) still reaches the live lookup -- and the CLI
+;; default resolves to the canonical checkout, never a worktree.
+
+(defn- recording-backend
+  "Wraps backend: every -query passes through while the query map is
+  recorded, so a test can assert the fill-forward's :query/since."
+  [backend queries]
+  (reify futon3c.evidence.backend/EvidenceBackend
+    (-append [_ _] nil)
+    (-get [_ id] (store/get-entry* backend id))
+    (-exists? [_ id] (some? (store/get-entry* backend id)))
+    (-query [_ q] (swap! queries conj q) (store/query* backend q))
+    (-count [_ q] (store/count* backend q))
+    (-forks-of [_ _] [])
+    (-delete! [_ _] {:compacted 0})
+    (-all [_] [])))
+
+(defn- fail-on-fill-backend
+  "Wraps backend: the build's full scan (a :query/since of epoch) reads fine;
+  the fill's since-bounded read returns the AR-43 typed read-failed map."
+  [backend]
+  (reify futon3c.evidence.backend/EvidenceBackend
+    (-append [_ _] nil)
+    (-get [_ _] nil)
+    (-exists? [_ _] false)
+    (-query [_ q] (if (= "1970-01-01T00:00:00Z" (:query/since q))
+                    (store/query* backend q)
+                    {:error/component :E-store :error/code :read-failed
+                     :error/kind :timeout :status nil}))
+    (-count [_ q] (store/count* backend q))
+    (-forks-of [_ _] [])
+    (-delete! [_ _] {:compacted 0})
+    (-all [_] [])))
+
+(deftest a-lookup-fills-the-ledger-forward-from-the-store
+  ;; a run registered AFTER the ledger build, straight into the store, is
+  ;; found by command: the lookup fills the ledger forward before answering,
+  ;; the fill's read is bounded by the ledger's newest :ran-at, and the
+  ;; ledger file records both the run and the fill itself
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:namespace "base-test"
+                           :command ["clojure" "-M:test" "-n" "base-test"]
+                           :ran-at "2026-09-25T01:00:00Z"})
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger! backend {:namespace-ledger-file ledger})
+           _ (is (true? (:complete? built)))
+           late (append-run! backend {:command ["lake" "build" "Demo.Module"]
+                                      :ran-at "2026-09-25T02:00:00Z"})
+           queries (atom [])
+           found (registry/latest-run-for-command
+                  (recording-backend backend queries)
+                  {:command ["lake" "build" "Demo.Module"]
+                   :namespace-ledger-file ledger})]
+       (is (= (:evidence/id late) (:evidence/id found)))
+       (is (= :namespace-ledger (:resolved-by found)))
+       (is (= ["2026-09-25T01:00:00Z"] (mapv :query/since @queries))
+           "the fill read only what registered after the ledger's newest :ran-at")
+       (let [{:keys [runs fills]} (registry/namespace-ledger ledger)]
+         (is (= (:evidence/id late)
+                (get-in runs [(registry/command-key ["lake" "build" "Demo.Module"]) :entry-id]))
+             "the ledger file now contains the late run")
+         (is (= 1 (count fills)))
+         (is (= "2026-09-25T01:00:00Z" (:since (first fills))))
+         (is (= 1 (:appended (first fills)))))
+       ;; a second lookup fills nothing further: dedupe by entry-id
+       (let [again (registry/latest-run-for-command
+                    backend {:command ["lake" "build" "Demo.Module"]
+                             :namespace-ledger-file ledger})]
+         (is (= (:evidence/id late) (:evidence/id again)))
+         (is (= 1 (count (:fills (registry/namespace-ledger ledger))))))))))
+
+(deftest fill-forward-over-a-failed-read-refuses-and-appends-nothing
+  ;; AR-43 in the fill: the typed read-failed map surfaces as
+  ;; :registry-read-failed -- never as "nothing new" -- and the ledger file
+  ;; is untouched
+  (fixture
+   (fn [{:keys [backend options]}]
+     (append-run! backend {:namespace "base-test"
+                           :command ["clojure" "-M:test" "-n" "base-test"]
+                           :ran-at "2026-09-25T01:00:00Z"})
+     (let [ledger (str (io/file (:artifact-dir options) "namespaces.ednlog"))
+           built (registry/build-namespace-ledger! backend {:namespace-ledger-file ledger})
+           _ (is (true? (:complete? built)))
+           before (slurp ledger)
+           none (registry/latest-run-for-command
+                 (fail-on-fill-backend backend)
+                 {:command ["lake" "build" "Demo.Module"]
+                  :namespace-ledger-file ledger})]
+       (is (= :none (:status none)))
+       (is (= :registry-read-failed (:reason none)))
+       (is (= :timeout (get-in none [:read-error :error/kind])))
+       (is (= before (slurp ledger)) "a failed fill appends nothing")))))
+
+(deftest a-worktree-cli-resolves-the-canonical-ledger-path
+  ;; a --pinned registration runs the CLI from a sibling worktree; with the
+  ;; local :7070 agency-url the ledger resolves to the CANONICAL checkout's
+  ;; data dir -- a worktree is never the canonical checkout -- so the live
+  ;; lookup reads what the worktree registered
+  (with-redefs-fn {#'registry/futon3c-checkout-root (fn [] "/tmp/wt-warrant-abcd1234")}
+    (fn []
+      (is (= (str (io/file "/tmp/canonical" "data" "test-registry" "namespace-ledger.edn"))
+             (registry/namespace-ledger-path
+              {:agency-url "http://localhost:7070"
+               :canonical-futon3c-root "/tmp/canonical"})))))
+  ;; the explicit option still wins over the canonical default
+  (is (= "/tmp/explicit/namespaces.ednlog"
+         (registry/namespace-ledger-path
+          {:namespace-ledger-file "/tmp/explicit/namespaces.ednlog"
+           :agency-url "http://localhost:7070"
+           :canonical-futon3c-root "/tmp/canonical"})))
+  ;; a non-local agency-url keeps the checkout-relative default
+  (is (= (str (io/file "/tmp/some-checkout" "data" "test-registry" "namespace-ledger.edn"))
+         (registry/namespace-ledger-path
+          {:futon3c-root "/tmp/some-checkout"
+           :agency-url "http://elsewhere:9999"}))))
