@@ -1171,23 +1171,6 @@
                    ["" "missions" "excursions" "tickets"]))
            (canonical-holes-dirs root)))))
 
-(defn caller-minted-task?
-  "True when the requisition TARGET is a task the CALLER clocked in for SEAT:
-   its excursion file says so on its own head line (`Clocked in by <caller>
-   for <seat>`, written by scripts/kimi-task.sh). Such a requisition names the
-   seat's work, not the caller's, so the caller's clock is left alone (Joe,
-   2026-09-25: Kimi seats clock in on unique tasks, E-kimi-task-N, so each
-   conversation starts fresh; the caller stays on its own target)."
-  ([target caller seat] (caller-minted-task? target caller seat resolve-work-target))
-  ([target caller seat resolve-fn]
-   (boolean
-    (when (and (string? target) (seq (str caller)) (seq (str seat)))
-      (when-let [path (resolve-fn target)]
-        (let [head (try (with-open [r (io/reader path)]
-                          (str/join "\n" (take 6 (line-seq r))))
-                        (catch Exception _ ""))]
-          (str/includes? head (str "Clocked in by " caller " for " seat))))))))
-
 (defn parse-requisition
   "Read the caller's requisition from PROMPT: a line
    `Requisition: <M-*|E-*|T-*> — <purpose>`.
@@ -1252,69 +1235,15 @@
          "requisition an existing mission, excursion or ticket.")
     (str agent-id " refused the requisition: " (pr-str requisition))))
 
-(defonce ^{:doc "[caller dedupe-tag] pairs whose clock reminder has been sent.
-   Survives a reload, not a restart."}
-  !clock-reminded
-  (atom #{}))
-
-(defn- first-clock-reminder?
-  "True the first time CALLER is reminded about a \"clock:\" DEDUPE-TAG, i.e.
-   once per requisitioned block of work. The followup queue's dedupe key is
-   released on delivery, so without this every job under one requisition
-   re-armed the reminder: claude-12 got one per queued kimi-1 job, about 30
-   (Joe, 2026-09-25). Other tags (refusals) fire every time."
-  [caller dedupe-tag]
-  (or (not (str/starts-with? (str dedupe-tag) "clock:"))
-      (let [k [(str caller) (str dedupe-tag)]
-            [before _] (swap-vals! !clock-reminded conj k)]
-        (not (contains? before k)))))
-
-(defn- enqueue-caller-followup!
-  "Queue a typed followup to CALLER's current session, the way inbox zero
-   reminds a seat of uncommitted work. DEDUPE-TAG keeps one outstanding; a
-   clock reminder is sent once per caller and target (first-clock-reminder?).
-   Seats whose invoke closure predates remind-caller-of-clock! still call
-   this through its var, so the gate lives here."
-  [caller dedupe-tag prompt metadata]
-  (try
-    (when-let [agent (and (first-clock-reminder? caller dedupe-tag)
-                          ((requiring-resolve 'futon3c.agency.registry/get-agent)
-                           (str caller)))]
-      (when-let [session (some-> (:agent/session-id agent) str not-empty)]
-        ((requiring-resolve 'futon3c.agency.followup-queue/enqueue!)
-         {:agent (str caller) :session session :type :kimi-work-target
-          :dedupe-key (str "kimi-work-target:" caller ":" session ":" dedupe-tag)
-          :prompt prompt
-          :metadata metadata})))
-    (catch Throwable _ nil)))
-
-(defn remind-caller-of-clock!
-  "A requisition for something other than the caller's clock gets one reminder
-   per caller and target (not one per job), so callers keep their own clock current
-   (Joe, 2026-09-24). Not for a continuation, and not for a task the caller
-   minted for this seat (E-kimi-task-N; caller-minted-task?), which is the
-   seat's target, not the caller's work. Top-level, called through its var:
-   a seat's invoke fn is a closure built at registration, so a change here
-   reaches running seats on reload; one inlined in make-invoke-fn did not
-   (2026-09-25)."
-  [agent-id caller job-target caller-target continuation?]
-  (when (and job-target (not= job-target caller-target)
-             (not continuation?)
-             (not (caller-minted-task? job-target caller agent-id)))
-    (enqueue-caller-followup!
-     caller (str "clock:" job-target)
-     ;; Name only the requisitioned target: this reminder arrives as an
-     ;; operator turn, where naming two targets makes the clock decision
-     ;; :ambiguous and unclocks the caller (seen live 2026-09-24). Naming
-     ;; one clocks the caller onto it.
-     (str "You requisitioned " agent-id " for " job-target
-          (if caller-target
-            ", which is not what your clock said."
-            " while not clocked in.")
-          " If your work has moved to " job-target
-          ", this reminder clocks you onto it; if it hasn't, "
-          "clock back onto what you are doing.")
-     {:requisitioned job-target :caller-clock caller-target})))
+(defn enqueue-caller-followup!
+  "Retired 2026-09-25. Kimi seats used to queue followups to their caller: a
+   clock reminder when a requisition named another target, and a copy of every
+   refusal. Joe: notifications along the way waste time, energy and usage; a
+   refusal already comes back as the job's error. Kept as a no-op only because
+   seat invoke closures built before this change still call it through its
+   var; delete at the next restart."
+  [_caller _dedupe-tag _prompt _metadata]
+  nil)
 
 (defn requisition-decision
   "Admit or refuse a job on a requisition-gated seat. Continuations without a
@@ -2148,10 +2077,6 @@ CALLS contains maps of tool name, arguments, and result digest."
 
           refusal
           (let [message (requisition-error-message agent-id refusal caller-target)]
-            (enqueue-caller-followup!
-             (:caller invoke-context) "requisition-refused"
-             (str message " (Refused by " agent-id ".)")
-             {:refused-by (str agent-id) :reason (:reason refusal)})
             {:result nil
              :session-id sid
              :error (str agent-id ": " message)})
@@ -2250,11 +2175,6 @@ CALLS contains maps of tool name, arguments, and result digest."
           ;; now owns the conversation.
           (when job-target
             (reset! !context-target job-target))
-          ;; Side effect Joe wants: callers keep their own clock current
-          ;; (remind-caller-of-clock!, a var so a reload reaches seats whose
-          ;; invoke closure was built before it).
-          (remind-caller-of-clock! agent-id (:caller invoke-context)
-                                   job-target caller-target continuation?)
           (persist-turn-start! {:evidence-store evidence-store
                                 :agent-id agent-id
                                 :sid sid

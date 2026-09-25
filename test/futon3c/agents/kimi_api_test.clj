@@ -376,32 +376,20 @@
           (followups/clear!)
           (.delete file))))))
 
-(deftest a-refusal-reminds-the-caller-like-inbox-zero
+(deftest a-kimi-seat-queues-no-followups-for-its-caller
+  ;; Joe, 2026-09-25: notifications along the way waste time, energy and
+  ;; usage. A refusal comes back as the job's error; a requisition off the
+  ;; caller's clock is the caller's business.
   (with-caller "claude-kimi-caller" "caller-session-1"
     (fn [queued]
-      (run-jobs (make-invoke {}) [["one" {:caller "claude-kimi-caller"} 1000]
-                                  ["two" {:caller "claude-kimi-caller"} 1000]])
-      (is (= 1 (count (queued))) "one outstanding reminder per caller session")
-      (is (= :kimi-work-target (:type (first (queued)))))
-      (is (str/starts-with? (:prompt (first (queued)))
-                            "You can't use a Kimi seat without a requisition")))))
-
-(deftest a-requisition-off-the-callers-clock-reminds-it-to-reclock
-  (with-caller "claude-kimi-caller" "caller-session-2"
-    (fn [queued]
-      ;; The reminder reads the caller's clock when the job starts; the
-      ;; job's inherited clock (a snapshot from creation) is stale here.
-      (clock-store/set-dispatch-mission! "claude-kimi-caller" "caller-session-2" "M-a")
-      (let [ctx {:caller "claude-kimi-caller"
-                 :inherited-clock {:clock {:mission-id "M-stale"}}}]
-        (run-jobs (make-invoke {}) [[(req "M-a" "on the clock") ctx 1000]
-                                    [(req "T-c" "off the clock") ctx 1000]
-                                    [(req "T-c" "again") ctx 1000]])
-        (is (= 1 (count (queued))) "none for the clocked target; one per session for the other")
-        (is (str/starts-with? (:prompt (first (queued))) "You requisitioned kimi-test for T-c"))
-        (is (str/includes? (:prompt (first (queued))) "this reminder clocks you onto it"))
-        (is (not (str/includes? (:prompt (first (queued))) "M-a"))
-            "naming the caller's clock too would make the delivered turn :ambiguous and unclock it")))))
+      (clock-store/set-dispatch-mission! "claude-kimi-caller" "caller-session-1" "M-a")
+      (let [ctx {:caller "claude-kimi-caller"}
+            [results] (run-jobs (make-invoke {}) [["no requisition" ctx 1000]
+                                                  [(req "T-c" "off the clock") ctx 1000]])]
+        (is (str/includes? (str (:error (first results)))
+                           "You can't use a Kimi seat without a requisition")
+            "the refusal still reaches the caller, as the job's error")
+        (is (empty? (queued)))))))
 
 (deftest zai-seats-need-no-requisition-and-keep-their-history
   (let [store (atom {:entries {} :order []})
