@@ -172,6 +172,42 @@ The component map, drawn by claude-10 under carve-out (b): nodes = the component
 
 **Exit criterion** (someone could implement the mission from this section alone): not yet. The map is what lets each row be built without a question (which field, which site, which test box); once it exists, DERIVE closes on the owner's and Joe's read. Owner's read of this section (~21:50Z): it reads as their decisions, with the two corrections applied above. Timing: nothing drawn yet as of ~21:50Z (the sitting went on reviews and rulings); the map EDN, its registered checker namespace, the fidelity matrix and the four PSRs are expected THIS sitting; the wiring note's skeleton next sitting. Phase table line: "wiring diagram: in progress (claude-10), expected this sitting".
 
+### PSR — Pattern Selection Records (DERIVE, claude-10, 2026-09-25)
+
+Each selection appears in the map (`holes/labs/M-wm-wiring/wm-flight-wiring.edn`, futon3c 3e96fdce) or the fidelity matrix (`fidelity-matrix.edn`) as a concrete feature; none is a gate.
+
+#### PSR-1: `process/built-but-not-wired-invisibility` for the unwired components
+
+- Pattern chosen: process/built-but-not-wired-invisibility
+- Candidates: built-but-not-wired-invisibility, a prose inventory table only
+- Rationale: Eleven components were closed singly and none is called from the tick or the flight; a binary "closed" reads them as present. The map's `:expected-findings` (20 `:to-do`) are the inventory, checked against futon2's files: a component stays listed until the code that consumes it exists, and wiring a row deletes its entries in the same commit.
+- Trace in the map: `:expected-findings`, `:kind :to-do`.
+- Confidence: high
+
+#### PSR-2: `test-registry/warrant-only-the-wires` for the row tests
+
+- Pattern chosen: test-registry/warrant-only-the-wires
+- Candidates: warrant-only-the-wires, one integration test over the whole flight
+- Rationale: Each row's warrant should name the wire it proves (a field written at one site and read at another), not general behaviour. Every row has a test box as its declared reader; the matrix names the same namespace as that row's tripwire.
+- Trace in the map: the `:box/kind :test` box per row; in the matrix, `:tripwires` named by those namespaces.
+- Confidence: high
+
+#### PSR-3: `apparatus/one-authority-per-question` for record fields
+
+- Pattern chosen: apparatus/one-authority-per-question
+- Candidates: one-authority-per-question, allow duplicate writers that agree
+- Rationale: A field on the click or enactment record with two writers can agree today and diverge later with no finding. Invariant 1: every field has one writer.
+- Trace in the map: `multiply-written` = [] asserted by `futon3c.diagramprover.wm-flight-wiring-test`.
+- Confidence: high
+
+#### PSR-4: `apparatus/done-is-observed-running` for the machine as a whole
+
+- Pattern chosen: apparatus/done-is-observed-running
+- Candidates: done-is-observed-running, declaring the wiring done when every row's test passes
+- Rationale: Rows that pass their tests singly do not show the machine acting. The machine exists when a flight's record shows each box of the trace acting: N-run, whose witness is the first trace (M-autoclock-in) matched step by step to the map's boxes.
+- Trace in the map: N-run and the `:traces` field (next map commit); load-closure resolution (N0) as its precondition.
+- Confidence: medium — the trace check is designed, not yet built.
+
 ## DOCUMENT (note, ahead of its phase)
 
 The mission's working page uses the M-futon-seams presentation (Joe, 2026-09-25: zone/wip/seams.html is the style for a wiring-focused mission): the mission text as the main column, margin notes anchored to exact spans at a recorded sha, a phase table read from each exit criterion against evidence, figures in their own lane. The generator `scripts/seams_mission_page.py` takes `--mission` and `--lab` since futon3c dc86c962 (claude-1; the M-futon-seams page byte-identical before and after, sha256 7be3b52d…; a non-mission refused with nothing written). `holes/labs/M-wm-wiring/` holds only a README: `annotations.edn` and `lifecycle.edn` are the owner's to write as the rows are worked, and until then the page states both absences (empty margin; every phase "not read" with its criterion quoted, "exit met" nowhere). Suggested annotation columns for this mission: (a) the component the row calls, with sha and warrant; (b) the PROOF-2a clause the row exercises. The margin is sized for two columns; if the mission stays annotation-light the measure is worth revisiting (claude-1).

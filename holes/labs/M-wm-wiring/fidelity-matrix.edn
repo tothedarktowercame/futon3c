@@ -1,0 +1,141 @@
+;; M-wm-wiring fidelity contract: Capability Preservation Matrix, one entry per
+;; inventory row (0-11) of the mission and one for the map itself. Author
+;; claude-10, 2026-09-25 (WM-MATRIX-PSR-I), beside wm-flight-wiring.edn
+;; (futon3c 3e96fdce).
+;;
+;; :disposition  :preserve  existing behaviour must stay byte-identical
+;;               :adapt     behaviour changes, in the stated way only
+;;               :drop      a source or path the wiring retires
+;; :tripwires    each {:test <ns> :assertion <what it pins> :status
+;;               :in-place|:to-write}; :in-place names the warrant covering it
+;;               (nil with :warrant-note when the test exists but no warrant of
+;;               it was found this sitting). A :to-write tripwire is named with
+;;               the row's test box namespace in the map, so the two cannot
+;;               drift apart: when the map's test box site exists, this entry
+;;               moves to :in-place in the same commit.
+;;
+;; Loop-closure boxes (scheduled entry, clock-in, flight entry, feedback
+;; edges) are not rows here yet: they arrive with the next map commit and get
+;; their entries in it.
+{:matrix/id :m-wm-wiring-fidelity
+ :map "holes/labs/M-wm-wiring/wm-flight-wiring.edn"
+ :rows
+ [{:row 0 :component "enactment step (flight writes the enactment record)"
+   :disposition :adapt
+   :change "the flight gains a step that writes attempts, checks, grain and deviations; nothing it did before changes"
+   :tripwires
+   [{:test "futon2.aif.flight-enact-test" :status :to-write
+     :assertion "a flight with an enactment writes a record in the click-001-enactment form; a flight without one produces the same flight record as before"}]}
+
+  {:row 1 :component "outer cascade selection over the field"
+   :disposition :adapt :proposed-pending "Joe's decision on OUTER-CASCADE-D (mixture law proposed, futon2 d615d06e)"
+   :change "the flight's target comes from a seeded draw over eligible field entries instead of the hand-placed target"
+   :tripwires
+   [{:test "futon2.aif.outer-cascade-test" :status :to-write
+     :assertion "with no action carrying a G the law is E alone (uniform, no data), and the seed and u on the record recompute the chosen target"}]}
+
+  {:row 2 :component "read step: outcomes at click time, quotes to spans, proposals recorded"
+   :disposition :preserve
+   :change "additive: the flight records links and refusals beside the wants; extractor and verifier outputs unchanged"
+   :tripwires
+   [{:test "futon2.wm.extract-outcomes-test" :status :in-place
+     :assertion "the M-futon-seams extractor control and the verifier's 40 tests"
+     :warrant "test-registry-f4576030"}
+    {:test "futon2.aif.served-by-reading-test" :status :in-place
+     :assertion "quotes round-trip to the verifier's pass; ambiguous, absent and astral cases"
+     :warrant "test-registry-b21deaa0"}
+    {:test "futon2.aif.served-by-reading-test" :status :to-write
+     :assertion "flight read-fn records each proposal's verifier result with the text sha (the map's r2-flight-read box)"}]}
+
+  {:row 3 :component "ask step: library root, :retrieval to validate-response, publication inside the click"
+   :disposition :preserve
+   :change "the prompt's one-argument form and validate-response's rules unchanged; the flight passes the root it already defaults to"
+   :tripwires
+   [{:test "futon2.aif.flight-ask-library-test" :status :to-write
+     :assertion "the flight's prompt names the library root; a reply's :retrieval reaches validate-response; an answer pending when the click posts is a pending :need, not :no-progress"}]}
+
+  {:row 4 :component "kernel reads the constructor's :order"
+   :disposition :adapt
+   :change "G changes only on non-chain containment, recorded against Lean 69c2; chain containment unchanged"
+   :tripwires
+   [{:test "futon2.aif.order-kernel-test" :status :to-write
+     :assertion "when :order is a chain and :precedence-violations is empty, G equals the list kernel's exactly"}
+    {:test "futon2.aif.interpretation-construction-test" :status :in-place
+     :assertion "nf-4 and nb-4: all-finite constructor output and a finite baseline byte-identical to fixtures from 3bbf5059 and 082dfe5e"
+     :warrant "test-registry-21b3bb44"}]}
+
+  {:row 5 :component "grain gate called before the grain attempt"
+   :disposition :adapt
+   :change "the enactment step calls grain-gate and records its pass or typed refusal; the gate itself unchanged"
+   :tripwires
+   [{:test "futon2.aif.grain-gate-test" :status :in-place
+     :assertion "six typed refusals, no-grain candidate refuses, docstring bracket not read as the arglist"
+     :warrant "test-registry-9bb4d15f"}
+    {:test "futon2.aif.flight-grain-gate-test" :status :to-write
+     :assertion "the enactment's grain attempt carries {:kind :grain-gate :result} before commit; a mismatched grain is recorded refused, the attempt not taken"}]}
+
+  {:row 6 :component "admitted labels into sourced-rates; :measurement on the click record"
+   :disposition :preserve
+   :change "no number changes today (no class-level admitted labels exist); the record gains :measurement"
+   :tripwires
+   [{:test "futon2.aif.click-measurement-test" :status :to-write
+     :assertion "the click's rates are byte-identical to before the wiring, and every class carries :measurement :absent"}]}
+
+  {:row 7 :component "enactment into the habit fold; selection reads the folded state"
+   :disposition :adapt
+   :change "E at selection comes from the enactment fold, not from the legacy store"
+   :tripwires
+   [{:test "futon2.aif.enactment-habit-test" :status :in-place
+     :assertion "policy key, increment and fold rows a a' b c d d' e f"
+     :warrant "test-registry-2730f868"}
+    {:test "futon2.aif.selection-reads-fold-test" :status :to-write
+     :assertion "selection's E is the fold's masses; with an empty fold it is uniform, never the legacy store's counts"}]
+   :drops [{:what "cascade-habit-store (data/cascade-prior.edn, :cascade-habit-path) as E's source at selection"
+            :when "row 7 lands"
+            :tripwire "futon2.aif.selection-reads-fold-test (no read of :cascade-habit-path on the selection path)"}]}
+
+  {:row 8 :component "pair overlap in the target field"
+   :disposition :adapt
+   :change "the field records each pair's shared tokens; comparable or :incommensurable"
+   :tripwires
+   [{:test "futon2.aif.target-field-test" :status :in-place
+     :assertion "the 7bd17dfb live read and earlier fixtures unchanged"
+     :warrant "test-registry-4ef4b04b"}
+    {:test "futon2.aif.target-field-overlap-test" :status :to-write
+     :assertion "disjoint universes compare; a shared token is recorded :incommensurable with the tokens, never a number"}]}
+
+  {:row 9 :component "selected candidate id under :selection-law"
+   :disposition :preserve
+   :change "additive: one key; every existing :selection-law key unchanged"
+   :tripwires
+   [{:test "futon2.aif.selection-law-candidate-test" :status :to-write
+     :assertion "the id equals :per-policy-argmax's candidate; the other keys are byte-identical to before"}
+    {:test "futon3c.exemplar.proof2a-wc-check-test" :status :in-place
+     :assertion "a missing id reads :join-unverifiable, a different id fails W_c"
+     :warrant "test-registry-1757d974"}]}
+
+  {:row 10 :component "one tick observes publication"
+   :disposition :adapt
+   :change "publication, observed only at flight time today, is observed by a tick"
+   :tripwires
+   [{:test "futon2.aif.publication-observed-test" :status :to-write
+     :assertion "a published interpretation is observed true on the next tick; an unpublished one false"}]}
+
+  {:row 11 :component "warrant checks"
+   :disposition :preserve
+   :change "done; no wiring"
+   :tripwires
+   [{:test "futon3c.test-registry worktree warrants check" :status :in-place
+     :assertion "worktree warrants and --pinned refs resolve (futon3c 4e66c56c, futon2 8eaa3e23)"
+     :warrant nil :warrant-note "no warrant id recorded this sitting"}]}
+
+  {:row :map :component "the diagramprover checker and the map"
+   :disposition :preserve
+   :change "the checker's control reports stay byte-identical; the map's report equals its expected findings"
+   :tripwires
+   [{:test "futon3c.diagramprover.wiring-test" :status :in-place
+     :assertion "control-report-is-unchanged: default, perturbed and heuristic reports of the worked map"
+     :warrant "test-registry-f24589cc"}
+    {:test "futon3c.diagramprover.wm-flight-wiring-test" :status :in-place
+     :assertion "report = :expected-findings; multiply-written []; six sites outside the load closure"
+     :warrant "test-registry-5cdd0298"}]}]}
