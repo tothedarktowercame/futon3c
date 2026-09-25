@@ -1252,13 +1252,34 @@
          "requisition an existing mission, excursion or ticket.")
     (str agent-id " refused the requisition: " (pr-str requisition))))
 
+(defonce ^{:doc "[caller dedupe-tag] pairs whose clock reminder has been sent.
+   Survives a reload, not a restart."}
+  !clock-reminded
+  (atom #{}))
+
+(defn- first-clock-reminder?
+  "True the first time CALLER is reminded about a \"clock:\" DEDUPE-TAG, i.e.
+   once per requisitioned block of work. The followup queue's dedupe key is
+   released on delivery, so without this every job under one requisition
+   re-armed the reminder: claude-12 got one per queued kimi-1 job, about 30
+   (Joe, 2026-09-25). Other tags (refusals) fire every time."
+  [caller dedupe-tag]
+  (or (not (str/starts-with? (str dedupe-tag) "clock:"))
+      (let [k [(str caller) (str dedupe-tag)]
+            [before _] (swap-vals! !clock-reminded conj k)]
+        (not (contains? before k)))))
+
 (defn- enqueue-caller-followup!
   "Queue a typed followup to CALLER's current session, the way inbox zero
-   reminds a seat of uncommitted work. DEDUPE-TAG keeps one outstanding."
+   reminds a seat of uncommitted work. DEDUPE-TAG keeps one outstanding; a
+   clock reminder is sent once per caller and target (first-clock-reminder?).
+   Seats whose invoke closure predates remind-caller-of-clock! still call
+   this through its var, so the gate lives here."
   [caller dedupe-tag prompt metadata]
   (try
-    (when-let [agent ((requiring-resolve 'futon3c.agency.registry/get-agent)
-                      (str caller))]
+    (when-let [agent (and (first-clock-reminder? caller dedupe-tag)
+                          ((requiring-resolve 'futon3c.agency.registry/get-agent)
+                           (str caller)))]
       (when-let [session (some-> (:agent/session-id agent) str not-empty)]
         ((requiring-resolve 'futon3c.agency.followup-queue/enqueue!)
          {:agent (str caller) :session session :type :kimi-work-target
@@ -1269,7 +1290,7 @@
 
 (defn remind-caller-of-clock!
   "A requisition for something other than the caller's clock gets one reminder
-   per caller session and target, so callers keep their own clock current
+   per caller and target (not one per job), so callers keep their own clock current
    (Joe, 2026-09-24). Not for a continuation, and not for a task the caller
    minted for this seat (E-kimi-task-N; caller-minted-task?), which is the
    seat's target, not the caller's work. Top-level, called through its var:

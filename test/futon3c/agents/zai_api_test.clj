@@ -2,6 +2,8 @@
   (:require [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.agency.followup-queue :as followup-queue]
+            [futon3c.agency.registry :as registry]
             [futon3c.agents.zai-api :as zai]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.peripheral.memory-backend :as memory-backend]
@@ -511,3 +513,27 @@
     (is (not-any? #(= other (:sha %)) got)
         "a commit the seat did not make is never attributed to it")
     (is (= "No such subject" (:subject (last got))))))
+
+(deftest a-requisition-draws-one-clock-reminder-not-one-per-job
+  ;; Joe, 2026-09-25: claude-12 got a followup for every queued kimi-1 job
+  ;; under one requisition (~30), because the queue's dedupe key is released
+  ;; on delivery. One reminder per caller and requisitioned target.
+  (let [sent (atom [])]
+    (with-redefs [zai/!clock-reminded (atom #{})
+                  registry/get-agent
+                  (fn [id] {:agent/id {:id/value id} :agent/session-id "s1"})
+                  followup-queue/enqueue!
+                  (fn [m] (swap! sent conj m) {:id (str (count @sent))})]
+      (dotimes [_ 30]
+        (zai/remind-caller-of-clock! "kimi-1" "claude-12" "M-futon-seams"
+                                     "M-the-perfect-crime" false))
+      (is (= 1 (count @sent)) "thirty jobs, one reminder")
+      (zai/remind-caller-of-clock! "kimi-1" "claude-12" "M-other"
+                                   "M-the-perfect-crime" false)
+      (is (= 2 (count @sent)) "a new requisitioned target is a new block of work")
+      (zai/remind-caller-of-clock! "kimi-1" "claude-9" "M-futon-seams"
+                                   "M-the-perfect-crime" false)
+      (is (= 3 (count @sent)) "another caller gets its own reminder")
+      (dotimes [_ 3]
+        (#'zai/enqueue-caller-followup! "claude-12" "requisition-refused" "no" {}))
+      (is (= 6 (count @sent)) "refusals are not gated"))))
