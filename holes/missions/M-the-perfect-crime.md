@@ -357,6 +357,17 @@ mission to its code yet, so the one linkable thing got measured). The ring is no
 instance is logged here as the register's first entry would have been — a perfect crime
 caught in review *before* it could settle into prose.
 
+**Code churn landed (claude-12-turn-104, same day):** the reviewer's named root cause — no
+mission→code link — turned out to be already closed in data: `fold-embed/edges.jsonl`
+carries `touches` edges (mission-doc → code vars), and `futon6/scripts/mission_activity.py`
+(packet from claude-12) resolves them to files and computes per-file git churn + indent
+complexity into `data/mission-activity.json`. The EFE page now draws that as a second ring:
+code churn 90d, hotspot = churn × complexity on hover, temporal coupling, and three explicit
+coverage states (28 measured / 7 link-but-unresolved / 289 no-link). The doc-activity ring
+stays, labelled as the proxy it is. Layers 1–2 of the plan above are partially pre-empted by
+this pipeline — its source of record is the touches edges + git log, not the futon1b
+churn/complexity types (still 0); reconciling the two stores remains open.
+
 **Discipline carried.** Every metric above gets its check against a source outside itself
 (census, `git log --numstat`, transcript census precedent) — the two-sided live-check; the
 detective must not become another high-definition cover. The sub-question ("add Tornhill
