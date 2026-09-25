@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "67bd2eeb19d78238d81e916f44a906ceae63e898b338499966d80899c94955bb")
-(def repos {"futon2" "2a89efb9" "futon3c" "58f1a8cb"})
+(def map-sha256 "8b33a027970174b468e23c10dd70a787db5d0b0145ed332c7fe9c243a86af0de")
+(def repos {"futon2" "db1f79c7" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -127,7 +127,7 @@
 (def expected-outside-closure
   ;; built component sites not in the load closure of test-registry-307b8969
   ;; (mission-reading-c8-test, futon2 d5320918)
-  #{"futon2/scripts/wm/extract-outcomes.clj"
+  #{"futon2/scripts/futon2/wm/extract_outcomes.clj"
     "futon2/scripts/wm_scheduled_run.clj"
     "futon2/src/futon2/aif/enactment_habit.clj"
     "futon2/src/futon2/aif/flight_driver.clj"

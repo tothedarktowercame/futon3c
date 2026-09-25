@@ -222,7 +222,10 @@
  ;; cascade) added with ct-projection 296a08ca: 4 new :standing entries.
  ;; Row 4 wired at futon2 2a89efb9 (efe/order-use reads the receipt's
  ;; :order; rank-cascade-actions writes :order-use): its two entries gone,
- ;; one :standing added (the test's fixture receipts). :kind :to-do is the
+ ;; one :standing added (the test's fixture receipts). Row 2 wired at futon2
+ ;; 9c7cd7bd (the extractor a namespace, scripts/futon2/wm/extract_outcomes.clj)
+ ;; and db1f79c7 (read-fn records the served-by reading and :text-sha256):
+ ;; its entry is gone. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -295,14 +298,6 @@
    {:file "futon2/src/futon2/aif/target_field.clj",
     :var "target-field"},
    :rows [8],
-   :kind :to-do}
-  {:finding :declaration-without-occurrence,
-   :box/id :r2-flight-read,
-   :field :text-sha256,
-   :role :reads,
-   :site
-   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
-   :rows [2],
    :kind :to-do}
   {:role :reads,
    :site

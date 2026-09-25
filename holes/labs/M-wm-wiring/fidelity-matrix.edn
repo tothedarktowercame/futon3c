@@ -39,13 +39,14 @@
    :change "additive: the flight records links and refusals beside the wants; extractor and verifier outputs unchanged"
    :tripwires
    [{:test "futon2.wm.extract-outcomes-test" :status :in-place
-     :assertion "the M-futon-seams extractor control and the verifier's 40 tests"
-     :warrant "test-registry-f4576030"}
+     :assertion "the M-futon-seams extractor control (whole -main output identical to a31f9cee through the script shim) and the verifier's tests, with the extractor a namespace"
+     :warrant "test-registry-04fdaea8"}
     {:test "futon2.aif.served-by-reading-test" :status :in-place
      :assertion "quotes round-trip to the verifier's pass; ambiguous, absent and astral cases"
-     :warrant "test-registry-b21deaa0"}
-    {:test "futon2.aif.served-by-reading-test" :status :to-write
-     :assertion "flight read-fn records each proposal's verifier result with the text sha (the map's r2-flight-read box)"}]}
+     :warrant "test-registry-577a2a20"}
+    {:test "futon2.aif.served-by-reading-test" :status :in-place
+     :assertion "read-fn records the v5 outcomes, each proposal with its verifier result (link or refusal, none dropped) and the text sha; M-autoclock-in records the anchor absence"
+     :warrant "test-registry-577a2a20"}]}
 
   {:row 3 :component "ask step: library root, :retrieval to validate-response, publication inside the click"
    :disposition :preserve
