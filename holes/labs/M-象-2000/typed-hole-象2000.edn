@@ -155,14 +155,14 @@
   :授权来源
   {:filler {:component "invoke warrant（entry-id/namespace/lane/base-sha，畸形即带类型拒绝）与 bell 的 --from 归属要求"
             :pointers ["futon3c/src/futon3c/agency/warrant.clj:32-44"
-                       "futon3c/scripts/agency_send.py:133-136"
-                       "futon3c/scripts/agency_send.py:173-173"]}
+                       "futon3c/scripts/agency_send.py:172-175"
+                       "futon3c/scripts/agency_send.py:172-175"]}
    :satiety :partial
    :missing "warrant 证明「这次交接经过哪条验收」，--from 使 bell 可归因；但没有「授予」这种记录类型——署名者与执行者之分、授权树、越权退回，都不存在。"
    :witness {:kind :code-reading
              :note "normalize-warrants 对畸形元素返回 {:handoff/refusal :warrant-invalid} 且不静默丢元素；agency_send 无 --from 时警告将无 mesh edge、无自动回铃。"
              :pointers ["futon3c/src/futon3c/agency/warrant.clj:32-44"
-                        "futon3c/scripts/agency_send.py:173-173"]}}
+                        "futon3c/scripts/agency_send.py:172-175"]}}
 
   :协议记录
   {:filler {:component "最近的是类型化 bell 的 query/answer --ref 对（ArSE 线程）"
@@ -261,12 +261,12 @@
   :行权有据
   {:filler {:component "warrant 交接链 + bell --from 归属（同 :授权来源）"
             :pointers ["futon3c/src/futon3c/agency/warrant.clj:32-44"
-                       "futon3c/scripts/agency_send.py:133-136"]}
+                       "futon3c/scripts/agency_send.py:172-175"]}
    :satiety :partial
    :missing "行为可归因于署名者（--from 缺失即警告）；但沿授权树追溯到一次授予的「据」不存在，没有授予的行为不会被退回。:want 四令牌里缺得最深的一条。"
    :witness {:kind :code-reading
-             :note "agency_send.py:133-136：无 --from 的 bell 记为 http-caller、无 mesh edge、自动回铃无路由——归因纪律已生效，授予记录未开始。"
-             :pointers ["futon3c/scripts/agency_send.py:133-136"]}}
+             :note "agency_send.py:172-175：无 --from 的 bell 记为 http-caller、无 mesh edge、自动回铃无路由——归因纪律已生效，授予记录未开始。"
+             :pointers ["futon3c/scripts/agency_send.py:172-175"]}}
 
   :成效可验
   {:filler {:component "无现成组件"}
@@ -326,5 +326,5 @@
   {:name :授权层入口
    :at "invoke warrant 与 bell --from 归属"
    :pointers ["futon3c/src/futon3c/agency/warrant.clj:32-44"
-              "futon3c/scripts/agency_send.py:133-136"]
+              "futon3c/scripts/agency_send.py:172-175"]
    :note "授权来源与行权有据的锚点；归因已有，授予记录与授权树要从零开始。"}]}
