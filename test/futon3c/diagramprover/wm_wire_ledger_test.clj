@@ -58,9 +58,9 @@
     futon3c.diagramprover.wm-wire-r7-fold-selection-test
     futon3c.diagramprover.wm-wire-r9-candidate-enact-test])
 
-(def adjacency-rev "7c67c38b")
+(def adjacency-rev "d0022eae")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "bc45a2a0")
+(def map-rev "40aae919")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
