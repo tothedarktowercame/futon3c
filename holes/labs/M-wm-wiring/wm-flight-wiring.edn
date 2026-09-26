@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "26079b48" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "e92ae532" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -650,10 +650,10 @@
   ;; :measured-a] entry and F1a-2-I's standing :measured-a entry (the step
   ;; reads (get-in run-record [:decision :measured-a])). It also reads B's
   ;; content, the problems' :interpretations. It reads (:measurement ma),
-  ;; which NO box writes: measured-a-version's record carries no
-  ;; :measurement, so every step would be :no-measurement-provenance once
-  ;; labels are admitted (the step test hand-builds the key). The port
-  ;; in/measurement.measured-a is that defect, visible, until it is fixed.
+  ;; which no box wrote until F1a-2c (futon2 e92ae532): measured-a-version's
+  ;; record carried no :measurement, so every step would have been
+  ;; :no-measurement-provenance once labels were admitted (the step test
+  ;; hand-built the key).
   {:box/id :flight-conditioning-step :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "conditioning-step"}
    :record-aliases {:measured-a ["ma"]}
@@ -683,7 +683,9 @@
    ;; reads each problem's :locators and sourced-rates' :status, :rates and
    ;; :measurement (the digest is taken only when some token is measured)
    :reads [:locators :status :rates :measurement]
-   :writes [[:rates {:record :measured-a}]]}
+   ;; F1a-2c (futon2 e92ae532): the record also carries the per-token
+   ;; :measurement, read by :flight-conditioning-step
+   :writes [[:rates {:record :measured-a}] [:measurement {:record :measured-a}]]}
   {:box/id :r7-fold-source :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_fold_source.clj" :var "increment-receipts"}
    :reads [:increment]}
@@ -1414,12 +1416,13 @@
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :read-never-written,
-   :field [:measurement :measured-a],
-   :readers [:flight-conditioning-step],
+ [{:finding :occurrence-without-declaration,
+   :field :universe,
+   :site {:file "futon2/src/futon2/aif/target_field.clj", :var "step"},
+   :declared-by [],
    :kind :to-do,
    :note
-   "F1b-join-I defect (claude-11, found 2026-09-26 declaring the step's reads): flight/conditioning-step requires (:measurement ma) and refuses :no-measurement-provenance without it, but measured-a-version's record carries no :measurement (it computes the per-token measurement and drops it). The step test hand-builds the key, so it tested its stub. Goes when the producer writes [:measurement {:record :measured-a}] (or the step stops needing it)"}
+   "arrived with futon2 7e6ae82de (Attach target universes from the outcome reading), picked up by F1a-2c's pin bump 26079b48 -> e92ae532 (claude-11): target-field/step now carries each target's :universe. Its lane declares the flow (the tick's :universes, WM-HANDOFF-H5-I) or stands it"}
   {:finding :occurrence-without-declaration,
    :field :status,
    :site
