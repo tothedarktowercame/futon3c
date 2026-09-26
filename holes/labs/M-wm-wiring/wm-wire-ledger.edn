@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "2b634b67",
-  :map "4e065ada"},
+  :rev "874cb7f4",
+  :map "08482abe"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 73, :unverified 76, :wires 154},
+ {:verified 5, :witnessed-hermetically 73, :unverified 85, :wires 163},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -94,6 +94,8 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
+  {:wire [:flight-click :r9-measured-a-version :status],
+   :status :unverified}
   {:wire [:flight-click-wants :click-start :wants],
    :status :unverified}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
@@ -147,6 +149,8 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
+  {:wire [:flight-record-summary :flight-run :chosen],
+   :status :unverified}
   {:wire [:flight-run :flight-driver-summary :needs],
    :status :witnessed-hermetically,
    :test
@@ -155,6 +159,11 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test/the-flights-readings-reach-the-drivers-summary}
+  {:wire
+   [:flight-run
+    :flight-steps-source
+    [:step {:record :enactment-entry}]],
+   :status :unverified}
   {:wire [:gate-refuse :gate-refusal-read :error],
    :status :witnessed-hermetically,
    :test
@@ -308,6 +317,8 @@
    :status :unverified}
   {:wire [:r2-store-locators :r3-store-locators :locators],
    :status :unverified}
+  {:wire [:r2-store-locators :r9-measured-a-version :locators],
+   :status :unverified}
   {:wire
    [:r3-aggregate-driver
     :r7-fold-call
@@ -352,6 +363,8 @@
    :status :unverified}
   {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
+  {:wire [:r4-kernel :r9-measured-a-version :rates],
+   :status :unverified}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
    :status :unverified}
   {:wire [:r5-flight-call :r5-grain-gate :grain],
@@ -366,8 +379,16 @@
    :status :unverified}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
    :status :unverified}
+  {:wire
+   [:r6-sourced-rates
+    :r6-cascade-lane
+    [:rates {:record :sourced-rates}]],
+   :status :unverified}
   {:wire [:r6-sourced-rates :r6-test :measurement],
    :status :unverified}
+  {:wire [:r6-sourced-rates :r9-measured-a-version :measurement],
+   :status :unverified}
+  {:wire [:r7-flight-call :flight-run :increment], :status :unverified}
   {:wire [:r7-flight-call :r7-call-test :wc],
    :status :witnessed-hermetically,
    :test
@@ -392,6 +413,8 @@
    :status :unverified}
   {:wire
    [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
+   :status :unverified}
+  {:wire [:r7-fold-call :r9-decision :conditioning-steps],
    :status :unverified}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
    :status :unverified}
