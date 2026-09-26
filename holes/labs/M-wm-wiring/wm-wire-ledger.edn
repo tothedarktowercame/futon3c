@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 7,
-  :witnessed-hermetically 118,
-  :unverified 48,
+  :witnessed-hermetically 122,
+  :unverified 44,
   :wires 173},
  :wires
  [{:wire
@@ -263,7 +263,11 @@
    [:morning-brief-fold
     :r7-fold-call
     [:belief {:record :morning-brief-fold}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-morning-brief-fold-r7-fold-call-belief-test/the-judge-produces-the-received-value,
+   :note
+   "Produced judge :belief equals the folded belief when scan channels are absent. Typed-absence belief maps currently throw IllegalArgumentException; negative records it, source unfixed."}
   {:wire [:r0-enact-step :r0-test :attempts],
    :status :witnessed-hermetically,
    :test
@@ -363,7 +367,11 @@
    [:r13-policy-depth-anticipation
     :r7-fold-call
     [:horizon-steps {:record :depth-anticipation}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r13-policy-depth-anticipation-r7-fold-call-horizon-steps-test/the-judge-produces-the-received-value,
+   :note
+   "Reader produces :policy-depth-used (3 -> 4); not cascade family T. The cascade-horizon remains sourced independently from cascade-sources."}
   {:wire
    [:r13-sources-horizon
     :construction-assemble
@@ -454,7 +462,11 @@
    [:r3-aggregate-driver
     :r7-fold-call
     [:driver {:record :r3d-driver}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r3-aggregate-driver-r7-fold-call-driver-test/the-judge-produces-the-received-value,
+   :note
+   "Microstep loop consumes each signed driver; records :aggregated-signed-error and changes post-belief. Typed omission comes from the real aggregator over an absent observation."}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :witnessed-hermetically,
    :test
@@ -763,6 +775,10 @@
    :test
    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-trace-record-r7-fold-call-mu-post-test/the-judge-produces-the-received-value,
+   :note
+   "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
   {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}
   {:wire [:wc-checker :r7-test :wc-verdict], :status :unverified}]}
