@@ -4,7 +4,7 @@
   :map "06d451d6"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 4, :witnessed-hermetically 61, :unverified 75, :wires 140},
+ {:verified 5, :witnessed-hermetically 73, :unverified 62, :wires 140},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -56,17 +56,39 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-eligibility-ruling-reaches-the-cascade}
-  {:wire [:flight-cast :click-start :author], :status :unverified}
+  {:wire [:flight-cast :click-start :author],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test/the-author-seat-reaches-the-click-endpoint}
   {:wire [:flight-cast :click-start :repair-reviewer],
-   :status :unverified}
-  {:wire [:flight-cast :click-start :reviewer], :status :unverified}
-  {:wire [:flight-click :flight-cast-test :cast], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test/the-repair-reviewer-seat-reaches-the-click-endpoint}
+  {:wire [:flight-cast :click-start :reviewer],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test/the-reviewer-seat-reaches-the-click-endpoint}
+  {:wire [:flight-click :flight-cast-test :cast],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test/the-cast-reaches-the-components-own-test}
   {:wire [:flight-click :flight-record-click :cast],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/flight-ada87008/flight-ada87008.edn",
+    :sha256
+    "85f7dcf9cd75f33e5e8ad5834cb7fb18264ab0f31e0d43644870bf541a3ff4de"},
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test/the-clicks-cast-reaches-the-flight-records-click-entry}
   {:wire [:flight-click :flight-record-click :detail],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test/the-refused-clicks-detail-reaches-the-click-entry}
   {:wire [:flight-click :flight-record-click :status],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
   {:wire [:flight-click-wants :click-start :wants],
    :status :unverified}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
@@ -105,17 +127,29 @@
    [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
    :status :unverified}
   {:wire [:flight-record-summary :click-reason-test :failure],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-click-reason-test-failure-test/the-close-failure-reaches-the-components-own-test}
   {:wire [:flight-record-summary :flight-click-close-test :chosen],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test/the-clicks-selection-reaches-the-components-own-test}
   {:wire [:flight-record-summary :flight-record-click :chosen],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test/the-clicks-selection-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-record-click :failure],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
   {:wire [:flight-run :flight-driver-summary :needs],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test/the-flights-needs-reach-the-drivers-summary}
   {:wire [:flight-run :flight-driver-summary :readings],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test/the-flights-readings-reach-the-drivers-summary}
   {:wire [:gate-refuse :gate-refusal-read :error],
    :status :witnessed-hermetically,
    :test

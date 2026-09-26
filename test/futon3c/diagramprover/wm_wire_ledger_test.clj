@@ -116,7 +116,20 @@
             [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test]
             [futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test]
             [futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test]
-            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]))
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]
+            [futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test]
+            [futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test]
+            [futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test]
+            [futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test]
+            [futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test]
+            [futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test]
+            [futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-click-reason-test-failure-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test]
+            [futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test]
+            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test]
+            [futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test]))
 
 (def wire-test-nses
   '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
@@ -194,7 +207,20 @@
     futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test
     futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test
     futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test
-    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test])
+    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test
+    futon3c.diagramprover.wm-wire-flight-cast-click-start-author-test
+    futon3c.diagramprover.wm-wire-flight-cast-click-start-reviewer-test
+    futon3c.diagramprover.wm-wire-flight-cast-click-start-repair-reviewer-test
+    futon3c.diagramprover.wm-wire-flight-click-flight-cast-test-cast-test
+    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-cast-test
+    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-detail-test
+    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-click-reason-test-failure-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-flight-click-close-test-chosen-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-chosen-test
+    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test
+    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
+    futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
 
 (def adjacency-rev "84cd6426")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
