@@ -306,3 +306,36 @@
       (let [u (writes-by-vertex {"a.clj" "(defn f [x] (let [m {:cascade-spec {:want x}}] (let [m {:cascade-spec m}] m)))"}
                                 [(wbox :w [[:want {:record :cascade-spec}]] {:returns-record :flight})])]
         (is (number? (get u [:w [:want :cascade-spec]])))))))
+
+;; ---------------------------------------------------------------------------
+;; WM-PROVER-THREADED-RETURN-I: the threaded first argument of -> / cond-> is a
+;; return position.
+
+(def resolve-target-src
+  (str "(defn resolve-target [given field-entry]\n"
+       "  (let [given? (some? given)]\n"
+       "    (cond-> (cond given? {:target given :why :given}\n"
+       "                  :else {:target (default-for given) :why :default})\n"
+       "      field-entry (assoc :field field-entry))))"))
+
+(deftest the-threaded-first-argument-is-a-return-position
+  (let [w (fn [src]
+            (writes-by-vertex {"a.clj" src}
+                              [(wbox :w [[:target {:record :flight}] [:field {:record :flight}]]
+                                     {:returns-record :flight})]))]
+    (testing "the resolve-target shape: both branches of the cond under cond-> are writes"
+      (let [u (w resolve-target-src)]
+        (is (= 2 (get u [:w [:target :flight]])))
+        (is (= 0 (get u [:w [:field :flight]])) "the key a threaded step adds stays unattributed")))
+    (testing "-> likewise, over cond, if, case, a literal and a let-bound name"
+      (is (= 2 (get (w "(defn f [x] (-> (if x {:target 1} {:target 2}) (assoc :k 1)))") [:w [:target :flight]])))
+      (is (= 3 (get (w "(defn f [x] (-> (case x 1 {:target 1} 2 {:target 2} {:target 0}) (assoc :k 1)))") [:w [:target :flight]])))
+      (is (= 1 (get (w "(defn f [x] (-> {:target x} (assoc :k 1)))") [:w [:target :flight]])))
+      (is (= 1 (get (w "(defn f [x] (let [m {:target x}] (-> m (assoc :k 1))))") [:w [:target :flight]])))
+      (is (= 2 (get (w "(defn f [x] (-> (cond x {:target 1} :else {:target 2}) (dissoc :z) (assoc :k 1)))") [:w [:target :flight]]))
+          "more than one threaded step"))
+    (testing "the threaded form must itself be in return position"
+      (is (= 0 (get (w "(defn f [x] (log! (cond-> (if x {:target 1} {:target 2}) x (assoc :k 1))) (count x))") [:w [:target :flight]]))))
+    (testing "->> and cond->> thread last, so their first argument is not the value: not covered"
+      (is (= 0 (get (w "(defn f [x] (->> (if x {:target 1} {:target 2}) (merge {:k 1})))") [:w [:target :flight]])))
+      (is (= 0 (get (w "(defn f [x] (cond->> (if x {:target 1} {:target 2}) x (merge {:k 1})))") [:w [:target :flight]]))))))

@@ -329,9 +329,14 @@
 ;; non-final body form, is not in return position.
 ;;
 ;; A let that binds a name to a map literal makes that literal reachable: a
-;; return position that is the name, or (assoc|merge|update name ...), or a
-;; -> / cond-> threaded from it, is the literal (`literal-of`). Return
-;; positions are [literal env] pairs, env being the let-bound literals in scope.
+;; return position that is the name, or (assoc|merge|update name ...), is the
+;; literal (`literal-of`). The threaded first argument of a -> / cond-> in
+;; return position is itself a return position, recursively: a literal, a
+;; let-bound name, or a cond/if/case whose branches are the literals. The keys
+;; the threaded steps add (assoc :k v) are not attributed. ->> and cond->> thread
+;; last, so their first argument is not the value and they are NOT covered.
+;; Return positions are [literal env] pairs, env being the let-bound literals
+;; in scope.
 ;;
 ;; Nested: inside an attributed literal, a value at key :r that is a map literal
 ;; (or resolves to a let-bound one by `literal-of`) is attributed to record r
@@ -382,7 +387,9 @@
           "case" (let [args (drop 2 kids)]
                    (concat (mapcat #(return-maps % env) (map second (partition 2 args)))
                            (when (odd? (count args)) (return-maps (last args) env))))
-          ("assoc" "merge" "update" "->" "cond->") (when-let [l (literal-of node env)] [[l env]])
+          ;; the threaded first argument of -> / cond-> is itself a return position
+          ("->" "cond->") (when (< 1 n) (return-maps (nth kids 1) env))
+          ("assoc" "merge" "update") (when-let [l (literal-of node env)] [[l env]])
           nil))
       nil)))
 
