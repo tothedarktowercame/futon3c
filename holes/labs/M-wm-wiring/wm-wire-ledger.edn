@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 7,
-  :witnessed-hermetically 139,
-  :unverified 27,
+  :witnessed-hermetically 137,
+  :unverified 29,
   :wires 173},
  :wires
  [{:wire
@@ -830,11 +830,11 @@
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-r9-test-per-policy-argmax-test/the-posterior-mode-reaches-the-selection-test}
   {:wire [:r9-selection-law :wc-checker :candidate],
-   :status :witnessed-hermetically,
+   :status :unverified,
    :test
    futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test/the-real-reader-handoff,
    :note
-   "Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
+   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. Real selector over pinned exemplar interpretations, real enact-fn, real proof2a_check.clj --wc --edn. Empty verdict proves selected id equals enacted id; absent id is join-unverifiable; different id fails the join."}
   {:wire
    [:run-record-publication
     :r10-observe-publication
@@ -858,14 +858,14 @@
    :note
    "Real write-trace! -> temporary daily file -> recent-trace-records -> read-trace -> reconcile-belief-carry -> judge :belief-pre. This carry does not use read-history-strict."}
   {:wire [:wc-checker :r7-increment :wc-verdict],
-   :status :witnessed-hermetically,
+   :status :unverified,
    :test
    futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test/the-real-reader-handoff,
    :note
-   "Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
+   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. Real checker verdict into increment; delta 1 witnesses the empty verdict, wc-failures retains failed verdicts and missing verdict yields delta 0."}
   {:wire [:wc-checker :r7-test :wc-verdict],
    :status :unverified,
    :note
-   "selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker.",
+   "Map finding: wc-checker is siteless; declare its site or withdraw the box. Executable checker evidence does not supply the missing map declaration. selection_reads_fold_test/enactment-receipts is passed [] or a literal join-unverifiable map. It calls increment and selector, never the W_c checker.",
    :registered-test-failed
    futon3c.diagramprover.wm-wire-wc-checker-r7-test-wc-verdict-test/the-named-test-does-not-drive-this-writer}]}
