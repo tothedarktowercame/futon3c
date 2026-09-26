@@ -1,7 +1,7 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='1650' height='1670' viewBox='0 0 1650 1670' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <rect width='1650' height='1670' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 9d962400; 130 boxes, 170 wires in 135 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 54f7e7cd; 130 boxes, 173 wires in 138 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-plan</text>
@@ -357,6 +357,7 @@
 <rect x='1511' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-measured-a-version → flight-conditioning-step: measurement@measured-a rates@measured-a</title></rect>
 <rect x='257' y='234' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-target-field → r1-outer-cascade: next-step</title></rect>
 <rect x='1126' y='1125' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>gate-refuse → gate-refusal-read: error</title></rect>
+<rect x='939' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r14-precision-carry → r9-selection-law: beta@precision</title></rect>
 <rect x='554' y='432' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-constraints-read → r3-store-constraints-read: constraints-read</title></rect>
 <rect x='1401' y='696' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>trace-record → r7-fold-call: mu-post@trace</title></rect>
 <rect x='1423' y='278' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-entry → r10-observe-publication: target@flight</title></rect>
@@ -373,6 +374,7 @@
 <rect x='653' y='1411' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r3-apply-belief-events: loop-belief</title></rect>
 <rect x='356' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-served-by-reading → r2-verifier: text-sha256 want-span</title></rect>
 <rect x='972' y='1554' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>flight-run → flight-steps-source: step@enactment-entry</title></rect>
+<rect x='1027' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r14-precision-carry → r14-selection-posterior: beta@precision</title></rect>
 <rect x='521' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r3-store-locators: locators</title></rect>
 <rect x='1401' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>morning-brief-fold → r7-fold-call: belief@morning-brief-fold</title></rect>
 <rect x='983' y='751' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r9-decision: want@cascade-problem</title></rect>
@@ -404,6 +406,7 @@
 <rect x='1445' y='1334' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>wc-checker → r7-test: wc-verdict</title></rect>
 <rect x='1313' y='1433' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r0-enact-step: publication-observed</title></rect>
 <rect x='279' y='267' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r1-outer-cascade → r1-test: chosen-target draw-seed target-selection</title></rect>
+<rect x='983' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r14-precision-carry → r9-decision: beta@precision</title></rect>
 <rect x='257' y='256' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r8-overlap → r1-outer-cascade: pair-overlap</title></rect>
 <rect x='873' y='751' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>construction-assemble-one → r4-kernel: want@cascade-spec</title></rect>
 <rect x='433' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r2-served-by-reading → r2-test: text-sha256 want-span</title></rect>
@@ -441,5 +444,5 @@
 <rect x='1225' y='1224' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
 <rect x='257' y='1389' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
 <rect x='1258' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
-<text x='16' y='1658' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 22 (sizes 71, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1).</text>
+<text x='16' y='1658' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 20 (sizes 73, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1).</text>
 </svg>

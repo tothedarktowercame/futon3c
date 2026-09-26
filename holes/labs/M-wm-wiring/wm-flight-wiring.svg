@@ -9,9 +9,9 @@
 </defs>
 <rect width='3575' height='5075' fill='white'/>
 <text x='24' y='36' font-size='24' font-weight='700' fill='#173b39'>The flight loop as the wiring map declares it</text>
-<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (9d962400, futon3c HEAD 52c5bcb4) by spike/wm_wiring_svg.bb; not hand edited. 130 boxes, 100 fields.</text>
+<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (54f7e7cd, futon3c HEAD 9734750d) by spike/wm_wiring_svg.bb; not hand edited. 130 boxes, 104 fields.</text>
 <text x='24' y='74' font-size='12' fill='#52605f'>Each panel is one step of the flight, in order. A box is a source var the map pins, listing what it writes (w) and reads (r). A field kept inside a step is an arrow inside its panel.</text>
-<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 e92ae532, futon3c 58f1a8cb), expecting 349 findings (8 to-do). 42 fields cross steps; 0 of 11 steps are entered or left by none.</text>
+<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 e92ae532, futon3c 58f1a8cb), expecting 352 findings (8 to-do). 42 fields cross steps; 0 of 11 steps are entered or left by none.</text>
 <rect x='181' y='138' width='244' height='1872' rx='10' fill='#f7fafa' stroke='#d9e2e1'/>
 <text x='193' y='158' font-size='12.5' font-weight='700' fill='#274d4a'>1 Loop entry, target field</text>
 <text x='193' y='171' font-size='9' fill='#3a4a48'>exemplar trace steps 1, 2, 3, 15</text>
@@ -198,6 +198,12 @@
 <circle cx='2929' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M2929,285 V363 H2954' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:delta: :r7-increment writes, :r7-fold reads (same step)</title></path>
 <text x='2932.0' y='324.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2932.0 324.0)'>delta</text><text x='2932.0' y='324.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2932.0 324.0)'>delta</text>
+<line x1='2045' y1='861' x2='2039' y2='861' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='2039' cy='861' r='2.2' fill='#2f5f5c'/>
+<path d='M2039,861 V939 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:beta@precision: :r14-precision-carry writes, :r14-selection-posterior reads (same step)</title></path>
+<path d='M2039,861 V363 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:beta@precision: :r14-precision-carry writes, :r9-selection-law reads (same step)</title></path>
+<path d='M2039,861 V651 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:beta@precision: :r14-precision-carry writes, :r9-decision reads (same step)</title></path>
+<text x='2042.0' y='900.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2042.0 900.0)'>beta@precision</text><text x='2042.0' y='900.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2042.0 900.0)'>beta@precision</text>
 <line x1='215' y1='429' x2='193' y2='429' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='193' cy='429' r='2.2' fill='#2f5f5c'/>
 <path d='M193,429 V651 H214' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:next-step: :r1-target-field writes, :r1-outer-cascade reads (same step)</title></path>
@@ -243,22 +249,22 @@
 <circle cx='728' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M728,285 V363 H749' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:want-span: :r2-served-by-reading writes, :r2-verifier reads (same step)</title></path>
 <text x='731.0' y='324.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 731.0 324.0)'>want-span</text><text x='731.0' y='324.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 731.0 324.0)'>want-span</text>
-<line x1='2045' y1='1149' x2='2039' y2='1149' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='2039' cy='1149' r='2.2' fill='#2f5f5c'/>
-<path d='M2039,1149 V1227 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-entry reads (same step)</title></path>
-<path d='M2039,1149 V1299 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-latest reads (same step)</title></path>
-<text x='2042.0' y='1224.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2042.0 1224.0)'>timeout-ms</text><text x='2042.0' y='1224.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2042.0 1224.0)'>timeout-ms</text>
+<line x1='2045' y1='1149' x2='2043' y2='1149' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='2043' cy='1149' r='2.2' fill='#2f5f5c'/>
+<path d='M2043,1149 V1227 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-entry reads (same step)</title></path>
+<path d='M2043,1149 V1299 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:timeout-ms: :c8-registry-get writes, :c8-latest reads (same step)</title></path>
+<text x='2046.0' y='1224.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2046.0 1224.0)'>timeout-ms</text><text x='2046.0' y='1224.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2046.0 1224.0)'>timeout-ms</text>
 <line x1='215' y1='645' x2='213' y2='645' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='213' cy='645' r='2.2' fill='#2f5f5c'/>
 <path d='M213,645 V723 H214' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:draw-seed: :r1-outer-cascade writes, :flight-entry reads (same step)</title></path>
 <path d='M213,645 V291 H214' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:draw-seed: :r1-outer-cascade writes, :loop-plan reads (same step)</title></path>
 <path d='M213,645 V363 H214' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:draw-seed: :r1-outer-cascade writes, :flight-plan reads (same step)</title></path>
 <text x='216.0' y='684.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 216.0 684.0)'>draw-seed</text><text x='216.0' y='684.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 216.0 684.0)'>draw-seed</text>
-<line x1='2045' y1='1149' x2='2043' y2='1149' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='2043' cy='1149' r='2.2' fill='#2f5f5c'/>
-<path d='M2043,1149 V1227 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-entry reads (same step)</title></path>
-<path d='M2043,1149 V1299 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-latest reads (same step)</title></path>
-<text x='2046.0' y='1224.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2046.0 1224.0)'>message</text><text x='2046.0' y='1224.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2046.0 1224.0)'>message</text>
+<line x1='2045' y1='1149' x2='2047' y2='1149' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='2047' cy='1149' r='2.2' fill='#2f5f5c'/>
+<path d='M2047,1149 V1227 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-entry reads (same step)</title></path>
+<path d='M2047,1149 V1299 H2044' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-latest reads (same step)</title></path>
+<text x='2050.0' y='1224.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2050.0 1224.0)'>message</text><text x='2050.0' y='1224.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2050.0 1224.0)'>message</text>
 <line x1='1390' y1='1221' x2='1384' y2='1221' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='1384' cy='1221' r='2.2' fill='#2f5f5c'/>
 <path d='M1384,1221 V1299 H1389' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:universes: :tick-flight-assembly writes, :construction-assemble-one reads (same step)</title></path>
@@ -284,6 +290,8 @@
 <text x='2031.0' y='259.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >source-pins</text><text x='2031.0' y='259.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >source-pins</text>
 <line x1='2019' y1='271' x2='2043' y2='271' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:min-cosine: read by :r9-embedding-neighbour, written by no box</title></line>
 <text x='2031.0' y='268.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >min-cosine</text><text x='2031.0' y='268.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >min-cosine</text>
+<line x1='189' y1='550' x2='213' y2='550' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:universe@entry: read by :r8-overlap, written by no box</title></line>
+<text x='201.0' y='547.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >universe@entry</text><text x='201.0' y='547.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >universe@entry</text>
 <line x1='433' y1='2058' x2='3183' y2='2058' stroke='#2f5f5c' stroke-width='1.4' ><title>:target@flight: :flight-entry writes; read by r2-flight-read, flight-run, flight-ask-fn, flight-judge-opts, tick-flight-assembly, r0-enact-step, r9-close-cause, flight-click, r10-observe-publication</title></line>
 <text x='427.0' y='2061.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='427.0' y='2061.0' font-size='8' text-anchor='end' fill='#2f5f5c' >target@flight</text>
 <path d='M411,717.0 H433 V2058' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
@@ -867,16 +875,18 @@ reads: horizon-steps@cascade-problem beta@cascade-problem</title><rect x='2045' 
 <text x='2053' y='799' font-size='7' fill='#6a6a64'>r: horizon-steps@cascade-problem beta@cascade-…</text>
 </g>
 <g><title>:r14-precision-carry
-writes: —
+writes: beta@precision gamma@precision tau@precision
 reads: —</title><rect x='2045' y='830' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='2053' y='845' font-size='10.5' font-weight='600' fill='#1d3a38'>advance</text>
 <text x='2053' y='857' font-size='7.5' fill='#5e6b6a'>policy_precision_carry.clj</text>
+<text x='2053' y='871' font-size='7' fill='#2f5f5c'>w: beta@precision gamma@precision tau@precision</text>
 </g>
 <g><title>:r14-selection-posterior
 writes: —
-reads: —</title><rect x='2045' y='902' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: beta@precision</title><rect x='2045' y='902' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='2053' y='917' font-size='10.5' font-weight='600' fill='#1d3a38'>selection-posterior</text>
 <text x='2053' y='929' font-size='7.5' fill='#5e6b6a'>cascade_selection.clj</text>
+<text x='2053' y='943' font-size='7' fill='#6a6a64'>r: beta@precision</text>
 </g>
 <g><title>:r13-policy-depth-anticipation
 writes: horizon-steps@depth-anticipation
@@ -1100,20 +1110,20 @@ reads: e-source delta wc-verdict</title><rect x='2955' y='778' width='196' heigh
 </g>
 <g><title>:r9-selection-law
 writes: per-policy-argmax candidate enacted-steps
-reads: controller-score</title><rect x='2045' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.4' />
+reads: controller-score beta@precision</title><rect x='2045' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.4' />
 <text x='2053' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>select-action-cascades</text>
 <text x='2053' y='353' font-size='7.5' fill='#5e6b6a'>policy.clj</text>
 <text x='2053' y='367' font-size='7' fill='#2f5f5c'>w: per-policy-argmax candidate enacted-steps</text>
-<text x='2053' y='379' font-size='7' fill='#6a6a64'>r: controller-score</text>
+<text x='2053' y='379' font-size='7' fill='#6a6a64'>r: controller-score beta@precision</text>
 <circle cx='2044' cy='325' r='9' fill='#173b39'/><text x='2044' y='328' text-anchor='middle' font-size='8' font-weight='700' fill='white'>9</text>
 </g>
 <g><title>:r9-decision
 writes: kind target-class measured-a policy-prefixes@token-belief-input
-reads: per-policy-argmax class enactment-fold construction-receipt want@cascade-problem conditioning-steps policy-prefixes@token-belief-input</title><rect x='2045' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: beta@precision per-policy-argmax class enactment-fold construction-receipt want@cascade-problem conditioning-steps policy-prefixes@token-belief-input</title><rect x='2045' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='2053' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>cascade-decision-admitted</text>
 <text x='2053' y='641' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
 <text x='2053' y='655' font-size='7' fill='#2f5f5c'>w: kind target-class measured-a policy-prefixe…</text>
-<text x='2053' y='667' font-size='7' fill='#6a6a64'>r: per-policy-argmax class enactment-fold cons…</text>
+<text x='2053' y='667' font-size='7' fill='#6a6a64'>r: beta@precision per-policy-argmax class enac…</text>
 </g>
 <g><title>:flight-conditioning-step
 writes: —
@@ -1426,10 +1436,11 @@ reads: measurement</title><rect x='1700' y='562' width='196' height='62' rx='6' 
 </g>
 <g><title>:r8-overlap
 writes: pair-overlap
-reads: —</title><rect x='215' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: universe@entry</title><rect x='215' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='223' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>with-pair-overlap</text>
 <text x='223' y='569' font-size='7.5' fill='#5e6b6a'>target_field.clj</text>
 <text x='223' y='583' font-size='7' fill='#2f5f5c'>w: pair-overlap</text>
+<text x='223' y='595' font-size='7' fill='#6a6a64'>r: universe@entry</text>
 </g>
 <g><title>:r8-test
 writes: —
@@ -1527,21 +1538,21 @@ reads: —</title><rect x='3315' y='830' width='196' height='62' rx='6' fill='#e
 <text x='24' y='2690' font-size='10.5' fill='#3a4a48'>dotted box: the step's registered test, a declared reader; it lists its reads and draws no arrows (23)</text>
 <text x='24' y='2704' font-size='10.5' fill='#3a4a48'>grey box: siteless component, exempt from conformance (2)</text>
 <line x1='700' y1='2658' x2='740' y2='2658' stroke='#2f5f5c' stroke-width='1.6' />
-<text x='748' y='2662' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (111 reader arrows; 42 fields cross steps, 47 stay inside one)</text>
+<text x='748' y='2662' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (114 reader arrows; 42 fields cross steps, 48 stay inside one)</text>
 <line x1='700' y1='2672' x2='740' y2='2672' stroke='#d48700' stroke-width='1.6' stroke-dasharray='5,3'/>
 <text x='748' y='2676' font-size='10.5' fill='#3a4a48'>dashed amber: declared on a box not yet built (0)</text>
 <line x1='700' y1='2686' x2='740' y2='2686' stroke='#7b3fa0' stroke-width='1.6' />
 <text x='748' y='2690' font-size='10.5' fill='#3a4a48'>purple: the reader is an earlier step than the writer, the loop closing (11)</text>
 <line x1='700' y1='2700' x2='740' y2='2700' stroke='#9a9a94' stroke-width='1.6' stroke-dasharray='3,2'/>
-<text x='748' y='2704' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (3); green stub: the owner's text, exogenous (1)</text>
+<text x='748' y='2704' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (4); green stub: the owner's text, exogenous (1)</text>
 <text x='24' y='2728' font-size='10.5' fill='#3a4a48'>Numbered rings: the exemplar trace the map records for M-autoclock-in, in order (loop-entry &gt; r1-outer-cascade &gt; flight-entry &gt; dispatch &gt; clock-in &gt; r2-served-by-reading &gt; r2-verifier &gt; r6-cascade-lane &gt; r9-selection-law &gt; r0-enact-step &gt; r7-flight-call &gt; wc-checker &gt; r7-increment &gt; r7-fold &gt; r1-outer-cascade). Boxes on it have a heavier border.</text>
-<text x='24' y='2744' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; remaining attribution limits are recorded in the map and WM-MAP-REPLAY-D; recognising a binding does not certify a hand-off. Standing findings (341) are generic keys the prover cannot scope per box.</text>
+<text x='24' y='2744' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; remaining attribution limits are recorded in the map and WM-MAP-REPLAY-D; recognising a binding does not certify a hand-off. Standing findings (344) are generic keys the prover cannot scope per box.</text>
 <text x='24' y='2776' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>
 <text x='24' y='2760' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>
 <line x1='24' y1='2814' x2='3551' y2='2814' stroke='#c8d3d2'/>
-<text x='24' y='2834' font-size='15' font-weight='700' fill='#1f3b39'>Organisation: who calls whom, in order (from the source, at futon2 8c703dd1)</text>
+<text x='24' y='2834' font-size='15' font-weight='700' fill='#1f3b39'>Organisation: who calls whom, in order (from the source, at futon2 229d1eaa)</text>
 <text x='24' y='2852' font-size='10.5' fill='#3a4a48'>Each box once, under its first caller in flight order; siblings in body order (numbered). 105 placed, 193 calls (173 direct, 8 hand-off invocations, 3 hand-checked cross-process, 9 closure constructions), 121 with a condition (printed on the edge). 91 callers placed elsewhere are thin grey arcs.</text>
-<text x='24' y='2867' font-size='10.5' fill='#3a4a48'>Generated by spike/wm_org_layer.bb at map 9d962400 (wm-org-layer.edn); its three hand-checked edges' evidence sites are re-verified on every run. Lanes derived from this order disagree with the panels' hand-kept lane table for 18 boxes (listed at the foot).</text>
+<text x='24' y='2867' font-size='10.5' fill='#3a4a48'>Generated by spike/wm_org_layer.bb at map 54f7e7cd (wm-org-layer.edn); its three hand-checked edges' evidence sites are re-verified on every run. Lanes derived from this order disagree with the panels' hand-kept lane table for 18 boxes (listed at the foot).</text>
 <line x1='24' y1='2882' x2='54' y2='2882' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='60' y='2886' font-size='10' fill='#3a4a48'>direct call</text>
 <line x1='354' y1='2882' x2='384' y2='2882' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
