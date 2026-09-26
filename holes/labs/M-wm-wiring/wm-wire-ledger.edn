@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "8dc61b63",
-  :map "b44b63ab"},
+  :rev "5d71e012",
+  :map "5927020d"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 102, :wires 104},
+ {:verified 0, :witnessed-hermetically 2, :unverified 107, :wires 109},
  :wires
  [{:wire [:c8-registry-get :c8-entry :message], :status :unverified}
   {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
@@ -26,6 +26,16 @@
   {:wire [:flight-click :flight-record-click :detail],
    :status :unverified}
   {:wire [:flight-click :flight-record-click :status],
+   :status :unverified}
+  {:wire [:flight-click-wants :click-start :wants],
+   :status :unverified}
+  {:wire [:flight-click-wants :flight-judge-opts :universe],
+   :status :unverified}
+  {:wire [:flight-click-wants :flight-judge-opts :wants],
+   :status :unverified}
+  {:wire [:flight-click-wants :tick-flight-assembly :universe],
+   :status :unverified}
+  {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :unverified}
   {:wire [:flight-entry :loop-test :target-source],
    :status :unverified}
