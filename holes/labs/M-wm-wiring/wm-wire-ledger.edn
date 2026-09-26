@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "5cc3bc8c",
-  :map "ad3afb76"},
+  :rev "735432ce",
+  :map "adb335c1"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 91, :wires 93},
+ {:verified 0, :witnessed-hermetically 2, :unverified 94, :wires 96},
  :wires
  [{:wire [:c8-registry-get :c8-entry :message], :status :unverified}
   {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
@@ -97,12 +97,18 @@
   {:wire [:r6-sourced-rates :r6-test :measurement],
    :status :unverified}
   {:wire [:r7-flight-call :r7-call-test :wc], :status :unverified}
+  {:wire [:r7-flight-call :r7-fold-source :increment],
+   :status :unverified}
   {:wire [:r7-fold :r1-outer-cascade :enactment-records],
    :status :unverified}
   {:wire [:r7-fold :r7-selection :enactment-records],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
+  {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
+   :status :unverified}
+  {:wire [:r7-fold-call :r9-decision :enactment-fold],
+   :status :unverified}
   {:wire [:r7-increment :r7-call-test :delta], :status :unverified}
   {:wire [:r7-increment :r7-call-test :wc-failures],
    :status :unverified}
