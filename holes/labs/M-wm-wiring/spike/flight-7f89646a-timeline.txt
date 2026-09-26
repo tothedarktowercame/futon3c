@@ -1,0 +1,22 @@
+# Fifth flight of M-autoclock-in (flight-7f89646a; the dry-run plan named flight-7f89646a) — timeline, UTC, generated 2026-09-26T02:33:02Z by /tmp/flight5/timeline.py from the store, the Agency job list, the click endpoint and the driver process
+# operator: Joe, 2026-09-25: "OK to M-auto-clock in but can you please monitor it directly"; "keep meticulous records with timestamps"; flown by claude-8
+2026-09-26T02:13:52Z driver  dry-run plan started (no --run); flight id in plan: flight-3f9cc28c
+2026-09-26T02:14:27Z driver  flight-driver M-autoclock-in --run started from /home/joe/code/futon2-flight5 (futon2 1e1546f6), seat claude-5, max-clicks 1
+2026-09-26T02:16:05Z agency  job invoke-1790388965771-24628-ceed1741 to claude-5 created request-2bae3189 (written this flight)
+2026-09-26T02:16:05Z store   request written request-2bae318991d867c5.edn kind extracted-criterion
+2026-09-26T02:16:37Z agency  job ceed1741 done reply wm/want-interpretation-response-v1 (2284 chars, 1 fenced)
+2026-09-26T02:17:47Z agency  job invoke-1790389067129-24632-68e02385 to claude-5 created request-6308ab6c (written this flight)
+2026-09-26T02:17:47Z store   request written request-6308ab6cd962e39d.edn kind extracted-criterion
+2026-09-26T02:18:16Z agency  job 68e02385 done reply wm/want-interpretation-response-v1 (3027 chars, 1 fenced)
+2026-09-26T02:19:05Z store   written M-autoclock-in.edn
+2026-09-26T02:19:17Z click   click wm-click-e9140183-529d-48b8-8859-5112fa70dac4 running? False phase None
+2026-09-26T02:19:20Z click   phase starting (monitor)
+2026-09-26T02:20:10Z click   phase code-state (monitor)
+2026-09-26T02:20:35Z click   phase substrate-preflight (monitor)
+2026-09-26T02:21:00Z click   phase preference-refresh (monitor)
+2026-09-26T02:22:41Z click   phase stop-line-memory (monitor)
+2026-09-26T02:23:06Z click   phase selection (monitor); the decision gate refused :missing-observation-locators (two C8 locators read :no-mechanical-check by the STALE gate loaded in :6768, pre-dd938402); closed :untyped-failure at 02:25:15Z (route RUNNER -> FULL_LOOP_CLOSE :incomplete)
+2026-09-26T02:25:15Z server  run record written tick-run-record-2026-09-26-flight-7f89646a-click-1.edn
+2026-09-26T02:25:25Z driver  flight-driver process ended: EXIT 0
+2026-09-26T02:25:25Z store   written flights/flight-7f89646a.edn
+2026-09-26T02:25:40Z click   click e9140183 running? False last incomplete (monitor)
