@@ -183,3 +183,14 @@
              (comment-lines))
           "the dropped-header bug fails here")
       (is (= v2 (edn/read-string (slurp f))) "the value is the last one written"))))
+
+(deftest a-scoped-port-id-reads-back
+  ;; F1a-1-I: the first scoped field with no reader became an :out/ port; its
+  ;; id must survive pr-str -> edn/read-string, or a re-pinned fixture cannot
+  ;; be read (`@` is not a keyword constituent the reader accepts)
+  (let [m {:spec/id :t :boxes [{:box/id :w :box/kind :component :writes [[:x {:record :r}]]}]}
+        d (proj/project m)
+        port (first (get-in d [:ports :output]))]
+    (is (= :out/x.r (:id port)))
+    (is (= "x@r" (:name port)) "the display name keeps the scoped form")
+    (is (= d (edn/read-string (pr-str d))))))

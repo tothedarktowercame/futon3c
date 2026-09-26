@@ -67,6 +67,16 @@
     (str (name (wiring/vertex-field v)) "@" (name (wiring/vertex-record v)))
     (name v)))
 
+(defn- vid
+  "The port ID's name for a wire vertex: as `vname`, but `field.record` for a
+  scoped field. `@` is not a keyword constituent the EDN reader accepts, so
+  an id built from `vname` could be printed into a fixture and never read
+  back; `vname` stays the port's :name."
+  [v]
+  (if (vector? v)
+    (str (name (wiring/vertex-field v)) "." (name (wiring/vertex-record v)))
+    (name v)))
+
 (defn- field-index [boxes k]
   (reduce (fn [m b] (reduce #(update %1 (wiring/vertex-key %2) (fnil conj []) (:box/id b)) m (get b k)))
           {} boxes))
@@ -82,7 +92,7 @@
          node (fn [box-id] (if (= :test (kind box-id)) (keyword "test" (name box-id)) box-id))
          fields (sort-by str (distinct (concat (keys writers) (keys readers))))
          pref? (set preference-fields)
-         fnode (fn [f] (if (pref? f) (keyword "pref" (vname f)) nil))
+         fnode (fn [f] (if (pref? f) (keyword "pref" (vid f)) nil))
          sources (for [b boxes :when (and (= :component (:box/kind b)) (empty? (:reads b)))]
                    (:box/id b))
          inputs (concat
@@ -90,7 +100,7 @@
                    {:id (fnode f) :name (vname f) :field f :constraint true :timescale :glacial
                     :source "preference: the owner's stated wants"})
                  (for [f fields :when (and (not (pref? f)) (empty? (writers f)))]
-                   {:id (keyword "in" (vname f)) :name (vname f) :field f
+                   {:id (keyword "in" (vid f)) :name (vname f) :field f
                     :source "read by the map, written by no box"})
                  (for [b sources]
                    {:id (keyword "world" (name b)) :name (name b)
@@ -100,7 +110,7 @@
                     {:id (node (:box/id b)) :name (name (:box/id b))
                      :consumer "registered test" :spec-ref (:file (:site b))})
                   (for [f fields :when (and (not (pref? f)) (empty? (readers f)))]
-                    {:id (keyword "out" (vname f)) :name (vname f) :field f
+                    {:id (keyword "out" (vid f)) :name (vname f) :field f
                      :consumer "written by the map, read by no box"}))
          components (for [b boxes :when (= :component (:box/kind b))]
                       (cond-> {:id (:box/id b) :name (name (:box/id b))
@@ -117,9 +127,9 @@
                 (for [f fields :when (pref? f), r (readers f)]
                   {:from (fnode f) :to (node r) :field f})
                 (for [f fields :when (and (not (pref? f)) (empty? (writers f))), r (readers f)]
-                  {:from (keyword "in" (vname f)) :to (node r) :field f})
+                  {:from (keyword "in" (vid f)) :to (node r) :field f})
                 (for [f fields :when (and (not (pref? f)) (empty? (readers f))), w (writers f)]
-                  {:from (node w) :to (keyword "out" (vname f)) :field f})
+                  {:from (node w) :to (keyword "out" (vid f)) :field f})
                 (for [b sources]
                   {:from (keyword "world" (name b)) :to b :field :world}))]
      {:mission/id id
