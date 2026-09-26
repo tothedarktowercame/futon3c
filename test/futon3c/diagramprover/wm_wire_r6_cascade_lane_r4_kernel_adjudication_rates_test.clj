@@ -1,5 +1,5 @@
 (ns futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test
-  "Rates wire, witnessed by real calls using two independently admitted labels.
+  "Rates wire, witnessed by real calls using ten real subjects admitted through the store and reader.
   See support/live-records-read for the live records lacking both ends."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]

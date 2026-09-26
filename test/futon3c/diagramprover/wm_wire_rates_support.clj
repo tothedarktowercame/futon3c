@@ -4,7 +4,12 @@
   F-pi is exercised by calling the kernel with its non-prefix option, because
   the lane normally selects prefix scoring. No flight or click is executed."
   (:require [clojure.test :refer [is]]
-            [futon2.aif.observation-admission :as admission]
+            [clojure.java.io :as io]
+            [futon2.aif.observation-checks :as checks]
+            [futon2.aif.observation-labels :as labels]
+            [futon2.aif.observation-label-store :as store]
+            [futon2.aif.observation-label-reader :as reader]
+            [futon2.aif.observation-label-reader-test :as population]
             [futon2.aif.observation-rates :as rates]
             [futon2.aif.efe :as efe]
             [futon2.aif.cascade-free-energy :as fe]
@@ -20,25 +25,31 @@
    :cascade-spec {:want #{:t/wanted}} :beta 1
    :locators (zipmap [:t/observed :t/other :t/wanted] (repeat {:class :C3}))})
 
-(defn labels []
-  (mapv (fn [[finding recorded]]
-          (let [subject {:token (name finding) :token-class :C3
-                         :application "Hermetic admission for a rate cell"
-                         :evidence-pointers [{:repo "fixture" :sha "fixture" :path (name finding)}]
-                         :author :none :enactor :none :recorded-verdict recorded
-                         :check-mechanism "declared-check" :check-cutoff {:fixture "fixture"}}
-                adj (admission/adjudication "recompute" (admission/observer-view subject)
-                                            finding {:fixture "fixture"})
-                review (admission/mechanical-review "independent" subject adj)
-                admitted (admission/admit subject adj review)
-                label (admission/label-record subject admitted)]
-            (when-not label (throw (ex-info "Fixture admission refused" admitted)))
-            label))
-        [[:present true] [:absent false]]))
+(defn label-view
+  "Real pinned C3 checks, admitted to a temporary store and filtered by the
+  production reader. Five absent subjects and n present subjects."
+  [n]
+  (let [root (io/file (w/tmp-dir "rates-population-")) path (io/file root "labels.edn")
+        ids (labels/loaded-identities)]
+    (try
+      (store/init! path)
+      (let [written (store/record!
+                      path
+                      (mapv #(checks/check-path-exists {:repo "futon2" :sha population/pin :path %})
+                            (concat (take n population/present-paths) population/absent-paths))
+                      ids {})]
+        (when-not (and (= (+ n 5) (:written written)) (zero? (:refused written)))
+          (throw (ex-info "Real fixture subjects were not admitted" written))))
+      (reader/read-rates-inputs path ids)
+      (finally (doseq [f (reverse (file-seq root))] (io/delete-file f))))))
 
-(defn lane []
-  (wm/cascade-lane problem {:through :R5
-                            :observation-labels {:labels (labels) :subjects {:C3 2}}}))
+(def admitted-view (delay (label-view 5)))
+
+(defn lane
+  ([] (lane @admitted-view))
+  ([view]
+   (wm/cascade-lane problem {:through :R5
+                            :observation-labels (select-keys view [:labels :subjects :prior])})))
 
 (defn measurement [lane-result]
   (get-in (first (:ranked lane-result)) [:certificate :rates-provenance :measurement]))
