@@ -4,7 +4,7 @@
   :map "9d962400"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 83, :unverified 82, :wires 170},
+ {:verified 5, :witnessed-hermetically 88, :unverified 77, :wires 170},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -389,7 +389,9 @@
     [:kernel {:record :evaluation}]],
    :status :unverified}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r8-selection-candidate :controller-score],
@@ -407,16 +409,24 @@
    :test
    futon3c.diagramprover.wm-wire-r5-test-grain-test/the-candidates-grain-reaches-the-grain-gate-test}
   {:wire [:r6-cascade-lane :r4-kernel :adjudication-rates],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-cascade-lane-r4-kernel-adjudication-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-measurement-test/the-writers-value-reaches-the-reader}
   {:wire
    [:r6-sourced-rates
     :r6-cascade-lane
     [:rates {:record :sourced-rates}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-cascade-lane-scoped-rates-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r6-test :measurement],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r6-sourced-rates-r6-test-measurement-test/the-writers-value-reaches-the-reader}
   {:wire [:r6-sourced-rates :r9-measured-a-version :measurement],
    :status :unverified}
   {:wire [:r7-flight-call :flight-run :increment], :status :unverified}
