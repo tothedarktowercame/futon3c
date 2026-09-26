@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='3380' height='3703' viewBox='0 0 3380 3703' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
+<svg xmlns='http://www.w3.org/2000/svg' width='3380' height='3754' viewBox='0 0 3380 3754' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <title>The flight loop as wm-flight-wiring.edn declares it</title>
 <defs>
 <marker id='a-wired' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#2f5f5c'/></marker>
@@ -7,11 +7,11 @@
 <marker id='a-unwritten' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#9a9a94'/></marker>
 <marker id='a-constraint' markerWidth='7' markerHeight='7' refX='6' refY='3.5' orient='auto'><path d='M0,0 L7,3.5 L0,7 z' fill='#11865b'/></marker>
 </defs>
-<rect width='3380' height='3703' fill='white'/>
+<rect width='3380' height='3754' fill='white'/>
 <text x='24' y='36' font-size='24' font-weight='700' fill='#173b39'>The flight loop as the wiring map declares it</text>
-<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (57956158, futon3c HEAD 57956158) by spike/wm_wiring_svg.bb; not hand edited. 106 boxes, 76 fields.</text>
+<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (e6e48e22, futon3c HEAD e6e48e22) by spike/wm_wiring_svg.bb; not hand edited. 109 boxes, 79 fields.</text>
 <text x='24' y='74' font-size='12' fill='#52605f'>Each panel is one step of the flight, in order. A box is a source var the map pins, listing what it writes (w) and reads (r). A field kept inside a step is an arrow inside its panel.</text>
-<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 284 findings (2 to-do). 24 fields cross steps; 0 of 11 steps are entered or left by none.</text>
+<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 294 findings (2 to-do). 24 fields cross steps; 0 of 11 steps are entered or left by none.</text>
 <rect x='181' y='138' width='244' height='1224' rx='10' fill='#f7fafa' stroke='#d9e2e1'/>
 <text x='193' y='158' font-size='12.5' font-weight='700' fill='#274d4a'>1 Loop entry, target field</text>
 <text x='193' y='171' font-size='9' fill='#3a4a48'>exemplar trace steps 1, 2, 3, 15</text>
@@ -100,6 +100,10 @@
 <circle cx='2794' cy='213' r='2.2' fill='#2f5f5c'/>
 <path d='M2794,213 V435 H2819' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:increment: :r7-flight-call writes, :r7-fold-source reads (same step)</title></path>
 <text x='2797.0' y='324.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2797.0 324.0)'>increment</text><text x='2797.0' y='324.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2797.0 324.0)'>increment</text>
+<line x1='1375' y1='501' x2='1353' y2='501' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1353' cy='501' r='2.2' fill='#2f5f5c'/>
+<path d='M1353,501 V579 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:error@prediction-error: :r3a-prediction-error writes, :r7-weighted-error reads (same step)</title></path>
+<text x='1356.0' y='540.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1356.0 540.0)'>error@prediction-error</text><text x='1356.0' y='540.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1356.0 540.0)'>error@prediction-error</text>
 <line x1='3130' y1='429' x2='3128' y2='429' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='3128' cy='429' r='2.2' fill='#2f5f5c'/>
 <path d='M3128,429 V507 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:failure: :flight-record-summary writes, :flight-record-click reads (same step)</title></path>
@@ -129,10 +133,10 @@
 <circle cx='2216' cy='717' r='2.2' fill='#2f5f5c'/>
 <path d='M2216,717 V795 H2229' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:failure-kind: :r9-phase-kind writes, :r9-failure-classifier reads (same step)</title></path>
 <text x='2219.0' y='756.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2219.0 756.0)'>failure-kind</text><text x='2219.0' y='756.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2219.0 756.0)'>failure-kind</text>
-<line x1='1375' y1='789' x2='1361' y2='789' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='1361' cy='789' r='2.2' fill='#2f5f5c'/>
-<path d='M1361,789 V867 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:precedence-violations: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
-<text x='1364.0' y='828.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1364.0 828.0)'>precedence-violations</text><text x='1364.0' y='828.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1364.0 828.0)'>precedence-violations</text>
+<line x1='1375' y1='933' x2='1369' y2='933' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1369' cy='933' r='2.2' fill='#2f5f5c'/>
+<path d='M1369,933 V1011 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:precedence-violations: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
+<text x='1372.0' y='972.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1372.0 972.0)'>precedence-violations</text><text x='1372.0' y='972.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1372.0 972.0)'>precedence-violations</text>
 <line x1='2230' y1='357' x2='2208' y2='357' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='2208' cy='357' r='2.2' fill='#2f5f5c'/>
 <path d='M2208,357 V579 H2229' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:judge-refusal: :r9-judge-refusal writes, :r9-abstention-carrier reads (same step)</title></path>
@@ -154,14 +158,18 @@
 <circle cx='3104' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M3104,285 V219 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:author: :flight-cast writes, :click-start reads (same step)</title></path>
 <text x='3107.0' y='285.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 3107.0 285.0)'>author</text><text x='3107.0' y='285.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 3107.0 285.0)'>author</text>
+<line x1='1375' y1='573' x2='1357' y2='573' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1357' cy='573' r='2.2' fill='#2f5f5c'/>
+<path d='M1357,573 V651 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:weighted-error: :r7-weighted-error writes, :r3-aggregate-driver reads (same step)</title></path>
+<text x='1360.0' y='612.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1360.0 612.0)'>weighted-error</text><text x='1360.0' y='612.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1360.0 612.0)'>weighted-error</text>
 <line x1='1655' y1='213' x2='1629' y2='213' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='1629' cy='213' r='2.2' fill='#2f5f5c'/>
 <path d='M1629,213 V291 H1654' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:measurement: :r6-sourced-rates writes, :r6-cascade-lane reads (same step)</title></path>
 <text x='1632.0' y='252.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1632.0 252.0)'>measurement</text><text x='1632.0' y='252.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1632.0 252.0)'>measurement</text>
-<line x1='1375' y1='789' x2='1365' y2='789' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='1365' cy='789' r='2.2' fill='#2f5f5c'/>
-<path d='M1365,789 V867 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:descent: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
-<text x='1368.0' y='828.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1368.0 828.0)'>descent</text><text x='1368.0' y='828.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1368.0 828.0)'>descent</text>
+<line x1='1375' y1='933' x2='1373' y2='933' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1373' cy='933' r='2.2' fill='#2f5f5c'/>
+<path d='M1373,933 V1011 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:descent: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
+<text x='1376.0' y='972.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1376.0 972.0)'>descent</text><text x='1376.0' y='972.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1376.0 972.0)'>descent</text>
 <line x1='3130' y1='357' x2='3120' y2='357' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='3120' cy='357' r='2.2' fill='#2f5f5c'/>
 <path d='M3120,357 V507 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:status: :flight-click writes, :flight-record-click reads (same step)</title></path>
@@ -182,6 +190,10 @@
 <circle cx='193' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M193,285 V507 H214' fill='none' stroke='#d48700' stroke-width='1.2' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:next-step: :r1-target-field writes, :r1-outer-cascade reads (same step)</title></path>
 <text x='196.0' y='396.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 196.0 396.0)'>next-step</text><text x='196.0' y='396.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 196.0 396.0)'>next-step</text>
+<line x1='1655' y1='357' x2='1637' y2='357' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1637' cy='357' r='2.2' fill='#2f5f5c'/>
+<path d='M1637,357 V435 H1654' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:rates: :r4-kernel writes, :fpi-policy-free-energy reads (same step)</title></path>
+<text x='1640.0' y='396.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1640.0 396.0)'>rates</text><text x='1640.0' y='396.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1640.0 396.0)'>rates</text>
 <line x1='2230' y1='213' x2='2204' y2='213' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='2204' cy='213' r='2.2' fill='#2f5f5c'/>
 <path d='M2204,213 V291 H2229' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:error: :gate-refuse writes, :gate-refusal-read reads (same step)</title></path>
@@ -190,10 +202,10 @@
 <circle cx='1633' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M1633,285 V363 H1654' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:adjudication-rates: :r6-cascade-lane writes, :r4-kernel reads (same step)</title></path>
 <text x='1636.0' y='324.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1636.0 324.0)'>adjudication-rates</text><text x='1636.0' y='324.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1636.0 324.0)'>adjudication-rates</text>
-<line x1='1375' y1='789' x2='1369' y2='789' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='1369' cy='789' r='2.2' fill='#2f5f5c'/>
-<path d='M1369,789 V867 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:units: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
-<text x='1372.0' y='828.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1372.0 828.0)'>units</text><text x='1372.0' y='828.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1372.0 828.0)'>units</text>
+<line x1='1375' y1='933' x2='1377' y2='933' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1377' cy='933' r='2.2' fill='#2f5f5c'/>
+<path d='M1377,933 V1011 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:units: :r4-constructor writes, :r4-order-use reads (same step)</title></path>
+<text x='1380.0' y='972.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1380.0 972.0)'>units</text><text x='1380.0' y='972.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1380.0 972.0)'>units</text>
 <line x1='2520' y1='357' x2='2498' y2='357' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='2498' cy='357' r='2.2' fill='#2f5f5c'/>
 <path d='M2498,357 V435 H2519' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:grain-gate: :r0-enact-step writes, :wc-checker reads (same step)</title></path>
@@ -210,10 +222,10 @@
 <circle cx='2494' cy='213' r='2.2' fill='#2f5f5c'/>
 <path d='M2494,213 V291 H2519' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:grain: :r5-flight-call writes, :r5-grain-gate reads (same step)</title></path>
 <text x='2497.0' y='252.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 2497.0 252.0)'>grain</text><text x='2497.0' y='252.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 2497.0 252.0)'>grain</text>
-<line x1='1375' y1='573' x2='1353' y2='573' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='1353' cy='573' r='2.2' fill='#2f5f5c'/>
-<path d='M1353,573 V651 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:wants@sources: :tick-flight-assembly writes, :construction-assemble-one reads (same step)</title></path>
-<text x='1356.0' y='612.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1356.0 612.0)'>wants@sources</text><text x='1356.0' y='612.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1356.0 612.0)'>wants@sources</text>
+<line x1='1375' y1='717' x2='1361' y2='717' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1361' cy='717' r='2.2' fill='#2f5f5c'/>
+<path d='M1361,717 V795 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:wants@sources: :tick-flight-assembly writes, :construction-assemble-one reads (same step)</title></path>
+<text x='1364.0' y='756.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1364.0 756.0)'>wants@sources</text><text x='1364.0' y='756.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1364.0 756.0)'>wants@sources</text>
 <line x1='215' y1='429' x2='201' y2='429' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='201' cy='429' r='2.2' fill='#2f5f5c'/>
 <path d='M201,429 V507 H214' fill='none' stroke='#d48700' stroke-width='1.2' stroke-dasharray='5,3' marker-end='url(#a-declared)'><title>:pair-overlap: :r8-overlap writes, :r1-outer-cascade reads (same step)</title></path>
@@ -236,10 +248,10 @@
 <path d='M1939,645 V723 H1944' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-entry reads (same step)</title></path>
 <path d='M1939,645 V795 H1944' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:message: :c8-registry-get writes, :c8-latest reads (same step)</title></path>
 <text x='1942.0' y='720.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1942.0 720.0)'>message</text><text x='1942.0' y='720.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1942.0 720.0)'>message</text>
-<line x1='1375' y1='573' x2='1357' y2='573' stroke='#2f5f5c' stroke-width='1.2'/>
-<circle cx='1357' cy='573' r='2.2' fill='#2f5f5c'/>
-<path d='M1357,573 V651 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:universes: :tick-flight-assembly writes, :construction-assemble-one reads (same step)</title></path>
-<text x='1360.0' y='612.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1360.0 612.0)'>universes</text><text x='1360.0' y='612.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1360.0 612.0)'>universes</text>
+<line x1='1375' y1='717' x2='1365' y2='717' stroke='#2f5f5c' stroke-width='1.2'/>
+<circle cx='1365' cy='717' r='2.2' fill='#2f5f5c'/>
+<path d='M1365,717 V795 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:universes: :tick-flight-assembly writes, :construction-assemble-one reads (same step)</title></path>
+<text x='1368.0' y='756.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1368.0 756.0)'>universes</text><text x='1368.0' y='756.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1368.0 756.0)'>universes</text>
 <line x1='3130' y1='285' x2='3112' y2='285' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='3112' cy='285' r='2.2' fill='#2f5f5c'/>
 <path d='M3112,285 V219 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:repair-reviewer: :flight-cast writes, :click-start reads (same step)</title></path>
@@ -273,7 +285,7 @@
 <circle cx='3043' cy='1410' r='1.8' fill='#2f5f5c'/>
 <path d='M3043,1410 V725.0 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:target@flight: :flight-entry writes, :flight-judge-opts reads</title></path>
 <circle cx='1293' cy='1410' r='1.8' fill='#2f5f5c'/>
-<path d='M1293,1410 V581.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:target@flight: :flight-entry writes, :tick-flight-assembly reads</title></path>
+<path d='M1293,1410 V725.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:target@flight: :flight-entry writes, :tick-flight-assembly reads</title></path>
 <circle cx='2448' cy='1410' r='1.8' fill='#2f5f5c'/>
 <path d='M2448,1410 V369.0 H2519' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:target@flight: :flight-entry writes, :r0-enact-step reads</title></path>
 <circle cx='2163' cy='1410' r='1.8' fill='#2f5f5c'/>
@@ -331,7 +343,7 @@
 <circle cx='3053' cy='1514' r='1.8' fill='#2f5f5c'/>
 <path d='M3053,1514 V717.0 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:universe: :flight-click-wants writes, :flight-judge-opts reads</title></path>
 <circle cx='1303' cy='1514' r='1.8' fill='#2f5f5c'/>
-<path d='M1303,1514 V573.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:universe: :flight-click-wants writes, :tick-flight-assembly reads</title></path>
+<path d='M1303,1514 V717.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:universe: :flight-click-wants writes, :tick-flight-assembly reads</title></path>
 <line x1='1308' y1='1527' x2='3063' y2='1527' stroke='#2f5f5c' stroke-width='1.4' ><title>:wants: :flight-click-wants writes; read by flight-judge-opts, tick-flight-assembly, click-start</title></line>
 <text x='1302.0' y='1530.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >wants</text><text x='1302.0' y='1530.0' font-size='8' text-anchor='end' fill='#2f5f5c' >wants</text>
 <path d='M1271,425.0 H1308 V1527' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
@@ -339,7 +351,7 @@
 <circle cx='3058' cy='1527' r='1.8' fill='#2f5f5c'/>
 <path d='M3058,1527 V709.0 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :flight-judge-opts reads</title></path>
 <circle cx='1313' cy='1527' r='1.8' fill='#2f5f5c'/>
-<path d='M1313,1527 V565.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :tick-flight-assembly reads</title></path>
+<path d='M1313,1527 V709.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :tick-flight-assembly reads</title></path>
 <circle cx='3063' cy='1527' r='1.8' fill='#2f5f5c'/>
 <path d='M3063,1527 V213.0 H3129' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :click-start reads</title></path>
 <line x1='1318' y1='1540' x2='1328' y2='1540' stroke='#2f5f5c' stroke-width='1.4' ><title>:interpretations: :ask-merge-published writes; read by construction-assemble-one, construction-construct</title></line>
@@ -347,24 +359,24 @@
 <path d='M1271,501.0 H1318 V1540' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1318' cy='1540' r='2.6' fill='#2f5f5c'/>
 <circle cx='1323' cy='1540' r='1.8' fill='#2f5f5c'/>
-<path d='M1323,1540 V645.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:interpretations: :ask-merge-published writes, :construction-assemble-one reads</title></path>
+<path d='M1323,1540 V789.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:interpretations: :ask-merge-published writes, :construction-assemble-one reads</title></path>
 <circle cx='1328' cy='1540' r='1.8' fill='#2f5f5c'/>
-<path d='M1328,1540 V717.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:interpretations: :ask-merge-published writes, :construction-construct reads</title></path>
+<path d='M1328,1540 V861.0 H1374' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:interpretations: :ask-merge-published writes, :construction-construct reads</title></path>
 <line x1='1593' y1='1553' x2='1873' y2='1553' stroke='#2f5f5c' stroke-width='1.4' ><title>:want@cascade-problem: :construction-assemble-one writes; read by r9-decision</title></line>
 <text x='1587.0' y='1556.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >want@cascade-problem</text><text x='1587.0' y='1556.0' font-size='8' text-anchor='end' fill='#2f5f5c' >want@cascade-problem</text>
-<path d='M1571,649.0 H1593 V1553' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1571,793.0 H1593 V1553' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1593' cy='1553' r='2.6' fill='#2f5f5c'/>
 <circle cx='1873' cy='1553' r='1.8' fill='#2f5f5c'/>
 <path d='M1873,1553 V437.0 H1944' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:want@cascade-problem: :construction-assemble-one writes, :r9-decision reads</title></path>
 <line x1='1598' y1='1566' x2='1603' y2='1566' stroke='#2f5f5c' stroke-width='1.4' ><title>:want@cascade-spec: :construction-assemble-one writes; read by r4-kernel</title></line>
 <text x='1592.0' y='1569.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >want@cascade-spec</text><text x='1592.0' y='1569.0' font-size='8' text-anchor='end' fill='#2f5f5c' >want@cascade-spec</text>
-<path d='M1571,641.0 H1598 V1566' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1571,785.0 H1598 V1566' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1598' cy='1566' r='2.6' fill='#2f5f5c'/>
 <circle cx='1603' cy='1566' r='1.8' fill='#2f5f5c'/>
 <path d='M1603,1566 V357.0 H1654' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:want@cascade-spec: :construction-assemble-one writes, :r4-kernel reads</title></path>
 <line x1='1608' y1='1579' x2='1883' y2='1579' stroke='#2f5f5c' stroke-width='1.4' ><title>:construction-receipt: :construction-construct writes; read by selection-candidate-derivations, r4-order-use, r9-decision</title></line>
 <text x='1602.0' y='1582.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >construction-receipt</text><text x='1602.0' y='1582.0' font-size='8' text-anchor='end' fill='#2f5f5c' >construction-receipt</text>
-<path d='M1571,717.0 H1608 V1579' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1571,861.0 H1608 V1579' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1608' cy='1579' r='2.6' fill='#2f5f5c'/>
 <circle cx='1878' cy='1579' r='1.8' fill='#2f5f5c'/>
 <path d='M1878,1579 V501.0 H1944' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:construction-receipt: :construction-construct writes, :selection-candidate-derivations reads</title></path>
@@ -620,10 +632,26 @@ reads: —</title><rect x='1375' y='326' width='196' height='62' rx='6' fill='#f
 <text x='1383' y='353' font-size='7.5' fill='#5e6b6a'>belief.clj</text>
 </g>
 <g><title>:r3a-prediction-error
-writes: —
+writes: error@prediction-error
 reads: —</title><rect x='1375' y='470' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='1383' y='485' font-size='10.5' font-weight='600' fill='#1d3a38'>compute-prediction-error</text>
 <text x='1383' y='497' font-size='7.5' fill='#5e6b6a'>free_energy.clj</text>
+<text x='1383' y='511' font-size='7' fill='#2f5f5c'>w: error@prediction-error</text>
+</g>
+<g><title>:r7-weighted-error
+writes: weighted-error
+reads: error@prediction-error</title><rect x='1375' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>weighted-error</text>
+<text x='1383' y='569' font-size='7.5' fill='#5e6b6a'>precision.clj</text>
+<text x='1383' y='583' font-size='7' fill='#2f5f5c'>w: weighted-error</text>
+<text x='1383' y='595' font-size='7' fill='#6a6a64'>r: error@prediction-error</text>
+</g>
+<g><title>:r3-aggregate-driver
+writes: —
+reads: weighted-error</title><rect x='1375' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>r3d-aggregate-driver</text>
+<text x='1383' y='641' font-size='7.5' fill='#5e6b6a'>belief.clj</text>
+<text x='1383' y='655' font-size='7' fill='#6a6a64'>r: weighted-error</text>
 </g>
 <g><title>:flight-click-wants
 writes: wants universe
@@ -641,11 +669,11 @@ reads: wants universe target@flight</title><rect x='3130' y='686' width='196' he
 </g>
 <g><title>:tick-flight-assembly
 writes: universes wants@sources
-reads: wants universe target@flight</title><rect x='1375' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-assembly-input</text>
-<text x='1383' y='569' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
-<text x='1383' y='583' font-size='7' fill='#2f5f5c'>w: universes wants@sources</text>
-<text x='1383' y='595' font-size='7' fill='#6a6a64'>r: wants universe target@flight</text>
+reads: wants universe target@flight</title><rect x='1375' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-assembly-input</text>
+<text x='1383' y='713' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
+<text x='1383' y='727' font-size='7' fill='#2f5f5c'>w: universes wants@sources</text>
+<text x='1383' y='739' font-size='7' fill='#6a6a64'>r: wants universe target@flight</text>
 </g>
 <g><title>:ask-merge-published
 writes: interpretations
@@ -656,19 +684,19 @@ reads: —</title><rect x='1075' y='470' width='196' height='62' rx='6' fill='#f
 </g>
 <g><title>:construction-assemble-one
 writes: want@cascade-spec want@cascade-problem
-reads: interpretations universes wants@sources</title><rect x='1375' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>assemble-one</text>
-<text x='1383' y='641' font-size='7.5' fill='#5e6b6a'>cascade_problems.clj</text>
-<text x='1383' y='655' font-size='7' fill='#2f5f5c'>w: want@cascade-spec want@cascade-problem</text>
-<text x='1383' y='667' font-size='7' fill='#6a6a64'>r: interpretations universes wants@sources</text>
+reads: interpretations universes wants@sources</title><rect x='1375' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='773' font-size='10.5' font-weight='600' fill='#1d3a38'>assemble-one</text>
+<text x='1383' y='785' font-size='7.5' fill='#5e6b6a'>cascade_problems.clj</text>
+<text x='1383' y='799' font-size='7' fill='#2f5f5c'>w: want@cascade-spec want@cascade-problem</text>
+<text x='1383' y='811' font-size='7' fill='#6a6a64'>r: interpretations universes wants@sources</text>
 </g>
 <g><title>:construction-construct
 writes: construction-receipt
-reads: interpretations</title><rect x='1375' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>construct</text>
-<text x='1383' y='713' font-size='7.5' fill='#5e6b6a'>interpretation_construction.clj</text>
-<text x='1383' y='727' font-size='7' fill='#2f5f5c'>w: construction-receipt</text>
-<text x='1383' y='739' font-size='7' fill='#6a6a64'>r: interpretations</text>
+reads: interpretations</title><rect x='1375' y='830' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='845' font-size='10.5' font-weight='600' fill='#1d3a38'>construct</text>
+<text x='1383' y='857' font-size='7.5' fill='#5e6b6a'>interpretation_construction.clj</text>
+<text x='1383' y='871' font-size='7' fill='#2f5f5c'>w: construction-receipt</text>
+<text x='1383' y='883' font-size='7' fill='#6a6a64'>r: interpretations</text>
 </g>
 <g><title>:selection-candidate-derivations
 writes: —
@@ -707,45 +735,52 @@ reads: library-root</title><rect x='1075' y='994' width='196' height='62' rx='6'
 </g>
 <g><title>:r4-constructor
 writes: precedence-violations descent units
-reads: —</title><rect x='1375' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='773' font-size='10.5' font-weight='600' fill='#1d3a38'>containment-order</text>
-<text x='1383' y='785' font-size='7.5' fill='#5e6b6a'>construction.clj</text>
-<text x='1383' y='799' font-size='7' fill='#2f5f5c'>w: precedence-violations descent units</text>
+reads: —</title><rect x='1375' y='902' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='917' font-size='10.5' font-weight='600' fill='#1d3a38'>containment-order</text>
+<text x='1383' y='929' font-size='7.5' fill='#5e6b6a'>construction.clj</text>
+<text x='1383' y='943' font-size='7' fill='#2f5f5c'>w: precedence-violations descent units</text>
 </g>
 <g><title>:r4-order-use
 writes: —
-reads: precedence-violations descent units construction-receipt</title><rect x='1375' y='830' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='845' font-size='10.5' font-weight='600' fill='#1d3a38'>order-use</text>
-<text x='1383' y='857' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
-<text x='1383' y='871' font-size='7' fill='#6a6a64'>r: precedence-violations descent units constru…</text>
+reads: precedence-violations descent units construction-receipt</title><rect x='1375' y='974' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='989' font-size='10.5' font-weight='600' fill='#1d3a38'>order-use</text>
+<text x='1383' y='1001' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
+<text x='1383' y='1015' font-size='7' fill='#6a6a64'>r: precedence-violations descent units constru…</text>
 </g>
 <g><title>:r4-coapply
 writes: —
-reads: —</title><rect x='1375' y='902' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1383' y='917' font-size='10.5' font-weight='600' fill='#1d3a38'>co-apply-kernel</text>
-<text x='1383' y='929' font-size='7.5' fill='#5e6b6a'>cascade_model_manifest.clj</text>
+reads: —</title><rect x='1375' y='1046' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1383' y='1061' font-size='10.5' font-weight='600' fill='#1d3a38'>co-apply-kernel</text>
+<text x='1383' y='1073' font-size='7.5' fill='#5e6b6a'>cascade_model_manifest.clj</text>
 </g>
 <g><title>:r4-kernel
-writes: order-use controller-score
+writes: order-use controller-score rates
 reads: adjudication-rates want@cascade-spec</title><rect x='1655' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='1663' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>rank-cascade-actions</text>
 <text x='1663' y='353' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
-<text x='1663' y='367' font-size='7' fill='#2f5f5c'>w: order-use controller-score</text>
+<text x='1663' y='367' font-size='7' fill='#2f5f5c'>w: order-use controller-score rates</text>
 <text x='1663' y='379' font-size='7' fill='#6a6a64'>r: adjudication-rates want@cascade-spec</text>
+</g>
+<g><title>:fpi-policy-free-energy
+writes: —
+reads: rates</title><rect x='1655' y='398' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1663' y='413' font-size='10.5' font-weight='600' fill='#1d3a38'>policy-free-energy</text>
+<text x='1663' y='425' font-size='7.5' fill='#5e6b6a'>cascade_free_energy.clj</text>
+<text x='1663' y='439' font-size='7' fill='#6a6a64'>r: rates</text>
 </g>
 <g><title>:r4-test
 writes: —
-reads: order-use</title><rect x='1375' y='994' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='1383' y='1009' font-size='10.5' font-weight='600' fill='#1d3a38'>r4-test</text>
-<text x='1383' y='1021' font-size='7.5' fill='#5e6b6a'>order_kernel_test.clj</text>
-<text x='1383' y='1035' font-size='7' fill='#6a6a64'>r: order-use</text>
+reads: order-use</title><rect x='1375' y='1138' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1383' y='1153' font-size='10.5' font-weight='600' fill='#1d3a38'>r4-test</text>
+<text x='1383' y='1165' font-size='7.5' fill='#5e6b6a'>order_kernel_test.clj</text>
+<text x='1383' y='1179' font-size='7' fill='#6a6a64'>r: order-use</text>
 </g>
 <g><title>:r4-coapply-test
 writes: —
-reads: order-use descent units</title><rect x='1375' y='1066' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='1383' y='1081' font-size='10.5' font-weight='600' fill='#1d3a38'>r4-coapply-test</text>
-<text x='1383' y='1093' font-size='7.5' fill='#5e6b6a'>coapply_kernel_test.clj</text>
-<text x='1383' y='1107' font-size='7' fill='#6a6a64'>r: order-use descent units</text>
+reads: order-use descent units</title><rect x='1375' y='1210' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1383' y='1225' font-size='10.5' font-weight='600' fill='#1d3a38'>r4-coapply-test</text>
+<text x='1383' y='1237' font-size='7.5' fill='#5e6b6a'>coapply_kernel_test.clj</text>
+<text x='1383' y='1251' font-size='7' fill='#6a6a64'>r: order-use descent units</text>
 </g>
 <g><title>:r0-enact-step
 writes: attempts grain-gate
@@ -1126,10 +1161,10 @@ reads: measurement</title><rect x='1655' y='254' width='196' height='62' rx='6' 
 </g>
 <g><title>:r6-test
 writes: —
-reads: measurement</title><rect x='1655' y='418' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='1663' y='433' font-size='10.5' font-weight='600' fill='#1d3a38'>r6-test</text>
-<text x='1663' y='445' font-size='7.5' fill='#5e6b6a'>click_measurement_test.clj</text>
-<text x='1663' y='459' font-size='7' fill='#6a6a64'>r: measurement</text>
+reads: measurement</title><rect x='1655' y='490' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1663' y='505' font-size='10.5' font-weight='600' fill='#1d3a38'>r6-test</text>
+<text x='1663' y='517' font-size='7.5' fill='#5e6b6a'>click_measurement_test.clj</text>
+<text x='1663' y='531' font-size='7' fill='#6a6a64'>r: measurement</text>
 </g>
 <g><title>:r8-overlap
 writes: pair-overlap
@@ -1215,12 +1250,12 @@ reads: —</title><rect x='3130' y='758' width='196' height='62' rx='6' fill='#e
 <text x='3138' y='785' font-size='7.5' fill='#5e6b6a'>warrants (siteless)</text>
 </g>
 <text x='24' y='1762' font-size='12' font-weight='700' fill='#274d4a'>Legend</text>
-<text x='24' y='1780' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (82)</text>
+<text x='24' y='1780' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (85)</text>
 <text x='24' y='1794' font-size='10.5' fill='#3a4a48'>dashed amber box: declared, not built, drawn at its intended site (1)</text>
 <text x='24' y='1808' font-size='10.5' fill='#3a4a48'>dotted box: the step's registered test, a declared reader; it lists its reads and draws no arrows (23)</text>
 <text x='24' y='1822' font-size='10.5' fill='#3a4a48'>grey box: siteless component, exempt from conformance (3)</text>
 <line x1='700' y1='1776' x2='740' y2='1776' stroke='#2f5f5c' stroke-width='1.6' />
-<text x='748' y='1780' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (78 reader arrows; 24 fields cross steps, 43 stay inside one)</text>
+<text x='748' y='1780' font-size='10.5' fill='#3a4a48'>line: a field, from its one writer to its readers, both built (81 reader arrows; 24 fields cross steps, 46 stay inside one)</text>
 <line x1='700' y1='1790' x2='740' y2='1790' stroke='#d48700' stroke-width='1.6' stroke-dasharray='5,3'/>
 <text x='748' y='1794' font-size='10.5' fill='#3a4a48'>dashed amber: declared on a box not yet built (6)</text>
 <line x1='700' y1='1804' x2='740' y2='1804' stroke='#7b3fa0' stroke-width='1.6' />
@@ -1228,13 +1263,13 @@ reads: —</title><rect x='3130' y='758' width='196' height='62' rx='6' fill='#e
 <line x1='700' y1='1818' x2='740' y2='1818' stroke='#9a9a94' stroke-width='1.6' stroke-dasharray='3,2'/>
 <text x='748' y='1822' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (3); green stub: the owner's text, exogenous (1)</text>
 <text x='24' y='1846' font-size='10.5' fill='#3a4a48'>Numbered rings: the exemplar trace the map records for M-autoclock-in, in order (loop-entry &gt; r1-outer-cascade &gt; flight-entry &gt; dispatch &gt; clock-in &gt; r2-served-by-reading &gt; r2-verifier &gt; r6-cascade-lane &gt; r9-selection-law &gt; r0-enact-step &gt; r7-flight-call &gt; wc-checker &gt; r7-increment &gt; r7-fold &gt; r1-outer-cascade). Boxes on it have a heavier border.</text>
-<text x='24' y='1862' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (282) are generic keys the prover cannot scope per box.</text>
+<text x='24' y='1862' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (292) are generic keys the prover cannot scope per box.</text>
 <text x='24' y='1894' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>
 <text x='24' y='1878' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>
 <line x1='24' y1='1932' x2='3356' y2='1932' stroke='#c8d3d2'/>
-<text x='24' y='1952' font-size='15' font-weight='700' fill='#1f3b39'>Organisation: who calls whom, in order (from the source, at futon2 279c2081)</text>
-<text x='24' y='1970' font-size='10.5' fill='#3a4a48'>Each box once, under its first caller in flight order; siblings in body order (numbered). 77 placed, 120 calls (100 direct, 8 hand-off invocations, 3 hand-checked cross-process, 9 closure constructions), 77 with a condition (printed on the edge). 45 callers placed elsewhere are thin grey arcs.</text>
-<text x='24' y='1985' font-size='10.5' fill='#3a4a48'>Generated by spike/wm_org_layer.bb at map 57956158 (wm-org-layer.edn); its three hand-checked edges' evidence sites are re-verified on every run. Lanes derived from this order disagree with the panels' hand-kept lane table for 13 boxes (listed at the foot).</text>
+<text x='24' y='1952' font-size='15' font-weight='700' fill='#1f3b39'>Organisation: who calls whom, in order (from the source, at futon2 bbe98f0b)</text>
+<text x='24' y='1970' font-size='10.5' fill='#3a4a48'>Each box once, under its first caller in flight order; siblings in body order (numbered). 80 placed, 126 calls (106 direct, 8 hand-off invocations, 3 hand-checked cross-process, 9 closure constructions), 79 with a condition (printed on the edge). 48 callers placed elsewhere are thin grey arcs.</text>
+<text x='24' y='1985' font-size='10.5' fill='#3a4a48'>Generated by spike/wm_org_layer.bb at map e6e48e22 (wm-org-layer.edn); its three hand-checked edges' evidence sites are re-verified on every run. Lanes derived from this order disagree with the panels' hand-kept lane table for 13 boxes (listed at the foot).</text>
 <line x1='24' y1='2000' x2='54' y2='2000' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='60' y='2004' font-size='10' fill='#3a4a48'>direct call</text>
 <line x1='354' y1='2000' x2='384' y2='2000' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
@@ -1243,51 +1278,54 @@ reads: —</title><rect x='3130' y='758' width='196' height='62' rx='6' fill='#e
 <text x='720' y='2004' font-size='10' fill='#3a4a48'>cross-process (HTTP / subprocess / bell), hand-checked</text>
 <line x1='1014' y1='2000' x2='1044' y2='2000' stroke='#9a9a94' stroke-width='0.8' stroke-dasharray='1,3'/>
 <text x='1050' y='2004' font-size='10' fill='#3a4a48'>builds a closure another box invokes</text>
-<path d='M716,3150 C776,3150 1132,2232 1072,2232' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M716,2691 C776,2691 1132,2742 1072,2742' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M716,2691 C776,2691 1132,2725 1072,2725' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M716,3201 C776,3201 1132,2232 1072,2232' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M716,2708 C776,2708 1132,2759 1072,2759' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M716,2708 C776,2708 1132,2742 1072,2742' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
 <path d='M538,2419 C598,2419 954,2487 894,2487' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M182,2028 C242,2028 598,3201 538,3201' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
-<path d='M182,2028 C242,2028 598,3133 538,3133' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
-<path d='M182,2028 C242,2028 598,3218 538,3218' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M182,2028 C242,2028 598,3252 538,3252' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M182,2028 C242,2028 598,3184 538,3184' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M182,2028 C242,2028 598,3269 538,3269' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
 <path d='M182,2028 C242,2028 598,2113 538,2113' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
 <path d='M182,2028 C242,2028 598,2419 538,2419' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
-<path d='M182,2028 C242,2028 598,2640 538,2640' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M182,2028 C242,2028 598,2657 538,2657' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
 <path d='M360,2096 C420,2096 776,2130 716,2130' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
 <path d='M360,2096 C420,2096 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M182,3320 C242,3320 1132,2759 1072,2759' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M182,3320 C242,3320 1132,2980 1072,2980' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M538,3201 C598,3201 776,3150 716,3150' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M538,3201 C598,3201 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M538,3201 C598,3201 776,3167 716,3167' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M538,3201 C598,3201 776,3184 716,3184' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M182,3371 C242,3371 1132,2776 1072,2776' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M182,3371 C242,3371 1132,3031 1072,3031' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M538,3252 C598,3252 776,3201 716,3201' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M538,3252 C598,3252 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M538,3252 C598,3252 776,3218 716,3218' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M538,3252 C598,3252 776,3235 716,3235' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
 <path d='M538,2113 C598,2113 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2759 C1132,2759 776,2623 716,2623' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2759 C1132,2759 776,2453 716,2453' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2759 C1132,2759 776,2436 716,2436' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2759 C1132,2759 776,2470 716,2470' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
-<path d='M360,3286 C420,3286 420,2062 360,2062' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M538,3133 C598,3133 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 1310,2776 1250,2776' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 1310,2793 1250,2793' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 1310,2810 1250,2810' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 776,2623 716,2623' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 776,2453 716,2453' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 776,2436 716,2436' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 776,2470 716,2470' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
-<path d='M1072,2980 C1132,2980 1310,2844 1250,2844' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 1310,2946 1250,2946' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,2980 C1132,2980 1310,2963 1250,2963' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M894,3099 C954,3099 1132,2997 1072,2997' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M894,2708 C954,2708 420,2062 360,2062' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M894,2708 C954,2708 1310,2555 1250,2555' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1250,2844 C1310,2844 954,2487 894,2487' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1250,2844 C1310,2844 1132,2521 1072,2521' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1250,2844 C1310,2844 1132,2572 1072,2572' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1250,2844 C1310,2844 1132,2589 1072,2589' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1072,3065 C1132,3065 1132,2742 1072,2742' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M894,3082 C954,3082 1132,2997 1072,2997' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
-<path d='M1428,2929 C1488,2929 1310,2555 1250,2555' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,2776 C1132,2776 776,2640 716,2640' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,2776 C1132,2776 776,2453 716,2453' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,2776 C1132,2776 776,2436 716,2436' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,2776 C1132,2776 776,2470 716,2470' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M360,3337 C420,3337 420,2062 360,2062' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,2521 C1132,2521 1488,2555 1428,2555' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M538,3184 C598,3184 954,2215 894,2215' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2793 1250,2793' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2810 1250,2810' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2827 1250,2827' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2861 1250,2861' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2878 1250,2878' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 776,2640 716,2640' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 776,2453 716,2453' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 776,2436 716,2436' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 776,2470 716,2470' fill='none' stroke='#9a9a94' stroke-opacity='0.35' stroke-width='0.7' stroke-dasharray='1,3'/>
+<path d='M1072,3031 C1132,3031 1310,2895 1250,2895' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,2997 1250,2997' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3031 C1132,3031 1310,3014 1250,3014' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M894,3150 C954,3150 1132,3048 1072,3048' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M894,2725 C954,2725 420,2062 360,2062' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M894,2725 C954,2725 1488,2555 1428,2555' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1250,2895 C1310,2895 954,2487 894,2487' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1250,2895 C1310,2895 1132,2521 1072,2521' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1250,2895 C1310,2895 1132,2589 1072,2589' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1250,2895 C1310,2895 1132,2606 1072,2606' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1072,3116 C1132,3116 1132,2759 1072,2759' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M894,3133 C954,3133 1132,3048 1072,3048' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
+<path d='M1428,2980 C1488,2980 1488,2555 1428,2555' fill='none' stroke='#7a8a88' stroke-opacity='0.35' stroke-width='0.7' />
 <path d='M32,2035 V2045 H202' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <path d='M32,2035 V2062 H202' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <path d='M210,2069 V2079 H380' fill='none' stroke='#c0392b' stroke-width='1.4' stroke-dasharray='2,2'/>
@@ -1318,51 +1356,54 @@ reads: —</title><rect x='3130' y='758' width='196' height='62' rx='6' fill='#e
 <path d='M744,2494 V2504 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <path d='M744,2494 V2521 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <path d='M922,2528 V2538 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2528 V2555 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2494 V2572 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2545 V2555 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2528 V2572 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <path d='M744,2494 V2589 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M566,2477 V2606 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,2426 V2623 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M210,2103 V2640 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
-<path d='M388,2647 V2657 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,2647 V2674 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,2647 V2691 H558' fill='none' stroke='#c0392b' stroke-width='1.4' stroke-dasharray='2,2'/>
-<path d='M566,2698 V2708 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V2725 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V2742 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V2759 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2776 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2793 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2810 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1100,2817 V2827 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2844 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1100,2851 V2861 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1100,2851 V2878 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1278,2885 V2895 H1448' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1100,2851 V2912 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M1100,2851 V2929 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2946 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M922,2766 V2963 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V2980 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V2997 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V3014 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V3031 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V3048 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M744,2715 V3065 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M566,2698 V3082 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M566,2698 V3099 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M210,2103 V3116 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M210,2103 V3133 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
-<path d='M388,3140 V3150 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,3140 V3167 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,3140 V3184 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M210,2103 V3201 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
-<path d='M210,2103 V3218 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
-<path d='M388,3225 V3235 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M388,3225 V3252 H558' fill='none' stroke='#c0392b' stroke-width='1.4' stroke-dasharray='2,2'/>
-<path d='M210,2103 V3269 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
-<path d='M32,2035 V3286 H202' fill='none' stroke='#9a9a94' stroke-width='0.8' stroke-dasharray='1,3'/>
-<path d='M210,3293 V3303 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2494 V2606 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M566,2477 V2623 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,2426 V2640 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M210,2103 V2657 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
+<path d='M388,2664 V2674 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,2664 V2691 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,2664 V2708 H558' fill='none' stroke='#c0392b' stroke-width='1.4' stroke-dasharray='2,2'/>
+<path d='M566,2715 V2725 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V2742 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V2759 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V2776 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2793 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2810 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2827 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2834 V2844 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2861 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2878 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2895 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2902 V2912 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2902 V2929 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1278,2936 V2946 H1448' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2902 V2963 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M1100,2902 V2980 H1270' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V2997 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M922,2783 V3014 H1092' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3031 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3048 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3065 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3082 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3099 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M744,2732 V3116 H914' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M566,2715 V3133 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M566,2715 V3150 H736' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M210,2103 V3167 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M210,2103 V3184 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
+<path d='M388,3191 V3201 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,3191 V3218 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,3191 V3235 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M210,2103 V3252 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
+<path d='M210,2103 V3269 H380' fill='none' stroke='#1f6fbf' stroke-width='1.2' stroke-dasharray='5,3'/>
+<path d='M388,3276 V3286 H558' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M388,3276 V3303 H558' fill='none' stroke='#c0392b' stroke-width='1.4' stroke-dasharray='2,2'/>
+<path d='M210,2103 V3320 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
+<path d='M32,2035 V3337 H202' fill='none' stroke='#9a9a94' stroke-width='0.8' stroke-dasharray='1,3'/>
+<path d='M210,3344 V3354 H380' fill='none' stroke='#2f5f5c' stroke-width='1.2' />
 <g><title>flight-driver-summary — futon2/src/futon2/aif/flight_driver.clj run-flight!</title><rect x='24' y='2022' width='158' height='13' rx='3' fill='#f7fafa' stroke='#1f3b39' stroke-width='2'/></g>
 <text x='28' y='2032' font-size='8.5' fill='#1f3b39'>ROOT · flight-driver-summary  ·10</text>
 <g><title>flight-entry — futon2/src/futon2/aif/flight_driver.clj resolve-target</title><rect x='202' y='2039' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
@@ -1459,173 +1500,180 @@ via [[:handoff :evaluate-g "futon2/scripts/futon2/report/war_machine.clj:7270"] 
 via ["futon2.aif.efe/rank-actions"]</title><rect x='914' y='2515' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
 <text x='918' y='2525' font-size='8.5' fill='#1f3b39'>2. r4-kernel  ·6</text>
 <text x='1078' y='2525' font-size='7.5' fill='#6b5a2a'>when (cond (nil? sourced))</text>
-<g><title>r4-order-use — futon2/src/futon2/aif/efe.clj order-use</title><rect x='1092' y='2532' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='1096' y='2542' font-size='8.5' fill='#1f3b39'>1. r4-order-use  ·5</text>
-<text x='1256' y='2542' font-size='7.5' fill='#6b5a2a'>when (cond :else)</text>
+<g><title>fpi-policy-free-energy — futon2/src/futon2/aif/cascade_free_energy.clj policy-free-energy</title><rect x='1092' y='2532' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2542' font-size='8.5' fill='#1f3b39'>1. fpi-policy-free-energy  ·6</text>
+<text x='1256' y='2542' font-size='7.5' fill='#6b5a2a'>when (when-not (:f-prefix-production? opts))</text>
 <g><title>r4-coapply — futon2/src/futon2/aif/cascade_model_manifest.clj co-apply-kernel
-via ["futon2.aif.cascade-model-manifest/horizon-g-sparse-cert" "futon2.aif.cascade-model-manifest/horizon-g-sparse*" "futon2.aif.cascade-model-manifest/push-forward" "futon2.aif.cascade-model-manifest/evaluate-state" "futon2.aif.cascade-model-manifest/evaluate-co-apply"]</title><rect x='1092' y='2549' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='1096' y='2559' font-size='8.5' fill='#1f3b39'>2. r4-coapply  ·5</text>
-<text x='1256' y='2559' font-size='7.5' fill='#6b5a2a'>when (cond :else)</text>
-<g><title>r7-selection — futon2/src/futon2/aif/policy.clj select-action-cascades</title><rect x='914' y='2566' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='2576' font-size='8.5' fill='#1f3b39'>3. r7-selection  ·9</text>
-<g><title>r9-selection-law — futon2/src/futon2/aif/policy.clj select-action-cascades</title><rect x='914' y='2583' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='2593' font-size='8.5' fill='#1f3b39'>4. r9-selection-law  ·7a</text>
-<g><title>r4-constructor — futon2/src/futon2/aif/construction.clj containment-order</title><rect x='736' y='2600' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='740' y='2610' font-size='8.5' fill='#1f3b39'>2. r4-constructor  ·5</text>
-<text x='900' y='2610' font-size='7.5' fill='#6b5a2a'>when (cond :else)</text>
+via ["futon2.aif.cascade-free-energy/candidate-free-energy" "futon2.aif.cascade-model-manifest/rollout" "futon2.aif.cascade-model-manifest/rollout*" "futon2.aif.cascade-model-manifest/push-forward" "futon2.aif.cascade-model-manifest/evaluate-state" "futon2.aif.cascade-model-manifest/evaluate-co-apply"]</title><rect x='1270' y='2549' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='1274' y='2559' font-size='8.5' fill='#1f3b39'>1. r4-coapply  ·5</text>
+<text x='1434' y='2559' font-size='7.5' fill='#6b5a2a'>when (if (= :missing (:status lean-source))) else</text>
+<g><title>r4-order-use — futon2/src/futon2/aif/efe.clj order-use</title><rect x='1092' y='2566' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='1096' y='2576' font-size='8.5' fill='#1f3b39'>2. r4-order-use  ·5</text>
+<text x='1256' y='2576' font-size='7.5' fill='#6b5a2a'>when (cond :else)</text>
+<g><title>r7-selection — futon2/src/futon2/aif/policy.clj select-action-cascades</title><rect x='914' y='2583' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='2593' font-size='8.5' fill='#1f3b39'>3. r7-selection  ·9</text>
+<g><title>r9-selection-law — futon2/src/futon2/aif/policy.clj select-action-cascades</title><rect x='914' y='2600' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='2610' font-size='8.5' fill='#1f3b39'>4. r9-selection-law  ·7a</text>
+<g><title>r4-constructor — futon2/src/futon2/aif/construction.clj containment-order</title><rect x='736' y='2617' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='740' y='2627' font-size='8.5' fill='#1f3b39'>2. r4-constructor  ·5</text>
+<text x='900' y='2627' font-size='7.5' fill='#6b5a2a'>when (cond :else)</text>
 <g><title>construction-assemble-one — futon2/src/futon2/aif/cascade_problems.clj assemble-one
-via ["futon2.aif.flight-runner/ask-one" "futon2.aif.flight-runner/settle" "futon2.aif.want-interpretation/validate-response" "futon2.aif.cascade-problems/assemble"]</title><rect x='558' y='2617' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='2627' font-size='8.5' fill='#1f3b39'>5. construction-assemble…  ·5</text>
-<text x='722' y='2627' font-size='7.5' fill='#6b5a2a'>when (if (contains? issued ::refused)) else</text>
+via ["futon2.aif.flight-runner/ask-one" "futon2.aif.flight-runner/settle" "futon2.aif.want-interpretation/validate-response" "futon2.aif.cascade-problems/assemble"]</title><rect x='558' y='2634' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='2644' font-size='8.5' fill='#1f3b39'>5. construction-assemble…  ·5</text>
+<text x='722' y='2644' font-size='7.5' fill='#6b5a2a'>when (if (contains? issued ::refused)) else</text>
 <g><title>flight-click — futon2/src/futon2/aif/flight_runner.clj http-click-fn
-via [[:handoff :click-fn "futon2/src/futon2/aif/flight_driver.clj:245"]]</title><rect x='380' y='2634' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='2644' font-size='8.5' fill='#1f3b39'>5. flight-click  ·10</text>
-<text x='544' y='2644' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
-<g><title>flight-cast — futon2/src/futon2/aif/flight_runner.clj click-cast</title><rect x='558' y='2651' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='2661' font-size='8.5' fill='#1f3b39'>1. flight-cast  ·10</text>
-<g><title>flight-record-summary — futon2/src/futon2/aif/flight_runner.clj record-summary</title><rect x='558' y='2668' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='2678' font-size='8.5' fill='#1f3b39'>2. flight-record-summary  ·10</text>
-<text x='722' y='2678' font-size='7.5' fill='#6b5a2a'>when (if-not (and (= 200 status) click-id)) else</text>
+via [[:handoff :click-fn "futon2/src/futon2/aif/flight_driver.clj:245"]]</title><rect x='380' y='2651' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='2661' font-size='8.5' fill='#1f3b39'>5. flight-click  ·10</text>
+<text x='544' y='2661' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
+<g><title>flight-cast — futon2/src/futon2/aif/flight_runner.clj click-cast</title><rect x='558' y='2668' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='2678' font-size='8.5' fill='#1f3b39'>1. flight-cast  ·10</text>
+<g><title>flight-record-summary — futon2/src/futon2/aif/flight_runner.clj record-summary</title><rect x='558' y='2685' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='2695' font-size='8.5' fill='#1f3b39'>2. flight-record-summary  ·10</text>
+<text x='722' y='2695' font-size='7.5' fill='#6b5a2a'>when (if-not (and (= 200 status) click-id)) else</text>
 <g><title>click-start — futon3c/src/futon3c/transport/http.clj handle-wm-click-start
-http-click-fn POSTs /api/alpha/wm/click (flight_runner.clj:495-511, cross-JVM HTTP); futon3c transport/http.clj:9295 routes the POST to handle-wm-click-start</title><rect x='558' y='2685' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='2695' font-size='8.5' fill='#1f3b39'>3. click-start  ·10</text>
+http-click-fn POSTs /api/alpha/wm/click (flight_runner.clj:495-511, cross-JVM HTTP); futon3c transport/http.clj:9295 routes the POST to handle-wm-click-start</title><rect x='558' y='2702' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='2712' font-size='8.5' fill='#1f3b39'>3. click-start  ·10</text>
 <g><title>r9-close-cause — futon2/src/futon2/aif/full_loop_runner.clj run-opportunity-core!
-via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='2702' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='740' y='2712' font-size='8.5' fill='#1f3b39'>1. r9-close-cause  ·7b</text>
-<text x='900' y='2712' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
+via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='2719' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='740' y='2729' font-size='8.5' fill='#1f3b39'>1. r9-close-cause  ·7b</text>
+<text x='900' y='2729' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
 <g><title>r9-finding-store — futon2/src/futon2/aif/repair_obligation.clj record-system-failure!
-via ["futon2.aif.full-loop-runner/emit-phase!" "futon2.aif.tripwire/observe!" "futon2.aif.tripwire/halt!" "futon2.aif.tripwire/record-trip!" "futon2.aif.tripwire/handle-action!" "futon2.aif.tripwire/record-finding!"]</title><rect x='914' y='2719' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='918' y='2729' font-size='8.5' fill='#1f3b39'>1. r9-finding-store  ·7b</text>
-<text x='1078' y='2729' font-size='7.5' fill='#6b5a2a'>when (cond *halt-on-witness?*)</text>
+via ["futon2.aif.full-loop-runner/emit-phase!" "futon2.aif.tripwire/observe!" "futon2.aif.tripwire/halt!" "futon2.aif.tripwire/record-trip!" "futon2.aif.tripwire/handle-action!" "futon2.aif.tripwire/record-finding!"]</title><rect x='914' y='2736' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='918' y='2746' font-size='8.5' fill='#1f3b39'>1. r9-finding-store  ·7b</text>
+<text x='1078' y='2746' font-size='7.5' fill='#6b5a2a'>when (cond *halt-on-witness?*)</text>
 <g><title>r9-failure-classifier — futon2/src/futon2/aif/full_loop_runner.clj explicit-failure-kind
-via ["futon2.aif.full-loop-runner/refresh-record"]</title><rect x='914' y='2736' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='918' y='2746' font-size='8.5' fill='#1f3b39'>3. r9-failure-classifier  ·7b</text>
+via ["futon2.aif.full-loop-runner/refresh-record"]</title><rect x='914' y='2753' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='918' y='2763' font-size='8.5' fill='#1f3b39'>3. r9-failure-classifier  ·7b</text>
 <g><title>r2-judge-observation — futon2/scripts/futon2/report/war_machine.clj judge
-via ["futon2.report.war-machine/generate-war-machine"]</title><rect x='914' y='2753' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='918' y='2763' font-size='8.5' fill='#1f3b39'>4. r2-judge-observation  ·5</text>
-<text x='1078' y='2763' font-size='7.5' fill='#6b5a2a'>when (or ... after (:judge-fn opts))</text>
-<g><title>r2-tick-observe — futon2/src/futon2/aif/observation.clj observe</title><rect x='1092' y='2770' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2780' font-size='8.5' fill='#1f3b39'>1. r2-tick-observe  ·5</text>
-<g><title>r3a-predict-observation — futon2/src/futon2/aif/belief.clj predict-observation</title><rect x='1092' y='2787' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2797' font-size='8.5' fill='#1f3b39'>2. r3a-predict-observati…  ·5</text>
-<g><title>r3a-channel-prediction-error — futon2/src/futon2/aif/free_energy.clj channel-prediction-error</title><rect x='1092' y='2804' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2814' font-size='8.5' fill='#1f3b39'>3. r3a-channel-predictio…  ·5</text>
-<g><title>r3a-prediction-error — futon2/src/futon2/aif/free_energy.clj compute-prediction-error</title><rect x='1270' y='2821' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1274' y='2831' font-size='8.5' fill='#1f3b39'>1. r3a-prediction-error  ·5</text>
+via ["futon2.report.war-machine/generate-war-machine"]</title><rect x='914' y='2770' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='918' y='2780' font-size='8.5' fill='#1f3b39'>4. r2-judge-observation  ·5</text>
+<text x='1078' y='2780' font-size='7.5' fill='#6b5a2a'>when (or ... after (:judge-fn opts))</text>
+<g><title>r2-tick-observe — futon2/src/futon2/aif/observation.clj observe</title><rect x='1092' y='2787' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2797' font-size='8.5' fill='#1f3b39'>1. r2-tick-observe  ·5</text>
+<g><title>r3a-predict-observation — futon2/src/futon2/aif/belief.clj predict-observation</title><rect x='1092' y='2804' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2814' font-size='8.5' fill='#1f3b39'>2. r3a-predict-observati…  ·5</text>
+<g><title>r3a-channel-prediction-error — futon2/src/futon2/aif/free_energy.clj channel-prediction-error</title><rect x='1092' y='2821' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2831' font-size='8.5' fill='#1f3b39'>3. r3a-channel-predictio…  ·5</text>
+<g><title>r3a-prediction-error — futon2/src/futon2/aif/free_energy.clj compute-prediction-error</title><rect x='1270' y='2838' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1274' y='2848' font-size='8.5' fill='#1f3b39'>1. r3a-prediction-error  ·5</text>
+<g><title>r7-weighted-error — futon2/src/futon2/aif/precision.clj weighted-error</title><rect x='1092' y='2855' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2865' font-size='8.5' fill='#1f3b39'>4. r7-weighted-error  ·5</text>
+<g><title>r3-aggregate-driver — futon2/src/futon2/aif/belief.clj r3d-aggregate-driver</title><rect x='1092' y='2872' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2882' font-size='8.5' fill='#1f3b39'>5. r3-aggregate-driver  ·5</text>
 <g><title>r9-decision — futon2/scripts/futon2/report/war_machine.clj cascade-decision-admitted
-via ["futon2.report.war-machine/select-and-record-cascade!" "futon2.report.war-machine/cascade-decision"]</title><rect x='1092' y='2838' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2848' font-size='8.5' fill='#1f3b39'>8. r9-decision  ·7a</text>
+via ["futon2.report.war-machine/select-and-record-cascade!" "futon2.report.war-machine/cascade-decision"]</title><rect x='1092' y='2889' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='2899' font-size='8.5' fill='#1f3b39'>10. r9-decision  ·7a</text>
 <g><title>gate-refuse — futon2/src/futon2/aif/decision_gate.clj refuse!
-via ["futon2.aif.decision-gate/emit!" "futon2.aif.decision-gate/check-abstention!"]</title><rect x='1270' y='2855' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1274' y='2865' font-size='8.5' fill='#1f3b39'>1. gate-refuse  ·7b</text>
-<text x='1434' y='2865' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) then</text>
-<g><title>r9-classify-target — futon2/src/futon2/aif/focus_receipt.clj classify-target</title><rect x='1270' y='2872' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1274' y='2882' font-size='8.5' fill='#1f3b39'>3. r9-classify-target  ·7a</text>
-<text x='1434' y='2882' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) else</text>
-<g><title>r9-embedding-neighbour — futon2/src/futon2/aif/focus_receipt.clj embedding-neighbour</title><rect x='1448' y='2889' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1452' y='2899' font-size='8.5' fill='#1f3b39'>1. r9-embedding-neighbour  ·7a</text>
-<text x='1612' y='2899' font-size='7.5' fill='#6b5a2a'>when (if (:row a)) else</text>
-<g><title>r9-class-model — futon2/scripts/futon2/report/war_machine.clj class-observation-model</title><rect x='1270' y='2906' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1274' y='2916' font-size='8.5' fill='#1f3b39'>4. r9-class-model  ·7a</text>
-<text x='1434' y='2916' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) else</text>
-<g><title>selection-candidate-derivations — futon2/src/futon2/aif/candidate_derivations.clj entry
-via ["futon2.aif.candidate-derivations/derivations"]</title><rect x='1270' y='2923' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1274' y='2933' font-size='8.5' fill='#1f3b39'>8. selection-candidate-d…  ·7a</text>
+via ["futon2.aif.decision-gate/emit!" "futon2.aif.decision-gate/check-abstention!"]</title><rect x='1270' y='2906' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1274' y='2916' font-size='8.5' fill='#1f3b39'>1. gate-refuse  ·7b</text>
+<text x='1434' y='2916' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) then</text>
+<g><title>r9-classify-target — futon2/src/futon2/aif/focus_receipt.clj classify-target</title><rect x='1270' y='2923' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1274' y='2933' font-size='8.5' fill='#1f3b39'>3. r9-classify-target  ·7a</text>
 <text x='1434' y='2933' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) else</text>
+<g><title>r9-embedding-neighbour — futon2/src/futon2/aif/focus_receipt.clj embedding-neighbour</title><rect x='1448' y='2940' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1452' y='2950' font-size='8.5' fill='#1f3b39'>1. r9-embedding-neighbour  ·7a</text>
+<text x='1612' y='2950' font-size='7.5' fill='#6b5a2a'>when (if (:row a)) else</text>
+<g><title>r9-class-model — futon2/scripts/futon2/report/war_machine.clj class-observation-model</title><rect x='1270' y='2957' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1274' y='2967' font-size='8.5' fill='#1f3b39'>4. r9-class-model  ·7a</text>
+<text x='1434' y='2967' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) else</text>
+<g><title>selection-candidate-derivations — futon2/src/futon2/aif/candidate_derivations.clj entry
+via ["futon2.aif.candidate-derivations/derivations"]</title><rect x='1270' y='2974' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1274' y='2984' font-size='8.5' fill='#1f3b39'>8. selection-candidate-d…  ·7a</text>
+<text x='1434' y='2984' font-size='7.5' fill='#6b5a2a'>when (if (empty? problems)) else</text>
 <g><title>r7-fold — futon2/src/futon2/aif/enactment_habit.clj fold
-via ["futon2.aif.enactment-fold-source/fold-from-flights"]</title><rect x='1092' y='2940' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2950' font-size='8.5' fill='#1f3b39'>9. r7-fold  ·9</text>
-<text x='1256' y='2950' font-size='7.5' fill='#6b5a2a'>when (or ... after (:enactment-fold judge-opts))</text>
+via ["futon2.aif.enactment-fold-source/fold-from-flights"]</title><rect x='1092' y='2991' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='3001' font-size='8.5' fill='#1f3b39'>11. r7-fold  ·9</text>
+<text x='1256' y='3001' font-size='7.5' fill='#6b5a2a'>when (or ... after (:enactment-fold judge-opts))</text>
 <g><title>r7-fold-source — futon2/src/futon2/aif/enactment_fold_source.clj increment-receipts
-via ["futon2.aif.enactment-fold-source/fold-from-flights"]</title><rect x='1092' y='2957' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='1096' y='2967' font-size='8.5' fill='#1f3b39'>10. r7-fold-source  ·9</text>
-<text x='1256' y='2967' font-size='7.5' fill='#6b5a2a'>when (or ... after (:enactment-fold judge-opts))</text>
+via ["futon2.aif.enactment-fold-source/fold-from-flights"]</title><rect x='1092' y='3008' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='1096' y='3018' font-size='8.5' fill='#1f3b39'>12. r7-fold-source  ·9</text>
+<text x='1256' y='3018' font-size='7.5' fill='#6b5a2a'>when (or ... after (:enactment-fold judge-opts))</text>
 <g><title>r7-fold-call — futon2/scripts/futon2/report/war_machine.clj judge
-via ["futon2.report.war-machine/generate-war-machine"]</title><rect x='914' y='2974' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='918' y='2984' font-size='8.5' fill='#1f3b39'>5. r7-fold-call  ·9</text>
-<text x='1078' y='2984' font-size='7.5' fill='#6b5a2a'>when (or ... after (:judge-fn opts))</text>
-<g><title>r9-judge-refusal-read — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal</title><rect x='914' y='2991' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='3001' font-size='8.5' fill='#1f3b39'>6. r9-judge-refusal-read  ·7b</text>
-<g><title>gate-refusal-read — futon2/src/futon2/aif/full_loop_runner.clj gate-refusal</title><rect x='914' y='3008' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='3018' font-size='8.5' fill='#1f3b39'>7. gate-refusal-read  ·7b</text>
-<text x='1078' y='3018' font-size='7.5' fill='#6b5a2a'>when (when-not jr)</text>
-<g><title>r9-judge-refusal — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal-sorry</title><rect x='914' y='3025' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='3035' font-size='8.5' fill='#1f3b39'>8. r9-judge-refusal  ·7b</text>
-<text x='1078' y='3035' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) then</text>
-<g><title>r9-judge-refusal-abstention — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal-abstention</title><rect x='914' y='3042' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='3052' font-size='8.5' fill='#1f3b39'>9. r9-judge-refusal-abst…  ·7b</text>
-<text x='1078' y='3052' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) then</text>
-<g><title>r9-phase-kind — futon2/src/futon2/aif/full_loop_runner.clj phase-kind-failure</title><rect x='914' y='3059' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='918' y='3069' font-size='8.5' fill='#1f3b39'>10. r9-phase-kind  ·7b</text>
-<text x='1078' y='3069' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) else</text>
+via ["futon2.report.war-machine/generate-war-machine"]</title><rect x='914' y='3025' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='918' y='3035' font-size='8.5' fill='#1f3b39'>5. r7-fold-call  ·9</text>
+<text x='1078' y='3035' font-size='7.5' fill='#6b5a2a'>when (or ... after (:judge-fn opts))</text>
+<g><title>r9-judge-refusal-read — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal</title><rect x='914' y='3042' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='3052' font-size='8.5' fill='#1f3b39'>6. r9-judge-refusal-read  ·7b</text>
+<g><title>gate-refusal-read — futon2/src/futon2/aif/full_loop_runner.clj gate-refusal</title><rect x='914' y='3059' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='3069' font-size='8.5' fill='#1f3b39'>7. gate-refusal-read  ·7b</text>
+<text x='1078' y='3069' font-size='7.5' fill='#6b5a2a'>when (when-not jr)</text>
+<g><title>r9-judge-refusal — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal-sorry</title><rect x='914' y='3076' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='3086' font-size='8.5' fill='#1f3b39'>8. r9-judge-refusal  ·7b</text>
+<text x='1078' y='3086' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) then</text>
+<g><title>r9-judge-refusal-abstention — futon2/src/futon2/aif/full_loop_runner.clj judge-refusal-abstention</title><rect x='914' y='3093' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='3103' font-size='8.5' fill='#1f3b39'>9. r9-judge-refusal-abst…  ·7b</text>
+<text x='1078' y='3103' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) then</text>
+<g><title>r9-phase-kind — futon2/src/futon2/aif/full_loop_runner.clj phase-kind-failure</title><rect x='914' y='3110' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='918' y='3120' font-size='8.5' fill='#1f3b39'>10. r9-phase-kind  ·7b</text>
+<text x='1078' y='3120' font-size='7.5' fill='#6b5a2a'>when (if-let [r (or jr gr)]) else</text>
 <g><title>run-record-publication — futon2/src/futon2/aif/full_loop_runner.clj persist-run-record!
-via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='3076' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='740' y='3086' font-size='8.5' fill='#1f3b39'>4. run-record-publication  ·7b</text>
-<text x='900' y='3086' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
+via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='3127' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='740' y='3137' font-size='8.5' fill='#1f3b39'>4. run-record-publication  ·7b</text>
+<text x='900' y='3137' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
 <g><title>r9-abstention-carrier — futon2/src/futon2/aif/full_loop_runner.clj persist-run-record!
-via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='3093' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='740' y='3103' font-size='8.5' fill='#1f3b39'>5. r9-abstention-carrier  ·7b</text>
-<text x='900' y='3103' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
-<g><title>flight-judge-opts — futon2/src/futon2/aif/flight.clj judge-opts</title><rect x='380' y='3110' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3120' font-size='8.5' fill='#1f3b39'>6. flight-judge-opts  ·10</text>
-<text x='544' y='3120' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
+via ["futon3c.wm.r10-click-adapter/commissioned-click!" "futon3c.wm.runner-service/click!" "futon3c.wm.runner-service/run-click!" "futon2.aif.full-loop-runner/run-opportunity!"]</title><rect x='736' y='3144' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='740' y='3154' font-size='8.5' fill='#1f3b39'>5. r9-abstention-carrier  ·7b</text>
+<text x='900' y='3154' font-size='7.5' fill='#6b5a2a'>when (if commissioned?) then</text>
+<g><title>flight-judge-opts — futon2/src/futon2/aif/flight.clj judge-opts</title><rect x='380' y='3161' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3171' font-size='8.5' fill='#1f3b39'>6. flight-judge-opts  ·10</text>
+<text x='544' y='3171' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
 <g><title>r5-flight-call — futon2/src/futon2/aif/flight_runner.clj enact-fn
-via [[:handoff :enact-fn "futon2/src/futon2/aif/flight_driver.clj:247"]]</title><rect x='380' y='3127' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3137' font-size='8.5' fill='#1f3b39'>7. r5-flight-call  ·8</text>
-<text x='544' y='3137' font-size='7.5' fill='#6b5a2a'>when (when enact-fn)</text>
+via [[:handoff :enact-fn "futon2/src/futon2/aif/flight_driver.clj:247"]]</title><rect x='380' y='3178' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3188' font-size='8.5' fill='#1f3b39'>7. r5-flight-call  ·8</text>
+<text x='544' y='3188' font-size='7.5' fill='#6b5a2a'>when (when enact-fn)</text>
 <g><title>c8-latest — futon2/src/futon2/aif/observation_checks.clj fetch-latest-for
-via ["futon2.aif.observation-checks/checks" "futon2.aif.observation-checks/check-registered-run" "futon2.aif.observation-checks/*registry-latest*" "futon2.aif.observation-checks/fetch-latest" "futon2.aif.observation-checks/fetch-latest-for-namespace"]</title><rect x='558' y='3144' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='3154' font-size='8.5' fill='#1f3b39'>1. c8-latest  ·7a</text>
-<text x='722' y='3154' font-size='7.5' fill='#6b5a2a'>when (if (contains? m :config)) else</text>
-<g><title>r5-grain-gate — futon2/src/futon2/aif/grain_gate.clj grain-gate</title><rect x='558' y='3161' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='3171' font-size='8.5' fill='#1f3b39'>3. r5-grain-gate  ·8</text>
-<text x='722' y='3171' font-size='7.5' fill='#6b5a2a'>when (if (or (:failed plan) (:declined plan))) else</text>
-<g><title>r10-observe-publication — futon2/src/futon2/aif/flight_runner.clj observe-publication-fn</title><rect x='558' y='3178' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='3188' font-size='8.5' fill='#1f3b39'>4. r10-observe-publicati…  ·9</text>
-<text x='722' y='3188' font-size='7.5' fill='#6b5a2a'>when (or ... after publication-observation)</text>
+via ["futon2.aif.observation-checks/checks" "futon2.aif.observation-checks/check-registered-run" "futon2.aif.observation-checks/*registry-latest*" "futon2.aif.observation-checks/fetch-latest" "futon2.aif.observation-checks/fetch-latest-for-namespace"]</title><rect x='558' y='3195' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='3205' font-size='8.5' fill='#1f3b39'>1. c8-latest  ·7a</text>
+<text x='722' y='3205' font-size='7.5' fill='#6b5a2a'>when (if (contains? m :config)) else</text>
+<g><title>r5-grain-gate — futon2/src/futon2/aif/grain_gate.clj grain-gate</title><rect x='558' y='3212' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='3222' font-size='8.5' fill='#1f3b39'>3. r5-grain-gate  ·8</text>
+<text x='722' y='3222' font-size='7.5' fill='#6b5a2a'>when (if (or (:failed plan) (:declined plan))) else</text>
+<g><title>r10-observe-publication — futon2/src/futon2/aif/flight_runner.clj observe-publication-fn</title><rect x='558' y='3229' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='3239' font-size='8.5' fill='#1f3b39'>4. r10-observe-publicati…  ·9</text>
+<text x='722' y='3239' font-size='7.5' fill='#6b5a2a'>when (or ... after publication-observation)</text>
 <g><title>r0-enact-step — futon2/src/futon2/aif/flight_runner.clj enact-fn
-via [[:handoff :enact-fn "futon2/src/futon2/aif/flight_driver.clj:247"]]</title><rect x='380' y='3195' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3205' font-size='8.5' fill='#1f3b39'>8. r0-enact-step  ·8</text>
-<text x='544' y='3205' font-size='7.5' fill='#6b5a2a'>when (when enact-fn)</text>
+via [[:handoff :enact-fn "futon2/src/futon2/aif/flight_driver.clj:247"]]</title><rect x='380' y='3246' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3256' font-size='8.5' fill='#1f3b39'>8. r0-enact-step  ·8</text>
+<text x='544' y='3256' font-size='7.5' fill='#6b5a2a'>when (when enact-fn)</text>
 <g><title>r7-flight-call — futon2/src/futon2/aif/flight_runner.clj wc-verdict-fn
-via [[:handoff :wc-fn "futon2/src/futon2/aif/flight_driver.clj:248"]]</title><rect x='380' y='3212' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3222' font-size='8.5' fill='#1f3b39'>9. r7-flight-call  ·9</text>
-<text x='544' y='3222' font-size='7.5' fill='#6b5a2a'>when (when (and wc-fn (:enactment enacted)))</text>
-<g><title>r7-increment — futon2/src/futon2/aif/enactment_habit.clj increment</title><rect x='558' y='3229' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='562' y='3239' font-size='8.5' fill='#1f3b39'>1. r7-increment  ·9</text>
+via [[:handoff :wc-fn "futon2/src/futon2/aif/flight_driver.clj:248"]]</title><rect x='380' y='3263' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3273' font-size='8.5' fill='#1f3b39'>9. r7-flight-call  ·9</text>
+<text x='544' y='3273' font-size='7.5' fill='#6b5a2a'>when (when (and wc-fn (:enactment enacted)))</text>
+<g><title>r7-increment — futon2/src/futon2/aif/enactment_habit.clj increment</title><rect x='558' y='3280' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='562' y='3290' font-size='8.5' fill='#1f3b39'>1. r7-increment  ·9</text>
 <g><title>wc-checker
-siteless (futon3c holes/labs/M-futon-seams/exemplar/proof2a_check.clj); wc-verdict-fn runs it as a bb subprocess (flight_runner.clj:915-922, :checker opt; the map's :traces hop r7-flight-call -&gt; wc-checker)</title><rect x='558' y='3246' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
-<text x='562' y='3256' font-size='8.5' fill='#1f3b39'>2. wc-checker  ·8</text>
-<g><title>flight-record-click — futon2/src/futon2/aif/flight.clj record-click</title><rect x='380' y='3263' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3273' font-size='8.5' fill='#1f3b39'>10. flight-record-click  ·10</text>
-<text x='544' y='3273' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
-<g><title>r3-flight-ask — futon2/src/futon2/aif/flight_runner.clj agency-answer-fn</title><rect x='202' y='3280' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='206' y='3290' font-size='8.5' fill='#1f3b39'>3. r3-flight-ask  ·4</text>
-<text x='366' y='3290' font-size='7.5' fill='#6b5a2a'>when (or ... after answer-fn)</text>
-<g><title>r3-prompt — futon2/src/futon2/aif/want_interpretation.clj prompt</title><rect x='380' y='3297' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
-<text x='384' y='3307' font-size='8.5' fill='#1f3b39'>2. r3-prompt  ·4</text>
-<text x='544' y='3307' font-size='7.5' fill='#6b5a2a'>when (cond library-root)</text>
-<g><title>loop-entry — futon2/scripts/wm_scheduled_run.clj -main</title><rect x='24' y='3314' width='158' height='13' rx='3' fill='#f7fafa' stroke='#1f3b39' stroke-width='2'/></g>
-<text x='28' y='3324' font-size='8.5' fill='#1f3b39'>ROOT · loop-entry  ·1</text>
-<text x='24' y='3355' font-size='11' font-weight='700' fill='#1f3b39'>Islands: components no box calls (6)</text>
-<text x='36' y='3371' font-size='10' fill='#3a4a48'>r1-target-field — futon2.aif.target-field is required by no production namespace (only its tests)</text>
-<text x='36' y='3385' font-size='10' fill='#3a4a48'>r1-outer-cascade — not built: its intended site has no code</text>
-<text x='36' y='3399' font-size='10' fill='#3a4a48'>r9-finding-cause-read — called only by its test (failure_cause_record_test)</text>
-<text x='36' y='3413' font-size='10' fill='#3a4a48'>r8-overlap — futon2.aif.target-field is required by no production namespace (only its tests)</text>
-<text x='36' y='3427' font-size='10' fill='#3a4a48'>eligibility — futon2.aif.target-field is required by no production namespace (only its tests)</text>
-<text x='36' y='3441' font-size='10' fill='#3a4a48'>r11-warrants — siteless</text>
-<text x='24' y='3469' font-size='11' font-weight='700' fill='#b25a00'>Lane table vs call order: 13 disagreements (the panels above still use the hand-kept table)</text>
-<text x='36' y='3485' font-size='10' fill='#3a4a48'>c8-entry: panel 7a Selection, decision, registry, but its first direct caller flight-click-wants runs in 4 Ask step (interpretation)</text>
-<text x='36' y='3499' font-size='10' fill='#3a4a48'>dispatch: panel 2 Dispatch, clock-in, but its first direct caller r3-flight-ask runs in 4 Ask step (interpretation)</text>
-<text x='36' y='3513' font-size='10' fill='#3a4a48'>r2-judge-observation: panel 5 Construction, order, but its first direct caller loop-entry runs in 1 Loop entry, target field</text>
-<text x='36' y='3527' font-size='10' fill='#3a4a48'>r4-coapply: panel 5 Construction, order, but its first direct caller r4-kernel runs in 6 Rates (A)</text>
-<text x='36' y='3541' font-size='10' fill='#3a4a48'>r4-order-use: panel 5 Construction, order, but its first direct caller r4-kernel runs in 6 Rates (A)</text>
-<text x='36' y='3555' font-size='10' fill='#3a4a48'>r6-cascade-lane: panel 6 Rates (A), but its first direct caller construction-construct runs in 5 Construction, order</text>
-<text x='36' y='3569' font-size='10' fill='#3a4a48'>r7-fold-call: panel 9 Habit (E), publish, but its first direct caller loop-entry runs in 1 Loop entry, target field</text>
-<text x='36' y='3583' font-size='10' fill='#3a4a48'>r9-abstention-carrier: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
-<text x='36' y='3597' font-size='10' fill='#3a4a48'>r9-close-cause: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
-<text x='36' y='3611' font-size='10' fill='#3a4a48'>r9-failure-classifier: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
-<text x='36' y='3625' font-size='10' fill='#3a4a48'>r9-finding-store: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
-<text x='36' y='3639' font-size='10' fill='#3a4a48'>run-record-publication: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
-<text x='36' y='3653' font-size='10' fill='#3a4a48'>wc-checker: panel 8 Grain gate, enactment, W_c, but its first direct caller r7-flight-call runs in 9 Habit (E), publish</text>
+siteless (futon3c holes/labs/M-futon-seams/exemplar/proof2a_check.clj); wc-verdict-fn runs it as a bb subprocess (flight_runner.clj:915-922, :checker opt; the map's :traces hop r7-flight-call -&gt; wc-checker)</title><rect x='558' y='3297' width='158' height='13' rx='3' fill='#fdf1e8' stroke='#d48700' stroke-width='0.8'/></g>
+<text x='562' y='3307' font-size='8.5' fill='#1f3b39'>2. wc-checker  ·8</text>
+<g><title>flight-record-click — futon2/src/futon2/aif/flight.clj record-click</title><rect x='380' y='3314' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3324' font-size='8.5' fill='#1f3b39'>10. flight-record-click  ·10</text>
+<text x='544' y='3324' font-size='7.5' fill='#6b5a2a'>when (if (and (seq questions) (empty? (:wants wants)))) else</text>
+<g><title>r3-flight-ask — futon2/src/futon2/aif/flight_runner.clj agency-answer-fn</title><rect x='202' y='3331' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='206' y='3341' font-size='8.5' fill='#1f3b39'>3. r3-flight-ask  ·4</text>
+<text x='366' y='3341' font-size='7.5' fill='#6b5a2a'>when (or ... after answer-fn)</text>
+<g><title>r3-prompt — futon2/src/futon2/aif/want_interpretation.clj prompt</title><rect x='380' y='3348' width='158' height='13' rx='3' fill='#f7fafa' stroke='#9fb3b1' stroke-width='0.8'/></g>
+<text x='384' y='3358' font-size='8.5' fill='#1f3b39'>2. r3-prompt  ·4</text>
+<text x='544' y='3358' font-size='7.5' fill='#6b5a2a'>when (cond library-root)</text>
+<g><title>loop-entry — futon2/scripts/wm_scheduled_run.clj -main</title><rect x='24' y='3365' width='158' height='13' rx='3' fill='#f7fafa' stroke='#1f3b39' stroke-width='2'/></g>
+<text x='28' y='3375' font-size='8.5' fill='#1f3b39'>ROOT · loop-entry  ·1</text>
+<text x='24' y='3406' font-size='11' font-weight='700' fill='#1f3b39'>Islands: components no box calls (6)</text>
+<text x='36' y='3422' font-size='10' fill='#3a4a48'>r1-target-field — futon2.aif.target-field is required by no production namespace (only its tests)</text>
+<text x='36' y='3436' font-size='10' fill='#3a4a48'>r1-outer-cascade — not built: its intended site has no code</text>
+<text x='36' y='3450' font-size='10' fill='#3a4a48'>r9-finding-cause-read — called only by its test (failure_cause_record_test)</text>
+<text x='36' y='3464' font-size='10' fill='#3a4a48'>r8-overlap — futon2.aif.target-field is required by no production namespace (only its tests)</text>
+<text x='36' y='3478' font-size='10' fill='#3a4a48'>eligibility — futon2.aif.target-field is required by no production namespace (only its tests)</text>
+<text x='36' y='3492' font-size='10' fill='#3a4a48'>r11-warrants — siteless</text>
+<text x='24' y='3520' font-size='11' font-weight='700' fill='#b25a00'>Lane table vs call order: 13 disagreements (the panels above still use the hand-kept table)</text>
+<text x='36' y='3536' font-size='10' fill='#3a4a48'>c8-entry: panel 7a Selection, decision, registry, but its first direct caller flight-click-wants runs in 4 Ask step (interpretation)</text>
+<text x='36' y='3550' font-size='10' fill='#3a4a48'>dispatch: panel 2 Dispatch, clock-in, but its first direct caller r3-flight-ask runs in 4 Ask step (interpretation)</text>
+<text x='36' y='3564' font-size='10' fill='#3a4a48'>r2-judge-observation: panel 5 Construction, order, but its first direct caller loop-entry runs in 1 Loop entry, target field</text>
+<text x='36' y='3578' font-size='10' fill='#3a4a48'>r4-coapply: panel 5 Construction, order, but its first direct caller r4-kernel runs in 6 Rates (A)</text>
+<text x='36' y='3592' font-size='10' fill='#3a4a48'>r4-order-use: panel 5 Construction, order, but its first direct caller r4-kernel runs in 6 Rates (A)</text>
+<text x='36' y='3606' font-size='10' fill='#3a4a48'>r6-cascade-lane: panel 6 Rates (A), but its first direct caller construction-construct runs in 5 Construction, order</text>
+<text x='36' y='3620' font-size='10' fill='#3a4a48'>r7-fold-call: panel 9 Habit (E), publish, but its first direct caller loop-entry runs in 1 Loop entry, target field</text>
+<text x='36' y='3634' font-size='10' fill='#3a4a48'>r9-abstention-carrier: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
+<text x='36' y='3648' font-size='10' fill='#3a4a48'>r9-close-cause: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
+<text x='36' y='3662' font-size='10' fill='#3a4a48'>r9-failure-classifier: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
+<text x='36' y='3676' font-size='10' fill='#3a4a48'>r9-finding-store: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
+<text x='36' y='3690' font-size='10' fill='#3a4a48'>run-record-publication: panel 7b Selection: refusals, failure record, but its first direct caller click-start runs in 10 Click, flight record</text>
+<text x='36' y='3704' font-size='10' fill='#3a4a48'>wc-checker: panel 8 Grain gate, enactment, W_c, but its first direct caller r7-flight-call runs in 9 Habit (E), publish</text>
 </svg>
