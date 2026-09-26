@@ -3,7 +3,8 @@
   callee box, and only when (a) the call exists in the caller's :var scope, (b) the
   nth argument comes from what :from says (through let, loop, {:keys} destructuring,
   return positions), and (c) the callee's nth parameter is a plain symbol used in
-  its body. Each has a failing counterpart here, and each failure leaves the
+  its body (or a supplied field destructured into a used local). Each has a
+  failing counterpart here, and each failure leaves the
   declared entries :declaration-without-occurrence with :passes-failed naming why.
   The shapes are reduced from the seven positional hops of WM-PROVER-POSITIONAL-D."
   (:require [clojure.java.io :as io]
@@ -189,8 +190,8 @@
     (testing "(c) fails: the call has more arguments than any arity"
       (is (= :passes-arity-mismatch
              (refused "(defn judge [scan] (let [o (obs/observe scan)] (h o 1 2)))" "(defn h [o x] (count o))" p))))
-    (testing "(c) fails: the parameter is destructured (declare the destructured keys instead)"
-      (is (= :param-not-a-plain-symbol (refused caller "(defn h [{:keys [a]}] a)" p))))
+    (testing "(c) fails: the destructured parameter does not bind the supplied field"
+      (is (= :parameter-field-not-bound (refused caller "(defn h [{:keys [a]}] a)" p))))
     (testing "the arity matching the call's argument count is the one checked"
       (is (accepted? "(defn judge [scan] (let [o (obs/observe scan)] (h o 1)))"
                      "(defn h ([o] 1) ([o x] (count o)))" p)))
