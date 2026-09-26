@@ -30,6 +30,11 @@
 ;;    interpretation admitted, a candidate constructed, selected and enacted, W_c passing,
 ;;    the publication observed. A condition text NOT in the table is :alternative and is
 ;;    listed under :undecided, so a new org layer cannot silently promote a wire.
+;; 2b. A call may carry :other-paths (ORG-PATHS-I). Every path is an edge, so a box reached
+;;    by several branches is reached under the DISJUNCTION of their condition sets, and a
+;;    call into a refusal box (decision_gate refuse!) is a :failure whatever arm carries it.
+;;    The output's :method lists the wires whose class differs from the first-path-only
+;;    method with both path sets. WM_COVERAGE_FIRST_PATH_ONLY=1 selects the older method.
 ;; 3. A path's condition set is its non-:success conditions. Per box, the minimal sets
 ;;    over all simple paths from a root (fixpoint).
 ;; 4. A wire's ends combine: the union of one writer set and one reader set, refused when
@@ -80,7 +85,40 @@
         [["(defmethod source-wants :a-exits)" :success "the driver starts every flight with :kind :a-exits (flight_driver.clj flight-for)"]
          ["(if (empty? problems)) then" :failure "no assembled problems: the decision is the abstained one (war_machine.clj:6280, decision-gate/emit! :status :abstained)"]
          ["(if (empty? problems)) else" :success "problems were assembled: the joint cascade decision runs (war_machine.clj:6284 on)"]
-         ["(if commissioned?) then" :alternative "commissioned? is (true? (:r10-commissioned payload)) (http.clj:8978); nothing in futon2 sets :r10-commissioned, so a flight's click takes runner-service/click!, not commissioned-click!"]
+         ["(if commissioned?) then" :alternative "commissioned? is (true? (:r10-commissioned payload)) (http.clj:8978): R10 operator-authorised plumbing outside PROOF-2a (COMMISSION-D). The flight must not set the key: the commissioned branch calls click! with only {:config :issuer-provenance}, so the flight's target and wants would never reach the runner. A flight's click is ordinary, so it does not take this branch"]
+         ["(call of a refusal box: decision_gate refuse!)" :failure "a call into decision_gate refuse!: the gate's refusal, on every path that reaches it (see refusal-boxes)"]
+         ["(if commissioned?) else" :success "the ordinary click (runner-service/click!): the flight's own click, which does not carry :r10-commissioned (COMMISSION-D). It reaches the same click! -> run-opportunity! as the commissioned branch, with no commissioning condition"]
+         ["(and ... after (nil? decision))" :failure "no decision recorded: the abstention carrier's arm for a tick with no selection decision (full_loop_runner.clj abstention-carrier)"]
+         ["(cond (and (nil? decision) judge-refusal))" :failure "the judge refused the decision typed: the tick abstains with that kind (full_loop_runner.clj abstention-carrier)"]
+         ["(cond (cascade-decision? decision))" :success "decision-gate/emit!'s cascade arm: the flight's decision is an admissible cascade decision (an abstention takes the arm before it)"]
+         ["(cond (and (map? decision) (get-in decision [:action :type])))" :failure "decision-gate/emit!'s flat-action arm: it refuses :flat-action"]
+         ["(when (> (- best (get eligible-marginals chosen-pattern 0.0)) mass-tolerance))" :failure "decision-gate check-cascade-decision!: the body is refuse! (the chosen pattern does not carry the most mass)"]
+         ["(when (> (abs (- (double chosen-mass) (double marginal))) mass-tolerance))" :failure "decision-gate: the body is refuse! (recorded chosen mass differs from the marginal)"]
+         ["(when (> (abs (- total 1.0)) mass-tolerance))" :failure "decision-gate: the body is refuse! :posterior-not-normalised"]
+         ["(when (and (seq (:precedence candidate)) (empty? (:interpretation-receipts candidate))))" :failure "decision-gate check-candidate-receipts!: the body is refuse!"]
+         ["(when (empty? marginals))" :failure "decision-gate: the body is refuse! :no-acting-candidate"]
+         ["(when (nil? chosen-pattern))" :failure "decision-gate: the body is refuse! :chosen-action-is-not-an-action"]
+         ["(when (seq refusals))" :failure "a refusals-present branch: the tick carries refusals"]
+         ["(when-not (= (set (keys posterior)) (set (map :id candidates))))" :failure "decision-gate check-queue!: the body is refuse! :ticket-queue-candidates-mismatch"]
+         ["(when-not (= receipt law-receipt))" :failure "decision-gate check-queue!: the body is refuse! :ticket-queue-certificate-mismatch"]
+         ["(when-not (and (= :wm/ticket-queue-selection-v1 (:schema receipt)) (seq (:entries declaration)) (= targets (:eligible-targets receipt)) (= (mapv #(...)" :failure "decision-gate check-queue!: the body is refuse! :ticket-queue-choice-invalid"]
+         ["(when-not (and (map? (:beta decision)) (contains? #{:declared :learned} status) (number? value) (pos? value)))" :failure "decision-gate check-beta!: the body is refuse!"]
+         ["(when-not (and (map? candidate) (= :cascade-candidate (:kind candidate))))" :failure "decision-gate check-candidate-receipts!: the body is refuse!"]
+         ["(when-not (and (map? posterior) (seq posterior)))" :failure "decision-gate: the body is refuse! :missing-recorded-posterior"]
+         ["(when-not (and (number? chosen-mass) (if (seq (get-in decision [:selection-certificate :ticket-queue :eligible-targets])) ;; A finite-support queue...)" :failure "decision-gate: the body is refuse! (the chosen mass is not a number or is out of the declared queue)"]
+         ["(when-not (contains? posterior (:action decision)))" :failure "decision-gate: the body is refuse! :chosen-action-not-a-candidate"]
+         ["(when-not (some? (:construction-receipt candidate)))" :failure "decision-gate check-candidate-receipts!: the body is refuse!"]
+         ["(when-not (some? (:interpretation-receipts candidate)))" :failure "decision-gate check-candidate-receipts!: the body is refuse!"]
+         ["(if (::retry %)) then" :alternative "flight_runner: an entry whose first answer failed validation is asked again; a first-time-valid answer takes the other branch"]
+         ["(if (string? locator)) else" :alternative "a command locator (observation_checks.clj:320); the other valid form is a namespace locator"]
+         ["(cond-> (nil? grain-p))" :alternative "the candidate names no grain pattern: the plan then runs the grain gate on a nil grain (flight_runner.clj), a data shape"]
+         ["(when (= :published (:outcome coverage-entry)))" :alternative "the coverage reading was published: depends on the mission text needing coverage, like (when (:coverage? cov-need))"]
+         ["(when (= :published (:outcome constraints-entry)))" :alternative "the constraints reading was published: depends on the mission text needing constraints"]
+         ["(or ... after (:repair-system-record-fn opts))" :success "a test seam absent: the production record runs"]
+         ["(or ... after (explicit-failure-kind t) (some thrower-kind (cause-chain t)))" :alternative "the failure classifier's own fallback chain, on the close-cause path (which a flight that fails takes)"]
+         ["(if (identical? historical-verification-completion-token (:historical-verification-completion-token (ex-data e)))) else" :alternative "not the historical-verification completion token: the ordinary failure record, on the close-cause path"]
+         ["(when-not (contains? @!noted-trips run-key))" :failure "tripwire: the first noting of a trip, the branch that records the trip finding"]
+         ["(or ... after (get classifications target))" :alternative "focus_receipt: the target was not classified in advance, so it is classified with the relation context; whether the flight supplies classifications is not fixed by the spike"]
          ["(cond :else)" :success "the default arm of a cond: reached when no earlier (refusal or special-case) arm fired"]
          ["(if (= :absent located)) else" :success "the locator was located"]
          ["(if (and (seq questions) (empty? (:wants wants)))) else" :success "not (questions asked and no wants): the flight has wants"]
@@ -136,7 +174,7 @@
          ["(if present?) then" :alternative "prior flight records are present (enactment-fold-source/fold-from-flights); the first flight has none"]
          ["(if *handling-trip?*) else" :success "not handling a trip"]
          ["(if (seq route)) then" :success "the observed route is non-empty: the branch that persists the run record (full_loop_runner.clj:678)"]
-         ["(when-not (and (sequential? refusals) (seq refusals)))" :success "no refusals"]
+         ["(when-not (and (sequential? refusals) (seq refusals)))" :failure "decision-gate check-abstention!: the body is refuse! :empty-refusals (corrected from :success in ORG-PATHS-I: the body is the refusal, on the abstention path)"]
          ["(when (:coverage? cov-need))" :alternative "the read step needs coverage: depends on the mission text"]
          ["(if-not (and (= :cascade-candidate (:kind action)) (= 1 (count domains)) (seq want) (map? q0) (seq q0) (model/normalized-exact? q0) (every? set? ...) else" :success "the action is a well-formed cascade candidate over one domain with a normalised q0"]]))
 
@@ -147,13 +185,33 @@
     (boolean (some (fn [[b p]] (some (fn [[b2 p2]] (and (= b b2) (not= p p2))) ps)) ps))))
 
 ;; ---------------------------------------------------------------------------
-;; The call graph
-(def edges
-  (vec (for [c (:calls org)]
-         {:from (:caller c) :to (:callee c)
-          :conds (vec (distinct (concat (when (:conditional c) [(:conditional c)]) (:conditions-along-path c))))
-          :nonsuccess (vec (distinct (remove #(= :success (:class (cond-class %)))
-                                             (concat (when (:conditional c) [(:conditional c)]) (:conditions-along-path c)))))})))
+;; The call graph. A call may carry :other-paths (the org layer keeps every distinct
+;; path to a callee, not the first found); each path is an edge of its own, so a box
+;; reached by two branches is reached under the DISJUNCTION of their condition sets:
+;; the reachability below keeps the minimal set per path. FIRST-PATH-ONLY (env
+;; WM_COVERAGE_FIRST_PATH_ONLY=1, or the old layer that has no :other-paths) ignores
+;; them: it is the earlier method, kept so a change of class can be printed with both.
+;; A call INTO a refusal box is a refusal whatever arm of whatever helper carries it:
+;; decision_gate refuse! is the refusal, and helper arms such as emit!'s (cond :else)
+;; fall through to it, which the text of that arm ("(cond :else)", the default arm) cannot
+;; say. Without this rule a fallthrough to :not-a-decision reads as an unconditional
+;; path and promotes the gate-refusal wire to :witness.
+(def refusal-boxes #{:gate-refuse})
+(def refusal-call-cond "(call of a refusal box: decision_gate refuse!)")
+(defn edge-of [c from to cond-1 along]
+  (let [cs (concat (when cond-1 [cond-1]) along (when (refusal-boxes to) [refusal-call-cond]))]
+    {:from from :to to
+     :conds (vec (distinct cs))
+     :nonsuccess (vec (distinct (remove #(= :success (:class (cond-class %))) cs)))}))
+(defn edges-for [use-others?]
+  (vec (for [c (:calls org)
+             e (cons (edge-of c (:caller c) (:callee c) (:conditional c) (:conditions-along-path c))
+                     (when use-others?
+                       (for [o (:other-paths c)]
+                         (edge-of o (:caller c) (:callee c) (:conditional o) (:conditions-along-path o)))))]
+         e)))
+(def edges (edges-for true))
+(def first-path-edges (edges-for false))
 (def roots (vec (:roots org)))
 (def org-nodes (into (set (mapcat (juxt :from :to) edges)) (concat roots (:unplaced org) (:tests-not-in-call-tree org))))
 (def unplaced (set (:unplaced org)))
@@ -164,7 +222,7 @@
 
 (defn reach
   "node -> {condset path}: the minimal non-success condition sets over simple paths from a root."
-  []
+  [edges]
   (loop [state (into {} (for [r roots] [r {#{} [r]}])) iter 0]
     (let [next-state
           (reduce (fn [st {:keys [from to nonsuccess]}]
@@ -181,12 +239,13 @@
       (cond (= next-state state) state
             (> iter 60) (die "reachability did not settle")
             :else (recur next-state (inc iter))))))
-(def R (reach))
+(def R (reach edges))
+(def R1 (reach first-path-edges))
 
 (def rank {:witness 0 :conditional 1 :failure-path 2})
 (defn set-class [s] (cond (empty? s) :witness (some #(= :failure (:class (cond-class %))) s) :failure-path :else :conditional))
 
-(defn end-info [box]
+(defn end-info [R box]
   (cond (= :test (box-kind box)) {:paths {#{} [:observer]} :observer? true}
         (contains? (set (:tests-not-in-call-tree org)) box) {:paths {#{} [:observer]} :observer? true}
         (not (org-nodes box)) {:why :box-not-in-org-layer}
@@ -194,8 +253,8 @@
         (empty? (get R box)) {:why :no-path-from-root}
         :else {:paths (get R box)}))
 
-(defn classify [[w r f :as wire]]
-  (let [we (end-info w) re (end-info r)]
+(defn classify [R [w r f :as wire]]
+  (let [we (end-info R w) re (end-info R r)]
     (if-let [why (or (:why we) (:why re))]
       {:wire wire :coverage :unreachable :why why :writer-end (or (:why we) :ok) :reader-end (or (:why re) :ok)}
       (let [combos (for [[ws wp] (:paths we) [rs rp] (:paths re)
@@ -209,8 +268,18 @@
               (seq (:conds best)) (assoc :conditions (vec (sort (:conds best))))
               (:observer? re) (assoc :reader-kind :test-observer))))))))
 
-(def rows (mapv classify wires))
-(def counts (assoc (into (sorted-map) (frequencies (map :coverage rows))) :wires (count rows)))
+(def first-only? (= "1" (System/getenv "WM_COVERAGE_FIRST_PATH_ONLY")))
+(def rows-first (mapv #(classify R1 %) wires))
+(def rows (if first-only? rows-first (mapv #(classify R %) wires)))
+(defn counts-of [rs] (assoc (into (sorted-map) (frequencies (map :coverage rs))) :wires (count rs)))
+;; the wires whose class changed between the first-path-only method and all paths,
+;; each with both path sets, so the change is checkable
+(def changed
+  (vec (for [[a b] (map vector rows-first rows) :when (not= (:coverage a) (:coverage b))]
+         {:wire (:wire b)
+          :first-path (select-keys a [:coverage :conditions :writer-path :reader-path :why])
+          :all-paths (select-keys b [:coverage :conditions :writer-path :reader-path :why])})))
+(def counts (counts-of rows))
 (when-not (= (count rows) (reduce + (vals (dissoc counts :wires))))
   (die "the counts do not sum to the wire count"))
 (def used (into (sorted-map) (for [t (distinct (mapcat :conds edges))] [t (cond-class t)])))
@@ -222,6 +291,7 @@
             :stale? (not= map-rev (:map-rev org))
             :stale-note "true when the org layer was generated from an older map than the ledger's: boxes added since are :box-not-in-org-layer, not map defects"}
    :counts counts
+   :method {:paths (if first-only? :first-path-only :all-paths) :first-path-counts (counts-of rows-first) :changed changed}
    :by-kind {:unreachable (into (sorted-map) (frequencies (map :why (filter #(= :unreachable (:coverage %)) rows))))
              :test-observer-readers (count (filter #(= :test-observer (:reader-kind %)) rows))}
    :conditions used

@@ -7,7 +7,10 @@
 ;; Reads the map (futon3c holes/labs/M-wm-wiring/wm-flight-wiring.edn) at
 ;; MAP-REV (default HEAD) and every site file from git: futon2 files at
 ;; FUTON2-REV (default futon2 HEAD), futon3c files at MAP-REV. Writes
-;; holes/labs/M-wm-wiring/wm-org-layer.edn.
+;; holes/labs/M-wm-wiring/wm-org-layer.edn (env WM_ORG_OUT names another output file).
+;; ORG-PATHS-I: a call carries every distinct path to its callee, not the first
+;; found: the first is the call's own :site/:via/:conditional/:conditions-along-path
+;; (unchanged), the others are :other-paths, deduplicated on :via and the conditions.
 ;;
 ;; Method (textual, rewrite-clj; nothing is evaluated):
 ;; - A box's site is a top-level def of :var in :file. Every symbol in that
@@ -189,18 +192,27 @@
   "Calls from the var NS/V (a box site) to box vars, followed through non-box
   vars up to DEPTH. A factory this var hands off (`:k (factory ...)` in its
   own form) is not followed from here: its closure runs where it is called.
-  Returns [{:callee [ns var] :loc first-loc-in-caller :via [...] :conds [...]}]."
+  Returns EVERY distinct path to each callee, not the first found:
+  [{:callee [ns var] :loc first-loc-in-caller :via [...] :conds [...]}], the
+  paths of one callee in the order the walk found them (the first is the one
+  the layer has always kept), deduplicated on :via and :conds. A callee
+  reachable through two branches of one caller (an ordinary click and a
+  commissioned one reaching the same click!) is reached under each branch's
+  conditions, and a consumer that takes the disjunction sees both."
   [ns v]
   (let [out (volatile! {})
         factories (handed-off-by ns v)]
     (letfn [(walk [cur via conds first-loc depth seen]
               (doseq [[r loc fi mc] (callees-of (first cur) (second cur))
                       :let [fl (or first-loc [loc fi]) c (conditional-of loc) conds' (cond-> conds mc (conj mc) c (conj c))]]
-                (cond (box-vars r) (vswap! out update r #(or % {:callee r :loc fl :via via :conds conds'}))
+                (cond (box-vars r) (vswap! out update r
+                                        (fn [ps] (if (some #(and (= via (:via %)) (= conds' (:conds %))) ps)
+                                                   ps
+                                                   (conj (or ps []) {:callee r :loc fl :via via :conds conds'}))))
                       (and (< depth 6) (not (seen r)) (re-find #"^futon" (first r)) (not (factories r)))
                       (walk r (conj via (str (first r) "/" (second r))) conds' fl (inc depth) (conj seen r)))))]
       (walk [ns v] [] [] nil 0 #{[ns v]}))
-    (vals @out)))
+    (vec (mapcat identity (vals @out)))))
 
 (def handoff-table
   (delay (reduce (fn [acc b]
@@ -278,15 +290,28 @@
                  ;; (calls a factory); the receiver invokes them
                  built (set (keep (comp :box second) (handoffs-in (file-index (:file s)) (get-in (file-index (:file s)) [:defs (:var s)]))))
                  order (into {} (map-indexed (fn [i cb] [cb (inc i)]) (distinct (map :callee-box ranked))))]
-           c (vals (group-by :callee-box ranked))
-           :let [c (first c) [loc fi] (:loc c)]]
+           cs (vals (group-by :callee-box ranked))
+           :let [c (first cs) [loc fi] (:loc c)
+                 ;; the other distinct paths to the same callee (same :via and
+                 ;; :conds as the kept one, or as each other, are one path)
+                 others (loop [seen #{[(:via c) (:conds c)]} out [] [x & xs] (rest cs)]
+                          (cond (nil? x) out
+                                (seen [(:via x) (:conds x)]) (recur seen out xs)
+                                :else (recur (conj seen [(:via x) (:conds x)]) (conj out x) xs)))]]
        (cond-> {:caller (:box/id b) :callee (:callee-box c)
                 :site (str (:path fi) ":" (line-of loc))
                 :order (order (:callee-box c))
                 :conditional (first (:conds c))}
          (seq (:via c)) (assoc :via (:via c))
          (built (:callee-box c)) (assoc :constructs true)
-         (< 1 (count (:conds c))) (assoc :conditions-along-path (:conds c))))
+         (< 1 (count (:conds c))) (assoc :conditions-along-path (:conds c))
+         (seq others) (assoc :other-paths
+                             (mapv (fn [x] (let [[l f] (:loc x)]
+                                             (cond-> {:site (str (:path f) ":" (line-of l))
+                                                      :conditional (first (:conds x))}
+                                               (seq (:via x)) (assoc :via (:via x))
+                                               (< 1 (count (:conds x))) (assoc :conditions-along-path (:conds x)))))
+                                   others))))
      []))))
 ;; hand-checked calls go after the caller's textual calls (their position in
 ;; the body is not a text position)
@@ -300,7 +325,7 @@
 (def component-ids (map :box/id (filter #(= :component (:box/kind %)) boxes)))
 (def roots (vec (for [id component-ids :when (and (not (callee-set id)) (some #(= id (:caller %)) calls))] id)))
 (def unplaced (vec (for [id component-ids :when (and (not (callee-set id)) (not (some #(= id (:caller %)) calls)))] id)))
-(def out-path (str f3c "/holes/labs/M-wm-wiring/wm-org-layer.edn"))
+(def out-path (or (System/getenv "WM_ORG_OUT") (str f3c "/holes/labs/M-wm-wiring/wm-org-layer.edn")))
 (spit (str out-path ".tmp")
       (with-out-str
         (println ";; GENERATED by holes/labs/M-wm-wiring/spike/wm_org_layer.bb -- do not edit; method in the script header.")
