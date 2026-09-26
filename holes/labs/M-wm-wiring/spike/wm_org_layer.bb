@@ -8,6 +8,9 @@
 ;; MAP-REV (default HEAD) and every site file from git: futon2 files at
 ;; FUTON2-REV (default futon2 HEAD), futon3c files at MAP-REV. Writes
 ;; holes/labs/M-wm-wiring/wm-org-layer.edn (env WM_ORG_OUT names another output file).
+;; wm_wiring_svg.bb runs this script for the figure's strip with WM_ORG_OUT set to a
+;; temp file, so a figure run does not rewrite the committed layer; run this script
+;; directly (no WM_ORG_OUT) to regenerate wm-org-layer.edn.
 ;; ORG-PATHS-I: a call carries every distinct path to its callee, not the first
 ;; found: the first is the call's own :site/:via/:conditional/:conditions-along-path
 ;; (unchanged), the others are :other-paths, deduplicated on :via and the conditions.
