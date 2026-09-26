@@ -29,10 +29,12 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R5-I, on F1b-join-I's 2b10ccc1: :r6-sourced-rates writes [:rates {:record :sourced-rates}], read by :r6-cascade-lane; new :r5-g-sparse-cert; 41/26/99/201 -> 42/26/100/203; :r5-g-sparse-cert joins the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 233af9f7 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-10 in the same commit as the map it describes (correcting 0b0a69b7, which reverted F1a-2b's :r9-measured-a-version box: the box and its finding restored on 233af9f7's map; :i4 unchanged). :map-sha typed absent (the map is in this commit).
+;; re-pinned at 6ff4d956 from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-11 at map 6ff4d956 (F1c-I: :r9-decision reads [:policy-prefixes {:record :token-belief-input}], the new :r9-f-prefix-supply (production-ranked) writes [:f-prefix {:record :ranked-entry}], read by the new :r8-selection-candidate; 42/27/102/210 -> 43/26/104/213; :out/policy-prefixes.token-belief-input leaves the outputs (the field is now read), :world/r9-f-prefix-supply joins the inputs (it takes the prefixes as an argument, not a declared field); both new boxes join the dead components (no test box reads :f-prefix); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha {:absent :same-commit-as-the-map},
+ :map-sha "6ff4d956",
  :futon5-sha "aeeee96",
- :counts {:inputs 42, :outputs 27, :components 102, :edges 210},
+ :counts {:inputs 43, :outputs 26, :components 104, :edges 213},
  :validate
  {:all-valid false,
   :checks
@@ -77,12 +79,14 @@
      :c8-latest
      :r2-store-locator-declines
      :r9-judge-refusal-abstention
+     :r8-selection-candidate
      :r3-prompt
      :selection-candidate-derivations
      :r3-store-locators
      :r4-order-use
      :r9-finding-store
      :r2-verifier
+     :r9-f-prefix-supply
      :r1-belief-carry
      :flight-cast
      :flight-plan
@@ -102,7 +106,6 @@
     :unspecified-outputs
     [:out/measured-a
      :out/observation.enactment-entry
-     :out/policy-prefixes.token-belief-input
      :out/rates.measured-a]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
