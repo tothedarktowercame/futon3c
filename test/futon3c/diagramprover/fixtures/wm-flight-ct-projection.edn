@@ -18,10 +18,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H11-WRITER-I: :flight-entry :returns-record :flight writes [:target {:record :flight}], read at nine boxes; 32/23/77/161 -> 31/23/77/161; :in/target@flight leaves the inputs (its nine edges now leave :flight-entry); dead components unchanged. :i4 CHANGES, by addition only: the scored facts' bypasses 36 -> 141 (field edges) and 146 -> 251 (positional), the new paths starting at the flight entry (and upstream of it the outer cascade's :chosen-target) and running through the flight's :target into the read, ask, assembly, enactment and click boxes; preferences, scored facts and the (empty) bypasses to preferences unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R2-R3a-I: boxes :r2-tick-observe, :r3a-predict-observation, :r3a-prediction-error (no fields) and :run-record-publication (writes :repair/publication, read by :r10-observe-publication); 31/23/77/161 -> 35/23/81/166; the four new boxes join the inputs as :world/*; the three field-less boxes join the dead components, :run-record-publication reaches :r10-test through the publication observation; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R2-R3a-I, E4 with :passes: :r2-judge-observation writes :tick-observation, :r3a-channel-prediction-error reads it; 35/23/81/166 -> 36/23/83/168; :world/r2-judge-observation joins the inputs; both boxes join the dead components (no test box reads :tick-observation); :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R7-I: :r3a-prediction-error writes [:error {:record :prediction-error}], read by the new :r7-weighted-error, which writes :weighted-error, read by the new :r3-aggregate-driver; :r4-kernel writes :rates, read by the new :fpi-policy-free-energy (F_pi, not live); 36/23/83/168 -> 36/23/86/171; the three new boxes join the dead components (no test box reads their fields); :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 36, :outputs 23, :components 83, :edges 168},
+ :counts {:inputs 36, :outputs 23, :components 86, :edges 171},
  :validate
  {:all-valid false,
   :checks
@@ -42,13 +43,16 @@
      :r2-store-criteria
      :r9-failure-classifier
      :r2-tick-observe
+     :r3-aggregate-driver
      :flight-driver-summary
      :flight-judge-opts
      :r3-store-criteria
+     :r7-weighted-error
      :r11-warrants
      :r3a-predict-observation
      :r3-store-locator-declines
      :r3-store-constraints-read
+     :fpi-policy-free-energy
      :r3-store-coverage
      :r2-store-coverage
      :r9-class-model

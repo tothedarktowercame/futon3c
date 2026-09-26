@@ -185,8 +185,37 @@
    ;; attributed. NEXT PROVER LIMIT: merge's literal arguments in return
    ;; position (as assoc's key-values already are). Until then no field is
    ;; declared here, and R7's (:error error-map) in weighted-error has no
-   ;; attributable writer
-   :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "compute-prediction-error"}}
+   ;; attributable writer.
+   ;; WM-NODE-R7-I: the limit is lifted (futon3c a35e5fbe, a literal
+   ;; argument of a returned merge): declared, scoped
+   :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "compute-prediction-error"}
+   :returns-record :prediction-error
+   :writes [[:error {:record :prediction-error}]]}
+  ;; WM-NODE-R7-I (WM-SUPERSET-D section 3): R3a -> R7 and R7 -> R3.
+  ;; precision/weighted-error reads the prediction-error record's :error,
+  ;; (:error error-map 0.0) (error-map aliased to :prediction-error; note
+  ;; the 0.0 default the read supplies for a missing :error, which the
+  ;; typed record's :present branch always carries), and returns (assoc
+  ;; error-map :precision ... :weighted-error ...), the R7 re-weighting.
+  ;; Its :weighted-error is declared unscoped: compute-prediction-error's
+  ;; own :weighted-error sits in the :prediction-error record (attributed
+  ;; there, undeclared), and the reader, belief/r3d-aggregate-driver, reads
+  ;; (:weighted-error %) off classify-channel-entry's verdict records, which
+  ;; copy the value from the R7 map through aggregate-member's (get err-map
+  ;; k), k drawn from [:weighted-error :precision]. So the value reaches R3
+  ;; by a copy the prover cannot follow key-for-key; the declared wire names
+  ;; the key at both ends. r3-aggregate-driver is WM-SUPERSET-D section 4's
+  ;; box (R3's packet by the discovery's rule, an edge in its later
+  ;; endpoint's packet); created here at claude-8's direction so R7 -> R3 is
+  ;; declared now, and R3's packet adds only its other boxes
+  {:box/id :r7-weighted-error :box/kind :component
+   :site {:file "futon2/src/futon2/aif/precision.clj" :var "weighted-error"}
+   :record-aliases {:prediction-error ["error-map"]}
+   :reads [[:error {:record :prediction-error}]]
+   :writes [:weighted-error]}
+  {:box/id :r3-aggregate-driver :box/kind :component
+   :site {:file "futon2/src/futon2/aif/belief.clj" :var "r3d-aggregate-driver"}
+   :reads [:weighted-error]}
   ;; WM-HANDOFF-H3-I (WM-HANDOFFS-D H3): the wants carry C, the read
   ;; criteria, from the flight into the tick. flight/click-wants (a defn)
   ;; builds {:wants :source :locators :universe} from the want source's
@@ -350,7 +379,23 @@
    ;; efe/compute-efe writes it for the non-cascade actions and
    ;; cascade_observation_scoring/rank-cascade-actions on the observation
    ;; path, both unboxed; select-action-cascades re-emits the chosen one)
-   :reads [:adjudication-rates [:want {:record :cascade-spec}]] :writes [:order-use :controller-score]}
+   :reads [:adjudication-rates [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
+  ;; WM-NODE-R7-I (E5, R7 -> R4, WM-PROVER-POSITIONAL-D E5): ON THE F_pi
+  ;; PATH, NOT LIVE (futon2 3f7a5c85: F_pi is not live; the ranked G comes
+  ;; from horizon-g-sparse*). rank-cascade-actions passes its local rates
+  ;; in a map-literal argument, (cascade-free-energy/policy-free-energy
+  ;; {... :rates rates}), whose parameter is destructured, {:keys [q0
+  ;; candidates tau observed-tokens rates] :as declared}: declared as the
+  ;; keyed field :rates (a :passes target must be a plain-symbol parameter).
+  ;; policy-free-energy hands rates positionally to candidate-free-energy
+  ;; (arg 1), which hands it to m/token-likelihood (arg 1), R4's site; those
+  ;; two hops are parameters passed on, a provenance :passes does not name
+  ;; (keyed-read, returns-of, literal-arg-key, element-of), so they stay
+  ;; undeclared and R7 -> R4 is not a single field between an R7 box and an
+  ;; R4 box
+  {:box/id :fpi-policy-free-energy :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_free_energy.clj" :var "policy-free-energy"}
+   :reads [:rates]}
   {:box/id :r4-test :row 4 :box/kind :test
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"}
    :reads [:order-use]}
@@ -1009,8 +1054,18 @@
  ;; (obs/observe ...)'s return as arg 1 of fe/channel-prediction-error,
  ;; read by :r3a-channel-prediction-error (a wrong :arg is refused,
  ;; :passes-failed :unbound-symbol, checked). One standing added (:status at
- ;; channel-prediction-error). 283 -> 284 (2 to-do, 282 standing). :kind
- ;; :to-do is the
+ ;; channel-prediction-error). 283 -> 284 (2 to-do, 282 standing).
+ ;; WM-NODE-R7-I (WM-SUPERSET-D section 3; merge literals, futon3c
+ ;; a35e5fbe): :r3a-prediction-error writes [:error {:record
+ ;; :prediction-error}] (returned merge literals), read by the new
+ ;; :r7-weighted-error ((:error error-map 0.0), alias error-map), which
+ ;; writes :weighted-error, read by the new :r3-aggregate-driver (off
+ ;; classify-channel-entry's copies). E5 (F_pi, not live): :r4-kernel
+ ;; writes :rates in its map-literal argument, read by the new
+ ;; :fpi-policy-free-energy ({:keys [... rates]}); the two positional
+ ;; hops after it have no :passes provenance. Ten standing added, all
+ ;; other records' keys at the new sites or keys newly declared. 284 -> 294
+ ;; (2 to-do, 292 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3684,4 +3739,109 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R2-R3a-I (E4): channel-prediction-error reads the channel source's own :status ((= :present (:status source))), another record's key, reported because the box was added as :passes's callee"}]}
+  "WM-NODE-R2-R3a-I (E4): channel-prediction-error reads the channel source's own :status ((= :present (:status source))), another record's key, reported because the box was added as :passes's callee"}
+ {:finding :occurrence-without-declaration,
+  :field :error,
+  :site
+  {:file "futon2/src/futon2/aif/precision.clj", :var "weighted-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: the unscoped :error at weighted-error is its docstring's (':weighted-error <- :error x :precision'); the read itself, (:error error-map 0.0), counts for [:error :prediction-error]"}
+
+ {:finding :occurrence-without-declaration,
+  :field :error,
+  :site
+  {:file "futon2/src/futon2/aif/repair_obligation.clj",
+   :var "record-system-failure!"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: record-system-failure! destructures an attempt's :error ({:keys [... error ...]}), another record's key; reported once :error is scoped somewhere on the map (the prediction-error record's), which leaves this :keys read to the unscoped field"}
+
+ {:finding :occurrence-without-declaration,
+  :field :rates,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-lane"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: cascade-lane's :rates is another record's (sourced-rates' returned {:rates ...}, cascade-lane's (:rates sourced), a test's fixture), reported because :rates became declared for E5's F_pi hop (rank-cascade-actions -> policy-free-energy)"}
+
+ {:finding :occurrence-without-declaration,
+  :field :rates,
+  :site
+  {:file "futon2/src/futon2/aif/observation_rates.clj",
+   :var "sourced-rates"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: sourced-rates's :rates is another record's (sourced-rates' returned {:rates ...}, cascade-lane's (:rates sourced), a test's fixture), reported because :rates became declared for E5's F_pi hop (rank-cascade-actions -> policy-free-energy)"}
+
+ {:finding :occurrence-without-declaration,
+  :field :rates,
+  :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: 's :rates is another record's (sourced-rates' returned {:rates ...}, cascade-lane's (:rates sourced), a test's fixture), reported because :rates became declared for E5's F_pi hop (rank-cascade-actions -> policy-free-energy)"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/belief.clj",
+   :var "r3d-aggregate-driver"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: :status at r3d-aggregate-driver is another record's key (a verdict's or refusal's :status, the rate universe), reported because the box was added"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_free_energy.clj",
+   :var "policy-free-energy"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: :status at policy-free-energy is another record's key (a verdict's or refusal's :status, the rate universe), reported because the box was added"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/precision.clj", :var "weighted-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: :status at weighted-error is another record's key (a verdict's or refusal's :status, the rate universe), reported because the box was added"}
+
+ {:finding :occurrence-without-declaration,
+  :field :universe,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_free_energy.clj",
+   :var "policy-free-energy"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: :universe at policy-free-energy is another record's key (a verdict's or refusal's :status, the rate universe), reported because the box was added"}
+
+ {:finding :occurrence-without-declaration,
+  :field :weighted-error,
+  :site
+  {:file "futon2/src/futon2/aif/free_energy.clj",
+   :var "compute-prediction-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R7-I: compute-prediction-error's own :weighted-error, the likelihood-derived per-call value in the prediction-error record, which R7's weighted-error replaces (keeping it as :per-call-precision's partner); attributed to the :prediction-error record, where no box declares it"}]}
