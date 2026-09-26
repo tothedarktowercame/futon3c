@@ -28,10 +28,11 @@
 ;; re-pinned at 2b10ccc1 from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R5-I, on F1b-join-I's 2b10ccc1: :r6-sourced-rates writes [:rates {:record :sourced-rates}], read by :r6-cascade-lane; new :r5-g-sparse-cert; 41/26/99/201 -> 42/26/100/203; :r5-g-sparse-cert joins the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 233af9f7 from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-10 in the same commit as the map it describes (correcting 0b0a69b7, which reverted F1a-2b's :r9-measured-a-version box: the box and its finding restored on 233af9f7's map; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "233af9f7",
+ :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 42, :outputs 26, :components 101, :edges 205},
+ :counts {:inputs 42, :outputs 27, :components 102, :edges 210},
  :validate
  {:all-valid false,
   :checks
@@ -84,7 +85,6 @@
      :r2-verifier
      :r1-belief-carry
      :flight-cast
-     :r2-store-locators
      :flight-plan
      :c8-registry-get
      :r2-store-locator-questions
@@ -102,7 +102,8 @@
     :unspecified-outputs
     [:out/measured-a
      :out/observation.enactment-entry
-     :out/policy-prefixes.token-belief-input]}
+     :out/policy-prefixes.token-belief-input
+     :out/rates.measured-a]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,

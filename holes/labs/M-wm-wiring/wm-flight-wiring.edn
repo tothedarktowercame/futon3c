@@ -638,6 +638,19 @@
   ;; records (enactment-fold-source/increment-receipts), folds them
   ;; (enactment-habit/fold, :r7-fold's var, called by fold-from-flights) and
   ;; judge hands the fold on as :enactment-fold
+  ;; F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): measured-a-version
+  ;; returns the :measured-a record :r9-decision writes, now carrying the
+  ;; rates VALUE beside :rates-sha. The literal is in measured-a-version's
+  ;; return position, so the scoped field is declared here, not on
+  ;; :r9-decision (whose var only assocs the returned record). Reader: F1b's
+  ;; join (F1c-D).
+  {:box/id :r9-measured-a-version :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "measured-a-version"}
+   :returns-record :measured-a
+   ;; reads each problem's :locators and sourced-rates' :status, :rates and
+   ;; :measurement (the digest is taken only when some token is measured)
+   :reads [:locators :status :rates :measurement]
+   :writes [[:rates {:record :measured-a}]]}
   {:box/id :r7-fold-source :row 7 :box/kind :component
    :site {:file "futon2/src/futon2/aif/enactment_fold_source.clj" :var "increment-receipts"}
    :reads [:increment]}
@@ -1360,7 +1373,7 @@
  ;; read now counts for the scoped vertex). New :r5-g-sparse-cert (no field:
  ;; G's :g travels by {:keys [g ...]}, not seen by the occurrence check).
  ;; Three standing added. 336 -> 338 on my entries; with F1b-join-I's
- ;; to-do (2b10ccc1) the map carries 339 (8 to-do, 331 standing).
+ ;; to-do (2b10ccc1) the map carries 341 (8 to-do, 333 standing).
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -1390,6 +1403,12 @@
    :kind :to-do,
    :note
    "F1a-1-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 d04711eb/6165ec8b): run! writes the observation that followed an enacted step on its :enactments entry. Its reader is F1b's step admission, not built; this entry goes when that reader is declared"}
+  {:finding :written-never-read,
+   :field [:rates :measured-a],
+   :writers [:r9-measured-a-version],
+   :kind :standing,
+   :note
+   "F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): the measured-A record carries the rates value beside its digest, so F's conditioning step can be recomputed from the run record. At HEAD it is always the typed absence on the production path: no production caller of cascade-lane passes :observation-labels. The reader comes with F1b-join-I; this entry goes when that reader is declared"}
   {:finding :written-never-read,
    :field :measured-a,
    :writers [:r9-decision],
