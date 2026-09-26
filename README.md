@@ -1,5 +1,8 @@
 # Futon3c — Real-time Coordination
 
+> **New to FUTON? Start with [futon0/INSTALL.md](https://github.com/tothedarktowercame/futon0/blob/main/INSTALL.md)**, the single guide to
+> installing and running the stack. This is Agency, the coordination server, in the core install (step 4 of INSTALL.md).
+
 Futon3c is the **real-time coordination** layer of the futon stack: agency
 (multi-agent routing), peripherals (capability envelopes), forum
 (collaborative proof trees), and the evidence landscape that connects
@@ -52,7 +55,7 @@ needs: `holes/excursions/E-shutdown-agents-killed-the-pools.md`.
 
 ```bash
 make tools     # Install repo-local clojure + bb into .tools/ (cluster-friendly)
-make dev       # Boot futon1a (XTDB) + futon3c transport
+make dev       # Boot futon3c transport (store: futon1b, started separately)
 make claude    # Pick a session or start fresh
 make codex     # Pick a Codex session or start fresh
 make codex-repl # Open Codex Emacs REPL launcher
@@ -93,10 +96,15 @@ make alfworld-runner ALFWORLD_RUNNER_GAMES=50 ALFWORLD_RUNNER_ARGS=
 
 ### `make dev`
 
-Starts a single JVM with:
+Starts one JVM. Durable storage is **futon1b**, a separate process you start
+first (see [futon0/INSTALL.md](https://github.com/tothedarktowercame/futon0/blob/main/INSTALL.md)).
+Set `FUTON3C_EVIDENCE_BACKEND=futon1b` so evidence is stored there; Agency
+looks for it at `http://127.0.0.1:7074` unless `FUTON1B_URL` says otherwise.
+Without that setting Agency still starts, keeps evidence in memory only, and
+prints `I-evidence-per-turn BOOT CHECK FAILED`.
 
-- **futon1a** on port 7071 (configurable via `FUTON1A_PORT`) — XTDB-backed
-  durable storage with HTTP API for the evidence landscape
+The JVM runs:
+
 - **futon3c transport** on port 7070 (configurable via `FUTON3C_PORT`) —
   dispatch, presence, and health endpoints
 - **Drawbridge** on port 6768 (configurable via `FUTON3C_DRAWBRIDGE_PORT`) —
@@ -225,10 +233,10 @@ Codex REPL turns are recorded as `type: coordination` entries on
 ```
 Claude Code session
   │
-  ├─ /psr  ─→  POST /api/alpha/evidence  ─→  XTDB
-  ├─ /pur  ─→  POST /api/alpha/evidence  ─→  XTDB
-  ├─ /par  ─→  POST /api/alpha/evidence  ─→  XTDB
-  └─ /rap  ←─  GET  /api/alpha/evidence   ←─  XTDB
+  ├─ /psr  ─→  POST /api/alpha/evidence  ─→  futon1b (XTDB 2)
+  ├─ /pur  ─→  POST /api/alpha/evidence  ─→  futon1b (XTDB 2)
+  ├─ /par  ─→  POST /api/alpha/evidence  ─→  futon1b (XTDB 2)
+  └─ /rap  ←─  GET  /api/alpha/evidence   ←─  futon1b (XTDB 2)
                         │
                 Arxana viewer (Emacs)
 ```
@@ -245,6 +253,10 @@ Claude Code session
 | `forum-post` | Collaborative proof tree contributions | — |
 | `conjecture` | Hypotheses under investigation | — |
 
+The full set (`EvidenceType` in `src/futon3c/social/shapes.clj`) also
+includes `mode-transition`, `presence-event`, `correction`, `arse-qa` and
+`memory`. Note that `observation` is a *claim type*, not an evidence type.
+
 ### HTTP API (futon3c transport)
 
 **Write:**
@@ -257,6 +269,7 @@ curl -X POST http://localhost:7070/api/alpha/evidence \
     "claim-type": "observation",
     "author": "claude",
     "session-id": "your-session-id",
+    "subject": {"ref/type": "session", "ref/id": "your-session-id"},
     "pattern-id": "agent/pause-is-not-failure",
     "body": {"query": "stuck on tests", "confidence": "medium"},
     "tags": ["psr"]
@@ -265,7 +278,10 @@ curl -X POST http://localhost:7070/api/alpha/evidence \
 
 Returns `201` with `{"ok": true, "evidence/id": "<UUID>", "entry": {...}}`.
 Auto-generates ID and timestamp if not provided. Returns `409` on duplicate
-IDs, `400` on missing required fields.
+IDs, `400` on missing required fields. `subject` is required: an entry
+without it is rejected as `invalid-entry` ("EvidenceEntry did not conform to
+shape"), and the error shows the rejected entry but not which field failed.
+The shape is `EvidenceEntry` in `src/futon3c/social/shapes.clj`.
 
 **Read:**
 
@@ -285,12 +301,16 @@ curl http://localhost:7070/api/alpha/evidence/<id>/chain
 
 ### Persistence Backends
 
-The `EvidenceBackend` protocol (`futon3c.evidence.backend`) has two
+The `EvidenceBackend` protocol (`futon3c.evidence.backend`) has three
 implementations:
 
-- **AtomBackend** — in-memory with CAS loop; used in tests and ephemeral
-  sessions
-- **XtdbBackend** — durable via XTDB; used when `make dev` is running
+- **AtomBackend** (`futon3c.evidence.backend`) — in-memory with a CAS loop;
+  used in tests and ephemeral sessions
+- **Futon1bBackend** (`futon3c.evidence.futon1b-backend`) — durable, over HTTP
+  to the futon1b store; what `make dev` uses when
+  `FUTON3C_EVIDENCE_BACKEND=futon1b`
+- **HttpBackend** (`futon3c.evidence.http-backend`) — reads and writes through
+  a running Agency's evidence API; for agents that run outside the Agency JVM
 
 The backend is selected by what you pass as `:evidence-store`:
 
@@ -298,11 +318,13 @@ The backend is selected by what you pass as `:evidence-store`:
 ;; In-memory (default)
 (make-default-peripheral-config {})
 
-;; Durable — pass an XTDB node
-(make-persistent-peripheral-config {:xtdb-node my-node})
+;; Durable — a futon1b backend
+(require '[futon3c.evidence.futon1b-backend :as f1b])
+(make-default-peripheral-config
+ {:evidence-store (f1b/make-futon1b-backend "http://127.0.0.1:7074")})
 
 ;; Or via runtime-config (used by make-http-handler, make-ws-handler)
-(runtime-config {:patterns my-patterns :xtdb-node my-node})
+(runtime-config {:patterns my-patterns :evidence-store my-backend})
 ```
 
 ### PSR/PUR Linking
@@ -438,8 +460,10 @@ methods does this class have?" with machine-readable precision.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FUTON1A_PORT` | 7071 | futon1a HTTP port |
-| `FUTON1A_DATA_DIR` | `~/code/storage/futon1a/default` | XTDB data directory |
+| `FUTON3C_EVIDENCE_BACKEND` | (unset: in-memory) | `futon1b` stores evidence durably in futon1b |
+| `FUTON1B_URL` | `http://127.0.0.1:7074` | futon1b base URL (use `127.0.0.1`, not `localhost`: futon1b binds IPv4 only) |
+| `FUTON1B_PENHOLDER` | `api` | Penholder for writes to futon1b (futon1b's default allowlist is `joe`, `api`) |
+| `FUTON_CODE_ROOT` | `/home/joe/code` | Root of the futon checkouts. Honoured by some components only; the multi-watcher still watches `/home/joe/code/*` |
 | `FUTON3C_ROLE` | `default` | Deployment role (`linode`, `laptop`, or `default`) used for role-based defaults |
 | `FUTON3C_PORT` | 7070 | futon3c transport HTTP port (0 = disable) |
 | `FUTON3C_IRC_PORT` | role-dependent | IRC server port (`linode`: 6667, `laptop`: 0, `default`: 6667) |
@@ -453,7 +477,9 @@ methods does this class have?" with machine-readable precision.
 | `FUTON3C_REGISTER_CODEX` | role-dependent | Register local `codex-1` invoke-fn at startup |
 | `FUTON3C_PEERS` | (none) | Comma-separated peer Agency URLs for federation announcements |
 | `FUTON3C_SELF_URL` | (none) | This host's reachable Agency base URL for federation callbacks |
-| `CLAUDE_PERMISSION_MODE` | `bypassPermissions` | Permission mode for claude CLI |
+| `CLAUDE_PERMISSION` | `bypassPermissions` | Permission mode for the claude CLI that Agency launches. The default means no confirmation before agents edit files or run commands; set `default` unless you have decided otherwise. Claude Code refuses `bypassPermissions` when run as root |
+| `CLAUDE_BIN` | `claude` (`make dev`: `~/.local/bin/claude`) | Path to the claude CLI |
+| `CODEX_SANDBOX` / `CODEX_APPROVAL` | `make dev`: `danger-full-access` / `never` | Codex sandbox and approval policy |
 | `CLAUDE_PICKER_MAX` | 12 | Max sessions shown in picker |
 
 ## Project Structure
@@ -461,7 +487,7 @@ methods does this class have?" with machine-readable precision.
 ```
 src/futon3c/
   agency/         Multi-agent registry, session management
-  evidence/       Evidence landscape (backend protocol, store API, XTDB backend)
+  evidence/       Evidence landscape (backend protocol, store API, futon1b and HTTP backends)
   reflection/     Clojure runtime reflection (core functions, envelope schema)
   peripheral/     Capability envelopes (explore, edit, test, reflect, discipline)
   runtime/        Dev-facing API (register agents, wire persistence, start transport)
@@ -469,7 +495,7 @@ src/futon3c/
   transport/      HTTP + WebSocket handlers, IRC bridge, wire protocol
 
 dev/futon3c/
-  dev.clj         Dev entry point (boots futon1a + futon3c)
+  dev.clj         Dev entry point (boots futon3c; storage is futon1b, a separate process)
 
 scripts/
   claude-picker   Session picker for Claude Code
@@ -488,7 +514,7 @@ library/
 | futon3b | Pattern-driven development | task + glacial |
 | **futon3c** | **Real-time coordination** | **social (real-time)** |
 
-futon3c depends on futon3b (gate pipeline) and futon1a (durable storage).
+futon3c depends on futon3b (gate pipeline) and futon1b (durable storage, a separate process).
 
 ## Development
 
