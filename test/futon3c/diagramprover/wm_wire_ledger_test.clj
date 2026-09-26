@@ -46,7 +46,6 @@
             [futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test]
             [futon3c.diagramprover.wm-wire-r4-kernel-r4-test-order-use-test]
             [futon3c.diagramprover.wm-wire-r4-kernel-r4-coapply-test-order-use-test]
-            [futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test]
             [futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test]
             [futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test]
             [futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test]
@@ -80,7 +79,6 @@
             [futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test]
             [futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test]
-            [futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test]
             [futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test]
             [futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test]
             [futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test]
@@ -207,7 +205,6 @@
     futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test
     futon3c.diagramprover.wm-wire-r4-kernel-r4-test-order-use-test
     futon3c.diagramprover.wm-wire-r4-kernel-r4-coapply-test-order-use-test
-    futon3c.diagramprover.wm-wire-r9-selection-law-r0-enact-step-enacted-steps-test
     futon3c.diagramprover.wm-wire-r9-selection-law-r7-increment-candidate-test
     futon3c.diagramprover.wm-wire-r9-selection-law-wc-checker-candidate-test
     futon3c.diagramprover.wm-wire-wc-checker-r7-increment-wc-verdict-test
@@ -242,7 +239,6 @@
    futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test
     futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test
-    futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test
     futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test
     futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test
     futon3c.diagramprover.wm-wire-r2-store-criteria-r3-store-criteria-criteria-test
@@ -371,9 +367,9 @@
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
 
-(def adjacency-rev "1103e7a3")
+(def adjacency-rev "2ba350a3")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "54f7e7cd")
+(def map-rev "775aaa6d")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
