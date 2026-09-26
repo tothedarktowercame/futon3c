@@ -151,14 +151,27 @@
   ;; end and none is declared. r3a-predict-observation: belief/
   ;; predict-observation returns a map keyed by channel, read the same way
   ;; ((get predictions ch), prediction-member's (get prediction k)): no
-  ;; field. E4, R2 -> R3a (o): judge's local observation is arg 1 of
-  ;; channel-prediction-error, which calls compute-prediction-error; a
-  ;; whole-value positional hop. TO-DO: the :passes declaration
-  ;; (WM-PROVER-POSITIONAL-D section 2, WM-PROVER-PASSES-I) on the caller's
-  ;; box, {:value :observation :from {:returns-of "obs/observe" :bound-to
-  ;; observation} ...}, with the R1/R3 packet once the rule lands
+  ;; field. E4, R2 -> R3a (o): judge's local observation, bound to
+  ;; (obs/observe scan-data) at :6909, is arg 1 of fe/channel-prediction-
+  ;; error at :7037, whose first parameter obs is a plain symbol it reads
+  ;; (channel-source-status obs channel); a whole-value positional hop,
+  ;; declared with :passes (WM-PROVER-PASSES-I, futon3c 553d7edf) on
+  ;; :r2-judge-observation (the caller, judge) into
+  ;; :r3a-channel-prediction-error (the callee). The value is named
+  ;; :tick-observation, a name the map gives the unkeyed observation (no
+  ;; such key exists in the code; the :passes check is its occurrence)
   {:box/id :r2-tick-observe :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/observation.clj" :var "observe"}}
+  {:box/id :r2-judge-observation :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "judge"}
+   :writes [:tick-observation]
+   :passes [{:value :tick-observation
+             :from {:returns-of "obs/observe"}
+             :to {:call "fe/channel-prediction-error" :arg 1
+                  :callee-box :r3a-channel-prediction-error}}]}
+  {:box/id :r3a-channel-prediction-error :box/kind :component
+   :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "channel-prediction-error"}
+   :reads [:tick-observation]}
   {:box/id :r3a-predict-observation :box/kind :component
    :site {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation"}}
   {:box/id :r3a-prediction-error :box/kind :component
@@ -991,7 +1004,13 @@
  ;; carrier). E4 (R2 -> R3a) waits on :passes, a comment on the map. Four
  ;; standing added: the heuristic's reading of the run record literal,
  ;; :error/:status at compute-prediction-error, one test. 279 -> 283 (2
- ;; to-do, 281 standing). :kind :to-do is the
+ ;; to-do, 281 standing). Then E4 with :passes (futon3c 553d7edf):
+ ;; :r2-judge-observation (judge) writes :tick-observation and passes
+ ;; (obs/observe ...)'s return as arg 1 of fe/channel-prediction-error,
+ ;; read by :r3a-channel-prediction-error (a wrong :arg is refused,
+ ;; :passes-failed :unbound-symbol, checked). One standing added (:status at
+ ;; channel-prediction-error). 283 -> 284 (2 to-do, 282 standing). :kind
+ ;; :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3657,4 +3676,12 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R2-R3a-I: :status at compute-prediction-error is the prediction-error record's own key, written in (merge stamp {...}) literals the record scope cannot attribute yet (merge's literal argument in return position, the next prover limit); reported because the box was added"}]}
+  "WM-NODE-R2-R3a-I: :status at compute-prediction-error is the prediction-error record's own key, written in (merge stamp {...}) literals the record scope cannot attribute yet (merge's literal argument in return position, the next prover limit); reported because the box was added"}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site {:file "futon2/src/futon2/aif/free_energy.clj", :var "channel-prediction-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R2-R3a-I (E4): channel-prediction-error reads the channel source's own :status ((= :present (:status source))), another record's key, reported because the box was added as :passes's callee"}]}

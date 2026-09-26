@@ -17,10 +17,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H9+H11-I, the want's writer: :construction-assemble-one writes [:want {:record :cascade-spec}] (read by :r4-kernel) and [:want {:record :cascade-problem}] (read by :r9-decision); 33/23/77/160 -> 32/23/77/161; :in/want@cascade-spec leaves the inputs; :tick-flight-assembly, :construction-assemble-one and :flight-click-wants leave the dead components (the wants now reach a test box through the kernel). :i4 CHANGES, by addition only: the scored facts' bypasses 12 -> 36 (field edges) and 74 -> 146 (positional), the new paths running from the click's wants and the published interpretations through the assembly and want@cascade-spec into the kernel, selection and the fold; preferences, scored facts and the (empty) bypasses to preferences unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H11-WRITER-I: :flight-entry :returns-record :flight writes [:target {:record :flight}], read at nine boxes; 32/23/77/161 -> 31/23/77/161; :in/target@flight leaves the inputs (its nine edges now leave :flight-entry); dead components unchanged. :i4 CHANGES, by addition only: the scored facts' bypasses 36 -> 141 (field edges) and 146 -> 251 (positional), the new paths starting at the flight entry (and upstream of it the outer cascade's :chosen-target) and running through the flight's :target into the read, ask, assembly, enactment and click boxes; preferences, scored facts and the (empty) bypasses to preferences unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R2-R3a-I: boxes :r2-tick-observe, :r3a-predict-observation, :r3a-prediction-error (no fields) and :run-record-publication (writes :repair/publication, read by :r10-observe-publication); 31/23/77/161 -> 35/23/81/166; the four new boxes join the inputs as :world/*; the three field-less boxes join the dead components, :run-record-publication reaches :r10-test through the publication observation; :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R2-R3a-I, E4 with :passes: :r2-judge-observation writes :tick-observation, :r3a-channel-prediction-error reads it; 35/23/81/166 -> 36/23/83/168; :world/r2-judge-observation joins the inputs; both boxes join the dead components (no test box reads :tick-observation); :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 35, :outputs 23, :components 81, :edges 166},
+ :counts {:inputs 36, :outputs 23, :components 83, :edges 168},
  :validate
  {:all-valid false,
   :checks
@@ -29,6 +30,7 @@
     :check :coverage,
     :dead-components
     [:r9-judge-refusal-read
+     :r3a-channel-prediction-error
      :r3-store-locator-questions
      :click-start
      :flight-run
@@ -68,6 +70,7 @@
      :c8-registry-get
      :r2-store-locator-questions
      :r9-abstention-carrier
+     :r2-judge-observation
      :r5-grain-gate
      :gate-refuse
      :gate-refusal-read]}
