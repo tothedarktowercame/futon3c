@@ -1,0 +1,167 @@
+{:adjacency
+ {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
+  :rev "5cc3bc8c",
+  :map "ad3afb76"},
+ :definition futon3c.diagramprover.wm-wire-ledger-test,
+ :counts
+ {:verified 0, :witnessed-hermetically 2, :unverified 91, :wires 93},
+ :wires
+ [{:wire [:c8-registry-get :c8-entry :message], :status :unverified}
+  {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
+  {:wire [:c8-registry-get :c8-latest :message], :status :unverified}
+  {:wire [:c8-registry-get :c8-latest :timeout-ms],
+   :status :unverified}
+  {:wire [:clock-in :r1-outer-cascade :clock-lineage],
+   :status :unverified}
+  {:wire [:dispatch :clock-in :mission-id], :status :unverified}
+  {:wire [:eligibility :r1-outer-cascade :eligible],
+   :status :unverified}
+  {:wire [:flight-cast :click-start :author], :status :unverified}
+  {:wire [:flight-cast :click-start :repair-reviewer],
+   :status :unverified}
+  {:wire [:flight-cast :click-start :reviewer], :status :unverified}
+  {:wire [:flight-click :flight-cast-test :cast], :status :unverified}
+  {:wire [:flight-click :flight-record-click :cast],
+   :status :unverified}
+  {:wire [:flight-click :flight-record-click :detail],
+   :status :unverified}
+  {:wire [:flight-click :flight-record-click :status],
+   :status :unverified}
+  {:wire [:flight-entry :loop-test :target-source],
+   :status :unverified}
+  {:wire [:flight-record-summary :click-reason-test :failure],
+   :status :unverified}
+  {:wire [:flight-record-summary :flight-click-close-test :chosen],
+   :status :unverified}
+  {:wire [:flight-record-summary :flight-record-click :chosen],
+   :status :unverified}
+  {:wire [:flight-record-summary :flight-record-click :failure],
+   :status :unverified}
+  {:wire [:gate-refuse :gate-refusal-read :error], :status :unverified}
+  {:wire [:loop-entry :r1-outer-cascade :trigger], :status :unverified}
+  {:wire [:r0-enact-step :r0-test :attempts], :status :unverified}
+  {:wire [:r0-enact-step :r0-test :grain-gate], :status :unverified}
+  {:wire [:r0-enact-step :r5-test :attempts], :status :unverified}
+  {:wire [:r0-enact-step :r5-test :grain-gate], :status :unverified}
+  {:wire [:r0-enact-step :r7-flight-call :attempts],
+   :status :unverified}
+  {:wire [:r0-enact-step :r7-increment :attempts], :status :unverified}
+  {:wire [:r0-enact-step :wc-checker :attempts], :status :unverified}
+  {:wire [:r0-enact-step :wc-checker :grain-gate], :status :unverified}
+  {:wire [:r1-outer-cascade :flight-entry :chosen-target],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :flight-entry :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :loop-test :draw-seed],
+   :status :unverified}
+  {:wire [:r1-outer-cascade :r1-test :draw-seed], :status :unverified}
+  {:wire [:r1-target-field :r1-outer-cascade :next-step],
+   :status :unverified}
+  {:wire
+   [:r10-observe-publication :r0-enact-step :publication-observed],
+   :status :unverified}
+  {:wire [:r10-observe-publication :r0-test :publication-observed],
+   :status :unverified}
+  {:wire
+   [:r10-observe-publication :r1-outer-cascade :publication-observed],
+   :status :unverified}
+  {:wire [:r10-observe-publication :r10-test :publication-observed],
+   :status :unverified}
+  {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
+   :status :unverified}
+  {:wire [:r2-served-by-reading :r2-test :text-sha256],
+   :status :unverified}
+  {:wire [:r2-served-by-reading :r2-test :want-span],
+   :status :unverified}
+  {:wire [:r2-served-by-reading :r2-verifier :text-sha256],
+   :status :unverified}
+  {:wire [:r2-served-by-reading :r2-verifier :want-span],
+   :status :unverified}
+  {:wire [:r3-flight-ask :r3-prompt :library-root],
+   :status :unverified}
+  {:wire [:r3-flight-ask :r3-test :library-root], :status :unverified}
+  {:wire [:r4-constructor :r4-coapply-test :descent],
+   :status :unverified}
+  {:wire [:r4-constructor :r4-coapply-test :units],
+   :status :unverified}
+  {:wire [:r4-constructor :r4-order-use :descent], :status :unverified}
+  {:wire [:r4-constructor :r4-order-use :precedence-violations],
+   :status :unverified}
+  {:wire [:r4-constructor :r4-order-use :units], :status :unverified}
+  {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
+  {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
+  {:wire [:r5-flight-call :r5-grain-gate :grain], :status :unverified}
+  {:wire [:r5-flight-call :r5-test :grain], :status :unverified}
+  {:wire [:r6-sourced-rates :r6-cascade-lane :measurement],
+   :status :unverified}
+  {:wire [:r6-sourced-rates :r6-test :measurement],
+   :status :unverified}
+  {:wire [:r7-flight-call :r7-call-test :wc], :status :unverified}
+  {:wire [:r7-fold :r1-outer-cascade :enactment-records],
+   :status :unverified}
+  {:wire [:r7-fold :r7-selection :enactment-records],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
+  {:wire [:r7-increment :r7-call-test :delta], :status :unverified}
+  {:wire [:r7-increment :r7-call-test :wc-failures],
+   :status :unverified}
+  {:wire [:r7-increment :r7-fold :delta], :status :unverified}
+  {:wire [:r7-increment :r7-test :delta], :status :unverified}
+  {:wire [:r7-selection :r7-test :e-source], :status :unverified}
+  {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
+   :status :unverified}
+  {:wire [:r8-overlap :r8-test :pair-overlap], :status :unverified}
+  {:wire [:r9-classify-target :r9-decision :class],
+   :status :unverified}
+  {:wire [:r9-classify-target :r9-relation-test :class],
+   :status :unverified}
+  {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
+   :status :unverified}
+  {:wire [:r9-close-cause :r9-finding-cause-read :failure-cause],
+   :status :unverified}
+  {:wire [:r9-close-cause :r9-finding-store :failure-cause],
+   :status :unverified}
+  {:wire [:r9-decision :flight-record-click :kind],
+   :status :unverified}
+  {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
+  {:wire [:r9-decision :r9-class-model :target-class],
+   :status :unverified}
+  {:wire [:r9-decision :r9-judge-refusal-read :kind],
+   :status :unverified}
+  {:wire [:r9-decision :r9-judge-refusal-test :kind],
+   :status :unverified}
+  {:wire [:r9-embedding-neighbour :r9-classify-target :derived-via],
+   :status :unverified}
+  {:wire [:r9-embedding-neighbour :r9-relation-test :derived-via],
+   :status :unverified}
+  {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
+   :status :unverified}
+  {:wire [:r9-judge-refusal :r9-judge-refusal-test :judge-refusal],
+   :status :unverified}
+  {:wire
+   [:r9-judge-refusal-abstention :r9-failure-classifier :outcome],
+   :status :unverified}
+  {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
+   :status :unverified}
+  {:wire [:r9-phase-kind :r9-failure-classifier :failure-kind],
+   :status :unverified}
+  {:wire [:r9-selection-law :r0-enact-step :candidate],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-candidate-enact-test/the-selected-candidate-reaches-the-enactment}
+  {:wire [:r9-selection-law :r0-enact-step :enacted-steps],
+   :status :unverified}
+  {:wire [:r9-selection-law :r7-increment :candidate],
+   :status :unverified}
+  {:wire [:r9-selection-law :r9-decision :per-policy-argmax],
+   :status :unverified}
+  {:wire [:r9-selection-law :r9-test :candidate], :status :unverified}
+  {:wire [:r9-selection-law :r9-test :enacted-steps],
+   :status :unverified}
+  {:wire [:r9-selection-law :r9-test :per-policy-argmax],
+   :status :unverified}
+  {:wire [:r9-selection-law :wc-checker :candidate],
+   :status :unverified}
+  {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}
+  {:wire [:wc-checker :r7-test :wc-verdict], :status :unverified}]}
