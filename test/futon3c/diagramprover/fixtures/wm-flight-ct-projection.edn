@@ -26,10 +26,11 @@
 ;; Re-pinned by claude-10 at map 1d2a9f94 (WM-NODE-R13-I; the map itself was committed by inbox-zero's promotion of claude-10's working tree, 1d2a9f94, before this fixture and the map test's sha, which follow here): :r13-sources-horizon writes [:horizon-steps {:record :sources}], read by the new :construction-assemble; :construction-assemble-one writes [:horizon-steps {:record :cascade-problem}], read by the new :r13-family-parameters; the new :r13-policy-depth-anticipation writes [:horizon-steps {:record :depth-anticipation}], read by :r7-fold-call; 37/25/92/190 -> 39/25/96/195; :construction-assemble, :r13-family-parameters and :r13-sources-horizon join the dead components; :i4 unchanged.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R4-I: :r4-evaluate-state writes [:kernel {:record :evaluation}], read by the new :r4-push-forward; new :r4-token-likelihood; 39/25/96/195 -> 41/25/99/198; the three new boxes join the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 ;; re-pinned at 2b10ccc1 from 9567d6bb on 2026-09-26
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R5-I, on F1b-join-I's 2b10ccc1: :r6-sourced-rates writes [:rates {:record :sourced-rates}], read by :r6-cascade-lane; new :r5-g-sparse-cert; 41/26/99/201 -> 42/26/100/203; :r5-g-sparse-cert joins the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "2b10ccc1",
+ :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 41, :outputs 26, :components 99, :edges 201},
+ :counts {:inputs 42, :outputs 26, :components 100, :edges 203},
  :validate
  {:all-valid false,
   :checks
@@ -61,6 +62,7 @@
      :r3a-predict-observation
      :r3-store-locator-declines
      :r3-store-constraints-read
+     :r5-g-sparse-cert
      :fpi-policy-free-energy
      :r3-store-coverage
      :r2-store-coverage

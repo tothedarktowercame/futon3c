@@ -511,7 +511,31 @@
    ;; efe/compute-efe writes it for the non-cascade actions and
    ;; cascade_observation_scoring/rank-cascade-actions on the observation
    ;; path, both unboxed; select-action-cascades re-emits the chosen one)
+      ;; WM-NODE-R5-I: reads G as {:keys [g certificate]} off
+   ;; horizon-g-sparse-cert's return; not declared (see :r5-g-sparse-cert)
    :reads [:adjudication-rates [:want {:record :cascade-spec}]] :writes [:order-use :controller-score :rates]}
+  ;; WM-NODE-R5-I (WM-SUPERSET-D section 8): G on the cascade path.
+  ;; rank-cascade-actions (:r4-kernel, R5's registry var) calls
+  ;; cascade-model-manifest/horizon-g-sparse-cert with a map literal
+  ;; {:rates rates :q0 ... :spec ... :horizon T ...}; the cert returns {:g g
+  ;; :certificate ...} (the g horizon-g-sparse* computed, destructured there
+  ;; as {:keys [g steps conditioning]}), and rank-cascade-actions destructures
+  ;; {:keys [g certificate]} and writes it as each ranked action's
+  ;; :controller-score (R5 -> R6, declared at R6). :g is NOT declared: both
+  ;; reads are {:keys [g ...]} destructurings, and the occurrence check
+  ;; matches the keyword :g in the site's text, which a :keys vector (the
+  ;; symbol g) does not contain; declared unscoped, rank-cascade-actions'
+  ;; read is :declaration-without-occurrence (checked). A prover case for
+  ;; claude-2: a :keys entry as an occurrence of its field (the heuristic's
+  ;; field-usage already counts it as a read; the default check does not).
+  ;; horizon-g-sparse* (the cert's own source of g) is not boxed. R4 -> R5 (A, Q(o|pi))
+  ;; is E6's function value (push-forward passed into predictive-steps), a
+  ;; :via-param form the prover lacks, recorded at :r4-push-forward. R19 ->
+  ;; R5: the assembled problem reaches the lane's R5 step as cascade-lane's
+  ;; destructured argument ({:keys [facts want interpretations ...
+  ;; cascade-spec]} problem), not attributable to the :cascade-problem record
+  {:box/id :r5-g-sparse-cert :row 4 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "horizon-g-sparse-cert"}}
   ;; WM-NODE-R7-I (E5, R7 -> R4, WM-PROVER-POSITIONAL-D E5): ON THE F_pi
   ;; PATH, NOT LIVE (futon2 3f7a5c85: F_pi is not live; the ranked G comes
   ;; from horizon-g-sparse*). rank-cascade-actions passes its local rates
@@ -605,19 +629,6 @@
    ;; problem's :locators, target-qualified), or the typed absence; write
    ;; only, the scoring is untouched; the reader comes with F1b
    :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class :measured-a]}
-  ;; F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): measured-a-version
-  ;; returns the :measured-a record :r9-decision writes, now carrying the
-  ;; rates VALUE beside :rates-sha. The literal is in measured-a-version's
-  ;; return position, so the scoped field is declared here, not on
-  ;; :r9-decision (whose var only assocs the returned record). Reader: F1b's
-  ;; join (F1c-D).
-  {:box/id :r9-measured-a-version :box/kind :component
-   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "measured-a-version"}
-   :returns-record :measured-a
-   ;; reads each problem's :locators and sourced-rates' :status, :rates and
-   ;; :measurement (the digest is taken only when some token is measured)
-   :reads [:locators :status :rates :measurement]
-   :writes [[:rates {:record :measured-a}]]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -851,7 +862,13 @@
   ;; ---- row 6, Clause A: :measurement on the click record.
   {:box/id :r6-sourced-rates :row 6 :box/kind :component
    :site {:file "futon2/src/futon2/aif/observation_rates.clj" :var "sourced-rates"}
-   :writes [:measurement]}
+   ;; WM-NODE-R5-I: A's consumer. sourced-rates returns {:status :sourced
+   ;; :rates ... :measurement ...} (else the refused map it got); its :rates,
+   ;; the measured token rates, is scoped to that record (:sourced-rates) and
+   ;; read by cascade-lane as (:rates sourced), which it passes to
+   ;; efe/rank-actions as :adjudication-rates (declared at R6/R7)
+   :returns-record :sourced-rates
+   :writes [:measurement [:rates {:record :sourced-rates}]]}
   {:box/id :r6-cascade-lane :row 6 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-lane"}
    ;; WM-HANDOFF-H6-I (the rates island): at R5 the lane passes
@@ -875,7 +892,8 @@
    ;; :keys destructuring is not attributed to a record, so the problem's
    ;; keys do not reach it as fields (corrected from the H9+H11 comment,
    ;; which said no field crossed with its reader here)
-   :reads [:measurement] :writes [:adjudication-rates]}
+   :record-aliases {:sourced-rates ["sourced"]}
+   :reads [:measurement [:rates {:record :sourced-rates}]] :writes [:adjudication-rates]}
   {:box/id :r6-test :row 6 :box/kind :test
    :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"}
    :reads [:measurement]}
@@ -1325,7 +1343,14 @@
  ;; :r4-push-forward; new :r4-token-likelihood (F_pi site, no field).
  ;; push-forward's :belief has no attributable reader ({sym :key}
  ;; destructuring, a call receiver, a function value). Six standing added.
- ;; 330 -> 336 (7 to-do, 329 standing).
+ ;; 330 -> 336 (7 to-do, 329 standing). WM-NODE-R5-I: :r6-sourced-rates
+ ;; :returns-record :sourced-rates writes [:rates {:record :sourced-rates}],
+ ;; read by :r6-cascade-lane ((:rates sourced), alias sourced), the measured
+ ;; A into G's call; cascade-lane's standing :rates entry is deleted (that
+ ;; read now counts for the scoped vertex). New :r5-g-sparse-cert (no field:
+ ;; G's :g travels by {:keys [g ...]}, not seen by the occurrence check).
+ ;; Three standing added. 336 -> 338 on my entries; with F1b-join-I's
+ ;; to-do (2b10ccc1) the map carries 339 (8 to-do, 331 standing).
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -1345,12 +1370,6 @@
    :kind :to-do,
    :note
    "F1a-1-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 d04711eb/6165ec8b): run! writes the observation that followed an enacted step on its :enactments entry. Its reader is F1b's step admission, not built; this entry goes when that reader is declared"}
-  {:finding :written-never-read,
-   :field [:rates :measured-a],
-   :writers [:r9-measured-a-version],
-   :kind :standing,
-   :note
-   "F1a-2b (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 bc66c6b1): the measured-A record carries the rates value beside its digest, so F's conditioning step can be recomputed from the run record. At HEAD it is always the typed absence on the production path: no production caller of cascade-lane passes :observation-labels. The reader comes with F1b-join-I; this entry goes when that reader is declared"}
   {:finding :written-never-read,
    :field :measured-a,
    :writers [:r9-decision],
@@ -4041,16 +4060,6 @@
   :note
   "WM-NODE-R7-I: record-system-failure! destructures an attempt's :error ({:keys [... error ...]}), another record's key; reported once :error is scoped somewhere on the map (the prediction-error record's), which leaves this :keys read to the unscoped field"}
 
- {:finding :occurrence-without-declaration,
-  :field :rates,
-  :site
-  {:file "futon2/scripts/futon2/report/war_machine.clj",
-   :var "cascade-lane"},
-  :declared-by [],
-  :rows [],
-  :kind :standing,
-  :note
-  "WM-NODE-R7-I: cascade-lane's :rates is another record's (sourced-rates' returned {:rates ...}, cascade-lane's (:rates sourced), a test's fixture), reported because :rates became declared for E5's F_pi hop (rank-cascade-actions -> policy-free-energy)"}
 
  {:finding :occurrence-without-declaration,
   :field :rates,
@@ -4496,4 +4505,36 @@
   :rows [4],
   :kind :standing,
   :note
-  "WM-NODE-R4-I: :units at push-forward is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
+  "WM-NODE-R4-I: :units at push-forward is another record's key (an evaluation's or refusal's :status/:kind, the co-application model's :units/:descent in push-forward's recorded evaluation), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+ {:finding :occurrence-without-declaration,
+  :field :rates,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "horizon-g-sparse-cert"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R5-I: :rates at horizon-g-sparse-cert is another record's key (the scorer's input map's :rates/:universe, the refusal's :status, the certificate's own entries), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "horizon-g-sparse-cert"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R5-I: :status at horizon-g-sparse-cert is another record's key (the scorer's input map's :rates/:universe, the refusal's :status, the certificate's own entries), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :universe,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+   :var "horizon-g-sparse-cert"},
+  :declared-by [],
+  :rows [4],
+  :kind :standing,
+  :note
+  "WM-NODE-R5-I: :universe at horizon-g-sparse-cert is another record's key (the scorer's input map's :rates/:universe, the refusal's :status, the certificate's own entries), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
