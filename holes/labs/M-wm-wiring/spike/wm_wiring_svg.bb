@@ -46,7 +46,7 @@
     [:gate-refusal-test :r9-judge-refusal-test :phase-kind-test :failure-cause-record-test]]
    ["8 Grain gate, enactment, W_c" [:r5-flight-call :r5-grain-gate :r0-enact-step :wc-checker] [:r5-test :r0-test]]
    ["9 Habit (E), publish" [:r7-flight-call :r7-increment :r7-fold :r7-fold-source :r7-fold-call :r7-selection :r10-observe-publication] [:r7-call-test :r7-test :habit-fold-call-test :r10-test]]
-   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
+   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :flight-run :flight-driver-summary :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
 
 (let [placed (mapcat (fn [[_ c t]] (concat c t)) lanes)
       dup (->> placed frequencies (filter #(> (val %) 1)) keys)

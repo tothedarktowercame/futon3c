@@ -56,6 +56,26 @@
   {:box/id :r2-flight-read :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn"}
    :reads [:text-sha256]}
+  ;; WM-HANDOFF-H1-I (WM-HANDOFFS-D H1): the flight loop, flight/run!, puts
+  ;; the read step's result on the flight record as :readings (with
+  ;; :before-click) and merges its :needs, and the ask step's :needs too; it
+  ;; reads :needs back itself (the owner questions that end a flight before
+  ;; a click, the pending asks). ONE WRITER: :needs has three textual
+  ;; producers, read-fn's and ask-fn's return maps and run!'s merge; the box
+  ;; is run!, and read-fn/ask-fn are returners whose maps run! merges (their
+  ;; occurrences stand below), not declared writers. No row: run! is the
+  ;; whole loop, no one clause's. The driver's summary (run-flight!) is the
+  ;; reader of both after the flight. The read step does NOT hand the ask
+  ;; step these fields: ask-fn reads neither; the read -> ask hand-off is the
+  ;; interpretation store (reading/publish-*! in read-fn, reading/
+  ;; published-* in flight/source-wants, which click-wants calls), not
+  ;; boxed here
+  {:box/id :flight-run :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "run!"}
+   :reads [:needs] :writes [:readings :needs]}
+  {:box/id :flight-driver-summary :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "run-flight!"}
+   :reads [:readings :needs]}
   {:box/id :r2-test :row 2 :box/kind :test
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"}
    :reads [:want-span :text-sha256]}
@@ -566,7 +586,16 @@
  ;; options; test box :habit-fold-call-test. New fields, so no finding is
  ;; deleted. Seventeen standing added, all occurrences (the test files,
  ;; judge's own records, select-action-cascades' :keys read the check does
- ;; not see). 180 -> 197 (2 to-do, 195 standing). :kind :to-do is the
+ ;; not see). 180 -> 197 (2 to-do, 195 standing). WM-HANDOFF-H1-I (futon2
+ ;; pin unchanged): :flight-run (flight/run!) writes :readings and :needs and
+ ;; reads :needs; :flight-driver-summary (run-flight!) reads both. One
+ ;; writer for :needs, run!; read-fn/ask-fn return it and record-click
+ ;; appends to it (standing below). The read -> ask hand-off is the
+ ;; interpretation store, not these fields, so the 3 -> 4 boundary stays
+ ;; uncrossed. Twenty-one standing added: :needs at nine other sites
+ ;; (incl. read-fn and record-click), four of run!'s own keys, seven of
+ ;; run-flight!'s, and :readings' write in an unclassified position. 197 -> 218 (2 to-do, 216
+ ;; standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -2363,4 +2392,211 @@
    :rows [7],
    :kind :standing,
    :note
-   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}]}
+   "WM-HABIT-FOLD-CALL-I: the test builds flight records, increment receipts and the options it captures (write positions in the test, not second writers)"}
+  {:role :writes,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :box/id :flight-run,
+   :field :readings,
+   :heuristic true,
+   :note
+   "WM-HANDOFF-H1-I: run! writes :readings by (update :readings (fnil conj []) ...) in a threading step, a position the heuristic leaves unclassified; the declaration is the code's (flight.clj run!, the read step's result with :before-click)",
+   :rows [],
+   :usage {:reads 0, :writes 0, :unclassified 1},
+   :kind :standing,
+   :finding :declared-write-not-found}
+
+  {:finding :occurrence-without-declaration,
+   :field :author,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :library-root,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-decision-admitted"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: another record's :needs (a cascade problem's or an interpretation request's own key), reported now because :needs became declared; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-lane"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: another record's :needs (a cascade problem's or an interpretation request's own key), reported now because :needs became declared; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site
+   {:file "futon2/src/futon2/aif/construction.clj",
+    :var "containment-order"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: another record's :needs (a cascade problem's or an interpretation request's own key), reported now because :needs became declared; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site {:file "futon2/src/futon2/aif/efe.clj", :var "order-use"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: another record's :needs (a cascade problem's or an interpretation request's own key), reported now because :needs became declared; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "record-click"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: record-click appends a click's missing input (the abstention's :missing) to the flight's :needs; a second producer inside the loop that run! calls, recorded here under the one-writer choice (the box for :needs is run!)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: read-fn returns :needs in its result map, which run! merges into the flight's; a returner, not a second writer (one writer, run!)"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site
+   {:file "futon2/src/futon2/aif/want_interpretation.clj",
+    :var "prompt"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: another record's :needs (a cascade problem's or an interpretation request's own key), reported now because :needs became declared; the prover has no per-record scope"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: a test builds records carrying :needs (a write position in the test, not a second writer); reported now because :needs became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :needs,
+   :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: a test builds records carrying :needs (a write position in the test, not a second writer); reported now because :needs became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :publication-observed,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :repair-reviewer,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :reviewer,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/flight_driver.clj", :var "run-flight!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: the driver's summary of a flown flight (run-flight!) carries these keys in its own result and cast; boxed as the reader of :readings/:needs only"}
+
+  {:finding :occurrence-without-declaration,
+   :field :wc,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}]}
