@@ -155,7 +155,7 @@ pub (:publication-observed
       ((or publication-observation
            (observe-publication-fn {:fetch-run-record fetch-run-record
                                     :repair-id-fn repair-id-fn}))
-       flight click))                                   ; :883-888
+       flight click))                                   ; :881-885
 ```
 
 - What is passed positionally is `flight` and `click`, args 1 and 2 of the
