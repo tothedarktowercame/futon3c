@@ -1,7 +1,7 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "424a431d",
-  :map "1713b872"},
+  :rev "7c4351b5",
+  :map "9d962400"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 5, :witnessed-hermetically 83, :unverified 82, :wires 170},
