@@ -25,6 +25,13 @@
    :cascade-spec {:want #{:t/wanted}} :beta 1
    :locators (zipmap [:t/observed :t/other :t/wanted] (repeat {:class :C3}))})
 
+(defn- observed-path [path]
+  ;; Same dispatch as observation-labels-consume-test/fill!: the result
+  ;; carries the loaded C3 mechanism stamp, including for absent paths.
+  (let [r (checks/observe {:subject {:class :C3 :repo "futon2"
+                                     :sha population/pin :path path}})]
+    (or (get-in r [:results :subject]) (get-in r [:refused :subject]))))
+
 (defn label-view
   "Real pinned C3 checks, admitted to a temporary store and filtered by the
   production reader. Five absent subjects and n present subjects."
@@ -35,7 +42,7 @@
       (store/init! path)
       (let [written (store/record!
                       path
-                      (mapv #(checks/check-path-exists {:repo "futon2" :sha population/pin :path %})
+                      (mapv observed-path
                             (concat (take n population/present-paths) population/absent-paths))
                       ids {})]
         (when-not (and (= (+ n 5) (:written written)) (zero? (:refused written)))
