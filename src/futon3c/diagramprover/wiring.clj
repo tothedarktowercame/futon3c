@@ -326,7 +326,9 @@
 ;; and, recursively, the branches of a trailing if/if-not/if-let/if-some, the
 ;; results of cond and case, and the last form of a trailing when/when-not/
 ;; when-let/when-some/do/let/loop (a `recur` is not a return). A map literal
-;; passed as an argument, or in a non-final body form, is not in return position.
+;; passed as an argument, or in a non-final body form, is not in return position,
+;; except as an argument of a returned (merge|into|conj ...), any position, or as the
+;; key-value pairs of a returned (assoc m :k v ...): the returned value contains it.
 ;;
 ;; A let that binds a name to a map literal makes that literal reachable: a
 ;; return position that is the name, or (assoc|merge|update name ...), is the
@@ -389,7 +391,22 @@
                            (when (odd? (count args)) (return-maps (last args) env))))
           ;; the threaded first argument of -> / cond-> is itself a return position
           ("->" "cond->") (when (< 1 n) (return-maps (nth kids 1) env))
-          ("assoc" "merge" "update") (when-let [l (literal-of node env)] [[l env]])
+          "update" (when-let [l (literal-of node env)] [[l env]])
+          ;; (assoc m :k v ...): the first argument if it is (or names) a literal, and the
+          ;; key-value pairs themselves, which `pairs-of` reads as a literal's entries
+          "assoc" (concat (when-let [l (literal-of node env)] [[l env]])
+                          [[node env]])
+          ;; (merge|into|conj a b ...): every argument that is a map literal, or names a
+          ;; let-bound one, in any position; other arguments (a param, a call) stay
+          ;; unattributed, as does a literal nested in a call inside an argument
+          ("merge" "into" "conj")
+          (let [lits (keep (fn [a] (case (:kind a)
+                                     :map a
+                                     :token (get env (:text a))
+                                     nil))
+                           (rest kids))
+                first-arg (literal-of node env)]
+            (map (fn [l] [l env]) (distinct (concat (when first-arg [first-arg]) lits))))
           nil))
       nil)))
 
@@ -408,6 +425,13 @@
   (when (and (= :token (:kind k)) (str/starts-with? (str (:text k)) ":"))
     (keyword (subs (:text k) 1))))
 
+(defn- pairs-of
+  "The [key value] entries of a literal: a map's, or the pairs of a returned (assoc m k v ...)."
+  [literal]
+  (partition 2 (if (= :map (:kind literal))
+                 (:children literal)
+                 (drop 2 (:children literal)))))
+
 (defn- expand-owners
   "ACC (start -> #{records}) with LITERAL owned by OWNERS, and, recursively, the
   literals under its keys that name a scoped record (each owned by that record
@@ -420,7 +444,7 @@
                 (if (and l (not (contains? (get acc (:start l) #{}) r)))
                   (expand-owners acc l env #{r} scoped)
                   acc)))
-            acc (partition 2 (:children literal)))))
+            acc (pairs-of literal))))
 
 (defn- owner-map
   "start offset -> #{records} for every map literal whose keys count as writes
@@ -456,8 +480,9 @@
    * a keyword call on such a receiver: (:target flight), where the receiver is
      the record's name or one of the site's declared :record-aliases;
    * the key of a map literal in return position of a site whose box declares
-     :returns-record r (see `return-maps`), or a scoped literal nested under
-     it or under a let-bound literal it returns (see `owner-map`).
+     :returns-record r (see `return-maps`): also a literal argument of a returned
+     merge/into/conj and the key-value pairs of a returned assoc; or a scoped
+     literal nested under it or under a let-bound literal it returns (see `owner-map`).
   Textual and heuristic like `classify-keyword`; a receiver threaded through
   -> is not seen (the path form still is). PARENT/IDX/GRAND/GIDX are the
   occurrence's enclosing node, its index there, and that node's parent; CFG is
@@ -475,7 +500,9 @@
                      (and ph (zero? idx)
                           (contains? (conj (get (:aliases cfg) r #{}) rname)
                                      (token-text (nth (:children parent) 1 nil))))
-                     (and (= :map (:kind parent)) (even? idx)
+                     (and (or (= :map (:kind parent))
+                              (and (= "assoc" ph) (<= 2 idx)))
+                          (even? idx)
                           (contains? (get (:owners cfg) (:start parent) #{}) r)))]
        r))))
 

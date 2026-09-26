@@ -339,3 +339,88 @@
     (testing "->> and cond->> thread last, so their first argument is not the value: not covered"
       (is (= 0 (get (w "(defn f [x] (->> (if x {:target 1} {:target 2}) (merge {:k 1})))") [:w [:target :flight]])))
       (is (= 0 (get (w "(defn f [x] (cond->> (if x {:target 1} {:target 2}) x (merge {:k 1})))") [:w [:target :flight]]))))))
+
+;; ---------------------------------------------------------------------------
+;; WM-PROVER-MERGE-LITERAL-I: a literal argument of a returned merge/into/conj, and the
+;; key-value pairs of a returned assoc.
+
+(def cpe-src
+  (str "(defn compute-prediction-error [observed prediction opts]\n"
+       "  (let [stamp (cond-> {:producer-contract :v1} (:channel opts) (assoc :channel 1))\n"
+       "        offending (remove nil? [observed prediction])]\n"
+       "    (cond\n"
+       "      (seq offending)\n"
+       "      (merge stamp {:status :refused :reason :malformed :offending offending})\n"
+       "      (nil? observed)\n"
+       "      (merge stamp {:status :absent :absent-member :observed}\n"
+       "             (or (not-empty (select-keys opts [:reason])) {:reason :observation-absent}))\n"
+       "      :else\n"
+       "      (let [err (- observed prediction)]\n"
+       "        (merge stamp {:status :present :observed observed :error err\n"
+       "                      :weighted-error (* err 2)})))))"))
+
+(defn- merge-box [writes]
+  (wbox :w writes {:returns-record :prediction-error}))
+
+(deftest a-literal-argument-of-a-returned-merge-is-returned
+  (let [u (writes-by-vertex {"a.clj" cpe-src}
+                            [(merge-box [[:error {:record :prediction-error}]
+                                         [:weighted-error {:record :prediction-error}]
+                                         [:status {:record :prediction-error}]
+                                         [:reason {:record :prediction-error}]
+                                         [:producer-contract {:record :prediction-error}]
+                                         [:channel {:record :prediction-error}]])])
+        n (fn [k] (get u [:w [k :prediction-error]]))]
+    (testing "the two keys R3a and R7 declare, each in the branch that writes it"
+      (is (= 1 (n :error)))
+      (is (= 1 (n :weighted-error))))
+    (testing "a key written by all three branches counts once per literal"
+      (is (= 3 (n :status))))
+    (testing ":reason is written by a literal inside an `or` call (not a direct argument) and by the first branch"
+      (is (= 1 (n :reason)) "only the direct literal of the first branch"))
+    (testing "the let-bound stamp literal resolves by the existing name rule (one occurrence in the text, three branches return it)"
+      (is (= 1 (n :producer-contract))))
+    (testing "a key an assoc thread step adds to stamp stays unattributed"
+      (is (= 0 (n :channel))))))
+
+(deftest merge-without-a-literal-and-not-in-return-position
+  (let [w (fn [src] (get (writes-by-vertex {"a.clj" src}
+                                           [(wbox :w [[:target {:record :flight}]] {:returns-record :flight})])
+                         [:w [:target :flight]]))]
+    (testing "(merge stamp x): no literal, nothing"
+      (is (= 0 (w "(defn f [stamp x] (merge stamp x))"))))
+    (testing "a literal inside a merge that is not in return position, nothing"
+      (is (= 0 (w "(defn f [s x] (log! (merge s {:target x})) (count x))")))
+      (is (= 0 (w "(defn f [s x] (let [m (merge s {:target x})] (count m)))")))
+      (is (= 0 (w "(defn f [s x] (count (merge s {:target x})))"))))
+    (testing "a literal nested in a call inside a merge argument is not a direct argument"
+      (is (= 0 (w "(defn f [s x] (merge s (or x {:target 1})))"))))))
+
+(deftest merge-into-conj-in-any-position-and-assoc-pairs
+  (let [w (fn [src] (get (writes-by-vertex {"a.clj" src}
+                                           [(wbox :w [[:target {:record :flight}]] {:returns-record :flight})])
+                         [:w [:target :flight]]))]
+    (testing "merge: any position, several literals"
+      (is (= 1 (w "(defn f [s x] (merge {:target x} s))")))
+      (is (= 2 (w "(defn f [s x] (merge {:target 1} s {:target 2}))"))))
+    (testing "into and conj"
+      (is (= 1 (w "(defn f [base x] (into base {:target x}))")))
+      (is (= 1 (w "(defn f [base x] (conj base {:target x}))")))
+      (is (= 1 (w "(defn f [x] (into {:target x} []))"))))
+    (testing "assoc: the key-value pairs of a returned assoc, several pairs"
+      (is (= 1 (w "(defn f [m x] (assoc m :target x))")))
+      (is (= 1 (w "(defn f [m x] (assoc m :other 1 :target x))")))
+      (is (= 0 (w "(defn f [m x] (assoc m :other x))"))))
+    (testing "in a branch of a cond, an if, a case and a trailing let"
+      (is (= 2 (w "(defn f [s x] (if x (merge s {:target 1}) (assoc s :target 2)))")))
+      (is (= 1 (w "(defn f [s x] (let [y (inc x)] (merge s {:target y})))")))
+      (is (= 2 (w "(defn f [s x] (case x 1 (merge s {:target 1}) (merge s {:target 0})))"))))
+    (testing "an assoc that is not returned is not attributed"
+      (is (= 0 (w "(defn f [m x] (count (assoc m :target x)))")))
+      (is (= 0 (w "(defn f [m x] (log! (assoc m :target x)) (count m))"))))
+    (testing "a nested scoped literal inside a returned merge goes to its key record"
+      (let [u (writes-by-vertex {"a.clj" "(defn f [s x] (merge s {:cascade-spec {:want x}}))"}
+                                [(wbox :w [[:want {:record :cascade-spec}] [:want {:record :flight}]]
+                                       {:returns-record :flight})])]
+        (is (= 1 (get u [:w [:want :cascade-spec]])))
+        (is (= 0 (get u [:w [:want :flight]])))))))
