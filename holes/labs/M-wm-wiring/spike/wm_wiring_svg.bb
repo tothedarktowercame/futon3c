@@ -42,7 +42,7 @@
    ["5 Construction, order" [:r2-tick-observe :r2-judge-observation :r3a-predict-observation :r3a-channel-prediction-error :r3a-prediction-error :r7-weighted-error :r3-aggregate-driver :r3-apply-belief-events :morning-brief-fold :r1-belief-carry :trace-record :r13-policy-depth-anticipation :r13-sources-horizon :construction-assemble :tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply :r4-evaluate-state :r4-push-forward :r4-token-likelihood] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-kernel :r5-g-sparse-cert :fpi-policy-free-energy] [:r6-test]]
    ["7a Selection, decision, registry"
-    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
+    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :r14-precision-carry :r14-selection-posterior :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
     [:r9-test :r9-relation-test]]
    ["7b Selection: refusals, failure record"
     [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :run-record-publication :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]

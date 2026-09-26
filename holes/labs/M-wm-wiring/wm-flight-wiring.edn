@@ -377,7 +377,10 @@
    ;; :horizon-steps horizon in base-problem (horizon is assemble's
    ;; (:horizon-steps sources), passed positionally)
    :writes [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]
-            [:horizon-steps {:record :cascade-problem}]]}
+            [:horizon-steps {:record :cascade-problem}]
+            ;; WM-NODE-R14-I: and each problem's beta (:beta beta in
+            ;; base-problem, beta from the sources' context rates)
+            [:beta {:record :cascade-problem}]]}
   ;; WM-NODE-R13-I (WM-SUPERSET-D section 6, corrected in PROOF-2a-PLAN
   ;; <2>2b LOG): the policy depth T. The tick has two horizons. (1) The
   ;; problem family's T: resolve-cascade-horizon returns {:value h ...}
@@ -411,7 +414,35 @@
    ;; (checked), so neither end is declared; a prover case for claude-2
    ;; with JOIN-GRAIN-D (a {sym :key} destructuring binding as a read)
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-family-parameters"}
-   :reads [[:horizon-steps {:record :cascade-problem}]]}
+   ;; WM-NODE-R14-I: and the family's beta, (get-in % [:cascade-problem
+   ;; :beta]), one value for the family (else :incommensurable-family)
+   :reads [[:horizon-steps {:record :cascade-problem}] [:beta {:record :cascade-problem}]]}
+  ;; WM-NODE-R14-I (RC7/RC8.3; the registry row :temperature, futon2
+  ;; 4030f7bdd): the temperature tau := beta, gamma := 1/beta, and its
+  ;; consumer. The family's beta (above) reaches the decision as {T
+  ;; :horizon-steps beta :beta} (the R13 destructuring case, not attributed)
+  ;; and enters policy-precision-carry/advance as :initialized-beta. advance
+  ;; builds the carry record in a let-bound literal, base {... :beta beta
+  ;; :gamma (/ 1.0 beta) :tau beta ...} (the row's :formal exactly), and
+  ;; returns it as (seal (merge base ...)): a literal inside a call that
+  ;; wraps the returned merge is not attributed, so :beta/:gamma/:tau are
+  ;; not declared (a prover case: a returned wrapper call such as seal over
+  ;; an attributable form). cascade-decision-admitted reads (:beta
+  ;; beta-state) into the map-literal argument {:beta ... :beta-state ...} of
+  ;; policy/select-action-cascades, which calls
+  ;; cascade-selection/selection-posterior with {:beta beta :candidates
+  ;; ...}; selection-posterior destructures [{:keys [beta candidates]}] (not
+  ;; a :passes target, and a :keys read is not seen by the occurrence check;
+  ;; the only :beta text at that site is its docstring, so an unscoped
+  ;; declaration would pass on a comment: not made). R14 -> R6 (tau) is
+  ;; therefore recorded, not declared. Positivity: selection-posterior
+  ;; refuses a non-positive beta (:invalid-temperature), the variational arm
+  ;; (MachineTemperature, variationalOkIsPositive); the spread and gain-only
+  ;; arms' positivity rests on the caller's tauMin, a <2>3b item not done here
+  {:box/id :r14-precision-carry :box/kind :component
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}}
+  {:box/id :r14-selection-posterior :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_selection.clj" :var "selection-posterior"}}
   {:box/id :r13-policy-depth-anticipation :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy_depth.clj" :var "anticipation"}
    :returns-record :depth-anticipation
@@ -1409,6 +1440,12 @@
  ;; G's :g travels by {:keys [g ...]}, not seen by the occurrence check).
  ;; Three standing added. 336 -> 338 on my entries; with F1b-join-I's
  ;; to-do (2b10ccc1) the map carries 341 (8 to-do, 333 standing).
+ ;; WM-NODE-R14-I: [:beta {:record :cascade-problem}] from
+ ;; :construction-assemble-one to :r13-family-parameters; new
+ ;; :r14-precision-carry (advance) and :r14-selection-posterior, no field
+ ;; (advance's record returns through (seal (merge base ...)); the
+ ;; posterior destructures its argument). Three standing added. 345 -> 348
+ ;; (8 to-do, 340 standing).
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -4660,4 +4697,34 @@
   :rows [4],
   :kind :standing,
   :note
-  "WM-NODE-R5-I: :universe at horizon-g-sparse-cert is another record's key (the scorer's input map's :rates/:universe, the refusal's :status, the certificate's own entries), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
+  "WM-NODE-R5-I: :universe at horizon-g-sparse-cert is another record's key (the scorer's input map's :rates/:universe, the refusal's :status, the certificate's own entries), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+ {:finding :occurrence-without-declaration,
+  :field :error,
+  :site
+  {:file "futon2/src/futon2/aif/policy_precision_carry.clj",
+   :var "advance"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R14-I: :error at advance is another record's key (the carry record's :status, a refusal's :kind/:error in hold), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/policy_precision_carry.clj",
+   :var "advance"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R14-I: :kind at advance is another record's key (the carry record's :status, a refusal's :kind/:error in hold), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/policy_precision_carry.clj",
+   :var "advance"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R14-I: :status at advance is another record's key (the carry record's :status, a refusal's :kind/:error in hold), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
