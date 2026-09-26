@@ -1225,6 +1225,12 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :written-never-read,
+   :field [:observation :enactment-entry],
+   :writers [:flight-run],
+   :kind :to-do,
+   :note
+   "F1a-1-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 d04711eb/6165ec8b): run! writes the observation that followed an enacted step on its :enactments entry. Its reader is F1b's step admission, not built; this entry goes when that reader is declared"}
+  {:finding :written-never-read,
    :field :measured-a,
    :writers [:r9-decision],
    :kind :standing,
