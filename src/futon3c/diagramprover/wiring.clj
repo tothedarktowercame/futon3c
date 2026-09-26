@@ -4,11 +4,41 @@
   (:require [clojure.string :as str]
             [futon3c.diagramprover.graph :as graph]))
 
+(defn vertex-key
+  "The wire vertex an entry of a box's :reads/:writes names. A keyword is its
+  own vertex, as it always was. `[field {:record r}]` scopes the field to the
+  record r and is the vertex `[field r]`: the same key on two different records
+  is two wires, and the one-writer rule holds per record. Anything else is
+  its own vertex, unchanged."
+  [entry]
+  (if (and (vector? entry) (= 2 (count entry))
+           (keyword? (first entry)) (map? (second entry)) (:record (second entry)))
+    [(first entry) (:record (second entry))]
+    entry))
+
+(defn vertex-field
+  "The field key of a vertex: the keyword itself, or the first of `[field r]`."
+  [v]
+  (if (vector? v) (first v) v))
+
+(defn vertex-record
+  "The record a vertex is scoped to, or nil for an unscoped field."
+  [v]
+  (when (vector? v) (second v)))
+
+(defn- entries [box role] (map vertex-key (or (get box role) [])))
+
 (defn- fields-in [boxes]
   (->> boxes
-       (mapcat #(concat (or (:reads %) []) (or (:writes %) [])))
+       (mapcat #(concat (entries % :reads) (entries % :writes)))
        distinct
        (sort-by str)))
+
+(defn- scopes-of
+  "field key -> set of the records some vertex of the map scopes it to."
+  [vertices]
+  (reduce (fn [m v] (if-let [r (vertex-record v)] (update m (vertex-field v) (fnil conj #{}) r) m))
+          {} vertices))
 
 (defn ingest
   "Turn an EDN wiring spec into an open hypergraph.
@@ -19,7 +49,8 @@
   (let [[initial field->vertex]
         (reduce (fn [[g index] field]
                   (let [[g' vertex] (graph/add-vertex
-                                     g {:vtype :wiring/field :field field})]
+                                     g (cond-> {:vtype :wiring/field :field field}
+                                         (vertex-record field) (assoc :record (vertex-record field))))]
                     [g' (assoc index field vertex)]))
                 [(graph/make-graph) {}]
                 (fields-in boxes))]
@@ -27,8 +58,8 @@
               (first
                (graph/add-edge
                 g
-                (mapv field->vertex (or (:reads box) []))
-                (mapv field->vertex (or (:writes box) []))
+                (mapv field->vertex (entries box :reads))
+                (mapv field->vertex (entries box :writes))
                 {:box/id (:box/id box)})))
             (assoc initial :spec/id id)
             (or boxes []))))
@@ -282,6 +313,73 @@
       :map (if (even? idx) :writes :unclassified)
       :unclassified)))
 
+(def ^:private path-fns #{"get-in" "assoc-in" "update-in"})
+(def ^:private key-fns #{"get" "assoc" "update"})
+
+(defn- token-text [node] (when (= :token (:kind node)) (:text node)))
+
+(defn- attributed-records
+  "Of CANDIDATES (record keywords), those the occurrence of a field key names.
+  Two forms name a record, and only these:
+   * the key sits in the path of get-in/assoc-in/update-in whose FIRST element
+     is the record's key: (get-in st [:sources :wants t]);
+   * the receiver symbol is the record's name: (get-in sources [:wants t]),
+     (get sources :wants), (assoc sources :wants v), (update sources :wants f).
+  Textual and heuristic like `classify-keyword`; a receiver threaded through
+  -> is not seen (the path form still is). PARENT/IDX/GRAND/GIDX are the
+  occurrence's enclosing node, its index there, and that node's parent."
+  [parent idx grand gidx candidates]
+  (let [gh (when (and grand (#{:list :fn} (:kind grand))) (head-text grand))
+        ph (when (and parent (#{:list :fn} (:kind parent))) (head-text parent))]
+    (set
+     (for [r candidates
+           :let [rkey (str r) rname (name r)]
+           :when (or (and (= :vector (:kind parent)) (path-fns gh)
+                          (or (and (pos? idx) (= rkey (token-text (first (:children parent)))))
+                              (and (= 2 gidx) (= rname (token-text (nth (:children grand) 1 nil))))))
+                     (and (key-fns ph) (= 2 idx) (= rname (token-text (nth (:children parent) 1 nil)))))]
+       r))))
+
+(defn- field-usage*
+  "`field-usage`, optionally restricted by :only-record r (count only the
+  occurrences that name record r) or :not-records rs (count only those that
+  name none of rs). With neither, exactly `field-usage`."
+  [^String text field {:keys [only-record not-records]}]
+  (let [fstr (str field)
+        fname (name field)
+        text-matches (count (re-seq (re-pattern
+                                     (str (java.util.regex.Pattern/quote fstr) "(?![\\w-])"))
+                                    text))
+        uses (volatile! [])
+        token-hits (volatile! 0)
+        cands (fn [] (cond only-record #{only-record} not-records not-records :else #{}))
+        counts? (fn [attr] (cond only-record (contains? attr only-record)
+                                 not-records (empty? attr)
+                                 :else true))]
+    (letfn [(visit [node parent idx grand gidx great ggidx]
+              (if (= :token (:kind node))
+                (cond
+                  (= fstr (:text node))
+                  (do (vswap! token-hits inc)
+                      (when (counts? (when parent (attributed-records parent idx grand gidx (cands))))
+                        (vswap! uses conj (if parent
+                                            (classify-keyword parent idx grand gidx great ggidx field)
+                                            :unclassified))))
+                  (and (= fname (:text node)) parent (= :vector (:kind parent))
+                       (keys-vector? grand gidx field))
+                  (when (counts? #{}) (vswap! uses conj :reads)))
+                (doseq [[i child] (map-indexed vector (:children node))]
+                  (visit child node i parent idx grand gidx))))]
+      (doseq [form (:forms (parse-forms text))]
+        (visit form nil nil nil nil nil nil)))
+    (let [f (frequencies @uses)]
+      {:reads (get f :reads 0)
+       :writes (get f :writes 0)
+       ;; an occurrence in a string, regex or comment cannot be attributed to a
+       ;; record: it belongs to the unscoped field, and to no scope
+       :unclassified (+ (get f :unclassified 0)
+                        (if only-record 0 (max 0 (- text-matches @token-hits))))})))
+
 (defn field-usage
   "Occurrences of FIELD in TEXT as {:reads n :writes m :unclassified k}.
   Textual and heuristic (see `classify-keyword`): every occurrence the
@@ -290,32 +388,24 @@
   destructuring `{:keys [field-name]}` entry is a read (it is a symbol, not
   the keyword, in the text)."
   [^String text field]
-  (let [fstr (str field)
-        fname (name field)
-        text-matches (count (re-seq (re-pattern
-                                     (str (java.util.regex.Pattern/quote fstr) "(?![\\w-])"))
-                                    text))
-        uses (volatile! [])
-        token-hits (volatile! 0)]
-    (letfn [(visit [node parent idx grand gidx great ggidx]
-              (if (= :token (:kind node))
-                (cond
-                  (= fstr (:text node))
-                  (do (vswap! token-hits inc)
-                      (vswap! uses conj (if parent
-                                          (classify-keyword parent idx grand gidx great ggidx field)
-                                          :unclassified)))
-                  (and (= fname (:text node)) parent (= :vector (:kind parent))
-                       (keys-vector? grand gidx field))
-                  (vswap! uses conj :reads))
-                (doseq [[i child] (map-indexed vector (:children node))]
-                  (visit child node i parent idx grand gidx))))]
-      (doseq [form (:forms (parse-forms text))]
-        (visit form nil nil nil nil nil nil)))
-    (let [f (frequencies @uses)]
-      {:reads (get f :reads 0)
-       :writes (get f :writes 0)
-       :unclassified (+ (get f :unclassified 0) (max 0 (- text-matches @token-hits)))})))
+  (field-usage* text field {}))
+
+(defn- vertex-usage
+  "Usage counts for VERTEX at TEXT. A scoped vertex `[field r]` counts only the
+  occurrences that name r (`attributed-records`). An unscoped field that some
+  vertex of the map scopes to records SCOPES counts only the occurrences that
+  name none of them, so a field whose scoped writer lives at another site
+  keeps its own occurrences. Any other field: `field-usage`, unchanged."
+  [text vertex scopes]
+  (let [f (vertex-field vertex)]
+    (cond (vertex-record vertex) (field-usage* text f {:only-record (vertex-record vertex)})
+          (seq (scopes f)) (field-usage* text f {:not-records (scopes f)})
+          :else (field-usage text f))))
+
+(defn- vertex-occurs? [text vertex scopes]
+  (if (or (vertex-record vertex) (seq (scopes (vertex-field vertex))))
+    (pos? (reduce + (vals (vertex-usage text vertex scopes))))
+    (field-occurs? text vertex)))
 
 (defn- site-scope
   "{:text …} for SITE: the whole file, or with :var only that top-level form;
@@ -360,6 +450,7 @@
   ([repo-root {:keys [boxes]} {:keys [heuristic?]}]
    (let [boxes (or boxes [])
          field-universe (set (fields-in boxes))
+         scopes (scopes-of field-universe)
          boxes-by-site (group-by :site (filter :site boxes))
          ;; An unreadable or malformed site is a FINDING, not an exception: the
          ;; checker's own boundary must not escape unstructured (the ToolBackend
@@ -379,10 +470,10 @@
                :let [site (:site box)
                      text (get-in site-text [site :text])]
                :when (and site text)
-               [role fields] [[:reads (or (:reads box) [])]
-                              [:writes (or (:writes box) [])]]
+               [role fields] [[:reads (entries box :reads)]
+                              [:writes (entries box :writes)]]
                field fields
-               :when (not (field-occurs? text field))]
+               :when (not (vertex-occurs? text field scopes))]
            {:finding :declaration-without-occurrence
             :box/id (:box/id box)
             :field field
@@ -395,7 +486,7 @@
                :when text
                field field-universe
                :when (and (not (contains? declared-here field))
-                          (field-occurs? text field))]
+                          (vertex-occurs? text field scopes))]
            {:finding :occurrence-without-declaration
             :field field
             :site site
@@ -406,11 +497,11 @@
                  :let [site (:site box)
                        text (get-in site-text [site :text])]
                  :when (and site text)
-                 [role fields] [[:reads (or (:reads box) [])]
-                                [:writes (or (:writes box) [])]]
+                 [role fields] [[:reads (entries box :reads)]
+                                [:writes (entries box :writes)]]
                  field fields
-                 :when (field-occurs? text field)
-                 :let [u (field-usage text field)]
+                 :when (vertex-occurs? text field scopes)
+                 :let [u (vertex-usage text field scopes)]
                  :when (zero? (get u role))]
              {:finding (if (= :writes role) :declared-write-not-found :declared-read-not-found)
               :box/id (:box/id box)
@@ -427,16 +518,17 @@
   "Per declared (box, role, field) at a readable site, the `field-usage`
   counts {:reads n :writes m :unclassified k}, marked :heuristic true."
   [repo-root {:keys [boxes]}]
-  (vec
-   (for [box (or boxes [])
-         :let [site (:site box)
-               text (when site (:text (site-scope repo-root site)))]
-         :when text
-         [role fields] [[:reads (or (:reads box) [])]
-                        [:writes (or (:writes box) [])]]
-         field fields]
-     {:box/id (:box/id box) :site site :role role :field field
-      :usage (field-usage text field) :heuristic true})))
+  (let [scopes (scopes-of (fields-in (or boxes [])))]
+    (vec
+     (for [box (or boxes [])
+           :let [site (:site box)
+                 text (when site (:text (site-scope repo-root site)))]
+           :when text
+           [role fields] [[:reads (entries box :reads)]
+                          [:writes (entries box :writes)]]
+           field fields]
+       {:box/id (:box/id box) :site site :role role :field field
+        :usage (vertex-usage text field scopes) :heuristic true}))))
 
 (defn- normal-path [root path]
   (let [f (java.io.File. (str path))

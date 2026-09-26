@@ -26,7 +26,8 @@
     come out of it, so I3 sees any box that writes a preference."
   (:require [clojure.java.io :as io]
             [clojure.pprint :as pp]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [futon3c.diagramprover.wiring :as wiring]))
 
 (def default-preference-fields
   "The C side of the flight's map: the want spans the read step places in the
@@ -58,8 +59,16 @@
   (when-let [file (:file (or (:site box) (:intended-site box)))]
     (some (fn [[re ts]] (when (re-find re file) ts)) timescale-rules)))
 
+(defn- vname
+  "The port name of a wire vertex: the field's name, or `field@record` for a
+  field scoped to a record (`wiring/vertex-key`)."
+  [v]
+  (if (vector? v)
+    (str (name (wiring/vertex-field v)) "@" (name (wiring/vertex-record v)))
+    (name v)))
+
 (defn- field-index [boxes k]
-  (reduce (fn [m b] (reduce #(update %1 %2 (fnil conj []) (:box/id b)) m (get b k)))
+  (reduce (fn [m b] (reduce #(update %1 (wiring/vertex-key %2) (fnil conj []) (:box/id b)) m (get b k)))
           {} boxes))
 
 (defn project
@@ -73,15 +82,15 @@
          node (fn [box-id] (if (= :test (kind box-id)) (keyword "test" (name box-id)) box-id))
          fields (sort-by str (distinct (concat (keys writers) (keys readers))))
          pref? (set preference-fields)
-         fnode (fn [f] (if (pref? f) (keyword "pref" (name f)) nil))
+         fnode (fn [f] (if (pref? f) (keyword "pref" (vname f)) nil))
          sources (for [b boxes :when (and (= :component (:box/kind b)) (empty? (:reads b)))]
                    (:box/id b))
          inputs (concat
                  (for [f fields :when (pref? f)]
-                   {:id (fnode f) :name (name f) :field f :constraint true :timescale :glacial
+                   {:id (fnode f) :name (vname f) :field f :constraint true :timescale :glacial
                     :source "preference: the owner's stated wants"})
                  (for [f fields :when (and (not (pref? f)) (empty? (writers f)))]
-                   {:id (keyword "in" (name f)) :name (name f) :field f
+                   {:id (keyword "in" (vname f)) :name (vname f) :field f
                     :source "read by the map, written by no box"})
                  (for [b sources]
                    {:id (keyword "world" (name b)) :name (name b)
@@ -91,7 +100,7 @@
                     {:id (node (:box/id b)) :name (name (:box/id b))
                      :consumer "registered test" :spec-ref (:file (:site b))})
                   (for [f fields :when (and (not (pref? f)) (empty? (readers f)))]
-                    {:id (keyword "out" (name f)) :name (name f) :field f
+                    {:id (keyword "out" (vname f)) :name (vname f) :field f
                      :consumer "written by the map, read by no box"}))
          components (for [b boxes :when (= :component (:box/kind b))]
                       (cond-> {:id (:box/id b) :name (name (:box/id b))
@@ -108,9 +117,9 @@
                 (for [f fields :when (pref? f), r (readers f)]
                   {:from (fnode f) :to (node r) :field f})
                 (for [f fields :when (and (not (pref? f)) (empty? (writers f))), r (readers f)]
-                  {:from (keyword "in" (name f)) :to (node r) :field f})
+                  {:from (keyword "in" (vname f)) :to (node r) :field f})
                 (for [f fields :when (and (not (pref? f)) (empty? (readers f))), w (writers f)]
-                  {:from (node w) :to (keyword "out" (name f)) :field f})
+                  {:from (node w) :to (keyword "out" (vname f)) :field f})
                 (for [b sources]
                   {:from (keyword "world" (name b)) :to b :field :world}))]
      {:mission/id id
@@ -142,7 +151,7 @@
     (reduce (fn [g b]
               (reduce (fn [g f] (reduce #(update %1 (:box/id b) (fnil conj #{}) [%2 f])
                                         g (writers f)))
-                      g (:reads b)))
+                      g (map wiring/vertex-key (:reads b))))
             (reduce (fn [g [from to]] (update g to (fnil conj #{}) [from :positional]))
                     {} positional-hops)
             boxes)))
@@ -197,7 +206,8 @@
       :as opts}]
   (let [preference-fields (preference-fields-of m opts)
         writers (field-index (:boxes m) :writes)
-        scored (vec (:reads (first (filter #(= scored-by (:box/id %)) (:boxes m)))))
+        scored (vec (map wiring/vertex-key
+                         (:reads (first (filter #(= scored-by (:box/id %)) (:boxes m))))))
         describe (fn [fs] (vec (for [f (sort-by str fs)]
                                  {:field f :writers (vec (sort-by str (writers f)))
                                   :observed-by (vec (sort-by str (filter observation-boxes (writers f))))})))
