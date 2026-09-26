@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "82816ccc" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "26079b48" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -630,8 +630,25 @@
    ;; only, the scoring is untouched; the reader comes with F1b
    ;; F1b-admit-I (futon2 82816ccc): reads judge's :conditioning-steps and
    ;; records each candidate's admitted prefix on the token-belief input
-   ;; ((assoc token-belief-input :policy-prefixes ...)), after scoring
-   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
+   ;; ((assoc token-belief-input :policy-prefixes ...))
+   ;; F1c-I (futon2 c25e3944): records the prefixes BEFORE selection and
+   ;; hands production-ranked the recorded value
+   ;; ((:policy-prefixes token-belief-input)), so F is computed from exactly
+   ;; what the certificate records
+   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps [:policy-prefixes {:record :token-belief-input}]] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
+  ;; F1c-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 6efecb1e, 26079b48): the F supply.
+  ;; production-ranked writes each ranked entry's :f-prefix from the
+  ;; candidate's admitted prefix (:computed Σf, :zero-support, or
+  ;; :not-supplied with the admission's reason; a prefix failing the re-check
+  ;; is refused as data); selection-candidate reads it into the −F term,
+  ;; beside G (the ranked entry's :controller-score)
+  {:box/id :r9-f-prefix-supply :box/kind :component
+   :site {:file "futon2/src/futon2/aif/policy_prefix_evidence.clj" :var "production-ranked"}
+   :writes [[:f-prefix {:record :ranked-entry}]]}
+  {:box/id :r8-selection-candidate :box/kind :component
+   :site {:file "futon2/src/futon2/aif/policy.clj" :var "selection-candidate"}
+   :record-aliases {:ranked-entry ["entry"]}
+   :reads [[:f-prefix {:record :ranked-entry}] :controller-score]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -1381,12 +1398,36 @@
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :written-never-read,
-   :field [:policy-prefixes :token-belief-input],
-   :writers [:r9-decision],
-   :kind :to-do,
+ [{:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/policy.clj",
+    :var "selection-candidate"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
    :note
-   "F1b-admit-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 82816ccc): the tick records each candidate's admitted observed prefix on the token-belief input. Its reader is F1c-I (production-ranked consuming it), not built; this entry goes when that reader is declared"}
+   "generic key (WM-MAP-REPLAY-I2): here it is the F prefix's own status (and the habit's and the certificate f's) (F1c-I), not the declared flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/policy.clj",
+    :var "selection-candidate"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): here it is the F prefix's own refusal kind (:invalid-policy-prefix) (F1c-I), not the declared flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/policy_prefix_evidence.clj",
+    :var "production-ranked"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): here it is the F prefix's own status (an :invalid prefix is refused) (F1c-I), not the declared flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
   {:finding :occurrence-without-declaration,
    :field :message,
    :site
