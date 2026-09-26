@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "7de525d9",
-  :map "e6e48e22"},
+  :rev "48524a7a",
+  :map "1d10314c"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 127, :wires 134},
+ {:verified 1, :witnessed-hermetically 6, :unverified 129, :wires 136},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -101,6 +101,11 @@
    :status :unverified}
   {:wire [:gate-refuse :gate-refusal-read :error], :status :unverified}
   {:wire [:loop-entry :r1-outer-cascade :trigger], :status :unverified}
+  {:wire
+   [:morning-brief-fold
+    :r7-fold-call
+    [:belief {:record :morning-brief-fold}]],
+   :status :unverified}
   {:wire [:r0-enact-step :r0-test :attempts], :status :unverified}
   {:wire [:r0-enact-step :r0-test :grain-gate], :status :unverified}
   {:wire [:r0-enact-step :r5-test :attempts], :status :unverified}
@@ -178,6 +183,11 @@
     :locator-questions],
    :status :unverified}
   {:wire [:r2-store-locators :r3-store-locators :locators],
+   :status :unverified}
+  {:wire
+   [:r3-aggregate-driver
+    :r7-fold-call
+    [:driver {:record :r3d-driver}]],
    :status :unverified}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :unverified}
