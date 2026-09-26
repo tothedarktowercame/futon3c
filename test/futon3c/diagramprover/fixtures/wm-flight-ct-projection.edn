@@ -25,10 +25,11 @@
 ;; re-pinned at 24b27e1a from 9567d6bb on 2026-09-26
 ;; Re-pinned by claude-10 at map 1d2a9f94 (WM-NODE-R13-I; the map itself was committed by inbox-zero's promotion of claude-10's working tree, 1d2a9f94, before this fixture and the map test's sha, which follow here): :r13-sources-horizon writes [:horizon-steps {:record :sources}], read by the new :construction-assemble; :construction-assemble-one writes [:horizon-steps {:record :cascade-problem}], read by the new :r13-family-parameters; the new :r13-policy-depth-anticipation writes [:horizon-steps {:record :depth-anticipation}], read by :r7-fold-call; 37/25/92/190 -> 39/25/96/195; :construction-assemble, :r13-family-parameters and :r13-sources-horizon join the dead components; :i4 unchanged.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-NODE-R4-I: :r4-evaluate-state writes [:kernel {:record :evaluation}], read by the new :r4-push-forward; new :r4-token-likelihood; 39/25/96/195 -> 41/25/99/198; the three new boxes join the dead components; :i4 unchanged). :map-sha typed absent (the map is in this commit).
+;; re-pinned at 2b10ccc1 from 9567d6bb on 2026-09-26
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha {:absent :same-commit-as-the-map},
+ :map-sha "2b10ccc1",
  :futon5-sha "aeeee96",
- :counts {:inputs 41, :outputs 25, :components 99, :edges 198},
+ :counts {:inputs 41, :outputs 26, :components 99, :edges 201},
  :validate
  {:all-valid false,
   :checks
@@ -95,7 +96,9 @@
    {:valid false,
     :check :spec-coverage,
     :unspecified-outputs
-    [:out/measured-a :out/observation.enactment-entry]}
+    [:out/measured-a
+     :out/observation.enactment-entry
+     :out/step.enactment-entry]}
    {:valid true, :check :timescale-ordering, :violations []}
    {:valid true, :check :exogeneity, :vulnerable-paths []}
    {:valid true,
