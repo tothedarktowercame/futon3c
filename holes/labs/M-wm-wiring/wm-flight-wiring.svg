@@ -9,9 +9,9 @@
 </defs>
 <rect width='3300' height='1804' fill='white'/>
 <text x='24' y='36' font-size='24' font-weight='700' fill='#173b39'>The flight loop as the wiring map declares it</text>
-<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (bc45a2a0, futon3c HEAD bc45a2a0) by spike/wm_wiring_svg.bb; not hand edited. 99 boxes, 71 fields.</text>
+<text x='24' y='58' font-size='12' fill='#52605f'>Generated from holes/labs/M-wm-wiring/wm-flight-wiring.edn (40aae919, futon3c HEAD 40aae919) by spike/wm_wiring_svg.bb; not hand edited. 100 boxes, 73 fields.</text>
 <text x='24' y='74' font-size='12' fill='#52605f'>Each panel is one step of the flight, in order. A box is a source var the map pins, listing what it writes (w) and reads (r). A field kept inside a step is an arrow inside its panel.</text>
-<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 273 findings (2 to-do). 20 fields cross steps; 0 of 11 steps are entered or left by none.</text>
+<text x='24' y='90' font-size='12' fill='#52605f'>A field that crosses steps is one line in the band below, tapped by its writer (dot) and each reader (arrow). The registered test checks each site at the pins (futon2 663caa7b, futon3c 58f1a8cb), expecting 281 findings (4 to-do). 20 fields cross steps; 0 of 11 steps are entered or left by none.</text>
 <rect x='181' y='138' width='244' height='1152' rx='10' fill='#f7fafa' stroke='#d9e2e1'/>
 <text x='193' y='158' font-size='12.5' font-weight='700' fill='#274d4a'>1 Loop entry, target field</text>
 <text x='193' y='171' font-size='9' fill='#3a4a48'>exemplar trace steps 1, 2, 3, 15</text>
@@ -114,8 +114,8 @@
 <text x='3039.0' y='432.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 3039.0 432.0)'>cast</text><text x='3039.0' y='432.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 3039.0 432.0)'>cast</text>
 <line x1='1060' y1='213' x2='1034' y2='213' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='1034' cy='213' r='2.2' fill='#2f5f5c'/>
-<path d='M1034,213 V291 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:library-root: :r3-flight-ask writes, :r3-prompt reads (same step)</title></path>
-<text x='1037.0' y='252.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1037.0 252.0)'>library-root</text><text x='1037.0' y='252.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1037.0 252.0)'>library-root</text>
+<path d='M1034,213 V363 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:library-root: :r3-flight-ask writes, :r3-prompt reads (same step)</title></path>
+<text x='1037.0' y='288.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 1037.0 288.0)'>library-root</text><text x='1037.0' y='288.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 1037.0 288.0)'>library-root</text>
 <line x1='2185' y1='789' x2='2175' y2='789' stroke='#2f5f5c' stroke-width='1.2'/>
 <circle cx='2175' cy='789' r='2.2' fill='#2f5f5c'/>
 <path d='M2175,789 V867 H2184' fill='none' stroke='#2f5f5c' stroke-width='1.2'  marker-end='url(#a-wired)'><title>:failure-cause: :r9-close-cause writes, :r9-finding-store reads (same step)</title></path>
@@ -250,12 +250,32 @@
 <text x='3047.0' y='432.0' font-size='8' text-anchor='middle' fill='none' stroke='white' stroke-width='3' transform='rotate(-90 3047.0 432.0)'>detail</text><text x='3047.0' y='432.0' font-size='8' text-anchor='middle' fill='#2f5f5c' transform='rotate(-90 3047.0 432.0)'>detail</text>
 <line x1='714' y1='262' x2='738' y2='262' stroke='#11865b' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-constraint)'><title>:owner-text: read by :r2-served-by-reading, written by no box (the owner's text, a constraint)</title></line>
 <text x='726.0' y='259.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >owner-text</text><text x='726.0' y='259.0' font-size='6.5' text-anchor='middle' fill='#11865b' >owner-text</text>
+<line x1='714' y1='190' x2='738' y2='190' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :r2-flight-read, written by no box</title></line>
+<text x='726.0' y='187.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='726.0' y='187.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='3024' y1='550' x2='3048' y2='550' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :flight-run, written by no box</title></line>
+<text x='3036.0' y='547.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='3036.0' y='547.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='1034' y1='262' x2='1058' y2='262' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :flight-ask-fn, written by no box</title></line>
+<text x='1046.0' y='259.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='1046.0' y='259.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='3024' y1='694' x2='3048' y2='694' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :flight-judge-opts, written by no box</title></line>
+<text x='3036.0' y='691.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='3036.0' y='691.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='1329' y1='190' x2='1353' y2='190' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :tick-flight-assembly, written by no box</title></line>
+<text x='1341.0' y='187.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='1341.0' y='187.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='1594' y1='334' x2='1618' y2='334' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:want@cascade-spec: read by :r4-kernel, written by no box</title></line>
+<text x='1606.0' y='331.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >want@cascade-spec</text><text x='1606.0' y='331.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >want@cascade-spec</text>
+<line x1='2439' y1='334' x2='2463' y2='334' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :r0-enact-step, written by no box</title></line>
+<text x='2451.0' y='331.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='2451.0' y='331.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
 <line x1='1879' y1='190' x2='1903' y2='190' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:relations: read by :r9-classify-target, written by no box</title></line>
 <text x='1891.0' y='187.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >relations</text><text x='1891.0' y='187.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >relations</text>
 <line x1='1879' y1='262' x2='1903' y2='262' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:source-pins: read by :r9-embedding-neighbour, written by no box</title></line>
 <text x='1891.0' y='259.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >source-pins</text><text x='1891.0' y='259.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >source-pins</text>
 <line x1='1879' y1='271' x2='1903' y2='271' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:min-cosine: read by :r9-embedding-neighbour, written by no box</title></line>
 <text x='1891.0' y='268.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >min-cosine</text><text x='1891.0' y='268.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >min-cosine</text>
+<line x1='2159' y1='766' x2='2183' y2='766' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :r9-close-cause, written by no box</title></line>
+<text x='2171.0' y='763.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='2171.0' y='763.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='3024' y1='334' x2='3048' y2='334' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :flight-click, written by no box</title></line>
+<text x='3036.0' y='331.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='3036.0' y='331.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
+<line x1='2729' y1='622' x2='2753' y2='622' stroke='#9a9a94' stroke-width='1.2' stroke-dasharray='3,2' marker-end='url(#a-unwritten)'><title>:target@flight: read by :r10-observe-publication, written by no box</title></line>
+<text x='2741.0' y='619.0' font-size='6.5' text-anchor='middle' fill='none' stroke='white' stroke-width='3' >target@flight</text><text x='2741.0' y='619.0' font-size='6.5' text-anchor='middle' fill='#9a9a94' >target@flight</text>
 <line x1='158' y1='1338' x2='693' y2='1338' stroke='#7b3fa0' stroke-width='1.4' ><title>:clock-lineage: :clock-in writes; read by r1-outer-cascade</title></line>
 <text x='152.0' y='1341.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >clock-lineage</text><text x='152.0' y='1341.0' font-size='8' text-anchor='end' fill='#7b3fa0' >clock-lineage</text>
 <path d='M671,285.0 H693 V1338' fill='none' stroke='#7b3fa0' stroke-width='1.1' />
@@ -267,40 +287,40 @@
 <path d='M936,429.0 H958 V1351' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='958' cy='1351' r='2.6' fill='#2f5f5c'/>
 <circle cx='963' cy='1351' r='1.8' fill='#2f5f5c'/>
-<path d='M963,1351 V501.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:criteria: :r2-store-criteria writes, :r3-store-criteria reads</title></path>
+<path d='M963,1351 V573.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:criteria: :r2-store-criteria writes, :r3-store-criteria reads</title></path>
 <line x1='968' y1='1364' x2='973' y2='1364' stroke='#2f5f5c' stroke-width='1.4' ><title>:coverage: :r2-store-coverage writes; read by r3-store-coverage</title></line>
 <text x='962.0' y='1367.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >coverage</text><text x='962.0' y='1367.0' font-size='8' text-anchor='end' fill='#2f5f5c' >coverage</text>
 <path d='M936,501.0 H968 V1364' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='968' cy='1364' r='2.6' fill='#2f5f5c'/>
 <circle cx='973' cy='1364' r='1.8' fill='#2f5f5c'/>
-<path d='M973,1364 V573.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:coverage: :r2-store-coverage writes, :r3-store-coverage reads</title></path>
+<path d='M973,1364 V645.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:coverage: :r2-store-coverage writes, :r3-store-coverage reads</title></path>
 <line x1='978' y1='1377' x2='983' y2='1377' stroke='#2f5f5c' stroke-width='1.4' ><title>:locators: :r2-store-locators writes; read by r3-store-locators</title></line>
 <text x='972.0' y='1380.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >locators</text><text x='972.0' y='1380.0' font-size='8' text-anchor='end' fill='#2f5f5c' >locators</text>
 <path d='M936,573.0 H978 V1377' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='978' cy='1377' r='2.6' fill='#2f5f5c'/>
 <circle cx='983' cy='1377' r='1.8' fill='#2f5f5c'/>
-<path d='M983,1377 V645.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locators: :r2-store-locators writes, :r3-store-locators reads</title></path>
+<path d='M983,1377 V717.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locators: :r2-store-locators writes, :r3-store-locators reads</title></path>
 <line x1='988' y1='1390' x2='993' y2='1390' stroke='#2f5f5c' stroke-width='1.4' ><title>:locator-questions: :r2-store-locator-questions writes; read by r3-store-locator-questions</title></line>
 <text x='982.0' y='1393.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >locator-questions</text><text x='982.0' y='1393.0' font-size='8' text-anchor='end' fill='#2f5f5c' >locator-questions</text>
 <path d='M936,645.0 H988 V1390' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='988' cy='1390' r='2.6' fill='#2f5f5c'/>
 <circle cx='993' cy='1390' r='1.8' fill='#2f5f5c'/>
-<path d='M993,1390 V717.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locator-questions: :r2-store-locator-questions writes, :r3-store-locator-questions reads</title></path>
+<path d='M993,1390 V789.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locator-questions: :r2-store-locator-questions writes, :r3-store-locator-questions reads</title></path>
 <line x1='998' y1='1403' x2='1003' y2='1403' stroke='#2f5f5c' stroke-width='1.4' ><title>:locator-declines: :r2-store-locator-declines writes; read by r3-store-locator-declines</title></line>
 <text x='992.0' y='1406.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >locator-declines</text><text x='992.0' y='1406.0' font-size='8' text-anchor='end' fill='#2f5f5c' >locator-declines</text>
 <path d='M936,717.0 H998 V1403' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='998' cy='1403' r='2.6' fill='#2f5f5c'/>
 <circle cx='1003' cy='1403' r='1.8' fill='#2f5f5c'/>
-<path d='M1003,1403 V789.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locator-declines: :r2-store-locator-declines writes, :r3-store-locator-declines reads</title></path>
+<path d='M1003,1403 V861.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:locator-declines: :r2-store-locator-declines writes, :r3-store-locator-declines reads</title></path>
 <line x1='1008' y1='1416' x2='1013' y2='1416' stroke='#2f5f5c' stroke-width='1.4' ><title>:constraints-read: :r2-store-constraints-read writes; read by r3-store-constraints-read</title></line>
 <text x='1002.0' y='1419.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >constraints-read</text><text x='1002.0' y='1419.0' font-size='8' text-anchor='end' fill='#2f5f5c' >constraints-read</text>
 <path d='M936,789.0 H1008 V1416' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1008' cy='1416' r='2.6' fill='#2f5f5c'/>
 <circle cx='1013' cy='1416' r='1.8' fill='#2f5f5c'/>
-<path d='M1013,1416 V861.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:constraints-read: :r2-store-constraints-read writes, :r3-store-constraints-read reads</title></path>
+<path d='M1013,1416 V933.0 H1059' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:constraints-read: :r2-store-constraints-read writes, :r3-store-constraints-read reads</title></path>
 <line x1='1278' y1='1429' x2='2973' y2='1429' stroke='#2f5f5c' stroke-width='1.4' ><title>:universe: :flight-click-wants writes; read by flight-judge-opts, tick-flight-assembly</title></line>
 <text x='1272.0' y='1432.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >universe</text><text x='1272.0' y='1432.0' font-size='8' text-anchor='end' fill='#2f5f5c' >universe</text>
-<path d='M1256,361.0 H1278 V1429' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1256,433.0 H1278 V1429' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1278' cy='1429' r='2.6' fill='#2f5f5c'/>
 <circle cx='2973' cy='1429' r='1.8' fill='#2f5f5c'/>
 <path d='M2973,1429 V721.0 H3049' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:universe: :flight-click-wants writes, :flight-judge-opts reads</title></path>
@@ -308,7 +328,7 @@
 <path d='M1283,1429 V217.0 H1354' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:universe: :flight-click-wants writes, :tick-flight-assembly reads</title></path>
 <line x1='1288' y1='1442' x2='2983' y2='1442' stroke='#2f5f5c' stroke-width='1.4' ><title>:wants: :flight-click-wants writes; read by flight-judge-opts, tick-flight-assembly, click-start</title></line>
 <text x='1282.0' y='1445.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >wants</text><text x='1282.0' y='1445.0' font-size='8' text-anchor='end' fill='#2f5f5c' >wants</text>
-<path d='M1256,353.0 H1288 V1442' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1256,425.0 H1288 V1442' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1288' cy='1442' r='2.6' fill='#2f5f5c'/>
 <circle cx='2978' cy='1442' r='1.8' fill='#2f5f5c'/>
 <path d='M2978,1442 V713.0 H3049' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :flight-judge-opts reads</title></path>
@@ -318,7 +338,7 @@
 <path d='M2983,1442 V213.0 H3049' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:wants: :flight-click-wants writes, :click-start reads</title></path>
 <line x1='1298' y1='1455' x2='1308' y2='1455' stroke='#2f5f5c' stroke-width='1.4' ><title>:interpretations: :ask-merge-published writes; read by construction-assemble-one, construction-construct</title></line>
 <text x='1292.0' y='1458.0' font-size='8' text-anchor='end' fill='none' stroke='white' stroke-width='3' >interpretations</text><text x='1292.0' y='1458.0' font-size='8' text-anchor='end' fill='#2f5f5c' >interpretations</text>
-<path d='M1256,429.0 H1298 V1455' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
+<path d='M1256,501.0 H1298 V1455' fill='none' stroke='#2f5f5c' stroke-width='1.1' />
 <circle cx='1298' cy='1455' r='2.6' fill='#2f5f5c'/>
 <circle cx='1303' cy='1455' r='1.8' fill='#2f5f5c'/>
 <path d='M1303,1455 V285.0 H1354' fill='none' stroke='#2f5f5c' stroke-width='1.1'  marker-end='url(#a-wired)'><title>:interpretations: :ask-merge-published writes, :construction-assemble-one reads</title></path>
@@ -438,18 +458,25 @@ reads: want-span text-sha256</title><rect x='740' y='326' width='196' height='62
 </g>
 <g><title>:r2-flight-read
 writes: —
-reads: text-sha256</title><rect x='740' y='182' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: text-sha256 target@flight</title><rect x='740' y='182' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='748' y='197' font-size='10.5' font-weight='600' fill='#1d3a38'>read-fn</text>
 <text x='748' y='209' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
-<text x='748' y='223' font-size='7' fill='#6a6a64'>r: text-sha256</text>
+<text x='748' y='223' font-size='7' fill='#6a6a64'>r: text-sha256 target@flight</text>
 </g>
 <g><title>:flight-run
 writes: readings needs
-reads: needs</title><rect x='3050' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: needs target@flight</title><rect x='3050' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='3058' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>run!</text>
 <text x='3058' y='569' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
 <text x='3058' y='583' font-size='7' fill='#2f5f5c'>w: readings needs</text>
-<text x='3058' y='595' font-size='7' fill='#6a6a64'>r: needs</text>
+<text x='3058' y='595' font-size='7' fill='#6a6a64'>r: needs target@flight</text>
+</g>
+<g><title>:flight-ask-fn
+writes: —
+reads: target@flight</title><rect x='1060' y='254' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='269' font-size='10.5' font-weight='600' fill='#1d3a38'>ask-fn</text>
+<text x='1068' y='281' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
+<text x='1068' y='295' font-size='7' fill='#6a6a64'>r: target@flight</text>
 </g>
 <g><title>:flight-driver-summary
 writes: —
@@ -502,74 +529,74 @@ reads: —</title><rect x='740' y='758' width='196' height='62' rx='6' fill='#ff
 </g>
 <g><title>:r3-store-criteria
 writes: —
-reads: criteria</title><rect x='1060' y='470' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='485' font-size='10.5' font-weight='600' fill='#1d3a38'>published-criteria</text>
-<text x='1068' y='497' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='511' font-size='7' fill='#6a6a64'>r: criteria</text>
+reads: criteria</title><rect x='1060' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>published-criteria</text>
+<text x='1068' y='569' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='583' font-size='7' fill='#6a6a64'>r: criteria</text>
 </g>
 <g><title>:r3-store-coverage
 writes: —
-reads: coverage</title><rect x='1060' y='542' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='557' font-size='10.5' font-weight='600' fill='#1d3a38'>published-coverage</text>
-<text x='1068' y='569' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='583' font-size='7' fill='#6a6a64'>r: coverage</text>
+reads: coverage</title><rect x='1060' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>published-coverage</text>
+<text x='1068' y='641' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='655' font-size='7' fill='#6a6a64'>r: coverage</text>
 </g>
 <g><title>:r3-store-locators
 writes: —
-reads: locators</title><rect x='1060' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locators</text>
-<text x='1068' y='641' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='655' font-size='7' fill='#6a6a64'>r: locators</text>
+reads: locators</title><rect x='1060' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locators</text>
+<text x='1068' y='713' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='727' font-size='7' fill='#6a6a64'>r: locators</text>
 </g>
 <g><title>:r3-store-locator-questions
 writes: —
-reads: locator-questions</title><rect x='1060' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locator-questions</text>
-<text x='1068' y='713' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='727' font-size='7' fill='#6a6a64'>r: locator-questions</text>
+reads: locator-questions</title><rect x='1060' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='773' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locator-questions</text>
+<text x='1068' y='785' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='799' font-size='7' fill='#6a6a64'>r: locator-questions</text>
 </g>
 <g><title>:r3-store-locator-declines
 writes: —
-reads: locator-declines</title><rect x='1060' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='773' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locator-declines</text>
-<text x='1068' y='785' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='799' font-size='7' fill='#6a6a64'>r: locator-declines</text>
+reads: locator-declines</title><rect x='1060' y='830' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='845' font-size='10.5' font-weight='600' fill='#1d3a38'>published-locator-declines</text>
+<text x='1068' y='857' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='871' font-size='7' fill='#6a6a64'>r: locator-declines</text>
 </g>
 <g><title>:r3-store-constraints-read
 writes: —
-reads: constraints-read</title><rect x='1060' y='830' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='845' font-size='10.5' font-weight='600' fill='#1d3a38'>published-constraints</text>
-<text x='1068' y='857' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
-<text x='1068' y='871' font-size='7' fill='#6a6a64'>r: constraints-read</text>
+reads: constraints-read</title><rect x='1060' y='902' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='917' font-size='10.5' font-weight='600' fill='#1d3a38'>published-constraints</text>
+<text x='1068' y='929' font-size='7.5' fill='#5e6b6a'>mission_reading.clj</text>
+<text x='1068' y='943' font-size='7' fill='#6a6a64'>r: constraints-read</text>
 </g>
 <g><title>:flight-click-wants
 writes: wants universe
-reads: —</title><rect x='1060' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>click-wants</text>
-<text x='1068' y='353' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
-<text x='1068' y='367' font-size='7' fill='#2f5f5c'>w: wants universe</text>
+reads: —</title><rect x='1060' y='398' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='413' font-size='10.5' font-weight='600' fill='#1d3a38'>click-wants</text>
+<text x='1068' y='425' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
+<text x='1068' y='439' font-size='7' fill='#2f5f5c'>w: wants universe</text>
 </g>
 <g><title>:flight-judge-opts
 writes: —
-reads: wants universe</title><rect x='3050' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: wants universe target@flight</title><rect x='3050' y='686' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='3058' y='701' font-size='10.5' font-weight='600' fill='#1d3a38'>judge-opts</text>
 <text x='3058' y='713' font-size='7.5' fill='#5e6b6a'>flight.clj</text>
-<text x='3058' y='727' font-size='7' fill='#6a6a64'>r: wants universe</text>
+<text x='3058' y='727' font-size='7' fill='#6a6a64'>r: wants universe target@flight</text>
 </g>
 <g><title>:tick-flight-assembly
 writes: universes wants@sources
-reads: wants universe</title><rect x='1355' y='182' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: wants universe target@flight</title><rect x='1355' y='182' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='1363' y='197' font-size='10.5' font-weight='600' fill='#1d3a38'>flight-assembly-input</text>
 <text x='1363' y='209' font-size='7.5' fill='#5e6b6a'>war_machine.clj</text>
 <text x='1363' y='223' font-size='7' fill='#2f5f5c'>w: universes wants@sources</text>
-<text x='1363' y='235' font-size='7' fill='#6a6a64'>r: wants universe</text>
+<text x='1363' y='235' font-size='7' fill='#6a6a64'>r: wants universe target@flight</text>
 </g>
 <g><title>:ask-merge-published
 writes: interpretations
-reads: —</title><rect x='1060' y='398' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='413' font-size='10.5' font-weight='600' fill='#1d3a38'>merge-published</text>
-<text x='1068' y='425' font-size='7.5' fill='#5e6b6a'>want_interpretation.clj</text>
-<text x='1068' y='439' font-size='7' fill='#2f5f5c'>w: interpretations</text>
+reads: —</title><rect x='1060' y='470' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='485' font-size='10.5' font-weight='600' fill='#1d3a38'>merge-published</text>
+<text x='1068' y='497' font-size='7.5' fill='#5e6b6a'>want_interpretation.clj</text>
+<text x='1068' y='511' font-size='7' fill='#2f5f5c'>w: interpretations</text>
 </g>
 <g><title>:construction-assemble-one
 writes: —
@@ -609,17 +636,17 @@ reads: —</title><rect x='1060' y='182' width='196' height='62' rx='6' fill='#f
 </g>
 <g><title>:r3-prompt
 writes: —
-reads: library-root</title><rect x='1060' y='254' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
-<text x='1068' y='269' font-size='10.5' font-weight='600' fill='#1d3a38'>prompt</text>
-<text x='1068' y='281' font-size='7.5' fill='#5e6b6a'>want_interpretation.clj</text>
-<text x='1068' y='295' font-size='7' fill='#6a6a64'>r: library-root</text>
+reads: library-root</title><rect x='1060' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+<text x='1068' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>prompt</text>
+<text x='1068' y='353' font-size='7.5' fill='#5e6b6a'>want_interpretation.clj</text>
+<text x='1068' y='367' font-size='7' fill='#6a6a64'>r: library-root</text>
 </g>
 <g><title>:r3-test
 writes: —
-reads: library-root</title><rect x='1060' y='922' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
-<text x='1068' y='937' font-size='10.5' font-weight='600' fill='#1d3a38'>r3-test</text>
-<text x='1068' y='949' font-size='7.5' fill='#5e6b6a'>flight_ask_library_test.clj</text>
-<text x='1068' y='963' font-size='7' fill='#6a6a64'>r: library-root</text>
+reads: library-root</title><rect x='1060' y='994' width='196' height='62' rx='6' fill='#fbfbf8' stroke='#8a8a84' stroke-width='1.2' stroke-dasharray='2,2'/>
+<text x='1068' y='1009' font-size='10.5' font-weight='600' fill='#1d3a38'>r3-test</text>
+<text x='1068' y='1021' font-size='7.5' fill='#5e6b6a'>flight_ask_library_test.clj</text>
+<text x='1068' y='1035' font-size='7' fill='#6a6a64'>r: library-root</text>
 </g>
 <g><title>:r4-constructor
 writes: precedence-violations descent units
@@ -643,11 +670,11 @@ reads: —</title><rect x='1355' y='542' width='196' height='62' rx='6' fill='#f
 </g>
 <g><title>:r4-kernel
 writes: order-use controller-score
-reads: adjudication-rates</title><rect x='1620' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: adjudication-rates want@cascade-spec</title><rect x='1620' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='1628' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>rank-cascade-actions</text>
 <text x='1628' y='353' font-size='7.5' fill='#5e6b6a'>efe.clj</text>
 <text x='1628' y='367' font-size='7' fill='#2f5f5c'>w: order-use controller-score</text>
-<text x='1628' y='379' font-size='7' fill='#6a6a64'>r: adjudication-rates</text>
+<text x='1628' y='379' font-size='7' fill='#6a6a64'>r: adjudication-rates want@cascade-spec</text>
 </g>
 <g><title>:r4-test
 writes: —
@@ -665,11 +692,11 @@ reads: order-use descent units</title><rect x='1355' y='706' width='196' height=
 </g>
 <g><title>:r0-enact-step
 writes: attempts grain-gate
-reads: candidate enacted-steps publication-observed</title><rect x='2465' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.4' />
+reads: candidate enacted-steps publication-observed target@flight</title><rect x='2465' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='2.4' />
 <text x='2473' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>enact-fn</text>
 <text x='2473' y='353' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
 <text x='2473' y='367' font-size='7' fill='#2f5f5c'>w: attempts grain-gate</text>
-<text x='2473' y='379' font-size='7' fill='#6a6a64'>r: candidate enacted-steps publication-observed</text>
+<text x='2473' y='379' font-size='7' fill='#6a6a64'>r: candidate enacted-steps publication-observe…</text>
 <circle cx='2464' cy='325' r='9' fill='#173b39'/><text x='2464' y='328' text-anchor='middle' font-size='8' font-weight='700' fill='white'>10</text>
 </g>
 <g><title>:r0-test
@@ -884,10 +911,11 @@ reads: failure-kind</title><rect x='2185' y='1138' width='196' height='62' rx='6
 </g>
 <g><title>:r9-close-cause
 writes: failure-cause
-reads: —</title><rect x='2185' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: target@flight</title><rect x='2185' y='758' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='2193' y='773' font-size='10.5' font-weight='600' fill='#1d3a38'>run-opportunity-core!</text>
 <text x='2193' y='785' font-size='7.5' fill='#5e6b6a'>full_loop_runner.clj</text>
 <text x='2193' y='799' font-size='7' fill='#2f5f5c'>w: failure-cause</text>
+<text x='2193' y='811' font-size='7' fill='#6a6a64'>r: target@flight</text>
 </g>
 <g><title>:r9-finding-store
 writes: —
@@ -912,10 +940,11 @@ reads: failure-cause</title><rect x='2185' y='1210' width='196' height='62' rx='
 </g>
 <g><title>:flight-click
 writes: status detail cast
-reads: —</title><rect x='3050' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: target@flight</title><rect x='3050' y='326' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='3058' y='341' font-size='10.5' font-weight='600' fill='#1d3a38'>http-click-fn</text>
 <text x='3058' y='353' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
 <text x='3058' y='367' font-size='7' fill='#2f5f5c'>w: status detail cast</text>
+<text x='3058' y='379' font-size='7' fill='#6a6a64'>r: target@flight</text>
 </g>
 <g><title>:flight-record-click
 writes: —
@@ -1054,10 +1083,11 @@ reads: pair-overlap</title><rect x='215' y='706' width='196' height='62' rx='6' 
 </g>
 <g><title>:r10-observe-publication
 writes: publication-observed
-reads: —</title><rect x='2755' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
+reads: target@flight</title><rect x='2755' y='614' width='196' height='62' rx='6' fill='#ffffff' stroke='#2f5f5c' stroke-width='1.2' />
 <text x='2763' y='629' font-size='10.5' font-weight='600' fill='#1d3a38'>observe-publication-fn</text>
 <text x='2763' y='641' font-size='7.5' fill='#5e6b6a'>flight_runner.clj</text>
 <text x='2763' y='655' font-size='7' fill='#2f5f5c'>w: publication-observed</text>
+<text x='2763' y='667' font-size='7' fill='#6a6a64'>r: target@flight</text>
 </g>
 <g><title>:r10-test
 writes: —
@@ -1121,7 +1151,7 @@ reads: —</title><rect x='3050' y='758' width='196' height='62' rx='6' fill='#e
 <text x='3058' y='785' font-size='7.5' fill='#5e6b6a'>warrants (siteless)</text>
 </g>
 <text x='24' y='1638' font-size='12' font-weight='700' fill='#274d4a'>Legend</text>
-<text x='24' y='1656' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (75)</text>
+<text x='24' y='1656' font-size='10.5' fill='#3a4a48'>solid box: built component at its pinned var (76)</text>
 <text x='24' y='1670' font-size='10.5' fill='#3a4a48'>dashed amber box: declared, not built, drawn at its intended site (1)</text>
 <text x='24' y='1684' font-size='10.5' fill='#3a4a48'>dotted box: the step's registered test, a declared reader; it lists its reads and draws no arrows (23)</text>
 <text x='24' y='1698' font-size='10.5' fill='#3a4a48'>grey box: siteless component, exempt from conformance (3)</text>
@@ -1132,9 +1162,9 @@ reads: —</title><rect x='3050' y='758' width='196' height='62' rx='6' fill='#e
 <line x1='700' y1='1680' x2='740' y2='1680' stroke='#7b3fa0' stroke-width='1.6' />
 <text x='748' y='1684' font-size='10.5' fill='#3a4a48'>purple: the reader is an earlier step than the writer, the loop closing (5)</text>
 <line x1='700' y1='1694' x2='740' y2='1694' stroke='#9a9a94' stroke-width='1.6' stroke-dasharray='3,2'/>
-<text x='748' y='1698' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (3); green stub: the owner's text, exogenous (1)</text>
+<text x='748' y='1698' font-size='10.5' fill='#3a4a48'>grey stub: a field read that no box writes (13); green stub: the owner's text, exogenous (1)</text>
 <text x='24' y='1722' font-size='10.5' fill='#3a4a48'>Numbered rings: the exemplar trace the map records for M-autoclock-in, in order (loop-entry &gt; r1-outer-cascade &gt; flight-entry &gt; dispatch &gt; clock-in &gt; r2-served-by-reading &gt; r2-verifier &gt; r6-cascade-lane &gt; r9-selection-law &gt; r0-enact-step &gt; r7-flight-call &gt; wc-checker &gt; r7-increment &gt; r7-fold &gt; r1-outer-cascade). Boxes on it have a heavier border.</text>
-<text x='24' y='1738' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (271) are generic keys the prover cannot scope per box.</text>
+<text x='24' y='1738' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (277) are generic keys the prover cannot scope per box.</text>
 <text x='24' y='1770' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>
 <text x='24' y='1754' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>
 </svg>
