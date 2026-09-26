@@ -5,19 +5,31 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 7,
-  :witnessed-hermetically 122,
-  :unverified 44,
+  :witnessed-hermetically 135,
+  :unverified 31,
   :wires 173},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-ask-merge-published-construction-assemble-one-interpretations-test/the-real-reader-receives-the-published-value,
+   :note
+   "Returned sources tampered before assemble-one; assembled interpretations and problem-tokens witness the read."}
   {:wire
    [:ask-merge-published :construction-construct :interpretations],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-ask-merge-published-construction-construct-interpretations-test/the-real-reader-receives-the-published-value,
+   :note
+   "Published patterns passed to real construct; receipt unreached-wants determines which open wants were produced. Missing interpretations refuse invalid-input."}
   {:wire
    [:ask-merge-published :flight-conditioning-step :interpretations],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-ask-merge-published-flight-conditioning-step-interpretations-test/the-real-reader-receives-the-published-value,
+   :note
+   "Tamper on merged sources BEFORE decision and persist-run-record!. Reader converter feeds rollout; altered produces changes q and B digest. Absent sources refuse assembly no-admitted-interpretation, so the persisted abstention gives no-measured-a, earlier than no-interpretation."}
   {:wire [:c8-registry-get :c8-entry :message],
    :status :witnessed-hermetically,
    :test
@@ -149,15 +161,35 @@
    :registered-test-failed
    futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test/the-observed-handoff}
   {:wire [:flight-click-wants :click-start :wants],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-wants-click-start-wants-test/the-real-reader-receives-the-published-value,
+   :note
+   "Real http-click-fn post body into direct handle-wm-click-start, request shape from flight-click-http-test. Runner IO captures handler-produced options; no click issued."}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-universe-test/the-real-reader-receives-the-published-value,
+   :note
+   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :flight-judge-opts :wants],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-wants-flight-judge-opts-wants-test/the-real-reader-receives-the-published-value,
+   :note
+   "click-wants from real A-exits text, returned map tampered before flight-judge-opts; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :universe],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-universe-test/the-real-reader-receives-the-published-value,
+   :note
+   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-click-wants-tick-flight-assembly-wants-test/the-real-reader-receives-the-published-value,
+   :note
+   "click-wants from real A-exits text, returned map tampered before tick-flight-assembly; reads the named field from judge options into sources when assembling."}
   {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
    :status :verified,
    :record
@@ -570,16 +602,36 @@
    :test
    futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
   {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r1-belief-carry-carried-mu-post-test/the-real-reader-produces-the-received-value,
+   :note
+   "Reconcile returns the carried posterior for surviving entities; absence is nil at the reader door and produces the fresh prior."}
   {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r3-apply-belief-events-loop-belief-test/the-real-reader-produces-the-received-value,
+   :note
+   "The judge prior reaches apply-arena-belief-events. Compare its produced posterior with update-belief-batch on the untouched prior and actual events; mutate the prior before the reader."}
   {:wire
    [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r3a-channel-prediction-error-channel-prediction-test/the-real-reader-produces-the-received-value,
+   :note
+   "The error record retains predicted mean and variance. Missing prediction is refused as malformed-prediction-triple, not an observation omission."}
   {:wire [:r7-fold-call :r9-decision :conditioning-steps],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-conditioning-steps-test/the-real-reader-produces-the-received-value,
+   :note
+   "Real run! step persisted under a temporary flights directory, read by judge and tampered at cascade-decision-admitted entry. Reader product is the admitted prefix observation update."}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-r9-decision-enactment-fold-test/the-real-reader-produces-the-received-value,
+   :note
+   "The live source labels carry no nonempty fold. Real run! increment, persisted flight, judge fold and decision habit receipt; tamper the fold at cascade-decision-admitted entry."}
   {:wire [:r7-increment :r7-call-test :delta],
    :status :witnessed-hermetically,
    :test
