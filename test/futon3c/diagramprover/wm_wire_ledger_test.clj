@@ -255,9 +255,9 @@
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-needs-test
     futon3c.diagramprover.wm-wire-flight-run-flight-driver-summary-readings-test])
 
-(def adjacency-rev "7c4351b5")
+(def adjacency-rev "1103e7a3")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
-(def map-rev "9d962400")
+(def map-rev "54f7e7cd")
 (def map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn")
 (def ledger-path "holes/labs/M-wm-wiring/wm-wire-ledger.edn")
 
@@ -297,7 +297,7 @@
   (let [adj (adjacency)
         boxes (into {} (map (juxt :box/id identity)) (:boxes (edn/read-string (git-show map-rev map-path))))]
     (is (= map-rev (:map adj)))
-    (is (= 170 (:wires adj) (count (wires adj))))
+    (is (= 173 (:wires adj) (count (wires adj))))
     (doseq [[a b f] (wires adj)]
       (is (some #{f} (:writes (boxes a))) (pr-str [a b f]))
       (is (some #{f} (:reads (boxes b))) (pr-str [a b f])))))
@@ -311,7 +311,7 @@
         c (:counts l)]
     (spit ledger-path (with-out-str (pp/pprint l)))
     (is (= l (edn/read-string (slurp ledger-path))) "the ledger on disk is the one computed")
-    (is (= 170 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
+    (is (= 173 (:wires c) (+ (:verified c) (:witnessed-hermetically c) (:unverified c))))
     (is (= (frequencies (map :status (:wires l)))
            (select-keys c (keys (frequencies (map :status (:wires l)))))))
     (doseq [[wire r] (registered)]
