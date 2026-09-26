@@ -76,6 +76,57 @@
   {:box/id :flight-driver-summary :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "run-flight!"}
    :reads [:readings :needs]}
+  ;; WM-HANDOFF-H2-I (WM-HANDOFFS-D carrier 2): the read step's
+  ;; publications reach the wants through the interpretation store
+  ;; (<store>/<target>.edn, futon2/data/wm-interpretations). The store is a
+  ;; carrier the map boxes by the functions that write and read its entries:
+  ;; each published kind has ONE writer, its publish function in
+  ;; futon2.aif.mission-reading (required as `reading`; read-fn calls it),
+  ;; and one read-back function, called by flight/source-wants's :a-exits
+  ;; method, which click-wants calls for the wants run! hands the ask step
+  ;; (flight.clj :325-335). The fields are the store entry's keys, visible
+  ;; at both sites. source-wants itself is not boxed: it is a defmulti, and
+  ;; a var-grain site scans the defmulti form, not the :a-exits method; its
+  ;; calls to the read-back functions are positional. The read-back boxes
+  ;; sit in the ask step's lane: what they return is the ask step's input
+  ;; (they are also read inside the read step, where read-fn asks
+  ;; click-wants what readings are still needed)
+  {:box/id :r2-store-criteria :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "publish-criteria!"}
+   :writes [:criteria]}
+  {:box/id :r2-store-coverage :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "publish-coverage!"}
+   :writes [:coverage]}
+  {:box/id :r2-store-locators :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "publish-locator!"}
+   :writes [:locators]}
+  {:box/id :r2-store-locator-questions :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "publish-locator-questions!"}
+   :writes [:locator-questions]}
+  {:box/id :r2-store-locator-declines :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "record-locator-decline!"}
+   :writes [:locator-declines]}
+  {:box/id :r2-store-constraints-read :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "publish-constraints!"}
+   :writes [:constraints-read]}
+  {:box/id :r3-store-criteria :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-criteria"}
+   :reads [:criteria]}
+  {:box/id :r3-store-coverage :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-coverage"}
+   :reads [:coverage]}
+  {:box/id :r3-store-locators :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-locators"}
+   :reads [:locators]}
+  {:box/id :r3-store-locator-questions :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-locator-questions"}
+   :reads [:locator-questions]}
+  {:box/id :r3-store-locator-declines :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-locator-declines"}
+   :reads [:locator-declines]}
+  {:box/id :r3-store-constraints-read :row 3 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-constraints"}
+   :reads [:constraints-read]}
   {:box/id :r2-test :row 2 :box/kind :test
    :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"}
    :reads [:want-span :text-sha256]}
@@ -595,7 +646,17 @@
  ;; uncrossed. Twenty-one standing added: :needs at nine other sites
  ;; (incl. read-fn and record-click), four of run!'s own keys, seven of
  ;; run-flight!'s, and :readings' write in an unclassified position. 197 -> 218 (2 to-do, 216
- ;; standing). :kind :to-do is the
+ ;; standing). WM-HANDOFF-H2-I (futon2 pin unchanged): the interpretation
+ ;; store as the read -> ask carrier, six store keys, each with one writer
+ ;; (its publish function in futon2.aif.mission-reading, lane 3) and one
+ ;; read-back function (called by flight/source-wants for the wants run!
+ ;; hands ask-fn, lane 4): :criteria :coverage :locators :locator-questions
+ ;; :locator-declines :constraints-read. All six keys are visible at both
+ ;; sites. source-wants is not boxed (a defmulti; the var-grain site would
+ ;; scan the defmulti form). Seventeen standing added: the publish
+ ;; functions' receipts' :kind/:status (nine), the coverage entry's own
+ ;; :criteria, read-fn's names for the reading kinds (three), and :locators
+ ;; at four other sites. 218 -> 235 (2 to-do, 233 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -2599,4 +2660,183 @@
    :rows [],
    :kind :standing,
    :note
-   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}]}
+   "WM-HANDOFF-H1-I: run! is the whole flight loop and carries these keys in the enactment entries and statuses it writes, not the flows other boxes declare"}
+  {:finding :occurrence-without-declaration,
+   :field :coverage,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: read-fn names the reading kinds as the flight's own keys (:readings-needed's :criteria?/:coverage/:locators, the requests it issues), not the store entries it has publish-* write"}
+
+  {:finding :occurrence-without-declaration,
+   :field :criteria,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: read-fn names the reading kinds as the flight's own keys (:readings-needed's :criteria?/:coverage/:locators, the requests it issues), not the store entries it has publish-* write"}
+
+  {:finding :occurrence-without-declaration,
+   :field :criteria,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-coverage!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the coverage entry carries its own :criteria (the added criteria, select-keys of the validated reply), inside :coverage; not the store's :criteria entry, whose one writer is publish-criteria!"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-constraints!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-coverage!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-criteria!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-locator!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-locator-questions!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-decision-admitted"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: another record's :locators (the flight's wants' locators, a cascade problem's), reported now because :locators became declared as the store entry; the prover has no per-record scope; the flight's wants' :locators is H3's hop"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-lane"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: another record's :locators (the flight's wants' locators, a cascade problem's), reported now because :locators became declared as the store entry; the prover has no per-record scope; the flight's wants' :locators is H3's hop"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: another record's :locators (the flight's wants' locators, a cascade problem's), reported now because :locators became declared as the store entry; the prover has no per-record scope; the flight's wants' :locators is H3's hop"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "read-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: read-fn names the reading kinds as the flight's own keys (:readings-needed's :criteria?/:coverage/:locators, the requests it issues), not the store entries it has publish-* write"}
+
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: a test builds records carrying :locators (a write position in the test, not a second writer); reported now because :locators became declared"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-constraints!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-coverage!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-criteria!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}
+
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/mission_reading.clj",
+    :var "publish-locator!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-HANDOFF-H2-I: the publish functions' receipts and validation carry :kind/:status of their own (the receipt's kind, the validation status); not the flows other boxes declare"}]}

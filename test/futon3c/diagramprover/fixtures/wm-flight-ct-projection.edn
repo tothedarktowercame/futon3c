@@ -7,10 +7,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-CLICK-REASON-I: :flight-record-summary writes :failure, :flight-record-click reads it, test box :click-reason-test; 27/21/53/118 -> 27/22/53/120; :test/click-reason-test joins the outputs; dead components unchanged; :i4 unchanged). :map-sha cannot name its own commit, so it is typed absent: the map is the one in this commit.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HABIT-FOLD-CALL-I: :r7-fold-source reads the flights' :increment, :r7-fold-call (judge) writes :enactment-fold, read by :r9-decision; test box :habit-fold-call-test; 27/22/53/120 -> 28/23/55/124; :r7-fold-source joins the dead components (its output, the receipts, is a return value to fold-from-flights, which no box declares); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H1-I: :flight-run (flight/run!) writes :readings/:needs, :flight-driver-summary (run-flight!) reads them; 28/23/55/124 -> 28/23/57/127; both join the dead components (the driver summary is a return value no test box reads); :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H2-I: the interpretation store as the read -> ask carrier, six publish boxes and six read-back boxes in futon2.aif.mission-reading; 28/23/57/127 -> 34/23/69/139; all twelve join the dead components (no test box reads a store key); :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 28, :outputs 23, :components 57, :edges 127},
+ :counts {:inputs 34, :outputs 23, :components 69, :edges 139},
  :validate
  {:all-valid false,
   :checks
@@ -19,26 +20,38 @@
     :check :coverage,
     :dead-components
     [:r9-judge-refusal-read
+     :r3-store-locator-questions
      :click-start
      :flight-run
      :r9-finding-cause-read
      :c8-entry
+     :r2-store-constraints-read
      :r2-flight-read
      :r4-coapply
+     :r2-store-criteria
      :r9-failure-classifier
      :flight-driver-summary
+     :r3-store-criteria
      :r11-warrants
+     :r3-store-locator-declines
+     :r3-store-constraints-read
+     :r3-store-coverage
+     :r2-store-coverage
      :r9-class-model
      :r7-fold-source
      :flight-record-click
      :c8-latest
+     :r2-store-locator-declines
      :r9-judge-refusal-abstention
      :r3-prompt
+     :r3-store-locators
      :r4-order-use
      :r9-finding-store
      :r2-verifier
      :flight-cast
+     :r2-store-locators
      :c8-registry-get
+     :r2-store-locator-questions
      :r9-abstention-carrier
      :r6-cascade-lane
      :r5-grain-gate
