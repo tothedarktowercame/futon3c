@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "cfc355a0",
-  :map "b9d18dfe"},
+  :rev "8dc61b63",
+  :map "b44b63ab"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 96, :wires 98},
+ {:verified 0, :witnessed-hermetically 2, :unverified 102, :wires 104},
  :wires
  [{:wire [:c8-registry-get :c8-entry :message], :status :unverified}
   {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
@@ -80,6 +80,27 @@
   {:wire [:r2-served-by-reading :r2-verifier :text-sha256],
    :status :unverified}
   {:wire [:r2-served-by-reading :r2-verifier :want-span],
+   :status :unverified}
+  {:wire
+   [:r2-store-constraints-read
+    :r3-store-constraints-read
+    :constraints-read],
+   :status :unverified}
+  {:wire [:r2-store-coverage :r3-store-coverage :coverage],
+   :status :unverified}
+  {:wire [:r2-store-criteria :r3-store-criteria :criteria],
+   :status :unverified}
+  {:wire
+   [:r2-store-locator-declines
+    :r3-store-locator-declines
+    :locator-declines],
+   :status :unverified}
+  {:wire
+   [:r2-store-locator-questions
+    :r3-store-locator-questions
+    :locator-questions],
+   :status :unverified}
+  {:wire [:r2-store-locators :r3-store-locators :locators],
    :status :unverified}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :unverified}
