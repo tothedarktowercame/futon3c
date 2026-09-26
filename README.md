@@ -1,5 +1,8 @@
 # Futon3c — Real-time Coordination
 
+> **New to FUTON? Start with [futon0/INSTALL.md](https://github.com/tothedarktowercame/futon0/blob/main/INSTALL.md)**, the single guide to
+> installing and running the stack. This is Agency, the coordination server, in the core install (step 4 of INSTALL.md).
+
 Futon3c is the **real-time coordination** layer of the futon stack: agency
 (multi-agent routing), peripherals (capability envelopes), forum
 (collaborative proof trees), and the evidence landscape that connects
