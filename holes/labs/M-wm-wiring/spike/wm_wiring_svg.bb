@@ -39,13 +39,13 @@
    ["2 Dispatch, clock-in" [:dispatch :clock-in] []]
    ["3 Read step (C)" [:r2-flight-read :r2-served-by-reading :r2-verifier :r2-store-criteria :r2-store-coverage :r2-store-locators :r2-store-locator-questions :r2-store-locator-declines :r2-store-constraints-read] [:r2-test]]
    ["4 Ask step (interpretation)" [:r3-flight-ask :flight-ask-fn :r3-prompt :flight-click-wants :ask-merge-published :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
-   ["5 Construction, order" [:tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply] [:r4-test :r4-coapply-test]]
+   ["5 Construction, order" [:r2-tick-observe :r3a-predict-observation :r3a-prediction-error :tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-kernel] [:r6-test]]
    ["7a Selection, decision, registry"
     [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-decision :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
     [:r9-test :r9-relation-test]]
    ["7b Selection: refusals, failure record"
-    [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]
+    [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :run-record-publication :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]
     [:gate-refusal-test :r9-judge-refusal-test :phase-kind-test :failure-cause-record-test]]
    ["8 Grain gate, enactment, W_c" [:r5-flight-call :r5-grain-gate :r0-enact-step :wc-checker] [:r5-test :r0-test]]
    ["9 Habit (E), publish" [:r7-flight-call :r7-increment :r7-fold :r7-fold-source :r7-fold-call :r7-selection :r10-observe-publication] [:r7-call-test :r7-test :habit-fold-call-test :r10-test]]

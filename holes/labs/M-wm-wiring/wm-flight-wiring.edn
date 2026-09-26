@@ -140,6 +140,40 @@
   {:box/id :r3-store-constraints-read :row 3 :box/kind :component
    :site {:file "futon2/src/futon2/aif/mission_reading.clj" :var "published-constraints"}
    :reads [:constraints-read]}
+  ;; WM-NODE-R2-R3a-I (WM-SUPERSET-D sections 1-2): the tick's observation
+  ;; and prediction error, in judge before the cascade assembly (obs/observe
+  ;; at war_machine :6909, fe/channel-prediction-error at :7037, before
+  ;; flight-assembly-input at :7247), so drawn first in lane 5.
+  ;; r2-tick-observe: observation.clj/observe returns (with-meta values ...)
+  ;; over a let-bound map keyed by channel (:loop-health, :stack-pct, ...);
+  ;; every reader reads a channel under a variable key ((get obs channel),
+  ;; (observation-status obs channel)), so no keyed field exists at either
+  ;; end and none is declared. r3a-predict-observation: belief/
+  ;; predict-observation returns a map keyed by channel, read the same way
+  ;; ((get predictions ch), prediction-member's (get prediction k)): no
+  ;; field. E4, R2 -> R3a (o): judge's local observation is arg 1 of
+  ;; channel-prediction-error, which calls compute-prediction-error; a
+  ;; whole-value positional hop. TO-DO: the :passes declaration
+  ;; (WM-PROVER-POSITIONAL-D section 2, WM-PROVER-PASSES-I) on the caller's
+  ;; box, {:value :observation :from {:returns-of "obs/observe" :bound-to
+  ;; observation} ...}, with the R1/R3 packet once the rule lands
+  {:box/id :r2-tick-observe :row 2 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/observation.clj" :var "observe"}}
+  {:box/id :r3a-predict-observation :box/kind :component
+   :site {:file "futon2/src/futon2/aif/belief.clj" :var "predict-observation"}}
+  {:box/id :r3a-prediction-error :box/kind :component
+   ;; returns the prediction-error record, (merge stamp {:status :present
+   ;; ... :error err :precision ... :weighted-error ...}) in each branch of
+   ;; its trailing cond. :error already has a declared writer (the gate's
+   ;; refusal), so the record's :error must be scoped [:error {:record
+   ;; :prediction-error}]; with :returns-record :prediction-error the
+   ;; scoped writes are :declaration-without-occurrence (checked): a
+   ;; literal passed as merge's argument in return position is not
+   ;; attributed. NEXT PROVER LIMIT: merge's literal arguments in return
+   ;; position (as assoc's key-values already are). Until then no field is
+   ;; declared here, and R7's (:error error-map) in weighted-error has no
+   ;; attributable writer
+   :site {:file "futon2/src/futon2/aif/free_energy.clj" :var "compute-prediction-error"}}
   ;; WM-HANDOFF-H3-I (WM-HANDOFFS-D H3): the wants carry C, the read
   ;; criteria, from the flight into the tick. flight/click-wants (a defn)
   ;; builds {:wants :source :locators :universe} from the want source's
@@ -400,6 +434,19 @@
    ;; caught at the runner's selection phase onto the :no-selection sorry cell
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal-sorry"}
    :writes [:judge-refusal]}
+  ;; WM-NODE-R2-R3a-I (R16 -> R2): the store carrier from the tick to the
+  ;; flight's publication observation. persist-run-record! writes the click's
+  ;; run record with :repair/publication (the runner's catch-up! results, one
+  ;; per repair id); enact-fn's observe-publication-fn fetches that record by
+  ;; click id and reads the key. Declared unscoped: the key is namespaced and
+  ;; distinctive, and the write is a nested literal handed to the store
+  ;; writer, not in return position, so a {:record :run-record} scope could
+  ;; not be attributed. The run record's other writer of the key,
+  ;; run-opportunity!'s (assoc result ... :repair/publication publication),
+  ;; is the value persist-run-record! copies (unboxed)
+  {:box/id :run-record-publication :row 10 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "persist-run-record!"}
+   :writes [:repair/publication]}
   {:box/id :r9-abstention-carrier :row 9 :box/kind :component
    ;; reads the sorry cell's :judge-refusal into abstention-carrier's branch
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "persist-run-record!"}
@@ -594,8 +641,12 @@
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "observe-publication-fn"}
    ;; it writes the observation as {:publication-observed obs}; enact-fn
    ;; reads it and records it on the enactment record.
-   ;; WM-HANDOFF-H9+H11-I: names (:target flight) on its typed absence
-   :reads [[:target {:record :flight}]] :writes [:publication-observed]}
+   ;; WM-HANDOFF-H9+H11-I: names (:target flight) on its typed absence.
+   ;; WM-NODE-R2-R3a-I (R16 -> R2, a store carrier, WM-PROVER-POSITIONAL-D
+   ;; E7): reads the click's run record from the store, (fetch-run-record
+   ;; (:click-id click)), and off it (:repair/publication record), which
+   ;; :run-record-publication writes
+   :reads [[:target {:record :flight}] :repair/publication] :writes [:publication-observed]}
   {:box/id :r10-test :row 10 :box/kind :test
    :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"}
    :reads [:publication-observed]}
@@ -930,7 +981,17 @@
  ;; :flight-entry :returns-record :flight writing [:target {:record
  ;; :flight}] (futon3c 29df1244, the threaded first argument of cond-> in
  ;; return position); the [:target :flight] to-do is deleted. 280 -> 279
- ;; (2 to-do, 277 standing). :kind :to-do is the
+ ;; (2 to-do, 277 standing). WM-NODE-R2-R3a-I (futon2 pin unchanged;
+ ;; WM-SUPERSET-D sections 1-2, WM-PROVER-POSITIONAL-D E4/E7): new boxes
+ ;; :r2-tick-observe, :r3a-predict-observation, :r3a-prediction-error (lane
+ ;; 5, no fields: channel-keyed maps read under variable keys, and the
+ ;; prediction-error record's keys sit in merge literals the scope cannot
+ ;; attribute) and :run-record-publication (persist-run-record!, writes
+ ;; :repair/publication, read by :r10-observe-publication: R16 -> R2's store
+ ;; carrier). E4 (R2 -> R3a) waits on :passes, a comment on the map. Four
+ ;; standing added: the heuristic's reading of the run record literal,
+ ;; :error/:status at compute-prediction-error, one test. 279 -> 283 (2
+ ;; to-do, 281 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3553,5 +3614,47 @@
   :kind :standing,
   :note
   "WM-HANDOFF-H9+H11-I: :wants at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+ {:role :writes,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "persist-run-record!"},
+  :box/id :run-record-publication,
+  :field :repair/publication,
+  :heuristic true,
+  :note
+  "WM-NODE-R2-R3a-I: heuristic only. persist-run-record! writes :repair/publication (:repair/publication result) as a key of the run record's literal (the cond-> it binds to record); the occurrence check finds the key, and the direction heuristic reads it as {:reads 1 :unclassified 1}, the keyword call being the read and the literal's key an occurrence it does not place. A documented limit of the heuristic, not a missing write",
+  :rows [10],
+  :usage {:reads 1, :writes 0, :unclassified 1},
+  :kind :standing,
+  :finding :declared-write-not-found}
 
-]}
+ {:finding :occurrence-without-declaration,
+  :field :error,
+  :site
+  {:file "futon2/src/futon2/aif/free_energy.clj",
+   :var "compute-prediction-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R2-R3a-I: :error at compute-prediction-error is the prediction-error record's own key, written in (merge stamp {...}) literals the record scope cannot attribute yet (merge's literal argument in return position, the next prover limit); reported because the box was added"}
+
+ {:finding :occurrence-without-declaration,
+  :field :repair/publication,
+  :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R2-R3a-I: a test builds run records carrying :repair/publication (a write position in the test, not a second writer); reported now because the key became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :status,
+  :site
+  {:file "futon2/src/futon2/aif/free_energy.clj",
+   :var "compute-prediction-error"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R2-R3a-I: :status at compute-prediction-error is the prediction-error record's own key, written in (merge stamp {...}) literals the record scope cannot attribute yet (merge's literal argument in return position, the next prover limit); reported because the box was added"}]}
