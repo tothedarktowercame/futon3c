@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "a41f4c31" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "ac06a830" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -205,6 +205,23 @@
   {:box/id :phase-kind-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/phase_kind_test.clj"}
    :reads [:failure-kind]}
+  ;; WM-CAUSE-ON-RECORD-I (futon2 ac06a830): the close writes the cause
+  ;; chain beneath the thrower's exception onto the repair finding as
+  ;; :failure-cause (close-cause, into the close map's :cause, carried by
+  ;; the same var); record-system-failure! keeps it on the durable finding;
+  ;; finding-failure-cause reads it, typed absent on an older finding
+  {:box/id :r9-close-cause :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "run-opportunity-core!"}
+   :writes [:failure-cause]}
+  {:box/id :r9-finding-store :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/repair_obligation.clj" :var "record-system-failure!"}
+   :reads [:failure-cause]}
+  {:box/id :r9-finding-cause-read :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "finding-failure-cause"}
+   :reads [:failure-cause]}
+  {:box/id :failure-cause-record-test :row 9 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"}
+   :reads [:failure-cause]}
   ;; WM-MAP-REPLAY-I2, defect A (fixed 8588dba0): the click's server
   ;; refusal reason, written onto the abstention by http-click-fn, read into
   ;; the flight record by record-click's select-keys (a read since
@@ -494,7 +511,14 @@
  ;; deleted (replay: wm-flight-replay-test, J1); test box :phase-kind-test.
  ;; Seven standing added: :kind/:outcome in phase-kind-failure, and five in
  ;; the test box's file (:detail :error :kind :outcome :status).
- ;; 145 -> 151 (2 to-do, 149 standing). :kind :to-do is the
+ ;; 145 -> 151 (2 to-do, 149 standing). WM-CAUSE-ON-RECORD-I (futon2 ac06a830):
+ ;; :r9-close-cause (run-opportunity-core!) writes :failure-cause, read by
+ ;; :r9-finding-store (record-system-failure!) and :r9-finding-cause-read
+ ;; (finding-failure-cause); test box :failure-cause-record-test. A new
+ ;; field, so no finding is deleted. Twenty standing added: fourteen
+ ;; occurrences in run-opportunity-core!, :failure-kind in
+ ;; record-system-failure!, five in the test file. 151 -> 171 (2 to-do,
+ ;; 169 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -1853,4 +1877,194 @@
    :rows [9],
    :kind :standing,
    :note
-   "WM-PHASE-KIND-I: phase-kind-failure reads the thrower's :kind (through thrower-kind) and names :outcome only in its docstring (explicit typing wins); :kind is not declared lest it make the box a reader of every record's :kind (the prover has no per-field scope)"}]}
+   "WM-PHASE-KIND-I: phase-kind-failure reads the thrower's :kind (through thrower-kind) and names :outcome only in its docstring (explicit typing wins); :kind is not declared lest it make the box a reader of every record's :kind (the prover has no per-field scope)"}
+  {:finding :occurrence-without-declaration,
+   :field :author,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :candidate,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :enacted-steps,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :judge-refusal,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :measurement,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :outcome,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :repair-reviewer,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :reviewer,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :trigger,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "run-opportunity-core!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: run-opportunity-core! is boxed as the :failure-cause writer; it is the runner's whole attempt (about 2000 lines) and carries this key in its own records (the close map, phase events, the brief, the finding it hands the store), not the flows other boxes declare. Its :failure-kind is the close map's (failure-kind-from e), not declared lest it be a second writer beside :r9-phase-kind"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site
+   {:file "futon2/src/futon2/aif/repair_obligation.clj",
+    :var "record-system-failure!"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: record-system-failure! copies the finding's :failure-kind onto the durable record; the classifier's flow ends at the close map, so it is not declared here"}
+  {:finding :occurrence-without-declaration,
+   :field :class,
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :failure-kind,
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site {:file "futon2/test/futon2/aif/failure_cause_record_test.clj"},
+   :declared-by [],
+   :rows [9],
+   :kind :standing,
+   :note
+   "WM-CAUSE-ON-RECORD-I: the test builds the thrown exceptions and the expected summaries (:class/:message entries, :kind, :failure-kind, :error): write positions in the test, not second writers"}]}
