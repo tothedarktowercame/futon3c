@@ -1,8 +1,9 @@
 ;; Re-pinned by claude-10 at map e7d11222 (WM-MAP-REPLAY-I: defects G and I declared; 19/16/35/81 -> 19/16/37/88; coverage: :r9-classify-target, :r9-embedding-neighbour and :r9-decision now reach a registered test; :r9-judge-refusal-read and :r9-class-model dead (their output is a return value: judge-refusal's to judge-refusal-sorry, the class model's map to observation_model); :i4 unchanged).
+;; Re-pinned by claude-10 at map 6d12635e (G amended: :r9-judge-refusal-abstention writes :outcome, :r9-failure-classifier reads :failure-kind/:outcome; 19/16/37/88 -> 21/16/39/91; coverage: both new components dead (the classifier's output is its return value; the abstention's :outcome reaches only the classifier); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "e7d11222",
+ :map-sha "6d12635e",
  :futon5-sha "aeeee96",
- :counts {:inputs 19, :outputs 16, :components 37, :edges 88},
+ :counts {:inputs 21, :outputs 16, :components 39, :edges 91},
  :validate
  {:all-valid false,
   :checks
@@ -13,8 +14,10 @@
     [:r9-judge-refusal-read
      :r2-flight-read
      :r4-coapply
+     :r9-failure-classifier
      :r11-warrants
      :r9-class-model
+     :r9-judge-refusal-abstention
      :r3-prompt
      :r4-order-use
      :r2-verifier
