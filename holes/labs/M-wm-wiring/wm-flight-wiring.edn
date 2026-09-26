@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "63246b57" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "c7367eaa" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -148,6 +148,18 @@
   {:box/id :r9-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"}
    :reads [:candidate :per-policy-argmax :enacted-steps]}
+  {:box/id :r9-judge-refusal :row 9 :box/kind :component
+   ;; WM-CLICK-REFUSAL-I: the judge's typed refusal of the cascade decision,
+   ;; caught at the runner's selection phase onto the :no-selection sorry cell
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal-sorry"}
+   :writes [:judge-refusal]}
+  {:box/id :r9-abstention-carrier :row 9 :box/kind :component
+   ;; reads the sorry cell's :judge-refusal into abstention-carrier's branch
+   :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "persist-run-record!"}
+   :reads [:judge-refusal]}
+  {:box/id :r9-judge-refusal-test :row 9 :box/kind :test
+   :site {:file "futon2/test/futon2/aif/judge_refusal_abstention_test.clj"}
+   :reads [:judge-refusal]}
 
   ;; ---- row 6, Clause A: :measurement on the click record.
   {:box/id :r6-sourced-rates :row 6 :box/kind :component
@@ -279,7 +291,12 @@
  ;; from the rollout); :r4-constructor declares its :descent and :units
  ;; writes, :r4-order-use reads them, the step-14 test box reads them; two
  ;; standing findings added (order-kernel-test's :dup case hand-writes a
- ;; receipt order), 19 -> 21 (2 to-do, 19 standing). :kind :to-do is the
+ ;; receipt order), 19 -> 21 (2 to-do, 19 standing).
+ ;; WM-CLICK-REFUSAL-I at futon2 c7367eaa: a cascade-decision refusal is the
+ ;; tick's typed abstention. :r9-judge-refusal (judge-refusal-sorry) writes
+ ;; the sorry cell's :judge-refusal, :r9-abstention-carrier
+ ;; (persist-run-record!, into abstention-carrier) reads it, the test box
+ ;; reads it; findings unchanged, 21 (2 to-do, 19 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
