@@ -10,14 +10,24 @@
 ;; rather than vanishing from the figure. A lane that no field enters or
 ;; leaves is labelled as such on the panel.
 ;;
-;;   bb holes/labs/M-wm-wiring/spike/wm_wiring_svg.bb [map.edn] > out.svg
+;;   bb holes/labs/M-wm-wiring/spike/wm_wiring_svg.bb [map.edn [rev]] > out.svg
+;; With REV, the map is read at that commit (git show), never from the
+;; working tree, so a figure is never drawn from an uncommitted map.
 (require '[clojure.edn :as edn] '[clojure.string :as str] '[clojure.java.shell :as sh])
 
 (def map-path (or (first *command-line-args*) "holes/labs/M-wm-wiring/wm-flight-wiring.edn"))
-(def m (edn/read-string {:default tagged-literal} (slurp map-path)))
+(def map-rev (second *command-line-args*))
+(def m (edn/read-string {:default tagged-literal}
+                        (if map-rev
+                          (let [r (sh/sh "git" "show" (str map-rev ":" map-path))]
+                            (when-not (zero? (:exit r)) (binding [*out* *err*] (println (:err r))) (System/exit 2))
+                            (:out r))
+                          (slurp map-path))))
 (def boxes (:boxes m))
 (def by-id (into {} (map (juxt :box/id identity)) boxes))
-(def map-sha (str/trim (:out (sh/sh "git" "log" "-1" "--format=%h" "--" map-path))))
+(def map-sha (if map-rev
+               (str/trim (:out (sh/sh "git" "rev-parse" "--short" map-rev)))
+               (str/trim (:out (sh/sh "git" "log" "-1" "--format=%h" "--" map-path)))))
 (def head-sha (str/trim (:out (sh/sh "git" "rev-parse" "--short" "HEAD"))))
 
 ;; Lanes in flight order: [title components tests]
@@ -36,7 +46,7 @@
     [:gate-refusal-test :r9-judge-refusal-test :phase-kind-test :failure-cause-record-test]]
    ["8 Grain gate, enactment, W_c" [:r5-flight-call :r5-grain-gate :r0-enact-step :wc-checker] [:r5-test :r0-test]]
    ["9 Habit (E), publish" [:r7-flight-call :r7-increment :r7-fold :r7-selection :r10-observe-publication] [:r7-call-test :r7-test :r10-test]]
-   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :r11-warrants] [:flight-cast-test :flight-click-close-test]]])
+   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
 
 (let [placed (mapcat (fn [[_ c t]] (concat c t)) lanes)
       dup (->> placed frequencies (filter #(> (val %) 1)) keys)
@@ -67,7 +77,7 @@
 (def cross? (set cross-fields))
 
 ;; geometry
-(def header-h 104) (def margin-l 150)
+(def header-h 104) (def strip-h 34) (def margin-l 150)
 (def panel-w 244) (def inner-l 34) (def box-w 196) (def box-h 62) (def pitch 72) (def test-gap 20) (def panel-pad 44)
 (def bus-pitch 13)
 
@@ -89,14 +99,14 @@
         (for [[i [_ comps tests]] (map-indexed vector lanes)
               [j id] (map-indexed vector (concat comps tests))
               :let [k j
-                    y (+ header-h panel-pad (* pitch k) (if (some #{id} tests) test-gap 0))]]
+                    y (+ header-h strip-h panel-pad (* pitch k) (if (some #{id} tests) test-gap 0))]]
           [id {:lane i :x (+ (panel-x i) inner-l) :y y}])))
 (def panel-h (apply max (for [[_ comps tests] lanes] (+ panel-pad (* pitch (+ (count comps) (count tests))) (if (seq tests) test-gap 0) 8))))
-(def bus-y0 (+ header-h panel-h 48))
+(def bus-y0 (+ header-h strip-h panel-h 48))
 (def bus-order (vec (sort-by (fn [f] [(lane-of (writer-of f)) (:y (positions (writer-of f))) (name f)]) cross-fields)))
 (def bus-y (into {} (map-indexed (fn [i f] [f (+ bus-y0 (* i bus-pitch))]) bus-order)))
 (def legend-y (+ bus-y0 (* bus-pitch (count bus-order)) 40))
-(def height (+ legend-y 150))
+(def height (+ legend-y 166))
 
 ;; tracks: within a gutter, ordered by bus y so vertical runs fan out in order
 (def track-x
@@ -146,10 +156,27 @@
 (doseq [[i [title comps _]] (map-indexed vector lanes)]
   (let [x (panel-x i)
         crossing (count (filter (fn [[f _ _]] true) (concat (filter #(= :exit (second %)) (taps-in-gutter (inc i))) (filter #(= :entry (second %)) (taps-in-gutter i)))))]
-    (emit (format "<rect x='%d' y='%d' width='%d' height='%d' rx='10' fill='%s' stroke='#d9e2e1'/>" x header-h panel-w panel-h (if (even? i) "#f7fafa" "#eef4f4")))
-    (emit (format "<text x='%d' y='%d' font-size='12.5' font-weight='700' fill='#274d4a'>%s</text>" (+ x 12) (+ header-h 20) (esc title)))
+    (emit (format "<rect x='%d' y='%d' width='%d' height='%d' rx='10' fill='%s' stroke='#d9e2e1'/>" x (+ header-h strip-h) panel-w panel-h (if (even? i) "#f7fafa" "#eef4f4")))
+    (emit (format "<text x='%d' y='%d' font-size='12.5' font-weight='700' fill='#274d4a'>%s</text>" (+ x 12) (+ header-h strip-h 20) (esc title)))
+    (let [on-trace (sort (mapcat #(trace-numbers %) comps))]
+      (emit (format "<text x='%d' y='%d' font-size='9' fill='%s'>%s</text>" (+ x 12) (+ header-h strip-h 33)
+                    (if (seq on-trace) "#3a4a48" "#b25a00")
+                    (if (seq on-trace) (str "exemplar trace steps " (str/join ", " on-trace)) "not on the exemplar trace"))))
     (when (zero? crossing)
-      (emit (format "<text x='%d' y='%d' font-size='9.5' font-style='italic' fill='#b25a00'>no field enters or leaves this step in the map</text>" (+ x 12) (+ header-h 34))))))
+      (emit (format "<text x='%d' y='%d' font-size='9.5' font-style='italic' fill='#b25a00'>no field enters or leaves this step in the map</text>" (+ x 12) (+ header-h strip-h 45))))))
+
+;; the hand-off strip: between step i and i+1, the declared fields that cross that boundary rightwards
+(doseq [i (range (dec n-lanes))]
+  (let [fs (filter (fn [f] (let [wl (lane-of (writer-of f))] (and (<= wl i) (some #(> (lane-of %) i) (readers-of f))))) cross-fields)
+        gx (+ (panel-x i) panel-w) gw (gutter-w (inc i)) cy (+ header-h 16)
+        ok? (seq fs)]
+    (emit (format "<path d='M%d,%d h%d l6,6 l-6,6 h-%d z' fill='%s' stroke='%s' stroke-width='1' %s/>"
+                  (- gx 2) (- cy 6) (- gw 4) (- gw 4) (if ok? "#e6f0ef" "#fff0e6") (if ok? "#2f5f5c" "#c0392b") (if ok? "" "stroke-dasharray='3,2'")))
+    (if ok?
+      (label (+ gx (/ gw 2.0)) (+ cy 3) 8 "#2f5f5c" "middle" (str (count fs)))
+      (label (+ gx (/ gw 2.0)) (+ cy 3) 8 "#c0392b" "middle" "0"))
+    (label (+ gx (/ gw 2.0)) (+ cy 16) 6.5 (if ok? "#2f5f5c" "#c0392b") "middle" (if ok? (str/join " " (map name fs)) "no declared hand-off"))))
+(emit (format "<text x='%d' y='%d' font-size='9.5' fill='#3a4a48'>Hand-off strip: between two steps, how many declared fields cross that boundary in the flight's direction (a purple line below is a field crossing the other way).</text>" (panel-x 0) (+ header-h 4)))
 
 ;; intra-lane arrows: left margin of the panel, one track per field
 (def intra-track (into {} (for [[i _] (map-indexed vector lanes)
@@ -238,6 +265,7 @@
                 (+ ly 84) (esc (:target (first (:traces m)))) (esc (str/join " > " (map name trace-seq)))))
   (emit (format "<text x='24' y='%d' font-size='10.5' fill='#3a4a48'>What this does not show: the prover reads sites textually, so a field's presence at a var is what is checked, not that the value flows; the eleven code shapes it cannot see are listed in WM-MAP-REPLAY-D. Standing findings (%d) are generic keys the prover cannot scope per box.</text>"
                 (+ ly 100) (count (filter #(= :standing (:kind %)) (:expected-findings m)))))
+  (emit (format "<text x='24' y='%d' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>" (+ ly 132)))
   (emit (format "<text x='24' y='%d' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>" (+ ly 116))))
 (emit "</svg>")
 (print (str out))
