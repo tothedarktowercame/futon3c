@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "dd3c0fea",
-  :map "90fc57c7"},
+  :rev "2b634b67",
+  :map "4e065ada"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 73, :unverified 75, :wires 153},
+ {:verified 5, :witnessed-hermetically 73, :unverified 76, :wires 154},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -343,6 +343,11 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-constructor-order-use-units-test/the-units-reach-order-use}
+  {:wire
+   [:r4-evaluate-state
+    :r4-push-forward
+    [:kernel {:record :evaluation}]],
+   :status :unverified}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :status :unverified}
   {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
