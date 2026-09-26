@@ -2,27 +2,27 @@
 {:inputs
  {:ledger {:rev "da7bab8b", :map "4e065ada", :wires 154},
   :org-layer
-  {:rev "da7bab8b",
+  {:rev "329d3f86",
    :uncommitted-input false,
-   :map-rev "36b7471d",
-   :futon2-rev "a8c7161c",
-   :calls 161,
+   :map-rev "4e065ada",
+   :futon2-rev "c37926bc",
+   :calls 174,
    :roots [:flight-driver-summary :loop-entry :loop-plan]},
-  :stale? true,
+  :stale? false,
   :stale-note
   "true when the org layer was generated from an older map than the ledger's: boxes added since are :box-not-in-org-layer, not map defects"},
  :counts
  {:conditional 11,
   :failure-path 4,
-  :unreachable 2,
+  :unreachable 1,
   :wires 154,
-  :witness 137},
+  :witness 138},
  :method
  {:paths :all-paths,
   :first-path-counts
-  {:conditional 19,
+  {:conditional 20,
    :failure-path 4,
-   :unreachable 2,
+   :unreachable 1,
    :wires 154,
    :witness 129},
   :changed
@@ -54,6 +54,31 @@
     {:coverage :witness,
      :writer-path [:loop-plan :r1-target-field],
      :reader-path [:loop-plan :r1-outer-cascade]}}
+   {:wire
+    [:r4-evaluate-state
+     :r4-push-forward
+     [:kernel {:record :evaluation}]],
+    :first-path
+    {:coverage :conditional,
+     :conditions ["(if (:status search)) else" "(if (= k n)) else"],
+     :writer-path
+     [:loop-entry
+      :r2-judge-observation
+      :r9-decision
+      :selection-candidate-derivations
+      :r4-evaluate-state],
+     :reader-path
+     [:loop-plan :construction-construct :r4-push-forward]},
+    :all-paths
+    {:coverage :witness,
+     :writer-path
+     [:loop-entry
+      :r2-judge-observation
+      :r9-decision
+      :selection-candidate-derivations
+      :r4-evaluate-state],
+     :reader-path
+     [:loop-plan :r6-cascade-lane :r4-kernel :r4-push-forward]}}
    {:wire [:r9-close-cause :failure-cause-record-test :failure-cause],
     :first-path
     {:coverage :conditional,
@@ -193,9 +218,7 @@
      [:flight-driver-summary
       :r0-enact-step
       :r10-observe-publication]}}]},
- :by-kind
- {:unreachable {:box-not-in-org-layer 1, :no-caller 1},
-  :test-observer-readers 41},
+ :by-kind {:unreachable {:no-caller 1}, :test-observer-readers 41},
  :conditions
  {"(and ... after (nil? decision))"
   {:class :failure,
@@ -208,6 +231,10 @@
   "(case (:trip/action report))"
   {:class :failure,
    :why "a tripwire action: a trip is an anomaly by definition"},
+  "(case op)"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(cond (= :observation-required (:kind r)))"
   {:class :alternative,
    :why
@@ -266,6 +293,10 @@
   {:class :alternative,
    :why
    "the sources carry no :construction: depends on the declared sources"},
+  "(defmethod evaluate :exact-enumeration)"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(defmethod source-wants :a-exits)"
   {:class :success,
    :why
@@ -282,8 +313,20 @@
   {:class :alternative,
    :why
    "the action carries no :row: the embedding neighbour is looked up another way"},
+  "(if (:status search)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (= :absent located)) else"
   {:class :success, :why "the locator was located"},
+  "(if (= :coupled-judgement (:kind model))) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (= :coupled-judgement (:kind model))) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (= :missing (:status lean-source))) else"
   {:class :success,
    :why
@@ -299,15 +342,47 @@
   "(if (= k n)) else"
   {:class :alternative,
    :why "a step counter: the non-final iteration"},
+  "(if (> tau horizon-steps)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (>= step K)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (and (= :frozen (:status prediction)) (seq (:initial-belief prediction)))) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (and (empty? (:problems admitted)) previous-beta)) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (and (map? ps) (= :missing (:status ps)))) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (and (seq questions) (empty? (:wants wants)))) else"
   {:class :success,
    :why "not (questions asked and no wants): the flight has wants"},
+  "(if (and next-theta (#{:observation-placement-not-declared :execution-clock-contract-missing} reason))) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
+  "(if (cascade-candidate? action)) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (contains? issued ::refused)) else"
   {:class :success, :why "the request was not refused"},
   "(if (contains? m :config)) else"
   {:class :alternative,
    :why
    "no :config key: the default configuration of the check; either is a valid run"},
+  "(if (contains? opts :observation-model)) then"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (empty? problems)) else"
   {:class :success,
    :why
@@ -328,6 +403,10 @@
   {:class :success,
    :why
    "a horizon is declared (nil is the :missing-common-horizon refusal)"},
+  "(if (nil? s)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (nil? s0)) else"
   {:class :success, :why "the start state exists"},
   "(if (not= :supported (:status supported))) else"
@@ -339,6 +418,10 @@
   {:class :alternative,
    :why
    "the flight is still open and under budget: a second click; the spike runs --max-clicks 1, which takes the other branch"},
+  "(if (or (rate-bad-token rates) (some #(not (contains? rates %)) (set state)))) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (seq applied)) then"
   {:class :alternative,
    :why
@@ -347,6 +430,10 @@
   {:class :alternative,
    :why
    "a_matrix_shadow.bb: the shadow script's own branch, not on a flight's path"},
+  "(if (seq missing)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if (seq route)) then"
   {:class :success,
    :why
@@ -383,6 +470,10 @@
   {:class :alternative,
    :why
    "prior flight records are present (enactment-fold-source/fold-from-flights); the first flight has none"},
+  "(if refusal?) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if stopping-rule-data) else"
   {:class :alternative,
    :why "no stopping-rule data: the failure classifier's other input"},
@@ -410,6 +501,10 @@
    "the action is a well-formed cascade candidate over one domain with a normalised q0"},
   "(if-not (compare-and-set! !status current next-status)) else"
   {:class :success, :why "the status transition succeeded"},
+  "(if-not (pos-int? horizon-steps)) else"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(if-not target) else"
   {:class :success,
    :why
@@ -443,6 +538,10 @@
   {:class :alternative,
    :why
    "focus_receipt: the target was not classified in advance, so it is classified with the relation context; whether the flight supplies classifications is not fixed by the spike"},
+  "(or ... after admit)"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(or ... after answer-fn)"
   {:class :success,
    :why "no answer-fn override: the driver's agency-answer-fn"},
@@ -473,6 +572,10 @@
   {:class :alternative,
    :why
    "the coverage reading was published: depends on the mission text needing coverage, like (when (:coverage? cov-need))"},
+  "(when (= :receipt (:interpretation-mode opts)))"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(when (> (- best (get eligible-marginals chosen-pattern 0.0)) mass-tolerance))"
   {:class :failure,
    :why
@@ -489,6 +592,10 @@
   {:class :failure,
    :why
    "decision-gate check-candidate-receipts!: the body is refuse!"},
+  "(when (and cohort? @action-occurrence))"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(when (and wc-fn (:enactment enacted)))"
   {:class :success,
    :why "wc-fn is configured and an enactment exists"},
@@ -509,6 +616,10 @@
   {:class :success,
    :why
    "the problem carries locators: the sourced-rates path a flight over a located target takes"},
+  "(when (map? q))"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(when (nil? chosen-pattern))"
   {:class :failure,
    :why
@@ -529,6 +640,10 @@
   {:class :success, :why "the spike gives --dispatch-seat"},
   "(when enact-fn)"
   {:class :success, :why "the enact step is configured in the spike"},
+  "(when model-valid?)"
+  {:class :alternative,
+   :why "not in TABLE: undecided",
+   :undecided true},
   "(when read-fn)"
   {:class :success, :why "the read step is configured in the spike"},
   "(when text)" {:class :success, :why "the target's text was read"},
@@ -584,7 +699,30 @@
    :why
    "decision-gate check-candidate-receipts!: the body is refuse!"},
   "(when-not jr)" {:class :success, :why "no judge refusal"}},
- :undecided [],
+ :undecided
+ ["(case op)"
+  "(defmethod evaluate :exact-enumeration)"
+  "(if (:status search)) else"
+  "(if (= :coupled-judgement (:kind model))) else"
+  "(if (= :coupled-judgement (:kind model))) then"
+  "(if (> tau horizon-steps)) else"
+  "(if (>= step K)) else"
+  "(if (and (= :frozen (:status prediction)) (seq (:initial-belief prediction)))) then"
+  "(if (and (empty? (:problems admitted)) previous-beta)) then"
+  "(if (and (map? ps) (= :missing (:status ps)))) else"
+  "(if (and next-theta (#{:observation-placement-not-declared :execution-clock-contract-missing} reason))) then"
+  "(if (cascade-candidate? action)) then"
+  "(if (contains? opts :observation-model)) then"
+  "(if (nil? s)) else"
+  "(if (or (rate-bad-token rates) (some #(not (contains? rates %)) (set state)))) else"
+  "(if (seq missing)) else"
+  "(if refusal?) else"
+  "(if-not (pos-int? horizon-steps)) else"
+  "(or ... after admit)"
+  "(when (= :receipt (:interpretation-mode opts)))"
+  "(when (and cohort? @action-occurrence))"
+  "(when (map? q))"
+  "(when model-valid?)"],
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -1133,12 +1271,15 @@
    [:r4-evaluate-state
     :r4-push-forward
     [:kernel {:record :evaluation}]],
-   :coverage :unreachable,
-   :why :box-not-in-org-layer,
-   :writer-end :box-not-in-org-layer,
-   :reader-end :box-not-in-org-layer,
-   :writer-path nil,
-   :reader-path nil}
+   :coverage :witness,
+   :writer-path
+   [:loop-entry
+    :r2-judge-observation
+    :r9-decision
+    :selection-candidate-derivations
+    :r4-evaluate-state],
+   :reader-path
+   [:loop-plan :r6-cascade-lane :r4-kernel :r4-push-forward]}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :coverage :conditional,
    :writer-path [:loop-plan :r6-cascade-lane :r4-kernel],
