@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "d0022eae",
-  :map "40aae919"},
+  :rev "6203c736",
+  :map "2d1a1b19"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 111, :wires 118},
+ {:verified 1, :witnessed-hermetically 6, :unverified 113, :wires 120},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -18,6 +18,16 @@
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
    :status :unverified}
   {:wire [:clock-in :r1-outer-cascade :clock-lineage],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r4-kernel
+    [:want {:record :cascade-spec}]],
+   :status :unverified}
+  {:wire
+   [:construction-assemble-one
+    :r9-decision
+    [:want {:record :cascade-problem}]],
    :status :unverified}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
    :status :unverified}
