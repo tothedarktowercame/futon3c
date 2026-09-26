@@ -5,7 +5,9 @@
   src/futon5/ct/mission.clj is read from futon5's git at a pinned sha and
   loaded into this process (read-only; it requires only clojure.set)."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.java.shell :as sh]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.diagramprover.ct-projection :as proj]))
 
@@ -152,3 +154,32 @@
   (is (= #{:x} (proj/preference-fields-of {:field-roles {:owner-text :constraint}}
                                           {:preference-fields [:x]})))
   (is (= proj/default-preference-fields (proj/preference-fields-of {} {}))))
+
+;; ---------------------------------------------------------------------------
+;; Re-pin keeps the fixture's header (WM-REPIN-I). The map test above reads
+;; the fixture with edn/read-string, which skips `;;` lines: it compares the
+;; value only, so the header can change without touching any result.
+
+(deftest repin-keeps-the-header
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "ct-repin" (make-array java.nio.file.attribute.FileAttribute 0)))
+        f (str (io/file dir "fixture.edn"))
+        comment-lines (fn [] (vec (take-while #(str/starts-with? % ";;")
+                                              (str/split-lines (slurp f)))))
+        v1 {:map-sha "aaaa" :x 1}
+        v2 {:map-sha "bbbb" :x 2}]
+    (testing "a missing file gets a header naming the same fields"
+      (proj/write-fixture! f v1 {:map-sha "aaaa" :projector-sha "p1" :date "2026-09-26"})
+      (is (= (conj proj/fixture-header ";; re-pinned at aaaa from p1 on 2026-09-26")
+             (comment-lines)))
+      (is (= v1 (edn/read-string (slurp f)))))
+    (testing "a two-line header re-pinned twice keeps both lines and gains two"
+      (spit f ";; line one\n;; line two\n{:old true}\n")
+      (proj/write-fixture! f v1 {:map-sha "aaaa" :projector-sha "p1" :date "2026-09-26"})
+      (proj/write-fixture! f v2 {:map-sha "bbbb" :projector-sha "p2" :date "2026-09-27"})
+      (is (= [";; line one" ";; line two"
+              ";; re-pinned at aaaa from p1 on 2026-09-26"
+              ";; re-pinned at bbbb from p2 on 2026-09-27"]
+             (comment-lines))
+          "the dropped-header bug fails here")
+      (is (= v2 (edn/read-string (slurp f))) "the value is the last one written"))))

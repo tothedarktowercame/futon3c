@@ -23,7 +23,10 @@
     :constraint entries when it has them) is an INPUT port :pref/<field> with
     :constraint true and :timescale :glacial (the owner's text changes
     slowest); its writers' edges go INTO the port and its readers' edges
-    come out of it, so I3 sees any box that writes a preference.")
+    come out of it, so I3 sees any box that writes a preference."
+  (:require [clojure.java.io :as io]
+            [clojure.pprint :as pp]
+            [clojure.string :as str]))
 
 (def default-preference-fields
   "The C side of the flight's map: the want spans the read step places in the
@@ -206,3 +209,35 @@
               :to-preferences-positional (bypass-paths m preference-fields (assoc opts :positional? true))
               :to-scored-facts (bypass-paths m scored opts)
               :to-scored-facts-positional (bypass-paths m scored (assoc opts :positional? true))}}))
+
+;; ---------------------------------------------------------------------------
+;; Writing the pinned fixture. The header is comments (the EDN reader skips
+;; them), so a re-pin that rewrites only the value used to drop it; the
+;; header is carried over here and each re-pin appends one line.
+
+(def fixture-header
+  [";; futon3c.diagramprover.ct-projection over the wiring map at :map-path,"
+   ";; at :map-sha, validated by futon5 src/futon5/ct/mission.clj at :futon5-sha"
+   ";; (loaded from git, read-only). The test compares the map at futon3c HEAD"
+   ";; to these values. Written by scripts/ct_projection_repin.clj."])
+
+(defn fixture-text
+  "The fixture file's text for VALUE. EXISTING is the file's current text, or
+  nil when there is none: its leading `;;` lines are kept in order (a
+  missing file gets `fixture-header`), then one line
+  `;; re-pinned at <map-sha> from <projector-sha> on <date>`, then VALUE
+  pretty-printed."
+  [existing value {:keys [map-sha projector-sha date]}]
+  (let [kept (if existing
+               (vec (take-while #(str/starts-with? % ";;")
+                                (str/split-lines existing)))
+               fixture-header)
+        line (str ";; re-pinned at " map-sha " from " projector-sha " on " date)]
+    (str (str/join "\n" (conj kept line)) "\n"
+         (with-out-str (pp/pprint value)))))
+
+(defn write-fixture!
+  "Write VALUE to PATH via `fixture-text`, keeping PATH's header."
+  [path value fields]
+  (let [f (io/file path)]
+    (spit f (fixture-text (when (.exists f) (slurp f)) value fields))))
