@@ -4,9 +4,9 @@
   :map "54f7e7cd"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 6,
-  :witnessed-hermetically 113,
-  :unverified 54,
+ {:verified 7,
+  :witnessed-hermetically 118,
+  :unverified 48,
   :wires 173},
  :wires
  [{:wire
@@ -40,33 +40,67 @@
    [:construction-assemble-one
     :r13-family-parameters
     [:beta {:record :cascade-problem}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-beta-test/the-observed-handoff}
   {:wire
    [:construction-assemble-one
     :r13-family-parameters
     [:horizon-steps {:record :cascade-problem}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r13-family-parameters-horizon-steps-test/the-observed-handoff}
   {:wire
    [:construction-assemble-one
     :r4-kernel
     [:want {:record :cascade-spec}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r4-kernel-want-test/the-observed-handoff}
   {:wire
    [:construction-assemble-one
     :r9-decision
     [:want {:record :cascade-problem}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-assemble-one-r9-decision-want-test/the-observed-handoff}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/the-construction-receipt-reaches-order-use}
   {:wire [:construction-construct :r9-decision :construction-receipt],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construction-construct-r9-decision-construction-receipt-test/the-observed-handoff}
   {:wire
    [:construction-construct
     :selection-candidate-derivations
     :construction-receipt],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path
+    "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn",
+    :sha256
+    "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa",
+    :why
+    "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); construction metadata wrongly says :hand-admitted. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input.",
+    :writer-path
+    [:decision
+     :selection-certificate
+     :candidates
+     0
+     :id
+     :construction-receipt],
+    :reader-path
+    [:decision
+     :selection-certificate
+     :candidate-derivations
+     :C1
+     :candidate-payload-sha256]},
+   :test
+   futon3c.diagramprover.wm-wire-construction-construct-selection-candidate-derivations-construction-receipt-test/the-observed-handoff,
+   :note
+   "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry. Separate existing defect: :construction merges a nonexistent outer receipt and says :hand-admitted."}
   {:wire [:dispatch :clock-in :mission-id],
    :status :witnessed-hermetically,
    :test
