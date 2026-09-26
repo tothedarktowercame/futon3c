@@ -27,11 +27,15 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "c7367eaa" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "1e1546f6" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
- :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation}
+ :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation
+               ;; WM-RELATION-I: the facets file's rows and the pinned
+               ;; embedding (its pins and declared floor), read from outside
+               ;; the map
+               :relations :constraint :source-pins :constraint :min-cosine :constraint}
  :boxes
  [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
   {:box/id :r1-target-field :row 1 :box/kind :component
@@ -160,6 +164,21 @@
   {:box/id :r9-judge-refusal-test :row 9 :box/kind :test
    :site {:file "futon2/test/futon2/aif/judge_refusal_abstention_test.clj"}
    :reads [:judge-refusal]}
+  {:box/id :r9-classify-target :row 9 :box/kind :component
+   ;; WM-RELATION-I: the scoring path's relation class; an M- target with no
+   ;; row derives through its stated Relations (the mission text, read by
+   ;; stated-relation-path under the context's code root: :code-root is not
+   ;; declared, since read-fn and cascade-decision-admitted use the same key
+   ;; for other roots), then the embedding (:r9-embedding-neighbour)
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "classify-target"}
+   :reads [:relations]}
+  {:box/id :r9-embedding-neighbour :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/focus_receipt.clj" :var "embedding-neighbour"}
+   :reads [:source-pins :min-cosine]}
+  {:box/id :r9-relation-test :row 9 :box/kind :test
+   ;; builds its inputs (fixture writes of :relations, :source-pins,
+   ;; :min-cosine); reads the classification it asserts
+   :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"}}
 
   ;; ---- row 6, Clause A: :measurement on the click record.
   {:box/id :r6-sourced-rates :row 6 :box/kind :component
@@ -296,7 +315,14 @@
  ;; tick's typed abstention. :r9-judge-refusal (judge-refusal-sorry) writes
  ;; the sorry cell's :judge-refusal, :r9-abstention-carrier
  ;; (persist-run-record!, into abstention-carrier) reads it, the test box
- ;; reads it; findings unchanged, 21 (2 to-do, 19 standing). :kind :to-do is the
+ ;; reads it; findings unchanged, 21 (2 to-do, 19 standing).
+ ;; WM-RELATION-I at futon2 1e1546f6: an M- target's relation is derived
+ ;; (stated Relations, then the pinned embedding). :r9-classify-target
+ ;; (focus_receipt/classify-target) reads the facets file's :relations,
+ ;; :r9-embedding-neighbour reads its embedding :source-pins and
+ ;; :min-cosine, :r9-relation-test builds them as fixtures. Six standing
+ ;; findings added (three exogenous reads, three test fixture writes),
+ ;; 21 -> 27 (2 to-do, 25 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -304,12 +330,33 @@
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
  [{:finding :read-never-written,
+   :field :min-cosine,
+   :readers [:r9-embedding-neighbour],
+   :rows [9],
+   :kind :standing,
+   :note
+   "exogenous by design (WM-RELATION-I): the facets file's relation rows and its pinned embedding (pins, declared floor), read from outside the map; written by nothing on it"}
+  {:finding :read-never-written,
    :field :owner-text,
    :readers [:r2-served-by-reading],
    :rows [2],
    :kind :standing,
    :note
    "the owner's text is exogenous by design: the one constraint, written by nothing on the map"}
+  {:finding :read-never-written,
+   :field :relations,
+   :readers [:r9-classify-target],
+   :rows [9],
+   :kind :standing,
+   :note
+   "exogenous by design (WM-RELATION-I): the facets file's relation rows and its pinned embedding (pins, declared floor), read from outside the map; written by nothing on it"}
+  {:finding :read-never-written,
+   :field :source-pins,
+   :readers [:r9-embedding-neighbour],
+   :rows [9],
+   :kind :standing,
+   :note
+   "exogenous by design (WM-RELATION-I): the facets file's relation rows and its pinned embedding (pins, declared floor), read from outside the map; written by nothing on it"}
   {:finding :declaration-without-occurrence,
    :box/id :clock-in,
    :field :clock-lineage,
@@ -437,6 +484,14 @@
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
+   :field :min-cosine,
+   :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
    :field :next-step,
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"},
    :declared-by [],
@@ -462,6 +517,22 @@
    :kind :standing,
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :relations,
+   :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :source-pins,
+   :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :units,
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
