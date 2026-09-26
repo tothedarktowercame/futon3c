@@ -38,7 +38,7 @@
   [["1 Loop entry, target field" [:loop-entry :r1-target-field :eligibility :r8-overlap :r1-outer-cascade :flight-entry] [:r1-test :r8-test :loop-test]]
    ["2 Dispatch, clock-in" [:dispatch :clock-in] []]
    ["3 Read step (C)" [:r2-flight-read :r2-served-by-reading :r2-verifier :r2-store-criteria :r2-store-coverage :r2-store-locators :r2-store-locator-questions :r2-store-locator-declines :r2-store-constraints-read] [:r2-test]]
-   ["4 Ask step (interpretation)" [:r3-flight-ask :r3-prompt :flight-click-wants :ask-merge-published :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
+   ["4 Ask step (interpretation)" [:r3-flight-ask :flight-ask-fn :r3-prompt :flight-click-wants :ask-merge-published :r3-store-criteria :r3-store-coverage :r3-store-locators :r3-store-locator-questions :r3-store-locator-declines :r3-store-constraints-read] [:r3-test]]
    ["5 Construction, order" [:tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-kernel] [:r6-test]]
    ["7a Selection, decision, registry"

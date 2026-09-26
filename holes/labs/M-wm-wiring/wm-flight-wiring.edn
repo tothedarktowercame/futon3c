@@ -58,8 +58,11 @@
    ;; reads the flight's target as (:target flight), a keyword call the
    ;; prover's record scope does not yet attribute; the read step is where
    ;; the flight's :target lands once H9 lands (see :dispatch for why the
-   ;; 1 -> 2 boundary carries no field today)
-   :reads [:text-sha256]}
+   ;; 1 -> 2 boundary carries no field today).
+   ;; WM-HANDOFF-H9+H11-I: declared as a scoped read, [:target {:record
+   ;; :flight}] (futon3c 16260b56 counts the keyword call on `flight`); its
+   ;; writer is not yet attributable (see :flight-entry)
+   :reads [:text-sha256 [:target {:record :flight}]]}
   ;; WM-HANDOFF-H1-I (WM-HANDOFFS-D H1): the flight loop, flight/run!, puts
   ;; the read step's result on the flight record as :readings (with
   ;; :before-click) and merges its :needs, and the ask step's :needs too; it
@@ -76,7 +79,13 @@
   ;; boxed here
   {:box/id :flight-run :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "run!"}
-   :reads [:needs] :writes [:readings :needs]}
+   ;; WM-HANDOFF-H9+H11-I: run! names the flight f: (:target f), scoped
+   :record-aliases {:flight ["f"]}
+   :reads [:needs [:target {:record :flight}]] :writes [:readings :needs]}
+  {:box/id :flight-ask-fn :box/kind :component
+   ;; WM-HANDOFF-H9+H11-I: the ask step's (:target flight)
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "ask-fn"}
+   :reads [[:target {:record :flight}]]}
   {:box/id :flight-driver-summary :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "run-flight!"}
    :reads [:readings :needs]}
@@ -152,7 +161,8 @@
    :writes [:wants :universe]}
   {:box/id :flight-judge-opts :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "judge-opts"}
-   :reads [:wants :universe]}
+   ;; WM-HANDOFF-H9+H11-I: (:target flight), scoped
+   :reads [:wants :universe [:target {:record :flight}]]}
   {:box/id :tick-flight-assembly :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
    ;; WM-HANDOFF-H5-I: writes the target's :universes (the flight's
@@ -161,7 +171,8 @@
    ;; ((assoc-in [:sources :wants target] (vec (:wants flight)))), scoped to
    ;; the record :sources (WM-PROVER-RECORD-SCOPE-I, futon3c 5e4d9d02), so
    ;; it is a different vertex from the click's :wants it reads
-   :reads [:wants :universe] :writes [:universes [:wants {:record :sources}]]}
+   ;; WM-HANDOFF-H9+H11-I: (:target flight) keys the sources' entries
+   :reads [:wants :universe [:target {:record :flight}]] :writes [:universes [:wants {:record :sources}]]}
   ;; WM-HANDOFF-H4-I (WM-HANDOFFS-D H4): the ask's answers reach
   ;; construction as the sources' :interpretations. publish! writes a
   ;; validated answer into the store under :patterns/:receipts (no
@@ -262,6 +273,14 @@
    :site {:file "futon2/src/futon2/aif/cascade_model_manifest.clj" :var "co-apply-kernel"}}
   {:box/id :r4-kernel :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
+   ;; WM-HANDOFF-H9+H11-I: reads the cascade spec's want, (:want spec-in)
+   ;; after spec-in (or (:cascade-spec opts) {}), scoped [:want {:record
+   ;; :cascade-spec}]. Its writer, assemble-one's :cascade-spec {:want (set
+   ;; want) ...} inside the let-bound base-problem literal, is returned by
+   ;; name ((assoc base-problem :precedences ...) under :cascade-problem in
+   ;; the returned map), which :returns-record does not attribute: the next
+   ;; prover limit, a let-bound literal returned by name. Not declared
+   :record-aliases {:cascade-spec ["spec-in"]}
    ;; WM-HANDOFF-H6-I (the rates island): reads the sourced rates the
    ;; cascade lane passes it as :adjudication-rates (the scorer that
    ;; consumes A; it runs at the lane's R5, after the rates are sourced).
@@ -271,7 +290,7 @@
    ;; efe/compute-efe writes it for the non-cascade actions and
    ;; cascade_observation_scoring/rank-cascade-actions on the observation
    ;; path, both unboxed; select-action-cascades re-emits the chosen one)
-   :reads [:adjudication-rates] :writes [:order-use :controller-score]}
+   :reads [:adjudication-rates [:want {:record :cascade-spec}]] :writes [:order-use :controller-score]}
   {:box/id :r4-test :row 4 :box/kind :test
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"}
    :reads [:order-use]}
@@ -282,7 +301,8 @@
   ;; ---- rows 0, 5, 7, 9, Clause C/E: the enactment record. No writer exists (row 0).
   {:box/id :r0-enact-step :row 0 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "enact-fn"}
-   :reads [:candidate :enacted-steps :publication-observed] :writes [:attempts :grain-gate]}
+   ;; WM-HANDOFF-H9+H11-I: base-step {:target (:target flight) ...}
+   :reads [:candidate :enacted-steps :publication-observed [:target {:record :flight}]] :writes [:attempts :grain-gate]}
   {:box/id :r0-test :row 0 :box/kind :test
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"}
    :reads [:attempts :grain-gate :publication-observed]}
@@ -421,7 +441,9 @@
   ;; finding-failure-cause reads it, typed absent on an older finding
   {:box/id :r9-close-cause :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "run-opportunity-core!"}
-   :writes [:failure-cause]}
+   ;; WM-HANDOFF-H9+H11-I: (get-in opts [:flight :target]), the posted
+   ;; click's copy of the flight record
+   :reads [[:target {:record :flight}]] :writes [:failure-cause]}
   {:box/id :r9-finding-store :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/repair_obligation.clj" :var "record-system-failure!"}
    :reads [:failure-cause]}
@@ -439,7 +461,8 @@
   ;; record (the replay variant declares them)
   {:box/id :flight-click :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "http-click-fn"}
-   :writes [:status :detail :cast]}
+   ;; WM-HANDOFF-H9+H11-I: target (:target flight)
+   :reads [[:target {:record :flight}]] :writes [:status :detail :cast]}
   {:box/id :flight-record-click :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight.clj" :var "record-click"}
    :reads [:kind :status :detail :chosen :cast :failure]}
@@ -548,8 +571,9 @@
    ;; for the chosen action's repair id; enact-fn copies the value (step 12)
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "observe-publication-fn"}
    ;; it writes the observation as {:publication-observed obs}; enact-fn
-   ;; reads it and records it on the enactment record
-   :writes [:publication-observed]}
+   ;; reads it and records it on the enactment record.
+   ;; WM-HANDOFF-H9+H11-I: names (:target flight) on its typed absence
+   :reads [[:target {:record :flight}]] :writes [:publication-observed]}
   {:box/id :r10-test :row 10 :box/kind :test
    :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"}
    :reads [:publication-observed]}
@@ -563,6 +587,17 @@
    :site {:file "futon2/src/futon2/aif/target_field.clj" :var "with-eligibility"}
    :writes [:eligible]}
   {:box/id :flight-entry :box/kind :component
+   ;; WM-HANDOFF-H9+H11-I: the one writer of the flight's :target in
+   ;; production is this function's returned map ({:target chosen-target
+   ;; ...} / {:target target ...}), which flight/start merges into the flight
+   ;; (start's form holds no :target; flight/choose-target also returns
+   ;; {:target ...} but has no production caller; both unboxed). NOT
+   ;; declared: the literals sit inside the first argument of a trailing
+   ;; cond-> (the (cond ...) the cond-> threads), which :returns-record's
+   ;; return position (last form, if/cond/case branches, trailing
+   ;; let/when/do) does not reach. That is the next prover limit: the value
+   ;; a trailing cond->/-> threads is in return position. Declared without
+   ;; it, the scoped write would be reported not found
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "resolve-target"}
    :reads [:chosen-target :draw-seed] :writes [:target-source]}
   {:box/id :dispatch :box/kind :component
@@ -849,7 +884,20 @@
  ;; selection as :controller-score (:r4-kernel writes, :r9-selection-law
  ;; reads), so the rates lane keeps a wire out. Three standing added:
  ;; :controller-score in the runner (the decision's copy) and two tests.
- ;; 270 -> 273 (2 to-do, 271 standing). :kind :to-do is the
+ ;; 270 -> 273 (2 to-do, 271 standing). WM-HANDOFF-H9+H11-I (futon2 pin
+ ;; unchanged; receiver forms, futon3c 16260b56): the flight's :target and
+ ;; the cascade spec's :want, declared as scoped READS only. [:target
+ ;; {:record :flight}] at read-fn, ask-fn (new box :flight-ask-fn, lane 4),
+ ;; judge-opts, run! (alias f), enact-fn, http-click-fn,
+ ;; observe-publication-fn, the runner's run-opportunity-core! ((get-in
+ ;; opts [:flight :target])) and flight-assembly-input; [:want {:record
+ ;; :cascade-spec}] at rank-cascade-actions (alias spec-in). Neither writer
+ ;; is attributable yet (resolve-target's literals under a trailing cond->;
+ ;; assemble-one's let-bound literal returned by name): two to-dos, the
+ ;; next prover limits. The 45 other-record :target occurrences do not
+ ;; appear (unscoped :target is declared by no box). Eight added: the two
+ ;; to-dos and six other keys at ask-fn. 273 -> 281 (4 to-do, 277
+ ;; standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3412,4 +3460,88 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-HANDOFF-H8-I: a test builds ranked actions carrying :controller-score (a write position in the test, not a second writer); reported now because the field became declared"}]}
+  "WM-HANDOFF-H8-I: a test builds ranked actions carrying :controller-score (a write position in the test, not a second writer); reported now because the field became declared"}
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :interpretations at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :kind at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :occurrence-without-declaration,
+  :field :needs,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :needs at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :occurrence-without-declaration,
+  :field :outcome,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :outcome at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :occurrence-without-declaration,
+  :field :universes,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :universes at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :occurrence-without-declaration,
+  :field :wants,
+  :site
+  {:file "futon2/src/futon2/aif/flight_runner.clj", :var "ask-fn"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H9+H11-I: :wants at ask-fn, reported because the box was added for the flight's :target: the ask step handles the flight's needs, wants, the view's :universes/:interpretations and the asks' :kind/:outcome, fields whose declared carriers are the flight loop's other boxes (run!, click-wants, merge-published, flight-assembly-input); ask-fn is a further reader or re-emitter, not a second writer"}
+
+ {:finding :read-never-written,
+  :field [:target :flight],
+  :readers
+  [:flight-ask-fn
+   :flight-click
+   :flight-judge-opts
+   :flight-run
+   :r0-enact-step
+   :r10-observe-publication
+   :r2-flight-read
+   :r9-close-cause
+   :tick-flight-assembly],
+  :rows [],
+  :kind :to-do,
+  :note
+  "WM-HANDOFF-H9+H11-I: the flight's :target, read at nine sites, has no attributable writer yet: resolve-target returns the {:target ...} literals inside the first argument of a trailing cond->, which :returns-record (futon3c 16260b56) does not treat as return position; declaring the write gives :declaration-without-occurrence (checked). Deleted when the prover counts the value a trailing cond->/-> threads as returned and :flight-entry declares the write"}
+
+ {:finding :read-never-written,
+  :field [:want :cascade-spec],
+  :readers [:r4-kernel],
+  :rows [],
+  :kind :to-do,
+  :note
+  "WM-HANDOFF-H9+H11-I: the cascade spec's :want, read by rank-cascade-actions ((:want spec-in)), has no attributable writer yet: assemble-one builds :cascade-spec {:want (set want) ...} in the let-bound base-problem literal and returns it by name ((assoc base-problem :precedences ...) under :cascade-problem), which :returns-record does not attribute. Deleted when the prover follows a let-bound literal returned by name and :construction-assemble-one declares the write"}]}

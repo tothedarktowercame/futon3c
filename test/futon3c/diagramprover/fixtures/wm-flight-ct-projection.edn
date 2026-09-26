@@ -13,10 +13,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H5-I: :tick-flight-assembly writes :universes, read by :construction-assemble-one; 36/23/75/148 -> 36/23/75/149, one edge; no box added; dead components unchanged; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H6-I: :construction-construct writes :construction-receipt, read by :r4-order-use, :r9-decision and the new :selection-candidate-derivations; :r6-cascade-lane writes :adjudication-rates, read by :r4-kernel; 36/23/75/149 -> 35/23/76/152; :world/r4-kernel leaves the inputs (the kernel now reads a declared field); :construction-construct, :ask-merge-published and :r6-cascade-lane leave the dead components (they reach :r4-test through the kernel's :order-use), :selection-candidate-derivations joins them; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H8-I: :tick-flight-assembly writes [:wants {:record :sources}], read by :construction-assemble-one (the edge wants@sources, internal, so no new port); :r4-kernel writes :controller-score, read by :r9-selection-law; 35/23/76/152 -> 34/23/76/153; :world/r9-selection-law leaves the inputs (selection now reads a declared field); dead components unchanged. :i4 CHANGES, by addition only: the scored facts' bypasses 6 -> 12 (field edges) and 47 -> 74 (with positional hops), each new path running back from selection through :controller-score to the kernel and :adjudication-rates to the cascade lane; the preference fields, the scored facts and the (empty) bypasses to preferences are unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H9+H11-I: scoped reads only, [:target {:record :flight}] at nine boxes (new :flight-ask-fn) and [:want {:record :cascade-spec}] at :r4-kernel; 34/23/76/153 -> 33/23/77/160; inputs gain :in/target@flight and :in/want@cascade-spec (read, written by no box yet: the two to-dos) and lose :world/r9-close-cause, :world/flight-click and :world/r10-observe-publication (each now reads a declared field); :flight-ask-fn joins the dead components; :i4 unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 34, :outputs 23, :components 76, :edges 153},
+ :counts {:inputs 33, :outputs 23, :components 77, :edges 160},
  :validate
  {:all-valid false,
   :checks
@@ -44,6 +45,7 @@
      :r3-store-coverage
      :r2-store-coverage
      :r9-class-model
+     :flight-ask-fn
      :r7-fold-source
      :flight-record-click
      :c8-latest
