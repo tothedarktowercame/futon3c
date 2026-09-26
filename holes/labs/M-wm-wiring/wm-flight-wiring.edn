@@ -27,7 +27,7 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "87dfe212" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "02e6ab07" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
@@ -534,7 +534,10 @@
  ;; field, so no finding is deleted. Nine standing added: :failure in
  ;; persist-run-record! and run-opportunity-core!, :error/:failure-kind in
  ;; record-summary's docstring, five in the test file. 171 -> 180 (2 to-do,
- ;; 178 standing). :kind :to-do is the
+ ;; 178 standing). WM-PHASE-SWALLOW-I (futon2 02e6ab07): the
+ ;; preference refresh's outcome, :refresh on the :preference-refresh phase
+ ;; event and the run record; neither the phase events nor :refresh is on
+ ;; the map, so no box is added. :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
