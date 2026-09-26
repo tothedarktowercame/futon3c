@@ -1,7 +1,7 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='1265' height='1285' viewBox='0 0 1265 1285' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
-<rect width='1265' height='1285' fill='white'/>
+<svg xmlns='http://www.w3.org/2000/svg' width='1298' height='1318' viewBox='0 0 1298 1318' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
+<rect width='1298' height='1318' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c 5927020d; 95 boxes, 109 wires in 86 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c dd0c145f; 98 boxes, 111 wires in 88 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>r1-target-field</text>
@@ -50,277 +50,285 @@
 <text x='440' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 440 196)'>r3-prompt</text>
 <text x='186' y='461' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-click-wants</text>
 <text x='451' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 451 196)'>flight-click-wants</text>
-<text x='186' y='472' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-criteria</text>
-<text x='462' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 462 196)'>r3-store-criteria</text>
-<text x='186' y='483' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-coverage</text>
-<text x='473' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 473 196)'>r3-store-coverage</text>
-<text x='186' y='494' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locators</text>
-<text x='484' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 484 196)'>r3-store-locators</text>
-<text x='186' y='505' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locator-questions</text>
-<text x='495' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 495 196)'>r3-store-locator-questions</text>
-<text x='186' y='516' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locator-declines</text>
-<text x='506' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 506 196)'>r3-store-locator-declines</text>
-<text x='186' y='527' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-constraints-read</text>
-<text x='517' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 517 196)'>r3-store-constraints-read</text>
-<text x='186' y='538' font-size='6.5' text-anchor='end' fill='#8a8a84'>r3-test</text>
-<text x='528' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 528 196)'>r3-test</text>
-<text x='186' y='549' font-size='6.5' text-anchor='end' fill='#1d3a38'>tick-flight-assembly</text>
-<text x='539' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 539 196)'>tick-flight-assembly</text>
-<text x='186' y='560' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-constructor</text>
-<text x='550' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 550 196)'>r4-constructor</text>
-<text x='186' y='571' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-order-use</text>
-<text x='561' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 561 196)'>r4-order-use</text>
-<text x='186' y='582' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-kernel</text>
-<text x='572' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 572 196)'>r4-kernel</text>
-<text x='186' y='593' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-coapply</text>
-<text x='583' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 583 196)'>r4-coapply</text>
-<text x='186' y='604' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-test</text>
-<text x='594' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 594 196)'>r4-test</text>
-<text x='186' y='615' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-coapply-test</text>
-<text x='605' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 605 196)'>r4-coapply-test</text>
-<text x='186' y='626' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-sourced-rates</text>
-<text x='616' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 616 196)'>r6-sourced-rates</text>
-<text x='186' y='637' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-cascade-lane</text>
-<text x='627' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 627 196)'>r6-cascade-lane</text>
-<text x='186' y='648' font-size='6.5' text-anchor='end' fill='#8a8a84'>r6-test</text>
-<text x='638' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 638 196)'>r6-test</text>
-<text x='186' y='659' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-classify-target</text>
-<text x='649' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 649 196)'>r9-classify-target</text>
-<text x='186' y='670' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-embedding-neighbour</text>
-<text x='660' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 660 196)'>r9-embedding-neighbour</text>
-<text x='186' y='681' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-selection-law</text>
-<text x='671' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 671 196)'>r9-selection-law</text>
-<text x='186' y='692' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-decision</text>
-<text x='682' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 682 196)'>r9-decision</text>
-<text x='186' y='703' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-class-model</text>
-<text x='693' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 693 196)'>r9-class-model</text>
-<text x='186' y='714' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-registry-get</text>
-<text x='704' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 704 196)'>c8-registry-get</text>
-<text x='186' y='725' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-entry</text>
-<text x='715' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 715 196)'>c8-entry</text>
-<text x='186' y='736' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-latest</text>
-<text x='726' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 726 196)'>c8-latest</text>
-<text x='186' y='747' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-test</text>
-<text x='737' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 737 196)'>r9-test</text>
-<text x='186' y='758' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-relation-test</text>
-<text x='748' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 748 196)'>r9-relation-test</text>
-<text x='186' y='769' font-size='6.5' text-anchor='end' fill='#1d3a38'>gate-refuse</text>
-<text x='759' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 759 196)'>gate-refuse</text>
-<text x='186' y='780' font-size='6.5' text-anchor='end' fill='#1d3a38'>gate-refusal-read</text>
-<text x='770' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 770 196)'>gate-refusal-read</text>
-<text x='186' y='791' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal</text>
-<text x='781' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 781 196)'>r9-judge-refusal</text>
-<text x='186' y='802' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal-read</text>
-<text x='792' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 792 196)'>r9-judge-refusal-read</text>
-<text x='186' y='813' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal-abstention</text>
-<text x='803' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 803 196)'>r9-judge-refusal-abstention</text>
-<text x='186' y='824' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-abstention-carrier</text>
-<text x='814' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 814 196)'>r9-abstention-carrier</text>
-<text x='186' y='835' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-phase-kind</text>
-<text x='825' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 825 196)'>r9-phase-kind</text>
-<text x='186' y='846' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-failure-classifier</text>
-<text x='836' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 836 196)'>r9-failure-classifier</text>
-<text x='186' y='857' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-close-cause</text>
-<text x='847' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 847 196)'>r9-close-cause</text>
-<text x='186' y='868' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-finding-store</text>
-<text x='858' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 858 196)'>r9-finding-store</text>
-<text x='186' y='879' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-finding-cause-read</text>
-<text x='869' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 869 196)'>r9-finding-cause-read</text>
-<text x='186' y='890' font-size='6.5' text-anchor='end' fill='#8a8a84'>gate-refusal-test</text>
-<text x='880' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 880 196)'>gate-refusal-test</text>
-<text x='186' y='901' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-judge-refusal-test</text>
-<text x='891' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 891 196)'>r9-judge-refusal-test</text>
-<text x='186' y='912' font-size='6.5' text-anchor='end' fill='#8a8a84'>phase-kind-test</text>
-<text x='902' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 902 196)'>phase-kind-test</text>
-<text x='186' y='923' font-size='6.5' text-anchor='end' fill='#8a8a84'>failure-cause-record-test</text>
-<text x='913' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 913 196)'>failure-cause-record-test</text>
-<text x='186' y='934' font-size='6.5' text-anchor='end' fill='#1d3a38'>r5-flight-call</text>
-<text x='924' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 924 196)'>r5-flight-call</text>
-<text x='186' y='945' font-size='6.5' text-anchor='end' fill='#1d3a38'>r5-grain-gate</text>
-<text x='935' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 935 196)'>r5-grain-gate</text>
-<text x='186' y='956' font-size='6.5' text-anchor='end' fill='#1d3a38'>r0-enact-step</text>
-<text x='946' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 946 196)'>r0-enact-step</text>
-<text x='186' y='967' font-size='6.5' text-anchor='end' fill='#1d3a38'>wc-checker</text>
-<text x='957' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 957 196)'>wc-checker</text>
-<text x='186' y='978' font-size='6.5' text-anchor='end' fill='#8a8a84'>r5-test</text>
-<text x='968' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 968 196)'>r5-test</text>
-<text x='186' y='989' font-size='6.5' text-anchor='end' fill='#8a8a84'>r0-test</text>
-<text x='979' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 979 196)'>r0-test</text>
-<text x='186' y='1000' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-flight-call</text>
-<text x='990' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 990 196)'>r7-flight-call</text>
-<text x='186' y='1011' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-increment</text>
-<text x='1001' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1001 196)'>r7-increment</text>
-<text x='186' y='1022' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold</text>
-<text x='1012' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1012 196)'>r7-fold</text>
-<text x='186' y='1033' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold-source</text>
-<text x='1023' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1023 196)'>r7-fold-source</text>
-<text x='186' y='1044' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold-call</text>
-<text x='1034' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1034 196)'>r7-fold-call</text>
-<text x='186' y='1055' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-selection</text>
-<text x='1045' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1045 196)'>r7-selection</text>
-<text x='186' y='1066' font-size='6.5' text-anchor='end' fill='#1d3a38'>r10-observe-publication</text>
-<text x='1056' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1056 196)'>r10-observe-publication</text>
-<text x='186' y='1077' font-size='6.5' text-anchor='end' fill='#8a8a84'>r7-call-test</text>
-<text x='1067' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1067 196)'>r7-call-test</text>
-<text x='186' y='1088' font-size='6.5' text-anchor='end' fill='#8a8a84'>r7-test</text>
-<text x='1078' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1078 196)'>r7-test</text>
-<text x='186' y='1099' font-size='6.5' text-anchor='end' fill='#8a8a84'>habit-fold-call-test</text>
-<text x='1089' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1089 196)'>habit-fold-call-test</text>
-<text x='186' y='1110' font-size='6.5' text-anchor='end' fill='#8a8a84'>r10-test</text>
-<text x='1100' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1100 196)'>r10-test</text>
-<text x='186' y='1121' font-size='6.5' text-anchor='end' fill='#1d3a38'>click-start</text>
-<text x='1111' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1111 196)'>click-start</text>
-<text x='186' y='1132' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-cast</text>
-<text x='1122' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1122 196)'>flight-cast</text>
-<text x='186' y='1143' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-click</text>
-<text x='1133' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1133 196)'>flight-click</text>
-<text x='186' y='1154' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-summary</text>
-<text x='1144' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1144 196)'>flight-record-summary</text>
-<text x='186' y='1165' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-click</text>
-<text x='1155' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1155 196)'>flight-record-click</text>
-<text x='186' y='1176' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-run</text>
-<text x='1166' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1166 196)'>flight-run</text>
-<text x='186' y='1187' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-driver-summary</text>
-<text x='1177' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1177 196)'>flight-driver-summary</text>
-<text x='186' y='1198' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-judge-opts</text>
-<text x='1188' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1188 196)'>flight-judge-opts</text>
-<text x='186' y='1209' font-size='6.5' text-anchor='end' fill='#1d3a38'>r11-warrants</text>
-<text x='1199' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1199 196)'>r11-warrants</text>
-<text x='186' y='1220' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-cast-test</text>
-<text x='1210' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1210 196)'>flight-cast-test</text>
-<text x='186' y='1231' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-click-close-test</text>
-<text x='1221' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1221 196)'>flight-click-close-test</text>
-<text x='186' y='1242' font-size='6.5' text-anchor='end' fill='#8a8a84'>click-reason-test</text>
-<text x='1232' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1232 196)'>click-reason-test</text>
+<text x='186' y='472' font-size='6.5' text-anchor='end' fill='#1d3a38'>ask-merge-published</text>
+<text x='462' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 462 196)'>ask-merge-published</text>
+<text x='186' y='483' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-criteria</text>
+<text x='473' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 473 196)'>r3-store-criteria</text>
+<text x='186' y='494' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-coverage</text>
+<text x='484' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 484 196)'>r3-store-coverage</text>
+<text x='186' y='505' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locators</text>
+<text x='495' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 495 196)'>r3-store-locators</text>
+<text x='186' y='516' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locator-questions</text>
+<text x='506' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 506 196)'>r3-store-locator-questions</text>
+<text x='186' y='527' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-locator-declines</text>
+<text x='517' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 517 196)'>r3-store-locator-declines</text>
+<text x='186' y='538' font-size='6.5' text-anchor='end' fill='#1d3a38'>r3-store-constraints-read</text>
+<text x='528' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 528 196)'>r3-store-constraints-read</text>
+<text x='186' y='549' font-size='6.5' text-anchor='end' fill='#8a8a84'>r3-test</text>
+<text x='539' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 539 196)'>r3-test</text>
+<text x='186' y='560' font-size='6.5' text-anchor='end' fill='#1d3a38'>tick-flight-assembly</text>
+<text x='550' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 550 196)'>tick-flight-assembly</text>
+<text x='186' y='571' font-size='6.5' text-anchor='end' fill='#1d3a38'>construction-assemble-one</text>
+<text x='561' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 561 196)'>construction-assemble-one</text>
+<text x='186' y='582' font-size='6.5' text-anchor='end' fill='#1d3a38'>construction-construct</text>
+<text x='572' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 572 196)'>construction-construct</text>
+<text x='186' y='593' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-constructor</text>
+<text x='583' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 583 196)'>r4-constructor</text>
+<text x='186' y='604' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-order-use</text>
+<text x='594' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 594 196)'>r4-order-use</text>
+<text x='186' y='615' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-kernel</text>
+<text x='605' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 605 196)'>r4-kernel</text>
+<text x='186' y='626' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-coapply</text>
+<text x='616' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 616 196)'>r4-coapply</text>
+<text x='186' y='637' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-test</text>
+<text x='627' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 627 196)'>r4-test</text>
+<text x='186' y='648' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-coapply-test</text>
+<text x='638' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 638 196)'>r4-coapply-test</text>
+<text x='186' y='659' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-sourced-rates</text>
+<text x='649' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 649 196)'>r6-sourced-rates</text>
+<text x='186' y='670' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-cascade-lane</text>
+<text x='660' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 660 196)'>r6-cascade-lane</text>
+<text x='186' y='681' font-size='6.5' text-anchor='end' fill='#8a8a84'>r6-test</text>
+<text x='671' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 671 196)'>r6-test</text>
+<text x='186' y='692' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-classify-target</text>
+<text x='682' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 682 196)'>r9-classify-target</text>
+<text x='186' y='703' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-embedding-neighbour</text>
+<text x='693' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 693 196)'>r9-embedding-neighbour</text>
+<text x='186' y='714' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-selection-law</text>
+<text x='704' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 704 196)'>r9-selection-law</text>
+<text x='186' y='725' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-decision</text>
+<text x='715' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 715 196)'>r9-decision</text>
+<text x='186' y='736' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-class-model</text>
+<text x='726' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 726 196)'>r9-class-model</text>
+<text x='186' y='747' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-registry-get</text>
+<text x='737' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 737 196)'>c8-registry-get</text>
+<text x='186' y='758' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-entry</text>
+<text x='748' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 748 196)'>c8-entry</text>
+<text x='186' y='769' font-size='6.5' text-anchor='end' fill='#1d3a38'>c8-latest</text>
+<text x='759' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 759 196)'>c8-latest</text>
+<text x='186' y='780' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-test</text>
+<text x='770' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 770 196)'>r9-test</text>
+<text x='186' y='791' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-relation-test</text>
+<text x='781' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 781 196)'>r9-relation-test</text>
+<text x='186' y='802' font-size='6.5' text-anchor='end' fill='#1d3a38'>gate-refuse</text>
+<text x='792' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 792 196)'>gate-refuse</text>
+<text x='186' y='813' font-size='6.5' text-anchor='end' fill='#1d3a38'>gate-refusal-read</text>
+<text x='803' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 803 196)'>gate-refusal-read</text>
+<text x='186' y='824' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal</text>
+<text x='814' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 814 196)'>r9-judge-refusal</text>
+<text x='186' y='835' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal-read</text>
+<text x='825' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 825 196)'>r9-judge-refusal-read</text>
+<text x='186' y='846' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-judge-refusal-abstention</text>
+<text x='836' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 836 196)'>r9-judge-refusal-abstention</text>
+<text x='186' y='857' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-abstention-carrier</text>
+<text x='847' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 847 196)'>r9-abstention-carrier</text>
+<text x='186' y='868' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-phase-kind</text>
+<text x='858' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 858 196)'>r9-phase-kind</text>
+<text x='186' y='879' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-failure-classifier</text>
+<text x='869' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 869 196)'>r9-failure-classifier</text>
+<text x='186' y='890' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-close-cause</text>
+<text x='880' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 880 196)'>r9-close-cause</text>
+<text x='186' y='901' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-finding-store</text>
+<text x='891' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 891 196)'>r9-finding-store</text>
+<text x='186' y='912' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-finding-cause-read</text>
+<text x='902' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 902 196)'>r9-finding-cause-read</text>
+<text x='186' y='923' font-size='6.5' text-anchor='end' fill='#8a8a84'>gate-refusal-test</text>
+<text x='913' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 913 196)'>gate-refusal-test</text>
+<text x='186' y='934' font-size='6.5' text-anchor='end' fill='#8a8a84'>r9-judge-refusal-test</text>
+<text x='924' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 924 196)'>r9-judge-refusal-test</text>
+<text x='186' y='945' font-size='6.5' text-anchor='end' fill='#8a8a84'>phase-kind-test</text>
+<text x='935' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 935 196)'>phase-kind-test</text>
+<text x='186' y='956' font-size='6.5' text-anchor='end' fill='#8a8a84'>failure-cause-record-test</text>
+<text x='946' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 946 196)'>failure-cause-record-test</text>
+<text x='186' y='967' font-size='6.5' text-anchor='end' fill='#1d3a38'>r5-flight-call</text>
+<text x='957' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 957 196)'>r5-flight-call</text>
+<text x='186' y='978' font-size='6.5' text-anchor='end' fill='#1d3a38'>r5-grain-gate</text>
+<text x='968' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 968 196)'>r5-grain-gate</text>
+<text x='186' y='989' font-size='6.5' text-anchor='end' fill='#1d3a38'>r0-enact-step</text>
+<text x='979' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 979 196)'>r0-enact-step</text>
+<text x='186' y='1000' font-size='6.5' text-anchor='end' fill='#1d3a38'>wc-checker</text>
+<text x='990' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 990 196)'>wc-checker</text>
+<text x='186' y='1011' font-size='6.5' text-anchor='end' fill='#8a8a84'>r5-test</text>
+<text x='1001' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1001 196)'>r5-test</text>
+<text x='186' y='1022' font-size='6.5' text-anchor='end' fill='#8a8a84'>r0-test</text>
+<text x='1012' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1012 196)'>r0-test</text>
+<text x='186' y='1033' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-flight-call</text>
+<text x='1023' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1023 196)'>r7-flight-call</text>
+<text x='186' y='1044' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-increment</text>
+<text x='1034' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1034 196)'>r7-increment</text>
+<text x='186' y='1055' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold</text>
+<text x='1045' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1045 196)'>r7-fold</text>
+<text x='186' y='1066' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold-source</text>
+<text x='1056' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1056 196)'>r7-fold-source</text>
+<text x='186' y='1077' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-fold-call</text>
+<text x='1067' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1067 196)'>r7-fold-call</text>
+<text x='186' y='1088' font-size='6.5' text-anchor='end' fill='#1d3a38'>r7-selection</text>
+<text x='1078' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1078 196)'>r7-selection</text>
+<text x='186' y='1099' font-size='6.5' text-anchor='end' fill='#1d3a38'>r10-observe-publication</text>
+<text x='1089' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1089 196)'>r10-observe-publication</text>
+<text x='186' y='1110' font-size='6.5' text-anchor='end' fill='#8a8a84'>r7-call-test</text>
+<text x='1100' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1100 196)'>r7-call-test</text>
+<text x='186' y='1121' font-size='6.5' text-anchor='end' fill='#8a8a84'>r7-test</text>
+<text x='1111' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1111 196)'>r7-test</text>
+<text x='186' y='1132' font-size='6.5' text-anchor='end' fill='#8a8a84'>habit-fold-call-test</text>
+<text x='1122' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1122 196)'>habit-fold-call-test</text>
+<text x='186' y='1143' font-size='6.5' text-anchor='end' fill='#8a8a84'>r10-test</text>
+<text x='1133' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1133 196)'>r10-test</text>
+<text x='186' y='1154' font-size='6.5' text-anchor='end' fill='#1d3a38'>click-start</text>
+<text x='1144' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1144 196)'>click-start</text>
+<text x='186' y='1165' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-cast</text>
+<text x='1155' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1155 196)'>flight-cast</text>
+<text x='186' y='1176' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-click</text>
+<text x='1166' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1166 196)'>flight-click</text>
+<text x='186' y='1187' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-summary</text>
+<text x='1177' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1177 196)'>flight-record-summary</text>
+<text x='186' y='1198' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-record-click</text>
+<text x='1188' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1188 196)'>flight-record-click</text>
+<text x='186' y='1209' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-run</text>
+<text x='1199' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1199 196)'>flight-run</text>
+<text x='186' y='1220' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-driver-summary</text>
+<text x='1210' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1210 196)'>flight-driver-summary</text>
+<text x='186' y='1231' font-size='6.5' text-anchor='end' fill='#1d3a38'>flight-judge-opts</text>
+<text x='1221' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1221 196)'>flight-judge-opts</text>
+<text x='186' y='1242' font-size='6.5' text-anchor='end' fill='#1d3a38'>r11-warrants</text>
+<text x='1232' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 1232 196)'>r11-warrants</text>
+<text x='186' y='1253' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-cast-test</text>
+<text x='1243' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1243 196)'>flight-cast-test</text>
+<text x='186' y='1264' font-size='6.5' text-anchor='end' fill='#8a8a84'>flight-click-close-test</text>
+<text x='1254' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1254 196)'>flight-click-close-test</text>
+<text x='186' y='1275' font-size='6.5' text-anchor='end' fill='#8a8a84'>click-reason-test</text>
+<text x='1265' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 1265 196)'>click-reason-test</text>
 <rect x='190' y='200' width='99' height='99' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='190' y1='200' x2='190' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='200' x2='1235' y2='200' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='200' x2='190' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='200' x2='1268' y2='200' stroke='#7f9391' stroke-width='0.8'/>
 <text x='192' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 192 70)'>1 Loop entry, target field</text>
 <rect x='289' y='299' width='22' height='22' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='289' y1='200' x2='289' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='299' x2='1235' y2='299' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='289' y1='200' x2='289' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='299' x2='1268' y2='299' stroke='#7f9391' stroke-width='0.8'/>
 <text x='291' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 291 70)'>2 Dispatch, clock-in</text>
 <rect x='311' y='321' width='110' height='110' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='311' y1='200' x2='311' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='321' x2='1235' y2='321' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='311' y1='200' x2='311' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='321' x2='1268' y2='321' stroke='#7f9391' stroke-width='0.8'/>
 <text x='313' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 313 70)'>3 Read step (C)</text>
-<rect x='421' y='431' width='110' height='110' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='421' y1='200' x2='421' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='431' x2='1235' y2='431' stroke='#7f9391' stroke-width='0.8'/>
+<rect x='421' y='431' width='121' height='121' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='421' y1='200' x2='421' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='431' x2='1268' y2='431' stroke='#7f9391' stroke-width='0.8'/>
 <text x='423' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 423 70)'>4 Ask step (interpretation)</text>
-<rect x='531' y='541' width='77' height='77' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='531' y1='200' x2='531' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='541' x2='1235' y2='541' stroke='#7f9391' stroke-width='0.8'/>
-<text x='533' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 533 70)'>5 Construction, order</text>
-<rect x='608' y='618' width='33' height='33' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='608' y1='200' x2='608' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='618' x2='1235' y2='618' stroke='#7f9391' stroke-width='0.8'/>
-<text x='610' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 610 70)'>6 Rates (A)</text>
-<rect x='641' y='651' width='110' height='110' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='641' y1='200' x2='641' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='651' x2='1235' y2='651' stroke='#7f9391' stroke-width='0.8'/>
-<text x='643' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 643 70)'>7a Selection, decision, regist</text>
-<rect x='751' y='761' width='165' height='165' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='751' y1='200' x2='751' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='761' x2='1235' y2='761' stroke='#7f9391' stroke-width='0.8'/>
-<text x='753' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 753 70)'>7b Selection: refusals, failur</text>
-<rect x='916' y='926' width='66' height='66' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='916' y1='200' x2='916' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='926' x2='1235' y2='926' stroke='#7f9391' stroke-width='0.8'/>
-<text x='918' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 918 70)'>8 Grain gate, enactment, W_c</text>
-<rect x='982' y='992' width='121' height='121' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='982' y1='200' x2='982' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='992' x2='1235' y2='992' stroke='#7f9391' stroke-width='0.8'/>
-<text x='984' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 984 70)'>9 Habit (E), publish</text>
-<rect x='1103' y='1113' width='132' height='132' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='1103' y1='200' x2='1103' y2='1245' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='1113' x2='1235' y2='1113' stroke='#7f9391' stroke-width='0.8'/>
-<text x='1105' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1105 70)'>10 Click, flight record</text>
-<rect x='1148' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-record-click: kind</title></rect>
-<rect x='1148' y='1136' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click → flight-record-click: cast detail status</title></rect>
+<rect x='542' y='552' width='99' height='99' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='542' y1='200' x2='542' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='552' x2='1268' y2='552' stroke='#7f9391' stroke-width='0.8'/>
+<text x='544' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 544 70)'>5 Construction, order</text>
+<rect x='641' y='651' width='33' height='33' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='641' y1='200' x2='641' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='651' x2='1268' y2='651' stroke='#7f9391' stroke-width='0.8'/>
+<text x='643' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 643 70)'>6 Rates (A)</text>
+<rect x='674' y='684' width='110' height='110' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='674' y1='200' x2='674' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='684' x2='1268' y2='684' stroke='#7f9391' stroke-width='0.8'/>
+<text x='676' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 676 70)'>7a Selection, decision, regist</text>
+<rect x='784' y='794' width='165' height='165' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='784' y1='200' x2='784' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='794' x2='1268' y2='794' stroke='#7f9391' stroke-width='0.8'/>
+<text x='786' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 786 70)'>7b Selection: refusals, failur</text>
+<rect x='949' y='959' width='66' height='66' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='949' y1='200' x2='949' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='959' x2='1268' y2='959' stroke='#7f9391' stroke-width='0.8'/>
+<text x='951' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 951 70)'>8 Grain gate, enactment, W_c</text>
+<rect x='1015' y='1025' width='121' height='121' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='1015' y1='200' x2='1015' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1025' x2='1268' y2='1025' stroke='#7f9391' stroke-width='0.8'/>
+<text x='1017' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1017 70)'>9 Habit (E), publish</text>
+<rect x='1136' y='1146' width='132' height='132' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='1136' y1='200' x2='1136' y2='1278' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='1146' x2='1268' y2='1146' stroke='#7f9391' stroke-width='0.8'/>
+<text x='1138' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 1138 70)'>10 Click, flight record</text>
+<rect x='1181' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → flight-record-click: kind</title></rect>
+<rect x='1181' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click → flight-record-click: cast detail status</title></rect>
 <rect x='268' y='234' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r8-overlap → r8-test: pair-overlap</title></rect>
-<rect x='642' y='663' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-embedding-neighbour → r9-classify-target: derived-via</title></rect>
-<rect x='1038' y='1015' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-fold → r7-selection: enactment-records</title></rect>
-<rect x='994' y='960' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>wc-checker → r7-increment: wc-verdict</title></rect>
-<rect x='741' y='663' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-embedding-neighbour → r9-relation-test: derived-via</title></rect>
-<rect x='521' y='432' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r3-flight-ask → r3-test: library-root</title></rect>
-<rect x='675' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r9-decision: per-policy-argmax</title></rect>
-<rect x='1071' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-test: delta</title></rect>
-<rect x='1071' y='1048' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-selection → r7-test: e-source</title></rect>
-<rect x='928' y='927' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r5-flight-call → r5-grain-gate: grain</title></rect>
-<rect x='598' y='553' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-constructor → r4-coapply-test: descent units</title></rect>
-<rect x='1060' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-call-test: delta wc-failures</title></rect>
-<rect x='532' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → tick-flight-assembly: universe wants</title></rect>
-<rect x='554' y='553' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-constructor → r4-order-use: descent precedence-violations units</title></rect>
-<rect x='829' y='806' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal-abstention → r9-failure-classifier: outcome</title></rect>
-<rect x='708' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-entry: message timeout-ms</title></rect>
-<rect x='1005' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-increment → r7-fold: delta</title></rect>
-<rect x='466' y='366' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-coverage → r3-store-coverage: coverage</title></rect>
-<rect x='873' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → gate-refusal-test: kind</title></rect>
-<rect x='1225' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → click-reason-test: failure</title></rect>
-<rect x='730' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-selection-law → r9-test: candidate enacted-steps per-policy-argmax</title></rect>
-<rect x='1060' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-flight-call → r7-call-test: wc</title></rect>
-<rect x='631' y='619' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
-<rect x='1104' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
-<rect x='587' y='575' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
-<rect x='994' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-increment: attempts</title></rect>
-<rect x='1203' y='1136' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
+<rect x='675' y='696' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-embedding-neighbour → r9-classify-target: derived-via</title></rect>
+<rect x='1071' y='1048' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-fold → r7-selection: enactment-records</title></rect>
+<rect x='1027' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>wc-checker → r7-increment: wc-verdict</title></rect>
+<rect x='774' y='696' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-embedding-neighbour → r9-relation-test: derived-via</title></rect>
+<rect x='532' y='432' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r3-flight-ask → r3-test: library-root</title></rect>
+<rect x='708' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r9-decision: per-policy-argmax</title></rect>
+<rect x='1104' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-test: delta</title></rect>
+<rect x='1104' y='1081' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-selection → r7-test: e-source</title></rect>
+<rect x='961' y='960' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r5-flight-call → r5-grain-gate: grain</title></rect>
+<rect x='631' y='586' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-constructor → r4-coapply-test: descent units</title></rect>
+<rect x='1093' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-call-test: delta wc-failures</title></rect>
+<rect x='543' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → tick-flight-assembly: universe wants</title></rect>
+<rect x='587' y='586' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-constructor → r4-order-use: descent precedence-violations units</title></rect>
+<rect x='862' y='839' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal-abstention → r9-failure-classifier: outcome</title></rect>
+<rect x='741' y='740' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-entry: message timeout-ms</title></rect>
+<rect x='554' y='465' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → construction-assemble-one: interpretations</title></rect>
+<rect x='1038' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-increment → r7-fold: delta</title></rect>
+<rect x='477' y='366' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-coverage → r3-store-coverage: coverage</title></rect>
+<rect x='906' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → gate-refusal-test: kind</title></rect>
+<rect x='1258' y='1180' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → click-reason-test: failure</title></rect>
+<rect x='763' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-selection-law → r9-test: candidate enacted-steps per-policy-argmax</title></rect>
+<rect x='1093' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-flight-call → r7-call-test: wc</title></rect>
+<rect x='664' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
+<rect x='1137' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
+<rect x='620' y='608' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
+<rect x='1027' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-increment: attempts</title></rect>
+<rect x='1236' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
 <rect x='235' y='212' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-target-field → r1-outer-cascade: next-step</title></rect>
-<rect x='763' y='762' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>gate-refuse → gate-refusal-read: error</title></rect>
-<rect x='510' y='410' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-constraints-read → r3-store-constraints-read: constraints-read</title></rect>
-<rect x='1093' y='1059' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r10-observe-publication → r10-test: publication-observed</title></rect>
+<rect x='796' y='795' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>gate-refuse → gate-refusal-read: error</title></rect>
+<rect x='521' y='410' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-constraints-read → r3-store-constraints-read: constraints-read</title></rect>
+<rect x='1126' y='1092' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r10-observe-publication → r10-test: publication-observed</title></rect>
 <rect x='312' y='333' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-served-by-reading → r2-flight-read: text-sha256</title></rect>
-<rect x='235' y='1059' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r1-outer-cascade: publication-observed</title></rect>
+<rect x='235' y='1092' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r1-outer-cascade: publication-observed</title></rect>
 <rect x='279' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r1-outer-cascade → loop-test: draw-seed</title></rect>
-<rect x='972' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r0-enact-step → r0-test: attempts grain-gate</title></rect>
-<rect x='455' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-criteria → r3-store-criteria: criteria</title></rect>
+<rect x='1005' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r0-enact-step → r0-test: attempts grain-gate</title></rect>
+<rect x='466' y='355' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-criteria → r3-store-criteria: criteria</title></rect>
 <rect x='246' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-outer-cascade → flight-entry: chosen-target draw-seed</title></rect>
-<rect x='950' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → wc-checker: candidate</title></rect>
+<rect x='983' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → wc-checker: candidate</title></rect>
 <rect x='334' y='333' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-served-by-reading → r2-verifier: text-sha256 want-span</title></rect>
-<rect x='477' y='377' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r3-store-locators: locators</title></rect>
-<rect x='1170' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
-<rect x='994' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r7-increment: candidate</title></rect>
-<rect x='939' y='674' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate enacted-steps</title></rect>
+<rect x='488' y='377' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locators → r3-store-locators: locators</title></rect>
+<rect x='1203' y='1202' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
+<rect x='1027' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r7-increment: candidate</title></rect>
+<rect x='972' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate enacted-steps</title></rect>
 <rect x='235' y='311' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>clock-in → r1-outer-cascade: clock-lineage</title></rect>
-<rect x='961' y='927' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r5-flight-call → r5-test: grain</title></rect>
-<rect x='906' y='850' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-close-cause → failure-cause-record-test: failure-cause</title></rect>
-<rect x='972' y='1059' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r10-observe-publication → r0-test: publication-observed</title></rect>
-<rect x='884' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → r9-judge-refusal-test: kind</title></rect>
-<rect x='675' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-classify-target → r9-decision: class</title></rect>
-<rect x='807' y='784' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal → r9-abstention-carrier: judge-refusal</title></rect>
-<rect x='620' y='619' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r6-cascade-lane: measurement</title></rect>
-<rect x='1016' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → r7-fold-source: increment</title></rect>
-<rect x='1104' y='1125' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-cast → click-start: author repair-reviewer reviewer</title></rect>
-<rect x='719' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-latest: message timeout-ms</title></rect>
-<rect x='1214' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → flight-click-close-test: chosen</title></rect>
-<rect x='499' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-declines → r3-store-locator-declines: locator-declines</title></rect>
-<rect x='598' y='575' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-coapply-test: order-use</title></rect>
-<rect x='675' y='1037' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r9-decision: enactment-fold</title></rect>
-<rect x='1071' y='960' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>wc-checker → r7-test: wc-verdict</title></rect>
-<rect x='939' y='1059' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r0-enact-step: publication-observed</title></rect>
+<rect x='994' y='960' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r5-flight-call → r5-test: grain</title></rect>
+<rect x='939' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-close-cause → failure-cause-record-test: failure-cause</title></rect>
+<rect x='1005' y='1092' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r10-observe-publication → r0-test: publication-observed</title></rect>
+<rect x='917' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → r9-judge-refusal-test: kind</title></rect>
+<rect x='708' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-classify-target → r9-decision: class</title></rect>
+<rect x='840' y='817' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal → r9-abstention-carrier: judge-refusal</title></rect>
+<rect x='653' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r6-cascade-lane: measurement</title></rect>
+<rect x='1049' y='1026' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → r7-fold-source: increment</title></rect>
+<rect x='1137' y='1158' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-cast → click-start: author repair-reviewer reviewer</title></rect>
+<rect x='752' y='740' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-latest: message timeout-ms</title></rect>
+<rect x='1247' y='1180' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → flight-click-close-test: chosen</title></rect>
+<rect x='510' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-declines → r3-store-locator-declines: locator-declines</title></rect>
+<rect x='631' y='608' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-coapply-test: order-use</title></rect>
+<rect x='708' y='1070' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r9-decision: enactment-fold</title></rect>
+<rect x='1104' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>wc-checker → r7-test: wc-verdict</title></rect>
+<rect x='972' y='1092' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r0-enact-step: publication-observed</title></rect>
 <rect x='257' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r1-outer-cascade → r1-test: draw-seed</title></rect>
 <rect x='235' y='234' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r8-overlap → r1-outer-cascade: pair-overlap</title></rect>
 <rect x='411' y='333' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r2-served-by-reading → r2-test: text-sha256 want-span</title></rect>
 <rect x='279' y='256' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-entry → loop-test: target-source</title></rect>
-<rect x='785' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-judge-refusal-read: kind</title></rect>
+<rect x='818' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-judge-refusal-read: kind</title></rect>
 <rect x='235' y='223' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>eligibility → r1-outer-cascade: eligible</title></rect>
-<rect x='862' y='850' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-cause-read: failure-cause</title></rect>
-<rect x='950' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → wc-checker: attempts grain-gate</title></rect>
-<rect x='829' y='828' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-phase-kind → r9-failure-classifier: failure-kind</title></rect>
+<rect x='895' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-cause-read: failure-cause</title></rect>
+<rect x='983' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → wc-checker: attempts grain-gate</title></rect>
+<rect x='862' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-phase-kind → r9-failure-classifier: failure-kind</title></rect>
 <rect x='301' y='300' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>dispatch → clock-in: mission-id</title></rect>
 <rect x='433' y='432' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r3-flight-ask → r3-prompt: library-root</title></rect>
-<rect x='895' y='828' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-phase-kind → phase-kind-test: failure-kind</title></rect>
+<rect x='928' y='861' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-phase-kind → phase-kind-test: failure-kind</title></rect>
 <rect x='235' y='201' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>loop-entry → r1-outer-cascade: trigger</title></rect>
-<rect x='961' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r0-enact-step → r5-test: attempts grain-gate</title></rect>
-<rect x='741' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-classify-target → r9-relation-test: class</title></rect>
-<rect x='1148' y='1147' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-record-click: chosen failure</title></rect>
-<rect x='983' y='949' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-flight-call: attempts</title></rect>
-<rect x='1082' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-fold-call → habit-fold-call-test: enactment-fold</title></rect>
-<rect x='488' y='388' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-questions → r3-store-locator-questions: locator-questions</title></rect>
-<rect x='686' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-class-model: target-class</title></rect>
-<rect x='1181' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → flight-judge-opts: universe wants</title></rect>
-<rect x='851' y='850' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
-<rect x='235' y='1015' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
-<rect x='884' y='784' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
-<text x='16' y='1273' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): 6 Rates (A). Weakly connected components among non-test boxes: 22 (sizes 26, 5, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1).</text>
+<rect x='994' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r0-enact-step → r5-test: attempts grain-gate</title></rect>
+<rect x='774' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-classify-target → r9-relation-test: class</title></rect>
+<rect x='1181' y='1180' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-record-summary → flight-record-click: chosen failure</title></rect>
+<rect x='565' y='465' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>ask-merge-published → construction-construct: interpretations</title></rect>
+<rect x='1016' y='982' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-flight-call: attempts</title></rect>
+<rect x='1115' y='1070' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-fold-call → habit-fold-call-test: enactment-fold</title></rect>
+<rect x='499' y='388' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-questions → r3-store-locator-questions: locator-questions</title></rect>
+<rect x='719' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-decision → r9-class-model: target-class</title></rect>
+<rect x='1214' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → flight-judge-opts: universe wants</title></rect>
+<rect x='884' y='883' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
+<rect x='235' y='1048' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
+<rect x='917' y='817' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
+<text x='16' y='1306' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): 6 Rates (A). Weakly connected components among non-test boxes: 23 (sizes 26, 5, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1).</text>
 </svg>
