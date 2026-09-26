@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 6,
-  :witnessed-hermetically 108,
-  :unverified 59,
+  :witnessed-hermetically 113,
+  :unverified 54,
   :wires 173},
  :wires
  [{:wire
@@ -109,7 +109,11 @@
    :test
    futon3c.diagramprover.wm-wire-flight-click-flight-record-click-status-test/the-refused-clicks-status-reaches-the-click-entry}
   {:wire [:flight-click :r9-measured-a-version :status],
-   :status :unverified}
+   :status :unverified,
+   :note
+   "Wrong writer: measured-a-version reads sourced-rates status, not http-click-fn status. Replacement: [:r6-sourced-rates :r9-measured-a-version :status].",
+   :registered-test-failed
+   futon3c.diagramprover.wm-wire-flight-click-r9-measured-a-version-status-test/the-observed-handoff}
   {:wire [:flight-click-wants :click-start :wants],
    :status :unverified}
   {:wire [:flight-click-wants :flight-judge-opts :universe],
@@ -206,7 +210,9 @@
    [:flight-run
     :flight-steps-source
     [:step {:record :enactment-entry}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-run-flight-steps-source-step-test/the-observed-handoff}
   {:wire [:gate-refuse :gate-refusal-read :error],
    :status :witnessed-hermetically,
    :test
@@ -586,9 +592,31 @@
    :test
    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test/the-close-cause-survives-the-finding-store}
   {:wire [:r9-decision :flight-conditioning-step :measured-a],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-flight-conditioning-step-measured-a-test/the-observed-handoff,
+   :note
+   "Compare the measured-A payload retained by the step: target-local rates, digest and classes; measurement consumption is witnessed separately."}
   {:wire [:r9-decision :flight-record-click :kind],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-decision-flight-record-click-kind-test/the-observed-handoff,
+   :note
+   {:kind :two-record-live-pair,
+    :flight
+    {:path "holes/labs/M-wm-wiring/spike/flight-ffcd772b.edn",
+     :sha256
+     "998565fb0a341077ae5b9341d977a9c5bf6db6ea0cf33fead1e00c630f4e2575",
+     :reader-path [:flight :clicks 0 :abstention :kind]},
+    :tick
+    {:path
+     "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-25-flight-ffcd772b-click-1.edn",
+     :sha256
+     "8ab0db5d770085f17bb341293a92424149bf2388ae7a6dd3e724887c9a44eba2",
+     :writer-path [:decision :abstention :targets],
+     :target "M-autoclock-in"},
+    :why
+    "Same click, :universe-not-admitted at both ends; neither has [:decision :kind]. Two records do not meet the one-record VERIFIED definition."}}
   {:wire [:r9-decision :gate-refusal-test :kind], :status :unverified}
   {:wire [:r9-decision :r9-class-model :target-class],
    :status :verified,
@@ -638,12 +666,18 @@
    [:r9-measured-a-version
     :flight-conditioning-step
     [:measurement {:record :measured-a}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-measurement-test/the-observed-handoff,
+   :note
+   "Measurement is consumed by the real target-local/read and unmeasured-class check, not retained on the step; no downstream recorded measurement end (second-layer item)."}
   {:wire
    [:r9-measured-a-version
     :flight-conditioning-step
     [:rates {:record :measured-a}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-measured-a-version-flight-conditioning-step-rates-test/the-observed-handoff}
   {:wire [:r9-phase-kind :phase-kind-test :failure-kind],
    :status :witnessed-hermetically,
    :test
