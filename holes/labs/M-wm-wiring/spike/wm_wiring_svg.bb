@@ -42,14 +42,14 @@
    ["5 Construction, order" [:r2-tick-observe :r2-judge-observation :r3a-predict-observation :r3a-channel-prediction-error :r3a-prediction-error :r7-weighted-error :r3-aggregate-driver :r3-apply-belief-events :morning-brief-fold :r1-belief-carry :trace-record :r13-policy-depth-anticipation :r13-sources-horizon :construction-assemble :tick-flight-assembly :construction-assemble-one :construction-construct :r4-constructor :r4-order-use :r4-coapply :r4-evaluate-state :r4-push-forward :r4-token-likelihood] [:r4-test :r4-coapply-test]]
    ["6 Rates (A)" [:r6-sourced-rates :r6-cascade-lane :r4-kernel :r5-g-sparse-cert :fpi-policy-free-energy] [:r6-test]]
    ["7a Selection, decision, registry"
-    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :r14-precision-carry :r14-selection-posterior :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
+    [:r9-classify-target :r9-embedding-neighbour :r9-selection-law :r9-f-prefix-supply :r8-selection-candidate :flight-steps-source :r9-decision :r9-measured-a-version :r13-family-parameters :r14-precision-carry :r14-selection-posterior :selection-candidate-derivations :r9-class-model :c8-registry-get :c8-entry :c8-latest]
     [:r9-test :r9-relation-test]]
    ["7b Selection: refusals, failure record"
     [:gate-refuse :gate-refusal-read :r9-judge-refusal :r9-judge-refusal-read :r9-judge-refusal-abstention :r9-abstention-carrier :run-record-publication :r9-phase-kind :r9-failure-classifier :r9-close-cause :r9-finding-store :r9-finding-cause-read]
     [:gate-refusal-test :r9-judge-refusal-test :phase-kind-test :failure-cause-record-test]]
    ["8 Grain gate, enactment, W_c" [:r5-flight-call :r5-grain-gate :r0-enact-step :wc-checker] [:r5-test :r0-test]]
    ["9 Habit (E), publish" [:r7-flight-call :r7-increment :r7-fold :r7-fold-source :r7-fold-call :r7-selection :r10-observe-publication] [:r7-call-test :r7-test :habit-fold-call-test :r10-test]]
-   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-record-summary :flight-record-click :flight-run :flight-driver-summary :flight-judge-opts :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
+   ["10 Click, flight record" [:click-start :flight-cast :flight-click :flight-conditioning-step :flight-record-summary :flight-record-click :flight-run :flight-driver-summary :flight-judge-opts :r11-warrants] [:flight-cast-test :flight-click-close-test :click-reason-test]]])
 
 (let [placed (mapcat (fn [[_ c t]] (concat c t)) lanes)
       dup (->> placed frequencies (filter #(> (val %) 1)) keys)
