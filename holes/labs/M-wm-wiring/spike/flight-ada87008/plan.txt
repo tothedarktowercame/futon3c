@@ -1,0 +1,154 @@
+{:constraints
+ [{:want :exit/h5c6933e5e2fc,
+   :requires :exit/h1dae607747ce,
+   :line 35,
+   :by :machine-reading,
+   :quote
+   "Name the resolution rule (turn → candidate target → existence witness → confirm/switch) and the override surface, such that auto-clock can never *silently* mislabel a turn. Until then: manual clock-in + the hydra are the floor; this stub holds the idea so it isn't winged."}
+  {:want :exit/h203ce9577ebe,
+   :requires :exit/h64ddcd0e8811,
+   :line 91,
+   :by :machine-reading,
+   :quote
+   "   **Consequence, and the locator this criterion now needs.** The Emacs buffer\n   path still enforces floor-only for operator input\n   (`agent-chat-auto-clock-only-fires-at-no-target-floor`,\n   `test/agent-chat-test.el:553`), so a single REPL turn can leave the buffer\n   displaying `M-old` while its durable decision records `M-new`. Under this\n   amendment **that ERT assertion is the stale one, not the JVM's**: the work"}
+  {:want :exit/h0c55648e57e5,
+   :requires :exit/h59adca2cd730,
+   :line 529,
+   :by :machine-reading,
+   :quote
+   "Acceptance must construct the current bad case: run a complete isolated"}
+  {:want :exit/h0c55648e57e5,
+   :requires :exit/h0f3acdf222d7,
+   :line 521,
+   :by :machine-reading,
+   :quote
+   "turn-admission accounting contract across Emacs, bell, and Marimo; use\nexisting resolved clock inputs for the positive case and explicit\n:unclocked/reason for the otherwise case. Use a stable turn/job identity for"}],
+ :owner-questions [],
+ :construction-parameters
+ {:budget
+  {:value {:max-moves 4, :max-expansions 20000},
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :commit "891b4af6"}},
+  :move-cost
+  {:value 0,
+   :authority
+   {:by "claude-10",
+    :date "2026-09-24",
+    :ruling :none-found,
+    :reason
+    "a construction move is computation inside the tick, not in G's units; cost 1 made the constructor decline M-aif-eig's plan (gain 0.33, :acting-worth-more)",
+    :commit "891b4af6"}}},
+ :answer-path
+ "Agency bell (mode work, requisition = target), poll to terminal, reply grammar :wm/want-interpretation-response-v1",
+ :unlocated [],
+ :store "/home/joe/code/futon2/data/wm-interpretations",
+ :clicks
+ {:max 1,
+  :run-ids "<date>-flight-4a6838e4-click-<n>",
+  :via
+  "POST /api/alpha/wm/click with flight-edn: an ordinary click (budget consume + cast-seat preflight); runner/run-opportunity! in the serving JVM"},
+ :coverage-questions nil,
+ :resolved-steps
+ {:bb "bb",
+  :enact
+  "flight-runner/enact-fn over the click's run record (observe-publication-fn inside it)",
+  :cast
+  {:author "claude-6",
+   :reviewer "claude-13",
+   :repair-reviewer {:absent :no-repair-reviewer-given}},
+  :library-root "/home/joe/code/futon3/library",
+  :cascades {:absent :no-cascades-dir},
+  :checker
+  "/home/joe/code/futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj",
+  :quotes {:absent :no-quotes},
+  :dispatch-step
+  {:via "flight-runner/agency-dispatch-step!",
+   :seat "claude-5",
+   :deadline {:absent :no-step-deadline}},
+  :wc "flight-runner/wc-verdict-fn with the checker and bb",
+  :field-entry {:absent :no-field-entry}},
+ :run? false,
+ :horizon
+ {:value 4,
+  :authority
+  {:source :cascade-sources,
+   :declarations
+   [{:source "T-repair-occ-444fb018.edn", :horizon-steps 4}]}},
+ :want-source
+ {:kind :a-exits,
+  :repo "futon3c",
+  :path "holes/missions/M-autoclock-in.md",
+  :lifecycle nil,
+  :text-read? true},
+ :criteria-from :machine-reading,
+ :open-wants
+ [:exit/h1dae607747ce
+  :exit/h5c6933e5e2fc
+  :exit/h7afd70f40a29
+  :exit/h64ddcd0e8811
+  :exit/h203ce9577ebe
+  :exit/h0c55648e57e5
+  :exit/h0f3acdf222d7
+  :exit/h59adca2cd730],
+ :requisition "M-autoclock-in",
+ :readings-it-would-request
+ {:coverage nil, :constraints nil, :criteria nil, :locators []},
+ :constraint-questions [],
+ :answering-seat "claude-5",
+ :requests-it-would-issue [],
+ :placement {:target "M-autoclock-in", :target-source :hand-placed},
+ :serving-jvm-displacement
+ {:from-run-record "2026-09-26-flight-278b6988-click-1",
+  :started-at "2026-09-26T02:37:17.379814389Z",
+  :absent :no-loaded-displacement-on-run-record},
+ :published-already
+ [:apparatus/success-must-not-resemble-failure
+  :coordination/session-durability-check
+  :hygiene/observe-the-authority
+  :orchestration/pattern-warranted-choice-point
+  :process/spec-drift-by-displacement
+  :process/spec-silence-pair
+  :sidecar/explicit-promotion-to-facts
+  :sidecar/proposal-ledger-for-fuzzy-output],
+ :wants
+ {:in-view
+  [{:token :exit/h1dae607747ce, :phase "EXTRACTED", :met? false}
+   {:token :exit/h5c6933e5e2fc, :phase "EXTRACTED", :met? false}
+   {:token :exit/h7afd70f40a29, :phase "EXTRACTED", :met? false}
+   {:token :exit/h64ddcd0e8811, :phase "EXTRACTED", :met? false}
+   {:token :exit/h203ce9577ebe, :phase "EXTRACTED", :met? false}
+   {:token :exit/h0c55648e57e5, :phase "EXTRACTED", :met? false}
+   {:token :exit/h0f3acdf222d7, :phase "EXTRACTED", :met? false}
+   {:token :exit/h59adca2cd730, :phase "EXTRACTED", :met? false}],
+  :out-of-view
+  [{:token :exit/h82097c2c3790,
+    :reason :owner-question,
+    :questions
+    [{:question
+      "Is Rule 0 (floor-only, never switch an active clock) still the mission's rule for an operator turn, or did INSTANTIATE-5 replace it? The Emacs buffer path still enforces the floor-only rule: ERT agent-chat-auto-clock-only-fires-at-no-target-floor passes. The durable JVM decision for the same REPL turn does the opposite. INSTANTIATE-5 says newly named targets supersede the stale clock, and futon3c.agency.clock-decision-test exact-mention-overrides-stale-clock-and-refusals-keep-it asserts a switch. A single REPL turn can therefore leave the buffer on M-old while its durable clock-decision records M-new. The two readings need different locators, and whichever one is chosen, the other path's passing test contradicts it.",
+      :span
+      {:lines [66 66],
+       :quote
+       "0. **The buffer is at the no-target floor** — no campaign, mission, *or* excursion is currently clocked. Auto-clock **fills the `[no mission]` floor; it never switches or overrides an active clocking.** (Joe, 2026-06-03: a turn that mentions another mission while you are already clocked must not move you — that mention is turn-level mention-graph data, NNexus-style, not a clock change. Gating on the *full* floor — not just \"no mission\" — also avoids the campaign-wipe edge, where mentioning `M-bar` while on a bare `C-foo` would re-parse with no inheritance and clear `C-foo`.)"},
+      :alternatives
+      ["Rule 0 stands for every surface: the locator is a registered run showing that both the Emacs buffer clock and the durable operator clock-decision refuse to switch an active clock on a mention. That run reads false now, because clock-decision-test asserts a switch, and the flight must bring the JVM resolver back to floor-only."
+       "Rule 0 is superseded for operator REPL turns by INSTANTIATE-5 (lines 516-521: 'For REPL input, newly named targets supersede the stale buffer clock carried in the payload') and survives only for bell/auto-bellback surfaces. In that case the criterion's text is stale and should be amended. The Emacs floor guard then disagrees with the durable decision, and the flight's work is to reconcile the two, not to certify line 64."
+       "Rule 0 governs only the Emacs buffer clock, the display the operator sees, and the durable decision is a separate record. The locator is then the ERT command [\"emacs\" \"-Q\" \"--batch\" \"-L\" \"emacs\" \"-L\" \"test\" \"-l\" \"test/agent-chat-test.el\" \"--eval\" \"(ert-run-tests-batch-and-exit \\\"agent-chat-auto-clock\\\")\"], which covers rules 0-6 on the buffer path."]}]}],
+  :unlocated []},
+ :needs-in-serving-jvm
+ "futon3c b7340968 (flight-edn) and futon2 runner/war-machine at this checkout, reloaded from master",
+ :flight-id "flight-4a6838e4",
+ :machine-located
+ [:exit/h0c55648e57e5
+  :exit/h0f3acdf222d7
+  :exit/h1dae607747ce
+  :exit/h203ce9577ebe
+  :exit/h59adca2cd730
+  :exit/h5c6933e5e2fc
+  :exit/h64ddcd0e8811
+  :exit/h7afd70f40a29]}
+
+Plan only. Nothing sent, nothing written. Add --read to run the read step only, --run to fly this flight once.

@@ -1,0 +1,5 @@
+futon2 checkout (worktree futon2-flight8): 083cc190aa1395ab7e50d6d5346dab8b8c04ddc7
+futon2 runtime reloaded into :6768 at 03:48Z: c95c6453 (full-loop-runner, loaded-displacement, flight-runner, flight, flight-driver)
+futon3c: 7790544122da9759982112abf01fda58e6ad9bad
+run-start 2026-09-26T03:50:56Z run-end 2026-09-26T03:56:19Z
+direct registry read after the flight: clojure entities-by-type mission limit 1000 -> 331 in 43238 ms; curl same URL -> 200 in 38.3 s, 363739 bytes
