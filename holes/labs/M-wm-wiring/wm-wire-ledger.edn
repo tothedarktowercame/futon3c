@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 7,
-  :witnessed-hermetically 137,
-  :unverified 29,
+  :witnessed-hermetically 142,
+  :unverified 24,
   :wires 173},
  :wires
  [{:wire
@@ -545,14 +545,32 @@
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-r4-kernel-fpi-policy-free-energy-rates-test/the-writers-value-reaches-the-reader}
-  {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
-  {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
+  {:wire [:r4-kernel :r4-coapply-test :order-use],
+   :status :witnessed-hermetically,
+   :test
+   futon2.aif.coapply-kernel-test/the-ranking-scores-a-non-chain-by-co-application,
+   :note
+   "Existing ranking co-application test calls the real ranker through order-kernel-test/rank and reads independent order-use. Reader value captured from its assertion report."}
+  {:wire [:r4-kernel :r4-test :order-use],
+   :status :witnessed-hermetically,
+   :test
+   futon2.aif.order-kernel-test/the-chain-scores-its-order-and-equals-the-list-kernel,
+   :note
+   "Existing chain test calls efe/rank-cascade-actions through order-kernel-test/rank and asserts entry order-use. Reader value captured from its clojure.test equality report."}
   {:wire [:r4-kernel :r8-selection-candidate :controller-score],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r4-kernel-r8-selection-candidate-controller-score-test/the-reader-receives-the-kernel-value,
+   :note
+   "Real ranker chain G read by selection-candidate into :g; typed absence and changed score altered before reader."}
   {:wire [:r4-kernel :r9-measured-a-version :rates],
    :status :unverified}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r4-kernel-r9-selection-law-controller-score-test/the-reader-receives-the-kernel-value,
+   :note
+   "Ranker over order-kernel-test chain fixture; selector re-emits controller-score at top level. Carrier mutated before real selector."}
   {:wire [:r5-flight-call :r5-grain-gate :grain],
    :status :witnessed-hermetically,
    :test
@@ -759,7 +777,11 @@
    [:r9-f-prefix-supply
     :r8-selection-candidate
     [:f-prefix {:record :ranked-entry}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r9-f-prefix-supply-r8-selection-candidate-f-prefix-test/the-reader-receives-the-kernel-value,
+   :note
+   "Real persisted decision -> conditioning-step with canonical policy key -> prefix admission -> production-ranked -> selection-candidate. Computed F retained under :f-prefix and :f; no synthetic history."}
   {:wire [:r9-judge-refusal :r9-abstention-carrier :judge-refusal],
    :status :witnessed-hermetically,
    :test
