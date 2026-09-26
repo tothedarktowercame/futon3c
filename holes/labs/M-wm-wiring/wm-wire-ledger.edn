@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "75501162",
-  :map "57956158"},
+  :rev "7de525d9",
+  :map "e6e48e22"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 124, :wires 131},
+ {:verified 1, :witnessed-hermetically 6, :unverified 127, :wires 134},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -182,6 +182,11 @@
   {:wire [:r3-flight-ask :r3-prompt :library-root],
    :status :unverified}
   {:wire [:r3-flight-ask :r3-test :library-root], :status :unverified}
+  {:wire
+   [:r3a-prediction-error
+    :r7-weighted-error
+    [:error {:record :prediction-error}]],
+   :status :unverified}
   {:wire [:r4-constructor :r4-coapply-test :descent],
    :status :unverified}
   {:wire [:r4-constructor :r4-coapply-test :units],
@@ -190,6 +195,8 @@
   {:wire [:r4-constructor :r4-order-use :precedence-violations],
    :status :unverified}
   {:wire [:r4-constructor :r4-order-use :units], :status :unverified}
+  {:wire [:r4-kernel :fpi-policy-free-energy :rates],
+   :status :unverified}
   {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r4-test :order-use], :status :unverified}
   {:wire [:r4-kernel :r9-selection-law :controller-score],
@@ -221,6 +228,8 @@
   {:wire [:r7-increment :r7-fold :delta], :status :unverified}
   {:wire [:r7-increment :r7-test :delta], :status :unverified}
   {:wire [:r7-selection :r7-test :e-source], :status :unverified}
+  {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
+   :status :unverified}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
    :status :unverified}
   {:wire [:r8-overlap :r8-test :pair-overlap], :status :unverified}
