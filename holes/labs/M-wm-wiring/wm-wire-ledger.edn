@@ -4,7 +4,10 @@
   :map "54f7e7cd"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 94, :unverified 74, :wires 173},
+ {:verified 7,
+  :witnessed-hermetically 101,
+  :unverified 65,
+  :wires 173},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -118,32 +121,67 @@
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :unverified}
   {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path "holes/labs/M-wm-wiring/spike/flight-d00574c8.edn",
+    :sha256
+    "68e531b462d535983ea5114a8da370daec943a3b4283b6b87831e63ecf9eadd8",
+    :why
+    "Plan placement and completed flight target; ask refusals sometimes retain target. Click summaries omit target; enactments do not dispatch; reading entries omit issued target.",
+    :writer-path [:plan :placement :target],
+    :reader-path
+    [:flight :asks 0 :asked 0 :reasons 0 :refusal :target]},
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-flight-ask-fn-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-click [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-flight-click-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry :flight-judge-opts [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-flight-judge-opts-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :flight-run [:target {:record :flight}]],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
+    :sha256
+    "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212",
+    :why
+    "Plan placement and completed flight target; ask refusals sometimes retain target. Click summaries omit target; enactments do not dispatch; reading entries omit issued target.",
+    :writer-path [:plan :placement :target],
+    :reader-path [:flight :target]},
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-flight-run-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :loop-test :target-source],
    :status :witnessed-hermetically,
    :test
    futon3c.diagramprover.wm-wire-flight-entry-loop-test-target-source-test/the-placement-reaches-the-loop-test}
   {:wire [:flight-entry :r0-enact-step [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-r0-enact-step-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry
     :r10-observe-publication
     [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-r10-observe-publication-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r2-flight-read [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-r2-flight-read-target-test/the-target-reaches-the-reader}
   {:wire [:flight-entry :r9-close-cause [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-r9-close-cause-target-test/the-target-reaches-the-reader}
   {:wire
    [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-entry-tick-flight-assembly-target-test/the-target-reaches-the-reader}
   {:wire [:flight-record-summary :click-reason-test :failure],
    :status :witnessed-hermetically,
    :test
