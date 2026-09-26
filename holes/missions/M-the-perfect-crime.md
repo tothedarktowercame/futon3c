@@ -470,8 +470,11 @@ hotspots, coupling, age, knowledge map over files — had not been run at all. T
 
 **Next**
 
-- Rebuild the EFE ring on this file-level data, so the mission view is a lens over real
-  hotspots.
+- ~~Rebuild the EFE ring on this file-level data, so the mission view is a lens over real
+  hotspots.~~ Done (packet 1b, E-kimi-task-44, futon6 c49a151): the pink code ring now reads
+  the Tornhill report per mission via `code.files` — solid pink = measured (summed revs and
+  hotspot on hover, top files with trend, seat count), dashed pink = linked files but none
+  in the report's window, dotted grey = no link; no report → no rings, legend says so.
 - The chained-claim sweep over agent final turns joined to Joe's next-turn stance (third
   sweep, "Candidate next step"). The join to sessions now exists for it.
 - The futon1b churn/complexity types (plan layer 1): this pipeline reads git directly, so the
