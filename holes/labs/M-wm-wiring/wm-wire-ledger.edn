@@ -4,7 +4,7 @@
   :map "9d962400"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 5, :witnessed-hermetically 88, :unverified 77, :wires 170},
+ {:verified 5, :witnessed-hermetically 94, :unverified 71, :wires 170},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -64,7 +64,10 @@
     :selection-candidate-derivations
     :construction-receipt],
    :status :unverified}
-  {:wire [:dispatch :clock-in :mission-id], :status :unverified}
+  {:wire [:dispatch :clock-in :mission-id],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-dispatch-clock-in-mission-id-test/the-writer-reaches-the-reader}
   {:wire [:eligibility :r1-outer-cascade :eligible],
    :status :witnessed-hermetically,
    :test
@@ -158,7 +161,9 @@
    :test
    futon3c.diagramprover.wm-wire-flight-record-summary-flight-record-click-failure-test/the-clicks-failure-reaches-the-click-entry}
   {:wire [:flight-record-summary :flight-run :chosen],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-record-summary-flight-run-chosen-test/the-writer-reaches-the-reader}
   {:wire [:flight-run :flight-driver-summary :needs],
    :status :witnessed-hermetically,
    :test
@@ -293,7 +298,9 @@
    [:r13-sources-horizon
     :construction-assemble
     [:horizon-steps {:record :sources}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r13-sources-horizon-construction-assemble-horizon-steps-test/the-writer-reaches-the-reader}
   {:wire
    [:r2-judge-observation
     :r3a-channel-prediction-error
@@ -354,8 +361,13 @@
     [:driver {:record :r3d-driver}]],
    :status :unverified}
   {:wire [:r3-flight-ask :r3-prompt :library-root],
-   :status :unverified}
-  {:wire [:r3-flight-ask :r3-test :library-root], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-prompt-library-root-test/the-writer-reaches-the-reader}
+  {:wire [:r3-flight-ask :r3-test :library-root],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r3-flight-ask-r3-test-library-root-test/the-writer-reaches-the-reader}
   {:wire
    [:r3a-prediction-error
     :r7-weighted-error
@@ -387,7 +399,9 @@
    [:r4-evaluate-state
     :r4-push-forward
     [:kernel {:record :evaluation}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r4-evaluate-state-r4-push-forward-kernel-test/the-writer-reaches-the-reader}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :status :witnessed-hermetically,
    :test
