@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "6203c736",
-  :map "2d1a1b19"},
+  :rev "671229b6",
+  :map "888c56fd"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 113, :wires 120},
+ {:verified 1, :witnessed-hermetically 6, :unverified 122, :wires 129},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -62,7 +62,30 @@
    :status :unverified}
   {:wire [:flight-click-wants :tick-flight-assembly :wants],
    :status :unverified}
+  {:wire [:flight-entry :flight-ask-fn [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :flight-click [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry :flight-judge-opts [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :flight-run [:target {:record :flight}]],
+   :status :unverified}
   {:wire [:flight-entry :loop-test :target-source],
+   :status :unverified}
+  {:wire [:flight-entry :r0-enact-step [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry
+    :r10-observe-publication
+    [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :r2-flight-read [:target {:record :flight}]],
+   :status :unverified}
+  {:wire [:flight-entry :r9-close-cause [:target {:record :flight}]],
+   :status :unverified}
+  {:wire
+   [:flight-entry :tick-flight-assembly [:target {:record :flight}]],
    :status :unverified}
   {:wire [:flight-record-summary :click-reason-test :failure],
    :status :unverified}
