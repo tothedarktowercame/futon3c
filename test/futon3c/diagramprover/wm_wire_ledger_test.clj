@@ -47,7 +47,16 @@
             [futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test]
             [futon3c.diagramprover.wm-wire-r2-verifier-want-span-test]
             [futon3c.diagramprover.wm-wire-r7-fold-selection-test]
-            [futon3c.diagramprover.wm-wire-r9-candidate-enact-test]))
+            [futon3c.diagramprover.wm-wire-r9-candidate-enact-test]
+            [futon3c.diagramprover.wm-wire-r10-publication-observed-test]
+            [futon3c.diagramprover.wm-wire-r7-flight-call-increment-test]
+            [futon3c.diagramprover.wm-wire-r7-flight-call-wc-test]
+            [futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test]
+            [futon3c.diagramprover.wm-wire-r7-increment-call-delta-test]
+            [futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test]
+            [futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test]
+            [futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test]
+            [futon3c.diagramprover.wm-wire-r7-selection-e-source-test]))
 
 (def wire-test-nses
   '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
@@ -56,7 +65,16 @@
     futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test
     futon3c.diagramprover.wm-wire-r2-verifier-want-span-test
     futon3c.diagramprover.wm-wire-r7-fold-selection-test
-    futon3c.diagramprover.wm-wire-r9-candidate-enact-test])
+    futon3c.diagramprover.wm-wire-r9-candidate-enact-test
+    futon3c.diagramprover.wm-wire-r10-publication-observed-test
+    futon3c.diagramprover.wm-wire-r7-flight-call-increment-test
+    futon3c.diagramprover.wm-wire-r7-flight-call-wc-test
+    futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test
+    futon3c.diagramprover.wm-wire-r7-increment-call-delta-test
+    futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test
+    futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test
+    futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test
+    futon3c.diagramprover.wm-wire-r7-selection-e-source-test])
 
 (def adjacency-rev "84cd6426")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")

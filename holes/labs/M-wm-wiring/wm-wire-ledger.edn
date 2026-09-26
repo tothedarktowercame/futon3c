@@ -4,7 +4,10 @@
   :map "06d451d6"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 133, :wires 140},
+ {:verified 1,
+  :witnessed-hermetically 15,
+  :unverified 124,
+  :wires 140},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -133,7 +136,9 @@
    [:r10-observe-publication :r1-outer-cascade :publication-observed],
    :status :unverified}
   {:wire [:r10-observe-publication :r10-test :publication-observed],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r10-publication-observed-test/the-observation-reaches-the-enactment-record}
   {:wire
    [:r2-judge-observation
     :r3a-channel-prediction-error
@@ -219,9 +224,14 @@
    :status :unverified}
   {:wire [:r6-sourced-rates :r6-test :measurement],
    :status :unverified}
-  {:wire [:r7-flight-call :r7-call-test :wc], :status :unverified}
+  {:wire [:r7-flight-call :r7-call-test :wc],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-flight-call-wc-test/the-wc-verdict-reaches-the-call-test}
   {:wire [:r7-flight-call :r7-fold-source :increment],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-flight-call-increment-test/the-increment-receipt-reaches-the-fold-source}
   {:wire [:r7-fold :r1-outer-cascade :enactment-records],
    :status :unverified}
   {:wire [:r7-fold :r7-selection :enactment-records],
@@ -229,7 +239,9 @@
    :test
    futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
   {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-fold-call-enactment-fold-test/the-fold-judge-hands-reaches-the-selection}
   {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
    :status :unverified}
   {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
@@ -239,12 +251,26 @@
    :status :unverified}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
    :status :unverified}
-  {:wire [:r7-increment :r7-call-test :delta], :status :unverified}
+  {:wire [:r7-increment :r7-call-test :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-call-delta-test/the-delta-reaches-the-call-test}
   {:wire [:r7-increment :r7-call-test :wc-failures],
-   :status :unverified}
-  {:wire [:r7-increment :r7-fold :delta], :status :unverified}
-  {:wire [:r7-increment :r7-test :delta], :status :unverified}
-  {:wire [:r7-selection :r7-test :e-source], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-call-wc-failures-test/the-wc-failures-reach-the-call-test}
+  {:wire [:r7-increment :r7-fold :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-fold-delta-test/the-delta-reaches-the-fold}
+  {:wire [:r7-increment :r7-test :delta],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-increment-r7-test-delta-test/the-delta-reaches-the-selection-test}
+  {:wire [:r7-selection :r7-test :e-source],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
    :status :unverified}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
