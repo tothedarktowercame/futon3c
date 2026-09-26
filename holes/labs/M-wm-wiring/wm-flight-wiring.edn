@@ -27,24 +27,32 @@
 ;; the graph): the W_c checker (futon3c holes/labs/M-futon-seams/exemplar/
 ;; proof2a_check.clj, warranted separately, test-registry-1757d974).
 {:spec/id :wm-flight-wiring
- :repos {"futon2" "663caa7b" "futon3c" "58f1a8cb"}
+ :repos {"futon2" "5d8105f2" "futon3c" "58f1a8cb"}
  ;; The owner's text is the one constraint (exogenous: nothing on the map
  ;; writes it); the spans that locate and pin it are observations of it.
  ;; Read by futon3c.diagramprover.ct-projection (296a08ca).
  :field-roles {:owner-text :constraint :want-span :observation :text-sha256 :observation}
  :boxes
- [;; ---- row 1, Clause T: target. The field exists; the outer cascade does not.
+ [;; ---- row 1, Clause T: target. The field exists, and the outer cascade (select) chooses among
+  ;; its eligible targets; the loop entry's plan mode calls it (H-T-CALLER-I). Running a flight is not wired.
   {:box/id :r1-target-field :row 1 :box/kind :component
    :site {:file "futon2/src/futon2/aif/target_field.clj" :var "step"}
    :writes [:next-step]}
   {:box/id :r1-outer-cascade :row 1 :box/kind :component
-   :status :not-built :intended-site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}
+   ;; BUILT (H-T-CALLER-I, futon2 b66369d3): select chooses among the field's
+   ;; ELIGIBLE targets (feasibility as support), E uniform-no-data, G typed
+   ;; absent, a seeded draw whose generator, seed, value and the excluded list
+   ;; are on the record. It reads :eligible off the field's entries and
+   ;; :trigger off its opts, and writes the choice. The reads below that it does
+   ;; not make yet are the row's to-do (the E from the fold, the publication
+   ;; and the clock lineage), findings until it reads them.
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}
    :reads [:trigger :next-step :eligible :pair-overlap :enactment-records :publication-observed
            :clock-lineage]
-   :writes [:chosen-target :draw-seed]}
+   :writes [:chosen-target :draw-seed :target-selection]}
   {:box/id :r1-test :row 1 :box/kind :test
    :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"}
-   :reads [:draw-seed]}
+   :reads [:draw-seed :chosen-target :target-selection]}
 
   ;; ---- row 2, Clause C: the read step. Components exist; the flight does not call them.
   {:box/id :r2-served-by-reading :row 2 :box/kind :component
@@ -516,7 +524,11 @@
    ;; :construction-receipt (destructured) and re-emits it on the pair
       ;; WM-HANDOFF-H9+H11-I: (get-in p [:cascade-problem :want]), the
    ;; problem's want as the joint decision reads it
-   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class]}
+   ;; F1a-2-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2): writes :measured-a on the
+   ;; emitted decision — the measured-A version (sourced-rates over each
+   ;; problem's :locators, target-qualified), or the typed absence; write
+   ;; only, the scoring is untouched; the reader comes with F1b
+   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}]] :writes [:kind :target-class :measured-a]}
   ;; WM-HABIT-FOLD-CALL-I (futon2 663caa7b): the hand-off across the
   ;; flight/tick boundary. The flight writes :increment onto its record
   ;; (:r7-flight-call); the tick reads the receipts back from the flight
@@ -817,7 +829,39 @@
    ;; prover limit)
    :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "resolve-target"}
    :returns-record :flight
-   :reads [:chosen-target :draw-seed] :writes [:target-source [:target {:record :flight}]]}
+   :reads [:chosen-target :draw-seed :target-selection] :writes [:target-source [:target {:record :flight}]]}
+  {:box/id :loop-plan :row 1 :box/kind :component
+   ;; H-T-CALLER-I: the loop entry's flight path (FUTON_WM_FLIGHT=plan;
+   ;; scripts/wm_scheduled_run.clj resolves this lazily, so the default tick
+   ;; loads no flight code). Reads the field, lets select choose, and hands the
+   ;; driver's plan the choice as a map. The hop from -main into this function
+   ;; is not declared: -main calls it through (requiring-resolve ...), whose head
+   ;; is computed, which :passes refuses by design. It PLANS; nothing is sent or
+   ;; written, and running a flight is not wired.
+   :site {:file "futon2/src/futon2/aif/outer_loop.clj" :var "plan-from-field!"}
+   :reads [:trigger :chosen-target :draw-seed :target-selection]
+   :passes [{:value :trigger :from {:literal-arg-key :trigger}
+             :to {:call "outer-cascade/select" :arg 1 :callee-box :r1-outer-cascade}}
+            ;; the field map (whose entries carry :eligible) is the :field key of
+            ;; select's opts: select reads the flags in support-of/excluded-of, not
+            ;; in its own text, so the hop is what evidences the box's read
+            {:value :eligible :from {:literal-arg-key :field}
+             :to {:call "outer-cascade/select" :arg 1 :callee-box :r1-outer-cascade}}
+            {:value :chosen-target :from {:literal-arg-key :chosen-target}
+             :to {:call "driver/plan" :arg 1 :callee-box :flight-plan}}
+            {:value :draw-seed :from {:literal-arg-key :draw-seed}
+             :to {:call "driver/plan" :arg 1 :callee-box :flight-plan}}
+            {:value :target-selection :from {:literal-arg-key :target-selection}
+             :to {:call "driver/plan" :arg 1 :callee-box :flight-plan}}]}
+  {:box/id :flight-plan :row 1 :box/kind :component
+   ;; the driver's plan: forwards the opts to resolve-target (the flight entry),
+   ;; which destructures :chosen-target, :draw-seed and :target-selection; the
+   ;; plan echoes the choice on every plan (:target-selection, typed absent on
+   ;; the hand path) and in :placement when chosen. Its reads are evidenced by
+   ;; the :passes of :loop-plan, not by a keyword at this site (plan forwards
+   ;; its opts as one argument).
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj" :var "plan"}
+   :reads [:chosen-target :draw-seed :target-selection]}
   {:box/id :dispatch :box/kind :component
    ;; run-flight! dispatches the seat through the runner, naming the target
    ;; as the mission (positional from the flight entry).
@@ -1177,7 +1221,13 @@
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :read-never-written,
+ [{:finding :written-never-read,
+   :field :measured-a,
+   :writers [:r9-decision],
+   :kind :standing,
+   :note
+   "F1a-2-I (PROOF-2a-PLAN ⟨2⟩2d F1): the tick's admitted decision writes the measured-A version (sourced-rates over each problem's :locators, target-qualified, digested; the typed absence when nothing measured is sourced). Write only; the reader comes with F1b"}
+  {:finding :read-never-written,
    :field :min-cosine,
    :readers [:r9-embedding-neighbour],
    :rows [9],
@@ -2465,11 +2515,6 @@
    :kind :standing,
    :note
    "the verdict enters increment positionally; :wc-verdict there is the receipt's typed absence when no verdict was passed"}
-  {:finding :site-unreadable,
-   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
-   :error? true,
-   :rows [1],
-   :kind :to-do}
   {:finding :occurrence-without-declaration,
    :field :detail,
    :site {:file "futon2/test/futon2/aif/phase_kind_test.clj"},
@@ -3957,4 +4002,193 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R1-I: trace-record's :status is another record's key (the tagged observation's, the decision's), reported because the box was added for :mu-post"}]}
+  "WM-NODE-R1-I: trace-record's :status is another record's key (the tagged observation's, the decision's), reported because the box was added for :mu-post"}
+  {:finding :declaration-without-occurrence,
+   :box/id :r1-outer-cascade,
+   :field :clock-lineage,
+   :role :reads,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :rows [1],
+   :kind :to-do,
+   :note
+   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  {:finding :declaration-without-occurrence,
+   :box/id :r1-outer-cascade,
+   :field :enactment-records,
+   :role :reads,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :rows [1],
+   :kind :to-do,
+   :note
+   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  {:finding :declaration-without-occurrence,
+   :box/id :r1-outer-cascade,
+   :field :next-step,
+   :role :reads,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :rows [1],
+   :kind :to-do,
+   :note
+   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  {:finding :declaration-without-occurrence,
+   :box/id :r1-outer-cascade,
+   :field :pair-overlap,
+   :role :reads,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :rows [1],
+   :kind :to-do,
+   :note
+   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  {:finding :declaration-without-occurrence,
+   :box/id :r1-outer-cascade,
+   :field :publication-observed,
+   :role :reads,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :rows [1],
+   :kind :to-do,
+   :note
+   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+  {:finding :occurrence-without-declaration,
+   :field :chosen,
+   :site {:file "futon2/src/futon2/aif/outer_cascade.clj", :var "select"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "the selection record's own :chosen key (the target chosen), reported because :chosen is the generic key declared for the click record's [:decision :chosen]"}
+  {:finding :occurrence-without-declaration,
+   :field :chosen,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "the keyword :chosen as a VALUE of :target-source ((= :chosen (:target-source r))), not a key"}
+  {:finding :occurrence-without-declaration,
+   :field :coverage,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan reports the readings the read step would request: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :criteria,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan reports the readings the read step would request: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :interpretations,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan reads the published interpretations: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan's :want-source :kind and the readings' kinds: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :locators,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan reports the locators the read step would request: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :target-source,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan's :placement key, read off resolve-target's result: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :universes,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan reads the target view's :universes: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :wants,
+   :site {:file "futon2/src/futon2/aif/flight_driver.clj", :var "plan"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "H-T-CALLER-I: flight-driver/plan is now :flight-plan's site (the :passes callee), so every universe field its text carries is checked. the plan's own :wants report: the plan's own data, not wired here (the read step's and construction's boxes declare these at their own sites)."}
+  {:finding :occurrence-without-declaration,
+   :field :chosen,
+   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture fields and entries carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :eligible,
+   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture fields and entries carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
+   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture fields and entries carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :next-step,
+   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture fields and entries carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :trigger,
+   :site {:file "futon2/test/futon2/aif/outer_cascade_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture fields and entries carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :target-selection,
+   :site {:file "futon2/test/futon2/aif/loop_closure_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds opts and expected maps carrying the key (write positions in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :attempts,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "futon2 d04711eb (F1a-1, PROOF-2a-PLAN <2>2d F1, another lane's commit): a key added to run! after the previous pin; that lane's map packet declares it. Absorbed here because the pin moved to b66369d3."}
+  {:finding :occurrence-without-declaration,
+   :field :universe,
+   :site {:file "futon2/src/futon2/aif/flight.clj", :var "run!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "futon2 d04711eb (F1a-1, PROOF-2a-PLAN <2>2d F1, another lane's commit): a key added to run! after the previous pin; that lane's map packet declares it. Absorbed here because the pin moved to b66369d3."}]}

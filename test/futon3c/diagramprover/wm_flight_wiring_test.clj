@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "419fcf560c2e2a7a76eac778a0603b68332fdff3560a83d30da199d97e2c5589")
-(def repos {"futon2" "663caa7b" "futon3c" "58f1a8cb"})
+(def map-sha256 "caa96ad51ab1f59ad67c0bc41408c2c8f9e369d73af9e077fd77b8bbae57c103")
+(def repos {"futon2" "5d8105f2" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -105,14 +105,16 @@
   (is (= [] (wiring/multiply-written (wiring/ingest (spec))))))
 
 (deftest not-built-boxes-are-absent-at-the-pinned-shas
+  ;; the outer cascade was the last :not-built box; select is built (H-T-CALLER-I,
+  ;; futon2 b66369d3). The check stays: it must still report a :not-built box
+  ;; whose intended var exists.
   (let [s (spec) root (materialise s)]
-    (is (= 1 (count (filter #(= :not-built (:status %)) (:boxes s)))) "the outer cascade (enact-fn built at step 10, the W_c call at 11, observe-publication-fn at 12)")
+    (is (= 0 (count (filter #(= :not-built (:status %)) (:boxes s)))) "nothing is :not-built on the map")
     (is (= [] (not-built-present root s)))
-    (testing "planted: create one intended var in the temp root and the check reports it"
-      (let [f (io/file root "futon2/src/futon2/aif/outer_cascade.clj")]
-        (io/make-parents f)
-        (spit f "(ns futon2.aif.outer-cascade)\n(defn select [field] field)\n")
-        (is (= [:r1-outer-cascade] (not-built-present root s)))))))
+    (testing "planted: a :not-built box whose intended var exists is reported"
+      (let [ghost {:box/id :ghost :status :not-built
+                   :intended-site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}}]
+        (is (= [:ghost] (not-built-present root (update s :boxes conj ghost))))))))
 
 (deftest the-exemplar-trace
   (let [s (spec) t (first (:traces s))]
@@ -120,7 +122,7 @@
     (is (= [] (trace-findings s t)))
     (is (= 5 (count (filter #(= :positional (:hop %)) (filter map? (:boxes t)))))
         "positional hops, checked only as declared")
-    (is (= [:r1-outer-cascade] (trace-gaps s t)))
+    (is (= [] (trace-gaps s t)) "no unbuilt box on the trace: the outer cascade is built")
     (testing "planted: an unknown box and a non-adjacent pair are caught"
       (is (= [{:finding :trace-box-unknown :box :no-such-box}]
              (trace-findings s (update t :boxes conj :no-such-box))))
@@ -148,6 +150,10 @@
     "futon2/src/futon2/aif/enactment_fold_source.clj"
     "futon2/src/futon2/aif/flight_driver.clj"
     "futon2/src/futon2/aif/grain_gate.clj"
+    ;; H-T-CALLER-I: the outer cascade's select and the loop entry's plan
+    ;; mode, written after that closure was registered
+    "futon2/src/futon2/aif/outer_cascade.clj"
+    "futon2/src/futon2/aif/outer_loop.clj"
     "futon2/src/futon2/aif/served_by_reading.clj"
     "futon2/src/futon2/aif/target_field.clj"
     "futon3c/src/futon3c/agency/clock_lineage.clj"
