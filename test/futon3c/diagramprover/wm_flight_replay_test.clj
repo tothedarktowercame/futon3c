@@ -14,8 +14,22 @@
   classifier reads. Pre-fix pin: 321d82c8^ = cdc492ec (c7367eaa^ is
   321d82c8, which already carries the fix). The classifier's :failure-kind
   is written by the runner's own typed throws, outside this variant, so it
-  is read-never-written at both pins; G is the :kind/:outcome pair. A and D need `select-keys` read
-  as a read (PROVER-READS-I); their shas are kept here :pending."
+  is read-never-written at both pins; G is the :kind/:outcome pair.
+
+  A (the second flight): http-click-fn wrote the server's :status/:detail
+  onto the abstention; record-click's select-keys kept only
+  :kind/:missing/:declines, so the reason never reached the flight record.
+  Per pin: at 8588dba0^ the writer's :status/:detail meet no reader; at the
+  pin record-click's select-keys reads them (a read since PROVER-READS-I,
+  futon3c 8f716c8e).
+
+  D (the second flight's C8 refusals): at 367be490^ the registry read's catch
+  wrote {:status :unreachable :body msg} and the same var destructured :body
+  and left it out of the refusal: one var, no key crossing between two
+  sites, so no per-pin pair can show it. It shows the other way: the pinned
+  declarations (registry-get writes :message/:timeout-ms, the two C8 readers
+  read them through select-keys) replayed at 367be490^ are not borne out by
+  that source (registry-get absent, the readers without the keys)."
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-flight-wiring-test :as map-test]))
 
@@ -40,13 +54,24 @@
                          :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "judge-refusal-abstention"}
                          :writes [:outcome]}
                         classifier-box]}}
-   ;; waiting on PROVER-READS-I: at their fixes the read sits in a
-   ;; select-keys vector, which the prover reports as a read not found
-   :A {:pending :prover-reads-i :pre-fix {:sha "8588dba0^"}
-       :boxes-sketch {:writer "futon2/src/futon2/aif/flight_runner.clj http-click-fn writes [:detail :status]"
-                      :reader "futon2/src/futon2/aif/flight.clj record-click reads [:detail :status]"}}
-   :D {:pending :prover-reads-i :pre-fix {:sha "367be490^"}
-       :boxes-sketch {:writer+reader "futon2/src/futon2/aif/observation_checks.clj the C8 check, [:message :class :timeout-ms]"}}})
+   :A (let [writer {:box/id :a-click :box/kind :component
+                    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "http-click-fn"}
+                    :writes [:kind :missing :status :detail]}
+            reader (fn [reads] {:box/id :a-record :box/kind :component
+                                :site {:file "futon2/src/futon2/aif/flight.clj" :var "record-click"}
+                                :reads reads})]
+        {:pre-fix {:sha "8588dba0^" :boxes [writer (reader [:kind :missing :declines])]}
+         :pinned {:boxes [writer (reader [:kind :missing :declines :status :detail])]}})
+   :D {:pre-fix {:sha "367be490^"}
+       :pinned {:boxes [{:box/id :d-get :box/kind :component
+                         :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "registry-get"}
+                         :writes [:message :timeout-ms]}
+                        {:box/id :d-entry :box/kind :component
+                         :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "fetch-registry-entry"}
+                         :reads [:message :timeout-ms]}
+                        {:box/id :d-latest :box/kind :component
+                         :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "fetch-latest-for"}
+                         :reads [:message :timeout-ms]}]}}})
 
 (defn- run [futon2-sha boxes]
   (let [s {:repos {"futon2" futon2-sha "futon3c" (get map-test/repos "futon3c")} :boxes boxes}
@@ -84,5 +109,32 @@
   (is (some #(= :var-not-found (:finding %))
             (run (get-in replays [:G :pre-fix :sha]) (get-in replays [:G :pinned :boxes])))))
 
-(deftest a-and-d-wait-on-prover-reads-i
-  (is (= #{:A :D} (set (keep (fn [[k v]] (when (= :prover-reads-i (:pending v)) k)) replays)))))
+(def a #{[:written-never-read :status] [:written-never-read :detail]})
+
+(deftest a-is-a-finding-before-its-fix
+  (let [{:keys [sha boxes]} (get-in replays [:A :pre-fix])
+        findings (run sha boxes)]
+    (is (= (conj a [:read-never-written :declines]) (pair findings))
+        "the click writes :status/:detail, record-click reads :kind/:missing/:declines: the reason meets no reader")
+    (is (empty? (conformance-misses findings)) "each declaration is borne out by 8588dba0^'s source")))
+
+(deftest a-is-not-a-finding-at-the-pin
+  (let [findings (run (get map-test/repos "futon2") (get-in replays [:A :pinned :boxes]))]
+    (is (= #{[:read-never-written :declines]} (pair findings))
+        "record-click's select-keys reads :status/:detail; :declines's writer (the abstention carrier) is outside the variant")
+    (is (empty? (conformance-misses findings)) "no false declared-read-not-found: select-keys is a read")))
+
+(deftest d-the-pinned-declarations-are-not-borne-out-before-the-fix
+  (let [findings (run (get-in replays [:D :pre-fix :sha]) (get-in replays [:D :pinned :boxes]))]
+    (is (= #{[:var-not-found :d-get]
+             [:declaration-without-occurrence :d-entry :message] [:declaration-without-occurrence :d-entry :timeout-ms]
+             [:declaration-without-occurrence :d-latest :message] [:declaration-without-occurrence :d-latest :timeout-ms]}
+           (set (for [f (conformance-misses findings)]
+                  (if (= :var-not-found (:finding f))
+                    [:var-not-found (some #(when (= (:site %) (:site f)) (:box/id %)) (get-in replays [:D :pinned :boxes]))]
+                    [(:finding f) (:box/id f) (:field f)])))))))
+
+(deftest d-is-not-a-finding-at-the-pin
+  (let [findings (run (get map-test/repos "futon2") (get-in replays [:D :pinned :boxes]))]
+    (is (empty? (pair findings)))
+    (is (empty? (conformance-misses findings)) "the readers read :message/:timeout-ms through select-keys")))

@@ -196,6 +196,37 @@
    ;; the runner's classifier of a failed attempt, unchanged by the fix
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "explicit-failure-kind"}
    :reads [:failure-kind :outcome]}
+  ;; WM-MAP-REPLAY-I2, defect A (fixed 8588dba0): the click's server
+  ;; refusal reason, written onto the abstention by http-click-fn, read into
+  ;; the flight record by record-click's select-keys (a read since
+  ;; PROVER-READS-I). The writer's :kind/:missing are not declared here:
+  ;; :kind would make it a second writer beside :r9-decision, a different
+  ;; record (the replay variant declares them)
+  {:box/id :flight-click :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "http-click-fn"}
+   :writes [:status :detail]}
+  {:box/id :flight-record-click :box/kind :component
+   :site {:file "futon2/src/futon2/aif/flight.clj" :var "record-click"}
+   :reads [:kind :status :detail]}
+  ;; defect D (fixed 367be490): the C8 registry read's failure, kept by
+  ;; registry-get and read by the two C8 checks through select-keys. :class
+  ;; is not declared: it would be a second writer of I's relation :class
+  {:box/id :c8-registry-get :box/kind :component
+   :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "registry-get"}
+   :writes [:message :timeout-ms]}
+  {:box/id :c8-entry :box/kind :component
+   :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "fetch-registry-entry"}
+   :reads [:message :timeout-ms]}
+  {:box/id :c8-latest :box/kind :component
+   :site {:file "futon2/src/futon2/aif/observation_checks.clj" :var "fetch-latest-for"}
+   :reads [:message :timeout-ms]}
+  ;; the fifth flight's live defect (flight-7f89646a): the decision gate's
+  ;; refusal is typed under :error/:reason, which the runner's classifier
+  ;; does not read, so it closed :untyped-failure. :reason is not declared
+  ;; (19 box sites carry their own :reason)
+  {:box/id :gate-refuse :row 9 :box/kind :component
+   :site {:file "futon2/src/futon2/aif/decision_gate.clj" :var "refuse!"}
+   :writes [:error]}
   {:box/id :r9-class-model :row 9 :box/kind :component
    ;; the class observation model reads :target-class (destructured) and
    ;; hands it on in the model map to observation_model/class-of-state,
@@ -377,14 +408,32 @@
  ;; standing findings added: :outcome/:failure-kind generic at other sites
  ;; (8), judge-refusal-abstention's :judge-refusal ex-data key and
  ;; docstring :kind (2), :failure-kind read-never-written (its writers are
- ;; the runner's own throws, unboxed); 56 -> 67 (2 to-do, 65 standing). :kind :to-do is the
+ ;; the runner's own throws, unboxed); 56 -> 67 (2 to-do, 65 standing).
+ ;; WM-MAP-REPLAY-I2 (prover reads select-keys since futon3c 8f716c8e):
+ ;; defect A, :flight-click (http-click-fn) writes :status/:detail,
+ ;; :flight-record-click (record-click) reads them; defect D,
+ ;; :c8-registry-get writes :message/:timeout-ms, :c8-entry and :c8-latest
+ ;; read them; the gate, :gate-refuse (decision_gate refuse!) writes :error.
+ ;; One to-do added, written-never-read :error: the fifth flight's live
+ ;; defect (flight-7f89646a), retired by WM-GATE-REFUSAL-I. 43 standing
+ ;; added: :status (28 sites), :detail, :message generic elsewhere, and keys
+ ;; the new boxes' own vars carry for other records (including the click
+ ;; server's :error, not declared lest it hide the gate's). 67 -> 111 (3
+ ;; to-do, 108 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
  ;; absent instead. :error of a :site-unreadable finding is compared as
  ;; :error? true. :rows, :kind and :note are annotations the test strips.
  :expected-findings
- [{:finding :read-never-written,
+ [{:finding :written-never-read,
+   :field :error,
+   :writers [:gate-refuse],
+   :rows [9],
+   :kind :to-do,
+   :note
+   "the fifth flight's live defect (flight-7f89646a): decision_gate refuse! types the refusal {:error :inadmissible-decision :reason ..}, the runner's classifier (explicit-failure-kind) reads only :failure-kind/:outcome, so the tick closed :untyped-failure at :selection. Retired by WM-GATE-REFUSAL-I"}
+  {:finding :read-never-written,
    :field :failure-kind,
    :readers [:r9-failure-classifier],
    :rows [9],
@@ -530,6 +579,26 @@
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
    :field :class,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "registry-get"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :class,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "fetch-latest-for"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :class,
    :site {:file "futon2/test/futon2/aif/click_measurement_test.clj"},
    :declared-by [],
    :rows [],
@@ -546,6 +615,16 @@
    :kind :standing,
    :note
    "generic key (WM-MAP-REPLAY-I): declared for defect G (:kind, the judge's refusal) and defect I (:class, the relation class); here it is another record's own :kind/:class, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :class,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "fetch-registry-entry"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
   {:finding :occurrence-without-declaration,
    :field :class,
    :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
@@ -588,6 +667,60 @@
    :note
    "the row-4 test builds fixture receipts carrying the key (a write position in the test, not a second writer of the field)"}
   {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site
+   {:file "futon2/src/futon2/aif/policy.clj",
+    :var "select-action-cascades"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site
+   {:file "futon2/src/futon2/aif/grain_gate.clj", :var "grain-gate"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site
+   {:file "futon2/scripts/futon2/wm/extract_outcomes.clj",
+    :var "verify-proposed-link"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site
+   {:file "futon2/src/futon2/aif/decision_gate.clj", :var "refuse!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :detail,
+   :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
    :field :e-source,
    :site
    {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
@@ -596,6 +729,16 @@
    :kind :standing,
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :error,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "http-click-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "the click server's response :error, kept by http-click-fn's select-keys; declaring it a read would join the gate's :error to a different record and hide the fifth flight's defect"}
   {:finding :occurrence-without-declaration,
    :field :failure-kind,
    :site
@@ -789,6 +932,16 @@
    "judge-refusal-abstention: :judge-refusal is the refusal carried on in the thrown ex-data to close! (a different record from the sorry cell's key), and :kind occurs only in its docstring"}
   {:finding :occurrence-without-declaration,
    :field :kind,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "http-click-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :kind,
    :site {:file "futon2/test/futon2/aif/flight_enact_test.clj"},
    :declared-by [],
    :rows [],
@@ -839,6 +992,26 @@
    :kind :standing,
    :note
    "generic key (WM-MAP-REPLAY-I): declared for defect G (:kind, the judge's refusal) and defect I (:class, the relation class); here it is another record's own :kind/:class, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "http-click-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :message,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-lane"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
   {:finding :occurrence-without-declaration,
    :field :min-cosine,
    :site {:file "futon2/test/futon2/aif/relation_derivation_test.clj"},
@@ -944,6 +1117,286 @@
    :kind :standing,
    :note
    "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/served_by_reading_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/policy.clj",
+    :var "select-action-cascades"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/cascade_model_manifest.clj",
+    :var "co-apply-kernel"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/grain_gate.clj", :var "grain-gate"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/flight_wc_call_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/flight_ask_library_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/test/futon2/aif/judge_refusal_abstention_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "registry-get"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "fetch-latest-for"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "observe-publication-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/observation_rates.clj",
+    :var "sourced-rates"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "persist-run-record!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "wc-verdict-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/observation_checks.clj",
+    :var "fetch-registry-entry"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/enactment_habit.clj",
+    :var "increment"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/focus_receipt.clj",
+    :var "classify-target"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/flight_grain_gate_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-decision-admitted"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "class-observation-model"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/coapply_kernel_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/scripts/futon2/wm/extract_outcomes.clj",
+    :var "verify-proposed-link"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/efe.clj", :var "rank-cascade-actions"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "dispatch!"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+    :var "judge-refusal"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site {:file "futon2/test/futon2/aif/publication_observed_test.clj"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "a test builds fixture records carrying the key (a write position in the test, not a second writer of the field)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/scripts/futon2/report/war_machine.clj",
+    :var "cascade-lane"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :status,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj", :var "enact-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "generic key (WM-MAP-REPLAY-I2): declared for defect A (:status/:detail, the click's refusal reason) and D (:message, the C8 failure); here it is another record's own key, not that flow. The prover has no per-field scope (WM-MAP-REPLAY-D list ii, item 7)"}
+  {:finding :occurrence-without-declaration,
+   :field :trigger,
+   :site
+   {:file "futon2/src/futon2/aif/flight_runner.clj",
+    :var "http-click-fn"},
+   :declared-by [],
+   :rows [],
+   :kind :standing,
+   :note
+   "WM-MAP-REPLAY-I2: in a defect-A/D/gate box's own var, a key it carries for another record (:kind/:trigger in the click's request and abstention, :class in the C8 failure, which would be a second writer of I's relation :class, :detail in the gate's refusal detail); not the declared flow"}
   {:finding :occurrence-without-declaration,
    :field :units,
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"},
