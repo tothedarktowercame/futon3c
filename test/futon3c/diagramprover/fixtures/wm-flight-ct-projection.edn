@@ -1,36 +1,20 @@
-;; futon3c.diagramprover.ct-projection over holes/labs/M-wm-wiring/wm-flight-wiring.edn
-;; at :map-sha, validated by futon5 src/futon5/ct/mission.clj at :futon5-sha (loaded from
-;; git, read-only). Written by the projection at its commit (claude-11, 2026-09-25,
-;; VERIFY-PROJECTION-I); the test compares the map at futon3c HEAD to these.
-;; Re-pinned by claude-10 at map 10a1e2d9 (row 4: :r4-order-use added; :counts and :validate moved, :i4 unchanged).
-;; Re-pinned by claude-10 at map 47a88fc6 (:enacted-steps declared: two edges; :i4 gains the parallel selection -> enactment paths via :enacted-steps).
-;; Re-pinned by claude-10 at map d638fb0e (step 7: flight-entry writes :target-source, reads :draw-seed; edges 57->59; :i4 positional paths 32->50, no new (target, first box) pair).
-;; Re-pinned by claude-10 at map 9c410d11 (step 8: r7-selection writes :e-source, read by the row-7 test box; :i4 unchanged).
-;; Re-pinned by claude-10 at map 89b1c3ad (step 10: enact-fn built; edges 61->65; :i4 unchanged).
-;; Re-pinned by claude-10 at map 1f73ead3 (step 11: the W_c call built; the trace routes it through the checker; :i4 positional 50->47, two (target, first box) pairs starting at r7-flight-call gone).
-;; Re-pinned by claude-10 at map 8f2c3f50 (step 12: observe-publication-fn built and the declared writer of :publication-observed; edges 68->69; :i4 unchanged).
-;; Re-pinned by claude-10 at map ccf883aa (step 14: :r4-coapply added, :descent/:units declared; edges 69->75; coverage: :r4-coapply dead (positional only), :r4-constructor now reaches an output; :i4 unchanged).
-;; Re-pinned by claude-10 at map 50a68ccf (WM-CLICK-REFUSAL-I: :r9-judge-refusal, :r9-abstention-carrier and their test box; 15/14/31/75 -> 16/15/33/78; coverage: :r9-abstention-carrier dead (reads only, feeds the run record's typed carrier); :i4 unchanged).
-;; Re-pinned by claude-10 at map 69d111a8 (WM-RELATION-I: :r9-classify-target, :r9-embedding-neighbour and their test box; 16/15/33/78 -> 19/16/35/81; coverage: both new components dead (their output is the class, read positionally by the war machine); :i4 unchanged).
+;; Re-pinned by claude-10 at map e7d11222 (WM-MAP-REPLAY-I: defects G and I declared; 19/16/35/81 -> 19/16/37/88; coverage: :r9-classify-target, :r9-embedding-neighbour and :r9-decision now reach a registered test; :r9-judge-refusal-read and :r9-class-model dead (their output is a return value: judge-refusal's to judge-refusal-sorry, the class model's map to observation_model); :i4 unchanged).
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
- :map-sha "69d111a8",
+ :map-sha "e7d11222",
  :futon5-sha "aeeee96",
- :counts {:inputs 19, :outputs 16, :components 35, :edges 81},
+ :counts {:inputs 19, :outputs 16, :components 37, :edges 88},
  :validate
  {:all-valid false,
   :checks
-  [{:valid false,
-    :check :completeness,
-    :unreachable-outputs [:test/r9-relation-test]}
+  [{:valid true, :check :completeness, :unreachable-outputs []}
    {:valid false,
     :check :coverage,
     :dead-components
-    [:r2-flight-read
-     :r9-embedding-neighbour
+    [:r9-judge-refusal-read
+     :r2-flight-read
      :r4-coapply
      :r11-warrants
-     :r9-decision
-     :r9-classify-target
+     :r9-class-model
      :r3-prompt
      :r4-order-use
      :r2-verifier
