@@ -1,12 +1,18 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "5d71e012",
-  :map "5927020d"},
+  :rev "dcd55083",
+  :map "dd0c145f"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 107, :wires 109},
+ {:verified 0, :witnessed-hermetically 2, :unverified 109, :wires 111},
  :wires
- [{:wire [:c8-registry-get :c8-entry :message], :status :unverified}
+ [{:wire
+   [:ask-merge-published :construction-assemble-one :interpretations],
+   :status :unverified}
+  {:wire
+   [:ask-merge-published :construction-construct :interpretations],
+   :status :unverified}
+  {:wire [:c8-registry-get :c8-entry :message], :status :unverified}
   {:wire [:c8-registry-get :c8-entry :timeout-ms], :status :unverified}
   {:wire [:c8-registry-get :c8-latest :message], :status :unverified}
   {:wire [:c8-registry-get :c8-latest :timeout-ms],
