@@ -55,6 +55,10 @@
    :reads [:want-span :text-sha256]}
   {:box/id :r2-flight-read :row 2 :box/kind :component
    :site {:file "futon2/src/futon2/aif/flight_runner.clj" :var "read-fn"}
+   ;; reads the flight's target as (:target flight), a keyword call the
+   ;; prover's record scope does not yet attribute; the read step is where
+   ;; the flight's :target lands once H9 lands (see :dispatch for why the
+   ;; 1 -> 2 boundary carries no field today)
    :reads [:text-sha256]}
   ;; WM-HANDOFF-H1-I (WM-HANDOFFS-D H1): the flight loop, flight/run!, puts
   ;; the read step's result on the flight record as :readings (with
@@ -563,7 +567,17 @@
    :reads [:chosen-target :draw-seed] :writes [:target-source]}
   {:box/id :dispatch :box/kind :component
    ;; run-flight! dispatches the seat through the runner, naming the target
-   ;; as the mission (positional from the flight entry)
+   ;; as the mission (positional from the flight entry).
+   ;; WHY 0 -> 1 AND 1 -> 2 CARRY NO FIELD (H9, held for
+   ;; WM-PROVER-RECEIVER-FORMS-I): runner/dispatch! is not a step between
+   ;; the flight entry and the read step. It is called positionally from
+   ;; the ask step (agency-answer-fn: (dispatch! opts seat caller (:target
+   ;; issued) ...)) and from the enact step (enact-fn's dispatch-step!); the
+   ;; target arrives as a positional mission argument and becomes
+   ;; :mission-id, which persist-clock! reads. No field enters lane 2 from
+   ;; lane 1. Once H9 lands, the flight's :target (written by resolve-target,
+   ;; read by read-fn, ask-fn, judge-opts and run!) crosses 0 -> 1 as transit
+   ;; and 1 -> 2 with its reader at the read step
    :site {:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "dispatch!"}
    :writes [:mission-id]}
   {:box/id :clock-in :box/kind :component
