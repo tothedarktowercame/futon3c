@@ -22,8 +22,8 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "deafa8c31e734dabb4dd1716c4cba14581075370c4f1917f6ad3a8c3dbf2542a")
-(def repos {"futon2" "5e35f7df" "futon3c" "58f1a8cb"})
+(def map-sha256 "fab9f1a6fdbd470e6f6d5b77fa099c0ec6a34ee44efeb8b20b711c5f7f9bb62b")
+(def repos {"futon2" "06261af8" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
   (let [d (.digest (MessageDigest/getInstance "SHA-256")
@@ -134,7 +134,9 @@
     "futon2/src/futon2/aif/grain_gate.clj"
     "futon2/src/futon2/aif/served_by_reading.clj"
     "futon2/src/futon2/aif/target_field.clj"
-    "futon3c/src/futon3c/agency/clock_lineage.clj"})
+    "futon3c/src/futon3c/agency/clock_lineage.clj"
+    ;; WM-CAST-I: the click endpoint, :click-start (futon3c, not futon2)
+    "futon3c/src/futon3c/transport/http.clj"})
 
 (deftest component-sites-against-a-registered-load-closure
   (let [s (spec)
