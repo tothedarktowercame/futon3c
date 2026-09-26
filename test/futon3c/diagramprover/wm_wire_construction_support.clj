@@ -16,7 +16,7 @@
 (def live-records-read
   [{:path "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-278b6988-click-1.edn"
     :sha256 "f634b05c8020472aed90eb3c0333226788264142f572b62b301bf84aee8c6dfa"
-    :why "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); construction metadata wrongly says :hand-admitted. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input."}
+    :why "Selected action retains the whole receipt, not a separate receipt-derived decision product. Derivation payload digest commits the nested machine receipt (VERIFIED); historical construction metadata predates the nested-receipt fix. Domain declaration records want but no beta or horizon; no assembled cascade-spec retained beside kernel input."}
    {:path "holes/labs/M-wm-wiring/spike/tick-run-record-2026-09-26-flight-7f89646a-click-1.edn" :sha256 "a8e04fb97e58808e8fabdb4ab771f3c414b4181ef82dac336729dd472a18d816"
     :why "No candidate-derivations or token-belief domain declaration at the decision certificate; no family beta/horizon or assembled cascade-spec beside a reader-produced value."}
    {:path "holes/labs/M-wm-wiring/spike/flight-6cda5ee8.edn" :sha256 "b26d4c3cc98009b1f7a828cd2355f6b01bb03feaeda8f03bf43a8a94f0292e34"

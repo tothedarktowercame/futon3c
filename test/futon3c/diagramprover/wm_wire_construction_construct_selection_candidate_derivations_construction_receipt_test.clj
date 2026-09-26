@@ -10,15 +10,15 @@
            :live-records-read support/live-records-read
            :record (assoc (first support/live-records-read)
                           :writer-path support/receipt-path :reader-path support/digest-path)
-           :note "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry. Separate existing defect: :construction merges a nonexistent outer receipt and says :hand-admitted."})
+           :note "Reader-produced payload digest commits the receipt nested under candidate :id. Both controls change only that receipt before real entry."})
 (deftest the-observed-handoff
   (let [o (check)]
     (is (w/received? o))
     (is (= (:writer o) (:recomputed o)))
     (is (= :machine-constructed (get-in o [:receipt :kind])))
     (is (nil? (:outer-receipt o)))
-    (is (= :hand-admitted (get-in o [:entry :construction :kind]))
-        "Existing defect: entry merges the outer receipt, but production nests it under :id")))
+    (is (= :machine-constructed (get-in o [:entry :construction :kind]))
+        "Entry retains the production payload receipt under :id")))
 (deftest absence-before-reader-fails
   (is (not (w/received? (observe :absent)))))
 (deftest different-value-before-reader-fails
