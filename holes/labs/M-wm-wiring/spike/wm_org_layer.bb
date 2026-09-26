@@ -233,12 +233,33 @@
 
 ;; --- hand-checked residue: calls the text cannot see ---
 (def hand
+  ;; :checks are re-verified on every run: each names a form (a var, or :any
+  ;; top-level form of the file) that must still contain every string; a
+  ;; check that fails stops the script (the edge's evidence moved).
   [{:caller :flight-click :callee :click-start :order 1 :conditional nil
+    :checks [{:file "futon2/src/futon2/aif/flight_runner.clj" :var "http-click-fn" :contains ["/api/alpha/wm/click"]}
+             {:file "futon3c/src/futon3c/transport/http.clj" :any true :contains ["\"/api/alpha/wm/click\" uri" "handle-wm-click-start request"]}]
     :evidence "http-click-fn POSTs /api/alpha/wm/click (flight_runner.clj:495-511, cross-JVM HTTP); futon3c transport/http.clj:9295 routes the POST to handle-wm-click-start"}
    {:caller :dispatch :callee :clock-in :order 1 :conditional nil
+    :checks [{:file "futon2/src/futon2/aif/full_loop_runner.clj" :var "dispatch!" :contains ["/api/alpha/bell" ":mission-id"]}
+             {:file "futon3c/src/futon3c/agency/clock_decision.clj" :any true :contains ["lineage/persist-clock!"]}]
     :evidence "full_loop_runner/dispatch! POSTs /api/alpha/bell with :mission-id (cross-JVM HTTP); in futon3c, agency/clock_decision.clj:293 calls clock_lineage/persist-clock!. The hop from the bell to the clock decision is not traced here: this edge is the map's :traces hop, not a read of the path"}
    {:caller :r7-flight-call :callee :wc-checker :order 1 :conditional nil
+    :checks [{:file "futon2/src/futon2/aif/flight_runner.clj" :var "wc-verdict-fn" :contains ["proof2a_check"]}
+             {:file "futon3c/holes/labs/M-futon-seams/exemplar/proof2a_check.clj" :any true :contains ["--wc"]}]
     :evidence "siteless (futon3c holes/labs/M-futon-seams/exemplar/proof2a_check.clj); wc-verdict-fn runs it as a bb subprocess (flight_runner.clj:915-922, :checker opt; the map's :traces hop r7-flight-call -> wc-checker)"}])
+
+;; re-verify the hand-checked edges' evidence
+(defn form-texts [path]
+  (when-let [text (read-file path)]
+    (for [t (take-while some? (iterate z/right (z/of-string text)))] (n/string (z/node t)))))
+(defn check-ok? [{:keys [file var any contains]}]
+  (let [forms (cond var (some-> (file-index file) (get-in [:defs var]) z/node n/string vector)
+                    any (form-texts file))]
+    (some (fn [t] (every? #(str/includes? t %) contains)) forms)))
+(doseq [h hand, c (:checks h)]
+  (when-not (check-ok? c)
+    (die "hand-checked edge" (:caller h) "->" (:callee h) "lost its evidence:" (pr-str c))))
 
 ;; --- assemble ---
 (def box-by-id (into {} (map (juxt :box/id identity) boxes)))

@@ -109,7 +109,65 @@
 (def bus-order (vec (sort-by (fn [f] [(lane-of (writer-of f)) (:y (positions (writer-of f))) (name f)]) cross-fields)))
 (def bus-y (into {} (map-indexed (fn [i f] [f (+ bus-y0 (* i bus-pitch))]) bus-order)))
 (def legend-y (+ bus-y0 (* bus-pitch (count bus-order)) 40))
-(def height (+ legend-y 166))
+;; ---------------------------------------------------------------------------
+;; The organisation layer (third section, below the legend): who calls whom,
+;; in what order, under what condition. Regenerated in this run by
+;; wm_org_layer.bb at the SAME map revision, so it cannot drift from the map.
+(def org
+  (let [r (sh/sh "bb" "holes/labs/M-wm-wiring/spike/wm_org_layer.bb" map-sha)]
+    (when-not (zero? (:exit r))
+      (binding [*out* *err*] (println "wm_org_layer.bb refused:" (:err r))) (System/exit 2))
+    (edn/read-string (slurp "holes/labs/M-wm-wiring/wm-org-layer.edn"))))
+(when-not (str/starts-with? (:map-rev org) map-sha)
+  (binding [*out* *err*] (prn {:refused :org-layer-at-another-map-revision :org (:map-rev org) :map map-sha})) (System/exit 2))
+(def org-calls (:calls org))
+;; placement: each box once, under its FIRST caller in flight order (depth-
+;; first from the roots, siblings in body order). A call that only BUILDS a
+;; closure another box invokes (:constructs) does not place: the invocation
+;; does. It is used only for a box nothing else calls.
+(def org-children (group-by :caller org-calls))
+(def org-tree
+  (let [placed (volatile! {}) rows (volatile! [])]
+    (letfn [(visit [id depth parent edge]
+              (when-not (contains? @placed id)
+                (vswap! placed assoc id {:depth depth :parent parent :edge edge :row (count @rows)})
+                (vswap! rows conj id)
+                (doseq [c (sort-by (juxt :order (comp str :callee)) (remove :constructs (org-children id)))]
+                  (visit (:callee c) (inc depth) id c))))]
+      (doseq [r (:roots org)]
+        (visit r 0 nil nil)
+        ;; boxes this root's tree reaches only through a construction, placed
+        ;; before the next root so they sit with their builder's tree
+        (doseq [c org-calls :when (and (:constructs c) (contains? @placed (:caller c)) (not (contains? @placed (:callee c))))]
+          (visit (:callee c) (inc (:depth (@placed (:caller c)))) (:caller c) c))))
+    {:placed @placed :rows @rows}))
+(def org-placed (:placed org-tree))
+(def org-rows (:rows org-tree))
+(def org-islands (:unplaced org))
+(def org-extra (for [c org-calls :let [p (org-placed (:callee c))] :when (and p (not= (:caller c) (:parent p)))] c))
+;; lanes derived from the call order: a box's lane is its first caller's
+;; lane in the hand table, where that caller is not an orchestrator (a box
+;; whose callees span three or more hand lanes); a box whose callers are all
+;; orchestrators heads its own lane. The roots keep theirs (1 and 10).
+(def orchestrators (set (for [[c cs] org-children :when (<= 3 (count (distinct (keep (comp lane-of :callee) cs))))] c)))
+(def first-direct-caller
+  (into {} (for [id org-rows
+                 :let [cs (->> org-calls (filter #(= id (:callee %))) (remove :constructs) (remove #(orchestrators (:caller %)))
+                               (sort-by #(:row (org-placed (:caller %)) 1e9)))]
+                 :when (seq cs)]
+             [id (:caller (first cs))])))
+(def derived-lane (into {} (for [id (keys by-id)] [id (if-let [c (first-direct-caller id)] (lane-of c) (lane-of id))])))
+(let [no-lane (filter #(and (nil? (lane-of %)) (nil? (derived-lane %))) (keys by-id))]
+  (when (seq no-lane) (binding [*out* *err*] (prn {:refused :box-with-no-lane :boxes no-lane})) (System/exit 2)))
+(def lane-disagreements
+  (vec (sort-by (comp str first)
+                (for [id (keys by-id) :when (and (first-direct-caller id) (not= (lane-of id) (derived-lane id)))]
+                  [id (lane-of id) (first-direct-caller id) (derived-lane id)]))))
+(def org-colw 178) (def org-rowh 17) (def org-bw 158) (def org-bh 13)
+(def org-y0 (+ legend-y 190))
+(def org-rows-y0 (+ org-y0 70))
+(def org-h (+ 70 (* org-rowh (count org-rows)) 40 (* 14 (+ (count org-islands) (count lane-disagreements))) 90))
+(def height (+ legend-y 166 org-h))
 
 ;; tracks: within a gutter, ordered by bus y so vertical runs fan out in order
 (def track-x
@@ -270,5 +328,62 @@
                 (+ ly 100) (count (filter #(= :standing (:kind %)) (:expected-findings m)))))
   (emit (format "<text x='24' y='%d' font-size='10.5' fill='#b25a00'>A red chevron in the hand-off strip is a boundary no declared field crosses in the flight's direction; the code hands data across it through the flight record and the store's published view, which no box carries yet.</text>" (+ ly 132)))
   (emit (format "<text x='24' y='%d' font-size='10.5' fill='#b25a00'>A step marked as entered or left by no field is one whose inputs and outputs the map does not yet declare; that is a gap in the map, not in the drawing.</text>" (+ ly 116))))
+;; --- the organisation strip ---
+(defn org-xy [id] (let [{:keys [depth row]} (org-placed id)] [(+ 24 (* depth org-colw)) (+ org-rows-y0 (* row org-rowh))]))
+(defn org-kind [c] (cond (:hand c) :hand (some #(and (vector? %) (= :handoff (first %))) (:via c)) :handoff (:constructs c) :constructs :else :direct))
+(def org-style {:direct ["#2f5f5c" "" 1.2] :handoff ["#1f6fbf" "5,3" 1.2] :hand ["#c0392b" "2,2" 1.4] :constructs ["#9a9a94" "1,3" 0.8]})
+(def org-counts (frequencies (map org-kind org-calls)))
+(emit (format "<line x1='24' y1='%d' x2='%d' y2='%d' stroke='#c8d3d2'/>" (- org-y0 20) (- width 24) (- org-y0 20)))
+(emit (format "<text x='24' y='%d' font-size='15' font-weight='700' fill='#1f3b39'>Organisation: who calls whom, in order (from the source, at futon2 %s)</text>" org-y0 (esc (:futon2-rev org))))
+(emit (format "<text x='24' y='%d' font-size='10.5' fill='#3a4a48'>%s</text>" (+ org-y0 18)
+              (esc (format "Each box once, under its first caller in flight order; siblings in body order (numbered). %d placed, %d calls (%d direct, %d hand-off invocations, %d hand-checked cross-process, %d closure constructions), %d with a condition (printed on the edge). %d callers placed elsewhere are thin grey arcs."
+                           (count org-rows) (count org-calls) (get org-counts :direct 0) (get org-counts :handoff 0) (get org-counts :hand 0) (get org-counts :constructs 0)
+                           (count (filter :conditional org-calls)) (count org-extra)))))
+(emit (format "<text x='24' y='%d' font-size='10.5' fill='#3a4a48'>%s</text>" (+ org-y0 33)
+              (esc (format "Generated by spike/wm_org_layer.bb at map %s (wm-org-layer.edn); its three hand-checked edges' evidence sites are re-verified on every run. Lanes derived from this order disagree with the panels' hand-kept lane table for %d boxes (listed at the foot)."
+                           (:map-rev org) (count lane-disagreements)))))
+(doseq [[k [kind txt]] (map-indexed vector [[:direct "direct call"] [:handoff "hand-off: a closure the caller was handed, invoked"] [:hand "cross-process (HTTP / subprocess / bell), hand-checked"] [:constructs "builds a closure another box invokes"]])
+        :let [[c dash w] (org-style kind) x (+ 24 (* k 330))]]
+  (emit (format "<line x1='%d' y1='%d' x2='%d' y2='%d' stroke='%s' stroke-width='%s' %s/>" x (+ org-y0 48) (+ x 30) (+ org-y0 48) c w (if (seq dash) (str "stroke-dasharray='" dash "'") "")))
+  (emit (format "<text x='%d' y='%d' font-size='10' fill='#3a4a48'>%s</text>" (+ x 36) (+ org-y0 52) (esc txt))))
+;; extra calls first (under), then tree edges, then boxes
+(doseq [c org-extra :let [[x1 y1] (org-xy (:caller c)) [x2 y2] (org-xy (:callee c))]]
+  (emit (format "<path d='M%d,%d C%d,%d %d,%d %d,%d' fill='none' stroke='%s' stroke-opacity='0.35' stroke-width='0.7' %s/>"
+                (+ x1 org-bw) (+ y1 (quot org-bh 2)) (+ x1 org-bw 60) (+ y1 (quot org-bh 2)) (+ x2 org-bw 60) (+ y2 (quot org-bh 2)) (+ x2 org-bw) (+ y2 (quot org-bh 2))
+                (if (= :constructs (org-kind c)) "#9a9a94" "#7a8a88") (if (= :constructs (org-kind c)) "stroke-dasharray='1,3'" ""))))
+(doseq [id org-rows :let [{:keys [parent edge]} (org-placed id)] :when parent
+        :let [[px py] (org-xy parent) [x y] (org-xy id) [c dash w] (org-style (org-kind edge))]]
+  (emit (format "<path d='M%d,%d V%d H%d' fill='none' stroke='%s' stroke-width='%s' %s/>" (+ px 8) (+ py org-bh) (+ y (quot org-bh 2)) x c w (if (seq dash) (str "stroke-dasharray='" dash "'") ""))))
+(doseq [id org-rows :let [[x y] (org-xy id) {:keys [edge]} (org-placed id) b (by-id id) root? (some #{id} (:roots org))
+                          lane (lane-of id) dis? (some #(= id (first %)) lane-disagreements)]]
+  (emit (format "<g><title>%s</title><rect x='%d' y='%d' width='%d' height='%d' rx='3' fill='%s' stroke='%s' stroke-width='%s'/></g>"
+                (esc (str (name id) (when-let [st (:site b)] (str " — " (:file st) " " (:var st))) (when-let [v (:via edge)] (str "\nvia " (pr-str v))) (when-let [e (:evidence edge)] (str "\n" e))))
+                x y org-bw org-bh (if (not (built? id)) "#fff4e0" (if dis? "#fdf1e8" "#f7fafa")) (if root? "#1f3b39" (if dis? "#d48700" "#9fb3b1")) (if root? 2 0.8)))
+  (emit (format "<text x='%d' y='%d' font-size='8.5' fill='#1f3b39'>%s%s</text>" (+ x 4) (+ y 10)
+                (esc (str (when root? "ROOT · ") (when edge (str (:order edge) ". ")) (clip (name id) 22)
+                          (when lane (str "  ·" (first (str/split (first (nth lanes lane)) #" "))))))
+                ""))
+  (when-let [cnd (:conditional edge)]
+    (emit (format "<text x='%d' y='%d' font-size='7.5' fill='#6b5a2a'>%s</text>" (+ x org-bw 6) (+ y 10) (esc (clip (str "when " cnd) 70))))))
+(let [y0 (+ org-rows-y0 (* org-rowh (count org-rows)) 24)]
+  (emit (format "<text x='24' y='%d' font-size='11' font-weight='700' fill='#1f3b39'>Islands: components no box calls (%d)</text>" y0 (count org-islands)))
+  (let [reason {:r1-target-field "futon2.aif.target-field is required by no production namespace (only its tests)"
+                :eligibility "futon2.aif.target-field is required by no production namespace (only its tests)"
+                :r8-overlap "futon2.aif.target-field is required by no production namespace (only its tests)"
+                :r1-outer-cascade "not built: its intended site has no code"
+                :r9-finding-cause-read "called only by its test (failure_cause_record_test)"
+                :r11-warrants "siteless"}]
+    (doseq [[k id] (map-indexed vector org-islands)]
+      (emit (format "<text x='36' y='%d' font-size='10' fill='#3a4a48'>%s</text>" (+ y0 16 (* k 14))
+                    (esc (str (name id) " — " (get reason id (if (built? id) "no caller found in the source" "not built"))))))))
+  (let [y1 (+ y0 30 (* 14 (count org-islands)))]
+    (emit (format "<text x='24' y='%d' font-size='11' font-weight='700' fill='#b25a00'>Lane table vs call order: %d disagreements (the panels above still use the hand-kept table)</text>" y1 (count lane-disagreements)))
+    (doseq [[k [id hand caller derived]] (map-indexed vector lane-disagreements)]
+      (emit (format "<text x='36' y='%d' font-size='10' fill='#3a4a48'>%s</text>" (+ y1 16 (* k 14))
+                    (esc (format "%s: panel %s, but its first direct caller %s runs in %s" (name id) (first (nth lanes hand)) (name caller) (first (nth lanes derived)))))))))
+(binding [*out* *err*]
+  (prn {:org {:placed (count org-rows) :islands (count org-islands) :calls (count org-calls) :kinds org-counts
+              :conditions (count (filter :conditional org-calls)) :extra-callers (count org-extra)
+              :lane-disagreements (mapv first lane-disagreements)}}))
 (emit "</svg>")
 (print (str out))
