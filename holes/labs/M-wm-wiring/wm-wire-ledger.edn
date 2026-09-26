@@ -5,8 +5,8 @@
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
  {:verified 1,
-  :witnessed-hermetically 25,
-  :unverified 114,
+  :witnessed-hermetically 39,
+  :unverified 100,
   :wires 140},
  :wires
  [{:wire
@@ -33,7 +33,9 @@
     [:want {:record :cascade-problem}]],
    :status :unverified}
   {:wire [:construction-construct :r4-order-use :construction-receipt],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-construct-order-use-receipt-test/the-construction-receipt-reaches-order-use}
   {:wire [:construction-construct :r9-decision :construction-receipt],
    :status :unverified}
   {:wire
@@ -43,9 +45,9 @@
    :status :unverified}
   {:wire [:dispatch :clock-in :mission-id], :status :unverified}
   {:wire [:eligibility :r1-outer-cascade :eligible],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-wire-is-unverified-because-the-reader-is-not-built}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-eligibility-r1-outer-cascade-eligible-test/the-eligibility-ruling-reaches-the-cascade}
   {:wire [:flight-cast :click-start :author], :status :unverified}
   {:wire [:flight-cast :click-start :repair-reviewer],
    :status :unverified}
@@ -108,9 +110,9 @@
    :status :unverified}
   {:wire [:gate-refuse :gate-refusal-read :error], :status :unverified}
   {:wire [:loop-entry :r1-outer-cascade :trigger],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test/the-wire-is-unverified-because-the-reader-is-not-built}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-loop-entry-r1-outer-cascade-trigger-test/the-trigger-reaches-the-cascade}
   {:wire
    [:morning-brief-fold
     :r7-fold-call
@@ -144,9 +146,9 @@
    :test
    futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test/the-gate-pass-reaches-the-wc-checker}
   {:wire [:r1-outer-cascade :flight-entry :chosen-target],
-   :status :unverified,
-   :registered-test-failed
-   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-wire-is-unverified-because-the-writer-is-not-built}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r1-outer-cascade-flight-entry-chosen-target-test/the-chosen-target-reaches-the-flight-entry}
   {:wire [:r1-outer-cascade :flight-entry :draw-seed],
    :status :unverified,
    :registered-test-failed
@@ -179,7 +181,9 @@
    [:r2-judge-observation
     :r3a-channel-prediction-error
     :tick-observation],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test/the-tick-observation-reaches-the-channel-prediction-error}
   {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
    :status :verified,
    :record
@@ -237,15 +241,29 @@
    [:r3a-prediction-error
     :r7-weighted-error
     [:error {:record :prediction-error}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test/the-prediction-error-reaches-the-reweighting}
   {:wire [:r4-constructor :r4-coapply-test :descent],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-coapply-descent-test/the-descent-reaches-the-coapplication-kernel-test}
   {:wire [:r4-constructor :r4-coapply-test :units],
-   :status :unverified}
-  {:wire [:r4-constructor :r4-order-use :descent], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-coapply-units-test/the-units-reach-the-coapplication-kernel-test}
+  {:wire [:r4-constructor :r4-order-use :descent],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-descent-test/the-descent-reaches-order-use}
   {:wire [:r4-constructor :r4-order-use :precedence-violations],
-   :status :unverified}
-  {:wire [:r4-constructor :r4-order-use :units], :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test/the-precedence-violations-reach-order-use}
+  {:wire [:r4-constructor :r4-order-use :units],
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-constructor-order-use-units-test/the-units-reach-order-use}
   {:wire [:r4-kernel :fpi-policy-free-energy :rates],
    :status :unverified}
   {:wire [:r4-kernel :r4-coapply-test :order-use], :status :unverified}
@@ -314,7 +332,9 @@
    :test
    futon3c.diagramprover.wm-wire-r7-selection-e-source-test/the-e-source-reaches-the-selection-test}
   {:wire [:r7-weighted-error :r3-aggregate-driver :weighted-error],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test/the-weighted-error-reaches-the-driver-aggregation}
   {:wire [:r8-overlap :r1-outer-cascade :pair-overlap],
    :status :unverified,
    :registered-test-failed
@@ -380,12 +400,16 @@
     :repair/publication],
    :status :unverified}
   {:wire [:tick-flight-assembly :construction-assemble-one :universes],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test/the-flights-universe-reaches-assembly}
   {:wire
    [:tick-flight-assembly
     :construction-assemble-one
     [:wants {:record :sources}]],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test/the-flights-wants-reach-assembly}
   {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :unverified}
   {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}

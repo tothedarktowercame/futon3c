@@ -74,7 +74,27 @@
             [futon3c.diagramprover.wm-wire-r0-wc-attempts-test]
             [futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test]
             [futon3c.diagramprover.wm-wire-r5-gate-grain-test]
-            [futon3c.diagramprover.wm-wire-r5-test-grain-test]))
+            [futon3c.diagramprover.wm-wire-r5-test-grain-test]
+            [futon3c.diagramprover.wm-wire-construct-order-use-receipt-test]
+            [futon3c.diagramprover.wm-wire-constructor-coapply-descent-test]
+            [futon3c.diagramprover.wm-wire-constructor-coapply-units-test]
+            [futon3c.diagramprover.wm-wire-constructor-order-use-descent-test]
+            [futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test]
+            [futon3c.diagramprover.wm-wire-constructor-order-use-units-test]
+            [futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test]
+            [futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test]
+            [futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test]
+            [futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test]
+            [futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test]
+            [futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test]
+            [futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test]
+            [futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test]
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test]
+            [futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test]))
 
 (def wire-test-nses
   '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
@@ -110,7 +130,27 @@
     futon3c.diagramprover.wm-wire-r0-wc-attempts-test
     futon3c.diagramprover.wm-wire-r0-wc-grain-gate-test
     futon3c.diagramprover.wm-wire-r5-gate-grain-test
-    futon3c.diagramprover.wm-wire-r5-test-grain-test])
+    futon3c.diagramprover.wm-wire-r5-test-grain-test
+    futon3c.diagramprover.wm-wire-construct-order-use-receipt-test
+    futon3c.diagramprover.wm-wire-constructor-coapply-descent-test
+    futon3c.diagramprover.wm-wire-constructor-coapply-units-test
+    futon3c.diagramprover.wm-wire-constructor-order-use-descent-test
+    futon3c.diagramprover.wm-wire-constructor-order-use-precedence-violations-test
+    futon3c.diagramprover.wm-wire-constructor-order-use-units-test
+    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-sources-wants-test
+    futon3c.diagramprover.wm-wire-flight-assembly-assemble-one-universes-test
+    futon3c.diagramprover.wm-wire-judge-observation-channel-pe-test
+    futon3c.diagramprover.wm-wire-prediction-error-weighted-error-test
+    futon3c.diagramprover.wm-wire-weighted-error-aggregate-driver-test
+    futon3c.diagramprover.wm-wire-gate-refuse-gate-refusal-read-error-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-failure-cause-record-test-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-cause-read-failure-cause-test
+    futon3c.diagramprover.wm-wire-r9-close-cause-r9-finding-store-failure-cause-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-abstention-carrier-judge-refusal-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-r9-judge-refusal-test-judge-refusal-test
+    futon3c.diagramprover.wm-wire-r9-judge-refusal-abstention-r9-failure-classifier-outcome-test
+    futon3c.diagramprover.wm-wire-r9-phase-kind-phase-kind-test-failure-kind-test
+    futon3c.diagramprover.wm-wire-r9-phase-kind-r9-failure-classifier-failure-kind-test])
 
 (def adjacency-rev "84cd6426")
 (def adjacency-path "holes/labs/M-wm-wiring/wm-adjacency.edn")
