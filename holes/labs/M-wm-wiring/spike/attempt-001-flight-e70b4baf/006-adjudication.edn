@@ -1,0 +1,1 @@
+{:event/schema-version 1, :cohort/id :wm-contract-machinery-78-v1, :attempt/id "attempt-001", :attempt/ordinal 1, :event/sequence 6, :checkpoint/type :adjudication, :recorded-at "2026-09-26T01:23:48.053202837Z", :payload {:sorry {:outcome :incomplete, :kind :not-reached-adjudication}}}

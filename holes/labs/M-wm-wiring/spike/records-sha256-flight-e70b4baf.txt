@@ -1,0 +1,22 @@
+# Every record the fourth flight (flight-e70b4baf, 2026-09-26 01:06:59Z-01:24:06Z, seat claude-5, flown by claude-8) wrote under futon2 data/ (unversioned); sha256 by claude-8 after the run.
+10ac7cd76b2b18b40c4044bb55f0e54bc210cd908d9c4deef74875fc9d2bc88c  flights/flight-e70b4baf.edn
+5625d33093a8d9dbd03422a50076f04f7448fed6e76d660c15fb0465b7290442  M-autoclock-in.edn
+241b10a024020344eba5d444c12fb33ad6afe107724dec95c81229b422bc5feb  /home/joe/code/futon2/data/wm-runs/tick-run-record-2026-09-26-flight-e70b4baf-click-1.edn
+17fd3dde3352f281b21e214c8b5f468e29001686a23da9d3b3c3aa5f681cbefc  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/001-time-step.edn
+ea021f12b2a8835e107805285bcde3394a887d9c9db6466b0fb7bfefcd59f37a  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/002-selection.edn
+cb60510eff60e2441250fdf6b3b54aedf9fec2e7b5702596c8fc20f4ab0cdeea  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/003-construction.edn
+11fbf36986a6fecc436d127600f475718704707771cacc5362518f55c4261c8e  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/004-dispatch.edn
+2d405ac2294f5bfc079e4948eea9385ffcce4315f77fa3212488869bd4d60e0c  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/005-build.edn
+87c49e95ec0cc31059c8353833ae9dd124253e8edc3be5b61ea95a79a84c079e  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/006-adjudication.edn
+e5c545ba48faaa11bffe46e9832859a87bcca95aca4cb98207be6a8c09767c37  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/007-closed.edn
+15921381e1b12379bd30aa1961f2fdfab59c006eee9290182f5500142fc46194  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/retained/b-update.edn
+331c2802bbb19f8a33177f5d8cc30f6f82f602d016a0e17ff0a49b2c9dec11d3  /home/joe/code/futon2/data/wm-full-loop-machinery-78/wm-contract-machinery-78-v1/attempt-001/retained/route-attestation.edn
+778637382742da0b799144e99a50a82659f53e311f0c301be245381d69df17d3  requests/request-46a6f3f653611603.edn
+e881031310f56d434e64703792c7e2d0cca7a12810cd739f80cbac07d21fdb01  requests/request-4a8559ab33b4b7c2.edn
+a579e31e5d12db5aaf5a1356c8614e1352ed26114760f5f5bb7f53306b1ab93f  requests/request-69bbac2e9ce5cf1d.edn
+a8cb017a80f04207aedc22cac8f61e45c7616a6e4fa120510ca92868e3919069  requests/request-750ea9b37bcb0ea0.edn
+08e291b29873b09f28a30b39e906459b506133fef1de0b72366ff714e0b5fe71  requests/request-8ab72109cbf6ba5a.edn
+5fa280c01492f1e452118de07392ecc6541a6ef39f8f8bcb507bd0431d802af0  requests/request-91748c43fece36aa.edn
+69d2880631aa15eb59038460c9f1d488a688b3d8f90c8a4e15475251f9475ea4  requests/request-a5ddd49f0fd2f139.edn
+34c03761acd634ca31e65d2143e37177cafe1de6b77cc01aa5c8c06d77d6a503  requests/request-aa0648e890f44bed.edn
+# evidence files written this flight: 0; flights/enactments: 0
