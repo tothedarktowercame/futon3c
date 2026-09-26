@@ -1,10 +1,10 @@
 {:adjacency
  {:path "holes/labs/M-wm-wiring/wm-adjacency.edn",
-  :rev "48524a7a",
-  :map "1d10314c"},
+  :rev "84cd6426",
+  :map "06d451d6"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 1, :witnessed-hermetically 6, :unverified 129, :wires 136},
+ {:verified 1, :witnessed-hermetically 6, :unverified 133, :wires 140},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -230,6 +230,13 @@
    futon3c.diagramprover.wm-wire-r7-fold-selection-test/the-fold-reaches-selection}
   {:wire [:r7-fold-call :habit-fold-call-test :enactment-fold],
    :status :unverified}
+  {:wire [:r7-fold-call :r1-belief-carry :carried-mu-post],
+   :status :unverified}
+  {:wire [:r7-fold-call :r3-apply-belief-events :loop-belief],
+   :status :unverified}
+  {:wire
+   [:r7-fold-call :r3a-channel-prediction-error :channel-prediction],
+   :status :unverified}
   {:wire [:r7-fold-call :r9-decision :enactment-fold],
    :status :unverified}
   {:wire [:r7-increment :r7-call-test :delta], :status :unverified}
@@ -305,6 +312,8 @@
    [:tick-flight-assembly
     :construction-assemble-one
     [:wants {:record :sources}]],
+   :status :unverified}
+  {:wire [:trace-record :r7-fold-call [:mu-post {:record :trace}]],
    :status :unverified}
   {:wire [:wc-checker :r7-increment :wc-verdict], :status :unverified}
   {:wire [:wc-checker :r7-test :wc-verdict], :status :unverified}]}
