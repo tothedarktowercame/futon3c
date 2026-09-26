@@ -152,8 +152,12 @@
   {:box/id :tick-flight-assembly :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "flight-assembly-input"}
    ;; WM-HANDOFF-H5-I: writes the target's :universes (the flight's
-   ;; :universe merged over the declared sources'), read by assemble-one
-   :reads [:wants :universe] :writes [:universes]}
+   ;; :universe merged over the declared sources'), read by assemble-one.
+   ;; WM-HANDOFF-H8-I: writes the sources' :wants of the flight's target
+   ;; ((assoc-in [:sources :wants target] (vec (:wants flight)))), scoped to
+   ;; the record :sources (WM-PROVER-RECORD-SCOPE-I, futon3c 5e4d9d02), so
+   ;; it is a different vertex from the click's :wants it reads
+   :reads [:wants :universe] :writes [:universes [:wants {:record :sources}]]}
   ;; WM-HANDOFF-H4-I (WM-HANDOFFS-D H4): the ask's answers reach
   ;; construction as the sources' :interpretations. publish! writes a
   ;; validated answer into the store under :patterns/:receipts (no
@@ -193,14 +197,20 @@
   ;; unboxed: cascade_sources/load-declared and
   ;; mission_hole_wants/merge-into-sources. flight-assembly-input's merge is
   ;; the last, so for the flight's target a token the flight located wins
-  ;; and a declared token it did not locate survives. H8's :wants is NOT
-  ;; declared here (to-do stands): the sources' :wants has the same two
-  ;; earlier writers, and :wants already has a declared writer
-  ;; (:flight-click-wants), so declaring flight-assembly-input's write would
-  ;; be a second declared writer of the key
+  ;; and a declared token it did not locate survives. WM-HANDOFF-H8-I: the
+  ;; sources' wants, scoped [:wants {:record :sources}] (a vertex apart from
+  ;; the click's :wants, which :flight-click-wants writes): written by
+  ;; flight-assembly-input, read here by (get-in sources [:wants target]) as
+  ;; the problem's :want, which is where C enters the problem (the
+  ;; registry's R19 -> R5). The same two earlier writers of the sources'
+  ;; :wants run in judge, unboxed (cascade_sources/load-declared :285,
+  ;; mission_hole_wants/merge-into-sources :158), so no second declared
+  ;; writer arises; flight-assembly-input's assoc-in replaces the flight
+  ;; target's entry outright (not a merge). Boxing those two is the
+  ;; declared-sources path, a later hop
   {:box/id :construction-assemble-one :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble-one"}
-   :reads [:interpretations :universes]}
+   :reads [:interpretations :universes [:wants {:record :sources}]]}
   {:box/id :construction-construct :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
    ;; WM-HANDOFF-H6-I: writes each constructed candidate's
@@ -250,8 +260,14 @@
    :site {:file "futon2/src/futon2/aif/efe.clj" :var "rank-cascade-actions"}
    ;; WM-HANDOFF-H6-I (the rates island): reads the sourced rates the
    ;; cascade lane passes it as :adjudication-rates (the scorer that
-   ;; consumes A; it runs at the lane's R5, after the rates are sourced)
-   :reads [:adjudication-rates] :writes [:order-use]}
+   ;; consumes A; it runs at the lane's R5, after the rates are sourced).
+   ;; WM-HANDOFF-H8-I: drawn in lane 6 (Rates), where it runs; its G reaches
+   ;; selection as each ranked cascade action's :controller-score, which
+   ;; select-action-cascades reads (the one writer on the cascade path:
+   ;; efe/compute-efe writes it for the non-cascade actions and
+   ;; cascade_observation_scoring/rank-cascade-actions on the observation
+   ;; path, both unboxed; select-action-cascades re-emits the chosen one)
+   :reads [:adjudication-rates] :writes [:order-use :controller-score]}
   {:box/id :r4-test :row 4 :box/kind :test
    :site {:file "futon2/test/futon2/aif/order_kernel_test.clj"}
    :reads [:order-use]}
@@ -309,7 +325,8 @@
    :reads [:e-source :delta :wc-verdict]}
   {:box/id :r9-selection-law :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
-   :writes [:per-policy-argmax :candidate :enacted-steps]}
+   ;; WM-HANDOFF-H8-I: reads G as the ranked actions' :controller-score
+   :reads [:controller-score] :writes [:per-policy-argmax :candidate :enacted-steps]}
   {:box/id :r9-decision :row 9 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
    ;; WM-MAP-REPLAY-I: the joint decision's typed refusal (ex-info with
@@ -807,7 +824,18 @@
  ;; placed by its row though it runs at the lane's R5, after the rates.
  ;; :measurement leaves the lane only inside :rates-provenance. Six standing
  ;; added: the P0 entry's own keys (three), assemble-one's refusal field
- ;; and carrier, two tests. 264 -> 270 (3 to-do, 267 standing). :kind :to-do is the
+ ;; and carrier, two tests. 264 -> 270 (3 to-do, 267 standing).
+ ;; WM-HANDOFF-H8-I (futon2 pin unchanged; the prover's record scope,
+ ;; futon3c 5e4d9d02): the sources' wants into the problem, where C enters
+ ;; risk. :tick-flight-assembly writes [:wants {:record :sources}],
+ ;; :construction-assemble-one reads it (both lane 5); the sources' two
+ ;; earlier writers in judge stay unboxed. The to-do at assemble-one becomes
+ ;; standing (its remaining unscoped :wants is a refusal's field name). The
+ ;; lane table draws :r4-kernel in lane 6, where it runs; its G reaches
+ ;; selection as :controller-score (:r4-kernel writes, :r9-selection-law
+ ;; reads), so the rates lane keeps a wire out. Three standing added:
+ ;; :controller-score in the runner (the decision's copy) and two tests.
+ ;; 270 -> 273 (2 to-do, 271 standing). :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
  ;; site and so no conformance finding; the test asserts their intended sites
@@ -3269,9 +3297,9 @@
    :var "assemble-one"},
   :declared-by [],
   :rows [8],
-  :kind :to-do,
+  :kind :standing,
   :note
-  "WM-HANDOFF-H4-I: assemble-one reads the sources' :wants (get-in sources [:wants target]), which flight-assembly-input writes into the assembly (H3); boxing assemble-one for :interpretations reports it now. H8 (the assembly's :sources into assemble-one) declares or annotates it"}
+  "WM-HANDOFF-H8-I: the read (get-in sources [:wants target]) is now declared, as [:wants {:record :sources}], and counts for that vertex; what remains of the unscoped :wants at assemble-one is its refusal's field name, (refusal target :want-not-declared :wants), not a read or a write of either record (was :to-do from H4)"}
  {:finding :occurrence-without-declaration,
   :field :universes,
   :site {:file "futon2/scripts/futon2/report/war_machine.clj", :var "judge"},
@@ -3341,4 +3369,33 @@
   :rows [9],
   :kind :standing,
   :note
-  "WM-HANDOFF-H6-I: :status at candidate_derivations/entry is the P0 entry's own key (a construction :kind, a source's :status, the entry's :locators), another record's, reported now because the box was added for :construction-receipt; the prover has no per-record scope"}]}
+  "WM-HANDOFF-H6-I: :status at candidate_derivations/entry is the P0 entry's own key (a construction :kind, a source's :status, the entry's :locators), another record's, reported now because the box was added for :construction-receipt; the prover has no per-record scope"}
+ {:finding :occurrence-without-declaration,
+  :field :controller-score,
+  :site
+  {:file "futon2/src/futon2/aif/full_loop_runner.clj",
+   :var "run-opportunity-core!"},
+  :declared-by [],
+  :rows [9],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H8-I: the runner copies the decision's :controller-score onto its record (the chosen action's G, re-emitted by select-action-cascades), a reader of the selection's output, not of the kernel's ranked actions; reported now because :controller-score became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :controller-score,
+  :site
+  {:file "futon2/test/futon2/aif/selection_law_candidate_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H8-I: a test builds ranked actions carrying :controller-score (a write position in the test, not a second writer); reported now because the field became declared"}
+
+ {:finding :occurrence-without-declaration,
+  :field :controller-score,
+  :site {:file "futon2/test/futon2/aif/selection_reads_fold_test.clj"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-HANDOFF-H8-I: a test builds ranked actions carrying :controller-score (a write position in the test, not a second writer); reported now because the field became declared"}]}

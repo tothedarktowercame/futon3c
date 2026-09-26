@@ -12,10 +12,11 @@
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H4-I: :ask-merge-published writes :interpretations, read by :construction-assemble-one and :construction-construct; 35/23/72/145 -> 36/23/75/148; :ask-merge-published reads no declared field, so it joins the inputs; the three new boxes join the dead components (no test box reads :interpretations); :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H5-I: :tick-flight-assembly writes :universes, read by :construction-assemble-one; 36/23/75/148 -> 36/23/75/149, one edge; no box added; dead components unchanged; :i4 unchanged). :map-sha typed absent, as before.
 ;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H6-I: :construction-construct writes :construction-receipt, read by :r4-order-use, :r9-decision and the new :selection-candidate-derivations; :r6-cascade-lane writes :adjudication-rates, read by :r4-kernel; 36/23/75/149 -> 35/23/76/152; :world/r4-kernel leaves the inputs (the kernel now reads a declared field); :construction-construct, :ask-merge-published and :r6-cascade-lane leave the dead components (they reach :r4-test through the kernel's :order-use), :selection-candidate-derivations joins them; :i4 unchanged). :map-sha typed absent, as before.
+;; Re-pinned by claude-10 in the same commit as the map it describes (WM-HANDOFF-H8-I: :tick-flight-assembly writes [:wants {:record :sources}], read by :construction-assemble-one (the edge wants@sources, internal, so no new port); :r4-kernel writes :controller-score, read by :r9-selection-law; 35/23/76/152 -> 34/23/76/153; :world/r9-selection-law leaves the inputs (selection now reads a declared field); dead components unchanged. :i4 CHANGES, by addition only: the scored facts' bypasses 6 -> 12 (field edges) and 47 -> 74 (with positional hops), each new path running back from selection through :controller-score to the kernel and :adjudication-rates to the cascade lane; the preference fields, the scored facts and the (empty) bypasses to preferences are unchanged). :map-sha typed absent, as before.
 {:map-path "holes/labs/M-wm-wiring/wm-flight-wiring.edn",
  :map-sha {:absent :same-commit-as-the-map},
  :futon5-sha "aeeee96",
- :counts {:inputs 35, :outputs 23, :components 76, :edges 152},
+ :counts {:inputs 34, :outputs 23, :components 76, :edges 153},
  :validate
  {:all-valid false,
   :checks
@@ -105,6 +106,61 @@
      :to :clock-lineage}
     {:path [:r0-enact-step :r7-increment :r7-fold],
      :via [:attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:controller-score :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:controller-score :enacted-steps :attempts :delta],
+     :to :enactment-records}
+    {:path [:r4-kernel :r9-selection-law :r7-increment :r7-fold],
+     :via [:controller-score :candidate :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via [:adjudication-rates :controller-score :candidate :delta],
      :to :enactment-records}
     {:path [:r7-increment :r7-fold],
      :via [:delta],
@@ -206,6 +262,146 @@
     {:path
      [:r2-verifier
       :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
       :r9-selection-law
       :r0-enact-step
       :r7-increment
@@ -324,6 +520,250 @@
      :via
      [:positional
       :positional
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta
+      :enactment-records
+      :draw-seed
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :delta
+      :enactment-records
+      :chosen-target
+      :positional
+      :mission-id],
+     :to :clock-lineage}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold
+      :r1-outer-cascade
+      :flight-entry
+      :dispatch
+      :clock-in],
+     :via
+     [:adjudication-rates
+      :controller-score
       :candidate
       :delta
       :enactment-records
@@ -597,6 +1037,52 @@
     {:path
      [:r2-verifier
       :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via
+     [:positional
+      :adjudication-rates
+      :controller-score
+      :candidate
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r2-verifier
+      :r6-cascade-lane
       :r9-selection-law
       :r0-enact-step
       :r7-increment
@@ -619,6 +1105,61 @@
       :r7-increment
       :r7-fold],
      :via [:positional :positional :candidate :delta],
+     :to :enactment-records}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:controller-score :candidate :attempts :delta],
+     :to :enactment-records}
+    {:path
+     [:r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via [:controller-score :enacted-steps :attempts :delta],
+     :to :enactment-records}
+    {:path [:r4-kernel :r9-selection-law :r7-increment :r7-fold],
+     :via [:controller-score :candidate :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :candidate
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r0-enact-step
+      :r7-increment
+      :r7-fold],
+     :via
+     [:adjudication-rates
+      :controller-score
+      :enacted-steps
+      :attempts
+      :delta],
+     :to :enactment-records}
+    {:path
+     [:r6-cascade-lane
+      :r4-kernel
+      :r9-selection-law
+      :r7-increment
+      :r7-fold],
+     :via [:adjudication-rates :controller-score :candidate :delta],
      :to :enactment-records}
     {:path
      [:r6-cascade-lane

@@ -22,7 +22,7 @@
 (def closure-path "test/futon3c/diagramprover/fixtures/load-closure@test-registry-307b8969.edn")
 
 ;; the pins: the map's bytes and the repo shas its sites were drawn against
-(def map-sha256 "62cc589280a8c71a8660d92ab283b575c9d70319e25d2178b91a29320afddb8a")
+(def map-sha256 "fce833904d57f3d061cda25f10e9e1acc47843e610e11578a6f06a35dfbfb4de")
 (def repos {"futon2" "663caa7b" "futon3c" "58f1a8cb"})
 
 (defn- sha256 [path]
@@ -79,7 +79,10 @@
             {:finding :trace-box-unknown :box box})
           (for [[a b] (partition 2 1 steps)
                 :when (and (by-id (:box a)) (by-id (:box b)) (not= :positional (:hop b)))
-                :when (empty? (filter (set (:writes (by-id (:box a)))) (:reads (by-id (:box b)))))]
+                ;; compare vertices, not raw entries: [field {:record r}]
+                ;; is the vertex [field r] (WM-PROVER-RECORD-SCOPE-I)
+                :when (empty? (filter (set (map wiring/vertex-key (:writes (by-id (:box a)))))
+                                      (map wiring/vertex-key (:reads (by-id (:box b))))))]
             {:finding :trace-not-connected :from (:box a) :to (:box b)})))))
 
 (defn trace-gaps [s {:keys [boxes]}]
@@ -123,6 +126,16 @@
              (trace-findings s (update t :boxes conj :no-such-box))))
       (is (= [{:finding :trace-not-connected :from :loop-entry :to :flight-entry}]
              (trace-findings s (update t :boxes #(into [(first %)] (drop 2 %)))))))))
+
+(deftest trace-findings-compare-vertices
+  ;; WM-HANDOFF-H8-I: a scoped write connects to the same scoped read, and
+  ;; not to the unscoped field of the same name (the click's :wants)
+  (let [s {:boxes [{:box/id :w :writes [[:wants {:record :sources}]]}
+                   {:box/id :r-scoped :reads [[:wants {:record :sources}]]}
+                   {:box/id :r-plain :reads [:wants]}]}]
+    (is (= [] (trace-findings s {:boxes [:w :r-scoped]})))
+    (is (= [{:finding :trace-not-connected :from :w :to :r-plain}]
+           (trace-findings s {:boxes [:w :r-plain]})))))
 
 (def expected-outside-closure
   ;; built component sites not in the load closure of test-registry-307b8969
