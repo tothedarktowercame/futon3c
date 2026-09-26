@@ -4,7 +4,7 @@
   :map "bc45a2a0"},
  :definition futon3c.diagramprover.wm-wire-ledger-test,
  :counts
- {:verified 0, :witnessed-hermetically 2, :unverified 116, :wires 118},
+ {:verified 1, :witnessed-hermetically 6, :unverified 111, :wires 118},
  :wires
  [{:wire
    [:ask-merge-published :construction-assemble-one :interpretations],
@@ -97,15 +97,29 @@
   {:wire [:r10-observe-publication :r10-test :publication-observed],
    :status :unverified}
   {:wire [:r2-served-by-reading :r2-flight-read :text-sha256],
-   :status :unverified}
+   :status :verified,
+   :record
+   {:path "holes/labs/M-wm-wiring/spike/flight-278b6988.edn",
+    :sha256
+    "2e27390797bb6332ba4a40e67ef92c452bca6a70eee8acb57ce2ff68f88fe212"},
+   :test
+   futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test/the-read-steps-text-pin-reaches-the-flight-record}
   {:wire [:r2-served-by-reading :r2-test :text-sha256],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-test-text-sha256-test/the-text-pin-reaches-the-components-test}
   {:wire [:r2-served-by-reading :r2-test :want-span],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-test-want-span-test/the-want-span-reaches-the-components-test}
   {:wire [:r2-served-by-reading :r2-verifier :text-sha256],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test/the-text-pin-reaches-the-verifier}
   {:wire [:r2-served-by-reading :r2-verifier :want-span],
-   :status :unverified}
+   :status :witnessed-hermetically,
+   :test
+   futon3c.diagramprover.wm-wire-r2-verifier-want-span-test/the-want-span-reaches-the-verifier}
   {:wire
    [:r2-store-constraints-read
     :r3-store-constraints-read

@@ -41,11 +41,21 @@
             [clojure.pprint :as pp]
             [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.wm-wire :as w]
+            [futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test]
+            [futon3c.diagramprover.wm-wire-r2-test-text-sha256-test]
+            [futon3c.diagramprover.wm-wire-r2-test-want-span-test]
+            [futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test]
+            [futon3c.diagramprover.wm-wire-r2-verifier-want-span-test]
             [futon3c.diagramprover.wm-wire-r7-fold-selection-test]
             [futon3c.diagramprover.wm-wire-r9-candidate-enact-test]))
 
 (def wire-test-nses
-  '[futon3c.diagramprover.wm-wire-r7-fold-selection-test
+  '[futon3c.diagramprover.wm-wire-r2-flight-read-text-sha256-test
+    futon3c.diagramprover.wm-wire-r2-test-text-sha256-test
+    futon3c.diagramprover.wm-wire-r2-test-want-span-test
+    futon3c.diagramprover.wm-wire-r2-verifier-text-sha256-test
+    futon3c.diagramprover.wm-wire-r2-verifier-want-span-test
+    futon3c.diagramprover.wm-wire-r7-fold-selection-test
     futon3c.diagramprover.wm-wire-r9-candidate-enact-test])
 
 (def adjacency-rev "7c67c38b")
