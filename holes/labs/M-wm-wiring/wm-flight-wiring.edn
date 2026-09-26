@@ -373,7 +373,49 @@
    ;; :r6-cascade-lane)
    :returns-record :result
    :reads [:interpretations :universes [:wants {:record :sources}]]
-   :writes [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]]}
+   ;; WM-NODE-R13-I: also stamps the family's horizon on each problem,
+   ;; :horizon-steps horizon in base-problem (horizon is assemble's
+   ;; (:horizon-steps sources), passed positionally)
+   :writes [[:want {:record :cascade-spec}] [:want {:record :cascade-problem}]
+            [:horizon-steps {:record :cascade-problem}]]}
+  ;; WM-NODE-R13-I (WM-SUPERSET-D section 6, corrected in PROOF-2a-PLAN
+  ;; <2>2b LOG): the policy depth T. The tick has two horizons. (1) The
+  ;; problem family's T: resolve-cascade-horizon returns {:value h ...}
+  ;; (declared on the sources, or computed from the admitted
+  ;; interpretations); assemble-cascade-problems-with-published puts it on
+  ;; the sources, (assoc-in merged [:sources :horizon-steps] (:value
+  ;; horizon)); cascade_problems/assemble reads (:horizon-steps sources) and
+  ;; hands it to assemble-one positionally, which stamps it on each problem;
+  ;; cascade-family-parameters reads (get-in % [:cascade-problem
+  ;; :horizon-steps]) and returns {:horizon-steps (first Ts) :beta ...},
+  ;; which cascade-decision-admitted destructures as {T :horizon-steps beta
+  ;; :beta} (see :r9-decision). (2) The run's configured depths:
+  ;; policy-depth/configured returns (validate ...), select-keys of
+  ;; {:anticipation :cascade-rollout}, not a literal; the kernel's T is
+  ;; recorded on :r6-cascade-lane. policy-depth/anticipation returns
+  ;; {:horizon-steps (when ready? effective) :record ...}, read by judge as
+  ;; (:horizon-steps depth-anticipation) for the trace and the depth record.
+  ;; None of these sites is named in R13's registry :code (RC10)
+  {:box/id :r13-sources-horizon :box/kind :component
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "assemble-cascade-problems-with-published"}
+   :writes [[:horizon-steps {:record :sources}]]}
+  {:box/id :construction-assemble :box/kind :component
+   :site {:file "futon2/src/futon2/aif/cascade_problems.clj" :var "assemble"}
+   :reads [[:horizon-steps {:record :sources}]]}
+  {:box/id :r13-family-parameters :box/kind :component
+   ;; returns {:horizon-steps (first Ts) :beta ...}, which
+   ;; cascade-decision-admitted takes as {T :horizon-steps beta :beta} (a
+   ;; map-destructuring binding). That read is NOT attributed by the prover:
+   ;; declared as [:horizon-steps {:record :family-params}] on :r9-decision
+   ;; it is :declaration-without-occurrence even with the right key
+   ;; (checked), so neither end is declared; a prover case for claude-2
+   ;; with JOIN-GRAIN-D (a {sym :key} destructuring binding as a read)
+   :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-family-parameters"}
+   :reads [[:horizon-steps {:record :cascade-problem}]]}
+  {:box/id :r13-policy-depth-anticipation :box/kind :component
+   :site {:file "futon2/src/futon2/aif/policy_depth.clj" :var "anticipation"}
+   :returns-record :depth-anticipation
+   :writes [[:horizon-steps {:record :depth-anticipation}]]}
   {:box/id :construction-construct :row 4 :box/kind :component
    :site {:file "futon2/src/futon2/aif/interpretation_construction.clj" :var "construct"}
    ;; WM-HANDOFF-H6-I: writes each constructed candidate's
@@ -572,7 +614,7 @@
    ;; :mean/:variance are read through a helper as a keyword argument
    ;; ((prediction-member prediction :mean)), which no rule attributes
    :reads [[:driver {:record :r3d-driver}] [:belief {:record :morning-brief-fold}]
-           [:mu-post {:record :trace}]]
+           [:mu-post {:record :trace}] [:horizon-steps {:record :depth-anticipation}]]
    :writes [:enactment-fold :carried-mu-post :loop-belief :channel-prediction]
    :passes [{:value :carried-mu-post
              :from {:keyed-read [:mu-post :trace]}
@@ -774,6 +816,14 @@
    ;; out only inside :rates-provenance, a composite the prover does not
    ;; open (rank-cascade-actions copies it to each certificate,
    ;; policy/selection-certificate keeps it under :scoring).
+   ;; WM-NODE-R13-I: the kernel's T is the run's configured depth: the R13
+   ;; step's (policy-depth/configured ...) result, read here as (get-in
+   ;; @state [:R13 :cascade-rollout]) into the let-bound base-opts literal
+   ;; ({... :horizon-steps ...}) that is passed to efe/rank-actions, not
+   ;; returned; rank-cascade-actions reads (:horizon-steps opts). configured
+   ;; returns a select-keys call, not a literal, and base-opts is an
+   ;; argument: no prover form attributes either end, so it is recorded
+   ;; here and not declared.
    ;; 5 -> 6 (construction -> rates): crossed with its reader in this lane
    ;; since 2d1a1b19, by [:want {:record :cascade-spec}] into :r4-kernel.
    ;; This box itself takes the problem as its argument, destructured
@@ -1217,6 +1267,16 @@
  ;; second hop (an element of predict-observation's return into
  ;; channel-prediction-error arg 3); E3's first hop refused by the prover
  ;; (recorded). One standing added. 294 -> 295 (2 to-do, 293 standing).
+ ;; WM-NODE-R13-I (futon2 pin unchanged): the policy
+ ;; depth T. [:horizon-steps {:record :sources}] from :r13-sources-horizon
+ ;; to the new :construction-assemble; [:horizon-steps {:record
+ ;; :cascade-problem}] from :construction-assemble-one to the new
+ ;; :r13-family-parameters; [:horizon-steps {:record :depth-anticipation}]
+ ;; from the new :r13-policy-depth-anticipation to judge. Not declared: the
+ ;; decision's {T :horizon-steps} destructuring (not attributed, checked)
+ ;; and the kernel's T (recorded on :r6-cascade-lane). Eleven standing
+ ;; added (other records' keys at the new sites). 319 -> 330 (7 to-do,
+ ;; 323 standing).
  ;; :kind :to-do is the
  ;; wiring's to-do list (a row wired deletes its entries in the same commit);
  ;; :standing says why an entry stays after wiring. Not-built boxes have no
@@ -4200,4 +4260,114 @@
    :rows [],
    :kind :standing,
    :note
-   "futon2 d04711eb (F1a-1, PROOF-2a-PLAN <2>2d F1, another lane's commit): a key added to run! after the previous pin; that lane's map packet declares it. Absorbed here because the pin moved to b66369d3."}]}
+   "futon2 d04711eb (F1a-1, PROOF-2a-PLAN <2>2d F1, another lane's commit): a key added to run! after the previous pin; that lane's map packet declares it. Absorbed here because the pin moved to b66369d3."}
+ {:finding :occurrence-without-declaration,
+  :field :candidate,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :candidate at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :class,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :class at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :construction-receipt,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :construction-receipt at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :interpretations,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :interpretations at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/scripts/futon2/report/war_machine.clj",
+   :var "cascade-family-parameters"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :kind at cascade-family-parameters is another record's key (the incommensurable-family refusal's :kind), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :kind at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :kind,
+  :site
+  {:file "futon2/src/futon2/aif/policy_depth.clj", :var "anticipation"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :kind at anticipation is another record's key (the depth record's :kind), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :locators,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :locators at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :needs,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :needs at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :universes,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :universes at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}
+
+ {:finding :occurrence-without-declaration,
+  :field :wants,
+  :site
+  {:file "futon2/src/futon2/aif/cascade_problems.clj", :var "assemble"},
+  :declared-by [],
+  :rows [],
+  :kind :standing,
+  :note
+  "WM-NODE-R13-I: :wants at assemble is another record's key (the assembly's refusals, dropped candidates and sources entries), reported because the box was added for :horizon-steps; the prover has no per-record scope for unscoped keys"}]}
