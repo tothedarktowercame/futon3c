@@ -16,6 +16,10 @@
 (def lanes (let [src (slurp "holes/labs/M-wm-wiring/spike/wm_wiring_svg.bb")
                  form (re-find #"(?s)\(def lanes\s+(\[.*?\]\]\])\)" src)]
              (edn/read-string (second form))))
+;; a record-scoped entry [field {:record r}] stays as written in the
+;; matrix (readable EDN, the map's own form) and is labelled field@r, the
+;; projection's port name (WM-PROVER-RECORD-SCOPE-I, futon3c 5e4d9d02)
+(defn field-label [f] (if (and (vector? f) (:record (second f))) (str (name (first f)) "@" (name (:record (second f)))) (name f)))
 (def boxes (:boxes m))
 (def by-id (into {} (map (juxt :box/id identity)) boxes))
 (def ordered (vec (mapcat (fn [[_ c t]] (concat c t)) lanes)))
@@ -51,7 +55,7 @@
         :components (mapv (fn [c] {:size (count c) :boxes c}) (sort-by (comp - count) components))
         :step-boundaries (vec (for [[i j xs] boundary-crossings] {:from i :to j :wires (count xs) :fields (vec (distinct (mapcat #(nth % 2) xs)))}))
         :island-steps (vec islands)
-        :matrix (into (sorted-map-by #(compare (str %1) (str %2))) (for [[k v] matrix] [k (vec (sort v))]))})
+        :matrix (into (sorted-map-by #(compare (str %1) (str %2))) (for [[k v] matrix] [k (vec (sort-by str v))]))})
   "svg"
   (let [n (count ordered) cell 11 left 190 top 200 w (+ left (* n cell) 30) h (+ top (* n cell) 40)
         idx (into {} (map-indexed (fn [i b] [b i]) ordered))
@@ -74,7 +78,7 @@
       (emit (format "<line x1='%d' y1='%d' x2='%d' y2='%d' stroke='#7f9391' stroke-width='0.8'/>" left y0 (+ left (* n cell)) y0))
       (emit (format "<text x='%d' y='%d' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 %d %d)'>%s</text>" (+ x0 2) (- top 130) (+ x0 2) (- top 130) (esc (subs title 0 (min 30 (count title)))))))
     (doseq [[[a b] fs] matrix :let [x (+ left (* (idx b) cell)) y (+ top (* (idx a) cell)) back? (< (lane-of b) (lane-of a))]]
-      (emit (format "<rect x='%d' y='%d' width='%d' height='%d' fill='%s' opacity='%s'><title>%s → %s: %s</title></rect>" (inc x) (inc y) (- cell 2) (- cell 2) (if back? (second colors) (first colors)) (if (test? b) "0.35" "0.95") (esc (name a)) (esc (name b)) (esc (str/join " " (map name (sort fs)))))))
+      (emit (format "<rect x='%d' y='%d' width='%d' height='%d' fill='%s' opacity='%s'><title>%s → %s: %s</title></rect>" (inc x) (inc y) (- cell 2) (- cell 2) (if back? (second colors) (first colors)) (if (test? b) "0.35" "0.95") (esc (name a)) (esc (name b)) (esc (str/join " " (map field-label (sort-by str fs)))))))
     (emit (format "<text x='16' y='%d' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): %s. Weakly connected components among non-test boxes: %s (sizes %s).</text>" (- h 12) (esc (str/join "; " (map second islands))) (count components) (esc (str/join ", " (map count (sort-by (comp - count) components))))))
     (emit "</svg>")
     (print (str out))))

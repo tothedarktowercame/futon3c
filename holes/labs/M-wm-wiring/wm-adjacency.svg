@@ -1,7 +1,7 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='1309' height='1329' viewBox='0 0 1309 1329' font-family='ui-sans-serif, system-ui, Helvetica, Arial, sans-serif'>
 <rect width='1309' height='1329' fill='white'/>
 <text x='16' y='28' font-size='18' font-weight='700' fill='#173b39'>The wiring map as an adjacency matrix</text>
-<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c e930fd49; 99 boxes, 116 wires in 93 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
+<text x='16' y='46' font-size='11' fill='#52605f'>Row: the box that writes; column: the box that reads; a cell: at least one field sent from row to column (hover for the fields). Map at futon3c bc45a2a0; 99 boxes, 118 wires in 94 entries. Teal: reader in the same or a later step; purple: reader in an earlier step. Steps separated by lines, in flight order.</text>
 <text x='186' y='208' font-size='6.5' text-anchor='end' fill='#1d3a38'>loop-entry</text>
 <text x='198' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 198 196)'>loop-entry</text>
 <text x='186' y='219' font-size='6.5' text-anchor='end' fill='#1d3a38'>r1-target-field</text>
@@ -76,18 +76,18 @@
 <text x='583' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 583 196)'>r4-constructor</text>
 <text x='186' y='604' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-order-use</text>
 <text x='594' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 594 196)'>r4-order-use</text>
-<text x='186' y='615' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-kernel</text>
-<text x='605' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 605 196)'>r4-kernel</text>
-<text x='186' y='626' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-coapply</text>
-<text x='616' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 616 196)'>r4-coapply</text>
-<text x='186' y='637' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-test</text>
-<text x='627' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 627 196)'>r4-test</text>
-<text x='186' y='648' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-coapply-test</text>
-<text x='638' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 638 196)'>r4-coapply-test</text>
-<text x='186' y='659' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-sourced-rates</text>
-<text x='649' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 649 196)'>r6-sourced-rates</text>
-<text x='186' y='670' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-cascade-lane</text>
-<text x='660' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 660 196)'>r6-cascade-lane</text>
+<text x='186' y='615' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-coapply</text>
+<text x='605' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 605 196)'>r4-coapply</text>
+<text x='186' y='626' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-test</text>
+<text x='616' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 616 196)'>r4-test</text>
+<text x='186' y='637' font-size='6.5' text-anchor='end' fill='#8a8a84'>r4-coapply-test</text>
+<text x='627' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 627 196)'>r4-coapply-test</text>
+<text x='186' y='648' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-sourced-rates</text>
+<text x='638' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 638 196)'>r6-sourced-rates</text>
+<text x='186' y='659' font-size='6.5' text-anchor='end' fill='#1d3a38'>r6-cascade-lane</text>
+<text x='649' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 649 196)'>r6-cascade-lane</text>
+<text x='186' y='670' font-size='6.5' text-anchor='end' fill='#1d3a38'>r4-kernel</text>
+<text x='660' y='196' font-size='6.5' fill='#1d3a38' transform='rotate(-90 660 196)'>r4-kernel</text>
 <text x='186' y='681' font-size='6.5' text-anchor='end' fill='#8a8a84'>r6-test</text>
 <text x='671' y='196' font-size='6.5' fill='#8a8a84' transform='rotate(-90 671 196)'>r6-test</text>
 <text x='186' y='692' font-size='6.5' text-anchor='end' fill='#1d3a38'>r9-classify-target</text>
@@ -216,14 +216,14 @@
 <line x1='421' y1='200' x2='421' y2='1289' stroke='#7f9391' stroke-width='0.8'/>
 <line x1='190' y1='431' x2='1279' y2='431' stroke='#7f9391' stroke-width='0.8'/>
 <text x='423' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 423 70)'>4 Ask step (interpretation)</text>
-<rect x='542' y='552' width='99' height='99' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
+<rect x='542' y='552' width='88' height='88' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
 <line x1='542' y1='200' x2='542' y2='1289' stroke='#7f9391' stroke-width='0.8'/>
 <line x1='190' y1='552' x2='1279' y2='552' stroke='#7f9391' stroke-width='0.8'/>
 <text x='544' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 544 70)'>5 Construction, order</text>
-<rect x='641' y='651' width='33' height='33' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
-<line x1='641' y1='200' x2='641' y2='1289' stroke='#7f9391' stroke-width='0.8'/>
-<line x1='190' y1='651' x2='1279' y2='651' stroke='#7f9391' stroke-width='0.8'/>
-<text x='643' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 643 70)'>6 Rates (A)</text>
+<rect x='630' y='640' width='44' height='44' fill='#e9f0f0' stroke='#b9c6c4' stroke-width='0.8'/>
+<line x1='630' y1='200' x2='630' y2='1289' stroke='#7f9391' stroke-width='0.8'/>
+<line x1='190' y1='640' x2='1279' y2='640' stroke='#7f9391' stroke-width='0.8'/>
+<text x='632' y='70' font-size='7' font-weight='700' fill='#274d4a' transform='rotate(-90 632 70)'>6 Rates (A)</text>
 <rect x='674' y='684' width='121' height='121' fill='#f3f7f7' stroke='#b9c6c4' stroke-width='0.8'/>
 <line x1='674' y1='200' x2='674' y2='1289' stroke='#7f9391' stroke-width='0.8'/>
 <line x1='190' y1='684' x2='1279' y2='684' stroke='#7f9391' stroke-width='0.8'/>
@@ -256,7 +256,7 @@
 <rect x='1115' y='1048' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-test: delta</title></rect>
 <rect x='1115' y='1092' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-selection → r7-test: e-source</title></rect>
 <rect x='972' y='971' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r5-flight-call → r5-grain-gate: grain</title></rect>
-<rect x='631' y='586' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-constructor → r4-coapply-test: descent units</title></rect>
+<rect x='620' y='586' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-constructor → r4-coapply-test: descent units</title></rect>
 <rect x='1104' y='1048' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-increment → r7-call-test: delta wc-failures</title></rect>
 <rect x='543' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → tick-flight-assembly: universe wants</title></rect>
 <rect x='587' y='586' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-constructor → r4-order-use: descent precedence-violations units</title></rect>
@@ -271,10 +271,10 @@
 <rect x='1269' y='1191' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → click-reason-test: failure</title></rect>
 <rect x='774' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-selection-law → r9-test: candidate enacted-steps per-policy-argmax</title></rect>
 <rect x='1104' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r7-flight-call → r7-call-test: wc</title></rect>
-<rect x='664' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
+<rect x='664' y='641' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r6-sourced-rates → r6-test: measurement</title></rect>
 <rect x='1148' y='454' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-click-wants → click-start: wants</title></rect>
-<rect x='554' y='553' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>tick-flight-assembly → construction-assemble-one: universes</title></rect>
-<rect x='620' y='608' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
+<rect x='554' y='553' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>tick-flight-assembly → construction-assemble-one: universes wants@sources</title></rect>
+<rect x='609' y='663' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r4-kernel → r4-test: order-use</title></rect>
 <rect x='1038' y='993' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r0-enact-step → r7-increment: attempts</title></rect>
 <rect x='1247' y='1180' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-click → flight-cast-test: cast</title></rect>
 <rect x='235' y='212' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r1-target-field → r1-outer-cascade: next-step</title></rect>
@@ -293,7 +293,7 @@
 <rect x='1214' y='1213' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-run → flight-driver-summary: needs readings</title></rect>
 <rect x='1038' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r7-increment: candidate</title></rect>
 <rect x='983' y='707' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-selection-law → r0-enact-step: candidate enacted-steps</title></rect>
-<rect x='598' y='663' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r6-cascade-lane → r4-kernel: adjudication-rates</title></rect>
+<rect x='653' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-cascade-lane → r4-kernel: adjudication-rates</title></rect>
 <rect x='235' y='311' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>clock-in → r1-outer-cascade: clock-lineage</title></rect>
 <rect x='1005' y='971' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r5-flight-call → r5-test: grain</title></rect>
 <rect x='950' y='894' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-close-cause → failure-cause-record-test: failure-cause</title></rect>
@@ -301,14 +301,15 @@
 <rect x='928' y='718' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-decision → r9-judge-refusal-test: kind</title></rect>
 <rect x='708' y='685' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-classify-target → r9-decision: class</title></rect>
 <rect x='851' y='828' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-judge-refusal → r9-abstention-carrier: judge-refusal</title></rect>
-<rect x='653' y='652' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r6-cascade-lane: measurement</title></rect>
+<rect x='642' y='641' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r6-sourced-rates → r6-cascade-lane: measurement</title></rect>
 <rect x='1060' y='1037' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r7-flight-call → r7-fold-source: increment</title></rect>
 <rect x='1148' y='1169' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>flight-cast → click-start: author repair-reviewer reviewer</title></rect>
 <rect x='763' y='751' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>c8-registry-get → c8-latest: message timeout-ms</title></rect>
 <rect x='1258' y='1191' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>flight-record-summary → flight-click-close-test: chosen</title></rect>
 <rect x='510' y='399' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r2-store-locator-declines → r3-store-locator-declines: locator-declines</title></rect>
-<rect x='631' y='608' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r4-kernel → r4-coapply-test: order-use</title></rect>
+<rect x='620' y='663' width='9' height='9' fill='#7b3fa0' opacity='0.35'><title>r4-kernel → r4-coapply-test: order-use</title></rect>
 <rect x='708' y='1081' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold-call → r9-decision: enactment-fold</title></rect>
+<rect x='697' y='663' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r4-kernel → r9-selection-law: controller-score</title></rect>
 <rect x='1115' y='1004' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>wc-checker → r7-test: wc-verdict</title></rect>
 <rect x='983' y='1103' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r10-observe-publication → r0-enact-step: publication-observed</title></rect>
 <rect x='257' y='245' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r1-outer-cascade → r1-test: draw-seed</title></rect>
@@ -337,5 +338,5 @@
 <rect x='895' y='894' width='9' height='9' fill='#2f5f5c' opacity='0.95'><title>r9-close-cause → r9-finding-store: failure-cause</title></rect>
 <rect x='235' y='1059' width='9' height='9' fill='#7b3fa0' opacity='0.95'><title>r7-fold → r1-outer-cascade: enactment-records</title></rect>
 <rect x='928' y='828' width='9' height='9' fill='#2f5f5c' opacity='0.35'><title>r9-judge-refusal → r9-judge-refusal-test: judge-refusal</title></rect>
-<text x='16' y='1317' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 19 (sizes 37, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1).</text>
+<text x='16' y='1317' font-size='10' fill='#3a4a48'>Island steps (no wire in or out, tests excluded): . Weakly connected components among non-test boxes: 18 (sizes 40, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1).</text>
 </svg>

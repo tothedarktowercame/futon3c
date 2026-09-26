@@ -23,7 +23,10 @@
                             (when-not (zero? (:exit r)) (binding [*out* *err*] (println (:err r))) (System/exit 2))
                             (:out r))
                           (slurp map-path))))
-(def boxes (:boxes m))
+;; a record-scoped entry [field {:record r}] is the field field@r, the
+;; projection's port name (WM-PROVER-RECORD-SCOPE-I, futon3c 5e4d9d02)
+(defn scoped-name [f] (if (and (vector? f) (:record (second f))) (keyword (str (name (first f)) "@" (name (:record (second f))))) f))
+(def boxes (mapv (fn [b] (cond-> b (:reads b) (update :reads #(mapv scoped-name %)) (:writes b) (update :writes #(mapv scoped-name %)))) (:boxes m)))
 (def by-id (into {} (map (juxt :box/id identity)) boxes))
 (def map-sha (if map-rev
                (str/trim (:out (sh/sh "git" "rev-parse" "--short" map-rev)))
