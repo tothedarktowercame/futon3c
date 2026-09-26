@@ -37,7 +37,10 @@
   ;; its eligible targets; the loop entry's plan mode calls it (H-T-CALLER-I). Running a flight is not wired.
   {:box/id :r1-target-field :row 1 :box/kind :component
    :site {:file "futon2/src/futon2/aif/target_field.clj" :var "step"}
-   :writes [:next-step]}
+   :writes [:next-step]
+   :attribution-findings
+   [{:kind :standing :field [:universe {:record :entry}]
+     :note "WM-R6-MAP-I: read-universe writes the universe and universe-source inside try; step copies them with select-keys. The prover cannot attribute that scoped return, so neither entry write is declared. A refused reading records universe-source with refusal and no universe key; typed absence is not a wire."}]}
   {:box/id :r1-outer-cascade :row 1 :box/kind :component
    ;; BUILT (H-T-CALLER-I, futon2 b66369d3): select chooses among the field's
    ;; ELIGIBLE targets (feasibility as support), E uniform-no-data, G typed
@@ -45,7 +48,8 @@
    ;; are on the record. It reads :eligible off the field's entries and
    ;; :trigger off its opts, and writes the choice. The reads below that it does
    ;; not make yet are the row's to-do (the E from the fold, the publication
-   ;; and the clock lineage), findings until it reads them.
+   ;; and the clock lineage), plus next-step and pair-overlap (WIRE-LANE-1B-I,
+   ;; fbeea918), findings until it reads them.
    :site {:file "futon2/src/futon2/aif/outer_cascade.clj" :var "select"}
    :reads [:trigger :next-step :eligible :pair-overlap :enactment-records :publication-observed
            :clock-lineage]
@@ -439,10 +443,19 @@
   ;; refuses a non-positive beta (:invalid-temperature), the variational arm
   ;; (MachineTemperature, variationalOkIsPositive); the spread and gain-only
   ;; arms' positivity rests on the caller's tauMin, a <2>3b item not done here
+  ;; WM-R6-MAP-I supersedes the attribution limits above for the advancing
+  ;; seal(merge) return and the two literal-map positional beta handoffs.
+  ;; The local hold and R13 function-return destructuring remain findings.
   {:box/id :r14-precision-carry :box/kind :component
-   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}}
+   :site {:file "futon2/src/futon2/aif/policy_precision_carry.clj" :var "advance"}
+   :returns-record :precision
+   :writes [[:beta {:record :precision}] [:gamma {:record :precision}] [:tau {:record :precision}]]
+   :attribution-findings
+   [{:kind :standing
+     :note "WM-R6-MAP-I: only the advancing seal(merge) return is attributed: operand 1 supplies beta/gamma/tau and seal preserves them. The local hold branches at line 101 carry the previous beta with status held; local-function return attribution is unsupported. For <3>0 the advancing branch is the witness path; a held tick carries the last beta."}]}
   {:box/id :r14-selection-posterior :box/kind :component
-   :site {:file "futon2/src/futon2/aif/cascade_selection.clj" :var "selection-posterior"}}
+   :site {:file "futon2/src/futon2/aif/cascade_selection.clj" :var "selection-posterior"}
+   :reads [[:beta {:record :precision}]]}
   {:box/id :r13-policy-depth-anticipation :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy_depth.clj" :var "anticipation"}
    :returns-record :depth-anticipation
@@ -640,9 +653,17 @@
   {:box/id :r9-selection-law :row 9 :box/kind :component
    :site {:file "futon2/src/futon2/aif/policy.clj" :var "select-action-cascades"}
    ;; WM-HANDOFF-H8-I: reads G as the ranked actions' :controller-score
-   :reads [:controller-score] :writes [:per-policy-argmax :candidate :enacted-steps]}
+   :reads [:controller-score [:beta {:record :precision}]]
+   :passes [{:value [:beta {:record :precision}] :from {:literal-arg-key :beta}
+             :to {:call "cascade-selection/selection-posterior" :arg 1
+                  :field-path [:beta] :callee-box :r14-selection-posterior}}]
+   :writes [:per-policy-argmax :candidate :enacted-steps]}
   {:box/id :r9-decision :row 9 :box/kind :component
    :site {:file "futon2/scripts/futon2/report/war_machine.clj" :var "cascade-decision-admitted"}
+   :record-aliases {:precision ["beta-state"]}
+   :passes [{:value [:beta {:record :precision}] :from {:literal-arg-key :beta}
+             :to {:call "policy/select-action-cascades" :arg 2
+                  :field-path [:beta] :callee-box :r9-selection-law}}]
    ;; WM-MAP-REPLAY-I: the joint decision's typed refusal (ex-info with
    ;; :kind, defect G's writer); the relation class read at :6587 and the
    ;; :target-class it hands the class model (defect I's hop)
@@ -665,7 +686,7 @@
    ;; hands production-ranked the recorded value
    ;; ((:policy-prefixes token-belief-input)), so F is computed from exactly
    ;; what the certificate records
-   :reads [:per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps [:policy-prefixes {:record :token-belief-input}]] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
+   :reads [[:beta {:record :precision}] :per-policy-argmax :class :enactment-fold :construction-receipt [:want {:record :cascade-problem}] :conditioning-steps [:policy-prefixes {:record :token-belief-input}]] :writes [:kind :target-class :measured-a [:policy-prefixes {:record :token-belief-input}]]}
   ;; F1c-I (PROOF-2a-PLAN ⟨2⟩2d F1, futon2 6efecb1e, 26079b48): the F supply.
   ;; production-ranked writes each ranked entry's :f-prefix from the
   ;; candidate's admitted prefix (:computed Σf, :zero-support, or
@@ -989,6 +1010,8 @@
   ;; ---- row 8, Clause T: pair overlap in the field.
   {:box/id :r8-overlap :row 8 :box/kind :component
    :site {:file "futon2/src/futon2/aif/target_field.clj" :var "with-pair-overlap"}
+   :record-aliases {:entry ["e"]}
+   :reads [[:universe {:record :entry}]]
    :writes [:pair-overlap]}
   {:box/id :r8-test :row 8 :box/kind :test
    :site {:file "futon2/test/futon2/aif/target_field_overlap_test.clj"}
@@ -4340,7 +4363,7 @@
    :rows [1],
    :kind :to-do,
    :note
-   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+   "WIRE-LANE-1B-I (fbeea918): outer-cascade/select does not read :next-step. The intended read remains to-do and its within-lane wire stays UNVERIFIED; no read is deleted."}
   {:finding :declaration-without-occurrence,
    :box/id :r1-outer-cascade,
    :field :pair-overlap,
@@ -4349,7 +4372,7 @@
    :rows [1],
    :kind :to-do,
    :note
-   "H-T-CALLER-I: select does not read this yet. The outer cascade's extension (E from the fold, the pair overlap, the field's step kinds, the publication observation, the clock lineage) reads it; until then the declaration is the row's to-do."}
+   "WIRE-LANE-1B-I (fbeea918): outer-cascade/select does not read :pair-overlap. The intended read remains to-do and its within-lane wire stays UNVERIFIED; no read is deleted."}
   {:finding :declaration-without-occurrence,
    :box/id :r1-outer-cascade,
    :field :publication-observed,
@@ -4739,4 +4762,23 @@
   :rows [],
   :kind :standing,
   :note
-  "WM-NODE-R14-I: :status at advance is another record's key (the carry record's :status, a refusal's :kind/:error in hold), reported because the box was added; the prover has no per-record scope for unscoped keys"}]}
+  "WM-NODE-R14-I: :status at advance is another record's key (the carry record's :status, a refusal's :kind/:error in hold), reported because the box was added; the prover has no per-record scope for unscoped keys"}
+{:finding :written-never-read,
+ :field [:gamma :precision],
+ :writers [:r14-precision-carry],
+ :kind :standing,
+ :note
+ "WM-R6-MAP-I: advancing return writes gamma from merge operand 1; no reader is declared. Held branches through local hold carry previous beta/gamma/tau and remain unattributed; <3>0 must distinguish the advancing witness from held carry."}
+{:finding :written-never-read,
+ :field [:tau :precision],
+ :writers [:r14-precision-carry],
+ :kind :standing,
+ :note
+ "WM-R6-MAP-I: advancing return writes tau from merge operand 1; no reader is declared. The R13 anonymous destructuring of the family return is still not record-attributed; no scope is invented."}
+{:finding :read-never-written,
+ :field [:universe :entry],
+ :readers [:r8-overlap],
+ :kind :standing,
+ :note
+ "WM-R6-MAP-I: with-pair-overlap reads universe from entry alias e. read-universe's producer returns through try, unsupported by the prover; step only copies via select-keys. No scoped universe or universe-source writer is declared. Refused readings supply universe-source refusal but no universe; that absence is not a wire."}
+]}
